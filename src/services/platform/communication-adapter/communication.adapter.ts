@@ -14,6 +14,7 @@ import { MatrixClient } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixGroupAdapter } from '../matrix/adapter-group/matrix.group.adapter';
 import { MatrixRoomAdapter } from '../matrix/adapter-room/matrix.room.adapter';
+import { Visibility } from '../matrix/adapter-room/matrix.room.dto.create.options';
 import { MatrixUserAdapter } from '../matrix/adapter-user/matrix.user.adapter';
 import { IOperationalMatrixUser } from '../matrix/adapter-user/matrix.user.interface';
 import { MatrixAgent } from '../matrix/agent/matrix.agent';
@@ -749,12 +750,18 @@ export class CommunicationAdapter {
     );
 
     try {
-      const promises = roomIDs.map(rId =>
-        elevatedAgent.matrixClient.setGuestAccess(rId, {
-          allowJoin: allowGuests,
-          allowRead: allowGuests,
-        })
-      );
+      const promises = roomIDs.map(rId => {
+        return Promise.all([
+          elevatedAgent.matrixClient.setGuestAccess(rId, {
+            allowJoin: allowGuests,
+            allowRead: allowGuests,
+          }),
+          elevatedAgent.matrixClient.setRoomDirectoryVisibility(
+            rId,
+            Visibility.Public
+          ),
+        ]);
+      });
 
       await Promise.all(promises);
       return true;
