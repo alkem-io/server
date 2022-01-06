@@ -57,7 +57,7 @@ export class CanvasResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       canvas.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.CREATE_CANVAS, // todo: refine this later?
       `update Canvas: ${canvas.name}`
     );
     return await this.canvasService.updateCanvas(canvas, canvasData, agentInfo);
