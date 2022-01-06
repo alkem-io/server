@@ -742,6 +742,14 @@ export class CommunicationAdapter {
     return userIDs;
   }
 
+  async getRoomAccessMode(roomID: string): Promise<string> {
+    const elevatedAgent = await this.getMatrixManagementAgentElevated();
+    return await this.matrixRoomAdapter.getAccessMode(
+      elevatedAgent.matrixClient,
+      roomID
+    );
+  }
+
   async setMatrixRoomsGuestAccess(roomIDs: string[], allowGuests = true) {
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
 
@@ -752,13 +760,12 @@ export class CommunicationAdapter {
             allowJoin: allowGuests,
             allowRead: allowGuests,
           });
-          const room = await this.matrixRoomAdapter.getMatrixRoom(
+          const guestAccess = await this.matrixRoomAdapter.getAccessMode(
             elevatedAgent.matrixClient,
             roomID
           );
-          const roomState = room.currentState;
           this.logger.verbose?.(
-            `Room ${roomID} access level is now: ${roomState.getGuestAccess()}`,
+            `Room ${roomID} access level is now: ${guestAccess}`,
             LogContext.COMMUNICATION
           );
         }

@@ -28,6 +28,11 @@ export class CommunicationAdminRoomMembershipResult {
   roomID: string;
 
   @Field(() => String, {
+    description: 'The access mode for the room.',
+  })
+  accessMode: string;
+
+  @Field(() => String, {
     description: 'A unique identifier for this membership result.',
   })
   id: string;
@@ -39,5 +44,6 @@ export class CommunicationAdminRoomMembershipResult {
     this.missingMembers = [];
     this.extraMembers = [];
     this.roomID = '';
+    this.accessMode = '';
   }
 }

@@ -95,6 +95,10 @@ export class AdminCommunicationService {
       }
     }
 
+    // Obtain the access mode for the room
+    result.accessMode = await this.communicationAdapter.getRoomAccessMode(
+      roomable.communicationRoomID
+    );
     return result;
   }
 
