@@ -25,6 +25,13 @@ import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
 import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
+import {
+  configQuery,
+  hubsQuery,
+  meQuery,
+  serverMetadataQuery,
+} from '@src/graphql';
+import { print } from 'graphql/language/printer';
 
 @Module({
   imports: [
@@ -87,38 +94,72 @@ import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
     }),
-    GraphQLModule.forRoot({
-      cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
-      uploads: false,
-      autoSchemaFile: true,
-      introspection: true,
-      playground: {
-        settings: {
-          'request.credentials': 'include',
+    GraphQLModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
+        uploads: false,
+        autoSchemaFile: true,
+        introspection: true,
+        playground: {
+          settings: {
+            'request.credentials': 'include',
+          },
+          tabs: [
+            {
+              name: 'Me',
+              endpoint: `${
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+              }/api/private/graphql`,
+              query: print(meQuery),
+            },
+            {
+              name: 'Hubs',
+              endpoint: `${
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+              }/api/private/graphql`,
+              query: print(hubsQuery),
+            },
+            {
+              name: 'Configuration',
+              endpoint: `${
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+              }/api/private/graphql`,
+              query: print(configQuery),
+            },
+            {
+              name: 'Server Metadata',
+              endpoint: `${
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+              }/api/private/graphql`,
+              query: print(serverMetadataQuery),
+            },
+          ],
         },
-      },
-      fieldResolverEnhancers: ['guards'],
-      sortSchema: true,
-      installSubscriptionHandlers: true,
-      context: ({ req, connection }) =>
-        // once the connection is established in onConnect, the context will have the user populated
-        connection ? { req: connection.context } : { req },
-      subscriptions: {
-        keepAlive: 5000,
-        onConnect: async (
-          _: { [key: string]: any },
-          __: { [key: string]: any },
-          context
-        ) => {
-          const authHeader = context.request.headers.authorization;
-          // Note: passing through headers so can leverage http authentication setup
-          // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
-          return { headers: { authorization: `${authHeader}` } };
+        fieldResolverEnhancers: ['guards'],
+        sortSchema: true,
+        installSubscriptionHandlers: true,
+        context: ({ req, connection }) =>
+          // once the connection is established in onConnect, the context will have the user populated
+          connection ? { req: connection.context } : { req },
+        subscriptions: {
+          keepAlive: 5000,
+          onConnect: async (
+            _: { [key: string]: any },
+            __: { [key: string]: any },
+            context
+          ) => {
+            const authHeader = context.request.headers.authorization;
+            // Note: passing through headers so can leverage http authentication setup
+            // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
+            return { headers: { authorization: `${authHeader}` } };
+          },
+          onDisconnect: async (_: any, __: any) => {
+            // Todo: make a nicer error message if the subscription fails due to an execption being thrown
+          },
         },
-        onDisconnect: async (_: any, __: any) => {
-          // Todo: make a nicer error message if the subscription fails due to an execption being thrown
-        },
-      },
+      }),
     }),
     ScalarsModule,
     AuthenticationModule,

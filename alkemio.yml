@@ -18,7 +18,13 @@ hosting:
   # to the alkemio-server service, orchestrated with the orchestration engine of your choice, e.g. kubernetes or docker-compose.
   # The graphql port is also used for internal communication between the services inside the e.g. kubernetes cluster.
   #
-  port: ${GRAPHQL_ENDPOINT}:4000
+  port: ${GRAPHQL_PORT}:4000
+
+  # The graphql endpoint.
+  # This is then used for routing the requests from the public-facing endpoint (e.g. https://dev.alkem.io/graphql)
+  # to the alkemio-server service, orchestrated with the orchestration engine of your choice, e.g. kubernetes or docker-compose.
+  #
+  endpoint: ${GRAPHQL_ENDPOINT}:http://localhost:3000
 
   # The type of environment is used in multiple places to determine whether dev tooling is enabled.
   # The tyoe of environment can also be used for monitoring / logging / analysis in an ELK cluster / ElasticCloud instance.

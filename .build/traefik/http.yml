@@ -66,10 +66,10 @@ http:
           - url: 'http://synapse-admin:80/'
 
   middlewares:
-    strip-admin-prefix:
+    strip-api-private-non-interactive-prefix:
       stripPrefix:
         prefixes:
-          - /admin
+          - /api/private/non-interactive
         forceSlash: false
 
     strip-api-private-prefix:
@@ -115,15 +115,15 @@ http:
       entryPoints:
         - 'web'
 
-    graphql-admin:
-      rule: 'PathPrefix(`/admin/graphql`)'
+    api-private-non-interactive-graphql:
+      rule: 'PathPrefix(`/api/private/non-interactive/graphql`)'
       service: 'alkemio-server'
       middlewares:
-        - strip-admin-prefix
+        - strip-api-private-non-interactive-prefix
       entryPoints:
         - 'web'
 
-    graphql-private:
+    api-private-graphql:
       rule: 'PathPrefix(`/api/private/graphql`)'
       service: 'oathkeeper-proxy'
       middlewares:
@@ -131,7 +131,7 @@ http:
       entryPoints:
         - 'web'
 
-    graphql-public:
+    api-public-graphql:
       rule: 'PathPrefix(`/api/public/graphql`)'
       service: 'alkemio-server'
       middlewares:

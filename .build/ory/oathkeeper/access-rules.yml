@@ -23,7 +23,7 @@
               - unauthorized
               - forbidden
 
-- id: 'alkemio:graphql:private'
+- id: 'alkemio:api:private:graphql'
   upstream:
     preserve_host: true
     url: 'http://host.docker.internal:4000'
