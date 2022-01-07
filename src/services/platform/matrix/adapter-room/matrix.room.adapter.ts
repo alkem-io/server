@@ -119,6 +119,22 @@ export class MatrixRoomAdapter {
     }
   }
 
+  async changeRoomPublicState(
+    matrixClient: MatrixClient,
+    roomID: string,
+    state: string
+  ): Promise<void> {
+    if (roomID === '')
+      throw new MatrixEntityNotFoundException(
+        'No room ID specified',
+        LogContext.COMMUNICATION
+      );
+
+    await matrixClient.sendStateEvent(roomID, 'm.room.join_rules', {
+      join_rule: state,
+    });
+  }
+
   async getMatrixRoom(
     adminMatrixClient: MatrixClient,
     roomID: string

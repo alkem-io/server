@@ -11,6 +11,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MatrixAgentPool } from '@src/services/platform/matrix/agent-pool/matrix.agent.pool';
 import { MatrixClient } from 'matrix-js-sdk';
+import { Visibility } from 'matrix-js-sdk/lib/@types/partials';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixGroupAdapter } from '../matrix/adapter-group/matrix.group.adapter';
 import { MatrixRoomAdapter } from '../matrix/adapter-room/matrix.room.adapter';
@@ -756,16 +757,19 @@ export class CommunicationAdapter {
     try {
       for (const roomID of roomIDs) {
         if (roomID.length > 0) {
-          await elevatedAgent.matrixClient.setGuestAccess(roomID, {
-            allowJoin: allowGuests,
-            allowRead: allowGuests,
-          });
-          const guestAccess = await this.matrixRoomAdapter.getAccessMode(
+          await this.matrixRoomAdapter.changeRoomPublicState(
+            elevatedAgent.matrixClient,
+            roomID,
+            Visibility.Public
+          );
+
+          const oldRoom = await this.matrixRoomAdapter.getMatrixRoom(
             elevatedAgent.matrixClient,
             roomID
           );
+          const rule = oldRoom.getJoinRule();
           this.logger.verbose?.(
-            `Room ${roomID} access level is now: ${guestAccess}`,
+            `Room ${roomID} join rule is now: ${rule}`,
             LogContext.COMMUNICATION
           );
         }
