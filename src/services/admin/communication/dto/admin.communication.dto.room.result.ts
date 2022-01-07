@@ -30,7 +30,7 @@ export class CommunicationAdminRoomMembershipResult {
   @Field(() => String, {
     description: 'The access mode for the room.',
   })
-  accessMode: string;
+  joinRule: string;
 
   @Field(() => String, {
     description: 'A unique identifier for this membership result.',
@@ -44,6 +44,6 @@ export class CommunicationAdminRoomMembershipResult {
     this.missingMembers = [];
     this.extraMembers = [];
     this.roomID = '';
-    this.accessMode = '';
+    this.joinRule = '';
   }
 }

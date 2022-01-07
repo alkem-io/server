@@ -119,7 +119,7 @@ export class MatrixRoomAdapter {
     }
   }
 
-  async changeRoomPublicState(
+  async changeRoomJoinRuleState(
     matrixClient: MatrixClient,
     roomID: string,
     state: string
@@ -133,6 +133,15 @@ export class MatrixRoomAdapter {
     await matrixClient.sendStateEvent(roomID, 'm.room.join_rules', {
       join_rule: state,
     });
+  }
+
+  public async getJoinRule(
+    adminMatrixClient: MatrixClient,
+    roomID: string
+  ): Promise<string> {
+    const room = await this.getMatrixRoom(adminMatrixClient, roomID);
+    const roomState = room.currentState;
+    return roomState.getJoinRule();
   }
 
   async getMatrixRoom(
@@ -162,16 +171,6 @@ export class MatrixRoomAdapter {
       LogContext.COMMUNICATION
     );
   }
-
-  public async getAccessMode(
-    adminMatrixClient: MatrixClient,
-    roomID: string
-  ): Promise<string> {
-    const room = await this.getMatrixRoom(adminMatrixClient, roomID);
-    const roomState = room.currentState;
-    return roomState.getGuestAccess();
-  }
-
   async inviteUserToRoom(
     adminMatrixClient: MatrixClient,
     roomID: string,
