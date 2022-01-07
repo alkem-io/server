@@ -22,12 +22,14 @@ import { NOTIFICATIONS_SERVICE } from '@core/microservices/microservices.module'
 import { ClientProxy } from '@nestjs/microservices';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
   constructor(
     private readonly communicationAdapter: CommunicationAdapter,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private readonly userService: UserService,
     private readonly userAuthorizationService: UserAuthorizationService,
     private readonly preferenceService: UserPreferenceService,
@@ -45,7 +47,7 @@ export class UserResolverMutations {
     @Args('userData') userData: CreateUserInput
   ): Promise<IUser> {
     const authorization =
-      this.userAuthorizationService.createUserAuthorizationPolicy();
+      this.authorizationPolicyService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorization,
