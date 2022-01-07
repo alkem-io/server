@@ -38,6 +38,7 @@ import { OrganizationVerificationService } from '../organization-verification/or
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 import { NVP } from '@domain/common/nvp/nvp.entity';
 import { INVP } from '@domain/common/nvp/nvp.interface';
+import { AgentInfo } from '@core/authentication';
 
 @Injectable()
 export class OrganizationService {
@@ -54,7 +55,8 @@ export class OrganizationService {
   ) {}
 
   async createOrganization(
-    organizationData: CreateOrganizationInput
+    organizationData: CreateOrganizationInput,
+    agentInfo?: AgentInfo
   ): Promise<IOrganization> {
     // Convert nameID to lower case
     organizationData.nameID = organizationData.nameID.toLowerCase();
@@ -70,7 +72,7 @@ export class OrganizationService {
     organization.groups = [];
 
     organization.agent = await this.agentService.createAgent({
-      parentDisplayID: `${organization.nameID}`,
+      parentDisplayID: `organization-${organization.nameID}`,
     });
 
     const savedOrg = await this.organizationRepository.save(organization);
@@ -82,6 +84,17 @@ export class OrganizationService {
       await this.organizationVerificationService.createOrganizationVerification(
         { organizationID: savedOrg.id }
       );
+    // Assign the creating agent as both a member and admin
+    if (agentInfo) {
+      await this.assignMember({
+        organizationID: savedOrg.id,
+        userID: agentInfo.userID,
+      });
+      await this.assignOrganizationAdmin({
+        organizationID: savedOrg.id,
+        userID: agentInfo.userID,
+      });
+    }
 
     return await this.organizationRepository.save(organization);
   }
