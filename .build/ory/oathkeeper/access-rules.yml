@@ -22,3 +22,28 @@
           - error:
               - unauthorized
               - forbidden
+
+- id: 'alkemio:graphql:private'
+  upstream:
+    preserve_host: true
+    url: 'http://host.docker.internal:4000'
+  match:
+    url: 'http://localhost:3000/api/private/graphql'
+    methods:
+      - POST
+      - GET
+  authenticators:
+    - handler: cookie_session
+    - handler: noop
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: id_token
+  errors:
+    - handler: redirect
+      config:
+        to: http://localhost:3000/identity/login
+        when:
+          - error:
+              - unauthorized
+              - forbidden

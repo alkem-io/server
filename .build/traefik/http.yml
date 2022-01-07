@@ -72,6 +72,18 @@ http:
           - /admin
         forceSlash: false
 
+    strip-api-private-prefix:
+      stripPrefix:
+        prefixes:
+          - /api/private
+        forceSlash: false
+
+    strip-api-public-prefix:
+      stripPrefix:
+        prefixes:
+          - /api/public
+        forceSlash: false
+
     strip-kratos-admin-prefix:
       stripPrefix:
         prefixes:
@@ -108,6 +120,22 @@ http:
       service: 'alkemio-server'
       middlewares:
         - strip-admin-prefix
+      entryPoints:
+        - 'web'
+
+    graphql-private:
+      rule: 'PathPrefix(`/api/private/graphql`)'
+      service: 'oathkeeper-proxy'
+      middlewares:
+        - strip-api-private-prefix
+      entryPoints:
+        - 'web'
+
+    graphql-public:
+      rule: 'PathPrefix(`/api/public/graphql`)'
+      service: 'alkemio-server'
+      middlewares:
+        - strip-api-public-prefix
       entryPoints:
         - 'web'
 
