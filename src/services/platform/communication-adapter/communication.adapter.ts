@@ -14,7 +14,6 @@ import { MatrixClient } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixGroupAdapter } from '../matrix/adapter-group/matrix.group.adapter';
 import { MatrixRoomAdapter } from '../matrix/adapter-room/matrix.room.adapter';
-import { Visibility } from '../matrix/adapter-room/matrix.room.dto.create.options';
 import { MatrixUserAdapter } from '../matrix/adapter-user/matrix.user.adapter';
 import { IOperationalMatrixUser } from '../matrix/adapter-user/matrix.user.interface';
 import { MatrixAgent } from '../matrix/agent/matrix.agent';
@@ -743,30 +742,37 @@ export class CommunicationAdapter {
     return userIDs;
   }
 
-  async setMatrixRoomsGuestAccess(allowGuests = true) {
+  async getRoomAccessMode(roomID: string): Promise<string> {
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
-    const roomIDs = await this.matrixUserAdapter.getJoinedRooms(
-      elevatedAgent.matrixClient
+    return await this.matrixRoomAdapter.getAccessMode(
+      elevatedAgent.matrixClient,
+      roomID
     );
+  }
+
+  async setMatrixRoomsGuestAccess(roomIDs: string[], allowGuests = true) {
+    const elevatedAgent = await this.getMatrixManagementAgentElevated();
 
     try {
-      const promises = roomIDs.map(rId => {
-        return Promise.all([
-          elevatedAgent.matrixClient.setGuestAccess(rId, {
+      for (const roomID of roomIDs) {
+        if (roomID.length > 0) {
+          await elevatedAgent.matrixClient.setGuestAccess(roomID, {
             allowJoin: allowGuests,
             allowRead: allowGuests,
-          }),
-          elevatedAgent.matrixClient.setRoomDirectoryVisibility(
-            rId,
-            Visibility.Public
-          ),
-        ]);
-      });
-
-      await Promise.all(promises);
+          });
+          const guestAccess = await this.matrixRoomAdapter.getAccessMode(
+            elevatedAgent.matrixClient,
+            roomID
+          );
+          this.logger.verbose?.(
+            `Room ${roomID} access level is now: ${guestAccess}`,
+            LogContext.COMMUNICATION
+          );
+        }
+      }
       return true;
     } catch (error) {
-      this.logger.verbose?.(
+      this.logger.error?.(
         `Unable to change guest access for rooms to (${
           allowGuests ? 'Public' : 'Private'
         }): ${error}`,

@@ -147,6 +147,15 @@ export class MatrixRoomAdapter {
     );
   }
 
+  public async getAccessMode(
+    adminMatrixClient: MatrixClient,
+    roomID: string
+  ): Promise<string> {
+    const room = await this.getMatrixRoom(adminMatrixClient, roomID);
+    const roomState = room.currentState;
+    return roomState.getGuestAccess();
+  }
+
   async inviteUserToRoom(
     adminMatrixClient: MatrixClient,
     roomID: string,
