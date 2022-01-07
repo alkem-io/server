@@ -742,9 +742,9 @@ export class CommunicationAdapter {
     return userIDs;
   }
 
-  async getRoomAccessMode(roomID: string): Promise<string> {
+  async getRoomJoinRule(roomID: string): Promise<string> {
     const elevatedAgent = await this.getMatrixManagementAgentElevated();
-    return await this.matrixRoomAdapter.getAccessMode(
+    return await this.matrixRoomAdapter.getJoinRule(
       elevatedAgent.matrixClient,
       roomID
     );
@@ -756,7 +756,7 @@ export class CommunicationAdapter {
     try {
       for (const roomID of roomIDs) {
         if (roomID.length > 0) {
-          await this.matrixRoomAdapter.changeRoomPublicState(
+          await this.matrixRoomAdapter.changeRoomJoinRuleState(
             elevatedAgent.matrixClient,
             roomID,
             // not sure where to find the enums - reverse engineered this from synapse

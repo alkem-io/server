@@ -96,7 +96,7 @@ export class AdminCommunicationService {
     }
 
     // Obtain the access mode for the room
-    result.accessMode = await this.communicationAdapter.getRoomAccessMode(
+    result.joinRule = await this.communicationAdapter.getRoomJoinRule(
       roomable.communicationRoomID
     );
     return result;
@@ -125,7 +125,7 @@ export class AdminCommunicationService {
     return true;
   }
 
-  async setMatrixRoomsPublicAccess(isPublic: boolean) {
+  async setMatrixRoomsJoinRule(isPublic: boolean) {
     const roomsUsed = await this.getRoomsUsed();
     return await this.communicationAdapter.setMatrixRoomsGuestAccess(
       roomsUsed,
