@@ -18,3 +18,7 @@
     - handler: redirect
       config:
         to: http://localhost:3000/identity/login
+        when:
+          - error:
+              - unauthorized
+              - forbidden
