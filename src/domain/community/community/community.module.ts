@@ -13,7 +13,6 @@ import { CommunityResolverMutations } from './community.resolver.mutations';
 import { CommunityService } from './community.service';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { CommunityResolverSubscriptions } from './community.resolver.subscriptions';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 
 @Module({
@@ -33,7 +32,6 @@ import { CommunicationModule } from '@domain/communication/communication/communi
     CommunityAuthorizationService,
     CommunityResolverMutations,
     CommunityResolverFields,
-    CommunityResolverSubscriptions,
     CommunityLifecycleOptionsProvider,
   ],
   exports: [CommunityService, CommunityAuthorizationService],
