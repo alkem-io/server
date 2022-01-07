@@ -125,14 +125,14 @@ import { print } from 'graphql/language/printer';
               name: 'Configuration',
               endpoint: `${
                 configService.get(ConfigurationTypes.HOSTING)?.endpoint
-              }/api/private/graphql`,
+              }/api/public/graphql`,
               query: print(configQuery),
             },
             {
               name: 'Server Metadata',
               endpoint: `${
                 configService.get(ConfigurationTypes.HOSTING)?.endpoint
-              }/api/private/graphql`,
+              }/api/public/graphql`,
               query: print(serverMetadataQuery),
             },
           ],
