@@ -1,0 +1,10 @@
+mutation adminCommunicationUpdateRoomsJoinRule($changeRoomAccessData: CommunicationAdminUpdateRoomsJoinRuleInput!) {
+  adminCommunicationUpdateRoomsJoinRule(changeRoomAccessData: $changeRoomAccessData)
+}
+
+Variables:
+{
+  "changeRoomAccessData": {
+    "isPublic": true
+  }
+}
