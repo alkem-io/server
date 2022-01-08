@@ -8,10 +8,7 @@ import { IUser } from '@domain/community/user';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { UserService } from './user.service';
 import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
-import {
-  AuthorizationPolicy,
-  IAuthorizationPolicy,
-} from '@domain/common/authorization-policy';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
@@ -98,12 +95,6 @@ export class UserAuthorizationService {
       resourceID: user.id,
     });
     return await this.userService.saveUser(user);
-  }
-
-  // Create an instance for usage in a mutation
-  public createUserAuthorizationPolicy(): IAuthorizationPolicy {
-    const authorization = new AuthorizationPolicy();
-    return this.appendGlobalCredentialRules(authorization);
   }
 
   private appendGlobalCredentialRules(

@@ -4,9 +4,7 @@ import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
 import { CommunityService } from './community.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
-  ApplicationEventInput,
   CreateApplicationInput,
-  DeleteApplicationInput,
   IApplication,
 } from '@domain/community/application';
 import { ApplicationService } from '@domain/community/application/application.service';
@@ -20,18 +18,14 @@ import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
-import { PubSubEngine } from 'apollo-server-express';
+import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { AssignCommunityMemberInput } from './dto/community.dto.assign.member';
 import { RemoveCommunityMemberInput } from './dto/community.dto.remove.member';
 import { ClientProxy } from '@nestjs/microservices';
-import { SubscriptionType } from '@common/enums/subscription.type';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
-import {
-  NOTIFICATIONS_SERVICE,
-  SUBSCRIPTION_PUB_SUB,
-} from '@common/constants/providers';
-import { ApplicationReceived } from '../application/application.dto.received';
+import { DeleteApplicationInput } from '../application/dto/application.dto.delete';
+import { ApplicationEventInput } from '../application/dto/application.dto.event';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -46,8 +40,6 @@ export class CommunityResolverMutations {
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService,
-    @Inject(SUBSCRIPTION_PUB_SUB)
-    private readonly subscriptionHandler: PubSubEngine,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
@@ -204,16 +196,6 @@ export class CommunityResolverMutations {
       payload
     );
 
-    const applicationReceivedEvent: ApplicationReceived = {
-      applicationID: application.id,
-      communityID: community.id,
-      userID: user.id,
-    };
-
-    this.subscriptionHandler.publish(
-      SubscriptionType.COMMUNITY_APPLICATION_CREATED,
-      applicationReceivedEvent
-    );
     return savedApplication;
   }
 

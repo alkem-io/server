@@ -1,6 +1,5 @@
 import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
 import { LogContext } from '@common/enums';
-import { SubscriptionType } from '@common/enums/subscription.type';
 import { Disposable } from '@interfaces/disposable.interface';
 import { Inject, LoggerService } from '@nestjs/common';
 import {
@@ -199,9 +198,9 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
 
   resolveRoomEventHandler() {
     return RoomMonitorFactory.create(message => {
-      this.subscriptionHandler.publish(
-        SubscriptionType.COMMUNICATION_ROOM_JOINED,
-        message
+      this.logger.verbose?.(
+        `Room joined: ${message}`,
+        LogContext.COMMUNICATION
       );
     });
   }

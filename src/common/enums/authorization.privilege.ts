@@ -10,6 +10,7 @@ export enum AuthorizationPrivilege {
   CREATE_HUB = 'create-hub',
   CREATE_ORGANIZATION = 'create-organization',
   READ_USERS = 'read-users',
+  UPDATE_CANVAS = 'update-canvas',
 }
 
 registerEnumType(AuthorizationPrivilege, {
