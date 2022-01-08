@@ -63,9 +63,12 @@ export class MatrixRoomAdapter {
     // adjust options
     const createOpts = options.createOpts || {};
 
-    const defaultPreset = Preset.PrivateChat;
+    // all rooms will by default be public
+    const defaultPreset = Preset.PublicChat;
     createOpts.preset = createOpts.preset || defaultPreset;
-    createOpts.visibility = createOpts.visibility || Visibility.Private;
+    // all rooms will by default be public and visible - need to revise this
+    // once the Synapse server is community accessible
+    createOpts.visibility = createOpts.visibility || Visibility.Public;
 
     if (dmUserId && createOpts.invite === undefined) {
       createOpts.invite = [dmUserId];
@@ -96,6 +99,51 @@ export class MatrixRoomAdapter {
     return roomID;
   }
 
+  async joinRoomSafe(
+    matrixClient: MatrixClient,
+    roomID: string
+  ): Promise<void> {
+    if (roomID === '')
+      throw new MatrixEntityNotFoundException(
+        'No room ID specified',
+        LogContext.COMMUNICATION
+      );
+
+    try {
+      await matrixClient.joinRoom(roomID);
+    } catch (ex: any) {
+      this.logger.error?.(
+        `[Membership] Exception user joining a room (user: ${matrixClient.getUserId()}) room: ${roomID}) - ${ex.toString()}`,
+        LogContext.COMMUNICATION
+      );
+    }
+  }
+
+  async changeRoomJoinRuleState(
+    matrixClient: MatrixClient,
+    roomID: string,
+    state: string
+  ): Promise<void> {
+    if (roomID === '')
+      throw new MatrixEntityNotFoundException(
+        'No room ID specified',
+        LogContext.COMMUNICATION
+      );
+
+    await matrixClient.sendStateEvent(roomID, 'm.room.join_rules', {
+      join_rule: state,
+    });
+  }
+
+  public async getJoinRule(
+    adminMatrixClient: MatrixClient,
+    roomID: string
+  ): Promise<string> {
+    const room = await this.getMatrixRoom(adminMatrixClient, roomID);
+    const roomState = room.currentState;
+    return roomState.getJoinRule();
+  }
+
   async getMatrixRoom(
     adminMatrixClient: MatrixClient,
     roomID: string
@@ -123,7 +171,6 @@ export class MatrixRoomAdapter {
       LogContext.COMMUNICATION
     );
   }
-
   async inviteUserToRoom(
     adminMatrixClient: MatrixClient,
     roomID: string,

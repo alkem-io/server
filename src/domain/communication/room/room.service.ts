@@ -77,7 +77,6 @@ export class RoomService {
   ): Promise<CommunicationMessageResult> {
     // Ensure the user is a member of room and group so can send
     await this.communicationAdapter.addUserToRoom(
-      roomable.communicationGroupID,
       roomable.communicationRoomID,
       communicationUserID
     );

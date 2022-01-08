@@ -73,8 +73,7 @@ export class ContextAuthorizationService {
       const updatedCanvas =
         await this.canvasAuthorizationService.applyAuthorizationPolicy(
           canvas,
-          context.authorization,
-          communityCredential
+          context.authorization
         );
       updatedCanvases.push(updatedCanvas);
     }
@@ -108,13 +107,21 @@ export class ContextAuthorizationService {
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    const communityMember = new AuthorizationPolicyRuleCredential(
+    const communityMemberCreateCanvas = new AuthorizationPolicyRuleCredential(
       [AuthorizationPrivilege.CREATE_CANVAS],
       communityCredential.type,
       communityCredential.resourceID
     );
-    communityMember.inheritable = false;
-    newRules.push(communityMember);
+    communityMemberCreateCanvas.inheritable = false;
+    newRules.push(communityMemberCreateCanvas);
+
+    // separate rule as do want the update to cascade so that users can update canvases
+    const communityMemberUpdateCanvas = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.UPDATE_CANVAS],
+      communityCredential.type,
+      communityCredential.resourceID
+    );
+    newRules.push(communityMemberUpdateCanvas);
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(

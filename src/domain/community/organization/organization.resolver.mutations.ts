@@ -54,7 +54,8 @@ export class OrganizationResolverMutations {
       `create Organization: ${organizationData.nameID}`
     );
     const organization = await this.organizationService.createOrganization(
-      organizationData
+      organizationData,
+      agentInfo
     );
 
     return await this.organizationAuthorizationService.applyAuthorizationPolicy(

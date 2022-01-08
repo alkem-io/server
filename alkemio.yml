@@ -268,9 +268,9 @@ monitoring:
 ## communications ##
 # Section defining all configuration parameters / endpoints required for communication between different actors (user-user, community-user etc) in Alkemio.
 communications:
-  enabled: ${COMMUNICATIONS_ENABLED}:false
+  enabled: ${COMMUNICATIONS_ENABLED}:true
   discussions:
-    enabled: ${COMMUNICATIONS_DISCUSSIONS_ENABLED}:false
+    enabled: ${COMMUNICATIONS_DISCUSSIONS_ENABLED}:true
 
   # the size of the agent pool to use for managing agent wrappers around Matrix client
   agentpool_size: ${COMMUNICATIONS_AGENTPOOL_SIZE}:50
@@ -348,7 +348,7 @@ microservices:
       password: ${RABBITMQ_PASSWORD}:bitnami
 
 notifications:
-  enabled: ${NOTIFICATIONS_ENABLED}:false
+  enabled: ${NOTIFICATIONS_ENABLED}:true
 
 collaboration:
   canvases:
