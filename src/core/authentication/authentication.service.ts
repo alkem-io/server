@@ -1,12 +1,12 @@
-import { ConfigurationTypes, LogContext } from '@common/enums';
-import { UserService } from '@domain/community/user/user.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AgentInfo } from './agent-info';
-import { ConfigService } from '@nestjs/config';
-import { NotSupportedException } from '@common/exceptions';
-import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
+import { ConfigService } from '@nestjs/config';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigurationTypes, LogContext } from '@common/enums';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { UserService } from '@domain/community/user/user.service';
+import { AgentInfo } from './agent-info';
+import { NotSupportedException } from '@common/exceptions';
+import { WALLET_MANAGEMENT_SERVICE } from '@common/constants/providers';
 import { catchError, from, tap } from 'rxjs';
 @Injectable()
 export class AuthenticationService {
