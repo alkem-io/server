@@ -81,6 +81,10 @@ export class AuthenticationService {
             )
             .pipe(
               tap(identityInfo => {
+                this.logger.verbose?.(
+                  `SSI Agent: Retrieved: ${JSON.stringify(identityInfo)}`,
+                  LogContext.AUTH
+                );
                 agentInfo.verifiedCredentials =
                   identityInfo.verifiedCredentials;
                 resolve(agentInfo);
