@@ -2,14 +2,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Global, Module } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { subscriptionPubSubFactory } from './subscription.pub-sub.factory';
+import { notificationsServiceFactory } from './notifications.service.factory';
+import { walletManagerServiceFactory } from './wallet-manager.service.factory';
 import {
   NOTIFICATIONS_SERVICE,
-  NOTIFICATIONS_SERVICE_OPTIONS,
   SUBSCRIPTION_PUB_SUB,
   WALLET_MANAGEMENT_SERVICE,
-  WALLET_MANAGEMENT_SERVICE_OPTIONS,
 } from '@common/constants/providers';
-import { microserviceFactory } from './microservice.factory';
 
 export type MicroserviceOptions = {
   queueName: string;
@@ -44,29 +43,13 @@ import { NotificationsPayloadBuilder } from './notifications.payload.builder';
     },
     {
       provide: NOTIFICATIONS_SERVICE,
-      useFactory: microserviceFactory,
-      inject: [
-        WINSTON_MODULE_NEST_PROVIDER,
-        ConfigService,
-        NOTIFICATIONS_SERVICE_OPTIONS,
-      ],
+      useFactory: notificationsServiceFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
       provide: WALLET_MANAGEMENT_SERVICE,
-      useFactory: microserviceFactory,
-      inject: [
-        WINSTON_MODULE_NEST_PROVIDER,
-        ConfigService,
-        WALLET_MANAGEMENT_SERVICE_OPTIONS,
-      ],
-    },
-    {
-      provide: NOTIFICATIONS_SERVICE_OPTIONS,
-      useValue: { queueName: 'alkemio-notifications' },
-    },
-    {
-      provide: WALLET_MANAGEMENT_SERVICE_OPTIONS,
-      useValue: { queueName: 'alkemio-wallet-manager' },
+      useFactory: walletManagerServiceFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
   ],
   exports: [
