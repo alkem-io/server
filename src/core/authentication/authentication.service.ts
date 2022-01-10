@@ -7,7 +7,14 @@ import { UserService } from '@domain/community/user/user.service';
 import { AgentInfo } from './agent-info';
 import { NotSupportedException } from '@common/exceptions';
 import { WALLET_MANAGEMENT_SERVICE } from '@common/constants/providers';
-import { catchError, from, tap } from 'rxjs';
+import {
+  catchError,
+  firstValueFrom,
+  from,
+  identity,
+  lastValueFrom,
+  tap,
+} from 'rxjs';
 @Injectable()
 export class AuthenticationService {
   constructor(
@@ -68,37 +75,56 @@ export class AuthenticationService {
     // Store also retrieved verified credentials; todo: likely slow, need to evaluate other options
     const ssiEnabled = this.configService.get(ConfigurationTypes.IDENTITY).ssi
       .enabled;
+
     if (ssiEnabled) {
-      return new Promise((resolve, _reject) =>
-        from(
-          this.walletManagementClient
-            .send(
-              { cmd: 'getIdentityInfo' },
-              {
-                did: agent.did,
-                password: agent.password,
-              }
-            )
-            .pipe(
-              tap(identityInfo => {
-                this.logger.verbose?.(
-                  `SSI Agent: Retrieved: ${JSON.stringify(identityInfo)}`,
-                  LogContext.AUTH
-                );
-                agentInfo.verifiedCredentials =
-                  identityInfo.verifiedCredentials;
-                resolve(agentInfo);
-              }),
-              catchError(err => {
-                this.logger.error(
-                  `Failed to get identity info from wallet manager: ${err}`,
-                  LogContext.SSI
-                );
-                throw new Error(err.message);
-              })
-            )
-        ).subscribe()
+      const identityInfo$ = this.walletManagementClient.send(
+        { cmd: 'getIdentityInfo' },
+        {
+          did: agent.did,
+          password: agent.password,
+        }
       );
+
+      try {
+        const identityInfo = await firstValueFrom(identityInfo$);
+        agentInfo.verifiedCredentials = await identityInfo;
+      } catch (err) {
+        this.logger.error?.(
+          `Failed to get identity info from wallet manager: ${err}`,
+          LogContext.AUTH
+        );
+      }
+
+      //   const identityInfo = await new Promise((resolve, _reject) =>
+      //     from(
+      //       this.walletManagementClient
+      //         .send(
+      //           { cmd: 'getIdentityInfo' },
+      //           {
+      //             did: agent.did,
+      //             password: agent.password,
+      //           }
+      //         )
+      //         .pipe(
+      //           tap(identityInfo => {
+      //             this.logger.verbose?.(
+      //               `SSI Agent: Retrieved: ${JSON.stringify(identityInfo)}`,
+      //               LogContext.AUTH
+      //             );
+      //             agentInfo.verifiedCredentials =
+      //               identityInfo.verifiedCredentials;
+      //             resolve(agentInfo);
+      //           }),
+      //           catchError(err => {
+      //             this.logger.error(
+      //               `Failed to get identity info from wallet manager: ${err}`,
+      //               LogContext.SSI
+      //             );
+      //             throw new Error(err.message);
+      //           })
+      //         )
+      //     ).subscribe()
+      //   );
     }
 
     return agentInfo;
