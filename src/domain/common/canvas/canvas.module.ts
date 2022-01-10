@@ -8,6 +8,7 @@ import { CanvasResolverFields } from './canvas.resolver.fields';
 import { CanvasResolverMutations } from './canvas.resolver.mutations';
 import { CanvasService } from './canvas.service';
 import { CanvasAuthorizationService } from './canvas.service.authorization';
+import { CanvasResolverSubscriptions } from '@domain/common/canvas/canvas.resolver.subscriptions';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { CanvasAuthorizationService } from './canvas.service.authorization';
     CanvasAuthorizationService,
     CanvasResolverMutations,
     CanvasResolverFields,
+    CanvasResolverSubscriptions,
   ],
   exports: [
     CanvasService,

@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
@@ -12,6 +12,10 @@ import { ICanvas } from './canvas.interface';
 import { UpdateCanvasDirectInput } from './dto/canvas.dto.update.direct';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CanvasContentUpdated } from '@domain/common/canvas/dto/canvas.dto.event.content.updated';
+import { SUBSCRIPTION_PUB_SUB } from '@core/microservices';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { SubscriptionType } from '@common/enums/subscription.type';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverMutations {
@@ -19,7 +23,9 @@ export class CanvasResolverMutations {
     private authorizationService: AuthorizationService,
     private canvasService: CanvasService,
     private canvasCheckoutAuthorizationService: CanvasCheckoutAuthorizationService,
-    private canvasCheckoutLifecycleOptionsProvider: CanvasCheckoutLifecycleOptionsProvider
+    private canvasCheckoutLifecycleOptionsProvider: CanvasCheckoutLifecycleOptionsProvider,
+    @Inject(SUBSCRIPTION_PUB_SUB)
+    private readonly subscriptionHandler: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -60,6 +66,22 @@ export class CanvasResolverMutations {
       AuthorizationPrivilege.UPDATE_CANVAS,
       `update Canvas: ${canvas.name}`
     );
-    return await this.canvasService.updateCanvas(canvas, canvasData, agentInfo);
+
+    const updatedCanvas = await this.canvasService.updateCanvas(
+      canvas,
+      canvasData,
+      agentInfo
+    );
+
+    const subscriptionPayload: CanvasContentUpdated = {
+      canvasID: updatedCanvas.id,
+      value: updatedCanvas.value ?? '', //todo how to handle this?
+    };
+    this.subscriptionHandler.publish(
+      SubscriptionType.CANVAS_CONTENT_UPDATED,
+      subscriptionPayload
+    );
+
+    return updatedCanvas;
   }
 }
