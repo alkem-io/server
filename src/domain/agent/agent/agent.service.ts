@@ -22,8 +22,9 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { ClientProxy } from '@nestjs/microservices';
 import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
-import { from, tap, catchError } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { SsiException } from '@common/exceptions/ssi.exception';
 
 @Injectable()
 export class AgentService {
@@ -194,58 +195,38 @@ export class AgentService {
   async createDidOnAgent(agent: IAgent): Promise<IAgent> {
     agent.password = Math.random().toString(36).substr(2, 10);
 
-    return new Promise((resolve, _reject) =>
-      from(
-        this.walletManagementClient
-          .send(
-            { cmd: 'createIdentity' },
-            {
-              password: agent.password,
-            }
-          )
-          .pipe(
-            tap(async did => {
-              agent.did = await did;
-              await this.saveAgent(agent);
-              resolve(agent);
-            }),
-            catchError(err => {
-              this.logger.error(
-                `Failed to get identity info from wallet manager: ${err}`,
-                LogContext.SSI
-              );
-              throw new Error(err.message);
-            })
-          )
-      ).subscribe()
+    const did$ = this.walletManagementClient.send(
+      { cmd: 'createIdentity' },
+      {
+        password: agent.password,
+      }
     );
+
+    try {
+      const did = await firstValueFrom(did$);
+      agent.did = did;
+      return await this.saveAgent(agent);
+    } catch (err: any) {
+      throw new SsiException(`Failed to create DID on agent: ${err.message}`);
+    }
   }
 
   async getVerifiedCredentials(agent: IAgent): Promise<VerifiedCredential[]> {
-    return new Promise((resolve, _reject) =>
-      from(
-        this.walletManagementClient
-          .send(
-            { cmd: 'getIdentityInfo' },
-            {
-              did: agent.did,
-              password: agent.password,
-            }
-          )
-          .pipe(
-            tap(identityInfo => {
-              resolve(identityInfo.verifiedCredentials);
-            }),
-            catchError(err => {
-              this.logger.error(
-                `Failed to get identity info from wallet manager: ${err}`,
-                LogContext.SSI
-              );
-              throw new Error(err.message);
-            })
-          )
-      ).subscribe()
+    const identityInfo$ = this.walletManagementClient.send(
+      { cmd: 'getIdentityInfo' },
+      {
+        did: agent.did,
+        password: agent.password,
+      }
     );
+
+    try {
+      return await firstValueFrom(identityInfo$);
+    } catch (err: any) {
+      throw new SsiException(
+        `Failed to get identity info from wallet manager: ${err.message}`
+      );
+    }
   }
 
   async ensureDidsCreated() {
