@@ -24,7 +24,6 @@ import { KonfigModule } from '@src/services/platform/configuration/config/config
 import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
-import { SsiAgentModule } from './services/platform/ssi/agent/ssi.agent.module';
 import {
   configQuery,
   hubsQuery,
@@ -62,35 +61,6 @@ import { print } from 'graphql/language/printer';
           ?.logging,
       }),
     }),
-    // TypeOrmModule.forRootAsync({
-    //   name: 'jolocom',
-    //   imports: [ConfigModule],
-    //   inject: [ConfigService],
-    //   useFactory: async (configService: ConfigService) => ({
-    //     type: 'sqlite', //todo: switch to mysql when issue is addressed.
-    //     insecureAuth: true,
-    //     synchronize: true /* note: only for demo */,
-    //     cache: true,
-    //     entities: [
-    //       'node_modules/@jolocom/sdk-storage-typeorm/js/src/entities/*.js',
-    //     ],
-    //     // NOTE: these are in until jolocom fixes the name issue on typeorm-mysql.
-    //     // host: configService.get(ConfigurationTypes.IDENTITY)?.ssi.jolocom.database
-    //     //   ?.host,
-    //     // port: configService.get(ConfigurationTypes.IDENTITY)?.ssi.jolocom.database
-    //     //   ?.port,
-    //     // username: configService.get(ConfigurationTypes.IDENTITY)?.ssi.jolocom
-    //     //   .database?.username,
-    //     // password: configService.get(ConfigurationTypes.IDENTITY)?.ssi.jolocom
-    //     //   .database?.password,
-    //     // database: configService.get(ConfigurationTypes.IDENTITY)?.ssi.jolocom.database
-    //     //   ?.schema,
-
-    //     logging: configService.get(ConfigurationTypes.IDENTITY)?.ssi.jolocom
-    //       .database?.logging,
-    //     database: './jolocom.sqlite3',
-    //   }),
-    // }),
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
     }),
@@ -171,7 +141,6 @@ import { print } from 'graphql/language/printer';
     MembershipModule,
     KonfigModule,
     IpfsModule,
-    SsiAgentModule,
     AdminCommunicationModule,
   ],
   controllers: [AppController],

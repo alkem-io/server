@@ -18,7 +18,6 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { ProjectModule } from '@domain/collaboration/project/project.module';
-import { SsiAgentModule } from '@services/platform/ssi/agent/ssi.agent.module';
 import { UserModule } from '@domain/community/user/user.module';
 
 @Module({
@@ -35,7 +34,6 @@ import { UserModule } from '@domain/community/user/user.module';
     NamingModule,
     LifecycleModule,
     ProjectModule,
-    SsiAgentModule,
     UserModule,
     TypeOrmModule.forFeature([Challenge]),
   ],

@@ -158,31 +158,31 @@ export class ChallengeResolverMutations {
     );
   }
 
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description:
-      'Authorizes a User to be able to modify the state on the specified Challenge.',
-  })
-  @Profiling.api
-  async authorizeStateModificationOnChallenge(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('grantStateModificationVC')
-    grantStateModificationVC: ChallengeAuthorizeStateModificationInput
-  ): Promise<IUser> {
-    const challenge = await this.challengeService.getChallengeOrFail(
-      grantStateModificationVC.challengeID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      challenge.authorization,
-      AuthorizationPrivilege.CREATE,
-      `create VC on challenge (${challenge.nameID}) for user ${grantStateModificationVC.userID}`
-    );
+  // @UseGuards(GraphqlGuard)
+  // @Mutation(() => IUser, {
+  //   description:
+  //     'Authorizes a User to be able to modify the state on the specified Challenge.',
+  // })
+  // @Profiling.api
+  // async authorizeStateModificationOnChallenge(
+  //   @CurrentUser() agentInfo: AgentInfo,
+  //   @Args('grantStateModificationVC')
+  //   grantStateModificationVC: ChallengeAuthorizeStateModificationInput
+  // ): Promise<IUser> {
+  //   const challenge = await this.challengeService.getChallengeOrFail(
+  //     grantStateModificationVC.challengeID
+  //   );
+  //   await this.authorizationService.grantAccessOrFail(
+  //     agentInfo,
+  //     challenge.authorization,
+  //     AuthorizationPrivilege.CREATE,
+  //     `create VC on challenge (${challenge.nameID}) for user ${grantStateModificationVC.userID}`
+  //   );
 
-    return await this.challengeService.authorizeStateModification(
-      grantStateModificationVC
-    );
-  }
+  //   return await this.challengeService.authorizeStateModification(
+  //     grantStateModificationVC
+  //   );
+  // }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {

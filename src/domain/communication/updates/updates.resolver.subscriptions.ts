@@ -4,7 +4,6 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Subscription } from '@nestjs/graphql';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { CommunicationUpdateMessageReceived } from './dto/updates.dto.event.message.received';
@@ -13,6 +12,7 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { UpdatesService } from './updates.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
 
 @Resolver()
 export class UpdatesResolverSubscriptions {

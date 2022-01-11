@@ -17,8 +17,8 @@ import { MessageID } from '@domain/common/scalars/scalar.message';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { CommunicationDiscussionMessageReceived } from './dto/discussion.dto.event.message.received';
+import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
 
 @Resolver()
 export class DiscussionResolverMutations {
