@@ -8,6 +8,7 @@ import { CanvasService } from './canvas.service';
 import { ICanvas } from './canvas.interface';
 import { CanvasCheckoutAuthorizationService } from '../canvas-checkout/canvas.checkout.service.authorization';
 import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class CanvasAuthorizationService {
@@ -26,6 +27,8 @@ export class CanvasAuthorizationService {
         canvas.authorization,
         parentAuthorization
       );
+
+    canvas.authorization = this.appendPrivilegeRules(canvas.authorization);
 
     if (canvas.checkout) {
       canvas.checkout =
@@ -59,5 +62,22 @@ export class CanvasAuthorizationService {
       );
 
     return updatedAuthorization;
+  }
+
+  private appendPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    const createPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.UPDATE_CANVAS],
+      AuthorizationPrivilege.UPDATE
+    );
+    privilegeRules.push(createPrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
   }
 }
