@@ -96,7 +96,7 @@ http:
           - /identity/ory/kratos/public
         forceSlash: false
 
-    strip-jwks-prefix:
+    strip-oathkeeper-jwks-prefix:
       stripPrefix:
         prefixes:
           - /jwks
@@ -159,7 +159,7 @@ http:
       rule: 'PathPrefix(`/jwks`)'
       service: 'oathkeeper-admin'
       middlewares:
-        - strip-jwks-prefix
+        - strip-oathkeeper-jwks-prefix
       entryPoints:
         - 'web'
 
