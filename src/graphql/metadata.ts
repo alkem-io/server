@@ -6,9 +6,7 @@ export const serverMetadataQuery = gql`
       services {
         name
         version
-        __typename
       }
-      __typename
     }
   }
 `;
