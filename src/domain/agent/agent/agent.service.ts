@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
@@ -16,11 +16,14 @@ import {
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { CredentialService } from '../credential/credential.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
-import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
 import { VerifiedCredential } from '@src/services/platform/ssi/agent';
 import { ConfigService } from '@nestjs/config';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { ClientProxy } from '@nestjs/microservices';
+import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
+import { from, tap, catchError } from 'rxjs';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class AgentService {
@@ -28,9 +31,11 @@ export class AgentService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private configService: ConfigService,
     private credentialService: CredentialService,
-    private ssiAgentService: SsiAgentService,
+    @Inject(WALLET_MANAGEMENT_SERVICE)
+    private walletManagementClient: ClientProxy,
     @InjectRepository(Agent)
-    private agentRepository: Repository<Agent>
+    private agentRepository: Repository<Agent>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
@@ -189,14 +194,57 @@ export class AgentService {
   async createDidOnAgent(agent: IAgent): Promise<IAgent> {
     agent.password = Math.random().toString(36).substr(2, 10);
 
-    agent.did = await this.ssiAgentService.createAgent(agent.password);
-    return await this.saveAgent(agent);
+    return new Promise((resolve, _reject) =>
+      from(
+        this.walletManagementClient
+          .send(
+            { cmd: 'createIdentity' },
+            {
+              password: agent.password,
+            }
+          )
+          .pipe(
+            tap(async did => {
+              agent.did = await did;
+              await this.saveAgent(agent);
+              resolve(agent);
+            }),
+            catchError(err => {
+              this.logger.error(
+                `Failed to get identity info from wallet manager: ${err}`,
+                LogContext.SSI
+              );
+              throw new Error(err.message);
+            })
+          )
+      ).subscribe()
+    );
   }
 
   async getVerifiedCredentials(agent: IAgent): Promise<VerifiedCredential[]> {
-    return await this.ssiAgentService.getVerifiedCredentials(
-      agent.did,
-      agent.password
+    return new Promise((resolve, _reject) =>
+      from(
+        this.walletManagementClient
+          .send(
+            { cmd: 'getIdentityInfo' },
+            {
+              did: agent.did,
+              password: agent.password,
+            }
+          )
+          .pipe(
+            tap(identityInfo => {
+              resolve(identityInfo.verifiedCredentials);
+            }),
+            catchError(err => {
+              this.logger.error(
+                `Failed to get identity info from wallet manager: ${err}`,
+                LogContext.SSI
+              );
+              throw new Error(err.message);
+            })
+          )
+      ).subscribe()
     );
   }
 

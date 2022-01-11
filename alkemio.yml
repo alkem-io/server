@@ -168,32 +168,6 @@ identity:
     # guaranteed to be migrated properly.
     enabled: ${SSI_ENABLED}:false
 
-    jolocom:
-      # MySQL database configuration for usage by the Jolocom SDK.
-      # The authentication method used is MySQL Native Password.
-      # Note: both schema / database name are used for configuration and they need to have the same value.
-      database:
-        # Database host.
-        host: ${DATABASE_HOST}:localhost
-
-        # MySQL daemon port.
-        port: 3306
-
-        # MySQL username.
-        username: 'root'
-
-        # MySQL password.
-        password: ${MYSQL_ROOT_PASSWORD}:toor
-
-        # MySQL schema / database name.
-        schema: ${JOLOCOM_MYSQL_DATABASE}:jolocom
-
-        # MySQL schema / database name.
-        database: ${JOLOCOM_MYSQL_DATABASE}:jolocom
-
-        # Flag setting whether MySQL operations should be logged to the console.
-        logging: ${JOLOCOM_ENABLE_ORM_LOGGING}:false
-
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
 monitoring:

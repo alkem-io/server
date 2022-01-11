@@ -37,20 +37,20 @@ import { challengeLifecycleConfigDefault } from './challenge.lifecycle.config.de
 import { challengeLifecycleConfigExtended } from './challenge.lifecycle.config.extended';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { INVP } from '@domain/common/nvp/nvp.interface';
-import { UUID_LENGTH } from '@common/constants';
+import { UUID_LENGTH, WALLET_MANAGEMENT_SERVICE } from '@common/constants';
 import { IAgent } from '@domain/agent/agent';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { ChallengeAuthorizeStateModificationInput } from './dto/challenge.dto.authorize.state.modification';
-import { SsiAgentService } from '@services/platform/ssi/agent/ssi.agent.service';
 import { UserService } from '@domain/community/user/user.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
 import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
 import { CommunityType } from '@common/enums/community.type';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class ChallengeService {
@@ -62,7 +62,8 @@ export class ChallengeService {
     private baseChallengeService: BaseChallengeService,
     private lifecycleService: LifecycleService,
     private organizationService: OrganizationService,
-    private ssiAgentService: SsiAgentService,
+    @Inject(WALLET_MANAGEMENT_SERVICE)
+    private walletManagementClient: ClientProxy,
     private userService: UserService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -608,24 +609,24 @@ export class ChallengeService {
     return await this.userService.getUserWithAgent(removeData.userID);
   }
 
-  async authorizeStateModification(
-    grantStateModificationVC: ChallengeAuthorizeStateModificationInput
-  ): Promise<IUser> {
-    const challengeAgent = await this.getAgent(
-      grantStateModificationVC.challengeID
-    );
-    const userAgent = await this.userService.getAgent(
-      grantStateModificationVC.userID
-    );
+  // async authorizeStateModification(
+  //   grantStateModificationVC: ChallengeAuthorizeStateModificationInput
+  // ): Promise<IUser> {
+  //   const challengeAgent = await this.getAgent(
+  //     grantStateModificationVC.challengeID
+  //   );
+  //   const userAgent = await this.userService.getAgent(
+  //     grantStateModificationVC.userID
+  //   );
 
-    await this.ssiAgentService.authorizeStateModification(
-      challengeAgent,
-      grantStateModificationVC.challengeID,
-      userAgent,
-      grantStateModificationVC.userID
-    );
-    return await this.userService.getUserOrFail(
-      grantStateModificationVC.userID
-    );
-  }
+  //   await this.ssiAgentService.authorizeStateModification(
+  //     challengeAgent,
+  //     grantStateModificationVC.challengeID,
+  //     userAgent,
+  //     grantStateModificationVC.userID
+  //   );
+  //   return await this.userService.getUserOrFail(
+  //     grantStateModificationVC.userID
+  //   );
+  // }
 }

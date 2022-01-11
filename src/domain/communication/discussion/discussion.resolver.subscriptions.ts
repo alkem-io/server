@@ -4,7 +4,6 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Subscription } from '@nestjs/graphql';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { LogContext } from '@common/enums/logging.context';
@@ -13,6 +12,7 @@ import { CommunicationDiscussionMessageReceived } from './dto/discussion.dto.eve
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { DiscussionService } from './discussion.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
 
 @Resolver()
 export class DiscussionResolverSubscriptions {

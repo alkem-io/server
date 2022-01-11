@@ -3,6 +3,16 @@ import { Global, Module } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { subscriptionPubSubFactory } from './subscription.pub-sub.factory';
 import { notificationsServiceFactory } from './notifications.service.factory';
+import { walletManagerServiceFactory } from './wallet-manager.service.factory';
+import {
+  NOTIFICATIONS_SERVICE,
+  SUBSCRIPTION_PUB_SUB,
+  WALLET_MANAGEMENT_SERVICE,
+} from '@common/constants/providers';
+
+export type MicroserviceOptions = {
+  queueName: string;
+};
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Opportunity } from '@domain/collaboration';
@@ -12,8 +22,6 @@ import { Community } from '@domain/community/community';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationsPayloadBuilder } from './notifications.payload.builder';
 
-export const SUBSCRIPTION_PUB_SUB = 'SUBSCRIPTION_PUB_SUB';
-export const NOTIFICATIONS_SERVICE = 'NOTIFICATIONS_SERVICE';
 @Global()
 @Module({
   imports: [
@@ -38,11 +46,18 @@ export const NOTIFICATIONS_SERVICE = 'NOTIFICATIONS_SERVICE';
       useFactory: notificationsServiceFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
+    {
+      provide: WALLET_MANAGEMENT_SERVICE,
+      useFactory: walletManagerServiceFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
   ],
   exports: [
-    NotificationsPayloadBuilder,
     SUBSCRIPTION_PUB_SUB,
     NOTIFICATIONS_SERVICE,
+    WALLET_MANAGEMENT_SERVICE,
+    NOTIFICATIONS_SERVICE,
+    NotificationsPayloadBuilder,
   ],
 })
 export class MicroservicesModule {}

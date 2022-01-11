@@ -18,10 +18,10 @@ import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization'
 import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
 import { IUserPreference, UserPreferenceService } from '../user-preferences';
 import { UpdateUserPreferenceInput } from '../user-preferences/dto';
-import { NOTIFICATIONS_SERVICE } from '@core/microservices/microservices.module';
 import { ClientProxy } from '@nestjs/microservices';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
+import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver(() => IUser)
