@@ -1,5 +1,5 @@
+import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
 import { LogContext } from '@common/enums';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { Disposable } from '@interfaces/disposable.interface';
 import { Inject, LoggerService } from '@nestjs/common';
 import {

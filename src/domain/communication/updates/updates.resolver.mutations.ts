@@ -12,15 +12,16 @@ import { UpdatesRemoveMessageInput } from './dto/updates.dto.remove.message';
 import { MessageID } from '@domain/common/scalars';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 import { EventType } from '@common/enums/event.type';
-import {
-  NOTIFICATIONS_SERVICE,
-  SUBSCRIPTION_PUB_SUB,
-} from '@core/microservices/microservices.module';
+
 import { ClientProxy } from '@nestjs/microservices';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { CommunicationUpdateMessageReceived } from './dto/updates.dto.event.message.received';
+import {
+  NOTIFICATIONS_SERVICE,
+  SUBSCRIPTION_PUB_SUB,
+} from '@common/constants/providers';
 
 @Resolver()
 export class UpdatesResolverMutations {

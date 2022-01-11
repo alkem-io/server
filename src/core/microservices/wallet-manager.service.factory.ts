@@ -4,7 +4,7 @@ import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 
-export async function notificationsServiceFactory(
+export async function walletManagerServiceFactory(
   logger: LoggerService,
   configService: ConfigService
 ): Promise<any> {
@@ -16,7 +16,7 @@ export async function notificationsServiceFactory(
   try {
     const options = {
       urls: [connectionString],
-      queue: MessagingQueue.NOTIFICATIONS,
+      queue: MessagingQueue.WALLET_MANAGER,
       queueOptions: {
         // the queue will survive a broker restart
         durable: true,

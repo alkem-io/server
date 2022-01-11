@@ -6,7 +6,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { OryStrategy } from './ory.strategy';
 import { CredentialModule } from '@domain/agent/credential/credential.module';
-import { SsiAgentModule } from '@src/services/platform/ssi/agent/ssi.agent.module';
 import { OryApiStrategy } from './ory.api.strategy';
 @Module({
   imports: [
@@ -16,7 +15,6 @@ import { OryApiStrategy } from './ory.api.strategy';
     }),
     UserModule,
     CredentialModule,
-    SsiAgentModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
