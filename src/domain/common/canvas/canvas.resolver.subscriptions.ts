@@ -5,11 +5,11 @@ import { CanvasContentUpdated } from '@domain/common/canvas/dto/canvas.dto.event
 import { AuthorizationPrivilege, CurrentUser, LogContext } from '@src/common';
 import { UUID } from '@domain/common/scalars';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { SubscriptionType } from '@common/enums/subscription.type';
+import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
 
 @Resolver()
 export class CanvasResolverSubscriptions {

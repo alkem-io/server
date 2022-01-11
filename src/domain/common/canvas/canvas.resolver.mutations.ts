@@ -13,9 +13,9 @@ import { UpdateCanvasDirectInput } from './dto/canvas.dto.update.direct';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CanvasContentUpdated } from '@domain/common/canvas/dto/canvas.dto.event.content.updated';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
+import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverMutations {
