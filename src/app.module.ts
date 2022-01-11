@@ -29,7 +29,7 @@ import {
   hubsQuery,
   meQuery,
   serverMetadataQuery,
-} from '@src/graphql';
+} from '@config/graphql';
 import { print } from 'graphql/language/printer';
 
 @Module({
