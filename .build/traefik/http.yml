@@ -30,7 +30,7 @@ http:
         servers:
           - url: 'http://host.docker.internal:4000/'
 
-    alkemio-web-service:
+    alkemio-web-client:
       loadBalancer:
         servers:
           - url: 'http://host.docker.internal:3001/'
@@ -103,12 +103,6 @@ http:
         forceSlash: false
 
   routers:
-    rabbitmq-management:
-      rule: 'PathPrefix(`/`)'
-      service: 'rabbitmq-management'
-      entryPoints:
-        - 'rabbitmq-management'
-
     graphql:
       rule: 'PathPrefix(`/graphql`)'
       service: 'oathkeeper-proxy'
@@ -155,6 +149,26 @@ http:
       entryPoints:
         - 'web'
 
+    alkemiowebroute:
+      rule: 'PathPrefix(`/`)'
+      service: 'alkemio-web-client'
+      entryPoints:
+        - 'web'
+
+    oathkeeper-jwks:
+      rule: 'PathPrefix(`/jwks`)'
+      service: 'oathkeeper-admin'
+      middlewares:
+        - strip-jwks-prefix
+      entryPoints:
+        - 'web'
+
+    ipfs:
+      rule: 'PathPrefix(`/ipfs`) || HostRegexp(`{^[a-zA-Z0-9_.-]*$}.ipfs.localhost`)'
+      service: 'ipfs-http-adapter'
+      entryPoints:
+        - 'web'
+
     synapse:
       rule: 'PathPrefix(`/`)'
       service: 'synapse'
@@ -179,31 +193,17 @@ http:
       entryPoints:
         - 'mailslurper-client'
 
-    alkemiowebroute:
-      rule: 'PathPrefix(`/`)'
-      service: 'alkemio-web-service'
-      entryPoints:
-        - 'web'
-
-    jwks:
-      rule: 'PathPrefix(`/jwks`)'
-      service: 'oathkeeper-admin'
-      middlewares:
-        - strip-jwks-prefix
-      entryPoints:
-        - 'web'
-
-    ipfs:
-      rule: 'PathPrefix(`/ipfs`) || HostRegexp(`{^[a-zA-Z0-9_.-]*$}.ipfs.localhost`)'
-      service: 'ipfs-http-adapter'
-      entryPoints:
-        - 'web'
-
     ipfs-api:
       rule: 'PathPrefix(`/`)'
       service: 'ipfs-api'
       entryPoints:
         - 'ipfs-api'
+
+    rabbitmq-management:
+      rule: 'PathPrefix(`/`)'
+      service: 'rabbitmq-management'
+      entryPoints:
+        - 'rabbitmq-management'
 
 tcp:
   services:
