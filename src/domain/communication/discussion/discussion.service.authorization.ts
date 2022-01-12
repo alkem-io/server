@@ -55,15 +55,13 @@ export class DiscussionAuthorizationService {
 
   async extendAuthorizationPolicyForMessageSender(
     discussion: IDiscussion,
-    messageID: string,
-    communicationUserID: string
+    messageID: string
   ): Promise<IAuthorizationPolicy> {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
     const senderUserID = await this.roomService.getUserIdForMessage(
       discussion,
-      messageID,
-      communicationUserID
+      messageID
     );
 
     // Allow any member of this community to create messages on the discussion

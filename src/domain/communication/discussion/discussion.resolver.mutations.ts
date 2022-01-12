@@ -85,8 +85,7 @@ export class DiscussionResolverMutations {
     const extendedAuthorization =
       await this.discussionAuthorizationService.extendAuthorizationPolicyForMessageSender(
         discussion,
-        messageData.messageID,
-        agentInfo.communicationID
+        messageData.messageID
       );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
