@@ -1,4 +1,3 @@
-import { ClientProxy } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigurationTypes, LogContext } from '@common/enums';
@@ -6,21 +5,12 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
 import { AgentInfo } from './agent-info';
 import { NotSupportedException } from '@common/exceptions';
-import { WALLET_MANAGEMENT_SERVICE } from '@common/constants/providers';
-import {
-  catchError,
-  firstValueFrom,
-  from,
-  identity,
-  lastValueFrom,
-  tap,
-} from 'rxjs';
+import { AgentService } from '@domain/agent/agent/agent.service';
 @Injectable()
 export class AuthenticationService {
   constructor(
     private configService: ConfigService,
-    @Inject(WALLET_MANAGEMENT_SERVICE)
-    private walletManagementClient: ClientProxy,
+    private agentService: AgentService,
     private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -77,54 +67,8 @@ export class AuthenticationService {
       .enabled;
 
     if (ssiEnabled) {
-      const identityInfo$ = this.walletManagementClient.send(
-        { cmd: 'getIdentityInfo' },
-        {
-          did: agent.did,
-          password: agent.password,
-        }
-      );
-
-      try {
-        const identityInfo = await firstValueFrom(identityInfo$);
-        agentInfo.verifiedCredentials = await identityInfo;
-      } catch (err) {
-        this.logger.error?.(
-          `Failed to get identity info from wallet manager: ${err}`,
-          LogContext.AUTH
-        );
-      }
-
-      //   const identityInfo = await new Promise((resolve, _reject) =>
-      //     from(
-      //       this.walletManagementClient
-      //         .send(
-      //           { cmd: 'getIdentityInfo' },
-      //           {
-      //             did: agent.did,
-      //             password: agent.password,
-      //           }
-      //         )
-      //         .pipe(
-      //           tap(identityInfo => {
-      //             this.logger.verbose?.(
-      //               `SSI Agent: Retrieved: ${JSON.stringify(identityInfo)}`,
-      //               LogContext.AUTH
-      //             );
-      //             agentInfo.verifiedCredentials =
-      //               identityInfo.verifiedCredentials;
-      //             resolve(agentInfo);
-      //           }),
-      //           catchError(err => {
-      //             this.logger.error(
-      //               `Failed to get identity info from wallet manager: ${err}`,
-      //               LogContext.SSI
-      //             );
-      //             throw new Error(err.message);
-      //           })
-      //         )
-      //     ).subscribe()
-      //   );
+      agentInfo.verifiedCredentials =
+        await this.agentService.getVerifiedCredentials(agent);
     }
 
     return agentInfo;
