@@ -25,6 +25,7 @@ import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
 import { firstValueFrom } from 'rxjs';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SsiException } from '@common/exceptions/ssi.exception';
+import { Profiling } from '@common/decorators/profiling.decorator';
 
 @Injectable()
 export class AgentService {
@@ -192,6 +193,7 @@ export class AgentService {
     return false;
   }
 
+  @Profiling.api
   async createDidOnAgent(agent: IAgent): Promise<IAgent> {
     agent.password = Math.random().toString(36).substr(2, 10);
 
@@ -211,6 +213,7 @@ export class AgentService {
     }
   }
 
+  @Profiling.api
   async getVerifiedCredentials(agent: IAgent): Promise<VerifiedCredential[]> {
     const identityInfo$ = this.walletManagementClient.send(
       { cmd: 'getIdentityInfo' },
