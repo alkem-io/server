@@ -2,7 +2,6 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICredential } from '@domain/agent/credential/credential.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { ConfigService } from '@nestjs/config';
 import { ForbiddenException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -15,8 +14,7 @@ import { AuthorizationPolicyRulePrivilege } from './authorization.policy.rule.pr
 export class AuthorizationService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    private configService: ConfigService
+    private readonly logger: LoggerService
   ) {}
 
   grantAccessOrFail(
