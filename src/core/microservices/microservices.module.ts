@@ -1,12 +1,14 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Global, Module } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { subscriptionPubSubFactory } from './subscription.pub-sub.factory';
+import { subscriptionDiscussionMessageFactory } from './subscription.discussion.message.factory';
 import { notificationsServiceFactory } from './notifications.service.factory';
 import { walletManagerServiceFactory } from './wallet-manager.service.factory';
 import {
   NOTIFICATIONS_SERVICE,
-  SUBSCRIPTION_PUB_SUB,
+  SUBSCRIPTION_DISCUSSION_MESSAGE,
+  SUBSCRIPTION_UPDATE_MESSAGE,
+  SUBSCRIPTION_CANVAS_CONTENT,
   WALLET_MANAGEMENT_SERVICE,
 } from '@common/constants/providers';
 
@@ -21,6 +23,8 @@ import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { Community } from '@domain/community/community';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationsPayloadBuilder } from './notifications.payload.builder';
+import { subscriptionCanvasContentFactory } from './subscription.canvas.content.factory';
+import { subscriptionUpdateMessageFactory } from './subscription.update.message.factory';
 
 @Global()
 @Module({
@@ -37,8 +41,18 @@ import { NotificationsPayloadBuilder } from './notifications.payload.builder';
     NotificationsPayloadBuilder,
 
     {
-      provide: SUBSCRIPTION_PUB_SUB,
-      useFactory: subscriptionPubSubFactory,
+      provide: SUBSCRIPTION_DISCUSSION_MESSAGE,
+      useFactory: subscriptionDiscussionMessageFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
+      provide: SUBSCRIPTION_UPDATE_MESSAGE,
+      useFactory: subscriptionUpdateMessageFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
+      provide: SUBSCRIPTION_CANVAS_CONTENT,
+      useFactory: subscriptionCanvasContentFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
@@ -53,7 +67,9 @@ import { NotificationsPayloadBuilder } from './notifications.payload.builder';
     },
   ],
   exports: [
-    SUBSCRIPTION_PUB_SUB,
+    SUBSCRIPTION_DISCUSSION_MESSAGE,
+    SUBSCRIPTION_UPDATE_MESSAGE,
+    SUBSCRIPTION_CANVAS_CONTENT,
     NOTIFICATIONS_SERVICE,
     WALLET_MANAGEMENT_SERVICE,
     NOTIFICATIONS_SERVICE,

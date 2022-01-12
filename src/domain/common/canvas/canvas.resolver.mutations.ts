@@ -15,7 +15,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CanvasContentUpdated } from '@domain/common/canvas/dto/canvas.dto.event.content.updated';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
+import { SUBSCRIPTION_CANVAS_CONTENT } from '@common/constants/providers';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverMutations {
@@ -24,8 +24,8 @@ export class CanvasResolverMutations {
     private canvasService: CanvasService,
     private canvasCheckoutAuthorizationService: CanvasCheckoutAuthorizationService,
     private canvasCheckoutLifecycleOptionsProvider: CanvasCheckoutLifecycleOptionsProvider,
-    @Inject(SUBSCRIPTION_PUB_SUB)
-    private readonly subscriptionHandler: PubSubEngine
+    @Inject(SUBSCRIPTION_CANVAS_CONTENT)
+    private readonly subscriptionCanvasContent: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -77,7 +77,7 @@ export class CanvasResolverMutations {
       canvasID: updatedCanvas.id,
       value: updatedCanvas.value ?? '', //todo how to handle this?
     };
-    this.subscriptionHandler.publish(
+    this.subscriptionCanvasContent.publish(
       SubscriptionType.CANVAS_CONTENT_UPDATED,
       subscriptionPayload
     );

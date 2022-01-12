@@ -1,7 +1,6 @@
-import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
 import { LogContext } from '@common/enums';
 import { Disposable } from '@interfaces/disposable.interface';
-import { Inject, LoggerService } from '@nestjs/common';
+import { LoggerService } from '@nestjs/common';
 import {
   autoAcceptRoomGuardFactory,
   AutoAcceptSpecificRoomMembershipMonitorFactory,
@@ -16,7 +15,6 @@ import {
   IMatrixEventHandler,
   MatrixEventDispatcher,
 } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
-import { PubSubEngine } from 'graphql-subscriptions';
 import { MatrixMessageAdapter } from '../adapter-message/matrix.message.adapter';
 import { MatrixRoomAdapter } from '../adapter-room/matrix.room.adapter';
 import { MatrixClient } from '../types/matrix.client.type';
@@ -39,8 +37,6 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     matrixClient: MatrixClient,
     roomAdapter: MatrixRoomAdapter,
     messageAdapter: MatrixMessageAdapter,
-    @Inject(SUBSCRIPTION_PUB_SUB)
-    private readonly subscriptionHandler: PubSubEngine,
     private logger: LoggerService
   ) {
     this.matrixClient = matrixClient;
