@@ -20,7 +20,7 @@ import { SubscriptionType } from '@common/enums/subscription.type';
 import { CommunicationUpdateMessageReceived } from './dto/updates.dto.event.message.received';
 import {
   NOTIFICATIONS_SERVICE,
-  SUBSCRIPTION_PUB_SUB,
+  SUBSCRIPTION_UPDATE_MESSAGE,
 } from '@common/constants/providers';
 
 @Resolver()
@@ -30,8 +30,8 @@ export class UpdatesResolverMutations {
     private updatesService: UpdatesService,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
-    @Inject(SUBSCRIPTION_PUB_SUB)
-    private readonly subscriptionHandler: PubSubEngine
+    @Inject(SUBSCRIPTION_UPDATE_MESSAGE)
+    private readonly subscriptionUpdateMessage: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -76,7 +76,7 @@ export class UpdatesResolverMutations {
       message: updateSent,
       updatesID: updates.id,
     };
-    this.subscriptionHandler.publish(
+    this.subscriptionUpdateMessage.publish(
       SubscriptionType.COMMUNICATION_UPDATE_MESSAGE_RECEIVED,
       subscriptionPayload
     );
