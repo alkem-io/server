@@ -4,8 +4,9 @@ import { ConfigService } from '@nestjs/config';
 import { AMQPPubSub } from 'graphql-amqp-subscriptions';
 import { PubSubEngine } from 'graphql-subscriptions';
 import amqp from 'amqplib';
+import { MessagingQueue } from '@common/enums/messaging.queue';
 
-export async function subscriptionPubSubFactory(
+export async function subscriptionUpdateMessageFactory(
   logger: LoggerService,
   configService: ConfigService
 ): Promise<PubSubEngine | undefined> {
@@ -42,7 +43,7 @@ export async function subscriptionPubSubFactory(
           },
         },
         queue: {
-          name: 'alkemio-subscriptions',
+          name: MessagingQueue.SUBSCRIPTION_UPDATE_MSG,
           options: {
             // used by only one connection and the queue will be deleted when that connection closes
             exclusive: false,

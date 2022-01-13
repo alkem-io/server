@@ -1,16 +1,16 @@
-import { ConfigurationTypes, LogContext } from '@common/enums';
-import { UserService } from '@domain/community/user/user.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AgentInfo } from './agent-info';
-import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
 import { ConfigService } from '@nestjs/config';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigurationTypes, LogContext } from '@common/enums';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { UserService } from '@domain/community/user/user.service';
+import { AgentInfo } from './agent-info';
 import { NotSupportedException } from '@common/exceptions';
+import { AgentService } from '@domain/agent/agent/agent.service';
 @Injectable()
 export class AuthenticationService {
   constructor(
     private configService: ConfigService,
-    private ssiAgentService: SsiAgentService,
+    private agentService: AgentService,
     private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -65,12 +65,10 @@ export class AuthenticationService {
     // Store also retrieved verified credentials; todo: likely slow, need to evaluate other options
     const ssiEnabled = this.configService.get(ConfigurationTypes.IDENTITY).ssi
       .enabled;
+
     if (ssiEnabled) {
       agentInfo.verifiedCredentials =
-        await this.ssiAgentService.getVerifiedCredentials(
-          agent.did,
-          agent.password
-        );
+        await this.agentService.getVerifiedCredentials(agent);
     }
 
     return agentInfo;

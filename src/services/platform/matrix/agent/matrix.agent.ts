@@ -1,8 +1,6 @@
 import { LogContext } from '@common/enums';
-import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { Disposable } from '@interfaces/disposable.interface';
-import { Inject, LoggerService } from '@nestjs/common';
+import { LoggerService } from '@nestjs/common';
 import {
   autoAcceptRoomGuardFactory,
   AutoAcceptSpecificRoomMembershipMonitorFactory,
@@ -17,7 +15,6 @@ import {
   IMatrixEventHandler,
   MatrixEventDispatcher,
 } from '@src/services/platform/matrix/events/matrix.event.dispatcher';
-import { PubSubEngine } from 'graphql-subscriptions';
 import { MatrixMessageAdapter } from '../adapter-message/matrix.message.adapter';
 import { MatrixRoomAdapter } from '../adapter-room/matrix.room.adapter';
 import { MatrixClient } from '../types/matrix.client.type';
@@ -40,8 +37,6 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     matrixClient: MatrixClient,
     roomAdapter: MatrixRoomAdapter,
     messageAdapter: MatrixMessageAdapter,
-    @Inject(SUBSCRIPTION_PUB_SUB)
-    private readonly subscriptionHandler: PubSubEngine,
     private logger: LoggerService
   ) {
     this.matrixClient = matrixClient;
@@ -66,11 +61,11 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
     {
       registerGroupMembershipMonitor = true,
       registerRoomMonitor = true,
-      registerTimelineMonitor = true,
+      registerTimelineMonitor = false,
     }: MatrixAgentStartOptions = {
       registerGroupMembershipMonitor: true,
       registerRoomMonitor: true,
-      registerTimelineMonitor: true,
+      registerTimelineMonitor: false,
     }
   ) {
     const startComplete = new Promise<void>((resolve, reject) => {
@@ -190,17 +185,7 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
       this.logger,
       messageReceivedEvent => {
         this.logger.verbose?.(
-          `Publishing message: ${messageReceivedEvent.message.message}`,
-          LogContext.COMMUNICATION
-        );
-        /* TODO - need to find a way to wire the admin user (with simplicity in mind)
-          in order to be able to read community data */
-        this.subscriptionHandler.publish(
-          SubscriptionType.COMMUNICATION_MESSAGE_RECEIVED,
-          messageReceivedEvent
-        );
-        this.logger.verbose?.(
-          `Published message: ${messageReceivedEvent.message.message}`,
+          `Room timeline received message: ${messageReceivedEvent.message.message}`,
           LogContext.COMMUNICATION
         );
       }
@@ -209,9 +194,9 @@ export class MatrixAgent implements IMatrixAgent, Disposable {
 
   resolveRoomEventHandler() {
     return RoomMonitorFactory.create(message => {
-      this.subscriptionHandler.publish(
-        SubscriptionType.COMMUNICATION_ROOM_JOINED,
-        message
+      this.logger.verbose?.(
+        `Room joined: ${message}`,
+        LogContext.COMMUNICATION
       );
     });
   }

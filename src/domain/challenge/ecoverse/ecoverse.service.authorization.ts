@@ -38,6 +38,10 @@ export class EcoverseAuthorizationService {
     ecoverse.authorization = await this.authorizationPolicyService.reset(
       ecoverse.authorization
     );
+    ecoverse.authorization =
+      this.authorizationPolicyService.inheritPlatformAuthorization(
+        ecoverse.authorization
+      );
     ecoverse.authorization = this.extendAuthorizationPolicy(
       ecoverse.authorization,
       ecoverse.id
@@ -88,44 +92,30 @@ export class EcoverseAuthorizationService {
     // By default it is world visible
     authorization.anonymousReadAccess = true;
 
-    const globalAdmin = {
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-      grantedPrivileges: [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.GRANT,
-      ],
-    };
-    newRules.push(globalAdmin);
-
-    const communityAdmin = {
-      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-      resourceID: '',
-      grantedPrivileges: [AuthorizationPrivilege.READ],
-    };
+    const communityAdmin = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.READ],
+      AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
+    );
     newRules.push(communityAdmin);
 
-    const ecoverseAdmin = {
-      type: AuthorizationCredential.ECOVERSE_ADMIN,
-      resourceID: ecoverseID,
-      grantedPrivileges: [
+    const ecoverseAdmin = new AuthorizationPolicyRuleCredential(
+      [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
         AuthorizationPrivilege.GRANT,
       ],
-    };
+      AuthorizationCredential.ECOVERSE_ADMIN,
+      ecoverseID
+    );
     newRules.push(ecoverseAdmin);
 
-    const ecoverseMember = {
-      type: AuthorizationCredential.ECOVERSE_MEMBER,
-      resourceID: ecoverseID,
-      grantedPrivileges: [AuthorizationPrivilege.READ],
-    };
+    const ecoverseMember = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.READ],
+      AuthorizationCredential.ECOVERSE_MEMBER,
+      ecoverseID
+    );
     newRules.push(ecoverseMember);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(

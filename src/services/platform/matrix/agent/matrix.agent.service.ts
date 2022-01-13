@@ -2,7 +2,6 @@ import { ConfigurationTypes, LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SUBSCRIPTION_PUB_SUB } from '@core/microservices/microservices.module';
 import { createClient, IContent } from 'matrix-js-sdk';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixGroupAdapter } from '../adapter-group/matrix.group.adapter';
@@ -15,7 +14,6 @@ import { MatrixAgent } from './matrix.agent';
 import { MatrixAgentMessageRequest } from './matrix.agent.dto.message.request';
 import { MatrixAgentMessageRequestDirect } from './matrix.agent.dto.message.request.direct';
 import { IMatrixAgent } from './matrix.agent.interface';
-import { PubSubEngine } from 'graphql-subscriptions';
 import { MatrixMessageAdapter } from '../adapter-message/matrix.message.adapter';
 
 @Injectable()
@@ -27,9 +25,7 @@ export class MatrixAgentService {
     private matrixGroupAdapter: MatrixGroupAdapter,
     private matrixMessageAdapter: MatrixMessageAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    @Inject(SUBSCRIPTION_PUB_SUB)
-    private readonly subscriptionHandler: PubSubEngine
+    private readonly logger: LoggerService
   ) {}
 
   async createMatrixAgent(
@@ -40,7 +36,6 @@ export class MatrixAgentService {
       matrixClient,
       this.matrixRoomAdapter,
       this.matrixMessageAdapter,
-      this.subscriptionHandler,
       this.logger
     );
   }

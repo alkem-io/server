@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
@@ -12,6 +12,10 @@ import { ICanvas } from './canvas.interface';
 import { UpdateCanvasDirectInput } from './dto/canvas.dto.update.direct';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CanvasContentUpdated } from '@domain/common/canvas/dto/canvas.dto.event.content.updated';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { SubscriptionType } from '@common/enums/subscription.type';
+import { SUBSCRIPTION_CANVAS_CONTENT } from '@common/constants/providers';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverMutations {
@@ -19,7 +23,9 @@ export class CanvasResolverMutations {
     private authorizationService: AuthorizationService,
     private canvasService: CanvasService,
     private canvasCheckoutAuthorizationService: CanvasCheckoutAuthorizationService,
-    private canvasCheckoutLifecycleOptionsProvider: CanvasCheckoutLifecycleOptionsProvider
+    private canvasCheckoutLifecycleOptionsProvider: CanvasCheckoutLifecycleOptionsProvider,
+    @Inject(SUBSCRIPTION_CANVAS_CONTENT)
+    private readonly subscriptionCanvasContent: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -57,9 +63,25 @@ export class CanvasResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       canvas.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.UPDATE_CANVAS,
       `update Canvas: ${canvas.name}`
     );
-    return await this.canvasService.updateCanvas(canvas, canvasData, agentInfo);
+
+    const updatedCanvas = await this.canvasService.updateCanvas(
+      canvas,
+      canvasData,
+      agentInfo
+    );
+
+    const subscriptionPayload: CanvasContentUpdated = {
+      canvasID: updatedCanvas.id,
+      value: updatedCanvas.value ?? '', //todo how to handle this?
+    };
+    this.subscriptionCanvasContent.publish(
+      SubscriptionType.CANVAS_CONTENT_UPDATED,
+      subscriptionPayload
+    );
+
+    return updatedCanvas;
   }
 }

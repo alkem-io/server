@@ -79,7 +79,7 @@ export class MatrixAgentPool
     );
   }
 
-  async acquire(matrixUserID: string): Promise<MatrixAgent> {
+  async acquire(matrixUserID: string, autoStart = false): Promise<MatrixAgent> {
     this.logger.verbose?.(
       `[AgentPool] obtaining agent for commsID: ${matrixUserID}`,
       LogContext.COMMUNICATION
@@ -110,7 +110,9 @@ export class MatrixAgentPool
         operatingUser
       );
 
-      await client.start();
+      if (autoStart) {
+        await client.start();
+      }
 
       this._cache[matrixUserID] = {
         agent: client,

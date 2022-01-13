@@ -1,4 +1,5 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
+import { MessagingQueue } from '@common/enums/messaging.queue';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
@@ -15,7 +16,7 @@ export async function notificationsServiceFactory(
   try {
     const options = {
       urls: [connectionString],
-      queue: 'alkemio-notifications',
+      queue: MessagingQueue.NOTIFICATIONS,
       queueOptions: {
         // the queue will survive a broker restart
         durable: true,

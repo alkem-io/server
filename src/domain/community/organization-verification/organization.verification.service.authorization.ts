@@ -51,50 +51,42 @@ export class OrganizationVerificationAuthorizationService {
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    const globalAdmin = {
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-      grantedPrivileges: [
+    const globalAdmin = new AuthorizationPolicyRuleCredential(
+      [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
       ],
-    };
+      AuthorizationCredential.GLOBAL_ADMIN
+    );
     newRules.push(globalAdmin);
 
-    const communityAdmin = {
-      type: AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-      resourceID: '',
-      grantedPrivileges: [
+    const communityAdmin = new AuthorizationPolicyRuleCredential(
+      [
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
       ],
-    };
+      AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
+    );
     newRules.push(communityAdmin);
 
-    const orgAdmin = {
-      type: AuthorizationCredential.ORGANIZATION_ADMIN,
-      resourceID: organizationID,
-      grantedPrivileges: [
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-      ],
-    };
+    const orgAdmin = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.READ, AuthorizationPrivilege.UPDATE],
+      AuthorizationCredential.ORGANIZATION_ADMIN,
+      organizationID
+    );
     newRules.push(orgAdmin);
 
-    const orgOwner = {
-      type: AuthorizationCredential.ORGANIZATION_OWNER,
-      resourceID: organizationID,
-      grantedPrivileges: [
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-      ],
-    };
+    const orgOwner = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.READ, AuthorizationPrivilege.UPDATE],
+      AuthorizationCredential.ORGANIZATION_OWNER,
+      organizationID
+    );
     newRules.push(orgOwner);
 
     const updatedAuthorization =

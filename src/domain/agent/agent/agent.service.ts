@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
@@ -16,11 +16,16 @@ import {
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { CredentialService } from '../credential/credential.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
-import { SsiAgentService } from '@src/services/platform/ssi/agent/ssi.agent.service';
 import { VerifiedCredential } from '@src/services/platform/ssi/agent';
 import { ConfigService } from '@nestjs/config';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { ClientProxy } from '@nestjs/microservices';
+import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
+import { firstValueFrom } from 'rxjs';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { SsiException } from '@common/exceptions/ssi.exception';
+import { Profiling } from '@common/decorators/profiling.decorator';
 
 @Injectable()
 export class AgentService {
@@ -28,9 +33,11 @@ export class AgentService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private configService: ConfigService,
     private credentialService: CredentialService,
-    private ssiAgentService: SsiAgentService,
+    @Inject(WALLET_MANAGEMENT_SERVICE)
+    private walletManagementClient: ClientProxy,
     @InjectRepository(Agent)
-    private agentRepository: Repository<Agent>
+    private agentRepository: Repository<Agent>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
@@ -186,18 +193,43 @@ export class AgentService {
     return false;
   }
 
+  @Profiling.api
   async createDidOnAgent(agent: IAgent): Promise<IAgent> {
     agent.password = Math.random().toString(36).substr(2, 10);
 
-    agent.did = await this.ssiAgentService.createAgent(agent.password);
-    return await this.saveAgent(agent);
+    const did$ = this.walletManagementClient.send(
+      { cmd: 'createIdentity' },
+      {
+        password: agent.password,
+      }
+    );
+
+    try {
+      const did = await firstValueFrom(did$);
+      agent.did = did;
+      return await this.saveAgent(agent);
+    } catch (err: any) {
+      throw new SsiException(`Failed to create DID on agent: ${err.message}`);
+    }
   }
 
+  @Profiling.api
   async getVerifiedCredentials(agent: IAgent): Promise<VerifiedCredential[]> {
-    return await this.ssiAgentService.getVerifiedCredentials(
-      agent.did,
-      agent.password
+    const identityInfo$ = this.walletManagementClient.send(
+      { cmd: 'getIdentityInfo' },
+      {
+        did: agent.did,
+        password: agent.password,
+      }
     );
+
+    try {
+      return await firstValueFrom(identityInfo$);
+    } catch (err: any) {
+      throw new SsiException(
+        `Failed to get identity info from wallet manager: ${err.message}`
+      );
+    }
   }
 
   async ensureDidsCreated() {

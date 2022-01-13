@@ -95,6 +95,10 @@ export class AdminCommunicationService {
       }
     }
 
+    // Obtain the access mode for the room
+    result.joinRule = await this.communicationAdapter.getRoomJoinRule(
+      roomable.communicationRoomID
+    );
     return result;
   }
 
@@ -119,6 +123,14 @@ export class AdminCommunicationService {
       );
     }
     return true;
+  }
+
+  async setMatrixRoomsJoinRule(isPublic: boolean) {
+    const roomsUsed = await this.getRoomsUsed();
+    return await this.communicationAdapter.setMatrixRoomsGuestAccess(
+      roomsUsed,
+      isPublic
+    );
   }
 
   async removeOrphanedRoom(

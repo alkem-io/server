@@ -11,10 +11,10 @@ import { IDiscussion } from '../discussion/discussion.interface';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
 import { DiscussionService } from '../discussion/discussion.service';
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
-import { NOTIFICATIONS_SERVICE } from '@core/microservices/microservices.module';
 import { ClientProxy } from '@nestjs/microservices';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
+import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 
 @Resolver()
 export class CommunicationResolverMutations {
@@ -52,21 +52,20 @@ export class CommunicationResolverMutations {
       agentInfo.communicationID
     );
 
+    const savedDiscussion = await this.discussionService.save(discussion);
+    await this.discussionAuthorizationService.applyAuthorizationPolicy(
+      discussion,
+      communication.authorization
+    );
+
+    // Emit the events to notify others
     const payload =
       await this.notificationsPayloadBuilder.buildCommunicationDiscussionCreatedNotificationPayload(
         discussion
       );
-
-    const savedDiscussion = await this.discussionService.save(discussion);
-
     this.notificationsClient.emit<number>(
       EventType.COMMUNICATION_DISCUSSION_CREATED,
       payload
-    );
-
-    await this.discussionAuthorizationService.applyAuthorizationPolicy(
-      discussion,
-      communication.authorization
     );
 
     return savedDiscussion;

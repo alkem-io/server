@@ -12,9 +12,16 @@ import { UpdatesRemoveMessageInput } from './dto/updates.dto.remove.message';
 import { MessageID } from '@domain/common/scalars';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 import { EventType } from '@common/enums/event.type';
-import { NOTIFICATIONS_SERVICE } from '@core/microservices/microservices.module';
+
 import { ClientProxy } from '@nestjs/microservices';
 import { NotificationsPayloadBuilder } from '@core/microservices';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { SubscriptionType } from '@common/enums/subscription.type';
+import { CommunicationUpdateMessageReceived } from './dto/updates.dto.event.message.received';
+import {
+  NOTIFICATIONS_SERVICE,
+  SUBSCRIPTION_UPDATE_MESSAGE,
+} from '@common/constants/providers';
 
 @Resolver()
 export class UpdatesResolverMutations {
@@ -22,7 +29,9 @@ export class UpdatesResolverMutations {
     private authorizationService: AuthorizationService,
     private updatesService: UpdatesService,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
+    @Inject(SUBSCRIPTION_UPDATE_MESSAGE)
+    private readonly subscriptionUpdateMessage: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -51,15 +60,25 @@ export class UpdatesResolverMutations {
       messageData
     );
 
-    const payload =
+    // Send the notifications event
+    const notificationsPayload =
       await this.notificationsPayloadBuilder.buildCommunicationUpdateSentNotificationPayload(
         agentInfo.userID,
         updates
       );
-
     this.notificationsClient.emit<number>(
       EventType.COMMUNICATION_UPDATE_SENT,
-      payload
+      notificationsPayload
+    );
+
+    // Send the subscriptions event
+    const subscriptionPayload: CommunicationUpdateMessageReceived = {
+      message: updateSent,
+      updatesID: updates.id,
+    };
+    this.subscriptionUpdateMessage.publish(
+      SubscriptionType.COMMUNICATION_UPDATE_MESSAGE_RECEIVED,
+      subscriptionPayload
     );
 
     return updateSent;

@@ -53,7 +53,7 @@ services:
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
-    image: oryd/kratos:v0.7.6-alpha.1
+    image: oryd/kratos:v0.8.0-alpha.3
     depends_on:
       - mysql_db
     environment:
@@ -69,7 +69,7 @@ services:
 
   kratos:
     container_name: alkemio_dev_kratos
-    image: oryd/kratos:v0.7.6-alpha.1
+    image: oryd/kratos:v0.8.0-alpha.3
     depends_on:
       - kratos-migrate
     ports:
@@ -94,7 +94,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oathkeeper
-    image: oryd/oathkeeper:v0.38
+    image: oryd/oathkeeper:v0.38.9-beta.1
     restart: always
     depends_on:
       - kratos
@@ -183,7 +183,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.4.2
+    image: alkemio/notifications:v0.4.5
     environment:
       - RABBITMQ_HOST
       - LOGGING_CONSOLE_ENABLED

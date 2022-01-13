@@ -18,7 +18,13 @@ hosting:
   # to the alkemio-server service, orchestrated with the orchestration engine of your choice, e.g. kubernetes or docker-compose.
   # The graphql port is also used for internal communication between the services inside the e.g. kubernetes cluster.
   #
-  port: ${GRAPHQL_ENDPOINT}:4000
+  port: ${GRAPHQL_PORT}:4000
+
+  # The graphql endpoint.
+  # This is then used for routing the requests from the public-facing endpoint (e.g. https://dev.alkem.io/graphql)
+  # to the alkemio-server service, orchestrated with the orchestration engine of your choice, e.g. kubernetes or docker-compose.
+  #
+  endpoint: ${GRAPHQL_ENDPOINT}:http://localhost:3000
 
   # The type of environment is used in multiple places to determine whether dev tooling is enabled.
   # The tyoe of environment can also be used for monitoring / logging / analysis in an ELK cluster / ElasticCloud instance.
@@ -168,32 +174,6 @@ identity:
     # guaranteed to be migrated properly.
     enabled: ${SSI_ENABLED}:false
 
-    jolocom:
-      # MySQL database configuration for usage by the Jolocom SDK.
-      # The authentication method used is MySQL Native Password.
-      # Note: both schema / database name are used for configuration and they need to have the same value.
-      database:
-        # Database host.
-        host: ${DATABASE_HOST}:localhost
-
-        # MySQL daemon port.
-        port: 3306
-
-        # MySQL username.
-        username: 'root'
-
-        # MySQL password.
-        password: ${MYSQL_ROOT_PASSWORD}:toor
-
-        # MySQL schema / database name.
-        schema: ${JOLOCOM_MYSQL_DATABASE}:jolocom
-
-        # MySQL schema / database name.
-        database: ${JOLOCOM_MYSQL_DATABASE}:jolocom
-
-        # Flag setting whether MySQL operations should be logged to the console.
-        logging: ${JOLOCOM_ENABLE_ORM_LOGGING}:false
-
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
 monitoring:
@@ -262,9 +242,9 @@ monitoring:
 ## communications ##
 # Section defining all configuration parameters / endpoints required for communication between different actors (user-user, community-user etc) in Alkemio.
 communications:
-  enabled: ${COMMUNICATIONS_ENABLED}:false
+  enabled: ${COMMUNICATIONS_ENABLED}:true
   discussions:
-    enabled: ${COMMUNICATIONS_DISCUSSIONS_ENABLED}:false
+    enabled: ${COMMUNICATIONS_DISCUSSIONS_ENABLED}:true
 
   # the size of the agent pool to use for managing agent wrappers around Matrix client
   agentpool_size: ${COMMUNICATIONS_AGENTPOOL_SIZE}:50
@@ -342,7 +322,7 @@ microservices:
       password: ${RABBITMQ_PASSWORD}:bitnami
 
 notifications:
-  enabled: ${NOTIFICATIONS_ENABLED}:false
+  enabled: ${NOTIFICATIONS_ENABLED}:true
 
 collaboration:
   canvases:

@@ -1,8 +1,20 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Global, Module } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { subscriptionPubSubFactory } from './subscription.pub-sub.factory';
+import { subscriptionDiscussionMessageFactory } from './subscription.discussion.message.factory';
 import { notificationsServiceFactory } from './notifications.service.factory';
+import { walletManagerServiceFactory } from './wallet-manager.service.factory';
+import {
+  NOTIFICATIONS_SERVICE,
+  SUBSCRIPTION_DISCUSSION_MESSAGE,
+  SUBSCRIPTION_UPDATE_MESSAGE,
+  SUBSCRIPTION_CANVAS_CONTENT,
+  WALLET_MANAGEMENT_SERVICE,
+} from '@common/constants/providers';
+
+export type MicroserviceOptions = {
+  queueName: string;
+};
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 import { Opportunity } from '@domain/collaboration';
@@ -11,9 +23,9 @@ import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { Community } from '@domain/community/community';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationsPayloadBuilder } from './notifications.payload.builder';
+import { subscriptionCanvasContentFactory } from './subscription.canvas.content.factory';
+import { subscriptionUpdateMessageFactory } from './subscription.update.message.factory';
 
-export const SUBSCRIPTION_PUB_SUB = 'SUBSCRIPTION_PUB_SUB';
-export const NOTIFICATIONS_SERVICE = 'NOTIFICATIONS_SERVICE';
 @Global()
 @Module({
   imports: [
@@ -29,8 +41,18 @@ export const NOTIFICATIONS_SERVICE = 'NOTIFICATIONS_SERVICE';
     NotificationsPayloadBuilder,
 
     {
-      provide: SUBSCRIPTION_PUB_SUB,
-      useFactory: subscriptionPubSubFactory,
+      provide: SUBSCRIPTION_DISCUSSION_MESSAGE,
+      useFactory: subscriptionDiscussionMessageFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
+      provide: SUBSCRIPTION_UPDATE_MESSAGE,
+      useFactory: subscriptionUpdateMessageFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
+      provide: SUBSCRIPTION_CANVAS_CONTENT,
+      useFactory: subscriptionCanvasContentFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
@@ -38,11 +60,20 @@ export const NOTIFICATIONS_SERVICE = 'NOTIFICATIONS_SERVICE';
       useFactory: notificationsServiceFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
+    {
+      provide: WALLET_MANAGEMENT_SERVICE,
+      useFactory: walletManagerServiceFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
   ],
   exports: [
-    NotificationsPayloadBuilder,
-    SUBSCRIPTION_PUB_SUB,
+    SUBSCRIPTION_DISCUSSION_MESSAGE,
+    SUBSCRIPTION_UPDATE_MESSAGE,
+    SUBSCRIPTION_CANVAS_CONTENT,
     NOTIFICATIONS_SERVICE,
+    WALLET_MANAGEMENT_SERVICE,
+    NOTIFICATIONS_SERVICE,
+    NotificationsPayloadBuilder,
   ],
 })
 export class MicroservicesModule {}

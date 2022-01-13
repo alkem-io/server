@@ -8,6 +8,7 @@ import { CanvasService } from './canvas.service';
 import { ICanvas } from './canvas.interface';
 import { CanvasCheckoutAuthorizationService } from '../canvas-checkout/canvas.checkout.service.authorization';
 import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class CanvasAuthorizationService {
@@ -26,6 +27,9 @@ export class CanvasAuthorizationService {
         canvas.authorization,
         parentAuthorization
       );
+
+    canvas.authorization = this.appendPrivilegeRules(canvas.authorization);
+
     if (canvas.checkout) {
       canvas.checkout =
         await this.canvasCheckoutAuthorizationService.applyAuthorizationPolicy(
@@ -41,13 +45,13 @@ export class CanvasAuthorizationService {
   ): IAuthorizationPolicy {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    // Allow any member of this community to create messages on the discussion
     if (checkout.lockedBy && checkout.lockedBy.length > 0) {
-      const lockedBy = {
-        type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-        resourceID: checkout.lockedBy,
-        grantedPrivileges: [AuthorizationPrivilege.UPDATE],
-      };
+      const lockedBy = new AuthorizationPolicyRuleCredential(
+        [AuthorizationPrivilege.UPDATE],
+        AuthorizationCredential.USER_SELF_MANAGEMENT,
+        checkout.lockedBy
+      );
+
       newRules.push(lockedBy);
     }
 
@@ -58,5 +62,22 @@ export class CanvasAuthorizationService {
       );
 
     return updatedAuthorization;
+  }
+
+  private appendPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    const createPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.UPDATE_CANVAS],
+      AuthorizationPrivilege.UPDATE
+    );
+    privilegeRules.push(createPrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
   }
 }

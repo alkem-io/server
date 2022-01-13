@@ -10,7 +10,7 @@ import {
 } from '@domain/community/organization';
 import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { OrganizationAuthorizationService } from './organization.service.authorization';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -45,21 +45,17 @@ export class OrganizationResolverMutations {
     @Args('organizationData') organizationData: CreateOrganizationInput
   ): Promise<IOrganization> {
     const authorizationPolicy =
-      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [
-          AuthorizationRoleGlobal.COMMUNITY_ADMIN,
-          AuthorizationRoleGlobal.ADMIN,
-        ],
-        [AuthorizationPrivilege.CREATE]
-      );
+      this.authorizationPolicyService.getPlatformAuthorizationPolicy();
+
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizationPolicy,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.CREATE_ORGANIZATION,
       `create Organization: ${organizationData.nameID}`
     );
     const organization = await this.organizationService.createOrganization(
-      organizationData
+      organizationData,
+      agentInfo
     );
 
     return await this.organizationAuthorizationService.applyAuthorizationPolicy(

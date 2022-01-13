@@ -10,6 +10,7 @@ import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.d
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AdminCommunicationService } from './admin.communication.service';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
+import { CommunicationAdminUpdateRoomsJoinRuleInput } from './dto/admin.communication.dto.update.rooms.joinrule';
 
 @Resolver()
 export class AdminCommunicationResolverMutations {
@@ -67,6 +68,27 @@ export class AdminCommunicationResolverMutations {
     );
     return await this.adminCommunicationService.removeOrphanedRoom(
       orphanedRoomData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => Boolean, {
+    description: 'Allow updating the rule for joining rooms: public or invite.',
+  })
+  @Profiling.api
+  async adminCommunicationUpdateRoomsJoinRule(
+    @Args('changeRoomAccessData')
+    changeRoomAccessData: CommunicationAdminUpdateRoomsJoinRuleInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<boolean> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.communicationGlobalAdminPolicy,
+      AuthorizationPrivilege.GRANT,
+      `communications admin update join rule on all rooms: ${agentInfo.email}`
+    );
+    return await this.adminCommunicationService.setMatrixRoomsJoinRule(
+      changeRoomAccessData.isPublic
     );
   }
 }
