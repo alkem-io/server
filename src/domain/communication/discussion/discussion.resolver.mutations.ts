@@ -18,7 +18,7 @@ import { CommunicationMessageResult } from '../message/communication.dto.message
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { CommunicationDiscussionMessageReceived } from './dto/discussion.dto.event.message.received';
-import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
+import { SUBSCRIPTION_DISCUSSION_MESSAGE } from '@common/constants/providers';
 
 @Resolver()
 export class DiscussionResolverMutations {
@@ -26,8 +26,8 @@ export class DiscussionResolverMutations {
     private authorizationService: AuthorizationService,
     private discussionService: DiscussionService,
     private discussionAuthorizationService: DiscussionAuthorizationService,
-    @Inject(SUBSCRIPTION_PUB_SUB)
-    private readonly subscriptionHandler: PubSubEngine
+    @Inject(SUBSCRIPTION_DISCUSSION_MESSAGE)
+    private readonly subscriptionDiscussionMessage: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -60,7 +60,7 @@ export class DiscussionResolverMutations {
       message: discussionMessage,
       discussionID: discussion.id,
     };
-    this.subscriptionHandler.publish(
+    this.subscriptionDiscussionMessage.publish(
       SubscriptionType.COMMUNICATION_DISCUSSION_MESSAGE_RECEIVED,
       subscriptionPayload
     );
@@ -85,8 +85,7 @@ export class DiscussionResolverMutations {
     const extendedAuthorization =
       await this.discussionAuthorizationService.extendAuthorizationPolicyForMessageSender(
         discussion,
-        messageData.messageID,
-        agentInfo.communicationID
+        messageData.messageID
       );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,

@@ -12,14 +12,15 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { UpdatesService } from './updates.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
+import { SUBSCRIPTION_UPDATE_MESSAGE } from '@common/constants/providers';
 
 @Resolver()
 export class UpdatesResolverSubscriptions {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(SUBSCRIPTION_PUB_SUB) private pubSub: PubSubEngine,
+    @Inject(SUBSCRIPTION_UPDATE_MESSAGE)
+    private subscriptionUpdateMessage: PubSubEngine,
     private updatesService: UpdatesService,
     private authorizationService: AuthorizationService
   ) {}
@@ -116,7 +117,7 @@ export class UpdatesResolverSubscriptions {
       // array of discussionIDs to the filter call
     }
 
-    return this.pubSub.asyncIterator(
+    return this.subscriptionUpdateMessage.asyncIterator(
       SubscriptionType.COMMUNICATION_UPDATE_MESSAGE_RECEIVED
     );
   }

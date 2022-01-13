@@ -12,7 +12,7 @@ import { CommunicationDiscussionMessageReceived } from './dto/discussion.dto.eve
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { DiscussionService } from './discussion.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
+import { SUBSCRIPTION_DISCUSSION_MESSAGE } from '@common/constants/providers';
 
 @Resolver()
 export class DiscussionResolverSubscriptions {
@@ -21,7 +21,8 @@ export class DiscussionResolverSubscriptions {
     private discussionService: DiscussionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(SUBSCRIPTION_PUB_SUB) private pubSub: PubSubEngine
+    @Inject(SUBSCRIPTION_DISCUSSION_MESSAGE)
+    private subscriptionDiscussionMessage: PubSubEngine
   ) {}
 
   // Note: the resolving method should not be doing any heavy lifting.
@@ -120,7 +121,7 @@ export class DiscussionResolverSubscriptions {
       // array of discussionIDs to the filter call
     }
 
-    return this.pubSub.asyncIterator(
+    return this.subscriptionDiscussionMessage.asyncIterator(
       SubscriptionType.COMMUNICATION_DISCUSSION_MESSAGE_RECEIVED
     );
   }

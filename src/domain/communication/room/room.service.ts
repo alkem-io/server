@@ -115,14 +115,12 @@ export class RoomService {
 
   async getUserIdForMessage(
     roomable: IRoomable,
-    messageID: string,
-    communicationUserID: string
+    messageID: string
   ): Promise<string> {
     const senderCommunicationID =
       await this.communicationAdapter.getMessageSender(
         roomable.communicationRoomID,
-        messageID,
-        communicationUserID
+        messageID
       );
     if (senderCommunicationID === '') {
       this.logger.error(

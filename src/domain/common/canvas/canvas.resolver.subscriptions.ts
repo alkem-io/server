@@ -9,14 +9,15 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_PUB_SUB } from '@common/constants/providers';
+import { SUBSCRIPTION_CANVAS_CONTENT } from '@common/constants/providers';
 
 @Resolver()
 export class CanvasResolverSubscriptions {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(SUBSCRIPTION_PUB_SUB) private pubSub: PubSubEngine,
+    @Inject(SUBSCRIPTION_CANVAS_CONTENT)
+    private subscriptionCanvasContent: PubSubEngine,
     private canvasService: CanvasService,
     private authorizationService: AuthorizationService
   ) {}
@@ -110,6 +111,8 @@ export class CanvasResolverSubscriptions {
       // array of discussionIDs to the filter call
     }
 
-    return this.pubSub.asyncIterator(SubscriptionType.CANVAS_CONTENT_UPDATED);
+    return this.subscriptionCanvasContent.asyncIterator(
+      SubscriptionType.CANVAS_CONTENT_UPDATED
+    );
   }
 }
