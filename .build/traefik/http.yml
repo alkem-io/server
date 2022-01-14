@@ -30,7 +30,7 @@ http:
         servers:
           - url: 'http://host.docker.internal:4000/'
 
-    alkemio-web-service:
+    alkemio-web-client:
       loadBalancer:
         servers:
           - url: 'http://host.docker.internal:3001/'
@@ -66,10 +66,22 @@ http:
           - url: 'http://synapse-admin:80/'
 
   middlewares:
-    strip-admin-prefix:
+    strip-api-private-non-interactive-prefix:
       stripPrefix:
         prefixes:
-          - /admin
+          - /api/private/non-interactive
+        forceSlash: false
+
+    strip-api-private-prefix:
+      stripPrefix:
+        prefixes:
+          - /api/private
+        forceSlash: false
+
+    strip-api-public-prefix:
+      stripPrefix:
+        prefixes:
+          - /api/public
         forceSlash: false
 
     strip-kratos-admin-prefix:
@@ -84,30 +96,40 @@ http:
           - /identity/ory/kratos/public
         forceSlash: false
 
-    strip-jwks-prefix:
+    strip-oathkeeper-jwks-prefix:
       stripPrefix:
         prefixes:
           - /jwks
         forceSlash: false
 
   routers:
-    rabbitmq-management:
-      rule: 'PathPrefix(`/`)'
-      service: 'rabbitmq-management'
-      entryPoints:
-        - 'rabbitmq-management'
-
     graphql:
       rule: 'PathPrefix(`/graphql`)'
       service: 'oathkeeper-proxy'
       entryPoints:
         - 'web'
 
-    graphql-admin:
-      rule: 'PathPrefix(`/admin/graphql`)'
+    api-private-non-interactive-graphql:
+      rule: 'PathPrefix(`/api/private/non-interactive/graphql`)'
       service: 'alkemio-server'
       middlewares:
-        - strip-admin-prefix
+        - strip-api-private-non-interactive-prefix
+      entryPoints:
+        - 'web'
+
+    api-private-graphql:
+      rule: 'PathPrefix(`/api/private/graphql`)'
+      service: 'oathkeeper-proxy'
+      middlewares:
+        - strip-api-private-prefix
+      entryPoints:
+        - 'web'
+
+    api-public-graphql:
+      rule: 'PathPrefix(`/api/public/graphql`)'
+      service: 'alkemio-server'
+      middlewares:
+        - strip-api-public-prefix
       entryPoints:
         - 'web'
 
@@ -124,6 +146,26 @@ http:
       service: 'kratos-admin'
       middlewares:
         - strip-kratos-admin-prefix
+      entryPoints:
+        - 'web'
+
+    alkemiowebroute:
+      rule: 'PathPrefix(`/`)'
+      service: 'alkemio-web-client'
+      entryPoints:
+        - 'web'
+
+    oathkeeper-jwks:
+      rule: 'PathPrefix(`/jwks`)'
+      service: 'oathkeeper-admin'
+      middlewares:
+        - strip-oathkeeper-jwks-prefix
+      entryPoints:
+        - 'web'
+
+    ipfs:
+      rule: 'PathPrefix(`/ipfs`) || HostRegexp(`{^[a-zA-Z0-9_.-]*$}.ipfs.localhost`)'
+      service: 'ipfs-http-adapter'
       entryPoints:
         - 'web'
 
@@ -151,31 +193,17 @@ http:
       entryPoints:
         - 'mailslurper-client'
 
-    alkemiowebroute:
-      rule: 'PathPrefix(`/`)'
-      service: 'alkemio-web-service'
-      entryPoints:
-        - 'web'
-
-    jwks:
-      rule: 'PathPrefix(`/jwks`)'
-      service: 'oathkeeper-admin'
-      middlewares:
-        - strip-jwks-prefix
-      entryPoints:
-        - 'web'
-
-    ipfs:
-      rule: 'PathPrefix(`/ipfs`) || HostRegexp(`{^[a-zA-Z0-9_.-]*$}.ipfs.localhost`)'
-      service: 'ipfs-http-adapter'
-      entryPoints:
-        - 'web'
-
     ipfs-api:
       rule: 'PathPrefix(`/`)'
       service: 'ipfs-api'
       entryPoints:
         - 'ipfs-api'
+
+    rabbitmq-management:
+      rule: 'PathPrefix(`/`)'
+      service: 'rabbitmq-management'
+      entryPoints:
+        - 'rabbitmq-management'
 
 tcp:
   services:
