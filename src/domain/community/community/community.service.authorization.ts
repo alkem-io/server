@@ -52,8 +52,8 @@ export class CommunityAuthorizationService {
     );
 
     // cascade
-    const groups = await this.communityService.getUserGroups(community);
-    for (const group of groups) {
+    community.groups = await this.communityService.getUserGroups(community);
+    for (const group of community.groups) {
       const savedGroup =
         await this.userGroupAuthorizationService.applyAuthorizationPolicy(
           group,
@@ -62,8 +62,10 @@ export class CommunityAuthorizationService {
       group.authorization = savedGroup.authorization;
     }
 
-    const applications = await this.communityService.getApplications(community);
-    for (const application of applications) {
+    community.applications = await this.communityService.getApplications(
+      community
+    );
+    for (const application of community.applications) {
       const applicationSaved =
         await this.applicationAuthorizationService.applyAuthorizationPolicy(
           application,
