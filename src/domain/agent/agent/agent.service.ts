@@ -224,7 +224,8 @@ export class AgentService {
     );
 
     try {
-      return await firstValueFrom(identityInfo$);
+      const verificedCredentials = await firstValueFrom(identityInfo$);
+      return verificedCredentials;
     } catch (err: any) {
       throw new SsiException(
         `Failed to get identity info from wallet manager: ${err.message}`

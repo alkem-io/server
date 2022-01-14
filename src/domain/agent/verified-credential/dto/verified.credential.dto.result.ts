@@ -13,10 +13,10 @@ export class VerifiedCredential {
   })
   issuer: string;
 
-  @Field(() => Date, {
+  @Field(() => String, {
     description: 'The time at which the credential was issued',
   })
-  issued?: Date;
+  issued?: string;
 
   @Field(() => JSON, {
     description: 'JSON for the claim in the credential',
