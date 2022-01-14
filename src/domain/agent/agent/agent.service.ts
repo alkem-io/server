@@ -256,7 +256,7 @@ export class AgentService {
       return await firstValueFrom(identityInfo$);
     } catch (err: any) {
       throw new SsiException(
-        `Failed to get identity info from wallet manager: ${err.message}`
+        `Failed to grant state transition Verified Credential: ${err.message}`
       );
     }
   }
