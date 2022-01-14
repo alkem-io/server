@@ -16,7 +16,7 @@ import {
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { CredentialService } from '../credential/credential.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
-import { VerifiedCredential } from '@src/services/platform/ssi/agent';
+import { VerifiedCredential } from '@domain/agent/verified-credential';
 import { ConfigService } from '@nestjs/config';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -220,6 +220,34 @@ export class AgentService {
       {
         did: agent.did,
         password: agent.password,
+      }
+    );
+
+    try {
+      return await firstValueFrom(identityInfo$);
+    } catch (err: any) {
+      throw new SsiException(
+        `Failed to get identity info from wallet manager: ${err.message}`
+      );
+    }
+  }
+
+  @Profiling.api
+  async authorizeStateModification(
+    challengeAgent: IAgent,
+    challengeID: string,
+    userAgent: IAgent,
+    userID: string
+  ): Promise<VerifiedCredential[]> {
+    const identityInfo$ = this.walletManagementClient.send(
+      { cmd: 'grantStateTransitionVC' },
+      {
+        issuerDid: challengeAgent.did,
+        issuerPW: challengeAgent.password,
+        receiverDid: userAgent.did,
+        receiverPw: userAgent.password,
+        challengeID: challengeID,
+        userID: userID,
       }
     );
 
