@@ -280,7 +280,7 @@ export class AuthorizationPolicyService {
       [AuthorizationPrivilege.CREATE_ORGANIZATION],
       AuthorizationCredential.ECOVERSE_ADMIN
     );
-    userNotInherited.inheritable = false;
+    hubAdminsNotInherited.inheritable = false;
     credentialRules.push(hubAdminsNotInherited);
 
     // Allow challenge admins to create new organizations
@@ -288,7 +288,7 @@ export class AuthorizationPolicyService {
       [AuthorizationPrivilege.CREATE_ORGANIZATION],
       AuthorizationCredential.CHALLENGE_ADMIN
     );
-    userNotInherited.inheritable = false;
+    challengeAdminsNotInherited.inheritable = false;
     credentialRules.push(challengeAdminsNotInherited);
 
     return credentialRules;

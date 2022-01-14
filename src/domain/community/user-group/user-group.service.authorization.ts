@@ -17,32 +17,37 @@ import { AuthorizationPolicyRuleCredential } from '@core/authorization/authoriza
 @Injectable()
 export class UserGroupAuthorizationService {
   constructor(
-    private authorizationPolicy: AuthorizationPolicyService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private userGroupService: UserGroupService,
     @InjectRepository(UserGroup)
     private userGroupRepository: Repository<UserGroup>
   ) {}
 
-  async applyAuthorizationPolicy(userGroup: IUserGroup): Promise<IUserGroup> {
+  async applyAuthorizationPolicy(
+    userGroup: IUserGroup,
+    parentAuthorization: IAuthorizationPolicy | undefined
+  ): Promise<IUserGroup> {
+    userGroup.authorization =
+      await this.authorizationPolicyService.inheritParentAuthorization(
+        userGroup.authorization,
+        parentAuthorization
+      );
     userGroup.authorization = this.extendCredentialRules(
       userGroup.authorization,
       userGroup.id
     );
-    const savedGroup: IUserGroup = await this.userGroupRepository.save(
-      userGroup
-    );
 
     // cascade
-    savedGroup.profile = this.userGroupService.getProfile(userGroup);
-    savedGroup.profile.authorization =
-      await this.authorizationPolicy.inheritParentAuthorization(
-        savedGroup.profile.authorization,
+    userGroup.profile = this.userGroupService.getProfile(userGroup);
+    userGroup.profile.authorization =
+      await this.authorizationPolicyService.inheritParentAuthorization(
+        userGroup.profile.authorization,
         userGroup.authorization
       );
     userGroup.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        savedGroup.profile
+        userGroup.profile
       );
 
     return await this.userGroupRepository.save(userGroup);
@@ -67,7 +72,7 @@ export class UserGroupAuthorizationService {
 
     newRules.push(userGroupMember);
 
-    this.authorizationPolicy.appendCredentialAuthorizationRules(
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
     );

@@ -64,12 +64,12 @@ export class OrganizationAuthorizationService {
       organization
     );
     for (const group of organization.groups) {
-      group.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          group.authorization,
+      const savedGroup =
+        await this.userGroupAuthorizationService.applyAuthorizationPolicy(
+          group,
           organization.authorization
         );
-      await this.userGroupAuthorizationService.applyAuthorizationPolicy(group);
+      group.authorization = savedGroup.authorization;
     }
 
     organization.verification = await this.organizationService.getVerification(
