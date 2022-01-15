@@ -129,9 +129,9 @@ export class VisualService {
   }
 
   private validateImageHeight(visual: IVisual, imageHeight: number) {
-    if (imageHeight < visual.minHeigt || imageHeight > visual.maxHeight)
+    if (imageHeight < visual.minHeight || imageHeight > visual.maxHeight)
       throw new ValidationException(
-        `Upload image has a height resolution of '${imageHeight}' which is not in the allowed range of ${visual.minHeigt} - ${visual.maxHeight} pixels!`,
+        `Upload image has a height resolution of '${imageHeight}' which is not in the allowed range of ${visual.minHeight} - ${visual.maxHeight} pixels!`,
         LogContext.COMMUNITY
       );
   }

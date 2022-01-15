@@ -22,7 +22,7 @@ export abstract class IVisual extends IAuthorizable {
   @Field(() => Number, {
     description: 'Minimum height resolution.',
   })
-  minHeigt!: number;
+  minHeight!: number;
 
   @Field(() => Number, {
     description: 'Maximum height resolution.',

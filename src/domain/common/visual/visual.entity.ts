@@ -18,7 +18,7 @@ export class Visual extends AuthorizableEntity implements IVisual {
   maxWidth!: number;
 
   @Column('int')
-  minHeigt!: number;
+  minHeight!: number;
 
   @Column('int')
   maxHeight!: number;
