@@ -5,12 +5,10 @@ import {
   CreateTagsetOnProfileInput,
   IProfile,
   UpdateProfileInput,
-  UploadProfileAvatarInput,
 } from '@domain/community/profile';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ProfileService } from './profile.service';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
@@ -102,35 +100,5 @@ export class ProfileResolverMutations {
       `profile: ${profile.id}`
     );
     return await this.profileService.updateProfile(profileData);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IProfile, {
-    description: 'Uploads and sets an avatar image for the specified Profile.',
-  })
-  async uploadAvatar(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('uploadData') uploadData: UploadProfileAvatarInput,
-    @Args({ name: 'file', type: () => GraphQLUpload })
-    { createReadStream, filename, mimetype }: FileUpload
-  ): Promise<IProfile> {
-    const profile = await this.profileService.getProfileOrFail(
-      uploadData.profileID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      profile.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `profile: ${profile.id}`
-    );
-    const readStream = createReadStream();
-    const updatedProfile = await this.profileService.uploadAvatar(
-      readStream,
-      filename,
-      mimetype,
-      uploadData
-    );
-
-    return updatedProfile;
   }
 }

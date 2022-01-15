@@ -16,24 +16,23 @@ import { AspectService } from '@domain/context/aspect/aspect.service';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EcosystemModelService } from '@domain/context/ecosystem-model/ecosystem-model.service';
-import { IVisual } from '@domain/context/visual/visual.interface';
-import { VisualService } from '../visual/visual.service';
-import { Visual } from '@domain/context/visual/visual.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Canvas, ICanvas } from '@domain/common/canvas';
 import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { CreateReferenceOnContextInput } from './dto/context.dto.create.reference';
 import { UpdateContextInput } from './dto/context.dto.update';
 import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
+import { VisualService } from '@domain/common/visual/visual.service';
+import { IVisual } from '@domain/common/visual/visual.interface';
 
 @Injectable()
 export class ContextService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private visualService: VisualService,
     private aspectService: AspectService,
     private canvasService: CanvasService,
     private ecosystemModelService: EcosystemModelService,
+    private visualService: VisualService,
     private referenceService: ReferenceService,
     @InjectRepository(Context)
     private contextRepository: Repository<Context>
@@ -45,7 +44,6 @@ export class ContextService {
       await this.ecosystemModelService.createEcosystemModel({});
     context.authorization = new AuthorizationPolicy();
     if (!context.references) context.references = [];
-    if (!context.visual) context.visual = new Visual();
     return context;
   }
 
@@ -93,14 +91,6 @@ export class ContextService {
       );
     }
 
-    if (contextInput.visual) {
-      const visual = await this.getVisual(context);
-      context.visual = await this.visualService.updateVisualValues(
-        visual,
-        contextInput.visual
-      );
-    }
-
     return await this.contextRepository.save(context);
   }
 
@@ -111,7 +101,7 @@ export class ContextService {
         'aspects',
         'references',
         'ecosystemModel',
-        'visual',
+        'visuals',
         'canvases',
       ],
     });
@@ -136,10 +126,12 @@ export class ContextService {
       );
     }
 
-    if (context.visual) {
-      await this.visualService.deleteVisual({
-        ID: context.visual?.id,
-      });
+    if (context.visuals) {
+      for (const visual of context.visuals) {
+        await this.visualService.deleteVisual({
+          ID: visual?.id,
+        });
+      }
     }
 
     if (context.authorization)
@@ -333,16 +325,16 @@ export class ContextService {
     return contextLoaded.ecosystemModel;
   }
 
-  async getVisual(context: IContext): Promise<IVisual> {
+  async getVisuals(context: IContext): Promise<IVisual[]> {
     const contextLoaded = await this.getContextOrFail(context.id, {
-      relations: ['visual'],
+      relations: ['visuals'],
     });
-    if (!contextLoaded.visual)
+    if (!contextLoaded.visuals)
       throw new EntityNotFoundException(
         `Context not initialised: ${context.id}`,
         LogContext.CONTEXT
       );
 
-    return contextLoaded.visual;
+    return contextLoaded.visuals;
   }
 }
