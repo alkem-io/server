@@ -115,6 +115,9 @@ export class visual1642233654294 implements MigrationInterface {
         `INSERT INTO visual2 (id, version, authorizationId, name, uri, minWidth, maxWidth, minHeight, maxHeight, aspectRatio, allowedTypes)
             values ('${visualID}', 1, '${authID}', 'avatar', '${profile.avatar}', '190', '410', '190', '410', '1', '${allowedTypes}')`
       );
+      await queryRunner.query(
+        `update profile set avatarId = '${visualID}' WHERE (id = '${profile.id}')`
+      );
     }
     await queryRunner.query(`ALTER TABLE \`profile\` DROP COLUMN \`avatar\``);
   }
