@@ -44,7 +44,44 @@ export class ContextService {
       await this.ecosystemModelService.createEcosystemModel({});
     context.authorization = new AuthorizationPolicy();
     if (!context.references) context.references = [];
+    context.visuals = [];
+    context.visuals.push(await this.createVisualBanner());
+    context.visuals.push(await this.createVisualBannerNarrow());
+    context.visuals.push(await this.createVisualAvatar());
     return context;
+  }
+
+  private async createVisualBanner(): Promise<IVisual> {
+    return await this.visualService.createVisual({
+      name: 'banner',
+      minWidth: 384,
+      maxWidth: 768,
+      minHeigt: 32,
+      maxHeight: 128,
+      aspectRatio: 6,
+    });
+  }
+
+  private async createVisualBannerNarrow(): Promise<IVisual> {
+    return await this.visualService.createVisual({
+      name: 'bannerNarrow',
+      minWidth: 192,
+      maxWidth: 384,
+      minHeigt: 32,
+      maxHeight: 128,
+      aspectRatio: 3,
+    });
+  }
+
+  private async createVisualAvatar(): Promise<IVisual> {
+    return await this.visualService.createVisual({
+      name: 'avatar',
+      minWidth: 190,
+      maxWidth: 400,
+      minHeigt: 190,
+      maxHeight: 400,
+      aspectRatio: 1,
+    });
   }
 
   async getContextOrFail(
