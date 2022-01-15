@@ -80,6 +80,9 @@ export class visual1642233654294 implements MigrationInterface {
       }
     }
     await queryRunner.query(
+      `ALTER TABLE \`context\` DROP FOREIGN KEY \`FK_9dd986ff532f7e2447ffe4934d2\``
+    );
+    await queryRunner.query(
       `DROP INDEX \`REL_9dd986ff532f7e2447ffe4934d\` ON \`context\``
     );
     await queryRunner.query(`ALTER TABLE \`context\` DROP COLUMN \`visualId\``);
