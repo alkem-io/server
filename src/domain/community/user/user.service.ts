@@ -99,8 +99,8 @@ export class UserService {
     );
 
     // ensure have a random avatar. todo: use a package we control
-    if (user.profile.avatar === '') {
-      user.profile.avatar = this.profileService.generateRandomAvatar(
+    if (user.profile.avatar?.uri === '') {
+      user.profile.avatar.uri = this.profileService.generateRandomAvatar(
         user.firstName,
         user.lastName
       );

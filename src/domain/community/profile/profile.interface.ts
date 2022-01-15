@@ -1,6 +1,7 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { IVisual } from '@domain/common/visual';
 import { Field, ObjectType } from '@nestjs/graphql';
 @ObjectType('Profile')
 export abstract class IProfile extends IAuthorizable {
@@ -16,12 +17,11 @@ export abstract class IProfile extends IAuthorizable {
   })
   tagsets?: ITagset[];
 
-  @Field(() => String, {
-    nullable: true,
-    description:
-      'A URI that points to the location of an avatar, either on a shared location or a gravatar',
+  @Field(() => IVisual, {
+    nullable: false,
+    description: 'The visual avatar for this profile',
   })
-  avatar!: string;
+  avatar?: IVisual;
 
   @Field(() => String, {
     nullable: true,

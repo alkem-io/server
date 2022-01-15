@@ -22,6 +22,7 @@ import {
 } from '@domain/community/profile';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { VisualService } from '@domain/common/visual/visual.service';
 
 @Injectable()
 export class ProfileService {
@@ -29,6 +30,7 @@ export class ProfileService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private tagsetService: TagsetService,
     private referenceService: ReferenceService,
+    private visualService: VisualService,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -41,12 +43,23 @@ export class ProfileService {
     let data = profileData;
     if (!data) data = {};
     const profile: IProfile = Profile.create({
-      avatar: profileData?.avatar,
       description: profileData?.description,
       tagsets: profileData?.tagsetsData,
       references: profileData?.referencesData,
     });
     profile.authorization = new AuthorizationPolicy();
+    profile.avatar = await this.visualService.createVisual(
+      {
+        name: 'avatar',
+        minWidth: this.minImageSize,
+        maxWidth: this.maxImageSize,
+        minHeigt: this.minImageSize,
+        maxHeight: this.maxImageSize,
+        aspectRatio: 1,
+      },
+      profileData?.avatar
+    );
+
     if (!profile.references) {
       profile.references = [];
     }
@@ -66,8 +79,11 @@ export class ProfileService {
   async updateProfile(profileData: UpdateProfileInput): Promise<IProfile> {
     const profile = await this.getProfileOrFail(profileData.ID);
 
-    if (profileData.avatar) {
-      profile.avatar = profileData.avatar;
+    if (profileData.avatar && profile.avatar) {
+      profile.avatar = await this.visualService.updateVisual({
+        ID: profile.avatar?.id,
+        uri: profileData.avatar,
+      });
     }
     if (profileData.description) {
       profile.description = profileData.description;

@@ -8,6 +8,7 @@ import { ProfileService } from './profile.service';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ProfileAuthorizationService } from './profile.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { VisualModule } from '@domain/common/visual/visual.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     TagsetModule,
     ReferenceModule,
     TypeOrmModule.forFeature([Profile]),
+    VisualModule,
   ],
   providers: [
     ProfileResolverMutations,

@@ -26,61 +26,24 @@ export class VisualService {
     private ipfsService: IpfsService
   ) {}
 
-  async createVisual(visualInput: CreateVisualInput): Promise<IVisual> {
-    const visual = new Visual(visualInput.name, visualInput.uri || '');
+  async createVisual(
+    visualInput: CreateVisualInput,
+    initialUri?: string
+  ): Promise<IVisual> {
+    const visual: IVisual = Visual.create(visualInput);
     visual.authorization = new AuthorizationPolicy();
+    if (initialUri) visual.uri = initialUri;
     await this.visualRepository.save(visual);
     return visual;
   }
 
-  updateVisualValues(visual: IVisual, visualData: UpdateVisualInput) {
-    // Copy over the received data if a uri is supplied
+  async updateVisual(visualData: UpdateVisualInput): Promise<IVisual> {
+    const visual = await this.getVisualOrFail(visualData.ID);
     if (visualData.uri || visualData.uri === '') {
       visual.uri = visualData.uri;
     }
-  }
-
-  async updateVisual(visualData: UpdateVisualInput): Promise<IVisual> {
-    const visual = await this.getVisualOrFail(visualData.ID);
-    this.updateVisualValues(visual, visualData);
 
     return await this.visualRepository.save(visual);
-  }
-
-  updateVisuals(
-    visuals: IVisual[] | undefined,
-    visualsData: UpdateVisualInput[]
-  ): IVisual[] {
-    if (!visuals)
-      throw new EntityNotFoundException(
-        'Not able to locate refernces',
-        LogContext.CHALLENGES
-      );
-    if (visualsData) {
-      for (const visualData of visualsData) {
-        // check the visual being update is part of the current entity
-        const visual = visuals.find(visual => visual.id === visualData.ID);
-        if (!visual)
-          throw new EntityNotFoundException(
-            `Unable to update visual with supplied ID: ${visualData.ID} - no visual in parent entity.`,
-            LogContext.CHALLENGES
-          );
-        this.updateVisualValues(visual, visualData);
-      }
-    }
-    return visuals;
-  }
-
-  async getVisualOrFail(visualID: string): Promise<IVisual> {
-    const visual = await this.visualRepository.findOne({
-      id: visualID,
-    });
-    if (!visual)
-      throw new EntityNotFoundException(
-        `Not able to locate visual with the specified ID: ${visualID}`,
-        LogContext.CHALLENGES
-      );
-    return visual;
   }
 
   async deleteVisual(deleteData: DeleteVisualInput): Promise<IVisual> {
@@ -96,6 +59,18 @@ export class VisualService {
       ...result,
       id,
     };
+  }
+
+  async getVisualOrFail(visualID: string): Promise<IVisual> {
+    const visual = await this.visualRepository.findOne({
+      id: visualID,
+    });
+    if (!visual)
+      throw new EntityNotFoundException(
+        `Not able to locate visual with the specified ID: ${visualID}`,
+        LogContext.CHALLENGES
+      );
+    return visual;
   }
 
   async saveVisual(visual: IVisual): Promise<IVisual> {
