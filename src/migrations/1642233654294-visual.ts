@@ -86,6 +86,7 @@ export class visual1642233654294 implements MigrationInterface {
       `DROP INDEX \`REL_9dd986ff532f7e2447ffe4934d\` ON \`context\``
     );
     await queryRunner.query(`ALTER TABLE \`context\` DROP COLUMN \`visualId\``);
+    await queryRunner.query('DROP TABLE `visual`');
 
     // Profile avatars
     await queryRunner.query(

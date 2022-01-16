@@ -374,4 +374,16 @@ export class ContextService {
 
     return contextLoaded.visuals;
   }
+
+  async getVisual(context: IContext, name: string): Promise<IVisual> {
+    const visuals = await this.getVisuals(context);
+    for (const visual of visuals) {
+      if (visual.name === name) return visual;
+    }
+
+    throw new EntityNotFoundException(
+      `Unable to find visual with the name '${name}' on context: ${context.id}`,
+      LogContext.CONTEXT
+    );
+  }
 }

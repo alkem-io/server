@@ -36,6 +36,24 @@ export class ContextResolverFields {
     return await this.contextService.getVisuals(context);
   }
 
+  @ResolveField('banner', () => IVisual, {
+    nullable: true,
+    description: 'The banner Visual assets for this Context.',
+  })
+  @Profiling.api
+  async banner(@Parent() context: Context): Promise<IVisual> {
+    return await this.contextService.getVisual(context, 'banner');
+  }
+
+  @ResolveField('bannerNarrow', () => IVisual, {
+    nullable: true,
+    description: 'The bannerNarrow Visual assets for this Context.',
+  })
+  @Profiling.api
+  async bannerNarrow(@Parent() context: Context): Promise<IVisual> {
+    return await this.contextService.getVisual(context, 'bannerNarrow');
+  }
+
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('aspects', () => [IAspect], {
