@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 
-@ObjectType('Visual')
+@ObjectType('Visual2')
 export abstract class IVisual extends IAuthorizable {
   @Field(() => String)
   name!: string;

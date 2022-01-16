@@ -9,6 +9,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ProfileAuthorizationService } from './profile.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { VisualModule } from '@domain/common/visual/visual.module';
+import { ProfileResolverFields } from './profile.resolver.fields';
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { VisualModule } from '@domain/common/visual/visual.module';
     ProfileResolverMutations,
     ProfileService,
     ProfileAuthorizationService,
+    ProfileResolverFields,
   ],
-  exports: [ProfileService, ProfileAuthorizationService],
+  exports: [ProfileService, ProfileAuthorizationService, ProfileResolverFields],
 })
 export class ProfileModule {}

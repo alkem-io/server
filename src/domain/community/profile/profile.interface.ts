@@ -17,10 +17,6 @@ export abstract class IProfile extends IAuthorizable {
   })
   tagsets?: ITagset[];
 
-  @Field(() => IVisual, {
-    nullable: false,
-    description: 'The visual avatar for this profile',
-  })
   avatar?: IVisual;
 
   @Field(() => String, {

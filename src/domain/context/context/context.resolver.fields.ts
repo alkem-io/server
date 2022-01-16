@@ -11,6 +11,7 @@ import { IReference } from '@domain/common/reference';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { IVisual } from '@domain/common/visual/visual.interface';
+import { IVisualOld } from './dto/context.dto.visual.old.result';
 
 @Resolver(() => IContext)
 export class ContextResolverFields {
@@ -36,22 +37,13 @@ export class ContextResolverFields {
     return await this.contextService.getVisuals(context);
   }
 
-  @ResolveField('banner', () => IVisual, {
+  @ResolveField('visual', () => IVisualOld, {
     nullable: true,
-    description: 'The banner Visual assets for this Context.',
+    description: 'The old api for Visual assets for this Context.',
   })
   @Profiling.api
-  async banner(@Parent() context: Context): Promise<IVisual> {
-    return await this.contextService.getVisual(context, 'banner');
-  }
-
-  @ResolveField('bannerNarrow', () => IVisual, {
-    nullable: true,
-    description: 'The bannerNarrow Visual assets for this Context.',
-  })
-  @Profiling.api
-  async bannerNarrow(@Parent() context: Context): Promise<IVisual> {
-    return await this.contextService.getVisual(context, 'bannerNarrow');
+  async visual(@Parent() context: Context): Promise<IVisualOld> {
+    return await this.contextService.getVisualOld(context);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
