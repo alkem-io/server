@@ -70,9 +70,7 @@ export class ChallengeLifecycleOptionsProvider {
             authorizationPolicy,
             AuthorizationPrivilege.UPDATE
           );
-          // Todo: disabling the logic check for now to always return true
-          if (!stateChangeAllowed) return true;
-          return true;
+          return stateChangeAllowed;
         },
       },
     };

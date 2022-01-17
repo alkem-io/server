@@ -1,5 +1,5 @@
 import { ICredential } from '@domain/agent/credential';
-import { VerifiedCredential } from '@src/services/platform/ssi/agent';
+import { VerifiedCredential } from '@domain/agent/verified-credential';
 
 export class AgentInfo {
   userID = '';
