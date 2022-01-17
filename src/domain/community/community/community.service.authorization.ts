@@ -9,6 +9,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
+import { ApplicationAuthorizationService } from '../application/application.service.authorization';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -17,6 +18,7 @@ export class CommunityAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communicationAuthorizationService: CommunicationAuthorizationService,
+    private applicationAuthorizationService: ApplicationAuthorizationService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>
   ) {}
@@ -50,23 +52,26 @@ export class CommunityAuthorizationService {
     );
 
     // cascade
-    const groups = await this.communityService.getUserGroups(community);
-    for (const group of groups) {
-      group.authorization =
-        await this.authorizationPolicyService.inheritParentAuthorization(
-          group.authorization,
+    community.groups = await this.communityService.getUserGroups(community);
+    for (const group of community.groups) {
+      const savedGroup =
+        await this.userGroupAuthorizationService.applyAuthorizationPolicy(
+          group,
           community.authorization
         );
-      await this.userGroupAuthorizationService.applyAuthorizationPolicy(group);
+      group.authorization = savedGroup.authorization;
     }
 
-    const applications = await this.communityService.getApplications(community);
-    for (const application of applications) {
-      application.authorization =
-        await this.authorizationPolicyService.inheritParentAuthorization(
-          application.authorization,
+    community.applications = await this.communityService.getApplications(
+      community
+    );
+    for (const application of community.applications) {
+      const applicationSaved =
+        await this.applicationAuthorizationService.applyAuthorizationPolicy(
+          application,
           community.authorization
         );
+      application.authorization = applicationSaved.authorization;
     }
 
     return await this.communityRepository.save(community);
