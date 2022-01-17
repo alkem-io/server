@@ -83,13 +83,9 @@ export class OrganizationResolverMutations {
     );
 
     const group = await this.organizationService.createGroup(groupData);
-    group.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
-        group.authorization,
-        organization.authorization
-      );
     return await this.userGroupAuthorizationService.applyAuthorizationPolicy(
-      group
+      group,
+      organization.authorization
     );
   }
 
