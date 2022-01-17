@@ -8,6 +8,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ApplicationResolverFields } from './application.resolver.fields';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { ApplicationAuthorizationService } from './application.service.authorization';
 
 @Module({
   imports: [
@@ -18,7 +19,11 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
     UserModule,
     TypeOrmModule.forFeature([Application]),
   ],
-  providers: [ApplicationService, ApplicationResolverFields],
-  exports: [ApplicationService],
+  providers: [
+    ApplicationService,
+    ApplicationAuthorizationService,
+    ApplicationResolverFields,
+  ],
+  exports: [ApplicationService, ApplicationAuthorizationService],
 })
 export class ApplicationModule {}

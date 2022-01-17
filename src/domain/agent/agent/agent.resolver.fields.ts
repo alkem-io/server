@@ -10,7 +10,7 @@ import {
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { Agent, IAgent } from '@domain/agent/agent';
 import { GraphqlGuard } from '@core/authorization';
-import { VerifiedCredential } from '@src/services/platform/ssi/agent';
+import { VerifiedCredential } from '@domain/agent/verified-credential';
 import { ConfigService } from '@nestjs/config';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 

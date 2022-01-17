@@ -42,10 +42,10 @@ export class CommunicationAuthorizationService {
       );
     }
 
-    const updates = this.communicationService.getUpdates(communication);
-    updates.authorization =
+    communication.updates = this.communicationService.getUpdates(communication);
+    communication.updates.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        updates.authorization,
+        communication.updates.authorization,
         communication.authorization
       );
 
