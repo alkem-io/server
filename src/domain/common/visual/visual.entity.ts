@@ -3,7 +3,7 @@ import { Context } from '@domain/context/context/context.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { IVisual } from './visual.interface';
 
-@Entity({ name: 'visual2' })
+@Entity()
 export class Visual extends AuthorizableEntity implements IVisual {
   @Column()
   name: string;

@@ -87,6 +87,8 @@ export class visual1642233654294 implements MigrationInterface {
     );
     await queryRunner.query(`ALTER TABLE \`context\` DROP COLUMN \`visualId\``);
     await queryRunner.query('DROP TABLE `visual`');
+    // rename the table from visual2 to visual
+    await queryRunner.query('ALTER TABLE `visual2` RENAME TO  `visual` ');
 
     // Profile avatars
     await queryRunner.query(
@@ -96,7 +98,7 @@ export class visual1642233654294 implements MigrationInterface {
       `ALTER TABLE \`profile\` ADD UNIQUE INDEX \`IDX_65588ca8ac212b8357637794d6\` (\`avatarId\`)`
     );
     await queryRunner.query(
-      `ALTER TABLE \`profile\` ADD CONSTRAINT \`FK_65588ca8ac212b8357637794d6f\` FOREIGN KEY (\`avatarId\`) REFERENCES \`visual2\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`profile\` ADD CONSTRAINT \`FK_65588ca8ac212b8357637794d6f\` FOREIGN KEY (\`avatarId\`) REFERENCES \`visual\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     const profiles: any[] = await queryRunner.query(
       `SELECT id, avatar from profile`
@@ -113,7 +115,7 @@ export class visual1642233654294 implements MigrationInterface {
 
       await queryRunner.query(
         //console.log(
-        `INSERT INTO visual2 (id, version, authorizationId, name, uri, minWidth, maxWidth, minHeight, maxHeight, aspectRatio, allowedTypes)
+        `INSERT INTO visual (id, version, authorizationId, name, uri, minWidth, maxWidth, minHeight, maxHeight, aspectRatio, allowedTypes)
             values ('${visualID}', 1, '${authID}', 'avatar', '${profile.avatar}', '190', '410', '190', '410', '1', '${allowedTypes}')`
       );
       await queryRunner.query(
@@ -125,18 +127,18 @@ export class visual1642233654294 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`visual2\` DROP FOREIGN KEY \`FK_63de1450cf75dc486700ca034c6\``
+      `ALTER TABLE \`visual\` DROP FOREIGN KEY \`FK_63de1450cf75dc486700ca034c6\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`visual2\` DROP FOREIGN KEY \`FK_439d0b187986492b58178a82c3f\``
+      `ALTER TABLE \`visual\` DROP FOREIGN KEY \`FK_439d0b187986492b58178a82c3f\``
     );
     await queryRunner.query(
       `ALTER TABLE \`context\` ADD \`visualId\` varchar(36) NULL`
     );
     await queryRunner.query(
-      `DROP INDEX \`REL_439d0b187986492b58178a82c3\` ON \`visual2\``
+      `DROP INDEX \`REL_439d0b187986492b58178a82c3\` ON \`visual\``
     );
-    await queryRunner.query(`DROP TABLE \`visual2\``);
+    await queryRunner.query(`DROP TABLE \`visual\``);
     await queryRunner.query(`ALTER TABLE \`profile\` ADD \`avatar\` text NULL`);
     await queryRunner.query(
       `CREATE UNIQUE INDEX \`REL_9dd986ff532f7e2447ffe4934d\` ON \`context\` (\`visualId\`)`
