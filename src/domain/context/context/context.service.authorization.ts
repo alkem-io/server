@@ -10,7 +10,6 @@ import {
 } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
-import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
@@ -47,15 +46,17 @@ export class ContextAuthorizationService {
     );
     context.authorization = this.appendPrivilegeRules(context.authorization);
     // cascade
-    const ecosystemModel = await this.contextService.getEcosystemModel(context);
-    ecosystemModel.authorization =
+    context.ecosystemModel = await this.contextService.getEcosystemModel(
+      context
+    );
+    context.ecosystemModel.authorization =
       await this.authorizationPolicyService.inheritParentAuthorization(
-        ecosystemModel.authorization,
+        context.ecosystemModel.authorization,
         context.authorization
       );
     context.ecosystemModel =
       await this.ecosysteModelAuthorizationService.applyAuthorizationPolicy(
-        ecosystemModel
+        context.ecosystemModel
       );
 
     context.aspects = await this.contextService.getAspects(context);
@@ -76,17 +77,14 @@ export class ContextAuthorizationService {
         );
     }
 
-    const canvases = await this.contextService.getCanvases(context);
-    const updatedCanvases: ICanvas[] = [];
-    for (const canvas of canvases) {
-      const updatedCanvas =
-        await this.canvasAuthorizationService.applyAuthorizationPolicy(
-          canvas,
-          context.authorization
-        );
-      updatedCanvases.push(updatedCanvas);
+
+    context.canvases = await this.contextService.getCanvases(context);
+    for (const canvas of context.canvases) {
+      await this.canvasAuthorizationService.applyAuthorizationPolicy(
+        canvas,
+        context.authorization
+      );
     }
-    context.canvases = updatedCanvases;
 
     context.references = await this.contextService.getReferences(context);
     for (const reference of context.references) {

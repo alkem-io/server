@@ -26,6 +26,7 @@ import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { DeleteApplicationInput } from '../application/dto/application.dto.delete';
 import { ApplicationEventInput } from '../application/dto/application.dto.event';
+import { ApplicationAuthorizationService } from '../application/application.service.authorization';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -40,6 +41,7 @@ export class CommunityResolverMutations {
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService,
+    private applicationAuthorizationService: ApplicationAuthorizationService,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
@@ -62,13 +64,9 @@ export class CommunityResolverMutations {
       `create group community: ${community.displayName}`
     );
     const group = await this.communityService.createGroup(groupData);
-    group.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
-        group.authorization,
-        community.authorization
-      );
     return await this.userGroupAuthorizationService.applyAuthorizationPolicy(
-      group
+      group,
+      community.authorization
     );
   }
 
@@ -162,27 +160,12 @@ export class CommunityResolverMutations {
     const application = await this.communityService.createApplication(
       applicationData
     );
-    application.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
-        application.authorization,
+
+    const savedApplication =
+      await this.applicationAuthorizationService.applyAuthorizationPolicy(
+        application,
         community.authorization
       );
-    // also grant the user privileges to manage their own application
-    application.authorization =
-      await this.authorizationPolicyService.appendCredentialAuthorizationRule(
-        application.authorization,
-        {
-          type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-          resourceID: user.id,
-        },
-        [
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ]
-      );
-
-    const savedApplication = await this.applicationService.save(application);
 
     const payload =
       await this.notificationsPayloadBuilder.buildApplicationCreatedNotificationPayload(

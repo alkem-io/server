@@ -29,28 +29,28 @@
       "type": "NotificationCommunityDiscussionResponse"
     },
     {
-      "group": "Notification",
+      "group": "NotificationCommunityAdmin",
       "displayName": "[Admin] Community Applications",
       "description": "Receive notification when a new application is received for a community for which I am an administrator",
       "valueType": "boolean",
       "type": "NotificationApplicationReceived"
     },
     {
-      "group": "Notification",
+      "group": "NotificationGlobalAdmin",
       "displayName": "[Admin] New user sign up",
       "description": "Receive notification when a new user signs up",
       "valueType": "boolean",
       "type": "NotificationUserSignUp"
     },
     {
-      "group": "Notification",
+      "group": "NotificationCommunityAdmin",
       "displayName": "[Admin] Community Discussion Created",
       "description": "Receive notification when a new discussion is created for a community for which I am an administrator",
       "valueType": "boolean",
       "type": "NotificationCommunityDiscussionCreatedAdmin"
     },
     {
-      "group": "Notification",
+      "group": "NotificationCommunityAdmin",
       "displayName": "[Admin] Community Updates",
       "description": "Receive notification when a new update is shared with a community for which I am an administrator",
       "valueType": "boolean",
