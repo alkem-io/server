@@ -38,7 +38,7 @@ export class VisualService {
   }
 
   async updateVisual(visualData: UpdateVisualInput): Promise<IVisual> {
-    const visual = await this.getVisualOrFail(visualData.ID);
+    const visual = await this.getVisualOrFail(visualData.visualID);
     if (visualData.uri || visualData.uri === '') {
       visual.uri = visualData.uri;
     }
@@ -99,11 +99,11 @@ export class VisualService {
 
     try {
       const uri = await this.ipfsService.uploadFileFromBuffer(buffer);
-      const profileData: UpdateVisualInput = {
-        ID: visual.id,
+      const updateData: UpdateVisualInput = {
+        visualID: visual.id,
         uri: uri,
       };
-      return await this.updateVisual(profileData);
+      return await this.updateVisual(updateData);
     } catch (error: any) {
       throw new IpfsUploadFailedException(
         `Ipfs upload of ${fileName} failed! Error: ${error.message}`

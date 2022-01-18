@@ -9,7 +9,6 @@ Variables:
 {
   "profileData": {
     "ID": "uuid",
-    "description": "some description",
-    "avatar": "http://someUri"
+    "description": "some description"
   }
 }

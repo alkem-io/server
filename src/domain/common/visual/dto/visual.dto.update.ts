@@ -1,5 +1,9 @@
-import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
+import { Field, InputType } from '@nestjs/graphql';
 
-export class UpdateVisualInput extends UpdateBaseAlkemioInput {
-  uri?: string;
+@InputType()
+export class UpdateVisualInput {
+  @Field({ nullable: false })
+  visualID!: string;
+  @Field({ nullable: false })
+  uri!: string;
 }

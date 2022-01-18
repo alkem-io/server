@@ -81,7 +81,7 @@ export class ProfileService {
 
     if (profileData.avatar && profile.avatar) {
       profile.avatar = await this.visualService.updateVisual({
-        ID: profile.avatar?.id,
+        visualID: profile.avatar?.id,
         uri: profileData.avatar,
       });
     }

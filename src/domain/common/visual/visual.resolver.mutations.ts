@@ -9,6 +9,7 @@ import { VisualUploadImageInput } from './dto/visual.dto.upload.image';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { VisualService } from './visual.service';
 import { IVisual } from './visual.interface';
+import { UpdateVisualInput } from './dto/visual.dto.update';
 
 @Resolver()
 export class VisualResolverMutations {
@@ -45,5 +46,25 @@ export class VisualResolverMutations {
     );
 
     return updatedProfile;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IVisual, {
+    description: 'Updates the image URI for the specified Visual.',
+  })
+  async updateVisual(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('updateData') updateData: UpdateVisualInput
+  ): Promise<IVisual> {
+    const visual = await this.visualService.getVisualOrFail(
+      updateData.visualID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      visual.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `visual image update: ${visual.id}`
+    );
+    return await this.visualService.updateVisual(updateData);
   }
 }
