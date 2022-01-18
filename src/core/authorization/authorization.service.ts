@@ -119,13 +119,13 @@ export class AuthorizationService {
         ) {
           for (const privilege of rule.grantedPrivileges) {
             if (privilege === privilegeRequired) {
-              this.logger.warn?.(
-                `Authorization engine: granting access for '${verifiedCredential.type}'`,
+              this.logger.verbose?.(
+                `[Authorization] Access granted based on VC of type: '${verifiedCredential.type}'`,
                 LogContext.AUTH
               );
               return true;
-              grantedPrivileges.push(privilege);
             }
+            grantedPrivileges.push(privilege);
           }
         }
       }

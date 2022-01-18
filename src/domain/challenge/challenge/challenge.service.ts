@@ -609,24 +609,24 @@ export class ChallengeService {
     return await this.userService.getUserWithAgent(removeData.userID);
   }
 
-  // async authorizeStateModification(
-  //   grantStateModificationVC: ChallengeAuthorizeStateModificationInput
-  // ): Promise<IUser> {
-  //   const challengeAgent = await this.getAgent(
-  //     grantStateModificationVC.challengeID
-  //   );
-  //   const userAgent = await this.userService.getAgent(
-  //     grantStateModificationVC.userID
-  //   );
+  async authorizeStateModification(
+    grantStateModificationVC: ChallengeAuthorizeStateModificationInput
+  ): Promise<IUser> {
+    const challengeAgent = await this.getAgent(
+      grantStateModificationVC.challengeID
+    );
+    const userAgent = await this.userService.getAgent(
+      grantStateModificationVC.userID
+    );
 
-  //   await this.ssiAgentService.authorizeStateModification(
-  //     challengeAgent,
-  //     grantStateModificationVC.challengeID,
-  //     userAgent,
-  //     grantStateModificationVC.userID
-  //   );
-  //   return await this.userService.getUserOrFail(
-  //     grantStateModificationVC.userID
-  //   );
-  // }
+    await this.agentService.authorizeStateModification(
+      challengeAgent,
+      grantStateModificationVC.challengeID,
+      userAgent,
+      grantStateModificationVC.userID
+    );
+    return await this.userService.getUserOrFail(
+      grantStateModificationVC.userID
+    );
+  }
 }

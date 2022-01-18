@@ -59,8 +59,8 @@ export class EcoverseAuthorizationService {
     );
 
     // propagate authorization rules for child entities
-    const challenges = await this.ecoverseService.getChallenges(ecoverse);
-    for (const challenge of challenges) {
+    ecoverse.challenges = await this.ecoverseService.getChallenges(ecoverse);
+    for (const challenge of ecoverse.challenges) {
       await this.challengeAuthorizationService.applyAuthorizationPolicy(
         challenge,
         ecoverse.authorization
