@@ -5,7 +5,7 @@ export class CreateVisualInput {
 
   maxWidth!: number;
 
-  minHeigt!: number;
+  minHeight!: number;
 
   maxHeight!: number;
 

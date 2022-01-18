@@ -57,7 +57,7 @@ export class ContextService {
       name: 'banner',
       minWidth: 384,
       maxWidth: 768,
-      minHeigt: 32,
+      minHeight: 32,
       maxHeight: 128,
       aspectRatio: 6,
     });
@@ -68,7 +68,7 @@ export class ContextService {
       name: 'bannerNarrow',
       minWidth: 192,
       maxWidth: 384,
-      minHeigt: 32,
+      minHeight: 32,
       maxHeight: 128,
       aspectRatio: 3,
     });
@@ -79,7 +79,7 @@ export class ContextService {
       name: 'avatar',
       minWidth: 190,
       maxWidth: 400,
-      minHeigt: 190,
+      minHeight: 190,
       maxHeight: 400,
       aspectRatio: 1,
     });

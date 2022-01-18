@@ -53,7 +53,7 @@ export class ProfileService {
         name: 'avatar',
         minWidth: this.minImageSize,
         maxWidth: this.maxImageSize,
-        minHeigt: this.minImageSize,
+        minHeight: this.minImageSize,
         maxHeight: this.maxImageSize,
         aspectRatio: 1,
       },

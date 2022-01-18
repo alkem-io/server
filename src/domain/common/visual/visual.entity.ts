@@ -41,6 +41,11 @@ export class Visual extends AuthorizableEntity implements IVisual {
     this.name = name;
     this.uri = uri || '';
     this.allowedTypes = this.createDefaultAllowedTypes();
+    this.minHeight = 0;
+    this.maxHeight = 0;
+    this.minWidth = 0;
+    this.maxWidth = 0;
+    this.aspectRatio = 1;
   }
 
   private createDefaultAllowedTypes(): string[] {
