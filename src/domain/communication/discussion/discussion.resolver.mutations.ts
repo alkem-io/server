@@ -57,6 +57,7 @@ export class DiscussionResolverMutations {
 
     // Send the subscription event
     const subscriptionPayload: CommunicationDiscussionMessageReceived = {
+      eventID: discussionMessage.id,
       message: discussionMessage,
       discussionID: discussion.id,
     };

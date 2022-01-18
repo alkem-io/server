@@ -73,6 +73,7 @@ export class UpdatesResolverMutations {
 
     // Send the subscriptions event
     const subscriptionPayload: CommunicationUpdateMessageReceived = {
+      eventID: updateSent.id,
       message: updateSent,
       updatesID: updates.id,
     };

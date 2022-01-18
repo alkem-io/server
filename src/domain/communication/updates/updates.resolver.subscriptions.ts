@@ -49,7 +49,7 @@ export class UpdatesResolverSubscriptions {
     ) {
       const updatesIDs: string[] = variables.updatesIDs;
       this.logger.verbose?.(
-        `[UpdateMsg Filter] Variable of IDs to filter by: ${updatesIDs}`,
+        `[DiscussionMsg Filter] Filtering event id: ${payload.eventID}`,
         LogContext.SUBSCRIPTIONS
       );
       if (!updatesIDs) {

@@ -48,7 +48,7 @@ export class DiscussionResolverSubscriptions {
     ) {
       const discussionIDs: string[] = variables.discussionIDs;
       this.logger.verbose?.(
-        `[DiscussionMsg Filter] Filtering event with list: ${discussionIDs}`,
+        `[DiscussionMsg Filter] Filtering event id: ${payload.eventID}`,
         LogContext.SUBSCRIPTIONS
       );
       if (!discussionIDs) {
