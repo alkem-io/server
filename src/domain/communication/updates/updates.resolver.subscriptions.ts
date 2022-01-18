@@ -47,13 +47,13 @@ export class UpdatesResolverSubscriptions {
       variables: any,
       context: any
     ) {
+      const agentInfo = context.req?.user;
       const updatesIDs: string[] = variables.updatesIDs;
       this.logger.verbose?.(
-        `[DiscussionMsg Filter] Filtering event id: ${payload.eventID}`,
+        `[UpdateMsg Filter] Filtering event '${payload.eventID}' for user: ${agentInfo.email}`,
         LogContext.SUBSCRIPTIONS
       );
       if (!updatesIDs) {
-        const agentInfo = context.req?.user;
         // If subscribed to all then need to check on every update the authorization to see it
         this.logger.verbose?.(
           `[UpdateMsg Filter] User (${agentInfo.email}) subscribed to all updates; filtering by Authorization to see ${payload.updatesID}`,

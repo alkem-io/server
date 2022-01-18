@@ -56,8 +56,9 @@ export class DiscussionResolverMutations {
       );
 
     // Send the subscription event
+    const eventID = `discussion-msg-${Math.floor(Math.random() * 100)}`;
     const subscriptionPayload: CommunicationDiscussionMessageReceived = {
-      eventID: discussionMessage.id,
+      eventID: eventID,
       message: discussionMessage,
       discussionID: discussion.id,
     };

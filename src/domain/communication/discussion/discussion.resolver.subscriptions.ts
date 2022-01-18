@@ -46,13 +46,13 @@ export class DiscussionResolverSubscriptions {
       variables: any,
       context: any
     ) {
+      const agentInfo = context.req?.user;
       const discussionIDs: string[] = variables.discussionIDs;
       this.logger.verbose?.(
-        `[DiscussionMsg Filter] Filtering event id: ${payload.eventID}`,
+        `[DiscussionMsg Filter] Filtering event id '${payload.eventID}' for user: ${agentInfo.email}`,
         LogContext.SUBSCRIPTIONS
       );
       if (!discussionIDs) {
-        const agentInfo = context.req?.user;
         // If subscribed to all then need to check on every update the authorization to see it as could not be done
         // on the subscription approval
         this.logger.verbose?.(

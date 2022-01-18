@@ -73,7 +73,9 @@ export class CanvasResolverMutations {
       agentInfo
     );
 
+    const eventID = `canvas-${Math.floor(Math.random() * 100)}`;
     const subscriptionPayload: CanvasContentUpdated = {
+      eventID: eventID,
       canvasID: updatedCanvas.id,
       value: updatedCanvas.value ?? '', //todo how to handle this?
     };

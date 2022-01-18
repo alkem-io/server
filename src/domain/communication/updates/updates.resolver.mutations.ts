@@ -72,8 +72,9 @@ export class UpdatesResolverMutations {
     );
 
     // Send the subscriptions event
+    const eventID = `update-msg-${Math.floor(Math.random() * 100)}`;
     const subscriptionPayload: CommunicationUpdateMessageReceived = {
-      eventID: updateSent.id,
+      eventID: eventID,
       message: updateSent,
       updatesID: updates.id,
     };

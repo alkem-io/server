@@ -207,7 +207,7 @@ monitoring:
 
     # To allow logging of a particular context to a file
     context_to_file:
-      enabled: ${LOGGING_CONTEXT_ENABLED}:true
+      enabled: ${LOGGING_CONTEXT_ENABLED}:false
       # The file name to use
       filename: ${LOGGING_CONTEXT_FILENAME}:logSubscriptions.txt
       # The context to actually log
