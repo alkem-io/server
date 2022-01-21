@@ -114,6 +114,21 @@ export class EcoverseService {
       this.ecoverseRepository
     );
 
+    if (ecoverseData.nameID) {
+      if (ecoverseData.nameID !== ecoverse.nameID) {
+        // updating the nameID, check new value is allowed
+        const updateAllowed = await this.isNameIdAvailable(ecoverseData.nameID);
+        if (!updateAllowed) {
+          throw new ValidationException(
+            `Unable to update Ecoverse nameID: the provided nameID is already taken: ${ecoverseData.nameID}`,
+            LogContext.CHALLENGES
+          );
+        }
+        ecoverse.nameID = ecoverseData.nameID;
+        await this.ecoverseRepository.save(ecoverse);
+      }
+    }
+
     if (ecoverseData.hostID) {
       await this.setEcoverseHost(ecoverse.id, ecoverseData.hostID);
     }
