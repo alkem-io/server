@@ -1,4 +1,4 @@
-import { ConfigurationTypes } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
@@ -8,7 +8,7 @@ import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filte
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
-import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { LoggerService, MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
@@ -67,7 +67,10 @@ import { print } from 'graphql/language/printer';
     GraphQLModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: async (
+        configService: ConfigService,
+        logger: LoggerService
+      ) => ({
         cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
         uploads: false,
         autoSchemaFile: true,
@@ -120,13 +123,33 @@ import { print } from 'graphql/language/printer';
             __: { [key: string]: any },
             context
           ) => {
-            const authHeader = context.request.headers.authorization;
+            const authHeader: string =
+              context.request.headers.authorization || '';
+            if (logger) {
+              logger.verbose?.(
+                `New subscription ${context}`,
+                LogContext.SUBSCRIPTIONS
+              );
+            } else {
+              console.log(`New subscription: ${authHeader.substring(0, 20)}`);
+            }
             // Note: passing through headers so can leverage http authentication setup
             // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
             return { headers: { authorization: `${authHeader}` } };
           },
-          onDisconnect: async (_: any, __: any) => {
+          onDisconnect: async (_: any, context: any) => {
+            const authHeader: string = context.request.headers.authorization;
             // Todo: make a nicer error message if the subscription fails due to an execption being thrown
+            if (logger) {
+              logger.verbose?.(
+                `Closing subscription ${context}`,
+                LogContext.SUBSCRIPTIONS
+              );
+            } else {
+              console.log(
+                `Closing subscription: ${authHeader.substring(0, 20)}`
+              );
+            }
           },
         },
       }),
