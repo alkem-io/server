@@ -32,13 +32,17 @@ export class DiscussionResolverSubscriptions {
     description: 'Receive new Discussion messages',
     async resolve(
       this: DiscussionResolverSubscriptions,
-      value: CommunicationDiscussionMessageReceived
+      payload: CommunicationDiscussionMessageReceived,
+      _: any,
+      context: any
     ): Promise<CommunicationDiscussionMessageReceived> {
+      const agentInfo = context.req?.user;
+      const logMsgPrefix = `[User (${agentInfo.email}) DiscussionMsg] - `;
       this.logger.verbose?.(
-        `[DiscussionMsg Resolve] sending out event for Discussion message received:: ${value.discussionID} `,
+        `${logMsgPrefix} Sending out event: ${payload.discussionID} `,
         LogContext.SUBSCRIPTIONS
       );
-      return value;
+      return payload;
     },
     async filter(
       this: DiscussionResolverSubscriptions,
@@ -48,15 +52,16 @@ export class DiscussionResolverSubscriptions {
     ) {
       const agentInfo = context.req?.user;
       const discussionIDs: string[] = variables.discussionIDs;
+      const logMsgPrefix = `[User (${agentInfo.email}) DiscussionMsg] - `;
       this.logger.verbose?.(
-        `[DiscussionMsg Filter] Filtering event id '${payload.eventID}' for user: ${agentInfo.email}`,
+        `${logMsgPrefix} Filtering event id '${payload.eventID}'`,
         LogContext.SUBSCRIPTIONS
       );
       if (!discussionIDs) {
         // If subscribed to all then need to check on every update the authorization to see it as could not be done
         // on the subscription approval
         this.logger.verbose?.(
-          `[DiscussionMsg Filter] User (${agentInfo.email}) subscribed to all msgs; filtering by Authorization to see ${payload.discussionID}`,
+          `${logMsgPrefix} Subscribed to all msgs; filtering by Authorization to see ${payload.discussionID}`,
           LogContext.SUBSCRIPTIONS
         );
         const updates = await this.discussionService.getDiscussionOrFail(
@@ -68,7 +73,7 @@ export class DiscussionResolverSubscriptions {
           AuthorizationPrivilege.READ
         );
         this.logger.verbose?.(
-          `[DiscussionMsg Filter] User (${agentInfo.email}) filter: ${filter}`,
+          `${logMsgPrefix} ...filter result: ${filter}`,
           LogContext.SUBSCRIPTIONS
         );
         return filter;
@@ -76,7 +81,7 @@ export class DiscussionResolverSubscriptions {
         // No need to do an authorization check as was done on the subscription approval
         const inList = discussionIDs.includes(payload.discussionID);
         this.logger.verbose?.(
-          `[DiscussionMsg Filter] result is ${inList}`,
+          `${logMsgPrefix} - Filter result is ${inList}`,
           LogContext.SUBSCRIPTIONS
         );
         return inList;
@@ -94,9 +99,10 @@ export class DiscussionResolverSubscriptions {
     })
     discussionIDs: string[]
   ) {
+    const logMsgPrefix = `[User (${agentInfo.email}) DiscussionMsg] - `;
     if (discussionIDs) {
       this.logger.verbose?.(
-        `[DiscussionMsg Request] User (${agentInfo.email}) subscribing to the following discussion: ${discussionIDs}`,
+        `${logMsgPrefix} Subscribing to the following discussions: ${discussionIDs}`,
         LogContext.SUBSCRIPTIONS
       );
       for (const discussionID of discussionIDs) {
@@ -113,7 +119,7 @@ export class DiscussionResolverSubscriptions {
       }
     } else {
       this.logger.verbose?.(
-        `[DiscussionMsg Request] User (${agentInfo.email}) subscribing to all discussions`,
+        `${logMsgPrefix} Subscribing to all discussions`,
         LogContext.SUBSCRIPTIONS
       );
 

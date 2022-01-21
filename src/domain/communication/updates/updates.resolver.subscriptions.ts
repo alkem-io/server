@@ -33,10 +33,14 @@ export class UpdatesResolverSubscriptions {
       'Receive new Update messages on Communities the currently authenticated User is a member of.',
     async resolve(
       this: UpdatesResolverSubscriptions,
-      value: CommunicationUpdateMessageReceived
+      value: CommunicationUpdateMessageReceived,
+      _: any,
+      context: any
     ): Promise<CommunicationUpdateMessageReceived> {
+      const agentInfo = context.req?.user;
+      const logMsgPrefix = `[User (${agentInfo.email}) Updates] - `;
       this.logger.verbose?.(
-        `[UpdateMsg Resolve] sending out event for Updates: ${value.updatesID} `,
+        `${logMsgPrefix} sending out event for Updates: ${value.updatesID} `,
         LogContext.SUBSCRIPTIONS
       );
       return value;
@@ -48,15 +52,16 @@ export class UpdatesResolverSubscriptions {
       context: any
     ) {
       const agentInfo = context.req?.user;
+      const logMsgPrefix = `[User (${agentInfo.email}) Updates] - `;
       const updatesIDs: string[] = variables.updatesIDs;
       this.logger.verbose?.(
-        `[UpdateMsg Filter] Filtering event '${payload.eventID}' for user: ${agentInfo.email}`,
+        `${logMsgPrefix}  Filtering event '${payload.eventID}'`,
         LogContext.SUBSCRIPTIONS
       );
       if (!updatesIDs) {
         // If subscribed to all then need to check on every update the authorization to see it
         this.logger.verbose?.(
-          `[UpdateMsg Filter] User (${agentInfo.email}) subscribed to all updates; filtering by Authorization to see ${payload.updatesID}`,
+          `${logMsgPrefix} Subscribed to all updates; filtering by Authorization to see ${payload.updatesID}`,
           LogContext.SUBSCRIPTIONS
         );
         const updates = await this.updatesService.getUpdatesOrFail(
@@ -68,14 +73,14 @@ export class UpdatesResolverSubscriptions {
           AuthorizationPrivilege.READ
         );
         this.logger.verbose?.(
-          `[UpdateMsg Filter] User (${agentInfo.email}) filter: ${filter}`,
+          `${logMsgPrefix} Filter result: ${filter}`,
           LogContext.SUBSCRIPTIONS
         );
         return filter;
       } else {
         const inList = updatesIDs.includes(payload.updatesID);
         this.logger.verbose?.(
-          `[UpdateMsg Filter] result is ${inList}`,
+          `${logMsgPrefix} Filter result is ${inList}`,
           LogContext.SUBSCRIPTIONS
         );
         return inList;
@@ -93,9 +98,10 @@ export class UpdatesResolverSubscriptions {
     })
     updatesIDs: string[]
   ) {
+    const logMsgPrefix = `[User (${agentInfo.email}) Updates] - `;
     if (updatesIDs) {
       this.logger.verbose?.(
-        `[UpdateMsg] User (${agentInfo.email}) subscribing to the following updates: ${updatesIDs}`,
+        `${logMsgPrefix} Subscribing to the following updates: ${updatesIDs}`,
         LogContext.SUBSCRIPTIONS
       );
       for (const updatesID of updatesIDs) {
@@ -110,7 +116,7 @@ export class UpdatesResolverSubscriptions {
       }
     } else {
       this.logger.verbose?.(
-        `[UpdateMsg] User (${agentInfo.email}) subscribing to all updates`,
+        `${logMsgPrefix} Subscribing to all updates`,
         LogContext.SUBSCRIPTIONS
       );
       // Todo: either disable this option or find a way to do this once in this method and pass the resulting
