@@ -64,7 +64,6 @@ export class WinstonConfigService {
       ConfigurationTypes.MONITORING
     )?.logging.context_to_file;
     if (contextToFileConfig.enabled) {
-      // todo: enable from config
       const filename = contextToFileConfig.filename;
 
       function filterMessagesFormat(filterFunc: any) {
