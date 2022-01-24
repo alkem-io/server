@@ -125,7 +125,6 @@ export class EcoverseService {
           );
         }
         ecoverse.nameID = ecoverseData.nameID;
-        await this.ecoverseRepository.save(ecoverse);
       }
     }
 
