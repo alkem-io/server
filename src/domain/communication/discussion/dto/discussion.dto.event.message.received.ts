@@ -3,6 +3,9 @@ import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('CommunicationDiscussionMessageReceived')
 export class CommunicationDiscussionMessageReceived {
+  // To identify the event
+  eventID!: string;
+
   @Field(() => String, {
     nullable: false,
     description:
