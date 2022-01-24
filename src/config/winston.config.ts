@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import * as WinstonElasticsearch from 'winston-elasticsearch';
 import { ConfigurationTypes } from '@common/enums';
 import { FileTransportOptions } from 'winston/lib/winston/transports';
-
+import * as logform from 'logform';
 @Injectable()
 export class WinstonConfigService {
   constructor(private configService: ConfigService) {}
@@ -67,17 +67,26 @@ export class WinstonConfigService {
       // todo: enable from config
       const filename = contextToFileConfig.filename;
 
-      const filterFunc = (info: any) => {
-        if (info.context && info.context === contextToFileConfig.context) {
-          return `${info.timestamp} ${info.level} ${info.context}: ${info.message}`;
-        }
-        return '';
-      };
+      function filterMessagesFormat(filterFunc: any) {
+        const formatFunc = (info: any) => {
+          if (filterFunc(info)) return info;
+          return null;
+        };
+
+        const formatWrap = logform.format(formatFunc);
+        const format = formatWrap();
+        format.transform = formatFunc;
+
+        return format;
+      }
 
       const myFormat = winston.format.combine(
         winston.format.timestamp(),
         winston.format.align(),
-        winston.format.printf(filterFunc)
+        filterMessagesFormat(
+          (info: any) =>
+            info.context && info.context === contextToFileConfig.context
+        )
       );
 
       const fileTransportOptions: FileTransportOptions = {
