@@ -17,6 +17,7 @@ export class Discussion extends RoomableEntity implements IDiscussion {
     this.category = category || '';
     this.description = description || '';
     this.commentsCount = 0;
+    this.createdBy = '';
   }
 
   @Column('text', { nullable: false })
@@ -31,7 +32,7 @@ export class Discussion extends RoomableEntity implements IDiscussion {
   @Column('int', { nullable: false })
   commentsCount!: number;
 
-  @Column('varchar', { length: 36, nullable: false })
+  @Column('varchar', { length: 36, nullable: true })
   createdBy!: string;
 
   @ManyToOne(() => Communication, communication => communication.discussions, {
