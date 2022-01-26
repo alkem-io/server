@@ -11,12 +11,14 @@ import { DiscussionModule } from '../discussion/discussion.module';
 import { CommunicationAdapterModule } from '@services/platform/communication-adapter/communication-adapter.module';
 import { UpdatesModule } from '../updates/updates.module';
 import { IdentityResolverModule } from '../identity-resolver/identity.resolver.module';
+import { RoomModule } from '../room/room.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     DiscussionModule,
+    RoomModule,
     CommunicationAdapterModule,
     UpdatesModule,
     IdentityResolverModule,

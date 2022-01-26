@@ -26,6 +26,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@services/admin/authorization/admin.authorization.service';
 import { UserPreferenceService } from '@domain/community/user-preferences';
 import { CreateUserPreferenceDefinitionInput } from '@domain/community/user-preferences/dto';
+import { CommunicationService } from '@domain/communication/communication/communication.service';
 
 @Injectable()
 export class BootstrapService {
@@ -39,6 +40,7 @@ export class BootstrapService {
     private adminAuthorizationService: AdminAuthorizationService,
     private configService: ConfigService,
     private organizationService: OrganizationService,
+    private communicationService: CommunicationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
     @InjectRepository(Ecoverse)
     private ecoverseRepository: Repository<Ecoverse>,
@@ -60,6 +62,7 @@ export class BootstrapService {
       await this.ensureEcoverseSingleton();
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
+      await this.ensureCommunicationRoomsCreated();
     } catch (error: any) {
       throw new BootstrapException(error.message);
     }
@@ -237,6 +240,15 @@ export class BootstrapService {
       .enabled;
     if (ssiEnabled) {
       await this.agentService.ensureDidsCreated();
+    }
+  }
+
+  async ensureCommunicationRoomsCreated() {
+    const communicationsEnabled = this.configService.get(
+      ConfigurationTypes.COMMUNICATIONS
+    ).enabled;
+    if (communicationsEnabled) {
+      await this.communicationService.ensureCommunicationRoomsCreated();
     }
   }
 
