@@ -6,7 +6,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import amqp from 'amqplib';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 
-export async function subscriptionUpdateMessageFactory(
+export async function subscriptionDiscussionUpdatedFactory(
   logger: LoggerService,
   configService: ConfigService
 ): Promise<PubSubEngine | undefined> {
@@ -43,7 +43,7 @@ export async function subscriptionUpdateMessageFactory(
           },
         },
         queue: {
-          name: MessagingQueue.SUBSCRIPTION_UPDATE_MESSAGE,
+          name: MessagingQueue.SUBSCRIPTION_DISCUSSION_UPDATED,
           options: {
             // used by only one connection and the queue will be deleted when that connection closes
             exclusive: false,

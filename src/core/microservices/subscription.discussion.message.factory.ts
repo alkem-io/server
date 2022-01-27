@@ -62,7 +62,7 @@ export async function subscriptionDiscussionMessageFactory(
     .catch(err => {
       logger.error(
         `Could not connect to RabbitMQ: ${err}, logging in...`,
-        LogContext.NOTIFICATIONS
+        LogContext.SUBSCRIPTIONS
       );
       return undefined;
     });
