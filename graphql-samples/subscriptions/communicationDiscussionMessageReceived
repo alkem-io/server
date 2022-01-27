@@ -1,5 +1,5 @@
 subscription {
-  communicationDiscussionMessageReceived {
+  communicationDiscussionMessageReceived(discussionID: "uuid") {
     discussionID,
     message {
       id,
