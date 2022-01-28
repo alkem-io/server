@@ -48,17 +48,14 @@ export class ProfileService {
       references: profileData?.referencesData,
     });
     profile.authorization = new AuthorizationPolicy();
-    profile.avatar = await this.visualService.createVisual(
-      {
-        name: 'avatar',
-        minWidth: this.minImageSize,
-        maxWidth: this.maxImageSize,
-        minHeight: this.minImageSize,
-        maxHeight: this.maxImageSize,
-        aspectRatio: 1,
-      },
-      profileData?.avatar
-    );
+    profile.avatar = await this.visualService.createVisual({
+      name: 'avatar',
+      minWidth: this.minImageSize,
+      maxWidth: this.maxImageSize,
+      minHeight: this.minImageSize,
+      maxHeight: this.maxImageSize,
+      aspectRatio: 1,
+    });
 
     if (!profile.references) {
       profile.references = [];
@@ -79,12 +76,6 @@ export class ProfileService {
   async updateProfile(profileData: UpdateProfileInput): Promise<IProfile> {
     const profile = await this.getProfileOrFail(profileData.ID);
 
-    if (profileData.avatar && profile.avatar) {
-      profile.avatar = await this.visualService.updateVisual({
-        visualID: profile.avatar?.id,
-        uri: profileData.avatar,
-      });
-    }
     if (profileData.description) {
       profile.description = profileData.description;
     }
