@@ -177,14 +177,15 @@ export class CommunicationAdapter {
 
   async getMessageSender(roomID: string, messageID: string): Promise<string> {
     // only the admin agent has knowledge of all rooms and synchronizes the state
+    const matrixElevatedAgent = await this.getMatrixManagementAgentElevated();
     const matrixRoom = await this.matrixAgentService.getRoom(
-      this.matrixElevatedAgent,
+      matrixElevatedAgent,
       roomID
     );
 
     const messages =
       await this.matrixRoomAdapter.getMatrixRoomTimelineAsMessages(
-        this.matrixElevatedAgent.matrixClient,
+        matrixElevatedAgent.matrixClient,
         matrixRoom
       );
     const matchingMessage = messages.find(message => message.id === messageID);

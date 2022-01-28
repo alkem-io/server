@@ -14,7 +14,13 @@ import { DiscussionAuthorizationService } from '../discussion/discussion.service
 import { ClientProxy } from '@nestjs/microservices';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
-import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
+import {
+  NOTIFICATIONS_SERVICE,
+  SUBSCRIPTION_DISCUSSION_UPDATED,
+} from '@common/constants/providers';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { CommunicationDiscussionUpdated } from './dto/communication.dto.event.discussion.updated';
+import { SubscriptionType } from '@common/enums/subscription.type';
 
 @Resolver()
 export class CommunicationResolverMutations {
@@ -24,7 +30,9 @@ export class CommunicationResolverMutations {
     private discussionAuthorizationService: DiscussionAuthorizationService,
     private discussionService: DiscussionService,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
+    @Inject(SUBSCRIPTION_DISCUSSION_UPDATED)
+    private readonly subscriptionDiscussionMessage: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -66,6 +74,19 @@ export class CommunicationResolverMutations {
     this.notificationsClient.emit<number>(
       EventType.COMMUNICATION_DISCUSSION_CREATED,
       payload
+    );
+
+    // Send out the subscription event
+    const eventID = `discussion-message-updated-${Math.floor(
+      Math.random() * 100
+    )}`;
+    const subscriptionPayload: CommunicationDiscussionUpdated = {
+      eventID: eventID,
+      discussionID: discussion.id,
+    };
+    this.subscriptionDiscussionMessage.publish(
+      SubscriptionType.COMMUNICATION_DISCUSSION_UPDATED,
+      subscriptionPayload
     );
 
     return savedDiscussion;
