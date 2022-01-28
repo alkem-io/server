@@ -11,7 +11,6 @@ import { IReference } from '@domain/common/reference';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { IVisual } from '@domain/common/visual/visual.interface';
-import { IVisualOld } from './dto/context.dto.visual.old.result';
 
 @Resolver(() => IContext)
 export class ContextResolverFields {
@@ -35,15 +34,6 @@ export class ContextResolverFields {
   @Profiling.api
   async visuals(@Parent() context: Context) {
     return await this.contextService.getVisuals(context);
-  }
-
-  @ResolveField('visual', () => IVisualOld, {
-    nullable: true,
-    description: 'The old api for Visual assets for this Context.',
-  })
-  @Profiling.api
-  async visual(@Parent() context: Context): Promise<IVisualOld> {
-    return await this.contextService.getVisualOld(context);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

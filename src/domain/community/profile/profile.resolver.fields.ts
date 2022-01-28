@@ -9,23 +9,13 @@ import { GraphqlGuard } from '@core/authorization/graphql.guard';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
-  @ResolveField('avatar', () => String, {
-    nullable: true,
-    description: 'The avatar uri for this Profile.',
-  })
-  @Profiling.api
-  async avatar(@Parent() profile: IProfile): Promise<string> {
-    if (profile.avatar) return profile.avatar.uri;
-    return 'not set';
-  }
-
   @UseGuards(GraphqlGuard)
-  @ResolveField('avatar2', () => IVisual, {
+  @ResolveField('avatar', () => IVisual, {
     nullable: true,
     description: 'The Visual avatar for this Profile.',
   })
   @Profiling.api
-  async avatar2(@Parent() profile: IProfile): Promise<IVisual> {
+  async avatar(@Parent() profile: IProfile): Promise<IVisual> {
     if (!profile.avatar) {
       throw new EntityNotInitializedException(
         'Avatar visual not defined',

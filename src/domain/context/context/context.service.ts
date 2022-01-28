@@ -24,7 +24,6 @@ import { UpdateContextInput } from './dto/context.dto.update';
 import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { IVisual } from '@domain/common/visual/visual.interface';
-import { IVisualOld } from './dto/context.dto.visual.old.result';
 
 @Injectable()
 export class ContextService {
@@ -386,14 +385,5 @@ export class ContextService {
       `Unable to find visual with the name '${name}' on context: ${context.id}`,
       LogContext.CONTEXT
     );
-  }
-
-  async getVisualOld(context: IContext): Promise<IVisualOld> {
-    return {
-      id: context.id,
-      banner: (await this.getVisual(context, 'banner')).uri,
-      background: (await this.getVisual(context, 'bannerNarrow')).uri,
-      avatar: (await this.getVisual(context, 'avatar')).uri,
-    };
   }
 }
