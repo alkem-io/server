@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
@@ -12,6 +12,7 @@ import { RoomRemoveMessageInput } from '../room/dto/room.dto.remove.message';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
 import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class UpdatesService {
@@ -19,7 +20,8 @@ export class UpdatesService {
     @InjectRepository(Updates)
     private updatesRepository: Repository<Updates>,
     private roomService: RoomService,
-    private communicationAdapter: CommunicationAdapter
+    private communicationAdapter: CommunicationAdapter,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createUpdates(
