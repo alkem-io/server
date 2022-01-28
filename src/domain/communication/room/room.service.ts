@@ -41,15 +41,25 @@ export class RoomService {
   }
 
   async initializeCommunicationRoom(roomable: IRoomable): Promise<string> {
+    if (
+      roomable.communicationRoomID &&
+      roomable.communicationRoomID.length > 0
+    ) {
+      this.logger.warn?.(
+        `Roomable (${roomable.displayName}) already has a communication room: ${roomable.communicationRoomID}`,
+        LogContext.COMMUNICATION
+      );
+      return roomable.communicationRoomID;
+    }
     try {
-      const communicationRoomID =
+      roomable.communicationRoomID =
         await this.communicationAdapter.createCommunityRoom(
           roomable.communicationGroupID,
           roomable.displayName,
           { roomableID: roomable.id }
         );
-      return communicationRoomID;
-    } catch (error) {
+      return roomable.communicationRoomID;
+    } catch (error: any) {
       this.logger.error?.(
         `Unable to initialize roomable communication room (${roomable.displayName}): ${error}`,
         LogContext.COMMUNICATION
