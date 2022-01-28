@@ -10,6 +10,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AdminAuthorizationModule } from '@services/admin/authorization/admin.authorization.module';
 import { UserPreferenceModule } from '@domain/community/user-preferences';
 import { BootstrapService } from './bootstrap.service';
+import { CommunicationModule } from '@domain/communication/communication/communication.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { BootstrapService } from './bootstrap.service';
     UserModule,
     UserPreferenceModule,
     AdminAuthorizationModule,
+    CommunicationModule,
     OrganizationModule,
     TypeOrmModule.forFeature([Ecoverse]),
   ],

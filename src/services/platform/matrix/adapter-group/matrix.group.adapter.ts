@@ -1,5 +1,6 @@
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixClient } from '../types/matrix.client.type';
 import { IOpts } from './matrix.group.dto.options';
@@ -8,7 +9,8 @@ import { IOpts } from './matrix.group.dto.options';
 export class MatrixGroupAdapter {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private configService: ConfigService
   ) {}
 
   // Maps from a groupID to an array of roomIDs
@@ -30,6 +32,14 @@ export class MatrixGroupAdapter {
     }
 
     return roomMap;
+  }
+
+  convertMatrixLocalGroupIdToMatrixID(groupID: string) {
+    const homeserverName = this.configService.get(
+      ConfigurationTypes.COMMUNICATIONS
+    )?.matrix?.homeserver_name;
+
+    return `+${groupID}:${homeserverName}`;
   }
 
   public async createGroup(

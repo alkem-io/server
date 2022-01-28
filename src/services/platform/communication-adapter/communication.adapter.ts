@@ -281,6 +281,10 @@ export class CommunicationAdapter {
     }
   }
 
+  async convertMatrixLocalGroupIdToMatrixID(groupID: string): Promise<string> {
+    return this.matrixGroupAdapter.convertMatrixLocalGroupIdToMatrixID(groupID);
+  }
+
   async createCommunityGroup(
     communityId: string,
     communityName: string

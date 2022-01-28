@@ -36,33 +36,14 @@ export class DiscussionService {
     const discussion = Discussion.create(discussionData);
     discussion.authorization = new AuthorizationPolicy();
     discussion.communicationGroupID = communicationGroupID;
-    discussion.displayName = displayName;
+    discussion.displayName = `${displayName}-discussion-${discussion.title}`;
     discussion.createdBy = userID;
     discussion.commentsCount = 0;
     await this.save(discussion);
-    discussion.communicationRoomID = await this.initializeDiscussionRoom(
-      discussion
-    );
+    discussion.communicationRoomID =
+      await this.roomService.initializeCommunicationRoom(discussion);
 
     return await this.save(discussion);
-  }
-
-  async initializeDiscussionRoom(discussion: IDiscussion): Promise<string> {
-    try {
-      const communicationRoomID =
-        await this.communicationAdapter.createCommunityRoom(
-          discussion.communicationGroupID,
-          `${discussion.displayName}-discussion-${discussion.title} `,
-          { discussionID: discussion.id }
-        );
-      return communicationRoomID;
-    } catch (error) {
-      this.logger.error?.(
-        `Unable to initialize discussion room (${discussion.title}): ${error}`,
-        LogContext.COMMUNICATION
-      );
-    }
-    return '';
   }
 
   async removeDiscussion(

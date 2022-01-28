@@ -12,12 +12,15 @@ import { CommunicationAdapterModule } from '@services/platform/communication-ada
 import { UpdatesModule } from '../updates/updates.module';
 import { IdentityResolverModule } from '../identity-resolver/identity.resolver.module';
 import { CommunicationResolverSubscriptions } from './communication.resolver.subscriptions';
+import { RoomModule } from '../room/room.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     DiscussionModule,
+    RoomModule,
+    CommunicationAdapterModule,
     UpdatesModule,
     CommunicationAdapterModule,
     IdentityResolverModule,
