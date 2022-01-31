@@ -68,6 +68,16 @@ export class ContextAuthorizationService {
         );
     }
 
+    context.visuals = await this.contextService.getVisuals(context);
+    for (const visual of context.visuals) {
+      visual.authorization =
+        await this.authorizationPolicyService.inheritParentAuthorization(
+          visual.authorization,
+          context.authorization
+        );
+    }
+
+
     context.canvases = await this.contextService.getCanvases(context);
     for (const canvas of context.canvases) {
       await this.canvasAuthorizationService.applyAuthorizationPolicy(
