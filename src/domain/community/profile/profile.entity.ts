@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { Reference } from '@domain/common/reference/reference.entity';
 import {
   RestrictedTagsetNames,
@@ -6,6 +6,7 @@ import {
 } from '@domain/common/tagset/tagset.entity';
 import { IProfile } from './profile.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { Visual } from '@domain/common/visual/visual.entity';
 
 @Entity()
 export class Profile extends AuthorizableEntity implements IProfile {
@@ -21,8 +22,13 @@ export class Profile extends AuthorizableEntity implements IProfile {
   })
   tagsets?: Tagset[];
 
-  @Column('text', { nullable: true })
-  avatar = '';
+  @OneToOne(() => Visual, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  avatar?: Visual;
 
   @Column('text', { nullable: true })
   description = '';

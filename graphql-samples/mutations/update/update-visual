@@ -1,0 +1,14 @@
+mutation updateVisual($updateData: UpdateVisualInput!) {
+  updateVisual(updateData: $updateData)
+  {
+    id
+  }
+}
+
+Variables:
+{
+  "updateData": {
+    "visualID": "uuid",
+    "uri": "some description"
+  }
+}
