@@ -235,6 +235,7 @@ export class SearchService {
       const organizationMatches = await this.organizationRepository
         .createQueryBuilder('organization')
         .leftJoinAndSelect('organization.profile', 'profile')
+        .leftJoinAndSelect('profile.avatar', 'avatar')
         .leftJoinAndSelect('organization.groups', 'groups')
         .where('organization.nameID like :term')
         .orWhere('organization.displayName like :term')
