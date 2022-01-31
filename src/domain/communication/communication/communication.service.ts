@@ -234,6 +234,7 @@ export class CommunicationService {
     }
     return discussion;
   }
+
   getUpdates(communication: ICommunication): IUpdates {
     if (!communication.updates) {
       throw new EntityNotInitializedException(
@@ -259,7 +260,6 @@ export class CommunicationService {
       );
     return communication;
   }
-
   async removeCommunication(communicationID: string): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const communication = await this.getCommunicationOrFail(communicationID, {

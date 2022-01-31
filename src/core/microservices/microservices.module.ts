@@ -10,6 +10,7 @@ import {
   SUBSCRIPTION_UPDATE_MESSAGE,
   SUBSCRIPTION_CANVAS_CONTENT,
   WALLET_MANAGEMENT_SERVICE,
+  SUBSCRIPTION_DISCUSSION_UPDATED,
 } from '@common/constants/providers';
 
 export type MicroserviceOptions = {
@@ -25,6 +26,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationsPayloadBuilder } from './notifications.payload.builder';
 import { subscriptionCanvasContentFactory } from './subscription.canvas.content.factory';
 import { subscriptionUpdateMessageFactory } from './subscription.update.message.factory';
+import { subscriptionDiscussionUpdatedFactory } from './subscription.discussion.updated.factory';
 
 @Global()
 @Module({
@@ -43,6 +45,11 @@ import { subscriptionUpdateMessageFactory } from './subscription.update.message.
     {
       provide: SUBSCRIPTION_DISCUSSION_MESSAGE,
       useFactory: subscriptionDiscussionMessageFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
+      provide: SUBSCRIPTION_DISCUSSION_UPDATED,
+      useFactory: subscriptionDiscussionUpdatedFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
@@ -68,6 +75,7 @@ import { subscriptionUpdateMessageFactory } from './subscription.update.message.
   ],
   exports: [
     SUBSCRIPTION_DISCUSSION_MESSAGE,
+    SUBSCRIPTION_DISCUSSION_UPDATED,
     SUBSCRIPTION_UPDATE_MESSAGE,
     SUBSCRIPTION_CANVAS_CONTENT,
     NOTIFICATIONS_SERVICE,

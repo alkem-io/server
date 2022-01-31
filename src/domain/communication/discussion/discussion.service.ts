@@ -146,4 +146,21 @@ export class DiscussionService {
 
     return messageData.messageID;
   }
+
+  async isDiscussionInCommunication(
+    discussionID: string,
+    communicationID: string
+  ): Promise<boolean> {
+    const discussion = await this.discussionRepository
+      .createQueryBuilder('discussion')
+      .where('discussion.id = :discussionID')
+      .andWhere('discussion.communicationId = :communicationID')
+      .setParameters({
+        discussionID: `${discussionID}`,
+        communicationID: `${communicationID}`,
+      })
+      .getOne();
+    if (discussion) return true;
+    return false;
+  }
 }
