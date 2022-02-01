@@ -312,6 +312,10 @@ export class OrganizationService {
     limit?: number,
     shuffle = false
   ): Promise<IOrganization[]> {
+    this.logger.verbose?.(
+      `Querying all organizations with limit: ${limit} and shuffle: ${shuffle}`,
+      LogContext.COMMUNITY
+    );
     const organizations: IOrganization[] =
       await this.organizationRepository.find();
     if (!organizations) return [];
@@ -320,7 +324,7 @@ export class OrganizationService {
     // Need to restrict the set of users to return
     if (shuffle) {
       const randomIndexes = generateRandomArraySelection(
-        limit,
+        Math.min(limit, organizations.length),
         organizations.length
       );
       const limitedResult: IOrganization[] = [];

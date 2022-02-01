@@ -477,20 +477,27 @@ export class UserService {
   }
 
   async getUsers(limit?: number, shuffle = false): Promise<IUser[]> {
-    const result = await this.userRepository.find({ serviceProfile: false });
-    if (!result) return [];
-    if (!limit) return result;
+    this.logger.verbose?.(
+      `Querying all users with limit: ${limit} and shuffle: ${shuffle}`,
+      LogContext.COMMUNITY
+    );
+    const users = await this.userRepository.find({ serviceProfile: false });
+    if (!users) return [];
+    if (!limit) return users;
 
     // Need to restrict the set of users to return
     if (shuffle) {
-      const randomIndexes = generateRandomArraySelection(limit, result.length);
+      const randomIndexes = generateRandomArraySelection(
+        Math.min(limit, users.length),
+        users.length
+      );
       const limitedResult: IUser[] = [];
       for (const index of randomIndexes) {
-        limitedResult.push(result[index]);
+        limitedResult.push(users[index]);
       }
       return limitedResult;
     }
-    return result.slice(0, limit);
+    return users.slice(0, limit);
   }
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
