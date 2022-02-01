@@ -11,6 +11,9 @@ export abstract class IAspect extends IAuthorizable {
   @Field(() => String)
   description!: string;
 
+  @Field(() => String)
+  type!: string;
+
   createdBy!: string;
 
   banner?: IVisual;

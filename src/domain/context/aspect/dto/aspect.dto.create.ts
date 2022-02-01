@@ -10,6 +10,10 @@ export class CreateAspectInput {
 
   @Field({ nullable: false })
   @MaxLength(MID_TEXT_LENGTH)
+  type!: string;
+
+  @Field({ nullable: false })
+  @MaxLength(MID_TEXT_LENGTH)
   title!: string;
 
   @Field({ nullable: false })

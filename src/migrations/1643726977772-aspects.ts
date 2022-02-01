@@ -7,6 +7,8 @@ export class aspects1643726977772 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`aspect\` DROP COLUMN \`explanation\``
     );
+    await queryRunner.query(`ALTER TABLE \`aspect\` DROP COLUMN \`framing\``);
+
     await queryRunner.query(
       `ALTER TABLE \`aspect\` ADD \`createdBy\` varchar(36) NULL`
     );
@@ -52,9 +54,21 @@ export class aspects1643726977772 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_c4fb636888fc391cf1d7406e891\` FOREIGN KEY (\`discussionId\`) REFERENCES \`discussion\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
+
+    await queryRunner.query(
+      `ALTER TABLE \`aspect\` ADD \`type\` text NOT NULL`
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`aspect\` ADD \`description\` text NOT NULL`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`ALTER TABLE \`aspect\` DROP COLUMN \`type\``);
+    await queryRunner.query(
+      `ALTER TABLE \`aspect\` DROP COLUMN \`description\``
+    );
     await queryRunner.query(
       `ALTER TABLE \`aspect\` DROP FOREIGN KEY \`FK_6c57bb50b3b6fb4943c807c83ce\``
     );
