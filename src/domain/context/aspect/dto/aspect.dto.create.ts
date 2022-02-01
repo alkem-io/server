@@ -6,7 +6,7 @@ import { MaxLength } from 'class-validator';
 @InputType()
 export class CreateAspectInput {
   @Field(() => UUID, { nullable: false })
-  parentID!: string;
+  contextID!: string;
 
   @Field({ nullable: false })
   @MaxLength(MID_TEXT_LENGTH)
@@ -14,9 +14,5 @@ export class CreateAspectInput {
 
   @Field({ nullable: false })
   @MaxLength(LONG_TEXT_LENGTH)
-  framing!: string;
-
-  @Field({ nullable: false })
-  @MaxLength(LONG_TEXT_LENGTH)
-  explanation!: string;
+  description!: string;
 }

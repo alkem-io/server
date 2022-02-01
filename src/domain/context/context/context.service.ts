@@ -45,43 +45,10 @@ export class ContextService {
     context.authorization = new AuthorizationPolicy();
     if (!context.references) context.references = [];
     context.visuals = [];
-    context.visuals.push(await this.createVisualBanner());
-    context.visuals.push(await this.createVisualBannerNarrow());
-    context.visuals.push(await this.createVisualAvatar());
+    context.visuals.push(await this.visualService.createVisualBanner());
+    context.visuals.push(await this.visualService.createVisualBannerNarrow());
+    context.visuals.push(await this.visualService.createVisualAvatar());
     return context;
-  }
-
-  private async createVisualBanner(): Promise<IVisual> {
-    return await this.visualService.createVisual({
-      name: 'banner',
-      minWidth: 384,
-      maxWidth: 768,
-      minHeight: 32,
-      maxHeight: 128,
-      aspectRatio: 6,
-    });
-  }
-
-  private async createVisualBannerNarrow(): Promise<IVisual> {
-    return await this.visualService.createVisual({
-      name: 'bannerNarrow',
-      minWidth: 192,
-      maxWidth: 384,
-      minHeight: 32,
-      maxHeight: 128,
-      aspectRatio: 3,
-    });
-  }
-
-  private async createVisualAvatar(): Promise<IVisual> {
-    return await this.visualService.createVisual({
-      name: 'avatar',
-      minWidth: 190,
-      maxWidth: 400,
-      minHeight: 190,
-      maxHeight: 400,
-      aspectRatio: 1,
-    });
   }
 
   async getContextOrFail(
@@ -215,8 +182,11 @@ export class ContextService {
     return newReference;
   }
 
-  async createAspect(aspectData: CreateAspectInput): Promise<IAspect> {
-    const contextID = aspectData.parentID;
+  async createAspect(
+    aspectData: CreateAspectInput,
+    userID: string
+  ): Promise<IAspect> {
+    const contextID = aspectData.contextID;
     const context = await this.getContextOrFail(contextID, {
       relations: ['aspects'],
     });
@@ -237,7 +207,7 @@ export class ContextService {
         LogContext.CONTEXT
       );
 
-    const aspect = await this.aspectService.createAspect(aspectData);
+    const aspect = await this.aspectService.createAspect(aspectData, userID);
     context.aspects.push(aspect);
     await this.contextRepository.save(context);
     return aspect;

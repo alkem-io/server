@@ -5,14 +5,19 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Aspect } from './aspect.entity';
 import { AspectResolverMutations } from './aspect.resolver.mutations';
 import { AspectService } from './aspect.service';
+import { AspectResolverFields } from './aspect.resolver.fields';
+import { DiscussionModule } from '@domain/communication/discussion/discussion.module';
+import { VisualModule } from '@domain/common/visual/visual.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
+    DiscussionModule,
+    VisualModule,
     TypeOrmModule.forFeature([Aspect]),
   ],
-  providers: [AspectResolverMutations, AspectService],
+  providers: [AspectResolverMutations, AspectService, AspectResolverFields],
   exports: [AspectService],
 })
 export class AspectModule {}

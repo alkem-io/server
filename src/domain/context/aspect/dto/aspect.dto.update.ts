@@ -11,9 +11,5 @@ export class UpdateAspectInput extends UpdateBaseAlkemioInput {
 
   @Field({ nullable: true })
   @MaxLength(LONG_TEXT_LENGTH)
-  framing?: string;
-
-  @Field({ nullable: true })
-  @MaxLength(LONG_TEXT_LENGTH)
-  explanation?: string;
+  description?: string;
 }

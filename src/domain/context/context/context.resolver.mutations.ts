@@ -59,12 +59,12 @@ export class ContextResolverMutations {
     description: 'Create a new Aspect on the Context.',
   })
   @Profiling.api
-  async createAspect(
+  async createAspectOnContext(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('aspectData') aspectData: CreateAspectInput
   ): Promise<IAspect> {
     const context = await this.contextService.getContextOrFail(
-      aspectData.parentID
+      aspectData.contextID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -72,7 +72,10 @@ export class ContextResolverMutations {
       AuthorizationPrivilege.CREATE,
       `create aspect on context: ${context.id}`
     );
-    const aspect = await this.contextService.createAspect(aspectData);
+    const aspect = await this.contextService.createAspect(
+      aspectData,
+      agentInfo.userID
+    );
     aspect.authorization =
       await this.authorizationPolicyService.inheritParentAuthorization(
         aspect.authorization,

@@ -135,4 +135,37 @@ export class VisualService {
         LogContext.COMMUNITY
       );
   }
+
+  async createVisualBanner(): Promise<IVisual> {
+    return await this.createVisual({
+      name: 'banner',
+      minWidth: 384,
+      maxWidth: 768,
+      minHeight: 32,
+      maxHeight: 128,
+      aspectRatio: 6,
+    });
+  }
+
+  async createVisualBannerNarrow(): Promise<IVisual> {
+    return await this.createVisual({
+      name: 'bannerNarrow',
+      minWidth: 192,
+      maxWidth: 384,
+      minHeight: 32,
+      maxHeight: 128,
+      aspectRatio: 3,
+    });
+  }
+
+  async createVisualAvatar(): Promise<IVisual> {
+    return await this.createVisual({
+      name: 'avatar',
+      minWidth: 190,
+      maxWidth: 400,
+      minHeight: 190,
+      maxHeight: 400,
+      aspectRatio: 1,
+    });
+  }
 }
