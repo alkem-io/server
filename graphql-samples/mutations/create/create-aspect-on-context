@@ -1,0 +1,18 @@
+mutation CreateAspect($aspectData: CreateAspectInput!) {
+  createAspectOnContext(aspectData: $aspectData) {
+    title,
+    framing,
+    explanation
+  }
+}
+
+
+query variables:
+{
+  "aspectData":
+  {
+    "contextID": "uuid",
+    "title": "TechStack2",
+    "description": "How do I handle scalability?",
+  }
+}

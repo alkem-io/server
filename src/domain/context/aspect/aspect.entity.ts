@@ -14,9 +14,6 @@ export class Aspect extends AuthorizableEntity implements IAspect {
   @Column('text', { name: 'framing' })
   description: string;
 
-  @Column('text', { name: 'explanation' })
-  explanation: string;
-
   @Column('varchar', { length: 36, nullable: true })
   createdBy!: string;
 
@@ -51,10 +48,9 @@ export class Aspect extends AuthorizableEntity implements IAspect {
   })
   context?: Context;
 
-  constructor(title: string, description: string, explanation: string) {
+  constructor(title: string, description: string) {
     super();
     this.title = title;
     this.description = description;
-    this.explanation = explanation;
   }
 }
