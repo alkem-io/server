@@ -476,13 +476,13 @@ export class UserService {
     return user;
   }
 
-  async getUsers(limit?: number, randomSelection = false): Promise<IUser[]> {
+  async getUsers(limit?: number, shuffle = false): Promise<IUser[]> {
     const result = await this.userRepository.find({ serviceProfile: false });
     if (!result) return [];
-    if (!limit || result.length < limit) return result;
+    if (!limit) return result;
 
     // Need to restrict the set of users to return
-    if (randomSelection) {
+    if (shuffle) {
       const randomIndexes = generateRandomArraySelection(limit, result.length);
       const limitedResult: IUser[] = [];
       for (const index of randomIndexes) {
@@ -490,7 +490,7 @@ export class UserService {
       }
       return limitedResult;
     }
-    return result.slice(0, limit - 1);
+    return result.slice(0, limit);
   }
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {

@@ -310,15 +310,15 @@ export class OrganizationService {
 
   async getOrganizations(
     limit?: number,
-    randomSelection = false
+    shuffle = false
   ): Promise<IOrganization[]> {
     const organizations: IOrganization[] =
       await this.organizationRepository.find();
     if (!organizations) return [];
-    if (!limit || organizations.length < limit) return organizations;
+    if (!limit) return organizations;
 
     // Need to restrict the set of users to return
-    if (randomSelection) {
+    if (shuffle) {
       const randomIndexes = generateRandomArraySelection(
         limit,
         organizations.length
@@ -329,7 +329,7 @@ export class OrganizationService {
       }
       return limitedResult;
     }
-    return organizations.slice(0, limit - 1);
+    return organizations.slice(0, limit);
   }
 
   async getActivity(organization: IOrganization): Promise<INVP[]> {

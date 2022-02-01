@@ -23,18 +23,15 @@ export class OrganizationResolverQueries {
     })
     limit: number,
     @Args({
-      name: 'randomSelection',
+      name: 'shuffle',
       type: () => Boolean,
       description:
-        'If more organizations than the limit specified then return a random or fixed selection.',
+        'If true and limit is specified then return the Organizations based on a random selection. Defaults to false.',
       nullable: true,
     })
-    randomSelection: boolean
+    shuffle: boolean
   ): Promise<IOrganization[]> {
-    return await this.organizationService.getOrganizations(
-      limit,
-      randomSelection
-    );
+    return await this.organizationService.getOrganizations(limit, shuffle);
   }
 
   @Query(() => IOrganization, {

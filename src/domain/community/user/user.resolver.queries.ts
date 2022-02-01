@@ -38,13 +38,13 @@ export class UserResolverQueries {
     })
     limit: number,
     @Args({
-      name: 'randomSelection',
+      name: 'shuffle',
       type: () => Boolean,
       description:
-        'If more users than the limit specified then return a random or fixed selection.',
+        'If true and limit is specified then return a random selection of Users. Defaults to false.',
       nullable: true,
     })
-    randomSelection: boolean
+    shuffle: boolean
   ): Promise<IUser[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -52,7 +52,7 @@ export class UserResolverQueries {
       AuthorizationPrivilege.READ_USERS,
       `users query: ${agentInfo.email}`
     );
-    return await this.userService.getUsers(limit, randomSelection);
+    return await this.userService.getUsers(limit, shuffle);
   }
 
   @UseGuards(GraphqlGuard)
