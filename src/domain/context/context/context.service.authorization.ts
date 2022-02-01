@@ -77,7 +77,6 @@ export class ContextAuthorizationService {
         );
     }
 
-
     context.canvases = await this.contextService.getCanvases(context);
     for (const canvas of context.canvases) {
       await this.canvasAuthorizationService.applyAuthorizationPolicy(
@@ -114,6 +113,14 @@ export class ContextAuthorizationService {
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
+    const communityMemberCreateAspect = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.CREATE_ASPECT],
+      communityCredential.type,
+      communityCredential.resourceID
+    );
+    communityMemberCreateAspect.inheritable = false;
+    newRules.push(communityMemberCreateAspect);
+
     const communityMemberCreateCanvas = new AuthorizationPolicyRuleCredential(
       [AuthorizationPrivilege.CREATE_CANVAS],
       communityCredential.type,
@@ -145,7 +152,10 @@ export class ContextAuthorizationService {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.CREATE_CANVAS],
+      [
+        AuthorizationPrivilege.CREATE_CANVAS,
+        AuthorizationPrivilege.CREATE_ASPECT,
+      ],
       AuthorizationPrivilege.CREATE
     );
     privilegeRules.push(createPrivilege);

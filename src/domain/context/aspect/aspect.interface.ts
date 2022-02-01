@@ -1,4 +1,5 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { IReference } from '@domain/common/reference/reference.interface';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
@@ -20,4 +21,6 @@ export abstract class IAspect extends IAuthorizable {
   bannerNarrow?: IVisual;
 
   discussion?: IDiscussion;
+
+  references?: IReference[];
 }

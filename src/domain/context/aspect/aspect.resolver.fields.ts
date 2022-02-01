@@ -1,7 +1,10 @@
+import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
 import { Profiling } from '@common/decorators/profiling.decorator';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
+import { IReference } from '@domain/common/reference/reference.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
@@ -70,5 +73,16 @@ export class AspectResolverFields {
       );
     }
     return aspect.discussion;
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('references', () => [IReference], {
+    nullable: true,
+    description: 'The References for this Aspect.',
+  })
+  @Profiling.api
+  async references(@Parent() aspect: IAspect) {
+    return await this.aspectService.getReferences(aspect);
   }
 }

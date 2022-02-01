@@ -1,10 +1,18 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
 import { IAspect } from './aspect.interface';
 import { Context } from '@domain/context/context/context.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
+import { Reference } from '@domain/common/reference/reference.entity';
 
 @Entity()
 export class Aspect extends AuthorizableEntity implements IAspect {
@@ -43,6 +51,12 @@ export class Aspect extends AuthorizableEntity implements IAspect {
   })
   @JoinColumn()
   discussion?: IDiscussion;
+
+  @OneToMany(() => Reference, reference => reference.aspect, {
+    eager: false,
+    cascade: true,
+  })
+  references?: Reference[];
 
   @ManyToOne(() => Context, context => context.aspects, {
     eager: false,
