@@ -25,20 +25,22 @@ export class DiscussionResolverSubscriptions {
     private subscriptionDiscussionMessage: PubSubEngine
   ) {}
 
-  // Note: the resolving method should not be doing any heavy lifting.
-  // Relies on users being cached for performance.
   @UseGuards(GraphqlGuard)
   @Subscription(() => CommunicationDiscussionMessageReceived, {
     description: 'Receive new Discussion messages',
     async resolve(
       this: DiscussionResolverSubscriptions,
-      value: CommunicationDiscussionMessageReceived
+      payload: CommunicationDiscussionMessageReceived,
+      _: any,
+      context: any
     ): Promise<CommunicationDiscussionMessageReceived> {
+      const agentInfo = context.req?.user;
+      const logMsgPrefix = `[User (${agentInfo.email}) DiscussionMsg] - `;
       this.logger.verbose?.(
-        `[DiscussionMsg Resolve] sending out event for Discussion message received:: ${value.discussionID} `,
+        `${logMsgPrefix} Sending out event: ${payload.discussionID} `,
         LogContext.SUBSCRIPTIONS
       );
-      return value;
+      return payload;
     },
     async filter(
       this: DiscussionResolverSubscriptions,
@@ -46,17 +48,18 @@ export class DiscussionResolverSubscriptions {
       variables: any,
       context: any
     ) {
+      const agentInfo = context.req?.user;
       const discussionIDs: string[] = variables.discussionIDs;
+      const logMsgPrefix = `[User (${agentInfo.email}) DiscussionMsg] - `;
       this.logger.verbose?.(
-        `[DiscussionMsg Filter] Filtering event with list: ${discussionIDs}`,
+        `${logMsgPrefix} Filtering event id '${payload.eventID}'`,
         LogContext.SUBSCRIPTIONS
       );
       if (!discussionIDs) {
-        const agentInfo = context.req?.user;
         // If subscribed to all then need to check on every update the authorization to see it as could not be done
         // on the subscription approval
         this.logger.verbose?.(
-          `[DiscussionMsg Filter] User (${agentInfo.email}) subscribed to all msgs; filtering by Authorization to see ${payload.discussionID}`,
+          `${logMsgPrefix} Subscribed to all msgs; filtering by Authorization to see ${payload.discussionID}`,
           LogContext.SUBSCRIPTIONS
         );
         const updates = await this.discussionService.getDiscussionOrFail(
@@ -68,7 +71,7 @@ export class DiscussionResolverSubscriptions {
           AuthorizationPrivilege.READ
         );
         this.logger.verbose?.(
-          `[DiscussionMsg Filter] User (${agentInfo.email}) filter: ${filter}`,
+          `${logMsgPrefix} ...filter result: ${filter}`,
           LogContext.SUBSCRIPTIONS
         );
         return filter;
@@ -76,7 +79,7 @@ export class DiscussionResolverSubscriptions {
         // No need to do an authorization check as was done on the subscription approval
         const inList = discussionIDs.includes(payload.discussionID);
         this.logger.verbose?.(
-          `[DiscussionMsg Filter] result is ${inList}`,
+          `${logMsgPrefix} - Filter result is ${inList}`,
           LogContext.SUBSCRIPTIONS
         );
         return inList;
@@ -94,9 +97,10 @@ export class DiscussionResolverSubscriptions {
     })
     discussionIDs: string[]
   ) {
+    const logMsgPrefix = `[User (${agentInfo.email}) DiscussionMsg] - `;
     if (discussionIDs) {
       this.logger.verbose?.(
-        `[DiscussionMsg Request] User (${agentInfo.email}) subscribing to the following discussion: ${discussionIDs}`,
+        `${logMsgPrefix} Subscribing to the following discussions: ${discussionIDs}`,
         LogContext.SUBSCRIPTIONS
       );
       for (const discussionID of discussionIDs) {
@@ -113,13 +117,79 @@ export class DiscussionResolverSubscriptions {
       }
     } else {
       this.logger.verbose?.(
-        `[DiscussionMsg Request] User (${agentInfo.email}) subscribing to all discussions`,
+        `${logMsgPrefix} Subscribing to all discussions`,
         LogContext.SUBSCRIPTIONS
       );
 
       // Todo: either disable this option or find a way to do this once in this method and pass the resulting
       // array of discussionIDs to the filter call
     }
+
+    return this.subscriptionDiscussionMessage.asyncIterator(
+      SubscriptionType.COMMUNICATION_DISCUSSION_MESSAGE_RECEIVED
+    );
+  }
+
+  // Note: the resolving method should not be doing any heavy lifting.
+  // Relies on users being cached for performance.
+  @UseGuards(GraphqlGuard)
+  @Subscription(() => CommunicationDiscussionMessageReceived, {
+    description: 'Receive new Discussion messages',
+    async resolve(
+      this: DiscussionResolverSubscriptions,
+      payload: CommunicationDiscussionMessageReceived,
+      _: any,
+      context: any
+    ): Promise<CommunicationDiscussionMessageReceived> {
+      const agentInfo = context.req?.user;
+      const logMsgPrefix = `[User (${agentInfo.email}) DiscussionMsg] - `;
+      this.logger.verbose?.(
+        `${logMsgPrefix} Sending out event: ${payload.discussionID} `,
+        LogContext.SUBSCRIPTIONS
+      );
+      return payload;
+    },
+    async filter(
+      this: DiscussionResolverSubscriptions,
+      payload: CommunicationDiscussionMessageReceived,
+      variables: any,
+      context: any
+    ) {
+      const agentInfo = context.req?.user;
+      const isMatch = variables.discussionID === payload.discussionID;
+
+      this.logger.verbose?.(
+        `[User (${agentInfo.email}) DiscussionMsg] - Filtering event id '${payload.eventID}' - match? ${isMatch}`,
+        LogContext.SUBSCRIPTIONS
+      );
+
+      return isMatch;
+    },
+  })
+  async communicationDiscussionMessageReceived2(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args({
+      name: 'discussionID',
+      type: () => UUID,
+      description: 'The ID of the Discussion to subscribe to.',
+    })
+    discussionID: string
+  ) {
+    const logMsgPrefix = `[User (${agentInfo.email}) DiscussionMsg] - `;
+    this.logger.verbose?.(
+      `${logMsgPrefix} Subscribing to the following discussion: ${discussionID}`,
+      LogContext.SUBSCRIPTIONS
+    );
+
+    const discussion = await this.discussionService.getDiscussionOrFail(
+      discussionID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      discussion.authorization,
+      AuthorizationPrivilege.READ,
+      `subscription to discussion messages on: ${discussion.displayName}`
+    );
 
     return this.subscriptionDiscussionMessage.asyncIterator(
       SubscriptionType.COMMUNICATION_DISCUSSION_MESSAGE_RECEIVED

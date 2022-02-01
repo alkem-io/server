@@ -4,7 +4,8 @@ import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
 import { ConfigService } from '@nestjs/config';
 import * as WinstonElasticsearch from 'winston-elasticsearch';
 import { ConfigurationTypes } from '@common/enums';
-
+import { FileTransportOptions } from 'winston/lib/winston/transports';
+import * as logform from 'logform';
 @Injectable()
 export class WinstonConfigService {
   constructor(private configService: ConfigService) {}
@@ -57,6 +58,45 @@ export class WinstonConfigService {
           },
         })
       );
+    }
+
+    const contextToFileConfig = this.configService.get(
+      ConfigurationTypes.MONITORING
+    )?.logging.context_to_file;
+    if (contextToFileConfig.enabled) {
+      const filename = contextToFileConfig.filename;
+
+      function filterMessagesFormat(filterFunc: any) {
+        const formatFunc = (info: any) => {
+          if (filterFunc(info)) return info;
+          return null;
+        };
+
+        const formatWrap = logform.format(formatFunc);
+        const format = formatWrap();
+        format.transform = formatFunc;
+
+        return format;
+      }
+
+      const myFormat = winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.align(),
+        filterMessagesFormat(
+          (info: any) =>
+            info.context && info.context === contextToFileConfig.context
+        )
+      );
+
+      const fileTransportOptions: FileTransportOptions = {
+        format: myFormat,
+        level: this.configService
+          .get(ConfigurationTypes.MONITORING)
+          ?.logging?.level.toLowerCase(),
+        silent: false,
+        filename: filename,
+      };
+      transports.push(new winston.transports.File(fileTransportOptions));
     }
 
     return {

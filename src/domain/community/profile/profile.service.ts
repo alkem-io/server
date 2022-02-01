@@ -20,13 +20,9 @@ import {
   CreateProfileInput,
   CreateTagsetOnProfileInput,
 } from '@domain/community/profile';
-import { ReadStream } from 'fs';
-import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
-import { streamToBuffer, validateImageDimensions } from '@common/utils';
-import { IpfsService } from '@src/services/platform/ipfs/ipfs.service';
-import { UploadProfileAvatarInput } from '@domain/community/profile';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { VisualService } from '@domain/common/visual/visual.service';
 
 @Injectable()
 export class ProfileService {
@@ -34,7 +30,7 @@ export class ProfileService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private tagsetService: TagsetService,
     private referenceService: ReferenceService,
-    private ipfsService: IpfsService,
+    private visualService: VisualService,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -47,12 +43,20 @@ export class ProfileService {
     let data = profileData;
     if (!data) data = {};
     const profile: IProfile = Profile.create({
-      avatar: profileData?.avatar,
       description: profileData?.description,
       tagsets: profileData?.tagsetsData,
       references: profileData?.referencesData,
     });
     profile.authorization = new AuthorizationPolicy();
+    profile.avatar = await this.visualService.createVisual({
+      name: 'avatar',
+      minWidth: this.minImageSize,
+      maxWidth: this.maxImageSize,
+      minHeight: this.minImageSize,
+      maxHeight: this.maxImageSize,
+      aspectRatio: 1,
+    });
+
     if (!profile.references) {
       profile.references = [];
     }
@@ -72,9 +76,6 @@ export class ProfileService {
   async updateProfile(profileData: UpdateProfileInput): Promise<IProfile> {
     const profile = await this.getProfileOrFail(profileData.ID);
 
-    if (profileData.avatar) {
-      profile.avatar = profileData.avatar;
-    }
     if (profileData.description) {
       profile.description = profileData.description;
     }
@@ -171,63 +172,6 @@ export class ProfileService {
         LogContext.COMMUNITY
       );
     return profile;
-  }
-
-  async uploadAvatar(
-    readStream: ReadStream,
-    fileName: string,
-    mimetype: string,
-    uploadData: UploadProfileAvatarInput
-  ): Promise<IProfile> {
-    const profileID = uploadData.profileID;
-    if (
-      !(
-        mimetype === 'image/png' ||
-        mimetype === 'image/jpeg' ||
-        mimetype === 'image/jpg' ||
-        mimetype === 'image/svg+xml' ||
-        fileName === 'hello-alkemio.txt'
-      )
-    ) {
-      throw new ValidationException(
-        `Forbidden avatar upload file type ${mimetype}. File must be jpg / jpeg / png / svg.`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    if (!readStream)
-      throw new ValidationException(
-        'Readstream should be defined!',
-        LogContext.COMMUNITY
-      );
-
-    const buffer = await streamToBuffer(readStream);
-
-    if (
-      !(await validateImageDimensions(
-        buffer,
-        this.minImageSize,
-        this.maxImageSize
-      ))
-    )
-      throw new ValidationException(
-        `Upload file dimensions must be between ${this.minImageSize} and ${this.maxImageSize} pixels!`,
-        LogContext.COMMUNITY
-      );
-
-    try {
-      const uri = await this.ipfsService.uploadFileFromBuffer(buffer);
-      const profileData: UpdateProfileInput = {
-        ID: profileID,
-        avatar: uri,
-      };
-      await this.updateProfile(profileData);
-      return await this.getProfileOrFail(profileID);
-    } catch (error) {
-      throw new IpfsUploadFailedException(
-        `Ipfs upload of ${fileName} failed! Error: ${error.message}`
-      );
-    }
   }
 
   generateRandomAvatar(firstName: string, lastName: string): string {

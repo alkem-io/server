@@ -4,8 +4,8 @@ import { EcosystemModel } from '@domain/context/ecosystem-model/ecosystem-model.
 import { Reference } from '@domain/common/reference/reference.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
-import { Visual } from '../visual/visual.entity';
 import { Canvas } from '@domain/common/canvas';
+import { Visual } from '@domain/common/visual/visual.entity';
 @Entity()
 export class Context extends AuthorizableEntity implements IContext {
   @Column('varchar', { length: 255, nullable: true })
@@ -43,9 +43,11 @@ export class Context extends AuthorizableEntity implements IContext {
   @JoinColumn()
   ecosystemModel?: EcosystemModel;
 
-  @OneToOne(() => Visual, { eager: false, cascade: true, onDelete: 'SET NULL' })
-  @JoinColumn()
-  visual?: Visual;
+  @OneToMany(() => Visual, visual => visual.context, {
+    eager: false,
+    cascade: true,
+  })
+  visuals?: Visual[];
 
   @OneToMany(() => Aspect, aspect => aspect.context, {
     eager: false,

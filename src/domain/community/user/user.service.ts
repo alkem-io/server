@@ -40,6 +40,7 @@ import { DirectRoomResult } from './dto/user.dto.communication.room.direct.resul
 import { UserPreferenceService } from '../user-preferences';
 import { KonfigService } from '@services/platform/configuration/config/config.service';
 import { IUserTemplate } from '@services/platform/configuration';
+import { generateRandomArraySelection } from '@common/utils/random.util';
 
 @Injectable()
 export class UserService {
@@ -99,8 +100,8 @@ export class UserService {
     );
 
     // ensure have a random avatar. todo: use a package we control
-    if (user.profile.avatar === '') {
-      user.profile.avatar = this.profileService.generateRandomAvatar(
+    if (user.profile.avatar?.uri === '') {
+      user.profile.avatar.uri = this.profileService.generateRandomAvatar(
         user.firstName,
         user.lastName
       );
@@ -475,8 +476,28 @@ export class UserService {
     return user;
   }
 
-  async getUsers(): Promise<IUser[]> {
-    return (await this.userRepository.find({ serviceProfile: false })) || [];
+  async getUsers(limit?: number, shuffle = false): Promise<IUser[]> {
+    this.logger.verbose?.(
+      `Querying all users with limit: ${limit} and shuffle: ${shuffle}`,
+      LogContext.COMMUNITY
+    );
+    const users = await this.userRepository.find({ serviceProfile: false });
+    if (!users) return [];
+    if (!limit) return users;
+
+    // Need to restrict the set of users to return
+    if (shuffle) {
+      const randomIndexes = generateRandomArraySelection(
+        Math.min(limit, users.length),
+        users.length
+      );
+      const limitedResult: IUser[] = [];
+      for (const index of randomIndexes) {
+        limitedResult.push(users[index]);
+      }
+      return limitedResult;
+    }
+    return users.slice(0, limit);
   }
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {

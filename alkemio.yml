@@ -205,6 +205,14 @@ monitoring:
       # Log response headers. Requires Logging Level at least verbose.
       headers_logging_enabled: ${LOGGING_RES_HEADERS_ENABLED}:false
 
+    # To allow logging of a particular context to a file
+    context_to_file:
+      enabled: ${LOGGING_CONTEXT_ENABLED}:false
+      # The file name to use
+      filename: ${LOGGING_CONTEXT_FILENAME}:logSubscriptions.txt
+      # The context to actually log
+      context: ${LOGGING_CONTEXT_ID}:subscriptions
+
   # Elastic logging configuration
   elastic:
     # A flag setting whether Winston Elastic transport will be enabled.

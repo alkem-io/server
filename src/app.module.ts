@@ -120,13 +120,31 @@ import { print } from 'graphql/language/printer';
             __: { [key: string]: any },
             context
           ) => {
-            const authHeader = context.request.headers.authorization;
+            const authHeader: string =
+              context.request.headers.authorization || '';
+            const msg = `[Websocket] Opening for user with token: ${authHeader.substring(
+              0,
+              20
+            )}`;
+
+            // dummy code to not trigger warnings
+            if (msg.length === 0) {
+              return; // console.log(msg);
+            }
             // Note: passing through headers so can leverage http authentication setup
             // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
             return { headers: { authorization: `${authHeader}` } };
           },
-          onDisconnect: async (_: any, __: any) => {
-            // Todo: make a nicer error message if the subscription fails due to an execption being thrown
+          onDisconnect: async (_: any, context: any) => {
+            const authHeader: string = context.request.headers.authorization;
+            const msg = `[Websocket] Closing for user with token: ${authHeader.substring(
+              0,
+              20
+            )}`;
+            // dummy code to not trigger warnings
+            if (msg.length === 0) {
+              return; // console.log(msg);
+            }
           },
         },
       }),

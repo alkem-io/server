@@ -19,6 +19,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { CommunicationDiscussionMessageReceived } from './dto/discussion.dto.event.message.received';
 import { SUBSCRIPTION_DISCUSSION_MESSAGE } from '@common/constants/providers';
+import { CommunicationDiscussionUpdated } from '../communication/dto/communication.dto.event.discussion.updated';
 
 @Resolver()
 export class DiscussionResolverMutations {
@@ -56,7 +57,9 @@ export class DiscussionResolverMutations {
       );
 
     // Send the subscription event
+    const eventID = `discussion-msg-${Math.floor(Math.random() * 100)}`;
     const subscriptionPayload: CommunicationDiscussionMessageReceived = {
+      eventID: eventID,
       message: discussionMessage,
       discussionID: discussion.id,
     };
@@ -64,6 +67,17 @@ export class DiscussionResolverMutations {
       SubscriptionType.COMMUNICATION_DISCUSSION_MESSAGE_RECEIVED,
       subscriptionPayload
     );
+
+    const eventID2 = `discussion-update-${Math.floor(Math.random() * 100)}`;
+    const subscriptionPayloadUpdate: CommunicationDiscussionUpdated = {
+      eventID: eventID2,
+      discussionID: discussion.id,
+    };
+    this.subscriptionDiscussionMessage.publish(
+      SubscriptionType.COMMUNICATION_DISCUSSION_UPDATED,
+      subscriptionPayloadUpdate
+    );
+
     return discussionMessage;
   }
 
@@ -93,11 +107,25 @@ export class DiscussionResolverMutations {
       AuthorizationPrivilege.DELETE,
       `communication delete message: ${discussion.title}`
     );
-    return await this.discussionService.removeMessageFromDiscussion(
+
+    const result = await this.discussionService.removeMessageFromDiscussion(
       discussion,
       agentInfo.communicationID,
       messageData
     );
+
+    // Send out events last
+    const eventID = `discussion-update-${Math.floor(Math.random() * 100)}`;
+    const subscriptionPayloadUpdate: CommunicationDiscussionUpdated = {
+      eventID: eventID,
+      discussionID: discussion.id,
+    };
+    this.subscriptionDiscussionMessage.publish(
+      SubscriptionType.COMMUNICATION_DISCUSSION_UPDATED,
+      subscriptionPayloadUpdate
+    );
+
+    return result;
   }
 
   @UseGuards(GraphqlGuard)

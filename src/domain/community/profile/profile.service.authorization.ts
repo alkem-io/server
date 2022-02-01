@@ -32,6 +32,13 @@ export class ProfileAuthorizationService {
           );
       }
     }
+    if (profile.avatar) {
+      profile.avatar.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          profile.avatar.authorization,
+          profile.authorization
+        );
+    }
     return await this.profileRepository.save(profile);
   }
 }

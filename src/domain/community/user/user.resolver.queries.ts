@@ -1,5 +1,5 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, Query, Resolver } from '@nestjs/graphql';
+import { Args, Float, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { IUser } from '@domain/community/user';
 import { UserService } from './user.service';
@@ -27,14 +27,32 @@ export class UserResolverQueries {
     description: 'The users who have profiles on this platform',
   })
   @Profiling.api
-  async users(@CurrentUser() agentInfo: AgentInfo): Promise<IUser[]> {
+  async users(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args({
+      name: 'limit',
+      type: () => Float,
+      description:
+        'The number of users to return; if omitted return all Users.',
+      nullable: true,
+    })
+    limit: number,
+    @Args({
+      name: 'shuffle',
+      type: () => Boolean,
+      description:
+        'If true and limit is specified then return a random selection of Users. Defaults to false.',
+      nullable: true,
+    })
+    shuffle: boolean
+  ): Promise<IUser[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `users query: ${agentInfo.email}`
     );
-    return await this.userService.getUsers();
+    return await this.userService.getUsers(limit, shuffle);
   }
 
   @UseGuards(GraphqlGuard)

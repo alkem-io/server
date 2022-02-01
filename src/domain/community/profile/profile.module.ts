@@ -5,11 +5,11 @@ import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Profile } from './profile.entity';
 import { ProfileResolverMutations } from './profile.resolver.mutations';
 import { ProfileService } from './profile.service';
-import { IpfsService } from '@src/services/platform/ipfs/ipfs.service';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ProfileAuthorizationService } from './profile.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { MicroservicesModule } from '@core/microservices/microservices.module';
+import { VisualModule } from '@domain/common/visual/visual.module';
+import { ProfileResolverFields } from './profile.resolver.fields';
 
 @Module({
   imports: [
@@ -18,14 +18,14 @@ import { MicroservicesModule } from '@core/microservices/microservices.module';
     TagsetModule,
     ReferenceModule,
     TypeOrmModule.forFeature([Profile]),
-    MicroservicesModule,
+    VisualModule,
   ],
   providers: [
     ProfileResolverMutations,
     ProfileService,
     ProfileAuthorizationService,
-    IpfsService,
+    ProfileResolverFields,
   ],
-  exports: [ProfileService, ProfileAuthorizationService],
+  exports: [ProfileService, ProfileAuthorizationService, ProfileResolverFields],
 })
 export class ProfileModule {}

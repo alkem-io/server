@@ -20,6 +20,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
 import { UpdatesService } from '../updates/updates.service';
 import { IUpdates } from '../updates/updates.interface';
+import { RoomService } from '../room/room.service';
 
 @Injectable()
 export class CommunicationService {
@@ -30,6 +31,7 @@ export class CommunicationService {
     private discussionService: DiscussionService,
     private updatesService: UpdatesService,
     private communicationAdapter: CommunicationAdapter,
+    private roomService: RoomService,
     @InjectRepository(Communication)
     private communicationRepository: Repository<Communication>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -52,8 +54,12 @@ export class CommunicationService {
 
     // save to get the id assigned
     await this.save(communication);
-    communication.communicationGroupID =
-      await this.initializeCommunicationsGroup(communication);
+    const communicationGroupID = await this.initializeCommunicationsGroup(
+      communication
+    );
+    if (communicationGroupID) {
+      communication.communicationGroupID = communicationGroupID;
+    }
 
     communication.updates = await this.updatesService.createUpdates(
       communication.communicationGroupID,
@@ -63,12 +69,53 @@ export class CommunicationService {
     return await this.communicationRepository.save(communication);
   }
 
+  async ensureCommunicationRoomsCreated(): Promise<void> {
+    // find any communications without a group
+    // Then load data to do the sorting
+    const communicationsWithoutGroups = await this.communicationRepository
+      .createQueryBuilder('communication')
+      .where('communicationGroupID = :id')
+      .setParameters({ id: '' })
+      .getMany();
+
+    for (const communicationWithoutGroup of communicationsWithoutGroups) {
+      // Load through normal mechanism to pick up eager loading, discussions
+      const communication = await this.getCommunicationOrFail(
+        communicationWithoutGroup.id,
+        {
+          relations: ['discussions', 'updates'],
+        }
+      );
+      this.logger.warn?.(
+        `Identified communication (${communication.id}) without communicationGroup set`,
+        LogContext.COMMUNICATION
+      );
+      const communicationGroupID = await this.initializeCommunicationsGroup(
+        communication
+      );
+      if (communicationGroupID) {
+        communication.communicationGroupID = communicationGroupID;
+      }
+
+      const updates = await this.getUpdates(communication);
+      updates.communicationGroupID = communication.communicationGroupID;
+      await this.roomService.initializeCommunicationRoom(updates);
+
+      const discussions = await this.getDiscussions(communication);
+      for (const discussion of discussions) {
+        discussion.communicationGroupID = communication.communicationGroupID;
+        await this.roomService.initializeCommunicationRoom(discussion);
+      }
+      await this.save(communication);
+    }
+  }
+
   async initializeCommunicationsGroup(
     communication: ICommunication
-  ): Promise<string> {
+  ): Promise<string | undefined> {
     if (!this.communicationsEnabled) {
       // not enabled, just return
-      return '';
+      return undefined;
     }
     if (communication.communicationGroupID === '') {
       try {
@@ -78,14 +125,25 @@ export class CommunicationService {
             communication.displayName
           );
         return communicationGroupID;
-      } catch (error) {
+      } catch (error: any) {
+        if (error.message === 'Group already exists') {
+          const existingGroupID =
+            await this.communicationAdapter.convertMatrixLocalGroupIdToMatrixID(
+              communication.id
+            );
+          this.logger.warn?.(
+            `Group for Communication (${communication.displayName}) already exists: ${error} - returning existing ID: ${existingGroupID}`,
+            LogContext.COMMUNICATION
+          );
+          return existingGroupID;
+        }
         this.logger.error?.(
           `Unable to initialize group for Communication (${communication.displayName}): ${error}`,
           LogContext.COMMUNICATION
         );
       }
     }
-    return '';
+    return undefined;
   }
 
   async save(communication: ICommunication): Promise<ICommunication> {
@@ -176,6 +234,7 @@ export class CommunicationService {
     }
     return discussion;
   }
+
   getUpdates(communication: ICommunication): IUpdates {
     if (!communication.updates) {
       throw new EntityNotInitializedException(
@@ -201,7 +260,6 @@ export class CommunicationService {
       );
     return communication;
   }
-
   async removeCommunication(communicationID: string): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const communication = await this.getCommunicationOrFail(communicationID, {

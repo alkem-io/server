@@ -7,6 +7,7 @@ import { DiscussionService } from './discussion.service';
 import { IDiscussion } from './discussion.interface';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 import { Discussion } from './discussion.entity';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @Resolver(() => IDiscussion)
 export class DiscussionResolverFields {
@@ -36,5 +37,15 @@ export class DiscussionResolverFields {
     const createdDate = (discussion as Discussion).createdDate;
     const date = new Date(createdDate);
     return date.getTime();
+  }
+
+  @ResolveField('createdBy', () => UUID, {
+    nullable: false,
+    description: 'The id of the user that created this discussion',
+  })
+  async createdBy(@Parent() discussion: IDiscussion): Promise<string> {
+    const createdBy = discussion.createdBy;
+    if (!createdBy) return '';
+    return createdBy;
   }
 }

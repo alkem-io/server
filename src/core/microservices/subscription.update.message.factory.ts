@@ -43,7 +43,7 @@ export async function subscriptionUpdateMessageFactory(
           },
         },
         queue: {
-          name: MessagingQueue.SUBSCRIPTION_UPDATE_MSG,
+          name: MessagingQueue.SUBSCRIPTION_UPDATE_MESSAGE,
           options: {
             // used by only one connection and the queue will be deleted when that connection closes
             exclusive: false,
@@ -62,7 +62,7 @@ export async function subscriptionUpdateMessageFactory(
     .catch(err => {
       logger.error(
         `Could not connect to RabbitMQ: ${err}, logging in...`,
-        LogContext.NOTIFICATIONS
+        LogContext.SUBSCRIPTIONS
       );
       return undefined;
     });

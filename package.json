@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.17.1",
+  "version": "0.18.1",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -68,6 +68,7 @@
     "image-size": "^1.0.0",
     "ipfs-http-client": "^51.0.1",
     "jwks-rsa": "^2.0.4",
+    "logform": "^2.3.2",
     "matrix-js-sdk": "^15.2.0",
     "module-alias": "^2.2.2",
     "mysql": "^2.18.1",
