@@ -5,7 +5,7 @@ mutation removeComment($messageData: CommentsRemoveMessageInput!) {
 Variables:
 {
   "messageData": {
-    "message": "example222",
+    "messageID": "example222",
     "commentsID": "uuid"
   }
 }
