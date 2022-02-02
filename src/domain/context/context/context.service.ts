@@ -220,7 +220,15 @@ export class ContextService {
         LogContext.CONTEXT
       );
 
-    const aspect = await this.aspectService.createAspect(aspectData, userID);
+    // Not idea: get the communicationGroupID to use for the comments
+    const communicationGroupID =
+      await this.namingService.getCommunicationGroupIdForContext(context.id);
+
+    const aspect = await this.aspectService.createAspect(
+      aspectData,
+      userID,
+      communicationGroupID
+    );
     context.aspects.push(aspect);
     await this.contextRepository.save(context);
     return aspect;

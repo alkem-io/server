@@ -16,6 +16,7 @@ import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
 import { ICanvas } from '@domain/common/canvas';
 import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
 import { DeleteCanvasOnContextInput } from './dto/context.dto.delete.canvas';
+import { AspectAuthorizationService } from '../aspect/aspect.service.authorization';
 @Resolver()
 export class ContextResolverMutations {
   constructor(
@@ -24,6 +25,7 @@ export class ContextResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private canvasAuthorizationService: CanvasAuthorizationService,
+    private aspectAuthorizationService: AspectAuthorizationService,
     private contextService: ContextService
   ) {}
 
@@ -76,12 +78,10 @@ export class ContextResolverMutations {
       aspectData,
       agentInfo.userID
     );
-    aspect.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
-        aspect.authorization,
-        context.authorization
-      );
-    return await this.aspectService.saveAspect(aspect);
+    return await this.aspectAuthorizationService.applyAuthorizationPolicy(
+      aspect,
+      context.authorization
+    );
   }
 
   @UseGuards(GraphqlGuard)

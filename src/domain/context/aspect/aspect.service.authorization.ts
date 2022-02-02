@@ -3,10 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { DiscussionAuthorizationService } from '@domain/communication/discussion/discussion.service.authorization';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
-import { ICredential } from '@domain/agent/credential/credential.interface';
 import { IAspect } from './aspect.interface';
 import { Aspect } from './aspect.entity';
 import { LogContext } from '@common/enums';
@@ -17,15 +15,13 @@ export class AspectAuthorizationService {
   constructor(
     private aspectService: AspectService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private discussionAuthorizationService: DiscussionAuthorizationService,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>
   ) {}
 
   async applyAuthorizationPolicy(
     aspect: IAspect,
-    parentAuthorization: IAuthorizationPolicy | undefined,
-    communityCredential: ICredential
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAspect> {
     aspect.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -35,8 +31,7 @@ export class AspectAuthorizationService {
 
     aspect.authorization = this.appendCredentialRules(
       aspect.authorization,
-      aspect.id,
-      communityCredential
+      aspect.id
     );
 
     // cascade
@@ -77,12 +72,11 @@ export class AspectAuthorizationService {
 
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    aspectID: string,
-    communityCredential: ICredential
+    aspectID: string
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for Aspect: ${aspectID} ${communityCredential.type}`,
+        `Authorization definition not found for Aspect: ${aspectID}`,
         LogContext.CONTEXT
       );
 

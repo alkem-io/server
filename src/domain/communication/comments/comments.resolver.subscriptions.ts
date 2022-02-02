@@ -58,75 +58,41 @@ export class CommentsResolverSubscriptions {
         `${logMsgPrefix}  Filtering event '${payload.eventID}'`,
         LogContext.SUBSCRIPTIONS
       );
-      if (!commentsIDs) {
-        // If subscribed to all then need to check on every update the authorization to see it
-        this.logger.verbose?.(
-          `${logMsgPrefix} Subscribed to all comments; filtering by Authorization to see ${payload.commentsID}`,
-          LogContext.SUBSCRIPTIONS
-        );
-        const comments = await this.commentsService.getCommentsOrFail(
-          payload.commentsID
-        );
-        const filter = await this.authorizationService.isAccessGranted(
-          agentInfo,
-          comments.authorization,
-          AuthorizationPrivilege.READ
-        );
-        this.logger.verbose?.(
-          `${logMsgPrefix} Filter result: ${filter}`,
-          LogContext.SUBSCRIPTIONS
-        );
-        return filter;
-      } else {
-        const inList = commentsIDs.includes(payload.commentsID);
-        this.logger.verbose?.(
-          `${logMsgPrefix} Filter result is ${inList}`,
-          LogContext.SUBSCRIPTIONS
-        );
-        return inList;
-      }
+
+      const inList = commentsIDs.includes(payload.commentsID);
+      this.logger.verbose?.(
+        `${logMsgPrefix} Filter result is ${inList}`,
+        LogContext.SUBSCRIPTIONS
+      );
+      return inList;
     },
   })
   async communicationUpdateMessageReceived(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
-      name: 'commentsIDs',
+      name: 'commentsID',
       type: () => [UUID],
-      description:
-        'The IDs of the Comments to subscribe to; if omitted subscribe to all Comments.',
-      nullable: true,
+      description: 'The ID of the Comments to subscribe to.',
+      nullable: false,
     })
-    commentsIDs: string[]
+    commentsID: string
   ) {
     const logMsgPrefix = `[User (${agentInfo.email}) Comments] - `;
-    if (commentsIDs) {
-      this.logger.verbose?.(
-        `${logMsgPrefix} Subscribing to the following comments: ${commentsIDs}`,
-        LogContext.SUBSCRIPTIONS
-      );
-      for (const commentsID of commentsIDs) {
-        // check the user has the READ privilege
-        const comments = await this.commentsService.getCommentsOrFail(
-          commentsID
-        );
-        await this.authorizationService.grantAccessOrFail(
-          agentInfo,
-          comments.authorization,
-          AuthorizationPrivilege.READ,
-          `subscription to comments on: ${comments.displayName}`
-        );
-      }
-    } else {
-      this.logger.verbose?.(
-        `${logMsgPrefix} Subscribing to all comments`,
-        LogContext.SUBSCRIPTIONS
-      );
-      // Todo: either disable this option or find a way to do this once in this method and pass the resulting
-      // array of discussionIDs to the filter call
-    }
+    this.logger.verbose?.(
+      `${logMsgPrefix} Subscribing to the following comments: ${commentsID}`,
+      LogContext.SUBSCRIPTIONS
+    );
+    // check the user has the READ privilege
+    const comments = await this.commentsService.getCommentsOrFail(commentsID);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      comments.authorization,
+      AuthorizationPrivilege.READ,
+      `subscription to comments on: ${comments.displayName}`
+    );
 
     return this.subscriptionUpdateMessage.asyncIterator(
-      SubscriptionType.COMMUNICATION_UPDATE_MESSAGE_RECEIVED
+      SubscriptionType.COMMUNICATION_COMMENTS_MESSAGE_RECEIVED
     );
   }
 }

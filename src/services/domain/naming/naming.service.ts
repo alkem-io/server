@@ -7,11 +7,14 @@ import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entit
 import { Project } from '@domain/collaboration/project';
 import { NameID, UUID } from '@domain/common/scalars';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
+import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
 
 export class NamingService {
   constructor(
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
+    @InjectRepository(Ecoverse)
+    private ecoverseRepository: Repository<Ecoverse>,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>,
     @InjectRepository(Opportunity)
@@ -63,5 +66,22 @@ export class NamingService {
   isValidUUID(uuid: string): boolean {
     if (uuid.length != UUID.LENGTH) return false;
     return UUID.REGEX.test(uuid);
+  }
+
+  async getCommunicationGroupIdForContext(contextID: string): Promise<string> {
+    const ecoverse = await this.ecoverseRepository
+      .createQueryBuilder('ecoverse')
+      .leftJoinAndSelect('ecoverse.community', 'community')
+      .leftJoinAndSelect('ecoverse.context', 'context')
+      .leftJoinAndSelect('community.communication', 'communication')
+      .where('context.id = :id')
+      .setParameters({ id: `${contextID}` })
+      .getOne();
+    if (ecoverse) {
+      const communicationGroupID =
+        ecoverse.community?.communication?.communicationGroupID;
+      return communicationGroupID || '';
+    }
+    return contextID;
   }
 }

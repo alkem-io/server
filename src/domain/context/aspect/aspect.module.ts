@@ -9,6 +9,7 @@ import { AspectResolverFields } from './aspect.resolver.fields';
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { CommentsModule } from '@domain/communication/comments/comments.module';
+import { AspectAuthorizationService } from './aspect.service.authorization';
 
 @Module({
   imports: [
@@ -19,7 +20,12 @@ import { CommentsModule } from '@domain/communication/comments/comments.module';
     ReferenceModule,
     TypeOrmModule.forFeature([Aspect]),
   ],
-  providers: [AspectResolverMutations, AspectService, AspectResolverFields],
-  exports: [AspectService],
+  providers: [
+    AspectResolverMutations,
+    AspectService,
+    AspectAuthorizationService,
+    AspectResolverFields,
+  ],
+  exports: [AspectService, AspectAuthorizationService],
 })
 export class AspectModule {}

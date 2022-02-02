@@ -21,7 +21,7 @@ export class CommentsResolverFields {
   async messages(
     @Parent() comments: IComments
   ): Promise<CommunicationMessageResult[]> {
-    const discussionRoom = await this.commentsService.getCommentsRoom(comments);
-    return discussionRoom.messages;
+    const commentsRoom = await this.commentsService.getCommentsRoom(comments);
+    return commentsRoom.messages;
   }
 }

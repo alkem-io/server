@@ -33,7 +33,8 @@ export class AspectService {
 
   async createAspect(
     aspectInput: CreateAspectInput,
-    userID: string
+    userID: string,
+    communicationGroupID: string
   ): Promise<IAspect> {
     const aspect: IAspect = Aspect.create(aspectInput);
     aspect.authorization = new AuthorizationPolicy();
@@ -43,7 +44,7 @@ export class AspectService {
     aspect.references = [];
 
     aspect.comments = await this.commentsService.createComments(
-      '',
+      communicationGroupID,
       `aspect-comments-${aspect.displayName}`
     );
 

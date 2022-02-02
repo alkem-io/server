@@ -11,16 +11,9 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CommentsRemoveMessageInput } from './dto/comments.dto.remove.message';
 import { MessageID } from '@domain/common/scalars';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
-import { EventType } from '@common/enums/event.type';
-
-import { ClientProxy } from '@nestjs/microservices';
-import { NotificationsPayloadBuilder } from '@core/microservices';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import {
-  NOTIFICATIONS_SERVICE,
-  SUBSCRIPTION_UPDATE_MESSAGE,
-} from '@common/constants/providers';
+import { SUBSCRIPTION_UPDATE_MESSAGE } from '@common/constants/providers';
 import { CommentsMessageReceived } from './dto/comments.dto.event.message.received';
 
 @Resolver()
@@ -28,8 +21,6 @@ export class CommentsResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private commentsService: CommentsService,
-    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
     @Inject(SUBSCRIPTION_UPDATE_MESSAGE)
     private readonly subscriptionUpdateMessage: PubSubEngine
   ) {}
@@ -37,10 +28,10 @@ export class CommentsResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => CommunicationMessageResult, {
     description:
-      'Sends an update message. Returns the id of the new Update message.',
+      'Sends an comment message. Returns the id of the new Update message.',
   })
   @Profiling.api
-  async sendUpdate(
+  async sendComment(
     @Args('messageData') messageData: CommentsSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<CommunicationMessageResult> {
@@ -54,44 +45,33 @@ export class CommentsResolverMutations {
       `comments send message: ${comments.displayName}`
     );
 
-    const updateSent = await this.commentsService.sendCommentsMessage(
+    const commentSent = await this.commentsService.sendCommentsMessage(
       comments,
       agentInfo.communicationID,
       messageData
     );
 
-    // Send the notifications event
-    const notificationsPayload =
-      await this.notificationsPayloadBuilder.buildCommunicationUpdateSentNotificationPayload(
-        agentInfo.userID,
-        comments
-      );
-    this.notificationsClient.emit<number>(
-      EventType.COMMUNICATION_UPDATE_SENT,
-      notificationsPayload
-    );
-
     // Send the subscriptions event
-    const eventID = `update-msg-${Math.floor(Math.random() * 100)}`;
+    const eventID = `comment-msg-${Math.floor(Math.random() * 100)}`;
     const subscriptionPayload: CommentsMessageReceived = {
       eventID: eventID,
-      message: updateSent,
+      message: commentSent,
       commentsID: comments.id,
     };
     this.subscriptionUpdateMessage.publish(
-      SubscriptionType.COMMUNICATION_UPDATE_MESSAGE_RECEIVED,
+      SubscriptionType.COMMUNICATION_COMMENTS_MESSAGE_RECEIVED,
       subscriptionPayload
     );
 
-    return updateSent;
+    return commentSent;
   }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => MessageID, {
-    description: 'Removes an update message.',
+    description: 'Removes a comment message.',
   })
   @Profiling.api
-  async removeUpdate(
+  async removeComment(
     @Args('messageData') messageData: CommentsRemoveMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {

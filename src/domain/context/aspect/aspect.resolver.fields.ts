@@ -59,6 +59,7 @@ export class AspectResolverFields {
     return aspect.banner;
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('comments', () => IComments, {
     nullable: true,
