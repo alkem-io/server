@@ -46,13 +46,13 @@ export class AspectService {
     aspect.discussion = await this.discussionService.createDiscussion(
       {
         communicationID: '',
-        title: aspectInput.title,
+        title: aspectInput.displayName || '',
         description: aspectInput.description,
         category: DiscussionCategory.GENERAL,
       },
       'communicationGroupID',
       userID,
-      `aspect-discussion-${aspect.title}`
+      `aspect-discussion-${aspect.displayName}`
     );
 
     return await this.aspectRepository.save(aspect);
@@ -89,8 +89,8 @@ export class AspectService {
     const aspect = await this.getAspectOrFail(aspectData.ID);
 
     // Copy over the received data
-    if (aspectData.title) {
-      aspect.title = aspectData.title;
+    if (aspectData.displayName) {
+      aspect.displayName = aspectData.displayName;
     }
     if (aspectData.description) {
       aspect.description = aspectData.description;

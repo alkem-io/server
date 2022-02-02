@@ -38,7 +38,7 @@ export class AspectResolverMutations {
       agentInfo,
       aspect.authorization,
       AuthorizationPrivilege.DELETE,
-      `delete aspect: ${aspect.title}`
+      `delete aspect: ${aspect.displayName}`
     );
     return await this.aspectService.removeAspect(deleteData);
   }
@@ -56,7 +56,7 @@ export class AspectResolverMutations {
       agentInfo,
       aspect.authorization,
       AuthorizationPrivilege.UPDATE,
-      `update aspect: ${aspect.title}`
+      `update aspect: ${aspect.displayName}`
     );
     return await this.aspectService.updateAspect(aspectData);
   }

@@ -12,6 +12,7 @@ import { ContextAuthorizationService } from './context.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CanvasModule } from '@domain/common/canvas/canvas.module';
 import { VisualModule } from '@domain/common/visual/visual.module';
+import { NamingModule } from '@services/domain/naming/naming.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { VisualModule } from '@domain/common/visual/visual.module';
     ReferenceModule,
     EcosystemModelModule,
     VisualModule,
+    NamingModule,
     TypeOrmModule.forFeature([Context]),
   ],
   providers: [

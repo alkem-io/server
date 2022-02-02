@@ -1,14 +1,10 @@
-import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.update';
 import { InputType, Field } from '@nestjs/graphql';
-import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
+import { LONG_TEXT_LENGTH } from '@src/common/constants';
 import { MaxLength } from 'class-validator';
 
 @InputType()
-export class UpdateAspectInput extends UpdateBaseAlkemioInput {
-  @Field({ nullable: true })
-  @MaxLength(MID_TEXT_LENGTH)
-  title?: string;
-
+export class UpdateAspectInput extends UpdateNameableInput {
   @Field({ nullable: true })
   @MaxLength(LONG_TEXT_LENGTH)
   description?: string;

@@ -24,6 +24,7 @@ import { UpdateContextInput } from './dto/context.dto.update';
 import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { IVisual } from '@domain/common/visual/visual.interface';
+import { NamingService } from '@services/domain/naming/naming.service';
 
 @Injectable()
 export class ContextService {
@@ -34,6 +35,7 @@ export class ContextService {
     private ecosystemModelService: EcosystemModelService,
     private visualService: VisualService,
     private referenceService: ReferenceService,
+    private namingService: NamingService,
     @InjectRepository(Context)
     private contextRepository: Repository<Context>
   ) {}
@@ -196,14 +198,25 @@ export class ContextService {
         LogContext.CONTEXT
       );
 
+    const nameAvailable =
+      await this.namingService.isAspectNameIdAvailableInContext(
+        aspectData.nameID,
+        context.id
+      );
+    if (!nameAvailable)
+      throw new ValidationException(
+        `Unable to create Aspect: the provided nameID is already taken: ${aspectData.nameID}`,
+        LogContext.CHALLENGES
+      );
+
     // Check that do not already have an aspect with the same title
-    const title = aspectData.title;
+    const displayName = aspectData.displayName;
     const existingAspect = context.aspects?.find(
-      aspect => aspect.title === title
+      aspect => aspect.displayName === displayName
     );
     if (existingAspect)
       throw new ValidationException(
-        `Already have an aspect with the provided title: ${title}`,
+        `Already have an aspect with the provided display name: ${displayName}`,
         LogContext.CONTEXT
       );
 

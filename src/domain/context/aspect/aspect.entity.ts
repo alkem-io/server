@@ -8,17 +8,14 @@ import {
 } from 'typeorm';
 import { IAspect } from './aspect.interface';
 import { Context } from '@domain/context/context/context.entity';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { Reference } from '@domain/common/reference/reference.entity';
+import { NameableEntity } from '@domain/common';
 
 @Entity()
-export class Aspect extends AuthorizableEntity implements IAspect {
-  @Column()
-  title: string;
-
+export class Aspect extends NameableEntity implements IAspect {
   @Column('text')
   description: string;
 
@@ -65,10 +62,9 @@ export class Aspect extends AuthorizableEntity implements IAspect {
   })
   context?: Context;
 
-  constructor(type: string, title: string, description: string) {
+  constructor(type: string, description: string) {
     super();
     this.type = type;
-    this.title = title;
     this.description = description;
   }
 }

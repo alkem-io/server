@@ -6,11 +6,14 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project';
 import { NameID, UUID } from '@domain/common/scalars';
+import { Aspect } from '@domain/context/aspect/aspect.entity';
 
 export class NamingService {
   constructor(
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
+    @InjectRepository(Aspect)
+    private aspectRepository: Repository<Aspect>,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @InjectRepository(Project)
@@ -38,6 +41,18 @@ export class NamingService {
     });
     if (projectCount > 0) return false;
     return true;
+  }
+
+  async isAspectNameIdAvailableInContext(
+    nameID: string,
+    contextID: string
+  ): Promise<boolean> {
+    const aspectCount = await this.aspectRepository.count({
+      id: `${nameID}-${contextID}`, // todo: proper check for availability
+    });
+    if (aspectCount === 0) return true;
+
+    return false;
   }
 
   isValidNameID(nameID: string): boolean {
