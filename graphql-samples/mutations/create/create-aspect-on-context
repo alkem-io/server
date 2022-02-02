@@ -15,6 +15,7 @@ query variables:
     "nameID": "nameID",
     "type": "test",
     "displayName": "TechStack2",
-    "description": "How do I handle scalability?"
+    "description": "How do I handle scalability?",
+    "tags": ["tag1", "tag2"]
   }
 }

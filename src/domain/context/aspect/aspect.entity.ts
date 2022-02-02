@@ -10,9 +10,10 @@ import { IAspect } from './aspect.interface';
 import { Context } from '@domain/context/context/context.entity';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { Reference } from '@domain/common/reference/reference.entity';
-import { NameableEntity } from '@domain/common';
+import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { Comments } from '@domain/communication/comments';
 import { IComments } from '@domain/communication/comments/comments.interface';
+import { Tagset } from '@domain/common/tagset/tagset.entity';
 
 @Entity()
 export class Aspect extends NameableEntity implements IAspect {
@@ -61,6 +62,10 @@ export class Aspect extends NameableEntity implements IAspect {
     onDelete: 'CASCADE',
   })
   context?: Context;
+
+  @OneToOne(() => Tagset, { eager: true, cascade: true, onDelete: 'SET NULL' })
+  @JoinColumn()
+  tagset?: Tagset;
 
   constructor(type: string, description: string) {
     super();

@@ -10,6 +10,7 @@ import { VisualModule } from '@domain/common/visual/visual.module';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { CommentsModule } from '@domain/communication/comments/comments.module';
 import { AspectAuthorizationService } from './aspect.service.authorization';
+import { TagsetModule } from '@domain/common/tagset/tagset.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AspectAuthorizationService } from './aspect.service.authorization';
     AuthorizationModule,
     CommentsModule,
     VisualModule,
+    TagsetModule,
     ReferenceModule,
     TypeOrmModule.forFeature([Aspect]),
   ],

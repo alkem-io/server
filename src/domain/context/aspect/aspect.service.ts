@@ -18,6 +18,8 @@ import { ReferenceService } from '@domain/common/reference/reference.service';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { CreateReferenceOnAspectInput } from './dto/aspect.dto.create.reference';
 import { CommentsService } from '@domain/communication/comments/comments.service';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 
 @Injectable()
 export class AspectService {
@@ -26,6 +28,7 @@ export class AspectService {
     private visualService: VisualService,
     private commentsService: CommentsService,
     private referenceService: ReferenceService,
+    private tagsetService: TagsetService,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -48,14 +51,39 @@ export class AspectService {
       `aspect-comments-${aspect.displayName}`
     );
 
+    aspect.tagset = await this.tagsetService.createTagset({
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: aspectInput.tags || [],
+    });
+
     return await this.aspectRepository.save(aspect);
   }
 
   async removeAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
     const aspectID = deleteData.ID;
-    const aspect = await this.getAspectOrFail(aspectID);
-    if (aspect.authorization)
+    const aspect = await this.getAspectOrFail(aspectID, {
+      relations: ['references'],
+    });
+    if (aspect.authorization) {
       await this.authorizationPolicyService.delete(aspect.authorization);
+    }
+    if (aspect.banner) {
+      await this.visualService.deleteVisual({ ID: aspect.banner.id });
+    }
+    if (aspect.bannerNarrow) {
+      await this.visualService.deleteVisual({ ID: aspect.bannerNarrow.id });
+    }
+    if (aspect.tagset) {
+      await this.tagsetService.removeTagset({ ID: aspect.tagset.id });
+    }
+    if (aspect.comments) {
+      await this.commentsService.deleteComments(aspect.comments);
+    }
+    if (aspect.references) {
+      for (const reference of aspect.references) {
+        await this.referenceService.deleteReference({ ID: reference.id });
+      }
+    }
 
     const result = await this.aspectRepository.remove(aspect as Aspect);
     result.id = aspectID;
@@ -87,6 +115,16 @@ export class AspectService {
     }
     if (aspectData.description) {
       aspect.description = aspectData.description;
+    }
+
+    if (aspectData.tags) {
+      if (!aspect.tagset) {
+        throw new EntityNotInitializedException(
+          `Aspect with id(${aspect.id}) not initialised with a tagset!`,
+          LogContext.COMMUNITY
+        );
+      }
+      aspect.tagset.tags = [...aspectData.tags];
     }
 
     await this.aspectRepository.save(aspect);

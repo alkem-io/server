@@ -39,6 +39,13 @@ export class aspects1643726977772 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`aspect\` ADD UNIQUE INDEX \`IDX_945b0355b4e9bd6b02c66507a3\` (\`bannerId\`)`
     );
+
+    await queryRunner.query(
+      `ALTER TABLE \`aspect\` ADD \`tagsetId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`aspect\` ADD UNIQUE INDEX \`IDX_777b0355b4e9bd6b02c66507aa\` (\`tagsetId\`)`
+    );
     await queryRunner.query(
       `ALTER TABLE \`aspect\` ADD \`bannerNarrowId\` char(36) NULL`
     );
@@ -75,6 +82,9 @@ export class aspects1643726977772 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_c4fb636888fc391cf1d7406e891\` FOREIGN KEY (\`commentsId\`) REFERENCES \`comments\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
+    await queryRunner.query(
+      `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_bd7b636888fc391cf1d7406e891\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
 
     await queryRunner.query(
       `ALTER TABLE \`reference\` ADD \`aspectId\` char(36) NULL`
@@ -103,6 +113,11 @@ export class aspects1643726977772 implements MigrationInterface {
       `ALTER TABLE \`aspect\` DROP COLUMN \`description\``
     );
     await queryRunner.query(`ALTER TABLE \`aspect\` DROP COLUMN \`nameID\``);
+    await queryRunner.query(
+      `ALTER TABLE \`reference\` DROP FOREIGN KEY \`FK_bd7b636888fc391cf1d7406e891\``
+    );
+
+    await queryRunner.query(`ALTER TABLE \`aspect\` DROP COLUMN \`tagsetId\``);
     await queryRunner.query(
       `ALTER TABLE \`aspect\` DROP COLUMN \`displayName\``
     );
