@@ -6,15 +6,15 @@ import { Aspect } from './aspect.entity';
 import { AspectResolverMutations } from './aspect.resolver.mutations';
 import { AspectService } from './aspect.service';
 import { AspectResolverFields } from './aspect.resolver.fields';
-import { DiscussionModule } from '@domain/communication/discussion/discussion.module';
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
+import { CommentsModule } from '@domain/communication/comments/comments.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
-    DiscussionModule,
+    CommentsModule,
     VisualModule,
     ReferenceModule,
     TypeOrmModule.forFeature([Aspect]),

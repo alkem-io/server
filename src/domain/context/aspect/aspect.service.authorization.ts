@@ -55,10 +55,10 @@ export class AspectAuthorizationService {
         );
     }
 
-    if (aspect.discussion) {
-      aspect.discussion =
-        await this.discussionAuthorizationService.applyAuthorizationPolicy(
-          aspect.discussion,
+    if (aspect.comments) {
+      aspect.comments.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          aspect.comments.authorization,
           aspect.authorization
         );
     }

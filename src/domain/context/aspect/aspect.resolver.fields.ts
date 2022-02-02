@@ -7,7 +7,7 @@ import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { IVisual } from '@domain/common/visual/visual.interface';
-import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
+import { IComments } from '@domain/communication/comments/comments.interface';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IAspect } from './aspect.interface';
@@ -60,19 +60,19 @@ export class AspectResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('discussion', () => IDiscussion, {
+  @ResolveField('comments', () => IComments, {
     nullable: true,
-    description: 'The discussion for this Aspect.',
+    description: 'The comments for this Aspect.',
   })
   @Profiling.api
-  async discussion(@Parent() aspect: IAspect): Promise<IDiscussion> {
-    if (!aspect.discussion) {
+  async comments(@Parent() aspect: IAspect): Promise<IComments> {
+    if (!aspect.comments) {
       throw new EntityNotInitializedException(
-        'Avatar discussion not defined',
+        'Aspect comments not defined',
         LogContext.COMMUNITY
       );
     }
-    return aspect.discussion;
+    return aspect.comments;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

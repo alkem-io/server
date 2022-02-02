@@ -4,6 +4,14 @@ export class aspects1643726977772 implements MigrationInterface {
   name = 'aspects1643726977772';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // First create the comments definition
+    await queryRunner.query(
+      `CREATE TABLE \`comments\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`displayName\` varchar(255) NOT NULL, \`communicationGroupID\` varchar(255) NOT NULL, \`communicationRoomID\` varchar(255) NOT NULL, \`authorizationId\` char(36) NULL, UNIQUE INDEX \`REL_7777dccdda9ba57d8e3a634cd8\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`comments\` ADD CONSTRAINT \`FK_77775901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
     await queryRunner.query(
       `ALTER TABLE \`aspect\` DROP COLUMN \`explanation\``
     );
@@ -38,10 +46,10 @@ export class aspects1643726977772 implements MigrationInterface {
       `ALTER TABLE \`aspect\` ADD UNIQUE INDEX \`IDX_7e83c97dc253674f4ce9d32cb0\` (\`bannerNarrowId\`)`
     );
     await queryRunner.query(
-      `ALTER TABLE \`aspect\` ADD \`discussionId\` char(36) NULL`
+      `ALTER TABLE \`aspect\` ADD \`commentsId\` char(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`aspect\` ADD UNIQUE INDEX \`IDX_c4fb636888fc391cf1d7406e89\` (\`discussionId\`)`
+      `ALTER TABLE \`aspect\` ADD UNIQUE INDEX \`IDX_c4fb636888fc391cf1d7406e89\` (\`commentsId\`)`
     );
     await queryRunner.query(
       `ALTER TABLE \`aspect\` DROP FOREIGN KEY \`FK_c52470717008d58ec6d76b12ffa\``
@@ -56,7 +64,7 @@ export class aspects1643726977772 implements MigrationInterface {
       `CREATE UNIQUE INDEX \`REL_7e83c97dc253674f4ce9d32cb0\` ON \`aspect\` (\`bannerNarrowId\`)`
     );
     await queryRunner.query(
-      `CREATE UNIQUE INDEX \`REL_c4fb636888fc391cf1d7406e89\` ON \`aspect\` (\`discussionId\`)`
+      `CREATE UNIQUE INDEX \`REL_c4fb636888fc391cf1d7406e89\` ON \`aspect\` (\`commentsId\`)`
     );
     await queryRunner.query(
       `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_945b0355b4e9bd6b02c66507a30\` FOREIGN KEY (\`bannerId\`) REFERENCES \`visual\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -65,7 +73,7 @@ export class aspects1643726977772 implements MigrationInterface {
       `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_7e83c97dc253674f4ce9d32cb01\` FOREIGN KEY (\`bannerNarrowId\`) REFERENCES \`visual\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_c4fb636888fc391cf1d7406e891\` FOREIGN KEY (\`discussionId\`) REFERENCES \`discussion\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_c4fb636888fc391cf1d7406e891\` FOREIGN KEY (\`commentsId\`) REFERENCES \`comments\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     await queryRunner.query(
@@ -78,6 +86,11 @@ export class aspects1643726977772 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE \`comments\` DROP FOREIGN KEY \`FK_77775901817dd09d5906537e088\``
+    );
+    await queryRunner.query(`DROP TABLE \`comments\``);
+
     await queryRunner.query(
       `ALTER TABLE \`reference\` DROP FOREIGN KEY \`FK_a21a8eda24f18cd6af58b0d4e72\``
     );
@@ -121,7 +134,7 @@ export class aspects1643726977772 implements MigrationInterface {
       `ALTER TABLE \`aspect\` DROP INDEX \`IDX_c4fb636888fc391cf1d7406e89\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`aspect\` DROP COLUMN \`discussionId\``
+      `ALTER TABLE \`aspect\` DROP COLUMN \`commentsId\``
     );
     await queryRunner.query(
       `ALTER TABLE \`aspect\` DROP INDEX \`IDX_7e83c97dc253674f4ce9d32cb0\``

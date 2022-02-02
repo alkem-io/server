@@ -14,18 +14,17 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { DeleteAspectInput } from './dto/aspect.dto.delete';
 import { UpdateAspectInput } from './dto/aspect.dto.update';
 import { VisualService } from '@domain/common/visual/visual.service';
-import { DiscussionService } from '@domain/communication/discussion/discussion.service';
-import { DiscussionCategory } from '@common/enums/communication.discussion.category';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { CreateReferenceOnAspectInput } from './dto/aspect.dto.create.reference';
+import { CommentsService } from '@domain/communication/comments/comments.service';
 
 @Injectable()
 export class AspectService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private visualService: VisualService,
-    private discussionService: DiscussionService,
+    private commentsService: CommentsService,
     private referenceService: ReferenceService,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>,
@@ -43,16 +42,9 @@ export class AspectService {
     aspect.bannerNarrow = await this.visualService.createVisualBanner();
     aspect.references = [];
 
-    aspect.discussion = await this.discussionService.createDiscussion(
-      {
-        communicationID: '',
-        title: aspectInput.displayName || '',
-        description: aspectInput.description,
-        category: DiscussionCategory.GENERAL,
-      },
-      'communicationGroupID',
-      userID,
-      `aspect-discussion-${aspect.displayName}`
+    aspect.comments = await this.commentsService.createComments(
+      '',
+      `aspect-comments-${aspect.displayName}`
     );
 
     return await this.aspectRepository.save(aspect);

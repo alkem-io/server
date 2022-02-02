@@ -9,10 +9,10 @@ import {
 import { IAspect } from './aspect.interface';
 import { Context } from '@domain/context/context/context.entity';
 import { Visual } from '@domain/common/visual/visual.entity';
-import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
-import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { NameableEntity } from '@domain/common';
+import { Comments } from '@domain/communication/comments';
+import { IComments } from '@domain/communication/comments/comments.interface';
 
 @Entity()
 export class Aspect extends NameableEntity implements IAspect {
@@ -41,13 +41,13 @@ export class Aspect extends NameableEntity implements IAspect {
   @JoinColumn()
   bannerNarrow?: Visual;
 
-  @OneToOne(() => Discussion, {
+  @OneToOne(() => Comments, {
     eager: true,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  discussion?: IDiscussion;
+  comments?: IComments;
 
   @OneToMany(() => Reference, reference => reference.aspect, {
     eager: false,
