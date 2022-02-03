@@ -1,6 +1,6 @@
 mutation updateAspect($aspectData: UpdateAspectInput!) {
   updateAspect(aspectData: $aspectData) {
-    title
+    displayName
   }
 }
 
@@ -8,8 +8,7 @@ Variables:
 {
   "aspectData": {
     "ID": "uuid",
-    "title": "some description",
-    "framing": "http://someUri",
-    "explanation": "http://someUri"
+    "displayName": "some name",
+    "description": "text"
   }
 }
