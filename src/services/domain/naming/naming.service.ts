@@ -8,6 +8,8 @@ import { Project } from '@domain/collaboration/project';
 import { NameID, UUID } from '@domain/common/scalars';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
 import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
+import { LogContext } from '@common/enums';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 export class NamingService {
   constructor(
@@ -82,6 +84,39 @@ export class NamingService {
         ecoverse.community?.communication?.communicationGroupID;
       return communicationGroupID || '';
     }
-    return contextID;
+    // not on an ecoverse, try challenge
+    const challenge = await this.ecoverseRepository
+      .createQueryBuilder('challenge')
+      .leftJoinAndSelect('challenge.community', 'community')
+      .leftJoinAndSelect('challenge.context', 'context')
+      .leftJoinAndSelect('community.communication', 'communication')
+      .where('context.id = :id')
+      .setParameters({ id: `${contextID}` })
+      .getOne();
+    if (challenge) {
+      const communicationGroupID =
+        challenge.community?.communication?.communicationGroupID;
+      return communicationGroupID || '';
+    }
+
+    // and finally try on opportunity
+    const opportunity = await this.ecoverseRepository
+      .createQueryBuilder('opportunity')
+      .leftJoinAndSelect('opportunity.community', 'community')
+      .leftJoinAndSelect('opportunity.context', 'context')
+      .leftJoinAndSelect('community.communication', 'communication')
+      .where('context.id = :id')
+      .setParameters({ id: `${contextID}` })
+      .getOne();
+    if (opportunity) {
+      const communicationGroupID =
+        opportunity.community?.communication?.communicationGroupID;
+      return communicationGroupID || '';
+    }
+
+    throw new RelationshipNotFoundException(
+      `Unable to find the communication ID for the provided context: ${contextID}`,
+      LogContext.CONTEXT
+    );
   }
 }
