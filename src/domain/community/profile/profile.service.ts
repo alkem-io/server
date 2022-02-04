@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -23,6 +23,7 @@ import {
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { VisualService } from '@domain/common/visual/visual.service';
+import { IVisual } from '@domain/common/visual';
 
 @Injectable()
 export class ProfileService {
@@ -36,9 +37,6 @@ export class ProfileService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  private readonly minImageSize = 190;
-  private readonly maxImageSize = 410;
-
   async createProfile(profileData?: CreateProfileInput): Promise<IProfile> {
     let data = profileData;
     if (!data) data = {};
@@ -48,14 +46,7 @@ export class ProfileService {
       references: profileData?.referencesData,
     });
     profile.authorization = new AuthorizationPolicy();
-    profile.avatar = await this.visualService.createVisual({
-      name: 'avatar',
-      minWidth: this.minImageSize,
-      maxWidth: this.maxImageSize,
-      minHeight: this.minImageSize,
-      maxHeight: this.maxImageSize,
-      aspectRatio: 1,
-    });
+    profile.avatar = await this.visualService.createVisualAvatar();
 
     if (!profile.references) {
       profile.references = [];
@@ -74,7 +65,9 @@ export class ProfileService {
   }
 
   async updateProfile(profileData: UpdateProfileInput): Promise<IProfile> {
-    const profile = await this.getProfileOrFail(profileData.ID);
+    const profile = await this.getProfileOrFail(profileData.ID, {
+      relations: ['references', 'avatar', 'tagsets', 'authorization'],
+    });
 
     if (profileData.description) {
       profile.description = profileData.description;
@@ -99,7 +92,9 @@ export class ProfileService {
 
   async deleteProfile(profileID: string): Promise<IProfile> {
     // Note need to load it in with all contained entities so can remove fully
-    const profile = await this.getProfileOrFail(profileID);
+    const profile = await this.getProfileOrFail(profileID, {
+      relations: ['references', 'avatar', 'tagsets', 'authorization'],
+    });
 
     if (profile.tagsets) {
       for (const tagset of profile.tagsets) {
@@ -115,6 +110,10 @@ export class ProfileService {
       }
     }
 
+    if (profile.avatar) {
+      await this.visualService.deleteVisual({ ID: profile.avatar.id });
+    }
+
     if (profile.authorization)
       await this.authorizationPolicyService.delete(profile.authorization);
 
@@ -122,7 +121,9 @@ export class ProfileService {
   }
 
   async createTagset(tagsetData: CreateTagsetOnProfileInput): Promise<ITagset> {
-    const profile = await this.getProfileOrFail(tagsetData.profileID);
+    const profile = await this.getProfileOrFail(tagsetData.profileID, {
+      relations: ['references'],
+    });
 
     const tagset = await this.tagsetService.addTagsetWithName(
       profile,
@@ -137,7 +138,9 @@ export class ProfileService {
   async createReference(
     referenceInput: CreateReferenceOnProfileInput
   ): Promise<IReference> {
-    const profile = await this.getProfileOrFail(referenceInput.profileID);
+    const profile = await this.getProfileOrFail(referenceInput.profileID, {
+      relations: ['references'],
+    });
 
     if (!profile.references)
       throw new EntityNotInitializedException(
@@ -164,8 +167,11 @@ export class ProfileService {
     return newReference;
   }
 
-  async getProfileOrFail(profileID: string): Promise<IProfile> {
-    const profile = await Profile.findOne({ id: profileID });
+  async getProfileOrFail(
+    profileID: string,
+    options?: FindOneOptions<Profile>
+  ): Promise<IProfile> {
+    const profile = await Profile.findOne({ id: profileID }, options);
     if (!profile)
       throw new EntityNotFoundException(
         `Profile with id(${profileID}) not found!`,
@@ -177,5 +183,44 @@ export class ProfileService {
   generateRandomAvatar(firstName: string, lastName: string): string {
     const randomColor = Math.floor(Math.random() * 16777215).toString(16);
     return `https://eu.ui-avatars.com/api/?name=${firstName}+${lastName}&background=${randomColor}&color=ffffff`;
+  }
+
+  async getAvatar(profileInput: IProfile): Promise<IVisual> {
+    const profile = await this.getProfileOrFail(profileInput.id, {
+      relations: ['avatar'],
+    });
+    if (!profile.avatar) {
+      throw new EntityNotInitializedException(
+        `Profile not initialized: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return profile.avatar;
+  }
+
+  async getReferences(profileInput: IProfile): Promise<IReference[]> {
+    const profile = await this.getProfileOrFail(profileInput.id, {
+      relations: ['references'],
+    });
+    if (!profile.references) {
+      throw new EntityNotInitializedException(
+        `Profile not initialized: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return profile.references;
+  }
+
+  async getTagsets(profileInput: IProfile): Promise<ITagset[]> {
+    const profile = await this.getProfileOrFail(profileInput.id, {
+      relations: ['tagsets'],
+    });
+    if (!profile.tagsets) {
+      throw new EntityNotInitializedException(
+        `Profile not initialized: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return profile.tagsets;
   }
 }

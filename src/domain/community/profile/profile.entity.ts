@@ -11,19 +11,19 @@ import { Visual } from '@domain/common/visual/visual.entity';
 @Entity()
 export class Profile extends AuthorizableEntity implements IProfile {
   @OneToMany(() => Reference, reference => reference.profile, {
-    eager: true,
+    eager: false,
     cascade: true,
   })
   references?: Reference[];
 
   @OneToMany(() => Tagset, tagset => tagset.profile, {
-    eager: true,
+    eager: false,
     cascade: true,
   })
   tagsets?: Tagset[];
 
   @OneToOne(() => Visual, {
-    eager: true,
+    eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })

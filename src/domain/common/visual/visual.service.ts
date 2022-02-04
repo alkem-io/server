@@ -19,6 +19,9 @@ import { IpfsService } from '@src/services/platform/ipfs/ipfs.service';
 
 @Injectable()
 export class VisualService {
+  private readonly avatarMinImageSize = 190;
+  private readonly avatarMaxImageSize = 410;
+
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Visual)
@@ -161,10 +164,10 @@ export class VisualService {
   async createVisualAvatar(): Promise<IVisual> {
     return await this.createVisual({
       name: 'avatar',
-      minWidth: 190,
-      maxWidth: 400,
-      minHeight: 190,
-      maxHeight: 400,
+      minWidth: this.avatarMinImageSize,
+      maxWidth: this.avatarMaxImageSize,
+      minHeight: this.avatarMinImageSize,
+      maxHeight: this.avatarMaxImageSize,
       aspectRatio: 1,
     });
   }
