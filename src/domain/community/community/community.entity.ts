@@ -46,7 +46,7 @@ export class Community
   groups?: UserGroup[];
 
   @OneToMany(() => Application, application => application.community, {
-    eager: true,
+    eager: false,
     cascade: true,
   })
   applications?: IApplication[];
