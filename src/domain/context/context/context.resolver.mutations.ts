@@ -71,7 +71,7 @@ export class ContextResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       context.authorization,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.CREATE_ASPECT,
       `create aspect on context: ${context.id}`
     );
     const aspect = await this.contextService.createAspect(
