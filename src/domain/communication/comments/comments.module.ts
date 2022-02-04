@@ -1,0 +1,27 @@
+import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { CommunicationAdapterModule } from '@services/platform/communication-adapter/communication-adapter.module';
+import { RoomModule } from '../room/room.module';
+import { Comments } from './comments.entity';
+import { CommentsResolverFields } from './comments.resolver.fields';
+import { CommentsResolverMutations } from './comments.resolver.mutations';
+import { CommentsResolverSubscriptions } from './comments.resolver.subscriptions';
+import { CommentsService } from './comments.service';
+
+@Module({
+  imports: [
+    AuthorizationModule,
+    RoomModule,
+    CommunicationAdapterModule,
+    TypeOrmModule.forFeature([Comments]),
+  ],
+  providers: [
+    CommentsService,
+    CommentsResolverFields,
+    CommentsResolverMutations,
+    CommentsResolverSubscriptions,
+  ],
+  exports: [CommentsService],
+})
+export class CommentsModule {}

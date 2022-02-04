@@ -24,6 +24,7 @@ import { UpdateContextInput } from './dto/context.dto.update';
 import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { IVisual } from '@domain/common/visual/visual.interface';
+import { NamingService } from '@services/domain/naming/naming.service';
 
 @Injectable()
 export class ContextService {
@@ -34,6 +35,7 @@ export class ContextService {
     private ecosystemModelService: EcosystemModelService,
     private visualService: VisualService,
     private referenceService: ReferenceService,
+    private namingService: NamingService,
     @InjectRepository(Context)
     private contextRepository: Repository<Context>
   ) {}
@@ -45,43 +47,10 @@ export class ContextService {
     context.authorization = new AuthorizationPolicy();
     if (!context.references) context.references = [];
     context.visuals = [];
-    context.visuals.push(await this.createVisualBanner());
-    context.visuals.push(await this.createVisualBannerNarrow());
-    context.visuals.push(await this.createVisualAvatar());
+    context.visuals.push(await this.visualService.createVisualBanner());
+    context.visuals.push(await this.visualService.createVisualBannerNarrow());
+    context.visuals.push(await this.visualService.createVisualAvatar());
     return context;
-  }
-
-  private async createVisualBanner(): Promise<IVisual> {
-    return await this.visualService.createVisual({
-      name: 'banner',
-      minWidth: 384,
-      maxWidth: 768,
-      minHeight: 32,
-      maxHeight: 128,
-      aspectRatio: 6,
-    });
-  }
-
-  private async createVisualBannerNarrow(): Promise<IVisual> {
-    return await this.visualService.createVisual({
-      name: 'bannerNarrow',
-      minWidth: 192,
-      maxWidth: 384,
-      minHeight: 32,
-      maxHeight: 128,
-      aspectRatio: 3,
-    });
-  }
-
-  private async createVisualAvatar(): Promise<IVisual> {
-    return await this.visualService.createVisual({
-      name: 'avatar',
-      minWidth: 190,
-      maxWidth: 400,
-      minHeight: 190,
-      maxHeight: 400,
-      aspectRatio: 1,
-    });
   }
 
   async getContextOrFail(
@@ -215,8 +184,11 @@ export class ContextService {
     return newReference;
   }
 
-  async createAspect(aspectData: CreateAspectInput): Promise<IAspect> {
-    const contextID = aspectData.parentID;
+  async createAspect(
+    aspectData: CreateAspectInput,
+    userID: string
+  ): Promise<IAspect> {
+    const contextID = aspectData.contextID;
     const context = await this.getContextOrFail(contextID, {
       relations: ['aspects'],
     });
@@ -226,18 +198,37 @@ export class ContextService {
         LogContext.CONTEXT
       );
 
+    const nameAvailable =
+      await this.namingService.isAspectNameIdAvailableInContext(
+        aspectData.nameID,
+        context.id
+      );
+    if (!nameAvailable)
+      throw new ValidationException(
+        `Unable to create Aspect: the provided nameID is already taken: ${aspectData.nameID}`,
+        LogContext.CHALLENGES
+      );
+
     // Check that do not already have an aspect with the same title
-    const title = aspectData.title;
+    const displayName = aspectData.displayName;
     const existingAspect = context.aspects?.find(
-      aspect => aspect.title === title
+      aspect => aspect.displayName === displayName
     );
     if (existingAspect)
       throw new ValidationException(
-        `Already have an aspect with the provided title: ${title}`,
+        `Already have an aspect with the provided display name: ${displayName}`,
         LogContext.CONTEXT
       );
 
-    const aspect = await this.aspectService.createAspect(aspectData);
+    // Not idea: get the communicationGroupID to use for the comments
+    const communicationGroupID =
+      await this.namingService.getCommunicationGroupIdForContext(context.id);
+
+    const aspect = await this.aspectService.createAspect(
+      aspectData,
+      userID,
+      communicationGroupID
+    );
     context.aspects.push(aspect);
     await this.contextRepository.save(context);
     return aspect;

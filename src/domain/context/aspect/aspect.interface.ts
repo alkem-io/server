@@ -1,14 +1,30 @@
-import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { INameable } from '@domain/common/entity/nameable-entity';
+import { IReference } from '@domain/common/reference/reference.interface';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { IVisual } from '@domain/common/visual/visual.interface';
+import { IComments } from '@domain/communication/comments/comments.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Aspect')
-export abstract class IAspect extends IAuthorizable {
+export abstract class IAspect extends INameable {
   @Field(() => String)
-  title!: string;
+  description!: string;
 
   @Field(() => String)
-  framing!: string;
+  type!: string;
 
-  @Field(() => String)
-  explanation!: string;
+  @Field(() => ITagset, {
+    nullable: true,
+    description: 'The set of tags for the Aspect',
+  })
+  tagset?: ITagset;
+
+  createdBy!: string;
+
+  banner?: IVisual;
+  bannerNarrow?: IVisual;
+
+  comments?: IComments;
+
+  references?: IReference[];
 }

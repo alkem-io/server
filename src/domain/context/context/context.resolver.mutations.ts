@@ -16,6 +16,7 @@ import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
 import { ICanvas } from '@domain/common/canvas';
 import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
 import { DeleteCanvasOnContextInput } from './dto/context.dto.delete.canvas';
+import { AspectAuthorizationService } from '../aspect/aspect.service.authorization';
 @Resolver()
 export class ContextResolverMutations {
   constructor(
@@ -24,6 +25,7 @@ export class ContextResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private canvasAuthorizationService: CanvasAuthorizationService,
+    private aspectAuthorizationService: AspectAuthorizationService,
     private contextService: ContextService
   ) {}
 
@@ -59,26 +61,27 @@ export class ContextResolverMutations {
     description: 'Create a new Aspect on the Context.',
   })
   @Profiling.api
-  async createAspect(
+  async createAspectOnContext(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('aspectData') aspectData: CreateAspectInput
   ): Promise<IAspect> {
     const context = await this.contextService.getContextOrFail(
-      aspectData.parentID
+      aspectData.contextID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       context.authorization,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.CREATE_ASPECT,
       `create aspect on context: ${context.id}`
     );
-    const aspect = await this.contextService.createAspect(aspectData);
-    aspect.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
-        aspect.authorization,
-        context.authorization
-      );
-    return await this.aspectService.saveAspect(aspect);
+    const aspect = await this.contextService.createAspect(
+      aspectData,
+      agentInfo.userID
+    );
+    return await this.aspectAuthorizationService.applyAuthorizationPolicy(
+      aspect,
+      context.authorization
+    );
   }
 
   @UseGuards(GraphqlGuard)
