@@ -4,11 +4,10 @@ import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.e
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 @Entity()
 export class Ecoverse extends BaseChallenge implements IEcoverse {
-  @OneToMany(
-    () => Challenge,
-    challenge => challenge.parentEcoverse,
-    { eager: false, cascade: true }
-  )
+  @OneToMany(() => Challenge, challenge => challenge.parentEcoverse, {
+    eager: false,
+    cascade: true,
+  })
   challenges?: Challenge[];
 
   constructor() {

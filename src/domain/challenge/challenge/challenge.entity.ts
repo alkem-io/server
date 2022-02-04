@@ -7,32 +7,30 @@ import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.e
 
 @Entity()
 export class Challenge extends BaseChallenge implements IChallenge {
-  @OneToMany(
-    () => Opportunity,
-    opportunity => opportunity.challenge,
-    { eager: false, cascade: true }
-  )
+  @OneToMany(() => Opportunity, opportunity => opportunity.challenge, {
+    eager: false,
+    cascade: true,
+  })
   opportunities?: Opportunity[];
 
-  @OneToMany(
-    () => Challenge,
-    challenge => challenge.parentChallenge,
-    { eager: false, cascade: true }
-  )
+  @OneToMany(() => Challenge, challenge => challenge.parentChallenge, {
+    eager: false,
+    cascade: true,
+  })
   childChallenges?: Challenge[];
 
-  @ManyToOne(
-    () => Challenge,
-    challenge => challenge.childChallenges,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
-  )
+  @ManyToOne(() => Challenge, challenge => challenge.childChallenges, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
   parentChallenge?: Challenge;
 
-  @ManyToOne(
-    () => Ecoverse,
-    ecoverse => ecoverse.challenges,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
-  )
+  @ManyToOne(() => Ecoverse, ecoverse => ecoverse.challenges, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
   parentEcoverse?: Ecoverse;
 
   @Column()
