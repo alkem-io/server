@@ -85,7 +85,7 @@ export class NamingService {
       return communicationGroupID || '';
     }
     // not on an ecoverse, try challenge
-    const challenge = await this.ecoverseRepository
+    const challenge = await this.challengeRepository
       .createQueryBuilder('challenge')
       .leftJoinAndSelect('challenge.community', 'community')
       .leftJoinAndSelect('challenge.context', 'context')
@@ -100,7 +100,7 @@ export class NamingService {
     }
 
     // and finally try on opportunity
-    const opportunity = await this.ecoverseRepository
+    const opportunity = await this.opportunityRepository
       .createQueryBuilder('opportunity')
       .leftJoinAndSelect('opportunity.community', 'community')
       .leftJoinAndSelect('opportunity.context', 'context')
