@@ -52,12 +52,18 @@ export class NamingService {
     nameID: string,
     contextID: string
   ): Promise<boolean> {
-    const aspectCount = await this.aspectRepository.count({
-      id: `${nameID}-${contextID}`, // todo: proper check for availability
-    });
-    if (aspectCount === 0) return true;
+    const query = this.aspectRepository
+      .createQueryBuilder('aspect')
+      .leftJoinAndSelect('aspect.context', 'context')
+      .where('context.id = :id')
+      .andWhere('aspect.nameID= :nameID')
+      .setParameters({ id: `${contextID}`, nameID: `${nameID}` });
+    const aspectWithNameID = await query.getOne();
+    if (aspectWithNameID) {
+      return false;
+    }
 
-    return false;
+    return true;
   }
 
   isValidNameID(nameID: string): boolean {
