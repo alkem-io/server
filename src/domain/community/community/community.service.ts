@@ -90,14 +90,17 @@ export class CommunityService {
   }
 
   // Loads the group into the Community entity if not already present
-  getUserGroups(community: ICommunity): IUserGroup[] {
-    if (!community.groups) {
+  async getUserGroups(community: ICommunity): Promise<IUserGroup[]> {
+    const communityWithGroups = await this.getCommunityOrFail(community.id, {
+      relations: ['groups'],
+    });
+    if (!communityWithGroups.groups) {
       throw new EntityNotInitializedException(
         `Community not initialized: ${community.displayName}`,
         LogContext.COMMUNITY
       );
     }
-    return community.groups;
+    return communityWithGroups.groups;
   }
 
   async getCommunityOrFail(

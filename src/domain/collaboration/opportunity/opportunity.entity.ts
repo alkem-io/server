@@ -7,25 +7,23 @@ import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.e
 
 @Entity()
 export class Opportunity extends BaseChallenge implements IOpportunity {
-  @ManyToOne(
-    () => Challenge,
-    challenge => challenge.opportunities,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
-  )
+  @ManyToOne(() => Challenge, challenge => challenge.opportunities, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
   challenge?: Challenge;
 
-  @OneToMany(
-    () => Project,
-    project => project.opportunity,
-    { eager: true, cascade: true }
-  )
+  @OneToMany(() => Project, project => project.opportunity, {
+    eager: true,
+    cascade: true,
+  })
   projects?: Project[];
 
-  @OneToMany(
-    () => Relation,
-    relation => relation.opportunity,
-    { eager: false, cascade: true }
-  )
+  @OneToMany(() => Relation, relation => relation.opportunity, {
+    eager: false,
+    cascade: true,
+  })
   relations?: Relation[];
 
   @Column()

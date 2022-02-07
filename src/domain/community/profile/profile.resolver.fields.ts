@@ -2,13 +2,16 @@ import { Profiling } from '@common/decorators';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IProfile } from './profile.interface';
 import { IVisual } from '@domain/common/visual/visual.interface';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { LogContext } from '@common/enums/logging.context';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
+import { IReference } from '@domain/common/reference/reference.interface';
+import { ProfileService } from './profile.service';
+import { ITagset } from '@domain/common';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
+  constructor(private profileService: ProfileService) {}
+
   @UseGuards(GraphqlGuard)
   @ResolveField('avatar', () => IVisual, {
     nullable: true,
@@ -16,12 +19,26 @@ export class ProfileResolverFields {
   })
   @Profiling.api
   async avatar(@Parent() profile: IProfile): Promise<IVisual> {
-    if (!profile.avatar) {
-      throw new EntityNotInitializedException(
-        'Avatar visual not defined',
-        LogContext.COMMUNITY
-      );
-    }
-    return profile.avatar;
+    return await this.profileService.getAvatar(profile);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('references', () => [IReference], {
+    nullable: true,
+    description: 'A list of URLs to relevant information.',
+  })
+  @Profiling.api
+  async references(@Parent() profile: IProfile): Promise<IReference[]> {
+    return await this.profileService.getReferences(profile);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('tagsets', () => [ITagset], {
+    nullable: true,
+    description: 'A list of named tagsets, each of which has a list of tags.',
+  })
+  @Profiling.api
+  async tagsets(@Parent() profile: IProfile): Promise<ITagset[]> {
+    return await this.profileService.getTagsets(profile);
   }
 }

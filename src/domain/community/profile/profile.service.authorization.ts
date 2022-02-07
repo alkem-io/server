@@ -3,16 +3,25 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IProfile, Profile } from '@domain/community/profile';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileService } from './profile.service';
 
 @Injectable()
 export class ProfileAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private profileService: ProfileService,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>
   ) {}
 
-  async applyAuthorizationPolicy(profile: IProfile): Promise<IProfile> {
+  async applyAuthorizationPolicy(profileInput: IProfile): Promise<IProfile> {
+    const profile = await this.profileService.getProfileOrFail(
+      profileInput.id,
+      {
+        relations: ['references', 'avatar', 'tagsets', 'authorization'],
+      }
+    );
+
     if (profile.references) {
       for (const reference of profile.references) {
         reference.authorization =

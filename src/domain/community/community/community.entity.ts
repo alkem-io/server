@@ -40,7 +40,7 @@ export class Community
   communication?: Communication;
 
   @OneToMany(() => UserGroup, userGroup => userGroup.community, {
-    eager: true,
+    eager: false,
     cascade: true,
   })
   groups?: UserGroup[];

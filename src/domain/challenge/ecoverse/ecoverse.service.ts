@@ -347,7 +347,7 @@ export class EcoverseService {
 
   async getGroups(ecoverse: IEcoverse): Promise<IUserGroup[]> {
     const community = await this.getCommunity(ecoverse);
-    return community.groups || [];
+    return await this.communityService.getUserGroups(community);
   }
 
   async getOpportunitiesInNameableScope(
