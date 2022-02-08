@@ -314,7 +314,10 @@ export class ContextService {
     return await this.canvasService.deleteCanvas(canvasID);
   }
 
-  async getAspects(context: IContext): Promise<IAspect[]> {
+  async getAspects(
+    context: IContext,
+    aspectIDs?: string[]
+  ): Promise<IAspect[]> {
     const contextLoaded = await this.getContextOrFail(context.id, {
       relations: ['aspects'],
     });
@@ -324,6 +327,21 @@ export class ContextService {
         LogContext.CONTEXT
       );
 
+    if (!aspectIDs) {
+      return contextLoaded.aspects;
+    }
+    const results: IAspect[] = [];
+    for (const aspectID of aspectIDs) {
+      const aspect = contextLoaded.aspects.find(
+        aspect => aspect.id === aspectID
+      );
+      if (!aspect)
+        throw new EntityNotFoundException(
+          `Aspect with requested ID (${aspectID}) not located within current Context: : ${context.id}`,
+          LogContext.CONTEXT
+        );
+      results.push(aspect);
+    }
     return contextLoaded.aspects;
   }
 

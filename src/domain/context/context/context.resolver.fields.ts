@@ -43,8 +43,17 @@ export class ContextResolverFields {
     description: 'The Aspects for this Context.',
   })
   @Profiling.api
-  async aspects(@Parent() context: Context) {
-    return await this.contextService.getAspects(context);
+  async aspects(
+    @Parent() context: Context,
+    @Args({
+      name: 'IDs',
+      type: () => [UUID],
+      description: 'The IDs of the aspects to return',
+      nullable: true,
+    })
+    ids: string[]
+  ) {
+    return await this.contextService.getAspects(context, ids);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
