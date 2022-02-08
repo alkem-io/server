@@ -333,7 +333,8 @@ export class ContextService {
     const results: IAspect[] = [];
     for (const aspectID of aspectIDs) {
       const aspect = contextLoaded.aspects.find(
-        aspect => aspect.id === aspectID
+        aspect =>
+          aspect.id === aspectID || aspect.nameID === aspectID.toLowerCase()
       );
       if (!aspect)
         throw new EntityNotFoundException(

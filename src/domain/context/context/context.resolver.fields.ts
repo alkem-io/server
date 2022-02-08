@@ -11,6 +11,7 @@ import { IReference } from '@domain/common/reference';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { IVisual } from '@domain/common/visual/visual.interface';
+import { UUID_NAMEID } from '@domain/common/scalars';
 
 @Resolver(() => IContext)
 export class ContextResolverFields {
@@ -47,8 +48,8 @@ export class ContextResolverFields {
     @Parent() context: Context,
     @Args({
       name: 'IDs',
-      type: () => [UUID],
-      description: 'The IDs of the aspects to return',
+      type: () => [UUID_NAMEID],
+      description: 'The IDs (either UUID or nameID) of the aspects to return',
       nullable: true,
     })
     ids: string[]
