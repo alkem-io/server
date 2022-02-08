@@ -343,7 +343,7 @@ export class ContextService {
         );
       results.push(aspect);
     }
-    return contextLoaded.aspects;
+    return results;
   }
 
   async getReferences(context: IContext): Promise<IReference[]> {
