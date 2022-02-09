@@ -56,7 +56,7 @@ export class AspectResolverMutations {
       agentInfo,
       aspect.authorization,
       AuthorizationPrivilege.UPDATE,
-      `update aspect: ${aspect.displayName}`
+      `update aspect: ${aspect.nameID}`
     );
     return await this.aspectService.updateAspect(aspectData);
   }
