@@ -3,6 +3,7 @@ import { IsOptional } from 'class-validator';
 import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.update';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { UpdateAuthorizationPolicyInput } from '@domain/common/authorization-policy';
+import { UpdateHubTemplateInput } from './ecoverse.dto.update.template';
 
 @InputType()
 export class UpdateEcoverseInput extends UpdateBaseChallengeInput {
@@ -26,4 +27,11 @@ export class UpdateEcoverseInput extends UpdateBaseChallengeInput {
   })
   @IsOptional()
   authorizationPolicy?: UpdateAuthorizationPolicyInput;
+
+  @Field(() => UpdateHubTemplateInput, {
+    nullable: true,
+    description: 'Update the template for this Hub.',
+  })
+  @IsOptional()
+  template?: UpdateHubTemplateInput;
 }
