@@ -11,6 +11,7 @@ import { IReference } from '@domain/common/reference';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { IVisual } from '@domain/common/visual/visual.interface';
+import { UUID_NAMEID } from '@domain/common/scalars';
 
 @Resolver(() => IContext)
 export class ContextResolverFields {
@@ -43,8 +44,17 @@ export class ContextResolverFields {
     description: 'The Aspects for this Context.',
   })
   @Profiling.api
-  async aspects(@Parent() context: Context) {
-    return await this.contextService.getAspects(context);
+  async aspects(
+    @Parent() context: Context,
+    @Args({
+      name: 'IDs',
+      type: () => [UUID_NAMEID],
+      description: 'The IDs (either UUID or nameID) of the aspects to return',
+      nullable: true,
+    })
+    ids: string[]
+  ) {
+    return await this.contextService.getAspects(context, ids);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
