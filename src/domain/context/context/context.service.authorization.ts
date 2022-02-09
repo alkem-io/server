@@ -16,6 +16,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { ICredential } from '@domain/agent/credential/credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { AspectAuthorizationService } from '../aspect/aspect.service.authorization';
 
 @Injectable()
 export class ContextAuthorizationService {
@@ -24,6 +25,7 @@ export class ContextAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private ecosysteModelAuthorizationService: EcosystemModelAuthorizationService,
     private canvasAuthorizationService: CanvasAuthorizationService,
+    private aspectAuthorizationService: AspectAuthorizationService,
     @InjectRepository(Context)
     private contextRepository: Repository<Context>
   ) {}
@@ -61,11 +63,10 @@ export class ContextAuthorizationService {
 
     context.aspects = await this.contextService.getAspects(context);
     for (const aspect of context.aspects) {
-      aspect.authorization =
-        await this.authorizationPolicyService.inheritParentAuthorization(
-          aspect.authorization,
-          context.authorization
-        );
+      await this.aspectAuthorizationService.applyAuthorizationPolicy(
+        aspect,
+        context.authorization
+      );
     }
 
     context.visuals = await this.contextService.getVisuals(context);
@@ -113,29 +114,27 @@ export class ContextAuthorizationService {
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    const communityMemberCreateAspect = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.CREATE_ASPECT],
+    const communityMemberNotInherited = new AuthorizationPolicyRuleCredential(
+      [
+        AuthorizationPrivilege.CREATE_ASPECT,
+        AuthorizationPrivilege.CREATE_CANVAS,
+      ],
       communityCredential.type,
       communityCredential.resourceID
     );
-    communityMemberCreateAspect.inheritable = false;
-    newRules.push(communityMemberCreateAspect);
+    communityMemberNotInherited.inheritable = false;
+    newRules.push(communityMemberNotInherited);
 
-    const communityMemberCreateCanvas = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.CREATE_CANVAS],
+    // separate rule as do want the update canvas / ability to create a comment to cascade
+    const communityMemberInherited = new AuthorizationPolicyRuleCredential(
+      [
+        AuthorizationPrivilege.UPDATE_CANVAS,
+        AuthorizationPrivilege.CREATE_COMMENT,
+      ],
       communityCredential.type,
       communityCredential.resourceID
     );
-    communityMemberCreateCanvas.inheritable = false;
-    newRules.push(communityMemberCreateCanvas);
-
-    // separate rule as do want the update to cascade so that users can update canvases
-    const communityMemberUpdateCanvas = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.UPDATE_CANVAS],
-      communityCredential.type,
-      communityCredential.resourceID
-    );
-    newRules.push(communityMemberUpdateCanvas);
+    newRules.push(communityMemberInherited);
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(

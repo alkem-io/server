@@ -61,7 +61,7 @@ export class AspectAuthorizationService {
     aspect.references = await this.aspectService.getReferences(aspect);
     for (const reference of aspect.references) {
       reference.authorization =
-        await this.authorizationPolicyService.inheritParentAuthorization(
+        this.authorizationPolicyService.inheritParentAuthorization(
           reference.authorization,
           aspect.authorization
         );
