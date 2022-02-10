@@ -43,7 +43,7 @@ export class AspectService {
     aspect.authorization = new AuthorizationPolicy();
     aspect.createdBy = userID;
     aspect.banner = await this.visualService.createVisualBanner();
-    aspect.bannerNarrow = await this.visualService.createVisualBanner();
+    aspect.bannerNarrow = await this.visualService.createVisualBannerNarrow();
     aspect.references = [];
 
     aspect.comments = await this.commentsService.createComments(
