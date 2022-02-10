@@ -19,6 +19,10 @@ export abstract class IAspect extends INameable {
   })
   tagset?: ITagset;
 
+  // Expose the date at which the aspect was created from parent entity
+  @Field(() => Date)
+  createdDate!: Date;
+
   createdBy!: string;
 
   banner?: IVisual;
