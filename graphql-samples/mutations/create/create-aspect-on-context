@@ -12,7 +12,6 @@ query variables:
   "aspectData":
   {
     "contextID": "uuid",
-    "nameID": "nameID",
     "type": "test",
     "displayName": "TechStack2",
     "description": "How do I handle scalability?",

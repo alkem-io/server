@@ -11,7 +11,7 @@ import { LogContext } from '@common/enums';
 import { IReference } from '@domain/common/reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { IContext, Context, CreateContextInput } from '@domain/context/context';
-import { CreateAspectInput, IAspect } from '@domain/context/aspect';
+import { CreateAspectOnContextInput, IAspect } from '@domain/context/aspect';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -185,7 +185,7 @@ export class ContextService {
   }
 
   async createAspect(
-    aspectData: CreateAspectInput,
+    aspectData: CreateAspectOnContextInput,
     userID: string
   ): Promise<IAspect> {
     const contextID = aspectData.contextID;
@@ -198,16 +198,22 @@ export class ContextService {
         LogContext.CONTEXT
       );
 
-    const nameAvailable =
-      await this.namingService.isAspectNameIdAvailableInContext(
-        aspectData.nameID,
-        context.id
+    if (aspectData.nameID && aspectData.nameID.length > 0) {
+      const nameAvailable =
+        await this.namingService.isAspectNameIdAvailableInContext(
+          aspectData.nameID,
+          context.id
+        );
+      if (!nameAvailable)
+        throw new ValidationException(
+          `Unable to create Aspect: the provided nameID is already taken: ${aspectData.nameID}`,
+          LogContext.CHALLENGES
+        );
+    } else {
+      aspectData.nameID = this.namingService.createNameID(
+        aspectData.displayName || `${aspectData.type}`
       );
-    if (!nameAvailable)
-      throw new ValidationException(
-        `Unable to create Aspect: the provided nameID is already taken: ${aspectData.nameID}`,
-        LogContext.CHALLENGES
-      );
+    }
 
     // Check that do not already have an aspect with the same title
     const displayName = aspectData.displayName;

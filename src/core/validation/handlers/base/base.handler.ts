@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 import { CreateActorGroupInput } from '@domain/context/actor-group';
-import { CreateAspectInput } from '@domain/context/aspect';
 import {
   CreateChallengeInput,
   UpdateChallengeInput,
@@ -29,6 +28,7 @@ import {
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
 import { UpdateUserGroupInput } from '@domain/community/user-group';
+import { CreateAspectOnContextInput } from '@domain/context/context/dto/context.dto.create.aspect';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -38,7 +38,7 @@ export class BaseHandler extends AbstractHandler {
     const types: Function[] = [
       CreateApplicationInput,
       CreateActorGroupInput,
-      CreateAspectInput,
+      CreateAspectOnContextInput,
       CreateChallengeInput,
       CreateContextInput,
       CreateOpportunityInput,
