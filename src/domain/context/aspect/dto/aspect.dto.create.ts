@@ -1,13 +1,17 @@
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.create';
-import { UUID } from '@domain/common/scalars';
+import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { InputType, Field } from '@nestjs/graphql';
 import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
 import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
 export class CreateAspectInput extends CreateNameableInput {
-  @Field(() => UUID, { nullable: false })
-  contextID!: string;
+  @Field(() => NameID, {
+    nullable: true,
+    description:
+      'A readable identifier, unique within the containing scope. If not provided generate based on the displayName',
+  })
+  nameID!: string;
 
   @Field({ nullable: false })
   @MaxLength(MID_TEXT_LENGTH)

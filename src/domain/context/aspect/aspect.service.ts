@@ -8,7 +8,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { CreateAspectInput, Aspect, IAspect } from '@domain/context/aspect';
+import { Aspect, IAspect } from '@domain/context/aspect';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DeleteAspectInput } from './dto/aspect.dto.delete';
@@ -20,6 +20,7 @@ import { CreateReferenceOnAspectInput } from './dto/aspect.dto.create.reference'
 import { CommentsService } from '@domain/communication/comments/comments.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
+import { CreateAspectInput } from './dto/aspect.dto.create';
 
 @Injectable()
 export class AspectService {

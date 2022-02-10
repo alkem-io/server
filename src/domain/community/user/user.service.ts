@@ -41,10 +41,10 @@ import { UserPreferenceService } from '../user-preferences';
 import { KonfigService } from '@services/platform/configuration/config/config.service';
 import { IUserTemplate } from '@services/platform/configuration';
 import { generateRandomArraySelection } from '@common/utils/random.util';
+import { NamingService } from '@services/domain/naming/naming.service';
 
 @Injectable()
 export class UserService {
-  replaceSpecialCharacters = require('replace-special-characters');
   cacheOptions: CachingConfig = { ttl: 300 };
 
   constructor(
@@ -52,6 +52,7 @@ export class UserService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
+    private namingService: NamingService,
     private agentService: AgentService,
     @Inject(UserPreferenceService)
     private userPreferenceService: UserPreferenceService,
@@ -658,20 +659,7 @@ export class UserService {
     lastName: string,
     useRandomSuffix = true
   ): string {
-    const nameIDExcludedCharacters = /[^a-zA-Z0-9/-]/g;
-    let randomSuffix = '';
-    if (useRandomSuffix) {
-      const randomNumber = Math.floor(Math.random() * 10000).toString();
-      randomSuffix = `-${randomNumber}`;
-    }
-    // replace spaces + trim to 25 characters
-    const nameID = `${firstName}-${lastName}${randomSuffix}`.replace(/\s/g, '');
-    // replace characters with umlouts etc to normal characters
-    const nameIDNoSpecialCharacters = this.replaceSpecialCharacters(nameID);
-    // Remove any characters that are not allowed
-    return nameIDNoSpecialCharacters
-      .replace(nameIDExcludedCharacters, '')
-      .toLowerCase()
-      .slice(0, 25);
+    const base = `${firstName}-${lastName}`;
+    return this.namingService.createNameID(base, useRandomSuffix);
   }
 }
