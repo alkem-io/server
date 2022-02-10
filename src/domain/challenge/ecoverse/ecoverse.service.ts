@@ -42,6 +42,7 @@ import { UpdateEcoverseInput } from './dto/ecoverse.dto.update';
 import { CreateChallengeOnEcoverseInput } from '../challenge/dto/challenge.dto.create.in.ecoverse';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CommunityType } from '@common/enums/community.type';
+import { HubTemplate } from './dto/ecoverse.dto.template.hub';
 
 @Injectable()
 export class EcoverseService {
@@ -130,6 +131,11 @@ export class EcoverseService {
 
     if (ecoverseData.hostID) {
       await this.setEcoverseHost(ecoverse.id, ecoverseData.hostID);
+    }
+
+    if (ecoverseData.template) {
+      const hubTemplate: HubTemplate = ecoverseData.template;
+      ecoverse.template = JSON.stringify(hubTemplate);
     }
 
     return await this.ecoverseRepository.save(ecoverse);
@@ -580,5 +586,21 @@ export class EcoverseService {
     });
 
     return await this.userService.getUserWithAgent(removeData.userID);
+  }
+
+  async getHubTemplates(ecoverse: IEcoverse): Promise<HubTemplate> {
+    const templatesStr = ecoverse.template || '';
+    let template = new HubTemplate();
+    try {
+      template = JSON.parse(templatesStr);
+      return template;
+    } catch (error: any) {
+      this.logger.error(
+        `Unable to retrieve templates for Hub (${ecoverse.nameID}): ${error}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return template;
   }
 }

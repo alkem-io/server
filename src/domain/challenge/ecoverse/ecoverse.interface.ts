@@ -5,4 +5,6 @@ import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.
 @ObjectType('Ecoverse')
 export abstract class IEcoverse extends IBaseChallenge {
   challenges?: IChallenge[];
+
+  template?: string;
 }

@@ -1,4 +1,4 @@
-import { Entity, OneToMany } from 'typeorm';
+import { Column, Entity, OneToMany } from 'typeorm';
 import { IEcoverse } from '@domain/challenge/ecoverse/ecoverse.interface';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
@@ -10,7 +10,11 @@ export class Ecoverse extends BaseChallenge implements IEcoverse {
   })
   challenges?: Challenge[];
 
+  @Column('text')
+  template?: string;
+
   constructor() {
     super();
+    this.template = '';
   }
 }
