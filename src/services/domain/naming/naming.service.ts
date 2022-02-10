@@ -12,6 +12,8 @@ import { LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
 export class NamingService {
+  replaceSpecialCharacters = require('replace-special-characters');
+
   constructor(
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -124,5 +126,24 @@ export class NamingService {
       `Unable to find the communication ID for the provided context: ${contextID}`,
       LogContext.CONTEXT
     );
+  }
+
+  createNameID(base: string, useRandomSuffix = true): string {
+    const nameIDExcludedCharacters = /[^a-zA-Z0-9/-]/g;
+    let randomSuffix = '';
+    if (useRandomSuffix) {
+      const randomNumber = Math.floor(Math.random() * 10000).toString();
+      randomSuffix = `-${randomNumber}`;
+    }
+    const baseMaxLength = base.slice(0, 20);
+    // replace spaces + trim to 25 characters
+    const nameID = `${baseMaxLength}${randomSuffix}`.replace(/\s/g, '');
+    // replace characters with umlouts etc to normal characters
+    const nameIDNoSpecialCharacters = this.replaceSpecialCharacters(nameID);
+    // Remove any characters that are not allowed
+    return nameIDNoSpecialCharacters
+      .replace(nameIDExcludedCharacters, '')
+      .toLowerCase()
+      .slice(0, 25);
   }
 }
