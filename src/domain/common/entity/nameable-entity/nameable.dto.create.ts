@@ -1,6 +1,6 @@
 import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { InputType, Field } from '@nestjs/graphql';
-import { MaxLength } from 'class-validator';
+import { MinLength, MaxLength } from 'class-validator';
 import { NameID } from '@domain/common/scalars';
 
 @InputType()
@@ -9,9 +9,11 @@ export class CreateNameableInput {
     nullable: false,
     description: 'A readable identifier, unique within the containing scope.',
   })
+  @MinLength(3)
   nameID!: string;
 
   @Field({ nullable: true, description: 'The display name for the entity.' })
+  @MinLength(3)
   @MaxLength(SMALL_TEXT_LENGTH)
   displayName?: string;
 }
