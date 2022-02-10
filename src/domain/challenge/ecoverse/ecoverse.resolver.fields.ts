@@ -26,6 +26,7 @@ import { IOpportunity } from '@domain/collaboration/opportunity';
 import { IAgent } from '@domain/agent/agent';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
+import { HubTemplate } from './dto/ecoverse.dto.template.hub';
 
 @Resolver(() => IEcoverse)
 export class EcoverseResolverFields {
@@ -250,5 +251,14 @@ export class EcoverseResolverFields {
   @Profiling.api
   async host(@Parent() ecoverse: Ecoverse): Promise<IOrganization | undefined> {
     return await this.ecoverseService.getHost(ecoverse.id);
+  }
+
+  @ResolveField('template', () => HubTemplate, {
+    nullable: false,
+    description: 'The template for this Hub.',
+  })
+  @Profiling.api
+  async templates(@Parent() ecoverse: IEcoverse): Promise<HubTemplate> {
+    return this.ecoverseService.getHubTemplates(ecoverse);
   }
 }
