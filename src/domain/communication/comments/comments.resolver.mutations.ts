@@ -41,7 +41,7 @@ export class CommentsResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       comments.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.CREATE_COMMENT,
       `comments send message: ${comments.displayName}`
     );
 
