@@ -108,7 +108,9 @@ export class AspectService {
   }
 
   async updateAspect(aspectData: UpdateAspectInput): Promise<IAspect> {
-    const aspect = await this.getAspectOrFail(aspectData.ID);
+    const aspect = await this.getAspectOrFail(aspectData.ID, {
+      relations: ['references'],
+    });
 
     // Copy over the received data
     if (aspectData.displayName) {
@@ -126,6 +128,13 @@ export class AspectService {
         );
       }
       aspect.tagset.tags = [...aspectData.tags];
+    }
+
+    if (aspectData.references) {
+      aspect.references = await this.referenceService.updateReferences(
+        aspect.references,
+        aspectData.references
+      );
     }
 
     await this.aspectRepository.save(aspect);

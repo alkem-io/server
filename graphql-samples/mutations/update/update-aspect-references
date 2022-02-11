@@ -1,0 +1,24 @@
+mutation updateAspect($aspectData: UpdateAspectInput!) {
+  updateAspect(aspectData: $aspectData) {
+    displayName
+    references {
+      name
+      uri
+      description
+    }
+  }
+}
+
+Variables:
+{
+  "aspectData": {
+    "ID": "uuid",
+    "references": [
+      {
+        "ID": "uuid",
+        "name": "videoxxxx",
+        "uri": "https://www.youtube.com"
+      }
+    ]
+  }
+}
