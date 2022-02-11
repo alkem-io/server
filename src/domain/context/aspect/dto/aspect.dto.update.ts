@@ -1,4 +1,5 @@
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.update';
+import { UpdateReferenceInput } from '@domain/common/reference/reference.dto.update';
 import { InputType, Field } from '@nestjs/graphql';
 import { LONG_TEXT_LENGTH } from '@src/common/constants';
 import { IsOptional, MaxLength } from 'class-validator';
@@ -15,4 +16,10 @@ export class UpdateAspectInput extends UpdateNameableInput {
   })
   @IsOptional()
   tags?: string[];
+
+  @Field(() => [UpdateReferenceInput], {
+    nullable: true,
+    description: 'Update the set of References for the Aspect.',
+  })
+  references?: UpdateReferenceInput[];
 }
