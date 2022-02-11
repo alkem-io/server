@@ -29,6 +29,7 @@ import {
 } from '@domain/collaboration/opportunity';
 import { UpdateUserGroupInput } from '@domain/community/user-group';
 import { CreateAspectOnContextInput } from '@domain/context/context/dto/context.dto.create.aspect';
+import { CreateAspectInput } from '@domain/context/aspect/dto/aspect.dto.create';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -49,6 +50,7 @@ export class BaseHandler extends AbstractHandler {
       CreateRelationInput,
       CreateTagsetInput,
       CreateUserInput,
+      CreateAspectInput,
       UpdateEcoverseInput,
       UpdateOpportunityInput,
       UpdateChallengeInput,
