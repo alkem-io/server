@@ -36,7 +36,7 @@ export class AspectResolverFields {
   async banner(@Parent() aspect: IAspect): Promise<IVisual> {
     if (!aspect.banner) {
       throw new EntityNotInitializedException(
-        'Avatar visual not defined',
+        'Banner visual not defined',
         LogContext.COMMUNITY
       );
     }
@@ -50,13 +50,13 @@ export class AspectResolverFields {
   })
   @Profiling.api
   async bannerNarrow(@Parent() aspect: IAspect): Promise<IVisual> {
-    if (!aspect.banner) {
+    if (!aspect.bannerNarrow) {
       throw new EntityNotInitializedException(
-        'Avatar visual not defined',
+        'narrow banner visual not defined',
         LogContext.COMMUNITY
       );
     }
-    return aspect.banner;
+    return aspect.bannerNarrow;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
