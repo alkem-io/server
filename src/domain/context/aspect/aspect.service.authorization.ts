@@ -7,14 +7,20 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { IAspect } from './aspect.interface';
 import { Aspect } from './aspect.entity';
-import { LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { AspectService } from './aspect.service';
+import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 
 @Injectable()
 export class AspectAuthorizationService {
   constructor(
     private aspectService: AspectService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private commentsAuthorizationService: CommentsAuthorizationService,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>
   ) {}
@@ -29,10 +35,7 @@ export class AspectAuthorizationService {
         parentAuthorization
       );
 
-    aspect.authorization = this.appendCredentialRules(
-      aspect.authorization,
-      aspect.id
-    );
+    aspect.authorization = this.appendCredentialRules(aspect);
 
     // cascade
     if (aspect.banner) {
@@ -51,9 +54,9 @@ export class AspectAuthorizationService {
     }
 
     if (aspect.comments) {
-      aspect.comments.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          aspect.comments.authorization,
+      aspect.comments =
+        await this.commentsAuthorizationService.applyAuthorizationPolicy(
+          aspect.comments,
           aspect.authorization
         );
     }
@@ -70,17 +73,22 @@ export class AspectAuthorizationService {
     return await this.aspectRepository.save(aspect);
   }
 
-  private appendCredentialRules(
-    authorization: IAuthorizationPolicy | undefined,
-    aspectID: string
-  ): IAuthorizationPolicy {
+  private appendCredentialRules(aspect: IAspect): IAuthorizationPolicy {
+    const authorization = aspect.authorization;
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for Aspect: ${aspectID}`,
+        `Authorization definition not found for Aspect: ${aspect.id}`,
         LogContext.CONTEXT
       );
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
+
+    const messageSender = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.UPDATE],
+      AuthorizationCredential.USER_SELF_MANAGEMENT,
+      aspect.createdBy
+    );
+    newRules.push(messageSender);
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
