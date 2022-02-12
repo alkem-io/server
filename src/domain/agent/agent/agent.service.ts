@@ -1,4 +1,9 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import {
+  CACHE_MANAGER,
+  Inject,
+  Injectable,
+  LoggerService,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
@@ -26,6 +31,8 @@ import { firstValueFrom } from 'rxjs';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SsiException } from '@common/exceptions/ssi.exception';
 import { Profiling } from '@common/decorators/profiling.decorator';
+import { ShareCredentialOutput } from '../credential/credential.dto.share';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class AgentService {
@@ -37,7 +44,10 @@ export class AgentService {
     private walletManagementClient: ClientProxy,
     @InjectRepository(Agent)
     private agentRepository: Repository<Agent>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache
   ) {}
 
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
@@ -258,6 +268,75 @@ export class AgentService {
       throw new SsiException(
         `Failed to grant state transition Verified Credential: ${err.message}`
       );
+    }
+  }
+
+  @Profiling.api
+  async createShareCredentialRequest(
+    issuerAgent: IAgent,
+    uniqueCallbackURL: string,
+    nonce: string,
+    credentialTypes: string[]
+  ): Promise<ShareCredentialOutput> {
+    const credentialRequest$ = this.walletManagementClient.send(
+      { cmd: 'createShareCredentialRequest' },
+      {
+        issuerDId: issuerAgent.did,
+        issuerPassword: issuerAgent.password,
+        types: credentialTypes,
+        uniqueCallbackURL: uniqueCallbackURL,
+      }
+    );
+
+    try {
+      const request = await firstValueFrom<ShareCredentialOutput>(
+        credentialRequest$
+      );
+      this.cacheManager.set<IAgent>(request.interactionId, issuerAgent, {
+        ttl: 900, // 15mins
+      });
+      this.cacheManager.set(nonce, request.interactionId, {
+        ttl: 900, // 15mins
+      });
+
+      return request;
+    } catch (err: any) {
+      throw new SsiException(
+        `Failed to create share credential request: ${err.message}`
+      );
+    }
+  }
+
+  @Profiling.api
+  async shareRequestedCredential(nonce: string, token: string): Promise<void> {
+    const interactionId = await this.cacheManager.get<string>(nonce);
+    if (!interactionId) {
+      throw new Error('The interaction is not valid');
+    }
+    const agent = await this.cacheManager.get<IAgent>(interactionId);
+    if (!agent) {
+      throw new Error('An agent could not be found for the interactionId');
+    }
+
+    this.logger.verbose?.(
+      `InteractionId with agent: ${interactionId} - ${agent.did} received ${token}`,
+      LogContext.SSI
+    );
+
+    const credentialStoreRequest$ = this.walletManagementClient.send(
+      { cmd: 'storeSharedCredentials' },
+      {
+        issuerDId: agent.did,
+        issuerPassword: agent.password,
+        interactionId: interactionId,
+        jwt: token,
+      }
+    );
+
+    try {
+      await firstValueFrom<boolean>(credentialStoreRequest$);
+    } catch (err: any) {
+      throw new SsiException(`Failed to share credential: ${err.message}`);
     }
   }
 

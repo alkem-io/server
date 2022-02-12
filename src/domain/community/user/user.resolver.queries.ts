@@ -11,14 +11,21 @@ import { GraphqlGuard } from '@core/authorization';
 import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, ConfigurationTypes } from '@common/enums';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { ShareCredentialOutput } from '@domain/agent/credential/credential.dto.share';
+import { ConfigService } from '@nestjs/config';
+import { ssiConfig } from '@config/ssi.config';
+import { v4 } from 'uuid';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
   constructor(
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private userService: UserService
+    private userService: UserService,
+    private agentService: AgentService,
+    private configService: ConfigService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -134,5 +141,39 @@ export class UserResolverQueries {
       throw new UserNotRegisteredException();
     }
     return user;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Query(() => ShareCredentialOutput, {
+    nullable: false,
+    description: 'Generate credential share request',
+  })
+  @Profiling.api
+  async generateCredentialShareRequest(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args({ name: 'types', type: () => [String] }) types: string[]
+  ): Promise<ShareCredentialOutput> {
+    const userID = agentInfo.userID;
+    if (!userID || userID.length == 0) {
+      throw new AuthenticationException(
+        'Unable to retrieve authenticated user; no identifier'
+      );
+    }
+
+    // TODO
+    const nonce = v4();
+    const url = `${
+      this.configService.get(ConfigurationTypes.HOSTING)?.endpoint
+    }/api/public/rest/${
+      ssiConfig.endpoints.shareRequestedCredentialEndpoint
+    }/${nonce}`;
+
+    const storedAgent = await this.userService.getAgent(userID);
+    return await this.agentService.createShareCredentialRequest(
+      storedAgent,
+      url,
+      nonce,
+      types
+    );
   }
 }

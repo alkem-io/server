@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { CacheModule, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CredentialModule } from '@domain/agent/credential/credential.module';
 import { AgentService } from './agent.service';
@@ -13,6 +13,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     AuthorizationModule,
     CredentialModule,
     TypeOrmModule.forFeature([Agent]),
+    CacheModule.register(),
   ],
   providers: [AgentService, AgentResolverFields],
   exports: [AgentService],

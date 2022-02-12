@@ -1,11 +1,18 @@
 import { ConfigurationTypes } from '@common/enums';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
+import {
+  configQuery,
+  hubsQuery,
+  meQuery,
+  serverMetadataQuery,
+} from '@config/graphql';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
+import { AgentModule } from '@domain/agent/agent/agent.module';
 import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { MiddlewareConsumer, Module } from '@nestjs/common';
@@ -22,15 +29,9 @@ import { MetadataModule } from '@src/services/domain/metadata/metadata.module';
 import { SearchModule } from '@src/services/domain/search/search.module';
 import { KonfigModule } from '@src/services/platform/configuration/config/config.module';
 import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
+import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
-import {
-  configQuery,
-  hubsQuery,
-  meQuery,
-  serverMetadataQuery,
-} from '@config/graphql';
-import { print } from 'graphql/language/printer';
 
 @Module({
   imports: [
@@ -160,6 +161,7 @@ import { print } from 'graphql/language/printer';
     KonfigModule,
     IpfsModule,
     AdminCommunicationModule,
+    AgentModule,
   ],
   controllers: [AppController],
   providers: [
