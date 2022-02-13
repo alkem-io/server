@@ -84,7 +84,11 @@ export class AspectAuthorizationService {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
     const messageSender = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.UPDATE],
+      [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
       AuthorizationCredential.USER_SELF_MANAGEMENT,
       aspect.createdBy
     );
