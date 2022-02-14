@@ -26,7 +26,7 @@ export class ProfileAuthorizationService {
       }
     );
 
-    // Inherit from the parentAuthorizationrelation.authorization =
+    // Inherit from the parent
     profile.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         profile.authorization,
