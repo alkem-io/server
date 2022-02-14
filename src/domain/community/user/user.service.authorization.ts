@@ -41,7 +41,8 @@ export class UserAuthorizationService {
     user.profile = await this.userService.getProfile(user);
     user.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        user.profile
+        user.profile,
+        user.authorization
       );
 
     // Allow users to also delete entities within the profile
