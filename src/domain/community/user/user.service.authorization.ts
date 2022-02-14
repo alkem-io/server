@@ -39,9 +39,9 @@ export class UserAuthorizationService {
 
     // cascade
     user.profile = await this.userService.getProfile(user);
-    user.profile.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        user.profile.authorization,
+    user.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        user.profile,
         user.authorization
       );
 
@@ -55,10 +55,7 @@ export class UserAuthorizationService {
         },
         [AuthorizationPrivilege.DELETE]
       );
-    user.profile =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(
-        user.profile
-      );
+
     user.agent = await this.userService.getAgent(user.id);
     user.agent.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(

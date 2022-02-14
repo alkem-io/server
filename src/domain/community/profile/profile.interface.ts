@@ -5,16 +5,8 @@ import { IVisual } from '@domain/common/visual';
 import { Field, ObjectType } from '@nestjs/graphql';
 @ObjectType('Profile')
 export abstract class IProfile extends IAuthorizable {
-  @Field(() => [IReference], {
-    nullable: true,
-    description: 'A list of URLs to relevant information.',
-  })
   references?: IReference[];
 
-  @Field(() => [ITagset], {
-    nullable: true,
-    description: 'A list of named tagsets, each of which has a list of tags.',
-  })
   tagsets?: ITagset[];
 
   avatar?: IVisual;

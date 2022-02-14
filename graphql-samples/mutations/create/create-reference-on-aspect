@@ -1,0 +1,17 @@
+mutation createReferenceOnAspect($referenceInput: CreateReferenceOnAspectInput!) {
+  createReferenceOnAspect(referenceData: $referenceInput) {
+    name,
+    uri,
+    description
+  }
+}
+
+Variables:
+{
+  "referenceInput": {
+      "aspectID": "uuid",
+      "name": "wow",
+      "uri": "something",
+      "description": "this works"
+  }
+}

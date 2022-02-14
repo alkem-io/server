@@ -1,0 +1,11 @@
+mutation removeComment($messageData: CommentsRemoveMessageInput!) {
+  removeComment(messageData: $messageData)
+}
+
+Variables:
+{
+  "messageData": {
+    "messageID": "example222",
+    "commentsID": "uuid"
+  }
+}

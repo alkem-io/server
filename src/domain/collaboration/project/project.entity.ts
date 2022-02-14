@@ -33,18 +33,17 @@ export class Project extends NameableEntity implements IProject {
   @JoinColumn()
   tagset?: Tagset;
 
-  @OneToMany(
-    () => Agreement,
-    agreement => agreement.project,
-    { eager: true, cascade: true }
-  )
+  @OneToMany(() => Agreement, agreement => agreement.project, {
+    eager: true,
+    cascade: true,
+  })
   agreements?: Agreement[];
 
-  @ManyToOne(
-    () => Opportunity,
-    opportunity => opportunity.projects,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
-  )
+  @ManyToOne(() => Opportunity, opportunity => opportunity.projects, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
   opportunity?: Opportunity;
 
   constructor(name: string, nameID: string) {

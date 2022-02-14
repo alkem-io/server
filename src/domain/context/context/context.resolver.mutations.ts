@@ -2,7 +2,6 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { IReference } from '@domain/common/reference';
 import { ContextService } from '@domain/context/context/context.service';
-import { CreateAspectInput, IAspect } from '@domain/context/aspect';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common/decorators';
@@ -10,20 +9,22 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AgentInfo } from '@core/authentication';
 import { CreateReferenceOnContextInput } from '@domain/context/context/dto/context.dto.create.reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
-import { AspectService } from '@domain/context/aspect/aspect.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
 import { ICanvas } from '@domain/common/canvas';
 import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
 import { DeleteCanvasOnContextInput } from './dto/context.dto.delete.canvas';
+import { AspectAuthorizationService } from '../aspect/aspect.service.authorization';
+import { CreateAspectOnContextInput } from './dto/context.dto.create.aspect';
+import { IAspect } from '../aspect/aspect.interface';
 @Resolver()
 export class ContextResolverMutations {
   constructor(
-    private aspectService: AspectService,
     private referenceService: ReferenceService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private canvasAuthorizationService: CanvasAuthorizationService,
+    private aspectAuthorizationService: AspectAuthorizationService,
     private contextService: ContextService
   ) {}
 
@@ -59,26 +60,27 @@ export class ContextResolverMutations {
     description: 'Create a new Aspect on the Context.',
   })
   @Profiling.api
-  async createAspect(
+  async createAspectOnContext(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('aspectData') aspectData: CreateAspectInput
+    @Args('aspectData') aspectData: CreateAspectOnContextInput
   ): Promise<IAspect> {
     const context = await this.contextService.getContextOrFail(
-      aspectData.parentID
+      aspectData.contextID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       context.authorization,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.CREATE_ASPECT,
       `create aspect on context: ${context.id}`
     );
-    const aspect = await this.contextService.createAspect(aspectData);
-    aspect.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
-        aspect.authorization,
-        context.authorization
-      );
-    return await this.aspectService.saveAspect(aspect);
+    const aspect = await this.contextService.createAspect(
+      aspectData,
+      agentInfo.userID
+    );
+    return await this.aspectAuthorizationService.applyAuthorizationPolicy(
+      aspect,
+      context.authorization
+    );
   }
 
   @UseGuards(GraphqlGuard)

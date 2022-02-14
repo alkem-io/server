@@ -39,10 +39,6 @@ export abstract class IContext extends IAuthorizable {
   })
   who?: string;
 
-  @Field(() => [IReference], {
-    nullable: true,
-    description: 'A list of URLs to relevant information.',
-  })
   references?: IReference[];
 
   ecosystemModel?: IEcosystemModel;

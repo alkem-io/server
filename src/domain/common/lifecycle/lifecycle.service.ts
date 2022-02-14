@@ -100,6 +100,13 @@ export class LifecycleService {
     // Note: https://github.com/statelyai/xstate/discussions/1757
     // restoring state has the hydrated actions, which unless removed will be executed again
     stateToHydrate.actions = [];
+    // Remove also the event itself as this would otherwise pull all agent / authorization policy into the hydrated state
+    stateToHydrate.event = '';
+    stateToHydrate._event.data.agentInfo.credentials = '';
+    stateToHydrate._event.data.agentInfo.verifiedCredentials = '';
+    stateToHydrate._event.data.authorization = '';
+
+    //stateToHydrate._event = un;
     const newStateStr = JSON.stringify(stateToHydrate);
 
     // Todo: do not stop as this triggers an exit action from the last state.

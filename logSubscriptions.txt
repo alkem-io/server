@@ -1,2 +1,0 @@
-{"context":"subscriptions","level":"verbose","message":"[User (valentin@alkem.io) Updates] -  Subscribing to all updates"}
-{"context":"subscriptions","level":"verbose","message":"[User (valentin@alkem.io) DiscussionMsg] -  Subscribing to all discussions"}

@@ -19,6 +19,9 @@ import { IpfsService } from '@src/services/platform/ipfs/ipfs.service';
 
 @Injectable()
 export class VisualService {
+  private readonly avatarMinImageSize = 190;
+  private readonly avatarMaxImageSize = 410;
+
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Visual)
@@ -134,5 +137,38 @@ export class VisualService {
         `Upload image has a height resolution of '${imageHeight}' which is not in the allowed range of ${visual.minHeight} - ${visual.maxHeight} pixels!`,
         LogContext.COMMUNITY
       );
+  }
+
+  async createVisualBanner(): Promise<IVisual> {
+    return await this.createVisual({
+      name: 'banner',
+      minWidth: 384,
+      maxWidth: 768,
+      minHeight: 32,
+      maxHeight: 128,
+      aspectRatio: 6,
+    });
+  }
+
+  async createVisualBannerNarrow(): Promise<IVisual> {
+    return await this.createVisual({
+      name: 'bannerNarrow',
+      minWidth: 192,
+      maxWidth: 384,
+      minHeight: 32,
+      maxHeight: 128,
+      aspectRatio: 3,
+    });
+  }
+
+  async createVisualAvatar(): Promise<IVisual> {
+    return await this.createVisual({
+      name: 'avatar',
+      minWidth: this.avatarMinImageSize,
+      maxWidth: this.avatarMaxImageSize,
+      minHeight: this.avatarMinImageSize,
+      maxHeight: this.avatarMaxImageSize,
+      aspectRatio: 1,
+    });
   }
 }

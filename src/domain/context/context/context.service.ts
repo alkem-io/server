@@ -11,7 +11,7 @@ import { LogContext } from '@common/enums';
 import { IReference } from '@domain/common/reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { IContext, Context, CreateContextInput } from '@domain/context/context';
-import { CreateAspectInput, IAspect } from '@domain/context/aspect';
+import { CreateAspectOnContextInput, IAspect } from '@domain/context/aspect';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -24,6 +24,7 @@ import { UpdateContextInput } from './dto/context.dto.update';
 import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { IVisual } from '@domain/common/visual/visual.interface';
+import { NamingService } from '@services/domain/naming/naming.service';
 
 @Injectable()
 export class ContextService {
@@ -34,6 +35,7 @@ export class ContextService {
     private ecosystemModelService: EcosystemModelService,
     private visualService: VisualService,
     private referenceService: ReferenceService,
+    private namingService: NamingService,
     @InjectRepository(Context)
     private contextRepository: Repository<Context>
   ) {}
@@ -45,43 +47,10 @@ export class ContextService {
     context.authorization = new AuthorizationPolicy();
     if (!context.references) context.references = [];
     context.visuals = [];
-    context.visuals.push(await this.createVisualBanner());
-    context.visuals.push(await this.createVisualBannerNarrow());
-    context.visuals.push(await this.createVisualAvatar());
+    context.visuals.push(await this.visualService.createVisualBanner());
+    context.visuals.push(await this.visualService.createVisualBannerNarrow());
+    context.visuals.push(await this.visualService.createVisualAvatar());
     return context;
-  }
-
-  private async createVisualBanner(): Promise<IVisual> {
-    return await this.visualService.createVisual({
-      name: 'banner',
-      minWidth: 384,
-      maxWidth: 768,
-      minHeight: 32,
-      maxHeight: 128,
-      aspectRatio: 6,
-    });
-  }
-
-  private async createVisualBannerNarrow(): Promise<IVisual> {
-    return await this.visualService.createVisual({
-      name: 'bannerNarrow',
-      minWidth: 192,
-      maxWidth: 384,
-      minHeight: 32,
-      maxHeight: 128,
-      aspectRatio: 3,
-    });
-  }
-
-  private async createVisualAvatar(): Promise<IVisual> {
-    return await this.visualService.createVisual({
-      name: 'avatar',
-      minWidth: 190,
-      maxWidth: 400,
-      minHeight: 190,
-      maxHeight: 400,
-      aspectRatio: 1,
-    });
   }
 
   async getContextOrFail(
@@ -215,8 +184,11 @@ export class ContextService {
     return newReference;
   }
 
-  async createAspect(aspectData: CreateAspectInput): Promise<IAspect> {
-    const contextID = aspectData.parentID;
+  async createAspect(
+    aspectData: CreateAspectOnContextInput,
+    userID: string
+  ): Promise<IAspect> {
+    const contextID = aspectData.contextID;
     const context = await this.getContextOrFail(contextID, {
       relations: ['aspects'],
     });
@@ -226,18 +198,43 @@ export class ContextService {
         LogContext.CONTEXT
       );
 
+    if (aspectData.nameID && aspectData.nameID.length > 0) {
+      const nameAvailable =
+        await this.namingService.isAspectNameIdAvailableInContext(
+          aspectData.nameID,
+          context.id
+        );
+      if (!nameAvailable)
+        throw new ValidationException(
+          `Unable to create Aspect: the provided nameID is already taken: ${aspectData.nameID}`,
+          LogContext.CHALLENGES
+        );
+    } else {
+      aspectData.nameID = this.namingService.createNameID(
+        aspectData.displayName || `${aspectData.type}`
+      );
+    }
+
     // Check that do not already have an aspect with the same title
-    const title = aspectData.title;
+    const displayName = aspectData.displayName;
     const existingAspect = context.aspects?.find(
-      aspect => aspect.title === title
+      aspect => aspect.displayName === displayName
     );
     if (existingAspect)
       throw new ValidationException(
-        `Already have an aspect with the provided title: ${title}`,
+        `Already have an aspect with the provided display name: ${displayName}`,
         LogContext.CONTEXT
       );
 
-    const aspect = await this.aspectService.createAspect(aspectData);
+    // Not idea: get the communicationGroupID to use for the comments
+    const communicationGroupID =
+      await this.namingService.getCommunicationGroupIdForContext(context.id);
+
+    const aspect = await this.aspectService.createAspect(
+      aspectData,
+      userID,
+      communicationGroupID
+    );
     context.aspects.push(aspect);
     await this.contextRepository.save(context);
     return aspect;
@@ -323,7 +320,10 @@ export class ContextService {
     return await this.canvasService.deleteCanvas(canvasID);
   }
 
-  async getAspects(context: IContext): Promise<IAspect[]> {
+  async getAspects(
+    context: IContext,
+    aspectIDs?: string[]
+  ): Promise<IAspect[]> {
     const contextLoaded = await this.getContextOrFail(context.id, {
       relations: ['aspects'],
     });
@@ -333,7 +333,23 @@ export class ContextService {
         LogContext.CONTEXT
       );
 
-    return contextLoaded.aspects;
+    if (!aspectIDs) {
+      return contextLoaded.aspects;
+    }
+    const results: IAspect[] = [];
+    for (const aspectID of aspectIDs) {
+      const aspect = contextLoaded.aspects.find(
+        aspect =>
+          aspect.id === aspectID || aspect.nameID === aspectID.toLowerCase()
+      );
+      if (!aspect)
+        throw new EntityNotFoundException(
+          `Aspect with requested ID (${aspectID}) not located within current Context: : ${context.id}`,
+          LogContext.CONTEXT
+        );
+      results.push(aspect);
+    }
+    return results;
   }
 
   async getReferences(context: IContext): Promise<IReference[]> {

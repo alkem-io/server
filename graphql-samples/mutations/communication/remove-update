@@ -5,7 +5,7 @@ mutation removeUpdate($messageData: UpdatesRemoveMessageInput!) {
 Variables:
 {
   "messageData": {
-    "message": "example222",
+    "messageID": "example222",
     "updatesID": "uuid"
   }
 }
