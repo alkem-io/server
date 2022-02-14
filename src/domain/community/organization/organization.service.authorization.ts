@@ -42,14 +42,10 @@ export class OrganizationAuthorizationService {
     );
 
     if (organization.profile) {
-      organization.profile.authorization =
-        this.authorizationPolicy.inheritParentAuthorization(
-          organization.profile.authorization,
-          organization.authorization
-        );
       organization.profile =
         await this.profileAuthorizationService.applyAuthorizationPolicy(
-          organization.profile
+          organization.profile,
+          organization.authorization
         );
     }
 

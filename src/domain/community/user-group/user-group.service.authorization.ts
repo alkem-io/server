@@ -40,14 +40,11 @@ export class UserGroupAuthorizationService {
 
     // cascade
     userGroup.profile = this.userGroupService.getProfile(userGroup);
-    userGroup.profile.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
-        userGroup.profile.authorization,
-        userGroup.authorization
-      );
+
     userGroup.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        userGroup.profile
+        userGroup.profile,
+        userGroup.authorization
       );
 
     return await this.userGroupRepository.save(userGroup);
