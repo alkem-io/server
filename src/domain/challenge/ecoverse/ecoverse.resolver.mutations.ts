@@ -48,7 +48,10 @@ export class EcoverseResolverMutations {
       AuthorizationPrivilege.CREATE_HUB,
       `updateEcoverse: ${ecoverseData.nameID}`
     );
-    const ecoverse = await this.ecoverseService.createEcoverse(ecoverseData);
+    const ecoverse = await this.ecoverseService.createEcoverse(
+      ecoverseData,
+      agentInfo
+    );
     return await this.ecoverseAuthorizationService.applyAuthorizationPolicy(
       ecoverse
     );
@@ -125,7 +128,8 @@ export class EcoverseResolverMutations {
       `challengeCreate: ${ecoverse.nameID}`
     );
     const challenge = await this.ecoverseService.createChallengeInEcoverse(
-      challengeData
+      challengeData,
+      agentInfo
     );
     return await this.challengeAuthorizationService.applyAuthorizationPolicy(
       challenge,

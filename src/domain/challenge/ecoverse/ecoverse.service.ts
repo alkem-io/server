@@ -43,6 +43,7 @@ import { CreateChallengeOnEcoverseInput } from '../challenge/dto/challenge.dto.c
 import { CommunityService } from '@domain/community/community/community.service';
 import { CommunityType } from '@common/enums/community.type';
 import { HubTemplate } from './dto/ecoverse.dto.template.hub';
+import { AgentInfo } from '@src/core';
 
 @Injectable()
 export class EcoverseService {
@@ -62,7 +63,10 @@ export class EcoverseService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createEcoverse(ecoverseData: CreateEcoverseInput): Promise<IEcoverse> {
+  async createEcoverse(
+    ecoverseData: CreateEcoverseInput,
+    agentInfo?: AgentInfo
+  ): Promise<IEcoverse> {
     await this.validateEcoverseData(ecoverseData);
     const ecoverse: IEcoverse = Ecoverse.create(ecoverseData);
 
@@ -97,6 +101,15 @@ export class EcoverseService {
     const savedEcoverse = await this.ecoverseRepository.save(ecoverse);
 
     await this.setEcoverseHost(ecoverse.id, ecoverseData.hostID);
+
+    if (agentInfo) {
+      await this.assignMember(agentInfo.userID, ecoverse.id);
+
+      await this.assignEcoverseAdmin({
+        ecoverseID: ecoverse.id,
+        userID: agentInfo.userID,
+      });
+    }
 
     return savedEcoverse;
   }
@@ -416,7 +429,8 @@ export class EcoverseService {
   }
 
   async createChallengeInEcoverse(
-    challengeData: CreateChallengeOnEcoverseInput
+    challengeData: CreateChallengeOnEcoverseInput,
+    agentInfo?: AgentInfo
   ): Promise<IChallenge> {
     const ecoverse = await this.getEcoverseOrFail(challengeData.ecoverseID, {
       relations: ['challenges', 'community'],
@@ -434,7 +448,8 @@ export class EcoverseService {
     // Update the challenge data being passed in to state set the parent ID to the contained challenge
     const newChallenge = await this.challengeService.createChallenge(
       challengeData,
-      ecoverse.id
+      ecoverse.id,
+      agentInfo
     );
     if (!ecoverse.challenges)
       throw new ValidationException(
@@ -553,6 +568,19 @@ export class EcoverseService {
       );
     }
     return organizations[0];
+  }
+
+  async assignMember(userID: string, hubId: string) {
+    const agent = await this.userService.getAgent(userID);
+    const hub = await this.getEcoverseOrFail(hubId);
+
+    await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.ECOVERSE_MEMBER,
+      resourceID: hub.id,
+    });
+
+    return await this.userService.getUserWithAgent(userID);
   }
 
   async assignEcoverseAdmin(

@@ -55,7 +55,8 @@ export class ChallengeResolverMutations {
       `challengeCreate: ${challenge.nameID}`
     );
     const childChallenge = await this.challengeService.createChildChallenge(
-      challengeData
+      challengeData,
+      agentInfo
     );
     return await this.challengeAuthorizationService.applyAuthorizationPolicy(
       childChallenge,
@@ -82,7 +83,8 @@ export class ChallengeResolverMutations {
       `opportunityCreate: ${challenge.nameID}`
     );
     const opportunity = await this.challengeService.createOpportunity(
-      opportunityData
+      opportunityData,
+      agentInfo
     );
     return await this.opportunityAuthorizationService.applyAuthorizationPolicy(
       opportunity,

@@ -51,6 +51,7 @@ import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
 import { CommunityType } from '@common/enums/community.type';
 import { ClientProxy } from '@nestjs/microservices';
+import { AgentInfo } from '@src/core';
 
 @Injectable()
 export class ChallengeService {
@@ -72,7 +73,8 @@ export class ChallengeService {
 
   async createChallenge(
     challengeData: CreateChallengeInput,
-    ecoverseID: string
+    ecoverseID: string,
+    agentInfo?: AgentInfo
   ): Promise<IChallenge> {
     const challenge: IChallenge = Challenge.create(challengeData);
     challenge.ecoverseID = ecoverseID;
@@ -122,6 +124,15 @@ export class ChallengeService {
         challenge.id,
         challengeData.leadOrganizations
       );
+    }
+
+    if (agentInfo) {
+      await this.assignMember(agentInfo.userID, challenge.id);
+
+      await this.assignChallengeAdmin({
+        userID: agentInfo.userID,
+        challengeID: challenge.id,
+      });
     }
 
     return savedChallenge;
@@ -370,7 +381,8 @@ export class ChallengeService {
   }
 
   async createChildChallenge(
-    challengeData: CreateChallengeOnChallengeInput
+    challengeData: CreateChallengeOnChallengeInput,
+    agentInfo?: AgentInfo
   ): Promise<IChallenge> {
     this.logger.verbose?.(
       `Adding child Challenge to Challenge (${challengeData.challengeID})`,
@@ -388,7 +400,8 @@ export class ChallengeService {
 
     const childChallenge = await this.createChallenge(
       challengeData,
-      challenge.ecoverseID
+      challenge.ecoverseID,
+      agentInfo
     );
 
     challenge.childChallenges?.push(childChallenge);
@@ -405,7 +418,8 @@ export class ChallengeService {
   }
 
   async createOpportunity(
-    opportunityData: CreateOpportunityInput
+    opportunityData: CreateOpportunityInput,
+    agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     this.logger.verbose?.(
       `Adding Opportunity to Challenge (${opportunityData.challengeID})`,
@@ -426,7 +440,8 @@ export class ChallengeService {
 
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
-      challenge.ecoverseID
+      challenge.ecoverseID,
+      agentInfo
     );
 
     challenge.opportunities?.push(opportunity);
@@ -574,6 +589,19 @@ export class ChallengeService {
 
     await this.organizationService.save(organization);
     return challenge;
+  }
+
+  async assignMember(userID: string, challengeId: string) {
+    const agent = await this.userService.getAgent(userID);
+    const challenge = await this.getChallengeOrFail(challengeId);
+
+    await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.CHALLENGE_MEMBER,
+      resourceID: challenge.id,
+    });
+
+    return await this.userService.getUserWithAgent(userID);
   }
 
   async assignChallengeAdmin(
