@@ -36,6 +36,7 @@ import { AssignOpportunityAdminInput } from './dto/opportunity.dto.assign.admin'
 import { RemoveOpportunityAdminInput } from './dto/opportunity.dto.remove.admin';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
+import { AgentInfo } from '@src/core';
 
 @Injectable()
 export class OpportunityService {
@@ -54,7 +55,8 @@ export class OpportunityService {
 
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
-    ecoverseID: string
+    ecoverseID: string,
+    agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
     opportunity.ecoverseID = ecoverseID;
@@ -93,6 +95,14 @@ export class OpportunityService {
       opportunity,
       AuthorizationCredential.OPPORTUNITY_MEMBER
     );
+
+    if (agentInfo) {
+      await this.assingMember(agentInfo.userID, opportunity.id);
+      await this.assignOpportunityAdmin({
+        userID: agentInfo.userID,
+        opportunityID: opportunity.id,
+      });
+    }
 
     return await this.saveOpportunity(opportunity);
   }
@@ -336,6 +346,19 @@ export class OpportunityService {
     return await this.opportunityRepository.count({
       where: { challenge: challengeID },
     });
+  }
+
+  async assingMember(userID: string, opportunityId: string) {
+    const agent = await this.userService.getAgent(userID);
+    const opportunity = await this.getOpportunityOrFail(opportunityId);
+
+    await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.OPPORTUNITY_MEMBER,
+      resourceID: opportunity.id,
+    });
+
+    return await this.userService.getUserWithAgent(userID);
   }
 
   async assignOpportunityAdmin(
