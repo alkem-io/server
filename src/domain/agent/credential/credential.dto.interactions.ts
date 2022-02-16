@@ -1,7 +1,7 @@
 import { InputType, ObjectType, Field } from '@nestjs/graphql';
 
 @ObjectType()
-export class ShareCredentialOutput {
+export class BeginCredentialRequestOutput {
   @Field({
     nullable: false,
     description: 'The interaction id for this credential share request.',
@@ -24,7 +24,7 @@ export class ShareCredentialOutput {
 }
 
 @InputType()
-export class ShareCredentialInput {
+export class BeginCredentialRequestInput {
   @Field(() => [String], {
     nullable: false,
     description: 'The types of the credentials that will be required.',

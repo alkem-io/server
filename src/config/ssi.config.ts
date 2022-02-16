@@ -1,5 +1,5 @@
 export const ssiConfig = {
   endpoints: {
-    shareRequestedCredentialEndpoint: 'shareRequestedCredentials',
+    completeCredentialShareInteraction: 'completeCredentialShareInteraction',
   },
 };

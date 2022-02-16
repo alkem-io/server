@@ -31,7 +31,7 @@ import { firstValueFrom } from 'rxjs';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SsiException } from '@common/exceptions/ssi.exception';
 import { Profiling } from '@common/decorators/profiling.decorator';
-import { ShareCredentialOutput } from '../credential/credential.dto.share';
+import { BeginCredentialRequestOutput } from '../credential/credential.dto.interactions';
 import { Cache } from 'cache-manager';
 
 @Injectable()
@@ -272,14 +272,14 @@ export class AgentService {
   }
 
   @Profiling.api
-  async createShareCredentialRequest(
+  async beginCredentialRequestInteraction(
     issuerAgent: IAgent,
     uniqueCallbackURL: string,
     nonce: string,
     credentialTypes: string[]
-  ): Promise<ShareCredentialOutput> {
+  ): Promise<BeginCredentialRequestOutput> {
     const credentialRequest$ = this.walletManagementClient.send(
-      { cmd: 'createShareCredentialRequest' },
+      { cmd: 'beginCredentialRequestInteraction' },
       {
         issuerDId: issuerAgent.did,
         issuerPassword: issuerAgent.password,
@@ -289,14 +289,16 @@ export class AgentService {
     );
 
     try {
-      const request = await firstValueFrom<ShareCredentialOutput>(
+      const request = await firstValueFrom<BeginCredentialRequestOutput>(
         credentialRequest$
       );
+
+      const requestExpirationTtl = request.expiresOn - new Date().getTime();
       this.cacheManager.set<IAgent>(request.interactionId, issuerAgent, {
-        ttl: 900, // 15mins
+        ttl: requestExpirationTtl,
       });
       this.cacheManager.set(nonce, request.interactionId, {
-        ttl: 900, // 15mins
+        ttl: requestExpirationTtl,
       });
 
       return request;
@@ -308,7 +310,10 @@ export class AgentService {
   }
 
   @Profiling.api
-  async shareRequestedCredential(nonce: string, token: string): Promise<void> {
+  async completeCredentialShareInteraction(
+    nonce: string,
+    token: string
+  ): Promise<void> {
     const interactionId = await this.cacheManager.get<string>(nonce);
     if (!interactionId) {
       throw new Error('The interaction is not valid');
@@ -324,10 +329,8 @@ export class AgentService {
     );
 
     const credentialStoreRequest$ = this.walletManagementClient.send(
-      { cmd: 'storeSharedCredentials' },
+      { cmd: 'completeCredentialShareInteraction' },
       {
-        issuerDId: agent.did,
-        issuerPassword: agent.password,
         interactionId: interactionId,
         jwt: token,
       }
@@ -337,6 +340,34 @@ export class AgentService {
       await firstValueFrom<boolean>(credentialStoreRequest$);
     } catch (err: any) {
       throw new SsiException(`Failed to share credential: ${err.message}`);
+    }
+  }
+
+  @Profiling.api
+  async issueVerifiedCredential(
+    issuerAgent: IAgent,
+    receiverAgent: IAgent,
+    credentialType: string,
+    credentialName: string,
+    credentialContext: any
+  ): Promise<void> {
+    const credentialRequest$ = this.walletManagementClient.send(
+      { cmd: 'issueVerifiedCredential' },
+      {
+        issuerDId: issuerAgent.did,
+        issuerPassword: issuerAgent.password,
+        receiverDId: receiverAgent.did,
+        receiverPassword: receiverAgent.password,
+        types: credentialType,
+        name: credentialName,
+        context: credentialContext,
+      }
+    );
+
+    try {
+      await firstValueFrom(credentialRequest$);
+    } catch (err: any) {
+      throw new SsiException(`Failed to issue credential: ${err.message}`);
     }
   }
 

@@ -9,7 +9,7 @@ export class AppService {
     return 'Hello Alkemio!';
   }
 
-  async shareRequestedCredential(nonce: string, token: string) {
-    this.agentService.shareRequestedCredential(nonce, token);
+  async completeCredentialShareInteraction(nonce: string, token: string) {
+    this.agentService.completeCredentialShareInteraction(nonce, token);
   }
 }

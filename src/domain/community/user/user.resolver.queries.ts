@@ -13,7 +13,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPrivilege, ConfigurationTypes } from '@common/enums';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { ShareCredentialOutput } from '@domain/agent/credential/credential.dto.share';
+import { BeginCredentialRequestOutput } from '@domain/agent/credential/credential.dto.interactions';
 import { ConfigService } from '@nestjs/config';
 import { ssiConfig } from '@config/ssi.config';
 import { v4 } from 'uuid';
@@ -144,15 +144,15 @@ export class UserResolverQueries {
   }
 
   @UseGuards(GraphqlGuard)
-  @Query(() => ShareCredentialOutput, {
+  @Query(() => BeginCredentialRequestOutput, {
     nullable: false,
     description: 'Generate credential share request',
   })
   @Profiling.api
-  async generateCredentialShareRequest(
+  async beginCredentialRequestInteraction(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ name: 'types', type: () => [String] }) types: string[]
-  ): Promise<ShareCredentialOutput> {
+  ): Promise<BeginCredentialRequestOutput> {
     const userID = agentInfo.userID;
     if (!userID || userID.length == 0) {
       throw new AuthenticationException(
@@ -160,16 +160,16 @@ export class UserResolverQueries {
       );
     }
 
-    // TODO
+    // TODO - the api/public/rest needs to be configurable
     const nonce = v4();
     const url = `${
       this.configService.get(ConfigurationTypes.HOSTING)?.endpoint
     }/api/public/rest/${
-      ssiConfig.endpoints.shareRequestedCredentialEndpoint
+      ssiConfig.endpoints.completeCredentialShareInteraction
     }/${nonce}`;
 
     const storedAgent = await this.userService.getAgent(userID);
-    return await this.agentService.createShareCredentialRequest(
+    return await this.agentService.beginCredentialRequestInteraction(
       storedAgent,
       url,
       nonce,
