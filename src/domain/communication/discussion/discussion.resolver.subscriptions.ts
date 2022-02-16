@@ -49,67 +49,6 @@ export class DiscussionResolverSubscriptions {
       context: any
     ) {
       const agentInfo = context.req?.user;
-      const discussionID: string = variables.discussionID;
-      const logMsgPrefix = `[User (${agentInfo.email}) DiscussionMsg] - `;
-      this.logger.verbose?.(
-        `${logMsgPrefix} Filtering event id '${payload.eventID}'`,
-        LogContext.SUBSCRIPTIONS
-      );
-      if (!discussionID) {
-        // If subscribed to all then need to check on every update the authorization to see it as could not be done
-        // on the subscription approval
-        this.logger.verbose?.(
-          `${logMsgPrefix} Subscribed to all msgs; filtering by Authorization to see ${payload.discussionID}`,
-          LogContext.SUBSCRIPTIONS
-        );
-        const updates = await this.discussionService.getDiscussionOrFail(
-          payload.discussionID
-        );
-        const filter = await this.authorizationService.isAccessGranted(
-          agentInfo,
-          updates.authorization,
-          AuthorizationPrivilege.READ
-        );
-        this.logger.verbose?.(
-          `${logMsgPrefix} ...filter result: ${filter}`,
-          LogContext.SUBSCRIPTIONS
-        );
-        return filter;
-      } else {
-        // No need to do an authorization check as was done on the subscription approval
-        const isMatch = discussionID === payload.discussionID;
-        this.logger.verbose?.(
-          `${logMsgPrefix} - Filter result is ${isMatch}`,
-          LogContext.SUBSCRIPTIONS
-        );
-        return isMatch;
-      }
-    },
-  })
-  @UseGuards(GraphqlGuard)
-  @Subscription(() => CommunicationDiscussionMessageReceived, {
-    description: 'Receive new Discussion messages',
-    async resolve(
-      this: DiscussionResolverSubscriptions,
-      payload: CommunicationDiscussionMessageReceived,
-      _: any,
-      context: any
-    ): Promise<CommunicationDiscussionMessageReceived> {
-      const agentInfo = context.req?.user;
-      const logMsgPrefix = `[User (${agentInfo.email}) DiscussionMsg] - `;
-      this.logger.verbose?.(
-        `${logMsgPrefix} Sending out event: ${payload.discussionID} `,
-        LogContext.SUBSCRIPTIONS
-      );
-      return payload;
-    },
-    async filter(
-      this: DiscussionResolverSubscriptions,
-      payload: CommunicationDiscussionMessageReceived,
-      variables: any,
-      context: any
-    ) {
-      const agentInfo = context.req?.user;
       const isMatch = variables.discussionID === payload.discussionID;
 
       this.logger.verbose?.(
