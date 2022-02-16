@@ -11,7 +11,7 @@ export class UserGroup extends AuthorizableEntity implements IUserGroup {
   name: string;
 
   @Column()
-  ecoverseID?: string;
+  hubID?: string;
 
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'SET NULL' })
   @JoinColumn()

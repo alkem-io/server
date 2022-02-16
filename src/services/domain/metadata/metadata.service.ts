@@ -1,5 +1,5 @@
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
+import { HubService } from '@domain/challenge/hub/hub.service';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { INVP, NVP } from '@domain/common/nvp';
 import { OrganizationService } from '@domain/community/organization/organization.service';
@@ -13,7 +13,7 @@ import { IServiceMetadata } from './service/service.metadata.interface';
 export class MetadataService {
   constructor(
     private userService: UserService,
-    private ecoverseService: EcoverseService,
+    private hubService: HubService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
     private organizationService: OrganizationService,
@@ -48,10 +48,10 @@ export class MetadataService {
     const activity: INVP[] = [];
 
     // Challenges
-    const ecoversesCount = await this.ecoverseService.getEcoverseCount();
-    const ecoversesTopic = new NVP('ecoverses', ecoversesCount.toString());
-    ecoversesTopic.id = 'ecoverses';
-    activity.push(ecoversesTopic);
+    const hubsCount = await this.hubService.getHubCount();
+    const hubsTopic = new NVP('hubs', hubsCount.toString());
+    hubsTopic.id = 'hubs';
+    activity.push(hubsTopic);
 
     const challengesCount = await this.challengeService.getChallengeCount();
     const challengesTopic = new NVP('challenges', challengesCount.toString());

@@ -2,204 +2,187 @@ import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { EcoverseService } from './ecoverse.service';
+import { HubService } from './hub.service';
 import {
-  CreateEcoverseInput,
-  DeleteEcoverseInput,
-  UpdateEcoverseInput,
-} from '@domain/challenge/ecoverse';
+  CreateHubInput,
+  DeleteHubInput,
+  UpdateHubInput,
+} from '@domain/challenge/hub';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { EcoverseAuthorizationService } from './ecoverse.service.authorization';
+import { HubAuthorizationService } from './hub.service.authorization';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
-import { IEcoverse } from './ecoverse.interface';
+import { IHub } from './hub.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { AssignEcoverseAdminInput } from './dto/ecoverse.dto.assign.admin';
-import { RemoveEcoverseAdminInput } from './dto/ecoverse.dto.remove.admin';
-import { EcoverseAuthorizationResetInput } from './dto/ecoverse.dto.reset.authorization';
-import { CreateChallengeOnEcoverseInput } from '../challenge/dto/challenge.dto.create.in.ecoverse';
+import { AssignHubAdminInput } from './dto/hub.dto.assign.admin';
+import { RemoveHubAdminInput } from './dto/hub.dto.remove.admin';
+import { HubAuthorizationResetInput } from './dto/hub.dto.reset.authorization';
+import { CreateChallengeOnHubInput } from '../challenge/dto/challenge.dto.create.in.hub';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 @Resolver()
-export class EcoverseResolverMutations {
+export class HubResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private ecoverseService: EcoverseService,
-    private ecoverseAuthorizationService: EcoverseAuthorizationService,
+    private hubService: HubService,
+    private hubAuthorizationService: HubAuthorizationService,
     private challengeAuthorizationService: ChallengeAuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IEcoverse, {
-    description: 'Creates a new Ecoverse.',
+  @Mutation(() => IHub, {
+    description: 'Creates a new Hub.',
   })
   @Profiling.api
-  async createEcoverse(
+  async createHub(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('ecoverseData') ecoverseData: CreateEcoverseInput
-  ): Promise<IEcoverse> {
+    @Args('hubData') hubData: CreateHubInput
+  ): Promise<IHub> {
     const authorizatinoPolicy =
       this.authorizationPolicyService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizatinoPolicy,
       AuthorizationPrivilege.CREATE_HUB,
-      `updateEcoverse: ${ecoverseData.nameID}`
+      `updateHub: ${hubData.nameID}`
     );
-    const ecoverse = await this.ecoverseService.createEcoverse(
-      ecoverseData,
-      agentInfo
-    );
-    return await this.ecoverseAuthorizationService.applyAuthorizationPolicy(
-      ecoverse
-    );
+    const hub = await this.hubService.createHub(hubData, agentInfo);
+    return await this.hubAuthorizationService.applyAuthorizationPolicy(hub);
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IEcoverse, {
-    description: 'Updates the Ecoverse.',
+  @Mutation(() => IHub, {
+    description: 'Updates the Hub.',
   })
   @Profiling.api
-  async updateEcoverse(
+  async updateHub(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('ecoverseData') ecoverseData: UpdateEcoverseInput
-  ): Promise<IEcoverse> {
-    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
-      ecoverseData.ID
-    );
+    @Args('hubData') hubData: UpdateHubInput
+  ): Promise<IHub> {
+    const hub = await this.hubService.getHubOrFail(hubData.ID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      ecoverse.authorization,
+      hub.authorization,
       AuthorizationPrivilege.UPDATE,
-      `updateEcoverse: ${ecoverse.nameID}`
+      `updateHub: ${hub.nameID}`
     );
 
     // ensure working with UUID
-    ecoverseData.ID = ecoverse.id;
+    hubData.ID = hub.id;
 
-    if (ecoverseData.authorizationPolicy) {
-      await this.ecoverseAuthorizationService.applyAuthorizationPolicy(
-        ecoverse,
-        ecoverseData.authorizationPolicy
+    if (hubData.authorizationPolicy) {
+      await this.hubAuthorizationService.applyAuthorizationPolicy(
+        hub,
+        hubData.authorizationPolicy
       );
     }
 
-    return await this.ecoverseService.update(ecoverseData);
+    return await this.hubService.update(hubData);
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IEcoverse, {
-    description: 'Deletes the specified Ecoverse.',
+  @Mutation(() => IHub, {
+    description: 'Deletes the specified Hub.',
   })
-  async deleteEcoverse(
+  async deleteHub(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteEcoverseInput
-  ): Promise<IEcoverse> {
-    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
-      deleteData.ID
-    );
+    @Args('deleteData') deleteData: DeleteHubInput
+  ): Promise<IHub> {
+    const hub = await this.hubService.getHubOrFail(deleteData.ID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      ecoverse.authorization,
+      hub.authorization,
       AuthorizationPrivilege.DELETE,
-      `deleteEcoverse: ${ecoverse.nameID}`
+      `deleteHub: ${hub.nameID}`
     );
-    return await this.ecoverseService.deleteEcoverse(deleteData);
+    return await this.hubService.deleteHub(deleteData);
   }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IChallenge, {
-    description: 'Creates a new Challenge within the specified Ecoverse.',
+    description: 'Creates a new Challenge within the specified Hub.',
   })
   @Profiling.api
   async createChallenge(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('challengeData') challengeData: CreateChallengeOnEcoverseInput
+    @Args('challengeData') challengeData: CreateChallengeOnHubInput
   ): Promise<IChallenge> {
-    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
-      challengeData.ecoverseID
-    );
+    const hub = await this.hubService.getHubOrFail(challengeData.hubID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      ecoverse.authorization,
+      hub.authorization,
       AuthorizationPrivilege.CREATE,
-      `challengeCreate: ${ecoverse.nameID}`
+      `challengeCreate: ${hub.nameID}`
     );
-    const challenge = await this.ecoverseService.createChallengeInEcoverse(
+    const challenge = await this.hubService.createChallengeInHub(
       challengeData,
       agentInfo
     );
     return await this.challengeAuthorizationService.applyAuthorizationPolicy(
       challenge,
-      ecoverse.authorization
+      hub.authorization
     );
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IEcoverse, {
-    description: 'Reset the Authorization Policy on the specified Ecoverse.',
+  @Mutation(() => IHub, {
+    description: 'Reset the Authorization Policy on the specified Hub.',
   })
   @Profiling.api
-  async authorizationPolicyResetOnEcoverse(
+  async authorizationPolicyResetOnHub(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('authorizationResetData')
-    authorizationResetData: EcoverseAuthorizationResetInput
-  ): Promise<IEcoverse> {
-    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
-      authorizationResetData.ecoverseID
+    authorizationResetData: HubAuthorizationResetInput
+  ): Promise<IHub> {
+    const hub = await this.hubService.getHubOrFail(
+      authorizationResetData.hubID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      ecoverse.authorization,
+      hub.authorization,
       AuthorizationPrivilege.UPDATE,
       `reset authorization definition: ${agentInfo.email}`
     );
-    return await this.ecoverseAuthorizationService.applyAuthorizationPolicy(
-      ecoverse
-    );
+    return await this.hubAuthorizationService.applyAuthorizationPolicy(hub);
   }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
-    description: 'Assigns a User as an Ecoverse Admin.',
+    description: 'Assigns a User as an Hub Admin.',
   })
   @Profiling.api
-  async assignUserAsEcoverseAdmin(
+  async assignUserAsHubAdmin(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignEcoverseAdminInput
+    @Args('membershipData') membershipData: AssignHubAdminInput
   ): Promise<IUser> {
-    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
-      membershipData.ecoverseID
-    );
+    const hub = await this.hubService.getHubOrFail(membershipData.hubID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      ecoverse.authorization,
+      hub.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign user ecoverse admin: ${ecoverse.displayName}`
+      `assign user hub admin: ${hub.displayName}`
     );
-    return await this.ecoverseService.assignEcoverseAdmin(membershipData);
+    return await this.hubService.assignHubAdmin(membershipData);
   }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
-    description: 'Removes a User from being an Ecoverse Admin.',
+    description: 'Removes a User from being an Hub Admin.',
   })
   @Profiling.api
-  async removeUserAsEcoverseAdmin(
+  async removeUserAsHubAdmin(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveEcoverseAdminInput
+    @Args('membershipData') membershipData: RemoveHubAdminInput
   ): Promise<IUser> {
-    const ecoverse = await this.ecoverseService.getEcoverseOrFail(
-      membershipData.ecoverseID
-    );
+    const hub = await this.hubService.getHubOrFail(membershipData.hubID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      ecoverse.authorization,
+      hub.authorization,
       AuthorizationPrivilege.GRANT,
-      `remove user ecoverse admin: ${ecoverse.displayName}`
+      `remove user hub admin: ${hub.displayName}`
     );
-    return await this.ecoverseService.removeEcoverseAdmin(membershipData);
+    return await this.hubService.removeHubAdmin(membershipData);
   }
 }

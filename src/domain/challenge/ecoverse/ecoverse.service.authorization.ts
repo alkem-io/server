@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
-import { EcoverseService } from './ecoverse.service';
+import { HubService } from './hub.service';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import {
   IAuthorizationPolicy,
@@ -12,80 +12,79 @@ import {
 import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IEcoverse } from './ecoverse.interface';
-import { Ecoverse } from './ecoverse.entity';
+import { IHub } from './hub.interface';
+import { Hub } from './hub.entity';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 
 @Injectable()
-export class EcoverseAuthorizationService {
+export class HubAuthorizationService {
   constructor(
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
-    private ecoverseService: EcoverseService,
-    @InjectRepository(Ecoverse)
-    private ecoverseRepository: Repository<Ecoverse>
+    private hubService: HubService,
+    @InjectRepository(Hub)
+    private hubRepository: Repository<Hub>
   ) {}
 
   async applyAuthorizationPolicy(
-    ecoverse: IEcoverse,
+    hub: IHub,
     authorizationPolicyData?: UpdateAuthorizationPolicyInput
-  ): Promise<IEcoverse> {
+  ): Promise<IHub> {
     // Store the current value of anonymousReadAccess
-    const anonymousReadAccessCache =
-      ecoverse.authorization?.anonymousReadAccess;
+    const anonymousReadAccessCache = hub.authorization?.anonymousReadAccess;
     // Ensure always applying from a clean state
-    ecoverse.authorization = await this.authorizationPolicyService.reset(
-      ecoverse.authorization
+    hub.authorization = await this.authorizationPolicyService.reset(
+      hub.authorization
     );
-    ecoverse.authorization =
+    hub.authorization =
       this.authorizationPolicyService.inheritPlatformAuthorization(
-        ecoverse.authorization
+        hub.authorization
       );
-    ecoverse.authorization = this.extendAuthorizationPolicy(
-      ecoverse.authorization,
-      ecoverse.id
+    hub.authorization = this.extendAuthorizationPolicy(
+      hub.authorization,
+      hub.id
     );
     if (authorizationPolicyData) {
-      ecoverse.authorization.anonymousReadAccess =
+      hub.authorization.anonymousReadAccess =
         authorizationPolicyData.anonymousReadAccess;
     } else if (anonymousReadAccessCache === false) {
-      ecoverse.authorization.anonymousReadAccess = false;
+      hub.authorization.anonymousReadAccess = false;
     }
 
     await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
-      ecoverse,
-      this.ecoverseRepository
+      hub,
+      this.hubRepository
     );
 
     // propagate authorization rules for child entities
-    ecoverse.challenges = await this.ecoverseService.getChallenges(ecoverse);
-    for (const challenge of ecoverse.challenges) {
+    hub.challenges = await this.hubService.getChallenges(hub);
+    for (const challenge of hub.challenges) {
       await this.challengeAuthorizationService.applyAuthorizationPolicy(
         challenge,
-        ecoverse.authorization
+        hub.authorization
       );
       challenge.authorization =
         await this.authorizationPolicyService.appendCredentialAuthorizationRule(
           challenge.authorization,
           {
             type: AuthorizationCredential.ECOVERSE_ADMIN,
-            resourceID: ecoverse.id,
+            resourceID: hub.id,
           },
           [AuthorizationPrivilege.DELETE]
         );
     }
 
-    return await this.ecoverseRepository.save(ecoverse);
+    return await this.hubRepository.save(hub);
   }
 
   private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    ecoverseID: string
+    hubID: string
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${ecoverseID}`,
+        `Authorization definition not found for: ${hubID}`,
         LogContext.CHALLENGES
       );
     const newRules: AuthorizationPolicyRuleCredential[] = [];
@@ -98,7 +97,7 @@ export class EcoverseAuthorizationService {
     );
     newRules.push(communityAdmin);
 
-    const ecoverseAdmin = new AuthorizationPolicyRuleCredential(
+    const hubAdmin = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
@@ -107,16 +106,16 @@ export class EcoverseAuthorizationService {
         AuthorizationPrivilege.GRANT,
       ],
       AuthorizationCredential.ECOVERSE_ADMIN,
-      ecoverseID
+      hubID
     );
-    newRules.push(ecoverseAdmin);
+    newRules.push(hubAdmin);
 
-    const ecoverseMember = new AuthorizationPolicyRuleCredential(
+    const hubMember = new AuthorizationPolicyRuleCredential(
       [AuthorizationPrivilege.READ],
       AuthorizationCredential.ECOVERSE_MEMBER,
-      ecoverseID
+      hubID
     );
-    newRules.push(ecoverseMember);
+    newRules.push(hubMember);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,

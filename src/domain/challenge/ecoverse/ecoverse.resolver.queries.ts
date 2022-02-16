@@ -1,34 +1,32 @@
 import { Inject } from '@nestjs/common';
 import { Profiling } from '@src/common/decorators';
-import { EcoverseService } from './ecoverse.service';
-import { IEcoverse } from './ecoverse.interface';
+import { HubService } from './hub.service';
+import { IHub } from './hub.interface';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { UUID_NAMEID } from '@domain/common/scalars';
 
 @Resolver()
-export class EcoverseResolverQueries {
-  constructor(
-    @Inject(EcoverseService) private ecoverseService: EcoverseService
-  ) {}
+export class HubResolverQueries {
+  constructor(@Inject(HubService) private hubService: HubService) {}
 
-  @Query(() => [IEcoverse], {
+  @Query(() => [IHub], {
     nullable: false,
-    description: 'The Ecoverses on this platform',
+    description: 'The Hubs on this platform',
   })
   @Profiling.api
-  async ecoverses(): Promise<IEcoverse[]> {
-    return await this.ecoverseService.getEcoverses();
+  async hubs(): Promise<IHub[]> {
+    return await this.hubService.getHubs();
   }
 
-  @Query(() => IEcoverse, {
+  @Query(() => IHub, {
     nullable: false,
     description:
-      'An ecoverse. If no ID is specified then the first Ecoverse is returned.',
+      'An hub. If no ID is specified then the first Hub is returned.',
   })
   @Profiling.api
-  async ecoverse(
+  async hub(
     @Args('ID', { type: () => UUID_NAMEID }) ID: string
-  ): Promise<IEcoverse> {
-    return await this.ecoverseService.getEcoverseOrFail(ID);
+  ): Promise<IHub> {
+    return await this.hubService.getHubOrFail(ID);
   }
 }

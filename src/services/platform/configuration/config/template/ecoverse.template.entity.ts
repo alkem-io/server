@@ -2,10 +2,10 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { ApplicationTemplate } from '@src/services/platform/configuration/config/template/application.template.entity';
 
 @ObjectType()
-export class EcoverseTemplate {
+export class HubTemplate {
   @Field(() => String, {
     nullable: false,
-    description: 'Ecoverse template name.',
+    description: 'Hub template name.',
   })
   name: string;
 

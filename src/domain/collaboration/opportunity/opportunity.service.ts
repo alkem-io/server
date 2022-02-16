@@ -55,18 +55,18 @@ export class OpportunityService {
 
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
-    ecoverseID: string,
+    hubID: string,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
-    opportunity.ecoverseID = ecoverseID;
+    opportunity.hubID = hubID;
     opportunity.projects = [];
     opportunity.relations = [];
 
     await this.baseChallengeService.initialise(
       opportunity,
       opportunityData,
-      ecoverseID,
+      hubID,
       CommunityType.OPPORTUNITY
     );
 
@@ -115,14 +115,14 @@ export class OpportunityService {
     let opportunity: IOpportunity | undefined;
     if (opportunityID.length == UUID_LENGTH) {
       opportunity = await this.opportunityRepository.findOne(
-        { id: opportunityID, ecoverseID: nameableScopeID },
+        { id: opportunityID, hubID: nameableScopeID },
         options
       );
     }
     if (!opportunity) {
       // look up based on nameID
       opportunity = await this.opportunityRepository.findOne(
-        { nameID: opportunityID, ecoverseID: nameableScopeID },
+        { nameID: opportunityID, hubID: nameableScopeID },
         options
       );
     }
@@ -163,7 +163,7 @@ export class OpportunityService {
     nameableScopeID: string
   ): Promise<IOpportunity[]> {
     return await this.opportunityRepository.find({
-      ecoverseID: nameableScopeID,
+      hubID: nameableScopeID,
     });
   }
 
@@ -213,7 +213,7 @@ export class OpportunityService {
         // updating the nameID, check new value is allowed
         await this.baseChallengeService.isNameAvailableOrFail(
           opportunityData.nameID,
-          opportunity.ecoverseID
+          opportunity.hubID
         );
         baseOpportunity.nameID = opportunityData.nameID;
         await this.opportunityRepository.save(baseOpportunity);
@@ -279,7 +279,7 @@ export class OpportunityService {
 
     const project = await this.projectService.createProject(
       projectData,
-      opportunity.ecoverseID
+      opportunity.hubID
     );
     if (!opportunity.projects)
       throw new EntityNotInitializedException(
@@ -332,9 +332,9 @@ export class OpportunityService {
     return activity;
   }
 
-  async getOpportunitiesInEcoverseCount(ecoverseID: string): Promise<number> {
+  async getOpportunitiesInHubCount(hubID: string): Promise<number> {
     return await this.opportunityRepository.count({
-      where: { ecoverseID: ecoverseID },
+      where: { hubID: hubID },
     });
   }
 

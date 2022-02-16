@@ -193,10 +193,10 @@ export class OrganizationService {
     const organization = await this.getOrganizationOrFail(orgID, {
       relations: ['profile', 'groups', 'agent'],
     });
-    const isEcoverseHost = await this.isEcoverseHost(organization);
-    if (isEcoverseHost) {
+    const isHubHost = await this.isHubHost(organization);
+    if (isHubHost) {
       throw new ForbiddenException(
-        'Unable to delete Organization: host of one or more ecoverses',
+        'Unable to delete Organization: host of one or more hubs',
         LogContext.CHALLENGES
       );
     }
@@ -263,7 +263,7 @@ export class OrganizationService {
     return result;
   }
 
-  async isEcoverseHost(organization: IOrganization): Promise<boolean> {
+  async isHubHost(organization: IOrganization): Promise<boolean> {
     if (!organization.agent)
       throw new RelationshipNotFoundException(
         `Unable to load agent for organization: ${organization.id}`,

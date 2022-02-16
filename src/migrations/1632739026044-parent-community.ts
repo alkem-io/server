@@ -5,7 +5,7 @@ export class parentCommunity1632739026044 implements MigrationInterface {
     await queryRunner.query(
       'UPDATE community as co \
       INNER JOIN challenge as c ON c.communityId = co.id \
-      INNER JOIN ecoverse as e ON e.id = c.ecoverseId \
+      INNER JOIN hub as e ON e.id = c.hubId \
       SET co.parentCommunityId = e.communityId where ISNULL(co.parentCommunityId);'
     );
   }
@@ -14,7 +14,7 @@ export class parentCommunity1632739026044 implements MigrationInterface {
     await queryRunner.query(
       'UPDATE community as co \
       INNER JOIN challenge as c ON c.communityId = co.id \
-      INNER JOIN ecoverse as e ON e.id = c.ecoverseId \
+      INNER JOIN hub as e ON e.id = c.hubId \
       SET co.parentCommunityId = NULL where co.parentCommunityId IS NOT NULL;'
     );
   }

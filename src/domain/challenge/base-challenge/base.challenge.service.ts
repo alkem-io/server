@@ -45,14 +45,14 @@ export class BaseChallengeService {
   async initialise(
     baseChallenge: IBaseChallenge,
     baseChallengeData: CreateBaseChallengeInput,
-    ecoverseID: string,
+    hubID: string,
     communityType: CommunityType
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
-    await this.isNameAvailableOrFail(baseChallengeData.nameID, ecoverseID);
+    await this.isNameAvailableOrFail(baseChallengeData.nameID, hubID);
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallenge.displayName,
-      ecoverseID,
+      hubID,
       communityType
     );
 
@@ -188,7 +188,7 @@ export class BaseChallengeService {
 
   async isNameAvailableOrFail(nameID: string, nameableScopeID: string) {
     if (
-      !(await this.namingService.isNameIdAvailableInEcoverse(
+      !(await this.namingService.isNameIdAvailableInHub(
         nameID,
         nameableScopeID
       ))

@@ -7,7 +7,7 @@ import {
   UpdateChallengeInput,
 } from '@domain/challenge/challenge';
 import { CreateContextInput } from '@domain/context/context';
-import { UpdateEcoverseInput } from '@domain/challenge/ecoverse/dto/ecoverse.dto.update';
+import { UpdateHubInput } from '@domain/challenge/hub/dto/hub.dto.update';
 import { CreateOrganizationInput } from '@domain/community/organization';
 import { CreateProfileInput } from '@domain/community/profile';
 import {
@@ -51,7 +51,7 @@ export class BaseHandler extends AbstractHandler {
       CreateTagsetInput,
       CreateUserInput,
       CreateAspectInput,
-      UpdateEcoverseInput,
+      UpdateHubInput,
       UpdateOpportunityInput,
       UpdateChallengeInput,
       UpdateUserGroupInput,

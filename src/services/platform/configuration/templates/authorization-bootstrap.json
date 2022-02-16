@@ -21,14 +21,14 @@
       ]
     },
     {
-      "email": "ecoverse.admin@alkem.io",
-      "firstName": "ecoverse",
+      "email": "hub.admin@alkem.io",
+      "firstName": "hub",
       "lastName": "admin",
       "credentials": []
     },
     {
-      "email": "ecoverse.member@alkem.io",
-      "firstName": "ecoverse",
+      "email": "hub.member@alkem.io",
+      "firstName": "hub",
       "lastName": "member",
       "credentials": []
     },
@@ -39,9 +39,9 @@
       "credentials": []
     },
     {
-      "email": "non.ecoverse@alkem.io",
+      "email": "non.hub@alkem.io",
       "firstName": "non",
-      "lastName": "ecoverse",
+      "lastName": "hub",
       "credentials": []
     },
     {

@@ -5,7 +5,7 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
+import { Hub } from '@domain/challenge/hub/hub.entity';
 
 @Module({
   imports: [
@@ -13,7 +13,7 @@ import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
     TypeOrmModule.forFeature([Opportunity]),
     TypeOrmModule.forFeature([Project]),
     TypeOrmModule.forFeature([Aspect]),
-    TypeOrmModule.forFeature([Ecoverse]),
+    TypeOrmModule.forFeature([Hub]),
   ],
   providers: [NamingService],
   exports: [NamingService],

@@ -12,7 +12,7 @@ export class discussion1635271457885 implements MigrationInterface {
       `CREATE TABLE \`updates\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`displayName\` varchar(255) NOT NULL, \`communicationGroupID\` varchar(255) NOT NULL, \`communicationRoomID\` varchar(255) NOT NULL, \`authorizationId\` char(36) NULL, UNIQUE INDEX \`REL_7777dccdda9ba57d8e3a634cd0\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
-      `CREATE TABLE \`communication\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`displayName\` varchar(255) NOT NULL, \`ecoverseID\` varchar(36) NOT NULL, \`communicationGroupID\` varchar(255) NOT NULL, \`updatesId\` char(36) NULL, \`authorizationId\` char(36) NULL, UNIQUE INDEX \`REL_a20c5901817dd09d5906537e08\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+      `CREATE TABLE \`communication\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`displayName\` varchar(255) NOT NULL, \`hubID\` varchar(36) NOT NULL, \`communicationGroupID\` varchar(255) NOT NULL, \`updatesId\` char(36) NULL, \`authorizationId\` char(36) NULL, UNIQUE INDEX \`REL_a20c5901817dd09d5906537e08\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
       `ALTER TABLE \`community\` ADD \`communicationId\` char(36) NULL`
@@ -41,7 +41,7 @@ export class discussion1635271457885 implements MigrationInterface {
 
     // For each Community entity create a new Communication entity and set the communicationID in the Community entity to be the id of the new Communication entity
     // For each Communication entity create an associated Authorization entity and set the ID of the authorization entity in the authorizatinId field. Note: all fields can have default values as the authorization policy can be reset after.
-    // For each Community entity copy the following fields from the Community entity to the linked Communication entity: communicationGroupID, updatesRoomID, ecoverseID
+    // For each Community entity copy the following fields from the Community entity to the linked Communication entity: communicationGroupID, updatesRoomID, hubID
     await queryRunner.query(
       `CREATE PROCEDURE sp_update_communications()
       BEGIN
@@ -49,26 +49,26 @@ export class discussion1635271457885 implements MigrationInterface {
       DECLARE community_id varchar(36);
       DECLARE community_communicationGroupID varchar(255);
       DECLARE community_updatesRoomID varchar(255);
-      DECLARE community_ecoverseID varchar(255);
+      DECLARE community_hubID varchar(255);
       DECLARE community_displayName varchar(255);
-      DECLARE community_cursor CURSOR FOR SELECT id, communicationGroupID, updatesRoomID, ecoverseID, displayName FROM community;
+      DECLARE community_cursor CURSOR FOR SELECT id, communicationGroupID, updatesRoomID, hubID, displayName FROM community;
       DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
 
       OPEN community_cursor;
 
       read_loop: LOOP
-        FETCH community_cursor INTO community_id, community_communicationGroupID, community_updatesRoomID, community_ecoverseID, community_displayName;
+        FETCH community_cursor INTO community_id, community_communicationGroupID, community_updatesRoomID, community_hubID, community_displayName;
       IF done THEN
         LEAVE read_loop;
       END IF;
 
-        SELECT community_id, community_communicationGroupID, community_updatesRoomID, community_ecoverseID;
+        SELECT community_id, community_communicationGroupID, community_updatesRoomID, community_hubID;
         INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess) SELECT UUID(), 1, '', '', 0;
         INSERT INTO updates(id, version, communicationGroupID, communicationRoomID, authorizationID, displayName)
           VALUES (UUID(), 1, community_communicationGroupID, community_updatesRoomID, (SELECT id from authorization_policy order by createdDate  desc LIMIT 1), community_displayName);
         INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess) SELECT UUID(), 1, '', '', 0;
-        INSERT INTO communication(id, version, communicationGroupID, updatesID, ecoverseID, authorizationID, displayName)
-          VALUES (UUID(), 1, community_communicationGroupID, (SELECT id from updates order by createdDate  desc LIMIT 1), community_ecoverseID, (SELECT id from authorization_policy order by createdDate  desc LIMIT 1), community_displayName);
+        INSERT INTO communication(id, version, communicationGroupID, updatesID, hubID, authorizationID, displayName)
+          VALUES (UUID(), 1, community_communicationGroupID, (SELECT id from updates order by createdDate  desc LIMIT 1), community_hubID, (SELECT id from authorization_policy order by createdDate  desc LIMIT 1), community_displayName);
         UPDATE community SET communicationId = (SELECT id from communication order by createdDate  desc LIMIT 1) where id = community_id;
       END LOOP;
 

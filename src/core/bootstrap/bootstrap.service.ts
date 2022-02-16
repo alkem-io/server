@@ -1,8 +1,8 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
-import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
+import { Hub } from '@domain/challenge/hub/hub.entity';
+import { HubService } from '@domain/challenge/hub/hub.service';
 import { UserService } from '@domain/community/user/user.service';
 import { Repository } from 'typeorm';
 import fs from 'fs';
@@ -13,7 +13,7 @@ import { Profiling } from '@common/decorators';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
-import { EcoverseAuthorizationService } from '@domain/challenge/ecoverse/ecoverse.service.authorization';
+import { HubAuthorizationService } from '@domain/challenge/hub/hub.service.authorization';
 import {
   DEFAULT_ECOVERSE_DISPLAYNAME,
   DEFAULT_ECOVERSE_NAMEID,
@@ -32,25 +32,25 @@ import { CommunicationService } from '@domain/communication/communication/commun
 export class BootstrapService {
   constructor(
     private agentService: AgentService,
-    private ecoverseService: EcoverseService,
+    private hubService: HubService,
     private preferenceService: UserPreferenceService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
-    private ecoverseAuthorizationService: EcoverseAuthorizationService,
+    private hubAuthorizationService: HubAuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
     private configService: ConfigService,
     private organizationService: OrganizationService,
     private communicationService: CommunicationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
-    @InjectRepository(Ecoverse)
-    private ecoverseRepository: Repository<Ecoverse>,
+    @InjectRepository(Hub)
+    private hubRepository: Repository<Hub>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
-  async bootstrapEcoverse() {
+  async bootstrapHub() {
     try {
-      this.logger.verbose?.('Bootstrapping Ecoverse...', LogContext.BOOTSTRAP);
+      this.logger.verbose?.('Bootstrapping Hub...', LogContext.BOOTSTRAP);
       this.logConfiguration();
 
       Profiling.logger = this.logger;
@@ -59,7 +59,7 @@ export class BootstrapService {
       )?.logging?.profiling_enabled;
       if (profilingEnabled) Profiling.profilingEnabled = profilingEnabled;
 
-      await this.ensureEcoverseSingleton();
+      await this.ensureHubSingleton();
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
       await this.ensureCommunicationRoomsCreated();
@@ -252,14 +252,14 @@ export class BootstrapService {
     }
   }
 
-  async ensureEcoverseSingleton() {
+  async ensureHubSingleton() {
     this.logger.verbose?.(
-      '=== Ensuring at least one ecoverse is present ===',
+      '=== Ensuring at least one hub is present ===',
       LogContext.BOOTSTRAP
     );
-    const ecoverseCount = await this.ecoverseRepository.count();
-    if (ecoverseCount == 0) {
-      this.logger.verbose?.('...No ecoverse present...', LogContext.BOOTSTRAP);
+    const hubCount = await this.hubRepository.count();
+    if (hubCount == 0) {
+      this.logger.verbose?.('...No hub present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
       // create a default host org
       const hostOrganization = await this.organizationService.getOrganization(
@@ -275,17 +275,15 @@ export class BootstrapService {
         );
       }
 
-      const ecoverse = await this.ecoverseService.createEcoverse({
+      const hub = await this.hubService.createHub({
         nameID: DEFAULT_ECOVERSE_NAMEID,
         displayName: DEFAULT_ECOVERSE_DISPLAYNAME,
         hostID: DEFAULT_HOST_ORG_NAMEID,
         context: {
-          tagline: 'An empty ecoverse to be populated',
+          tagline: 'An empty hub to be populated',
         },
       });
-      return await this.ecoverseAuthorizationService.applyAuthorizationPolicy(
-        ecoverse
-      );
+      return await this.hubAuthorizationService.applyAuthorizationPolicy(hub);
     }
   }
 }

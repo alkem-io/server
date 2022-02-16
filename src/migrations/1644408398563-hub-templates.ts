@@ -5,13 +5,11 @@ export class hubTemplates1644408398563 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`ecoverse\` ADD \`template\` text NOT NULL`
+      `ALTER TABLE \`hub\` ADD \`template\` text NOT NULL`
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE \`ecoverse\` DROP COLUMN \`template\``
-    );
+    await queryRunner.query(`ALTER TABLE \`hub\` DROP COLUMN \`template\``);
   }
 }

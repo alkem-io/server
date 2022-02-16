@@ -19,5 +19,5 @@ export abstract class IProject extends INameable {
 
   agreements?: IAgreement[];
 
-  ecoverseID!: string;
+  hubID!: string;
 }

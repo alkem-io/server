@@ -19,7 +19,7 @@ export abstract class IOpportunity
 
   relations?: IRelation[];
 
-  ecoverseID!: string;
+  hubID!: string;
 
   @Field(() => IChallenge, {
     nullable: true,

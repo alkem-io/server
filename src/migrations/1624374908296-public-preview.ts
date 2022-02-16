@@ -47,7 +47,7 @@ export class publicPreview1624374908296 implements MigrationInterface {
       'CREATE TABLE `organisation` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `displayName` varchar(255) NOT NULL, `nameID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `profileId` varchar(36) NULL, `agentId` varchar(36) NULL, UNIQUE INDEX `REL_badc07674ce4e44801e5a5f36c` (`authorizationId`), UNIQUE INDEX `REL_037ba4b170844c039e74aa22ec` (`profileId`), UNIQUE INDEX `REL_7671a7e33f6665764f4534a596` (`agentId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `user_group` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `profileId` varchar(36) NULL, `organisationId` varchar(36) NULL, `communityId` varchar(36) NULL, UNIQUE INDEX `REL_e8e32f1e59c349b406a4752e54` (`authorizationId`), UNIQUE INDEX `REL_9912e4cfc1e09848a392a65151` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `user_group` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `hubID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `profileId` varchar(36) NULL, `organisationId` varchar(36) NULL, `communityId` varchar(36) NULL, UNIQUE INDEX `REL_e8e32f1e59c349b406a4752e54` (`authorizationId`), UNIQUE INDEX `REL_9912e4cfc1e09848a392a65151` (`profileId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
       'CREATE TABLE `nvp` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `value` varchar(255) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB'
@@ -56,13 +56,13 @@ export class publicPreview1624374908296 implements MigrationInterface {
       'CREATE TABLE `user` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `displayName` varchar(255) NOT NULL, `nameID` varchar(255) NOT NULL, `accountUpn` varchar(255) NOT NULL, `firstName` varchar(255) NOT NULL, `lastName` varchar(255) NOT NULL, `email` varchar(255) NOT NULL, `phone` varchar(255) NOT NULL, `city` varchar(255) NOT NULL, `country` varchar(255) NOT NULL, `gender` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `profileId` varchar(36) NULL, `agentId` varchar(36) NULL, UNIQUE INDEX `REL_09f909622aa177a097256b7cc2` (`authorizationId`), UNIQUE INDEX `REL_9466682df91534dd95e4dbaa61` (`profileId`), UNIQUE INDEX `REL_b61c694cacfab25533bd23d9ad` (`agentId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `application` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `ecoverseID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `lifecycleId` varchar(36) NULL, `userId` varchar(36) NULL, `communityId` varchar(36) NULL, UNIQUE INDEX `REL_56f5614fff0028d40370499582` (`authorizationId`), UNIQUE INDEX `REL_7ec2857c7d8d16432ffca1cb3d` (`lifecycleId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `application` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `hubID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `lifecycleId` varchar(36) NULL, `userId` varchar(36) NULL, `communityId` varchar(36) NULL, UNIQUE INDEX `REL_56f5614fff0028d40370499582` (`authorizationId`), UNIQUE INDEX `REL_7ec2857c7d8d16432ffca1cb3d` (`lifecycleId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `community` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `displayName` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `credentialId` varchar(36) NULL, `parentCommunityId` varchar(36) NULL, UNIQUE INDEX `REL_6e7584bfb417bd0f8e8696ab58` (`authorizationId`), UNIQUE INDEX `REL_973fe78e64b8a79056d58ead43` (`credentialId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `community` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `displayName` varchar(255) NOT NULL, `hubID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `credentialId` varchar(36) NULL, `parentCommunityId` varchar(36) NULL, UNIQUE INDEX `REL_6e7584bfb417bd0f8e8696ab58` (`authorizationId`), UNIQUE INDEX `REL_973fe78e64b8a79056d58ead43` (`credentialId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `ecoverse` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `displayName` varchar(255) NOT NULL, `nameID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `contextId` varchar(36) NULL, `communityId` varchar(36) NULL, `lifecycleId` varchar(36) NULL, `tagsetId` varchar(36) NULL, `agentId` varchar(36) NULL, UNIQUE INDEX `REL_17a161eef37c9f07186532ab75` (`authorizationId`), UNIQUE INDEX `REL_6db8627abbf00b1b986e359054` (`contextId`), UNIQUE INDEX `REL_f5ad15bcb06a95c2a109fbcce2` (`communityId`), UNIQUE INDEX `REL_ec1a68698d32f610a5fc1880c7` (`lifecycleId`), UNIQUE INDEX `REL_3a69b0a6c67ead761763400990` (`tagsetId`), UNIQUE INDEX `REL_b0c3f360534db92017e36a00bb` (`agentId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `hub` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `displayName` varchar(255) NOT NULL, `nameID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `contextId` varchar(36) NULL, `communityId` varchar(36) NULL, `lifecycleId` varchar(36) NULL, `tagsetId` varchar(36) NULL, `agentId` varchar(36) NULL, UNIQUE INDEX `REL_17a161eef37c9f07186532ab75` (`authorizationId`), UNIQUE INDEX `REL_6db8627abbf00b1b986e359054` (`contextId`), UNIQUE INDEX `REL_f5ad15bcb06a95c2a109fbcce2` (`communityId`), UNIQUE INDEX `REL_ec1a68698d32f610a5fc1880c7` (`lifecycleId`), UNIQUE INDEX `REL_3a69b0a6c67ead761763400990` (`tagsetId`), UNIQUE INDEX `REL_b0c3f360534db92017e36a00bb` (`agentId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
       'CREATE TABLE `relation` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `type` varchar(255) NOT NULL, `actorName` varchar(255) NOT NULL, `actorType` varchar(255) NOT NULL, `actorRole` varchar(255) NOT NULL, `description` text NULL, `authorizationId` varchar(36) NULL, `opportunityId` varchar(36) NULL, UNIQUE INDEX `REL_53fccd56207915b969b91834e0` (`authorizationId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
@@ -71,13 +71,13 @@ export class publicPreview1624374908296 implements MigrationInterface {
       'CREATE TABLE `agreement` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `name` varchar(255) NOT NULL, `description` text NULL, `projectId` varchar(36) NULL, `tagsetId` varchar(36) NULL, UNIQUE INDEX `REL_22348b89c2f802a3d75d52fbd5` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `project` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `displayName` varchar(255) NOT NULL, `nameID` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `description` text NULL, `authorizationId` varchar(36) NULL, `lifecycleId` varchar(36) NULL, `tagsetId` varchar(36) NULL, `opportunityId` varchar(36) NULL, UNIQUE INDEX `REL_fac8673f44e6b295e30d1c1739` (`authorizationId`), UNIQUE INDEX `REL_f425931bb61a95ef6f6d89c9a8` (`lifecycleId`), UNIQUE INDEX `REL_d07535c59062f86e887de8f0a5` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `project` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `displayName` varchar(255) NOT NULL, `nameID` varchar(255) NOT NULL, `hubID` varchar(255) NOT NULL, `description` text NULL, `authorizationId` varchar(36) NULL, `lifecycleId` varchar(36) NULL, `tagsetId` varchar(36) NULL, `opportunityId` varchar(36) NULL, UNIQUE INDEX `REL_fac8673f44e6b295e30d1c1739` (`authorizationId`), UNIQUE INDEX `REL_f425931bb61a95ef6f6d89c9a8` (`lifecycleId`), UNIQUE INDEX `REL_d07535c59062f86e887de8f0a5` (`tagsetId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `opportunity` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `displayName` varchar(255) NOT NULL, `nameID` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `contextId` varchar(36) NULL, `communityId` varchar(36) NULL, `lifecycleId` varchar(36) NULL, `tagsetId` varchar(36) NULL, `agentId` varchar(36) NULL, `challengeId` varchar(36) NULL, UNIQUE INDEX `REL_a344b754f33792cbbc58e41e89` (`authorizationId`), UNIQUE INDEX `REL_9c169eb500e2d3823154c7b603` (`contextId`), UNIQUE INDEX `REL_1c7744df92f39ab567084fd8c0` (`communityId`), UNIQUE INDEX `REL_6860f1e3ae5509245bdb5c401f` (`lifecycleId`), UNIQUE INDEX `REL_7d23d17ce61f11c92ff1ea0ed1` (`tagsetId`), UNIQUE INDEX `REL_c814aa7dc8a68f27d96d5d1782` (`agentId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `opportunity` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `displayName` varchar(255) NOT NULL, `nameID` varchar(255) NOT NULL, `hubID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `contextId` varchar(36) NULL, `communityId` varchar(36) NULL, `lifecycleId` varchar(36) NULL, `tagsetId` varchar(36) NULL, `agentId` varchar(36) NULL, `challengeId` varchar(36) NULL, UNIQUE INDEX `REL_a344b754f33792cbbc58e41e89` (`authorizationId`), UNIQUE INDEX `REL_9c169eb500e2d3823154c7b603` (`contextId`), UNIQUE INDEX `REL_1c7744df92f39ab567084fd8c0` (`communityId`), UNIQUE INDEX `REL_6860f1e3ae5509245bdb5c401f` (`lifecycleId`), UNIQUE INDEX `REL_7d23d17ce61f11c92ff1ea0ed1` (`tagsetId`), UNIQUE INDEX `REL_c814aa7dc8a68f27d96d5d1782` (`agentId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
-      'CREATE TABLE `challenge` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `displayName` varchar(255) NOT NULL, `nameID` varchar(255) NOT NULL, `ecoverseID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `contextId` varchar(36) NULL, `communityId` varchar(36) NULL, `lifecycleId` varchar(36) NULL, `tagsetId` varchar(36) NULL, `agentId` varchar(36) NULL, `parentChallengeId` varchar(36) NULL, `parentEcoverseId` varchar(36) NULL, UNIQUE INDEX `REL_178fa41e46fd331f3501a62f6b` (`authorizationId`), UNIQUE INDEX `REL_1deebaabfc620e881858333b0d` (`contextId`), UNIQUE INDEX `REL_aa9668dd2340c2d794b414577b` (`communityId`), UNIQUE INDEX `REL_3c535130cde781b69259eec7d8` (`lifecycleId`), UNIQUE INDEX `REL_6b1bcaf365212806d8cc1f87b5` (`tagsetId`), UNIQUE INDEX `REL_b025a2720e5ee0e5b38774f7a8` (`agentId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
+      'CREATE TABLE `challenge` (`id` varchar(36) NOT NULL, `createdDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), `updatedDate` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), `version` int NOT NULL, `displayName` varchar(255) NOT NULL, `nameID` varchar(255) NOT NULL, `hubID` varchar(255) NOT NULL, `authorizationId` varchar(36) NULL, `contextId` varchar(36) NULL, `communityId` varchar(36) NULL, `lifecycleId` varchar(36) NULL, `tagsetId` varchar(36) NULL, `agentId` varchar(36) NULL, `parentChallengeId` varchar(36) NULL, `parentHubId` varchar(36) NULL, UNIQUE INDEX `REL_178fa41e46fd331f3501a62f6b` (`authorizationId`), UNIQUE INDEX `REL_1deebaabfc620e881858333b0d` (`contextId`), UNIQUE INDEX `REL_aa9668dd2340c2d794b414577b` (`communityId`), UNIQUE INDEX `REL_3c535130cde781b69259eec7d8` (`lifecycleId`), UNIQUE INDEX `REL_6b1bcaf365212806d8cc1f87b5` (`tagsetId`), UNIQUE INDEX `REL_b025a2720e5ee0e5b38774f7a8` (`agentId`), PRIMARY KEY (`id`)) ENGINE=InnoDB'
     );
     await queryRunner.query(
       'CREATE TABLE `application_questions` (`applicationId` varchar(36) NOT NULL, `nvpId` varchar(36) NOT NULL, INDEX `IDX_8495fae86f13836b0745642baa` (`applicationId`), INDEX `IDX_fe50118fd82e7fe2f74f986a19` (`nvpId`), PRIMARY KEY (`applicationId`, `nvpId`)) ENGINE=InnoDB'
@@ -188,22 +188,22 @@ export class publicPreview1624374908296 implements MigrationInterface {
       'ALTER TABLE `community` ADD CONSTRAINT `FK_8e8283bdacc9e770918fe689333` FOREIGN KEY (`parentCommunityId`) REFERENCES `community`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_17a161eef37c9f07186532ab758` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_definition`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_17a161eef37c9f07186532ab758` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_definition`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_6db8627abbf00b1b986e359054f` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_6db8627abbf00b1b986e359054f` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_f5ad15bcb06a95c2a109fbcce2a` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_f5ad15bcb06a95c2a109fbcce2a` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_ec1a68698d32f610a5fc1880c7f` FOREIGN KEY (`lifecycleId`) REFERENCES `lifecycle`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_ec1a68698d32f610a5fc1880c7f` FOREIGN KEY (`lifecycleId`) REFERENCES `lifecycle`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_3a69b0a6c67ead7617634009903` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_3a69b0a6c67ead7617634009903` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` ADD CONSTRAINT `FK_b0c3f360534db92017e36a00bb2` FOREIGN KEY (`agentId`) REFERENCES `agent`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_b0c3f360534db92017e36a00bb2` FOREIGN KEY (`agentId`) REFERENCES `agent`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `relation` ADD CONSTRAINT `FK_53fccd56207915b969b91834e04` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_definition`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
@@ -272,7 +272,7 @@ export class publicPreview1624374908296 implements MigrationInterface {
       'ALTER TABLE `challenge` ADD CONSTRAINT `FK_7d2b222d54b900071b0959f03ef` FOREIGN KEY (`parentChallengeId`) REFERENCES `challenge`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_494b27cb13b59128fb24b365ca6` FOREIGN KEY (`parentEcoverseId`) REFERENCES `ecoverse`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_494b27cb13b59128fb24b365ca6` FOREIGN KEY (`parentHubId`) REFERENCES `hub`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `application_questions` ADD CONSTRAINT `FK_8495fae86f13836b0745642baa8` FOREIGN KEY (`applicationId`) REFERENCES `application`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
@@ -363,22 +363,22 @@ export class publicPreview1624374908296 implements MigrationInterface {
       'ALTER TABLE `relation` DROP FOREIGN KEY `FK_53fccd56207915b969b91834e04`'
     );
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` DROP FOREIGN KEY `FK_b0c3f360534db92017e36a00bb2`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_b0c3f360534db92017e36a00bb2`'
     );
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` DROP FOREIGN KEY `FK_3a69b0a6c67ead7617634009903`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_3a69b0a6c67ead7617634009903`'
     );
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` DROP FOREIGN KEY `FK_ec1a68698d32f610a5fc1880c7f`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_ec1a68698d32f610a5fc1880c7f`'
     );
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` DROP FOREIGN KEY `FK_f5ad15bcb06a95c2a109fbcce2a`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_f5ad15bcb06a95c2a109fbcce2a`'
     );
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` DROP FOREIGN KEY `FK_6db8627abbf00b1b986e359054f`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_6db8627abbf00b1b986e359054f`'
     );
     await queryRunner.query(
-      'ALTER TABLE `ecoverse` DROP FOREIGN KEY `FK_17a161eef37c9f07186532ab758`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_17a161eef37c9f07186532ab758`'
     );
     await queryRunner.query(
       'ALTER TABLE `community` DROP FOREIGN KEY `FK_8e8283bdacc9e770918fe689333`'
@@ -549,24 +549,24 @@ export class publicPreview1624374908296 implements MigrationInterface {
     );
     await queryRunner.query('DROP TABLE `relation`');
     await queryRunner.query(
-      'DROP INDEX `REL_b0c3f360534db92017e36a00bb` ON `ecoverse`'
+      'DROP INDEX `REL_b0c3f360534db92017e36a00bb` ON `hub`'
     );
     await queryRunner.query(
-      'DROP INDEX `REL_3a69b0a6c67ead761763400990` ON `ecoverse`'
+      'DROP INDEX `REL_3a69b0a6c67ead761763400990` ON `hub`'
     );
     await queryRunner.query(
-      'DROP INDEX `REL_ec1a68698d32f610a5fc1880c7` ON `ecoverse`'
+      'DROP INDEX `REL_ec1a68698d32f610a5fc1880c7` ON `hub`'
     );
     await queryRunner.query(
-      'DROP INDEX `REL_f5ad15bcb06a95c2a109fbcce2` ON `ecoverse`'
+      'DROP INDEX `REL_f5ad15bcb06a95c2a109fbcce2` ON `hub`'
     );
     await queryRunner.query(
-      'DROP INDEX `REL_6db8627abbf00b1b986e359054` ON `ecoverse`'
+      'DROP INDEX `REL_6db8627abbf00b1b986e359054` ON `hub`'
     );
     await queryRunner.query(
-      'DROP INDEX `REL_17a161eef37c9f07186532ab75` ON `ecoverse`'
+      'DROP INDEX `REL_17a161eef37c9f07186532ab75` ON `hub`'
     );
-    await queryRunner.query('DROP TABLE `ecoverse`');
+    await queryRunner.query('DROP TABLE `hub`');
     await queryRunner.query(
       'DROP INDEX `REL_973fe78e64b8a79056d58ead43` ON `community`'
     );

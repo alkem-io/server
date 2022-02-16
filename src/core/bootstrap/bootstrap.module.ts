@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
-import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
+import { Hub } from '@domain/challenge/hub/hub.entity';
+import { HubModule } from '@domain/challenge/hub/hub.module';
 import { ProfileModule } from '@domain/community/profile/profile.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { UserModule } from '@domain/community/user/user.module';
@@ -15,7 +15,7 @@ import { CommunicationModule } from '@domain/communication/communication/communi
 @Module({
   imports: [
     AgentModule,
-    EcoverseModule,
+    HubModule,
     ProfileModule,
     TagsetModule,
     UserModule,
@@ -23,7 +23,7 @@ import { CommunicationModule } from '@domain/communication/communication/communi
     AdminAuthorizationModule,
     CommunicationModule,
     OrganizationModule,
-    TypeOrmModule.forFeature([Ecoverse]),
+    TypeOrmModule.forFeature([Hub]),
   ],
   providers: [BootstrapService],
   exports: [BootstrapService],

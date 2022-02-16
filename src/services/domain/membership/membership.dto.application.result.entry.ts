@@ -36,7 +36,7 @@ export class ApplicationResultEntry {
   @Field(() => UUID, {
     description: 'ID for the ultimate containing Hub',
   })
-  ecoverseID!: string;
+  hubID!: string;
 
   @Field(() => UUID, {
     description:
@@ -56,7 +56,7 @@ export class ApplicationResultEntry {
     displayName: string,
     state: string,
     id: string,
-    ecoverseID: string,
+    hubID: string,
     createdDate: Date,
     updatedDate: Date
   ) {
@@ -64,7 +64,7 @@ export class ApplicationResultEntry {
     this.communityID = communityID;
     this.state = state;
     this.id = id;
-    this.ecoverseID = ecoverseID;
+    this.hubID = hubID;
     this.createdDate = createdDate;
     this.updatedDate = updatedDate;
   }

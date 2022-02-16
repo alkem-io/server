@@ -4,11 +4,11 @@ import { OrganizationModule } from '@domain/community/organization/organization.
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
-import { EcoverseResolverMutations } from '@domain/challenge/ecoverse/ecoverse.resolver.mutations';
-import { EcoverseResolverQueries } from '@domain/challenge/ecoverse/ecoverse.resolver.queries';
-import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
-import { EcoverseResolverFields } from '@domain/challenge/ecoverse/ecoverse.resolver.fields';
+import { Hub } from '@domain/challenge/hub/hub.entity';
+import { HubResolverMutations } from '@domain/challenge/hub/hub.resolver.mutations';
+import { HubResolverQueries } from '@domain/challenge/hub/hub.resolver.queries';
+import { HubService } from '@domain/challenge/hub/hub.service';
+import { HubResolverFields } from '@domain/challenge/hub/hub.resolver.fields';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { ProjectModule } from '@domain/collaboration/project/project.module';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
@@ -17,7 +17,7 @@ import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
 import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { EcoverseAuthorizationService } from '@domain/challenge/ecoverse/ecoverse.service.authorization';
+import { HubAuthorizationService } from '@domain/challenge/hub/hub.service.authorization';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
@@ -41,15 +41,15 @@ import { UserModule } from '@domain/community/user/user.module';
     ApplicationModule,
     UserModule,
     NamingModule,
-    TypeOrmModule.forFeature([Ecoverse]),
+    TypeOrmModule.forFeature([Hub]),
   ],
   providers: [
-    EcoverseService,
-    EcoverseAuthorizationService,
-    EcoverseResolverFields,
-    EcoverseResolverQueries,
-    EcoverseResolverMutations,
+    HubService,
+    HubAuthorizationService,
+    HubResolverFields,
+    HubResolverQueries,
+    HubResolverMutations,
   ],
-  exports: [EcoverseService, EcoverseAuthorizationService],
+  exports: [HubService, HubAuthorizationService],
 })
-export class EcoverseModule {}
+export class HubModule {}
