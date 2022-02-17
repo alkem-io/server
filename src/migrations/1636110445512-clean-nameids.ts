@@ -4,7 +4,7 @@ const tableNames = [
   'user',
   'project',
   'organization',
-  'hub',
+  'ecoverse',
   'challenge',
   'opportunity',
 ];
