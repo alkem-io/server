@@ -10,6 +10,9 @@ export class ecoverseToHub1645089442935 implements MigrationInterface {
       `ALTER TABLE \`challenge\` CHANGE COLUMN \`ecoverseID\` \`hubID\` VARCHAR(255) NOT NULL`
     );
     await queryRunner.query(
+      `ALTER TABLE \`challenge\` CHANGE COLUMN \`parentEcoverseID\` \`parentHubID\` VARCHAR(36) NOT NULL`
+    );
+    await queryRunner.query(
       `ALTER TABLE \`opportunity\` CHANGE COLUMN \`ecoverseID\` \`hubID\` VARCHAR(255) NOT NULL`
     );
     await queryRunner.query(
@@ -24,9 +27,27 @@ export class ecoverseToHub1645089442935 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`user_group\` CHANGE COLUMN \`ecoverseID\` \`hubID\` VARCHAR(255) NOT NULL`
     );
+    await queryRunner.query(
+      `UPDATE \`credential\` SET \`type\` = 'hub-member' WHERE \`type\` = 'ecoverse-member'`
+    );
+    await queryRunner.query(
+      `UPDATE \`credential\` SET \`type\` = 'hub-admin' WHERE \`type\` = 'ecoverse-admin'`
+    );
+    await queryRunner.query(
+      `UPDATE \`credential\` SET \`type\` = 'hub-host' WHERE \`type\` = 'ecoverse-host'`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `UPDATE \`credential\` SET \`type\` = 'ecoverse-host' WHERE \`type\` = 'hub-host'`
+    );
+    await queryRunner.query(
+      `UPDATE \`credential\` SET \`type\` = 'ecoverse-admin' WHERE \`type\` = 'hub-admin'`
+    );
+    await queryRunner.query(
+      `UPDATE \`credential\` SET \`type\` = 'ecoverse-member' WHERE \`type\` = 'hub-member'`
+    );
     await queryRunner.query(
       `ALTER TABLE \`user_group\` CHANGE COLUMN \`hubID\` \`ecoverseID\` VARCHAR(255) NOT NULL`
     );
@@ -41,6 +62,9 @@ export class ecoverseToHub1645089442935 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`opportunity\` CHANGE COLUMN \`hubID\` \`ecoverseID\` VARCHAR(255) NOT NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`challenge\` CHANGE COLUMN \`parentHubID\` \`parentEcoverseID\` VARCHAR(36) NOT NULL`
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` CHANGE COLUMN \`hubID\` \`ecoverseID\` VARCHAR(255) NOT NULL`
