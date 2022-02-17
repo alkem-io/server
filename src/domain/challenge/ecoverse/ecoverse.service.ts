@@ -44,6 +44,7 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { CommunityType } from '@common/enums/community.type';
 import { HubTemplate } from './dto/ecoverse.dto.template.hub';
 import { AgentInfo } from '@src/core';
+import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 
 @Injectable()
 export class EcoverseService {
@@ -346,19 +347,26 @@ export class EcoverseService {
     return true;
   }
 
-  async getChallenges(ecoverse: IEcoverse): Promise<IChallenge[]> {
+  async getChallenges(
+    ecoverse: IEcoverse,
+    limit?: number,
+    shuffle?: boolean
+  ): Promise<IChallenge[]> {
     const ecoverseWithChallenges = await this.getEcoverseOrFail(ecoverse.id, {
       relations: ['challenges'],
     });
     const challenges = ecoverseWithChallenges.challenges;
-    if (!challenges)
+    if (!challenges) {
       throw new RelationshipNotFoundException(
         `Unable to load challenges for Ecoverse ${ecoverse.id} `,
         LogContext.CHALLENGES
       );
+    }
+
+    const limitAndShuffled = limitAndShuffle(challenges, limit, shuffle);
 
     // Sort the challenges base on their display name
-    const sortedChallenges = challenges.sort((a, b) =>
+    const sortedChallenges = limitAndShuffled.sort((a, b) =>
       a.displayName > b.displayName ? 1 : -1
     );
     return sortedChallenges;

@@ -39,7 +39,7 @@ import { IOrganizationVerification } from '../organization-verification/organiza
 import { NVP } from '@domain/common/nvp/nvp.entity';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { AgentInfo } from '@core/authentication';
-import { generateRandomArraySelection } from '@common/utils/random.util';
+import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 
 @Injectable()
 export class OrganizationService {
@@ -318,22 +318,8 @@ export class OrganizationService {
     );
     const organizations: IOrganization[] =
       await this.organizationRepository.find();
-    if (!organizations) return [];
-    if (!limit) return organizations;
 
-    // Need to restrict the set of users to return
-    if (shuffle) {
-      const randomIndexes = generateRandomArraySelection(
-        Math.min(limit, organizations.length),
-        organizations.length
-      );
-      const limitedResult: IOrganization[] = [];
-      for (const index of randomIndexes) {
-        limitedResult.push(organizations[index]);
-      }
-      return limitedResult;
-    }
-    return organizations.slice(0, limit);
+    return limitAndShuffle(organizations, limit, shuffle);
   }
 
   async getActivity(organization: IOrganization): Promise<INVP[]> {

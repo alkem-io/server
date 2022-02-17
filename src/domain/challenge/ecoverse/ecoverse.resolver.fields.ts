@@ -13,7 +13,7 @@ import { IUserGroup } from '@domain/community/user-group';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationAgentPrivilege,
   CurrentUser,
@@ -80,8 +80,26 @@ export class EcoverseResolverFields {
   })
   @UseGuards(GraphqlGuard)
   @Profiling.api
-  async challenges(@Parent() ecoverse: Ecoverse) {
-    return await this.ecoverseService.getChallenges(ecoverse);
+  async challenges(
+    @Parent() ecoverse: Ecoverse,
+    @Args({
+      name: 'limit',
+      type: () => Float,
+      description:
+        'The number of Challenges to return; if omitted return all Challenges.',
+      nullable: true,
+    })
+    limit: number,
+    @Args({
+      name: 'shuffle',
+      type: () => Boolean,
+      description:
+        'If true and limit is specified then return the Challenges based on a random selection.',
+      nullable: true,
+    })
+    shuffle: boolean
+  ) {
+    return await this.ecoverseService.getChallenges(ecoverse, limit, shuffle);
   }
 
   @ResolveField('tagset', () => ITagset, {
