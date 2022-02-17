@@ -15,8 +15,8 @@ import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { HubAuthorizationService } from '@domain/challenge/hub/hub.service.authorization';
 import {
-  DEFAULT_ECOVERSE_DISPLAYNAME,
-  DEFAULT_ECOVERSE_NAMEID,
+  DEFAULT_HUB_DISPLAYNAME,
+  DEFAULT_HUB_NAMEID,
   DEFAULT_HOST_ORG_DISPLAY_NAME,
   DEFAULT_HOST_ORG_NAMEID,
 } from '@common/constants';
@@ -276,8 +276,8 @@ export class BootstrapService {
       }
 
       const hub = await this.hubService.createHub({
-        nameID: DEFAULT_ECOVERSE_NAMEID,
-        displayName: DEFAULT_ECOVERSE_DISPLAYNAME,
+        nameID: DEFAULT_HUB_NAMEID,
+        displayName: DEFAULT_HUB_DISPLAYNAME,
         hostID: DEFAULT_HOST_ORG_NAMEID,
         context: {
           tagline: 'An empty hub to be populated',

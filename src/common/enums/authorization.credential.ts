@@ -5,9 +5,9 @@ export enum AuthorizationCredential {
   GLOBAL_ADMIN = 'global-admin', // able to do everything, god mode
   GLOBAL_ADMIN_COMMUNITY = 'global-admin-community', // able to manage the top level community, including assigning credentials
   GLOBAL_REGISTERED = 'global-registered', // credential issued to all registered users
-  ECOVERSE_ADMIN = 'hub-admin',
-  ECOVERSE_HOST = 'hub-host', // host for an hub; can only be one...
-  ECOVERSE_MEMBER = 'hub-member',
+  HUB_ADMIN = 'hub-admin',
+  HUB_HOST = 'hub-host', // host for an hub; can only be one...
+  HUB_MEMBER = 'hub-member',
   CHALLENGE_ADMIN = 'challenge-admin',
   CHALLENGE_MEMBER = 'challenge-member',
   CHALLENGE_LEAD = 'challenge-lead', // For organizations that are leads of a challenge

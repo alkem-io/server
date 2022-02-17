@@ -79,7 +79,7 @@ export class HubService {
     // set the credential type in use by the community
     await this.baseChallengeService.setMembershipCredential(
       hub,
-      AuthorizationCredential.ECOVERSE_MEMBER
+      AuthorizationCredential.HUB_MEMBER
     );
 
     // set immediate community parent
@@ -174,7 +174,7 @@ export class HubService {
       const agentHostOrg = await this.organizationService.getAgent(hostOrg);
       hostOrg.agent = await this.agentService.revokeCredential({
         agentID: agentHostOrg.id,
-        type: AuthorizationCredential.ECOVERSE_HOST,
+        type: AuthorizationCredential.HUB_HOST,
         resourceID: hub.id,
       });
       await this.organizationService.save(hostOrg);
@@ -304,7 +304,7 @@ export class HubService {
       );
       organization.agent = await this.agentService.revokeCredential({
         agentID: agentExisting.id,
-        type: AuthorizationCredential.ECOVERSE_HOST,
+        type: AuthorizationCredential.HUB_HOST,
         resourceID: hubID,
       });
     }
@@ -313,7 +313,7 @@ export class HubService {
     const agent = await this.organizationService.getAgent(organization);
     organization.agent = await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ECOVERSE_HOST,
+      type: AuthorizationCredential.HUB_HOST,
       resourceID: hubID,
     });
 
@@ -534,7 +534,7 @@ export class HubService {
   async getHost(hubID: string): Promise<IOrganization | undefined> {
     const organizations =
       await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.ECOVERSE_HOST,
+        type: AuthorizationCredential.HUB_HOST,
         resourceID: hubID,
       });
     if (organizations.length == 0) {
@@ -555,7 +555,7 @@ export class HubService {
 
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ECOVERSE_MEMBER,
+      type: AuthorizationCredential.HUB_MEMBER,
       resourceID: hub.id,
     });
 
@@ -570,7 +570,7 @@ export class HubService {
     // assign the credential
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ECOVERSE_ADMIN,
+      type: AuthorizationCredential.HUB_ADMIN,
       resourceID: hub.id,
     });
 
@@ -584,7 +584,7 @@ export class HubService {
 
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ECOVERSE_ADMIN,
+      type: AuthorizationCredential.HUB_ADMIN,
       resourceID: hub.id,
     });
 

@@ -2,7 +2,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { ApplicationTemplate } from '@src/services/platform/configuration/config/template/application.template.entity';
 
 @ObjectType()
-export class HubTemplate {
+export class PlatformHubTemplate {
   @Field(() => String, {
     nullable: false,
     description: 'Hub template name.',

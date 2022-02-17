@@ -271,7 +271,7 @@ export class OrganizationService {
       );
 
     return await this.agentService.hasValidCredential(organization.agent.id, {
-      type: AuthorizationCredential.ECOVERSE_HOST,
+      type: AuthorizationCredential.HUB_HOST,
     });
   }
 

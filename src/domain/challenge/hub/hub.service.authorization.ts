@@ -68,7 +68,7 @@ export class HubAuthorizationService {
         await this.authorizationPolicyService.appendCredentialAuthorizationRule(
           challenge.authorization,
           {
-            type: AuthorizationCredential.ECOVERSE_ADMIN,
+            type: AuthorizationCredential.HUB_ADMIN,
             resourceID: hub.id,
           },
           [AuthorizationPrivilege.DELETE]
@@ -105,14 +105,14 @@ export class HubAuthorizationService {
         AuthorizationPrivilege.DELETE,
         AuthorizationPrivilege.GRANT,
       ],
-      AuthorizationCredential.ECOVERSE_ADMIN,
+      AuthorizationCredential.HUB_ADMIN,
       hubID
     );
     newRules.push(hubAdmin);
 
     const hubMember = new AuthorizationPolicyRuleCredential(
       [AuthorizationPrivilege.READ],
-      AuthorizationCredential.ECOVERSE_MEMBER,
+      AuthorizationCredential.HUB_MEMBER,
       hubID
     );
     newRules.push(hubMember);

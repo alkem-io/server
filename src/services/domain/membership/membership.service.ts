@@ -74,7 +74,7 @@ export class MembershipService {
         membership.organizations.push(
           await this.createOrganizationResult(credential.resourceID, user.id)
         );
-      } else if (credential.type === AuthorizationCredential.ECOVERSE_MEMBER) {
+      } else if (credential.type === AuthorizationCredential.HUB_MEMBER) {
         const response = await this.createHubMembershipResult(
           credential.resourceID,
           user.id
@@ -249,7 +249,7 @@ export class MembershipService {
     const agent = organization?.agent;
     if (agent?.credentials) {
       for (const credential of agent.credentials) {
-        if (credential.type === AuthorizationCredential.ECOVERSE_HOST) {
+        if (credential.type === AuthorizationCredential.HUB_HOST) {
           const hub = await this.hubService.getHubOrFail(credential.resourceID);
           membership.hubsHosting.push({
             nameID: hub.nameID,

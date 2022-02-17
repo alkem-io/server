@@ -153,10 +153,10 @@ export class UserAuthorizationService {
     );
     for (const credential of credentials) {
       // Grant read access to Hub Admins for hubs the user is a member of
-      if (credential.type === AuthorizationCredential.ECOVERSE_MEMBER) {
+      if (credential.type === AuthorizationCredential.HUB_MEMBER) {
         const hubAdmin = new AuthorizationPolicyRuleCredential(
           [AuthorizationPrivilege.READ],
-          AuthorizationCredential.ECOVERSE_ADMIN,
+          AuthorizationCredential.HUB_ADMIN,
           credential.resourceID
         );
         newRules.push(hubAdmin);
