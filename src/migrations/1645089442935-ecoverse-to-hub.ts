@@ -4,28 +4,28 @@ export class ecoverseToHub1645089442935 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE \`ecoverse\` RENAME TO \`hub\``);
     await queryRunner.query(
-      `ALTER TABLE \`application\` CHANGE COLUMN \`ecoverseID\` \`hubID\` VARCHAR(255) NOT NULL`
+      `ALTER TABLE \`application\` RENAME COLUMN \`ecoverseID\` TO \`hubID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`challenge\` CHANGE COLUMN \`ecoverseID\` \`hubID\` VARCHAR(255) NOT NULL`
+      `ALTER TABLE \`challenge\` RENAME COLUMN \`ecoverseID\` TO \`hubID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`challenge\` CHANGE COLUMN \`parentEcoverseID\` \`parentHubID\` VARCHAR(36) NOT NULL`
+      `ALTER TABLE \`challenge\` RENAME COLUMN \`parentEcoverseID\` TO \`parentHubID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`opportunity\` CHANGE COLUMN \`ecoverseID\` \`hubID\` VARCHAR(255) NOT NULL`
+      `ALTER TABLE \`opportunity\` RENAME COLUMN \`ecoverseID\` TO \`hubID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`project\` CHANGE COLUMN \`ecoverseID\` \`hubID\` VARCHAR(255) NOT NULL`
+      `ALTER TABLE \`project\` RENAME COLUMN \`ecoverseID\` TO \`hubID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`communication\` CHANGE COLUMN \`ecoverseID\` \`hubID\` VARCHAR(36) NOT NULL`
+      `ALTER TABLE \`communication\` RENAME COLUMN \`ecoverseID\` TO \`hubID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`community\` CHANGE COLUMN \`ecoverseID\` \`hubID\` VARCHAR(255) NOT NULL`
+      `ALTER TABLE \`community\` RENAME COLUMN \`ecoverseID\` TO \`hubID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`user_group\` CHANGE COLUMN \`ecoverseID\` \`hubID\` VARCHAR(255) NOT NULL`
+      `ALTER TABLE \`user_group\` RENAME COLUMN \`ecoverseID\` TO \`hubID\``
     );
     await queryRunner.query(
       `UPDATE \`credential\` SET \`type\` = 'hub-member' WHERE \`type\` = 'ecoverse-member'`
@@ -49,28 +49,28 @@ export class ecoverseToHub1645089442935 implements MigrationInterface {
       `UPDATE \`credential\` SET \`type\` = 'ecoverse-member' WHERE \`type\` = 'hub-member'`
     );
     await queryRunner.query(
-      `ALTER TABLE \`user_group\` CHANGE COLUMN \`hubID\` \`ecoverseID\` VARCHAR(255) NOT NULL`
+      `ALTER TABLE \`user_group\` RENAME COLUMN \`hubID\` TO \`ecoverseID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`community\` CHANGE COLUMN \`hubID\` \`ecoverseID\` VARCHAR(255) NOT NULL`
+      `ALTER TABLE \`community\` RENAME COLUMN \`hubID\` TO \`ecoverseID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`communication\` CHANGE COLUMN \`hubID\` \`ecoverseID\` VARCHAR(36) NOT NULL`
+      `ALTER TABLE \`communication\` RENAME COLUMN \`hubID\` TO \`ecoverseID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`project\` CHANGE COLUMN \`hubID\` \`ecoverseID\` VARCHAR(255) NOT NULL`
+      `ALTER TABLE \`project\` RENAME COLUMN \`hubID\` TO \`ecoverseID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`opportunity\` CHANGE COLUMN \`hubID\` \`ecoverseID\` VARCHAR(255) NOT NULL`
+      `ALTER TABLE \`opportunity\` RENAME COLUMN \`hubID\` TO \`ecoverseID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`challenge\` CHANGE COLUMN \`parentHubID\` \`parentEcoverseID\` VARCHAR(36) NOT NULL`
+      `ALTER TABLE \`challenge\` RENAME COLUMN \`parentHubID\` TO \`parentEcoverseID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`challenge\` CHANGE COLUMN \`hubID\` \`ecoverseID\` VARCHAR(255) NOT NULL`
+      `ALTER TABLE \`challenge\` RENAME COLUMN \`hubID\` TO \`ecoverseID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`application\` CHANGE COLUMN \`hubID\` \`ecoverseID\` VARCHAR(255) NOT NULL`
+      `ALTER TABLE \`application\` RENAME COLUMN \`hubID\` TO \`ecoverseID\``
     );
     await queryRunner.query(`ALTER TABLE \`hub\` RENAME TO \`ecoverse\``);
   }
