@@ -31,8 +31,12 @@ import { firstValueFrom } from 'rxjs';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SsiException } from '@common/exceptions/ssi.exception';
 import { Profiling } from '@common/decorators/profiling.decorator';
-import { BeginCredentialRequestOutput } from '../credential/credential.dto.interactions';
+import {
+  BeginCredentialOfferOutput,
+  BeginCredentialRequestOutput,
+} from '../credential/credential.dto.interactions';
 import { Cache } from 'cache-manager';
+import { ssiConfig } from '@config/ssi.config';
 
 @Injectable()
 export class AgentService {
@@ -304,13 +308,13 @@ export class AgentService {
       return request;
     } catch (err: any) {
       throw new SsiException(
-        `Failed to create share credential request: ${err.message}`
+        `[beginCredentialRequestInteraction]: Failed to request credential: ${err.message}`
       );
     }
   }
 
   @Profiling.api
-  async completeCredentialShareInteraction(
+  async completeCredentialRequestInteraction(
     nonce: string,
     token: string
   ): Promise<void> {
@@ -329,7 +333,7 @@ export class AgentService {
     );
 
     const credentialStoreRequest$ = this.walletManagementClient.send(
-      { cmd: 'completeCredentialShareInteraction' },
+      { cmd: ssiConfig.endpoints.completeCredentialRequestInteraction },
       {
         interactionId: interactionId,
         jwt: token,
@@ -339,7 +343,87 @@ export class AgentService {
     try {
       await firstValueFrom<boolean>(credentialStoreRequest$);
     } catch (err: any) {
-      throw new SsiException(`Failed to share credential: ${err.message}`);
+      throw new SsiException(
+        `[completeCredentialRequestInteraction]: Failed to request credential: ${err.message}`
+      );
+    }
+  }
+
+  @Profiling.api
+  async beginCredentialOfferInteraction(
+    issuerAgent: IAgent,
+    uniqueCallbackURL: string,
+    nonce: string,
+    credentialTypes: string[]
+  ): Promise<BeginCredentialOfferOutput> {
+    const credentialOffer$ = this.walletManagementClient.send(
+      { cmd: 'beginCredentialOfferInteraction' },
+      {
+        issuerDId: issuerAgent.did,
+        issuerPassword: issuerAgent.password,
+        offeredCredentials: credentialTypes.map(type => ({
+          type,
+          // TODO need to create a claims service and resolve claims based on the types + users in a secure way
+          claim: { custom: `Claim for this ${type} of credential` },
+        })),
+        uniqueCallbackURL: uniqueCallbackURL,
+      }
+    );
+
+    try {
+      const request = await firstValueFrom<BeginCredentialOfferOutput>(
+        credentialOffer$
+      );
+
+      const requestExpirationTtl = request.expiresOn - new Date().getTime();
+      this.cacheManager.set<IAgent>(request.interactionId, issuerAgent, {
+        ttl: requestExpirationTtl,
+      });
+      this.cacheManager.set(nonce, request.interactionId, {
+        ttl: requestExpirationTtl,
+      });
+
+      return request;
+    } catch (err: any) {
+      throw new SsiException(
+        `[beginCredentialOfferInteraction]: Failed to offer credential: ${err.message}`
+      );
+    }
+  }
+
+  @Profiling.api
+  async completeCredentialOfferInteraction(
+    nonce: string,
+    token: string
+  ): Promise<any> {
+    const interactionId = await this.cacheManager.get<string>(nonce);
+    if (!interactionId) {
+      throw new Error('The interaction is not valid');
+    }
+    const agent = await this.cacheManager.get<IAgent>(interactionId);
+    if (!agent) {
+      throw new Error('An agent could not be found for the interactionId');
+    }
+
+    this.logger.verbose?.(
+      `InteractionId with agent: ${interactionId} - ${agent.did} received ${token}`,
+      LogContext.SSI
+    );
+
+    const credentialOfferSelection$ = this.walletManagementClient.send(
+      { cmd: ssiConfig.endpoints.completeCredentialOfferInteraction },
+      {
+        interactionId: interactionId,
+        jwt: token,
+      }
+    );
+
+    try {
+      return await firstValueFrom(credentialOfferSelection$);
+    } catch (err: any) {
+      throw new SsiException(
+        `[completeCredentialOfferInteraction]:Failed to offer credential: ${err.message}`
+      );
     }
   }
 

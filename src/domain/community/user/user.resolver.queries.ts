@@ -13,7 +13,10 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPrivilege, ConfigurationTypes } from '@common/enums';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { BeginCredentialRequestOutput } from '@domain/agent/credential/credential.dto.interactions';
+import {
+  BeginCredentialOfferOutput,
+  BeginCredentialRequestOutput,
+} from '@domain/agent/credential/credential.dto.interactions';
 import { ConfigService } from '@nestjs/config';
 import { ssiConfig } from '@config/ssi.config';
 import { v4 } from 'uuid';
@@ -165,11 +168,45 @@ export class UserResolverQueries {
     const url = `${
       this.configService.get(ConfigurationTypes.HOSTING)?.endpoint
     }/api/public/rest/${
-      ssiConfig.endpoints.completeCredentialShareInteraction
+      ssiConfig.endpoints.completeCredentialRequestInteraction
     }/${nonce}`;
 
     const storedAgent = await this.userService.getAgent(userID);
     return await this.agentService.beginCredentialRequestInteraction(
+      storedAgent,
+      url,
+      nonce,
+      types
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Query(() => BeginCredentialOfferOutput, {
+    nullable: false,
+    description: 'Generate credential offer request',
+  })
+  @Profiling.api
+  async beginCredentialOfferInteraction(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args({ name: 'types', type: () => [String] }) types: string[]
+  ): Promise<BeginCredentialOfferOutput> {
+    const userID = agentInfo.userID;
+    if (!userID || userID.length == 0) {
+      throw new AuthenticationException(
+        'Unable to retrieve authenticated user; no identifier'
+      );
+    }
+
+    // TODO - the api/public/rest needs to be configurable
+    const nonce = v4();
+    const url = `${
+      this.configService.get(ConfigurationTypes.HOSTING)?.endpoint
+    }/api/public/rest/${
+      ssiConfig.endpoints.completeCredentialOfferInteraction
+    }/${nonce}`;
+
+    const storedAgent = await this.userService.getAgent(userID);
+    return await this.agentService.beginCredentialOfferInteraction(
       storedAgent,
       url,
       nonce,

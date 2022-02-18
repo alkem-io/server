@@ -9,7 +9,11 @@ export class AppService {
     return 'Hello Alkemio!';
   }
 
-  async completeCredentialShareInteraction(nonce: string, token: string) {
-    this.agentService.completeCredentialShareInteraction(nonce, token);
+  async completeCredentialRequestInteraction(nonce: string, token: string) {
+    await this.agentService.completeCredentialRequestInteraction(nonce, token);
+  }
+
+  async completeCredentialOfferInteraction(nonce: string, token: string) {
+    return this.agentService.completeCredentialOfferInteraction(nonce, token);
   }
 }
