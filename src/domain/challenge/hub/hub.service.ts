@@ -41,6 +41,7 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { CommunityType } from '@common/enums/community.type';
 import { HubTemplate } from './dto/hub.dto.template.hub';
 import { AgentInfo } from '@src/core';
+import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 
 @Injectable()
 export class HubService {
@@ -334,19 +335,26 @@ export class HubService {
     return true;
   }
 
-  async getChallenges(hub: IHub): Promise<IChallenge[]> {
+  async getChallenges(
+    hub: IHub,
+    limit?: number,
+    shuffle?: boolean
+  ): Promise<IChallenge[]> {
     const hubWithChallenges = await this.getHubOrFail(hub.id, {
       relations: ['challenges'],
     });
     const challenges = hubWithChallenges.challenges;
-    if (!challenges)
+    if (!challenges) {
       throw new RelationshipNotFoundException(
         `Unable to load challenges for Hub ${hub.id} `,
         LogContext.CHALLENGES
       );
+    }
+
+    const limitAndShuffled = limitAndShuffle(challenges, limit, shuffle);
 
     // Sort the challenges base on their display name
-    const sortedChallenges = challenges.sort((a, b) =>
+    const sortedChallenges = limitAndShuffled.sort((a, b) =>
       a.displayName > b.displayName ? 1 : -1
     );
     return sortedChallenges;
