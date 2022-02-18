@@ -44,11 +44,11 @@ export class CommunicationService {
 
   async createCommunication(
     displayName: string,
-    ecoverseID: string
+    hubID: string
   ): Promise<ICommunication> {
     const communication: ICommunication = new Communication(displayName);
     communication.authorization = new AuthorizationPolicy();
-    communication.ecoverseID = ecoverseID;
+    communication.hubID = hubID;
 
     communication.discussions = [];
 

@@ -278,7 +278,7 @@ export class AuthorizationPolicyService {
     // Allow hub admins to create new organizations
     const hubAdminsNotInherited = new AuthorizationPolicyRuleCredential(
       [AuthorizationPrivilege.CREATE_ORGANIZATION],
-      AuthorizationCredential.ECOVERSE_ADMIN
+      AuthorizationCredential.HUB_ADMIN
     );
     hubAdminsNotInherited.inheritable = false;
     credentialRules.push(hubAdminsNotInherited);

@@ -1,6 +1,6 @@
 query {
   membershipOrganization(membershipData: {organizationID: "luveniakena"}) {
-   	ecoversesHosting {
+   	hubsHosting {
       nameID
       id
     }

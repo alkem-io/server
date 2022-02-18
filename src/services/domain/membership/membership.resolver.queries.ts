@@ -22,7 +22,7 @@ export class MembershipResolverQueries {
   @UseGuards(GraphqlGuard)
   @Query(() => UserMembership, {
     nullable: false,
-    description: 'Search the ecoverse for terms supplied',
+    description: 'Search the hub for terms supplied',
   })
   @Profiling.api
   async membershipUser(

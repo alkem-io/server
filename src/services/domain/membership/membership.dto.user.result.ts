@@ -2,7 +2,7 @@ import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ApplicationResultEntry } from './membership.dto.application.result.entry';
 import { MembershipCommunityResultEntry } from './membership.dto.community.result.entry';
-import { MembershipUserResultEntryEcoverse } from './membership.dto.user.result.entry.ecoverse';
+import { MembershipUserResultEntryHub } from './membership.dto.user.result.entry.hub';
 import { MembershipUserResultEntryOrganization } from './membership.dto.user.result.entry.organization';
 
 @ObjectType()
@@ -12,11 +12,11 @@ export class UserMembership {
   })
   id!: string;
 
-  @Field(() => [MembershipUserResultEntryEcoverse], {
+  @Field(() => [MembershipUserResultEntryHub], {
     description:
-      'Details of Ecoverses the user is a member of, with child memberships',
+      'Details of Hubs the user is a member of, with child memberships',
   })
-  ecoverses: MembershipUserResultEntryEcoverse[] = [];
+  hubs: MembershipUserResultEntryHub[] = [];
 
   @Field(() => [MembershipUserResultEntryOrganization], {
     description:

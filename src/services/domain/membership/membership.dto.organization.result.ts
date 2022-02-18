@@ -11,9 +11,9 @@ export class OrganizationMembership {
   id!: string;
 
   @Field(() => [MembershipResultEntry], {
-    description: 'Details of Ecoverses the Organization is hosting.',
+    description: 'Details of Hubs the Organization is hosting.',
   })
-  ecoversesHosting: MembershipResultEntry[] = [];
+  hubsHosting: MembershipResultEntry[] = [];
 
   @Field(() => [MembershipOrganizationResultEntryChallenge], {
     description: 'Details of the Challenges the Organization is leading.',

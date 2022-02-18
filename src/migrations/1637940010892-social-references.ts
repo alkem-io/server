@@ -3,8 +3,8 @@ import { RandomGenerator } from 'typeorm/util/RandomGenerator';
 
 const newReferenceNames = [
   {
-    name: 'github',
-    description: 'Your Github account',
+    name: 'gitecoverse',
+    description: 'Your Gitecoverse account',
   },
   {
     name: 'linkedin',

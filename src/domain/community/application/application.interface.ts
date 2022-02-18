@@ -16,7 +16,7 @@ export abstract class IApplication extends IAuthorizable {
 
   questions?: IQuestion[];
 
-  ecoverseID?: string;
+  hubID?: string;
 
   @Field(() => Date)
   createdDate!: Date;

@@ -7,7 +7,7 @@ import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entit
 import { Project } from '@domain/collaboration/project';
 import { NameID, UUID } from '@domain/common/scalars';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
+import { Hub } from '@domain/challenge/hub/hub.entity';
 import { LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 
@@ -17,8 +17,8 @@ export class NamingService {
   constructor(
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
-    @InjectRepository(Ecoverse)
-    private ecoverseRepository: Repository<Ecoverse>,
+    @InjectRepository(Hub)
+    private hubRepository: Repository<Hub>,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>,
     @InjectRepository(Opportunity)
@@ -28,23 +28,23 @@ export class NamingService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async isNameIdAvailableInEcoverse(
+  async isNameIdAvailableInHub(
     nameID: string,
-    ecoverseID: string
+    hubID: string
   ): Promise<boolean> {
     const challengeCount = await this.challengeRepository.count({
       nameID: nameID,
-      ecoverseID: ecoverseID,
+      hubID: hubID,
     });
     if (challengeCount > 0) return false;
     const opportunityCount = await this.opportunityRepository.count({
       nameID: nameID,
-      ecoverseID: ecoverseID,
+      hubID: hubID,
     });
     if (opportunityCount > 0) return false;
     const projectCount = await this.projectRepository.count({
       nameID: nameID,
-      ecoverseID: ecoverseID,
+      hubID: hubID,
     });
     if (projectCount > 0) return false;
     return true;
@@ -79,20 +79,20 @@ export class NamingService {
   }
 
   async getCommunicationGroupIdForContext(contextID: string): Promise<string> {
-    const ecoverse = await this.ecoverseRepository
-      .createQueryBuilder('ecoverse')
-      .leftJoinAndSelect('ecoverse.community', 'community')
-      .leftJoinAndSelect('ecoverse.context', 'context')
+    const hub = await this.hubRepository
+      .createQueryBuilder('hub')
+      .leftJoinAndSelect('hub.community', 'community')
+      .leftJoinAndSelect('hub.context', 'context')
       .leftJoinAndSelect('community.communication', 'communication')
       .where('context.id = :id')
       .setParameters({ id: `${contextID}` })
       .getOne();
-    if (ecoverse) {
+    if (hub) {
       const communicationGroupID =
-        ecoverse.community?.communication?.communicationGroupID;
+        hub.community?.communication?.communicationGroupID;
       return communicationGroupID || '';
     }
-    // not on an ecoverse, try challenge
+    // not on an hub, try challenge
     const challenge = await this.challengeRepository
       .createQueryBuilder('challenge')
       .leftJoinAndSelect('challenge.community', 'community')

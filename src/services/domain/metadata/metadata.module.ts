@@ -1,5 +1,5 @@
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
-import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
+import { HubModule } from '@domain/challenge/hub/hub.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { UserModule } from '@domain/community/user/user.module';
@@ -11,7 +11,7 @@ import { MetadataService } from './metadata.service';
   imports: [
     UserModule,
     ChallengeModule,
-    EcoverseModule,
+    HubModule,
     OpportunityModule,
     OrganizationModule,
   ],

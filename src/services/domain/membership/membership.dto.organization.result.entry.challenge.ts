@@ -4,7 +4,7 @@ import { MembershipResultEntry } from './membership.dto.result.entry';
 @ObjectType()
 export class MembershipOrganizationResultEntryChallenge extends MembershipResultEntry {
   @Field(() => String, {
-    description: 'The ID of the Ecoverse hosting this Challenge.',
+    description: 'The ID of the Hub hosting this Challenge.',
   })
-  ecoverseID = '';
+  hubID = '';
 }

@@ -73,18 +73,18 @@ export class ChallengeService {
 
   async createChallenge(
     challengeData: CreateChallengeInput,
-    ecoverseID: string,
+    hubID: string,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
     const challenge: IChallenge = Challenge.create(challengeData);
-    challenge.ecoverseID = ecoverseID;
+    challenge.hubID = hubID;
     challenge.childChallenges = [];
 
     challenge.opportunities = [];
     await this.baseChallengeService.initialise(
       challenge,
       challengeData,
-      ecoverseID,
+      hubID,
       CommunityType.CHALLENGE
     );
 
@@ -151,7 +151,7 @@ export class ChallengeService {
         // updating the nameID, check new value is allowed
         await this.baseChallengeService.isNameAvailableOrFail(
           challengeData.nameID,
-          challenge.ecoverseID
+          challenge.hubID
         );
         challenge.nameID = challengeData.nameID;
         await this.challengeRepository.save(challenge);
@@ -221,14 +221,14 @@ export class ChallengeService {
     let challenge: IChallenge | undefined;
     if (challengeID.length == UUID_LENGTH) {
       challenge = await this.challengeRepository.findOne(
-        { id: challengeID, ecoverseID: nameableScopeID },
+        { id: challengeID, hubID: nameableScopeID },
         options
       );
     }
     if (!challenge) {
       // look up based on nameID
       challenge = await this.challengeRepository.findOne(
-        { nameID: challengeID, ecoverseID: nameableScopeID },
+        { nameID: challengeID, hubID: nameableScopeID },
         options
       );
     }
@@ -395,12 +395,12 @@ export class ChallengeService {
 
     await this.baseChallengeService.isNameAvailableOrFail(
       challengeData.nameID,
-      challenge.ecoverseID
+      challenge.hubID
     );
 
     const childChallenge = await this.createChallenge(
       challengeData,
-      challenge.ecoverseID,
+      challenge.hubID,
       agentInfo
     );
 
@@ -435,12 +435,12 @@ export class ChallengeService {
 
     await this.baseChallengeService.isNameAvailableOrFail(
       opportunityData.nameID,
-      challenge.ecoverseID
+      challenge.hubID
     );
 
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
-      challenge.ecoverseID,
+      challenge.hubID,
       agentInfo
     );
 
@@ -462,9 +462,9 @@ export class ChallengeService {
     return challenges || [];
   }
 
-  async getChallengesInEcoverseCount(ecoverseID: string): Promise<number> {
+  async getChallengesInHubCount(hubID: string): Promise<number> {
     const count = await this.challengeRepository.count({
-      where: { ecoverseID: ecoverseID },
+      where: { hubID: hubID },
     });
     return count;
   }
