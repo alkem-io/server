@@ -147,19 +147,19 @@ export class UserAuthorizationService {
     );
     newRules.push(userSelfAdmin);
 
-    // Get the agent + credentials + grant access for ecoverse / challenge admins read only
+    // Get the agent + credentials + grant access for hub / challenge admins read only
     const { credentials } = await this.userService.getUserAndCredentials(
       user.id
     );
     for (const credential of credentials) {
-      // Grant read access to Ecoverse Admins for ecoverses the user is a member of
-      if (credential.type === AuthorizationCredential.ECOVERSE_MEMBER) {
-        const ecoverseAdmin = new AuthorizationPolicyRuleCredential(
+      // Grant read access to Hub Admins for hubs the user is a member of
+      if (credential.type === AuthorizationCredential.HUB_MEMBER) {
+        const hubAdmin = new AuthorizationPolicyRuleCredential(
           [AuthorizationPrivilege.READ],
-          AuthorizationCredential.ECOVERSE_ADMIN,
+          AuthorizationCredential.HUB_ADMIN,
           credential.resourceID
         );
-        newRules.push(ecoverseAdmin);
+        newRules.push(hubAdmin);
       } else if (credential.type === AuthorizationCredential.CHALLENGE_MEMBER) {
         const challengeAdmin = new AuthorizationPolicyRuleCredential(
           [AuthorizationPrivilege.READ],

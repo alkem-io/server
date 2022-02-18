@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { UpdateAspectTemplateInput } from './ecoverse.dto.update.template.aspect';
+import { UpdateAspectTemplateInput } from './hub.dto.update.template.aspect';
 
 @InputType()
 export class UpdateHubTemplateInput {

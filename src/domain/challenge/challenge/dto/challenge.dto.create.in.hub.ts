@@ -3,7 +3,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { CreateChallengeInput } from './challenge.dto.create';
 
 @InputType()
-export class CreateChallengeOnEcoverseInput extends CreateChallengeInput {
+export class CreateChallengeOnHubInput extends CreateChallengeInput {
   @Field(() => UUID_NAMEID, { nullable: false })
-  ecoverseID!: string;
+  hubID!: string;
 }

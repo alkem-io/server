@@ -1,8 +1,8 @@
 import { gql } from 'apollo-server-express';
 
 export const hubsQuery = gql`
-  query ecoverses {
-    ecoverses {
+  query hubs {
+    hubs {
       nameID
       displayName
       community {

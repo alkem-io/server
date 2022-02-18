@@ -1,7 +1,7 @@
 query {
   configuration {
     template {
-      ecoverses {
+      hubs {
         name
         applications{
           name

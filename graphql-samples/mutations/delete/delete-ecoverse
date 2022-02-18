@@ -1,5 +1,5 @@
-mutation deleteEcoverse($deleteData: DeleteEcoverseInput!) {
-  deleteEcoverse(deleteData: $deleteData) {
+mutation deleteHub($deleteData: DeleteHubInput!) {
+  deleteHub(deleteData: $deleteData) {
     id
   }
 }

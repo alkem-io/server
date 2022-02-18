@@ -29,7 +29,7 @@ export class Community
   displayName: string;
 
   @Column()
-  ecoverseID: string;
+  hubID: string;
 
   @OneToOne(() => Communication, {
     eager: false,
@@ -82,7 +82,7 @@ export class Community
     super();
     this.displayName = name;
     this.type = type;
-    this.ecoverseID = '';
+    this.hubID = '';
     this.parentID = '';
   }
 }

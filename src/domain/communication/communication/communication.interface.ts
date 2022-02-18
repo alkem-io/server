@@ -8,7 +8,7 @@ export abstract class ICommunication extends IAuthorizable {
   discussions?: IDiscussion[];
   updates?: IUpdates;
 
-  ecoverseID!: string;
+  hubID!: string;
 
   displayName!: string;
 
