@@ -23,9 +23,21 @@ export class VerifiedCredential {
   })
   claim: string;
 
+  @Field(() => JSON, {
+    description: 'JSON for the context in the credential',
+  })
+  context: string;
+
+  @Field(() => String, {
+    description: 'The name of the VC',
+  })
+  name: string;
+
   constructor() {
     this.type = '';
     this.issuer = '';
     this.claim = '';
+    this.context = '';
+    this.name = '';
   }
 }
