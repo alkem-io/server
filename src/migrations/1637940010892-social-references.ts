@@ -1,5 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { RandomGenerator } from 'typeorm/util/RandomGenerator';
+import { randomUUID } from 'crypto';
 
 const newReferenceNames = [
   {
@@ -31,7 +31,7 @@ export class socialReferences1637940010892 implements MigrationInterface {
 
         if (!refExists) {
           // create auth policy
-          const authId = RandomGenerator.uuid4();
+          const authId = randomUUID();
           await queryRunner.query(
             //console.log(
             `insert into authorization_policy
