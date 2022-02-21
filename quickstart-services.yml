@@ -37,7 +37,7 @@ services:
 
   mysql_db:
     container_name: alkemio_dev_mysql_db
-    image: mysql:8.0.11
+    image: mariadb:10.7.1
     networks:
       - alkemio_dev_net
     environment:
@@ -49,7 +49,7 @@ services:
     volumes:
       - alkemio_dev_mysql_db:/var/lib/mysql
       - ./.scripts/schema.sql:/bootstrap_scripts/1.sql
-    command: --default-authentication-plugin=mysql_native_password --init-file /bootstrap_scripts/1.sql
+    command: --sql_mode="" --default-authentication-plugin=mysql_native_password --init-file /bootstrap_scripts/1.sql
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
