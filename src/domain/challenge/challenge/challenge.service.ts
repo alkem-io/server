@@ -52,6 +52,7 @@ import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.c
 import { CommunityType } from '@common/enums/community.type';
 import { ClientProxy } from '@nestjs/microservices';
 import { AgentInfo } from '@src/core';
+import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 
 @Injectable()
 export class ChallengeService {
@@ -344,17 +345,26 @@ export class ChallengeService {
     );
   }
 
-  async getOpportunities(challengeId: string): Promise<IOpportunity[]> {
+  async getOpportunities(
+    challengeId: string,
+    limit?: number,
+    shuffle = false
+  ): Promise<IOpportunity[]> {
     const challenge = await this.getChallengeOrFail(challengeId, {
       relations: ['opportunities'],
     });
+
     const opportunities = challenge.opportunities;
     if (!opportunities)
       throw new RelationshipNotFoundException(
         `Unable to load Opportunities for challenge ${challengeId} `,
         LogContext.COLLABORATION
       );
-    return opportunities;
+    this.logger.verbose?.(
+      `Querying all Opportunities with limit: ${limit} and shuffle: ${shuffle}`,
+      LogContext.CHALLENGES
+    );
+    return limitAndShuffle(opportunities, limit, shuffle);
   }
 
   // Loads the challenges into the challenge entity if not already present

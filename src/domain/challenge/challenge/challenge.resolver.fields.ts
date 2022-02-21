@@ -1,4 +1,4 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
@@ -45,8 +45,30 @@ export class ChallengeResolverFields {
     description: 'The Opportunities for the challenge.',
   })
   @Profiling.api
-  async opportunities(@Parent() challenge: Challenge) {
-    return await this.challengeService.getOpportunities(challenge.id);
+  async opportunities(
+    @Parent() challenge: Challenge,
+    @Args({
+      name: 'limit',
+      type: () => Float,
+      description:
+        'The number of Opportunities to return; if omitted return all Opportunities.',
+      nullable: true,
+    })
+    limit: number,
+    @Args({
+      name: 'shuffle',
+      type: () => Boolean,
+      description:
+        'If true and limit is specified then return the Opportunities based on a random selection.',
+      nullable: true,
+    })
+    shuffle: boolean
+  ) {
+    return await this.challengeService.getOpportunities(
+      challenge.id,
+      limit,
+      shuffle
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
