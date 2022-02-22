@@ -1,25 +1,20 @@
-import { UseGuards } from '@nestjs/common';
-import { Args, Float, Query, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
-import { IUser } from '@domain/community/user';
-import { UserService } from './user.service';
-import { AuthenticationException } from '@common/exceptions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@src/core/authentication/agent-info';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AuthenticationException } from '@common/exceptions';
 import { UserNotRegisteredException } from '@common/exceptions/registration.exception';
 import { GraphqlGuard } from '@core/authorization';
-import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationPrivilege, ConfigurationTypes } from '@common/enums';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import {
-  BeginCredentialOfferOutput,
-  BeginCredentialRequestOutput,
-} from '@domain/agent/credential/credential.dto.interactions';
+import { CredentialMetadataOutput } from '@domain/agent/credential/credential.dto.metadata';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
+import { IUser } from '@domain/community/user';
+import { UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ssiConfig } from '@config/ssi.config';
-import { v4 } from 'uuid';
+import { Args, Float, Query, Resolver } from '@nestjs/graphql';
+import { Profiling } from '@src/common/decorators';
+import { AgentInfo } from '@src/core/authentication/agent-info';
+import { UserService } from './user.service';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
@@ -147,15 +142,14 @@ export class UserResolverQueries {
   }
 
   @UseGuards(GraphqlGuard)
-  @Query(() => BeginCredentialRequestOutput, {
+  @Query(() => [CredentialMetadataOutput], {
     nullable: false,
-    description: 'Generate credential share request',
+    description: 'Get supported credential metadata',
   })
   @Profiling.api
-  async beginCredentialRequestInteraction(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args({ name: 'types', type: () => [String] }) types: string[]
-  ): Promise<BeginCredentialRequestOutput> {
+  async getSupportedCredentialMetadata(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<CredentialMetadataOutput[]> {
     const userID = agentInfo.userID;
     if (!userID || userID.length == 0) {
       throw new AuthenticationException(
@@ -163,54 +157,6 @@ export class UserResolverQueries {
       );
     }
 
-    // TODO - the api/public/rest needs to be configurable
-    const nonce = v4();
-    const url = `${
-      this.configService.get(ConfigurationTypes.HOSTING)?.endpoint
-    }/api/public/rest/${
-      ssiConfig.endpoints.completeCredentialRequestInteraction
-    }/${nonce}`;
-
-    const storedAgent = await this.userService.getAgent(userID);
-    return await this.agentService.beginCredentialRequestInteraction(
-      storedAgent,
-      url,
-      nonce,
-      types
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Query(() => BeginCredentialOfferOutput, {
-    nullable: false,
-    description: 'Generate credential offer request',
-  })
-  @Profiling.api
-  async beginCredentialOfferInteraction(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args({ name: 'types', type: () => [String] }) types: string[]
-  ): Promise<BeginCredentialOfferOutput> {
-    const userID = agentInfo.userID;
-    if (!userID || userID.length == 0) {
-      throw new AuthenticationException(
-        'Unable to retrieve authenticated user; no identifier'
-      );
-    }
-
-    // TODO - the api/public/rest needs to be configurable
-    const nonce = v4();
-    const url = `${
-      this.configService.get(ConfigurationTypes.HOSTING)?.endpoint
-    }/api/public/rest/${
-      ssiConfig.endpoints.completeCredentialOfferInteraction
-    }/${nonce}`;
-
-    const storedAgent = await this.userService.getAgent(userID);
-    return await this.agentService.beginCredentialOfferInteraction(
-      storedAgent,
-      url,
-      nonce,
-      types
-    );
+    return await this.agentService.getSupportedCredentialMetadata();
   }
 }

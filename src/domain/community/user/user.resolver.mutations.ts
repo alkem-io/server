@@ -23,6 +23,17 @@ import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import {
+  BeginCredentialOfferOutput,
+  BeginCredentialRequestOutput,
+} from '@domain/agent/credential/credential.dto.interactions';
+import { AuthenticationException } from '@common/exceptions/authentication.exception';
+import { ssiConfig } from '@config/ssi.config';
+import { ConfigurationTypes } from '@common/enums';
+import { v4 } from 'uuid';
+import { ConfigService } from '@nestjs/config';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { AlkemioUserClaim } from '@domain/agent/claim/claim.entity';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -34,6 +45,8 @@ export class UserResolverMutations {
     private readonly userAuthorizationService: UserAuthorizationService,
     private readonly preferenceService: UserPreferenceService,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
+    private configService: ConfigService,
+    private agentService: AgentService,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
@@ -209,6 +222,87 @@ export class UserResolverMutations {
       user,
       userPreferenceData.type,
       userPreferenceData.value
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => BeginCredentialRequestOutput, {
+    nullable: false,
+    description: 'Generate credential share request',
+  })
+  @Profiling.api
+  async beginCredentialRequestInteraction(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args({ name: 'types', type: () => [String] }) types: string[]
+  ): Promise<BeginCredentialRequestOutput> {
+    const userID = agentInfo.userID;
+    if (!userID || userID.length == 0) {
+      throw new AuthenticationException(
+        'Unable to retrieve authenticated user; no identifier'
+      );
+    }
+
+    // TODO - the api/public/rest needs to be configurable
+    const nonce = v4();
+    const url = `${
+      this.configService.get(ConfigurationTypes.HOSTING)?.endpoint
+    }/api/public/rest/${
+      ssiConfig.endpoints.completeCredentialRequestInteraction
+    }/${nonce}`;
+
+    const storedAgent = await this.userService.getAgent(userID);
+    return await this.agentService.beginCredentialRequestInteraction(
+      storedAgent,
+      url,
+      nonce,
+      types
+    );
+  }
+
+  private generateCredentialOfferUrl() {
+    // TODO - the api/public/rest needs to be configurable
+    const nonce = v4();
+    const url = `${
+      this.configService.get(ConfigurationTypes.HOSTING)?.endpoint
+    }/api/public/rest/${
+      ssiConfig.endpoints.completeCredentialOfferInteraction
+    }/${nonce}`;
+
+    return {
+      nonce,
+      url,
+    };
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => BeginCredentialOfferOutput, {
+    description: 'Generate Alkemio user credential offer',
+  })
+  @Profiling.api
+  async beginAlkemioUserCredentialOfferInteraction(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<BeginCredentialOfferOutput> {
+    const userID = agentInfo.userID;
+    // TODO need to verify that the user has verified registration
+    if (!userID || userID.length == 0) {
+      throw new AuthenticationException(
+        'Unable to retrieve authenticated user; no identifier'
+      );
+    }
+
+    const { nonce, url } = this.generateCredentialOfferUrl();
+
+    const storedAgent = await this.userService.getAgent(userID);
+    return await this.agentService.beginCredentialOfferInteraction(
+      storedAgent,
+      url,
+      nonce,
+      [
+        {
+          type: 'AlkemioMemberCredential',
+          claims: [new AlkemioUserClaim({ userID, email: agentInfo.email })],
+        },
+      ]
     );
   }
 }

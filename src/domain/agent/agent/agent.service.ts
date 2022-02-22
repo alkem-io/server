@@ -37,6 +37,9 @@ import {
 } from '../credential/credential.dto.interactions';
 import { Cache } from 'cache-manager';
 import { ssiConfig } from '@config/ssi.config';
+import { IClaim } from '../claim/claim.entity';
+import { ClaimService } from '../claim/claim.service';
+import { CredentialMetadataOutput } from '../credential/credential.dto.metadata';
 
 @Injectable()
 export class AgentService {
@@ -44,6 +47,7 @@ export class AgentService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private configService: ConfigService,
     private credentialService: CredentialService,
+    private claimsService: ClaimService,
     @Inject(WALLET_MANAGEMENT_SERVICE)
     private walletManagementClient: ClientProxy,
     @InjectRepository(Agent)
@@ -354,17 +358,16 @@ export class AgentService {
     issuerAgent: IAgent,
     uniqueCallbackURL: string,
     nonce: string,
-    credentialTypes: string[]
+    credentials: { type: string; claims: IClaim[] }[]
   ): Promise<BeginCredentialOfferOutput> {
     const credentialOffer$ = this.walletManagementClient.send(
       { cmd: 'beginCredentialOfferInteraction' },
       {
         issuerDId: issuerAgent.did,
         issuerPassword: issuerAgent.password,
-        offeredCredentials: credentialTypes.map(type => ({
-          type,
-          // TODO need to create a claims service and resolve claims based on the types + users in a secure way
-          claim: { custom: `Claim for this ${type} of credential` },
+        offeredCredentials: credentials.map(cred => ({
+          type: cred.type,
+          claim: this.claimsService.createClaimObject(cred.claims),
         })),
         uniqueCallbackURL: uniqueCallbackURL,
       }
@@ -420,6 +423,24 @@ export class AgentService {
 
     try {
       return await firstValueFrom(credentialOfferSelection$);
+    } catch (err: any) {
+      throw new SsiException(
+        `[completeCredentialOfferInteraction]:Failed to offer credential: ${err.message}`
+      );
+    }
+  }
+
+  @Profiling.api
+  async getSupportedCredentialMetadata(): Promise<CredentialMetadataOutput[]> {
+    const credentialMetadata$ = this.walletManagementClient.send(
+      {
+        cmd: 'getSupportedCredentialMetadata',
+      },
+      {}
+    );
+
+    try {
+      return await firstValueFrom(credentialMetadata$);
     } catch (err: any) {
       throw new SsiException(
         `[completeCredentialOfferInteraction]:Failed to offer credential: ${err.message}`
