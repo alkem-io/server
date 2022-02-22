@@ -1,0 +1,14 @@
+mutation UpdateHub($hubData: UpdateHubInput!) {
+  updateHub(hubData: $hubData) {
+    displayName,
+    id
+  }
+}
+{
+  "hubData":
+		{
+      "ID": "uuid",
+      "displayName": "New CT 3",
+      "hostID": "uuid"
+		}
+}

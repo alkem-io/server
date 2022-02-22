@@ -10,6 +10,8 @@ import { UserGroupAuthorizationService } from '../user-group/user-group.service.
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -36,6 +38,12 @@ export class CommunityAuthorizationService {
     community.authorization = this.extendAuthorizationPolicy(
       community.authorization,
       parentAuthorization?.anonymousReadAccess
+    );
+    community.authorization = this.appendVerifiedCredentialRules(
+      community.authorization
+    );
+    community.authorization = this.appendPrivilegeRules(
+      community.authorization
     );
 
     // always false
@@ -111,5 +119,42 @@ export class CommunityAuthorizationService {
       );
 
     return updatedAuthorization;
+  }
+
+  private appendPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    const communityJoinPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.COMMUNITY_JOIN],
+      AuthorizationPrivilege.GRANT
+    );
+    privilegeRules.push(communityJoinPrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
+  }
+
+  private appendVerifiedCredentialRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const verifiedCredentialRules: AuthorizationPolicyRuleVerifiedCredential[] =
+      [];
+
+    // todo: to be updated
+    // const stateChange = {
+    //   type: AuthorizationVerifiedCredential.STATE_MODIFICATION_CREDENTIAL,
+    //   resourceID: 'todo-value',
+    //   grantedPrivileges: [AuthorizationPrivilege.COMMUNITY_JOIN],
+    // };
+    // verifiedCredentialRules.push(stateChange);
+
+    return this.authorizationPolicyService.appendVerifiedCredentialAuthorizationRules(
+      authorization,
+      verifiedCredentialRules
+    );
   }
 }
