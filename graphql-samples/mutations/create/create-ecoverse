@@ -1,5 +1,5 @@
-mutation CreateEcoverse($ecoverseData: CreateEcoverseInput!) {
-  createEcoverse(ecoverseData: $ecoverseData) {
+mutation CreateHub($hubData: CreateHubInput!) {
+  createHub(hubData: $hubData) {
     displayName,
     id
   }
@@ -7,9 +7,9 @@ mutation CreateEcoverse($ecoverseData: CreateEcoverseInput!) {
 
 query variables:
 {
-  "ecoverseData":
+  "hubData":
   {
-    "displayName": "Test ecoverse2",
+    "displayName": "Test hub2",
     "nameID": "eco2",
     "hostID": "Eco1Host"
   }

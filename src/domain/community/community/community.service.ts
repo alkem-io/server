@@ -49,18 +49,18 @@ export class CommunityService {
 
   async createCommunity(
     name: string,
-    ecoverseID: string,
+    hubID: string,
     type: CommunityType
   ): Promise<ICommunity> {
     const community: ICommunity = new Community(name, type);
     community.authorization = new AuthorizationPolicy();
-    community.ecoverseID = ecoverseID;
+    community.hubID = hubID;
 
     community.groups = [];
     community.communication =
       await this.communicationService.createCommunication(
         community.displayName,
-        ecoverseID
+        hubID
       );
     return await this.communityRepository.save(community);
   }
@@ -82,7 +82,7 @@ export class CommunityService {
     const group = await this.userGroupService.addGroupWithName(
       community,
       groupName,
-      community.ecoverseID
+      community.hubID
     );
     await this.communityRepository.save(community);
 
@@ -318,9 +318,9 @@ export class CommunityService {
     return validCredential;
   }
 
-  async getCommunities(ecoverseId: string): Promise<Community[]> {
+  async getCommunities(hubId: string): Promise<Community[]> {
     const communites = await this.communityRepository.find({
-      where: { ecoverse: { id: ecoverseId } },
+      where: { hub: { id: hubId } },
     });
     return communites || [];
   }
@@ -363,15 +363,15 @@ export class CommunityService {
         LogContext.COMMUNITY
       );
 
-    const ecoverseID = community.ecoverseID;
-    if (!ecoverseID)
+    const hubID = community.hubID;
+    if (!hubID)
       throw new EntityNotInitializedException(
-        `Unable to locate containing ecoverse: ${community.displayName}`,
+        `Unable to locate containing hub: ${community.displayName}`,
         LogContext.COMMUNITY
       );
     const application = await this.applicationService.createApplication(
       applicationData,
-      ecoverseID
+      hubID
     );
     community.applications?.push(application);
     await this.communityRepository.save(community);
@@ -385,7 +385,7 @@ export class CommunityService {
   ): Promise<ICommunity> {
     const community = await this.communityRepository.findOne({
       id: communityID,
-      ecoverseID: nameableScopeID,
+      hubID: nameableScopeID,
     });
 
     if (!community) {

@@ -1,10 +1,10 @@
 import { Column, Entity, OneToMany } from 'typeorm';
-import { IEcoverse } from '@domain/challenge/ecoverse/ecoverse.interface';
+import { IHub } from '@domain/challenge/hub/hub.interface';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 @Entity()
-export class Ecoverse extends BaseChallenge implements IEcoverse {
-  @OneToMany(() => Challenge, challenge => challenge.parentEcoverse, {
+export class Hub extends BaseChallenge implements IHub {
+  @OneToMany(() => Challenge, challenge => challenge.parentHub, {
     eager: false,
     cascade: true,
   })

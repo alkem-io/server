@@ -1,11 +1,11 @@
-mutation authorizationPolicyResetOnEcoverse($authorizationResetData: EcoverseAuthorizationResetInput!) {
-  authorizationPolicyResetOnEcoverse(authorizationResetData: $authorizationResetData) {
+mutation authorizationPolicyResetOnHub($authorizationResetData: HubAuthorizationResetInput!) {
+  authorizationPolicyResetOnHub(authorizationResetData: $authorizationResetData) {
     nameID
   }
 }
 
 {
   "authorizationResetData": {
-    "ecoverseID": "Eco1"
+    "hubID": "Eco1"
   }
 }

@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { AspectTemplate } from './ecoverse.dto.template.aspect';
+import { AspectTemplate } from './hub.dto.template.aspect';
 
-@ObjectType('HubTemplate')
+@ObjectType()
 export class HubTemplate {
   @Field(() => [AspectTemplate])
   aspectTemplates!: AspectTemplate[];

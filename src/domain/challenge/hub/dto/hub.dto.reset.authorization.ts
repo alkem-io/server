@@ -2,11 +2,11 @@ import { UUID_NAMEID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class EcoverseAuthorizationResetInput {
+export class HubAuthorizationResetInput {
   @Field(() => UUID_NAMEID, {
     nullable: false,
     description:
-      'The identifier of the Ecoverse whose Authorization Policy should be reset.',
+      'The identifier of the Hub whose Authorization Policy should be reset.',
   })
-  ecoverseID!: string;
+  hubID!: string;
 }

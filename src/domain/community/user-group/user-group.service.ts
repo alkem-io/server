@@ -43,11 +43,11 @@ export class UserGroupService {
 
   async createUserGroup(
     userGroupData: CreateUserGroupInput,
-    ecoverseID = ''
+    hubID = ''
   ): Promise<IUserGroup> {
     this.validateName(userGroupData.name);
     const group = UserGroup.create(userGroupData);
-    group.ecoverseID = ecoverseID;
+    group.hubID = hubID;
     group.authorization = new AuthorizationPolicy();
 
     (group as IUserGroup).profile = await this.profileService.createProfile(
@@ -217,7 +217,7 @@ export class UserGroupService {
   async addGroupWithName(
     groupable: IGroupable,
     name: string,
-    ecoverseID?: string
+    hubID?: string
   ): Promise<IUserGroup> {
     // Check if the group already exists, if so log a warning
     const alreadyExists = this.hasGroupWithName(groupable, name);
@@ -233,7 +233,7 @@ export class UserGroupService {
         name: name,
         parentID: groupable.id,
       },
-      ecoverseID
+      hubID
     );
     await groupable.groups?.push(newGroup);
     return newGroup;

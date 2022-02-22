@@ -4,7 +4,7 @@ import { Field, InputType } from '@nestjs/graphql';
 export class SearchInput {
   @Field(() => [String], {
     nullable: false,
-    description: 'The terms to be searched for within this Ecoverse. Max 5.',
+    description: 'The terms to be searched for within this Hub. Max 5.',
   })
   terms!: string[];
 

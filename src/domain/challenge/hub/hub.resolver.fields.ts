@@ -1,6 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
+import { Hub } from '@domain/challenge/hub/hub.entity';
 import { IProject } from '@domain/collaboration/project';
 import { INVP } from '@domain/common/nvp';
 import { UUID, UUID_NAMEID } from '@domain/common/scalars';
@@ -13,84 +13,102 @@ import { IUserGroup } from '@domain/community/user-group';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationAgentPrivilege,
   CurrentUser,
   Profiling,
 } from '@src/common/decorators';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
-import { IEcoverse } from '@domain/challenge/ecoverse/ecoverse.interface';
+import { HubService } from '@domain/challenge/hub/hub.service';
+import { IHub } from '@domain/challenge/hub/hub.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { IAgent } from '@domain/agent/agent';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
-import { HubTemplate } from './dto/ecoverse.dto.template.hub';
+import { HubTemplate } from './dto/hub.dto.template.hub';
 
-@Resolver(() => IEcoverse)
-export class EcoverseResolverFields {
+@Resolver(() => IHub)
+export class HubResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
     private groupService: UserGroupService,
     private applicationService: ApplicationService,
-    private ecoverseService: EcoverseService
+    private hubService: HubService
   ) {}
 
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description:
-      'Get a Community within the Ecoverse. Defaults to the Community for the Ecoverse itself.',
+      'Get a Community within the Hub. Defaults to the Community for the Hub itself.',
   })
   @Profiling.api
   async community(
-    @Parent() ecoverse: Ecoverse,
+    @Parent() hub: Hub,
     @Args('ID', { type: () => UUID, nullable: true }) ID: string
   ) {
-    // Default to returning the community for the Ecoverse
+    // Default to returning the community for the Hub
     if (!ID) {
-      return await this.ecoverseService.getCommunity(ecoverse);
+      return await this.hubService.getCommunity(hub);
     }
-    return await this.ecoverseService.getCommunityInNameableScope(ID, ecoverse);
+    return await this.hubService.getCommunityInNameableScope(ID, hub);
   }
 
   @ResolveField('context', () => IContext, {
     nullable: true,
-    description: 'The context for the ecoverse.',
+    description: 'The context for the hub.',
   })
   @Profiling.api
-  async context(@Parent() ecoverse: Ecoverse) {
-    return await this.ecoverseService.getContext(ecoverse);
+  async context(@Parent() hub: Hub) {
+    return await this.hubService.getContext(hub);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('agent', () => IAgent, {
     nullable: true,
-    description: 'The Agent representing this Ecoverse.',
+    description: 'The Agent representing this Hub.',
   })
   @Profiling.api
-  async agent(@Parent() ecoverse: Ecoverse): Promise<IAgent> {
-    return await this.ecoverseService.getAgent(ecoverse.id);
+  async agent(@Parent() hub: Hub): Promise<IAgent> {
+    return await this.hubService.getAgent(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('challenges', () => [IChallenge], {
     nullable: true,
-    description: 'The challenges for the ecoverse.',
+    description: 'The challenges for the hub.',
   })
   @UseGuards(GraphqlGuard)
   @Profiling.api
-  async challenges(@Parent() ecoverse: Ecoverse) {
-    return await this.ecoverseService.getChallenges(ecoverse);
+  async challenges(
+    @Parent() hub: Hub,
+    @Args({
+      name: 'limit',
+      type: () => Float,
+      description:
+        'The number of Challenges to return; if omitted return all Challenges.',
+      nullable: true,
+    })
+    limit: number,
+    @Args({
+      name: 'shuffle',
+      type: () => Boolean,
+      description:
+        'If true and limit is specified then return the Challenges based on a random selection.',
+      nullable: true,
+    })
+    shuffle: boolean
+  ) {
+    return await this.hubService.getChallenges(hub, limit, shuffle);
   }
 
   @ResolveField('tagset', () => ITagset, {
     nullable: true,
-    description: 'The set of tags for the  ecoverse.',
+    description: 'The set of tags for the  hub.',
   })
   @Profiling.api
-  async tagset(@Parent() ecoverse: Ecoverse) {
-    return ecoverse.tagset;
+  async tagset(@Parent() hub: Hub) {
+    return hub.tagset;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -102,20 +120,20 @@ export class EcoverseResolverFields {
   @Profiling.api
   async challenge(
     @Args('ID', { type: () => UUID_NAMEID }) id: string,
-    @Parent() ecoverse: Ecoverse
+    @Parent() hub: Hub
   ): Promise<IChallenge> {
-    return await this.ecoverseService.getChallengeInNameableScope(id, ecoverse);
+    return await this.hubService.getChallengeInNameableScope(id, hub);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('opportunities', () => [IOpportunity], {
     nullable: false,
-    description: 'All opportunities within the ecoverse',
+    description: 'All opportunities within the hub',
   })
   @UseGuards(GraphqlGuard)
   @Profiling.api
-  async opportunities(@Parent() ecoverse: Ecoverse): Promise<IOpportunity[]> {
-    return await this.ecoverseService.getOpportunitiesInNameableScope(ecoverse);
+  async opportunities(@Parent() hub: Hub): Promise<IOpportunity[]> {
+    return await this.hubService.getOpportunitiesInNameableScope(hub);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -127,23 +145,20 @@ export class EcoverseResolverFields {
   @Profiling.api
   async opportunity(
     @Args('ID', { type: () => UUID_NAMEID }) id: string,
-    @Parent() ecoverse: Ecoverse
+    @Parent() hub: Hub
   ): Promise<IOpportunity> {
-    return await this.ecoverseService.getOpportunityInNameableScope(
-      id,
-      ecoverse
-    );
+    return await this.hubService.getOpportunityInNameableScope(id, hub);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('projects', () => [IProject], {
     nullable: false,
-    description: 'All projects within this ecoverse',
+    description: 'All projects within this hub',
   })
   @UseGuards(GraphqlGuard)
   @Profiling.api
-  async projects(@Parent() ecoverse: Ecoverse): Promise<IProject[]> {
-    return await this.ecoverseService.getProjects(ecoverse);
+  async projects(@Parent() hub: Hub): Promise<IProject[]> {
+    return await this.hubService.getProjects(hub);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -154,25 +169,22 @@ export class EcoverseResolverFields {
   @UseGuards(GraphqlGuard)
   @Profiling.api
   async project(
-    @Parent() ecoverse: Ecoverse,
+    @Parent() hub: Hub,
     @Args('ID', { type: () => UUID_NAMEID }) projectID: string
   ): Promise<IProject> {
-    return await this.ecoverseService.getProjectInNameableScope(
-      projectID,
-      ecoverse
-    );
+    return await this.hubService.getProjectInNameableScope(projectID, hub);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
     nullable: false,
-    description: 'The User Groups on this Ecoverse',
+    description: 'The User Groups on this Hub',
   })
   @Profiling.api
-  async groups(@Parent() ecoverse: Ecoverse): Promise<IUserGroup[]> {
+  async groups(@Parent() hub: Hub): Promise<IUserGroup[]> {
     return await this.groupService.getGroups({
-      ecoverseID: ecoverse.id,
+      hubID: hub.id,
     });
   }
 
@@ -180,15 +192,15 @@ export class EcoverseResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('groupsWithTag', () => [IUserGroup], {
     nullable: false,
-    description: 'All groups on this Ecoverse that have the provided tag',
+    description: 'All groups on this Hub that have the provided tag',
   })
   @Profiling.api
   async groupsWithTag(
-    @Parent() ecoverse: Ecoverse,
+    @Parent() hub: Hub,
     @Args('tag') tag: string
   ): Promise<IUserGroup[]> {
     return await this.groupService.getGroupsWithTag(tag, {
-      ecoverseID: ecoverse.id,
+      hubID: hub.id,
     });
   }
 
@@ -196,16 +208,15 @@ export class EcoverseResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('group', () => IUserGroup, {
     nullable: false,
-    description:
-      'The user group with the specified id anywhere in the ecoverse',
+    description: 'The user group with the specified id anywhere in the hub',
   })
   @Profiling.api
   async group(
-    @Parent() ecoverse: Ecoverse,
+    @Parent() hub: Hub,
     @Args('ID', { type: () => UUID }) groupID: string
   ): Promise<IUserGroup> {
     return await this.groupService.getUserGroupOrFail(groupID, {
-      where: { ecoverseID: ecoverse.id },
+      where: { hubID: hub.id },
     });
   }
 
@@ -216,13 +227,13 @@ export class EcoverseResolverFields {
   })
   async application(
     @CurrentUser() agentInfo: AgentInfo,
-    @Parent() ecoverse: Ecoverse,
+    @Parent() hub: Hub,
     @Args('ID', { type: () => UUID }) applicationID: string
   ): Promise<IApplication> {
     const application = await this.applicationService.getApplicationOrFail(
       applicationID,
       {
-        where: { ecoverseID: ecoverse.id },
+        where: { hubID: hub.id },
       }
     );
     // Check the user can access this particular application
@@ -230,27 +241,27 @@ export class EcoverseResolverFields {
       agentInfo,
       application.authorization,
       AuthorizationPrivilege.READ,
-      `read application: ${application.id} on hub ${ecoverse.nameID}`
+      `read application: ${application.id} on hub ${hub.nameID}`
     );
     return application;
   }
 
   @ResolveField('activity', () => [INVP], {
     nullable: true,
-    description: 'The activity within this Ecoverse.',
+    description: 'The activity within this Hub.',
   })
   @Profiling.api
-  async activity(@Parent() ecoverse: Ecoverse) {
-    return await this.ecoverseService.getActivity(ecoverse);
+  async activity(@Parent() hub: Hub) {
+    return await this.hubService.getActivity(hub);
   }
 
   @ResolveField('host', () => IOrganization, {
     nullable: true,
-    description: 'The Ecoverse host.',
+    description: 'The Hub host.',
   })
   @Profiling.api
-  async host(@Parent() ecoverse: Ecoverse): Promise<IOrganization | undefined> {
-    return await this.ecoverseService.getHost(ecoverse.id);
+  async host(@Parent() hub: Hub): Promise<IOrganization | undefined> {
+    return await this.hubService.getHost(hub.id);
   }
 
   @ResolveField('template', () => HubTemplate, {
@@ -258,7 +269,7 @@ export class EcoverseResolverFields {
     description: 'The template for this Hub.',
   })
   @Profiling.api
-  async templates(@Parent() ecoverse: IEcoverse): Promise<HubTemplate> {
-    return this.ecoverseService.getHubTemplates(ecoverse);
+  async templates(@Parent() hub: IHub): Promise<HubTemplate> {
+    return this.hubService.getHubTemplates(hub);
   }
 }

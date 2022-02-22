@@ -7,7 +7,7 @@ import {
   UpdateChallengeInput,
 } from '@domain/challenge/challenge';
 import { CreateContextInput } from '@domain/context/context';
-import { UpdateEcoverseInput } from '@domain/challenge/ecoverse/dto/ecoverse.dto.update';
+import { UpdateHubInput } from '@domain/challenge/hub/dto/hub.dto.update';
 import { CreateOrganizationInput } from '@domain/community/organization';
 import { CreateProfileInput } from '@domain/community/profile';
 import {
@@ -29,6 +29,7 @@ import {
 } from '@domain/collaboration/opportunity';
 import { UpdateUserGroupInput } from '@domain/community/user-group';
 import { CreateAspectOnContextInput } from '@domain/context/context/dto/context.dto.create.aspect';
+import { CreateAspectInput } from '@domain/context/aspect/dto/aspect.dto.create';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -49,7 +50,8 @@ export class BaseHandler extends AbstractHandler {
       CreateRelationInput,
       CreateTagsetInput,
       CreateUserInput,
-      UpdateEcoverseInput,
+      CreateAspectInput,
+      UpdateHubInput,
       UpdateOpportunityInput,
       UpdateChallengeInput,
       UpdateUserGroupInput,

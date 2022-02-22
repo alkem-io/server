@@ -122,7 +122,7 @@ export class ProfileService {
 
   async createTagset(tagsetData: CreateTagsetOnProfileInput): Promise<ITagset> {
     const profile = await this.getProfileOrFail(tagsetData.profileID, {
-      relations: ['references'],
+      relations: ['tagsets'],
     });
 
     const tagset = await this.tagsetService.addTagsetWithName(

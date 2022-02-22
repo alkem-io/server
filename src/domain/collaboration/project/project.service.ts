@@ -35,12 +35,12 @@ export class ProjectService {
 
   async createProject(
     projectData: CreateProjectInput,
-    ecoverseID: string
+    hubID: string
   ): Promise<IProject> {
-    await this.isNameAvailableOrFail(projectData.nameID, ecoverseID);
+    await this.isNameAvailableOrFail(projectData.nameID, hubID);
     const project: IProject = Project.create(projectData);
     project.authorization = new AuthorizationPolicy();
-    project.ecoverseID = ecoverseID;
+    project.hubID = hubID;
 
     await this.projectRepository.save(project);
 
@@ -79,7 +79,7 @@ export class ProjectService {
     let project: IProject | undefined;
     if (projectID.length == UUID_LENGTH) {
       project = await this.projectRepository.findOne(
-        { id: projectID, ecoverseID: nameableScopeID },
+        { id: projectID, hubID: nameableScopeID },
         options
       );
     }
@@ -87,7 +87,7 @@ export class ProjectService {
     if (!project) {
       // look up based on nameID instead
       project = await this.projectRepository.findOne(
-        { nameID: projectID, ecoverseID: nameableScopeID },
+        { nameID: projectID, hubID: nameableScopeID },
         options
       );
     }
@@ -104,7 +104,7 @@ export class ProjectService {
 
   async isNameAvailableOrFail(nameID: string, nameableScopeID: string) {
     if (
-      !(await this.namingService.isNameIdAvailableInEcoverse(
+      !(await this.namingService.isNameIdAvailableInHub(
         nameID,
         nameableScopeID
       ))
@@ -131,9 +131,9 @@ export class ProjectService {
     return project;
   }
 
-  async getProjects(ecoverseID: string): Promise<Project[]> {
+  async getProjects(hubID: string): Promise<Project[]> {
     const projects = await this.projectRepository.find({
-      ecoverseID: ecoverseID,
+      hubID: hubID,
     });
     return projects || [];
   }
@@ -168,9 +168,9 @@ export class ProjectService {
     return project.lifecycle;
   }
 
-  async getProjectsInEcoverseCount(ecoverseID: string): Promise<number> {
+  async getProjectsInHubCount(hubID: string): Promise<number> {
     const count = await this.projectRepository.count({
-      where: { ecoverseID: ecoverseID },
+      where: { hubID: hubID },
     });
     return count;
   }

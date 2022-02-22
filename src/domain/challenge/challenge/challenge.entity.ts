@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
+import { Hub } from '@domain/challenge/hub/hub.entity';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
@@ -26,15 +26,15 @@ export class Challenge extends BaseChallenge implements IChallenge {
   })
   parentChallenge?: Challenge;
 
-  @ManyToOne(() => Ecoverse, ecoverse => ecoverse.challenges, {
+  @ManyToOne(() => Hub, hub => hub.challenges, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  parentEcoverse?: Ecoverse;
+  parentHub?: Hub;
 
   @Column()
-  ecoverseID!: string;
+  hubID!: string;
 
   constructor() {
     super();

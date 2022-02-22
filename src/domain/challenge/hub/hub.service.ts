@@ -7,10 +7,7 @@ import {
 } from '@common/exceptions';
 import { IAgent } from '@domain/agent/agent';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import {
-  CreateEcoverseInput,
-  DeleteEcoverseInput,
-} from '@domain/challenge/ecoverse';
+import { CreateHubInput, DeleteHubInput } from '@domain/challenge/hub';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { IProject } from '@domain/collaboration/project';
@@ -31,21 +28,23 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { Ecoverse } from './ecoverse.entity';
-import { IEcoverse } from './ecoverse.interface';
+import { Hub } from './hub.entity';
+import { IHub } from './hub.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AssignEcoverseAdminInput } from './dto/ecoverse.dto.assign.admin';
+import { AssignHubAdminInput } from './dto/hub.dto.assign.admin';
 import { IUser } from '@domain/community/user/user.interface';
-import { RemoveEcoverseAdminInput } from './dto/ecoverse.dto.remove.admin';
+import { RemoveHubAdminInput } from './dto/hub.dto.remove.admin';
 import { UserService } from '@domain/community/user/user.service';
-import { UpdateEcoverseInput } from './dto/ecoverse.dto.update';
-import { CreateChallengeOnEcoverseInput } from '../challenge/dto/challenge.dto.create.in.ecoverse';
+import { UpdateHubInput } from './dto/hub.dto.update';
+import { CreateChallengeOnHubInput } from '../challenge/dto/challenge.dto.create.in.hub';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CommunityType } from '@common/enums/community.type';
-import { HubTemplate } from './dto/ecoverse.dto.template.hub';
+import { HubTemplate } from './dto/hub.dto.template.hub';
+import { AgentInfo } from '@src/core';
+import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 
 @Injectable()
-export class EcoverseService {
+export class HubService {
   constructor(
     private agentService: AgentService,
     private organizationService: OrganizationService,
@@ -57,156 +56,168 @@ export class EcoverseService {
     private userService: UserService,
     private communityService: CommunityService,
     private challengeService: ChallengeService,
-    @InjectRepository(Ecoverse)
-    private ecoverseRepository: Repository<Ecoverse>,
+    @InjectRepository(Hub)
+    private hubRepository: Repository<Hub>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createEcoverse(ecoverseData: CreateEcoverseInput): Promise<IEcoverse> {
-    await this.validateEcoverseData(ecoverseData);
-    const ecoverse: IEcoverse = Ecoverse.create(ecoverseData);
+  async createHub(
+    hubData: CreateHubInput,
+    agentInfo?: AgentInfo
+  ): Promise<IHub> {
+    await this.validateHubData(hubData);
+    const hub: IHub = Hub.create(hubData);
 
     // remove context before saving as want to control that creation
-    ecoverse.context = undefined;
-    await this.ecoverseRepository.save(ecoverse);
+    hub.context = undefined;
+    await this.hubRepository.save(hub);
     await this.baseChallengeService.initialise(
-      ecoverse,
-      ecoverseData,
-      ecoverse.id,
+      hub,
+      hubData,
+      hub.id,
       CommunityType.HUB
     );
     // set the credential type in use by the community
     await this.baseChallengeService.setMembershipCredential(
-      ecoverse,
-      AuthorizationCredential.ECOVERSE_MEMBER
+      hub,
+      AuthorizationCredential.HUB_MEMBER
     );
 
     // set immediate community parent
-    if (ecoverse.community) {
-      ecoverse.community.parentID = ecoverse.id;
+    if (hub.community) {
+      hub.community.parentID = hub.id;
     }
 
     // Lifecycle
     const machineConfig: any = challengeLifecycleConfigDefault;
-    ecoverse.lifecycle = await this.lifecycleService.createLifecycle(
-      ecoverse.id,
+    hub.lifecycle = await this.lifecycleService.createLifecycle(
+      hub.id,
       machineConfig
     );
 
     // save before assigning host in case that fails
-    const savedEcoverse = await this.ecoverseRepository.save(ecoverse);
+    const savedHub = await this.hubRepository.save(hub);
 
-    await this.setEcoverseHost(ecoverse.id, ecoverseData.hostID);
+    await this.setHubHost(hub.id, hubData.hostID);
 
-    return savedEcoverse;
+    if (agentInfo) {
+      await this.assignMember(agentInfo.userID, hub.id);
+
+      await this.assignHubAdmin({
+        hubID: hub.id,
+        userID: agentInfo.userID,
+      });
+    }
+
+    return savedHub;
   }
 
-  async validateEcoverseData(ecoverseData: CreateEcoverseInput) {
-    if (!(await this.isNameIdAvailable(ecoverseData.nameID)))
+  async validateHubData(hubData: CreateHubInput) {
+    if (!(await this.isNameIdAvailable(hubData.nameID)))
       throw new ValidationException(
-        `Unable to create Ecoverse: the provided nameID is already taken: ${ecoverseData.nameID}`,
+        `Unable to create Hub: the provided nameID is already taken: ${hubData.nameID}`,
         LogContext.CHALLENGES
       );
   }
 
-  async update(ecoverseData: UpdateEcoverseInput): Promise<IEcoverse> {
-    const ecoverse: IEcoverse = await this.baseChallengeService.update(
-      ecoverseData,
-      this.ecoverseRepository
+  async update(hubData: UpdateHubInput): Promise<IHub> {
+    const hub: IHub = await this.baseChallengeService.update(
+      hubData,
+      this.hubRepository
     );
 
-    if (ecoverseData.nameID) {
-      if (ecoverseData.nameID !== ecoverse.nameID) {
+    if (hubData.nameID) {
+      if (hubData.nameID !== hub.nameID) {
         // updating the nameID, check new value is allowed
-        const updateAllowed = await this.isNameIdAvailable(ecoverseData.nameID);
+        const updateAllowed = await this.isNameIdAvailable(hubData.nameID);
         if (!updateAllowed) {
           throw new ValidationException(
-            `Unable to update Ecoverse nameID: the provided nameID is already taken: ${ecoverseData.nameID}`,
+            `Unable to update Hub nameID: the provided nameID is already taken: ${hubData.nameID}`,
             LogContext.CHALLENGES
           );
         }
-        ecoverse.nameID = ecoverseData.nameID;
+        hub.nameID = hubData.nameID;
       }
     }
 
-    if (ecoverseData.hostID) {
-      await this.setEcoverseHost(ecoverse.id, ecoverseData.hostID);
+    if (hubData.hostID) {
+      await this.setHubHost(hub.id, hubData.hostID);
     }
 
-    if (ecoverseData.template) {
-      const hubTemplate: HubTemplate = ecoverseData.template;
-      ecoverse.template = JSON.stringify(hubTemplate);
+    if (hubData.template) {
+      const hubTemplate: HubTemplate = hubData.template;
+      hub.template = JSON.stringify(hubTemplate);
     }
 
-    return await this.ecoverseRepository.save(ecoverse);
+    return await this.hubRepository.save(hub);
   }
 
-  async deleteEcoverse(deleteData: DeleteEcoverseInput): Promise<IEcoverse> {
-    const ecoverse = await this.getEcoverseOrFail(deleteData.ID, {
+  async deleteHub(deleteData: DeleteHubInput): Promise<IHub> {
+    const hub = await this.getHubOrFail(deleteData.ID, {
       relations: ['challenges'],
     });
 
-    // Do not remove an ecoverse that has child challenges , require these to be individually first removed
-    if (ecoverse.challenges && ecoverse.challenges.length > 0)
+    // Do not remove an hub that has child challenges , require these to be individually first removed
+    if (hub.challenges && hub.challenges.length > 0)
       throw new ValidationException(
-        `Unable to remove Ecoverse (${ecoverse.nameID}) as it contains ${ecoverse.challenges.length} challenges`,
+        `Unable to remove Hub (${hub.nameID}) as it contains ${hub.challenges.length} challenges`,
         LogContext.CHALLENGES
       );
 
-    const baseChallenge = await this.getEcoverseOrFail(deleteData.ID, {
+    const baseChallenge = await this.getHubOrFail(deleteData.ID, {
       relations: ['community', 'context', 'lifecycle', 'agent'],
     });
     await this.baseChallengeService.deleteEntities(baseChallenge);
 
     // Remove any host credentials
-    const hostOrg = await this.getHost(ecoverse.id);
+    const hostOrg = await this.getHost(hub.id);
     if (hostOrg) {
       const agentHostOrg = await this.organizationService.getAgent(hostOrg);
       hostOrg.agent = await this.agentService.revokeCredential({
         agentID: agentHostOrg.id,
-        type: AuthorizationCredential.ECOVERSE_HOST,
-        resourceID: ecoverse.id,
+        type: AuthorizationCredential.HUB_HOST,
+        resourceID: hub.id,
       });
       await this.organizationService.save(hostOrg);
     }
 
-    const result = await this.ecoverseRepository.remove(ecoverse as Ecoverse);
+    const result = await this.hubRepository.remove(hub as Hub);
     result.id = deleteData.ID;
     return result;
   }
 
-  async getEcoverses(): Promise<IEcoverse[]> {
-    // Load the ecoverses
-    const ecoverses: IEcoverse[] = await this.ecoverseRepository.find();
-    if (ecoverses.length === 0) return [];
+  async getHubs(): Promise<IHub[]> {
+    // Load the hubs
+    const hubs: IHub[] = await this.hubRepository.find();
+    if (hubs.length === 0) return [];
 
     // Get the order to return the data in
-    const sortedIDs = await this.getEcoversesSortOrderDefault();
-    const ecoversesResult: IEcoverse[] = [];
-    for (const ecoverseID of sortedIDs) {
-      const ecoverse = ecoverses.find(ecoverse => ecoverse.id === ecoverseID);
-      if (ecoverse) {
-        ecoversesResult.push(ecoverse);
+    const sortedIDs = await this.getHubsSortOrderDefault();
+    const hubsResult: IHub[] = [];
+    for (const hubID of sortedIDs) {
+      const hub = hubs.find(hub => hub.id === hubID);
+      if (hub) {
+        hubsResult.push(hub);
       } else {
         this.logger.error(
-          'Invalid state error when sorting Ecoverses!',
+          'Invalid state error when sorting Hubs!',
           LogContext.CHALLENGES
         );
       }
     }
-    return ecoversesResult;
+    return hubsResult;
   }
 
-  private async getEcoversesSortOrderDefault(): Promise<string[]> {
+  private async getHubsSortOrderDefault(): Promise<string[]> {
     // Then load data to do the sorting
-    const ecoversesDataForSorting = await this.ecoverseRepository
-      .createQueryBuilder('ecoverse')
-      .leftJoinAndSelect('ecoverse.challenges', 'challenge')
-      .leftJoinAndSelect('ecoverse.authorization', 'authorization_policy')
+    const hubsDataForSorting = await this.hubRepository
+      .createQueryBuilder('hub')
+      .leftJoinAndSelect('hub.challenges', 'challenge')
+      .leftJoinAndSelect('hub.authorization', 'authorization_policy')
       .leftJoinAndSelect('challenge.opportunities', 'opportunities')
       .getMany();
 
-    const sortedEcoverses = ecoversesDataForSorting.sort((a, b) => {
+    const sortedHubs = hubsDataForSorting.sort((a, b) => {
       if (
         a.authorization?.anonymousReadAccess === true &&
         b.authorization?.anonymousReadAccess === false
@@ -225,7 +236,7 @@ export class EcoverseService {
       // Shouldn't get there
       if (!a.challenges || !b.challenges)
         throw new ValidationException(
-          `Critical error when comparing Ecoverses! Critical error when loading Challenges for Ecoverse ${a} and Ecoverse ${b}`,
+          `Critical error when comparing Hubs! Critical error when loading Challenges for Hub ${a} and Hub ${b}`,
           LogContext.CHALLENGES
         );
 
@@ -243,8 +254,8 @@ export class EcoverseService {
     });
 
     const sortedIDs: string[] = [];
-    for (const ecoverse of sortedEcoverses) {
-      sortedIDs.push(ecoverse.id);
+    for (const hub of sortedHubs) {
+      sortedIDs.push(hub.id);
     }
     return sortedIDs;
   }
@@ -260,42 +271,33 @@ export class EcoverseService {
     return challengeAndOpportunitiesCount;
   }
 
-  async getEcoverseOrFail(
-    ecoverseID: string,
-    options?: FindOneOptions<Ecoverse>
-  ): Promise<IEcoverse> {
-    let ecoverse: IEcoverse | undefined;
-    if (ecoverseID.length === UUID_LENGTH) {
-      ecoverse = await this.ecoverseRepository.findOne(
-        { id: ecoverseID },
-        options
-      );
+  async getHubOrFail(
+    hubID: string,
+    options?: FindOneOptions<Hub>
+  ): Promise<IHub> {
+    let hub: IHub | undefined;
+    if (hubID.length === UUID_LENGTH) {
+      hub = await this.hubRepository.findOne({ id: hubID }, options);
     }
-    if (!ecoverse) {
+    if (!hub) {
       // look up based on nameID
-      ecoverse = await this.ecoverseRepository.findOne(
-        { nameID: ecoverseID },
-        options
-      );
+      hub = await this.hubRepository.findOne({ nameID: hubID }, options);
     }
-    if (!ecoverse)
+    if (!hub)
       throw new EntityNotFoundException(
-        `Unable to find Ecoverse with ID: ${ecoverseID}`,
+        `Unable to find Hub with ID: ${hubID}`,
         LogContext.CHALLENGES
       );
-    return ecoverse;
+    return hub;
   }
 
-  async setEcoverseHost(
-    ecoverseID: string,
-    hostOrgID: string
-  ): Promise<IEcoverse> {
+  async setHubHost(hubID: string, hostOrgID: string): Promise<IHub> {
     const organization = await this.organizationService.getOrganizationOrFail(
       hostOrgID,
       { relations: ['groups', 'agent'] }
     );
 
-    const existingHost = await this.getHost(ecoverseID);
+    const existingHost = await this.getHost(hubID);
 
     if (existingHost) {
       const agentExisting = await this.organizationService.getAgent(
@@ -303,8 +305,8 @@ export class EcoverseService {
       );
       organization.agent = await this.agentService.revokeCredential({
         agentID: agentExisting.id,
-        type: AuthorizationCredential.ECOVERSE_HOST,
-        resourceID: ecoverseID,
+        type: AuthorizationCredential.HUB_HOST,
+        resourceID: hubID,
       });
     }
 
@@ -312,118 +314,124 @@ export class EcoverseService {
     const agent = await this.organizationService.getAgent(organization);
     organization.agent = await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ECOVERSE_HOST,
-      resourceID: ecoverseID,
+      type: AuthorizationCredential.HUB_HOST,
+      resourceID: hubID,
     });
 
     await this.organizationService.save(organization);
-    return await this.getEcoverseOrFail(ecoverseID);
+    return await this.getHubOrFail(hubID);
   }
 
   async isNameIdAvailable(nameID: string): Promise<boolean> {
-    const challengeCount = await this.ecoverseRepository.count({
+    const challengeCount = await this.hubRepository.count({
       nameID: nameID,
     });
     if (challengeCount != 0) return false;
 
-    // check restricted ecoverse names
-    const restrictedEcoverseNames = ['user', 'organization'];
-    if (restrictedEcoverseNames.includes(nameID.toLowerCase())) return false;
+    // check restricted hub names
+    const restrictedHubNames = ['user', 'organization'];
+    if (restrictedHubNames.includes(nameID.toLowerCase())) return false;
 
     return true;
   }
 
-  async getChallenges(ecoverse: IEcoverse): Promise<IChallenge[]> {
-    const ecoverseWithChallenges = await this.getEcoverseOrFail(ecoverse.id, {
+  async getChallenges(
+    hub: IHub,
+    limit?: number,
+    shuffle?: boolean
+  ): Promise<IChallenge[]> {
+    const hubWithChallenges = await this.getHubOrFail(hub.id, {
       relations: ['challenges'],
     });
-    const challenges = ecoverseWithChallenges.challenges;
-    if (!challenges)
+    const challenges = hubWithChallenges.challenges;
+    if (!challenges) {
       throw new RelationshipNotFoundException(
-        `Unable to load challenges for Ecoverse ${ecoverse.id} `,
+        `Unable to load challenges for Hub ${hub.id} `,
         LogContext.CHALLENGES
       );
+    }
+
+    const limitAndShuffled = limitAndShuffle(challenges, limit, shuffle);
 
     // Sort the challenges base on their display name
-    const sortedChallenges = challenges.sort((a, b) =>
+    const sortedChallenges = limitAndShuffled.sort((a, b) =>
       a.displayName > b.displayName ? 1 : -1
     );
     return sortedChallenges;
   }
 
-  async getGroups(ecoverse: IEcoverse): Promise<IUserGroup[]> {
-    const community = await this.getCommunity(ecoverse);
+  async getGroups(hub: IHub): Promise<IUserGroup[]> {
+    const community = await this.getCommunity(hub);
     return await this.communityService.getUserGroups(community);
   }
 
-  async getOpportunitiesInNameableScope(
-    ecoverse: IEcoverse
-  ): Promise<IOpportunity[]> {
+  async getOpportunitiesInNameableScope(hub: IHub): Promise<IOpportunity[]> {
     return await this.opportunityService.getOpportunitiesInNameableScope(
-      ecoverse.id
+      hub.id
     );
   }
 
   async getOpportunityInNameableScope(
     opportunityID: string,
-    ecoverse: IEcoverse
+    hub: IHub
   ): Promise<IOpportunity> {
     return await this.opportunityService.getOpportunityInNameableScopeOrFail(
       opportunityID,
-      ecoverse.id
+      hub.id
     );
   }
 
   async getChallengeInNameableScope(
     challengeID: string,
-    ecoverse: IEcoverse
+    hub: IHub
   ): Promise<IChallenge> {
     return await this.challengeService.getChallengeInNameableScopeOrFail(
       challengeID,
-      ecoverse.id
+      hub.id
     );
   }
 
   async getProjectInNameableScope(
     projectID: string,
-    ecoverse: IEcoverse
+    hub: IHub
   ): Promise<IProject> {
     return await this.projectService.getProjectInNameableScopeOrFail(
       projectID,
-      ecoverse.id
+      hub.id
     );
   }
 
-  async getCommunity(ecoverse: IEcoverse): Promise<ICommunity> {
+  async getCommunity(hub: IHub): Promise<ICommunity> {
     return await this.baseChallengeService.getCommunity(
-      ecoverse.id,
-      this.ecoverseRepository
+      hub.id,
+      this.hubRepository
     );
   }
 
-  async getContext(ecoverse: IEcoverse): Promise<IContext> {
+  async getContext(hub: IHub): Promise<IContext> {
     return await this.baseChallengeService.getContext(
-      ecoverse.id,
-      this.ecoverseRepository
+      hub.id,
+      this.hubRepository
     );
   }
 
-  async getLifecycle(ecoverse: IEcoverse): Promise<ILifecycle> {
+  async getLifecycle(hub: IHub): Promise<ILifecycle> {
     return await this.baseChallengeService.getLifecycle(
-      ecoverse.id,
-      this.ecoverseRepository
+      hub.id,
+      this.hubRepository
     );
   }
 
-  async createChallengeInEcoverse(
-    challengeData: CreateChallengeOnEcoverseInput
+  async createChallengeInHub(
+    challengeData: CreateChallengeOnHubInput,
+    agentInfo?: AgentInfo
   ): Promise<IChallenge> {
-    const ecoverse = await this.getEcoverseOrFail(challengeData.ecoverseID, {
+    const hub = await this.getHubOrFail(challengeData.hubID, {
       relations: ['challenges', 'community'],
     });
-    const nameAvailable = await this.namingService.isNameIdAvailableInEcoverse(
+    const nameAvailable = await this.namingService.isNameIdAvailableInHub(
       challengeData.nameID,
-      ecoverse.id
+      hub.id
     );
     if (!nameAvailable)
       throw new ValidationException(
@@ -434,169 +442,172 @@ export class EcoverseService {
     // Update the challenge data being passed in to state set the parent ID to the contained challenge
     const newChallenge = await this.challengeService.createChallenge(
       challengeData,
-      ecoverse.id
+      hub.id,
+      agentInfo
     );
-    if (!ecoverse.challenges)
+    if (!hub.challenges)
       throw new ValidationException(
-        `Unable to create Challenge: challenges not initialized: ${challengeData.ecoverseID}`,
+        `Unable to create Challenge: challenges not initialized: ${challengeData.hubID}`,
         LogContext.CHALLENGES
       );
 
-    ecoverse.challenges.push(newChallenge);
+    hub.challenges.push(newChallenge);
     // Finally set the community relationship
     await this.communityService.setParentCommunity(
       newChallenge.community,
-      ecoverse.community
+      hub.community
     );
 
-    await this.ecoverseRepository.save(ecoverse);
+    await this.hubRepository.save(hub);
     return newChallenge;
   }
 
-  async getChallenge(
-    challengeID: string,
-    ecoverse: IEcoverse
-  ): Promise<IChallenge> {
+  async getChallenge(challengeID: string, hub: IHub): Promise<IChallenge> {
     return await this.challengeService.getChallengeInNameableScopeOrFail(
       challengeID,
-      ecoverse.id
+      hub.id
     );
   }
 
   async getCommunityInNameableScope(
     communityID: string,
-    ecoverse: IEcoverse
+    hub: IHub
   ): Promise<ICommunity> {
     return await this.communityService.getCommunityInNameableScopeOrFail(
       communityID,
-      ecoverse.id
+      hub.id
     );
   }
 
-  async getProjects(ecoverse: IEcoverse): Promise<IProject[]> {
-    return await this.projectService.getProjects(ecoverse.id);
+  async getProjects(hub: IHub): Promise<IProject[]> {
+    return await this.projectService.getProjects(hub.id);
   }
 
-  async getActivity(ecoverse: IEcoverse): Promise<INVP[]> {
+  async getActivity(hub: IHub): Promise<INVP[]> {
     const activity: INVP[] = [];
 
     // Challenges
-    const challengesCount =
-      await this.challengeService.getChallengesInEcoverseCount(ecoverse.id);
+    const challengesCount = await this.challengeService.getChallengesInHubCount(
+      hub.id
+    );
     const challengesTopic = new NVP('challenges', challengesCount.toString());
-    challengesTopic.id = `challenges-${ecoverse.id}`;
+    challengesTopic.id = `challenges-${hub.id}`;
     activity.push(challengesTopic);
 
     const opportunitiesCount =
-      await this.opportunityService.getOpportunitiesInEcoverseCount(
-        ecoverse.id
-      );
+      await this.opportunityService.getOpportunitiesInHubCount(hub.id);
     const opportunitiesTopic = new NVP(
       'opportunities',
       opportunitiesCount.toString()
     );
-    opportunitiesTopic.id = `opportunities-${ecoverse.id}`;
+    opportunitiesTopic.id = `opportunities-${hub.id}`;
     activity.push(opportunitiesTopic);
 
     // Projects
-    const projectsCount = await this.projectService.getProjectsInEcoverseCount(
-      ecoverse.id
+    const projectsCount = await this.projectService.getProjectsInHubCount(
+      hub.id
     );
     const projectsTopic = new NVP('projects', projectsCount.toString());
-    projectsTopic.id = `projects-${ecoverse.id}`;
+    projectsTopic.id = `projects-${hub.id}`;
     activity.push(projectsTopic);
 
     // Members
-    const membersCount = await this.getMembersCount(ecoverse);
+    const membersCount = await this.getMembersCount(hub);
     const membersTopic = new NVP('members', membersCount.toString());
-    membersTopic.id = `members-${ecoverse.id}`;
+    membersTopic.id = `members-${hub.id}`;
     activity.push(membersTopic);
 
     return activity;
   }
 
-  async getChallengesCount(ecoverseID: string): Promise<number> {
-    return await this.challengeService.getChallengesInEcoverseCount(ecoverseID);
+  async getChallengesCount(hubID: string): Promise<number> {
+    return await this.challengeService.getChallengesInHubCount(hubID);
   }
 
-  async getAgent(ecoverseID: string): Promise<IAgent> {
-    return await this.baseChallengeService.getAgent(
-      ecoverseID,
-      this.ecoverseRepository
-    );
+  async getAgent(hubID: string): Promise<IAgent> {
+    return await this.baseChallengeService.getAgent(hubID, this.hubRepository);
   }
 
-  async getMembersCount(ecoverse: IEcoverse): Promise<number> {
+  async getMembersCount(hub: IHub): Promise<number> {
     return await this.baseChallengeService.getMembersCount(
-      ecoverse,
-      this.ecoverseRepository
+      hub,
+      this.hubRepository
     );
   }
 
-  async getEcoverseCount(): Promise<number> {
-    return await this.ecoverseRepository.count();
+  async getHubCount(): Promise<number> {
+    return await this.hubRepository.count();
   }
 
-  async getHost(ecoverseID: string): Promise<IOrganization | undefined> {
+  async getHost(hubID: string): Promise<IOrganization | undefined> {
     const organizations =
       await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.ECOVERSE_HOST,
-        resourceID: ecoverseID,
+        type: AuthorizationCredential.HUB_HOST,
+        resourceID: hubID,
       });
     if (organizations.length == 0) {
       return undefined;
     }
     if (organizations.length > 1) {
       throw new RelationshipNotFoundException(
-        `More than one host for Ecoverse ${ecoverseID} `,
+        `More than one host for Hub ${hubID} `,
         LogContext.CHALLENGES
       );
     }
     return organizations[0];
   }
 
-  async assignEcoverseAdmin(
-    assignData: AssignEcoverseAdminInput
-  ): Promise<IUser> {
-    const userID = assignData.userID;
+  async assignMember(userID: string, hubId: string) {
     const agent = await this.userService.getAgent(userID);
-    const ecoverse = await this.getEcoverseOrFail(assignData.ecoverseID);
+    const hub = await this.getHubOrFail(hubId);
 
-    // assign the credential
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ECOVERSE_ADMIN,
-      resourceID: ecoverse.id,
+      type: AuthorizationCredential.HUB_MEMBER,
+      resourceID: hub.id,
     });
 
     return await this.userService.getUserWithAgent(userID);
   }
 
-  async removeEcoverseAdmin(
-    removeData: RemoveEcoverseAdminInput
-  ): Promise<IUser> {
-    const ecoverseID = removeData.ecoverseID;
-    const ecoverse = await this.getEcoverseOrFail(ecoverseID);
+  async assignHubAdmin(assignData: AssignHubAdminInput): Promise<IUser> {
+    const userID = assignData.userID;
+    const agent = await this.userService.getAgent(userID);
+    const hub = await this.getHubOrFail(assignData.hubID);
+
+    // assign the credential
+    await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.HUB_ADMIN,
+      resourceID: hub.id,
+    });
+
+    return await this.userService.getUserWithAgent(userID);
+  }
+
+  async removeHubAdmin(removeData: RemoveHubAdminInput): Promise<IUser> {
+    const hubID = removeData.hubID;
+    const hub = await this.getHubOrFail(hubID);
     const agent = await this.userService.getAgent(removeData.userID);
 
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ECOVERSE_ADMIN,
-      resourceID: ecoverse.id,
+      type: AuthorizationCredential.HUB_ADMIN,
+      resourceID: hub.id,
     });
 
     return await this.userService.getUserWithAgent(removeData.userID);
   }
 
-  async getHubTemplates(ecoverse: IEcoverse): Promise<HubTemplate> {
-    const templatesStr = ecoverse.template || '';
+  async getHubTemplates(hub: IHub): Promise<HubTemplate> {
+    const templatesStr = hub.template || '';
     let template = new HubTemplate();
     try {
       template = JSON.parse(templatesStr);
       return template;
     } catch (error: any) {
       this.logger.error(
-        `Unable to retrieve templates for Hub (${ecoverse.nameID}): ${error}`,
+        `Unable to retrieve templates for Hub (${hub.nameID}): ${error}`,
         LogContext.CHALLENGES
       );
     }

@@ -22,7 +22,7 @@ const bootstrap = async () => {
   app.useGlobalFilters(new HttpExceptionsFilter(logger));
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
-  await bootstrapService.bootstrapEcoverse();
+  await bootstrapService.bootstrapHub();
   const corsEnabled = configService.get(ConfigurationTypes.SECURITY).cors
     .enabled;
   if (corsEnabled) {

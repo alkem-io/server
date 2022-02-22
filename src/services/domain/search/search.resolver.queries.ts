@@ -14,7 +14,7 @@ export class SearchResolverQueries {
   @UseGuards(GraphqlGuard)
   @Query(() => [SearchResultEntry], {
     nullable: false,
-    description: 'Search the ecoverse for terms supplied',
+    description: 'Search the hub for terms supplied',
   })
   @Profiling.api
   async search(

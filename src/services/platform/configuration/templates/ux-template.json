@@ -1,6 +1,6 @@
 {
   "name": "default-ux-template",
-  "description": "sample ecoverse template based on Odyssey ecoverse setup; used by CT Web Client to configure the display / options to end users",
+  "description": "sample hub template based on Odyssey hub setup; used by CT Web Client to configure the display / options to end users",
   "users": [
     {
       "name": "default",
@@ -68,7 +68,7 @@
       ]
     }
   ],
-  "ecoverses": [
+  "hubs": [
     {
       "name": "default",
       "applications": [

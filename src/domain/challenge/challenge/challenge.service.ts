@@ -51,6 +51,8 @@ import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
 import { CommunityType } from '@common/enums/community.type';
 import { ClientProxy } from '@nestjs/microservices';
+import { AgentInfo } from '@src/core';
+import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 
 @Injectable()
 export class ChallengeService {
@@ -72,17 +74,18 @@ export class ChallengeService {
 
   async createChallenge(
     challengeData: CreateChallengeInput,
-    ecoverseID: string
+    hubID: string,
+    agentInfo?: AgentInfo
   ): Promise<IChallenge> {
     const challenge: IChallenge = Challenge.create(challengeData);
-    challenge.ecoverseID = ecoverseID;
+    challenge.hubID = hubID;
     challenge.childChallenges = [];
 
     challenge.opportunities = [];
     await this.baseChallengeService.initialise(
       challenge,
       challengeData,
-      ecoverseID,
+      hubID,
       CommunityType.CHALLENGE
     );
 
@@ -124,6 +127,15 @@ export class ChallengeService {
       );
     }
 
+    if (agentInfo) {
+      await this.assignMember(agentInfo.userID, challenge.id);
+
+      await this.assignChallengeAdmin({
+        userID: agentInfo.userID,
+        challengeID: challenge.id,
+      });
+    }
+
     return savedChallenge;
   }
 
@@ -140,7 +152,7 @@ export class ChallengeService {
         // updating the nameID, check new value is allowed
         await this.baseChallengeService.isNameAvailableOrFail(
           challengeData.nameID,
-          challenge.ecoverseID
+          challenge.hubID
         );
         challenge.nameID = challengeData.nameID;
         await this.challengeRepository.save(challenge);
@@ -210,14 +222,14 @@ export class ChallengeService {
     let challenge: IChallenge | undefined;
     if (challengeID.length == UUID_LENGTH) {
       challenge = await this.challengeRepository.findOne(
-        { id: challengeID, ecoverseID: nameableScopeID },
+        { id: challengeID, hubID: nameableScopeID },
         options
       );
     }
     if (!challenge) {
       // look up based on nameID
       challenge = await this.challengeRepository.findOne(
-        { nameID: challengeID, ecoverseID: nameableScopeID },
+        { nameID: challengeID, hubID: nameableScopeID },
         options
       );
     }
@@ -333,17 +345,26 @@ export class ChallengeService {
     );
   }
 
-  async getOpportunities(challengeId: string): Promise<IOpportunity[]> {
+  async getOpportunities(
+    challengeId: string,
+    limit?: number,
+    shuffle = false
+  ): Promise<IOpportunity[]> {
     const challenge = await this.getChallengeOrFail(challengeId, {
       relations: ['opportunities'],
     });
+
     const opportunities = challenge.opportunities;
     if (!opportunities)
       throw new RelationshipNotFoundException(
         `Unable to load Opportunities for challenge ${challengeId} `,
         LogContext.COLLABORATION
       );
-    return opportunities;
+    this.logger.verbose?.(
+      `Querying all Opportunities with limit: ${limit} and shuffle: ${shuffle}`,
+      LogContext.CHALLENGES
+    );
+    return limitAndShuffle(opportunities, limit, shuffle);
   }
 
   // Loads the challenges into the challenge entity if not already present
@@ -370,7 +391,8 @@ export class ChallengeService {
   }
 
   async createChildChallenge(
-    challengeData: CreateChallengeOnChallengeInput
+    challengeData: CreateChallengeOnChallengeInput,
+    agentInfo?: AgentInfo
   ): Promise<IChallenge> {
     this.logger.verbose?.(
       `Adding child Challenge to Challenge (${challengeData.challengeID})`,
@@ -383,12 +405,13 @@ export class ChallengeService {
 
     await this.baseChallengeService.isNameAvailableOrFail(
       challengeData.nameID,
-      challenge.ecoverseID
+      challenge.hubID
     );
 
     const childChallenge = await this.createChallenge(
       challengeData,
-      challenge.ecoverseID
+      challenge.hubID,
+      agentInfo
     );
 
     challenge.childChallenges?.push(childChallenge);
@@ -405,7 +428,8 @@ export class ChallengeService {
   }
 
   async createOpportunity(
-    opportunityData: CreateOpportunityInput
+    opportunityData: CreateOpportunityInput,
+    agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     this.logger.verbose?.(
       `Adding Opportunity to Challenge (${opportunityData.challengeID})`,
@@ -421,12 +445,13 @@ export class ChallengeService {
 
     await this.baseChallengeService.isNameAvailableOrFail(
       opportunityData.nameID,
-      challenge.ecoverseID
+      challenge.hubID
     );
 
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
-      challenge.ecoverseID
+      challenge.hubID,
+      agentInfo
     );
 
     challenge.opportunities?.push(opportunity);
@@ -447,9 +472,9 @@ export class ChallengeService {
     return challenges || [];
   }
 
-  async getChallengesInEcoverseCount(ecoverseID: string): Promise<number> {
+  async getChallengesInHubCount(hubID: string): Promise<number> {
     const count = await this.challengeRepository.count({
-      where: { ecoverseID: ecoverseID },
+      where: { hubID: hubID },
     });
     return count;
   }
@@ -574,6 +599,19 @@ export class ChallengeService {
 
     await this.organizationService.save(organization);
     return challenge;
+  }
+
+  async assignMember(userID: string, challengeId: string) {
+    const agent = await this.userService.getAgent(userID);
+    const challenge = await this.getChallengeOrFail(challengeId);
+
+    await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.CHALLENGE_MEMBER,
+      resourceID: challenge.id,
+    });
+
+    return await this.userService.getUserWithAgent(userID);
   }
 
   async assignChallengeAdmin(

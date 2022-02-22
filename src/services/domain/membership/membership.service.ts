@@ -1,10 +1,10 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EcoverseService } from '@domain/challenge/ecoverse/ecoverse.service';
+import { HubService } from '@domain/challenge/hub/hub.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { MembershipUserInput } from './membership.dto.user.input';
-import { MembershipUserResultEntryEcoverse } from './membership.dto.user.result.entry.ecoverse';
+import { MembershipUserResultEntryHub } from './membership.dto.user.result.entry.hub';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { AuthorizationCredential, LogContext } from '@common/enums';
@@ -23,7 +23,7 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { ApplicationResultEntry } from './membership.dto.application.result.entry';
 import { IUser } from '@domain/community/user/user.interface';
 import { MembershipCommunityResultEntry } from './membership.dto.community.result.entry';
-import { IEcoverse } from '@domain/challenge/ecoverse/ecoverse.interface';
+import { IHub } from '@domain/challenge/hub/hub.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { Repository } from 'typeorm/repository/Repository';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
@@ -40,7 +40,7 @@ export class MembershipService {
   constructor(
     private userService: UserService,
     private userGroupService: UserGroupService,
-    private ecoverseService: EcoverseService,
+    private hubService: HubService,
     private challengeService: ChallengeService,
     private applicationService: ApplicationService,
     private communityService: CommunityService,
@@ -64,7 +64,7 @@ export class MembershipService {
       return membership;
     }
     membership.id = user.id;
-    const storedEcoverse: IEcoverse[] = [];
+    const storedHub: IHub[] = [];
     const storedChallenges: IChallenge[] = [];
     const storedOpportunities: IOpportunity[] = [];
     const storedCommunityUserGroupResults: UserGroupResult[] = [];
@@ -74,13 +74,13 @@ export class MembershipService {
         membership.organizations.push(
           await this.createOrganizationResult(credential.resourceID, user.id)
         );
-      } else if (credential.type === AuthorizationCredential.ECOVERSE_MEMBER) {
-        const response = await this.createEcoverseMembershipResult(
+      } else if (credential.type === AuthorizationCredential.HUB_MEMBER) {
+        const response = await this.createHubMembershipResult(
           credential.resourceID,
           user.id
         );
-        membership.ecoverses.push(response.entry);
-        storedEcoverse.push(response.ecoverse);
+        membership.hubs.push(response.entry);
+        storedHub.push(response.hub);
       } else if (credential.type === AuthorizationCredential.CHALLENGE_MEMBER) {
         const challenge = await this.challengeService.getChallengeOrFail(
           credential.resourceID,
@@ -102,7 +102,7 @@ export class MembershipService {
           credential.resourceID
         );
         const parent = await this.userGroupService.getParent(group);
-        if ('ecoverseID' in parent) {
+        if ('hubID' in parent) {
           storedCommunityUserGroupResults.push({
             userGroup: group,
             userGroupParent: parent,
@@ -118,23 +118,21 @@ export class MembershipService {
 
     membership.communities = [];
 
-    // Assign to the right ecoverse
-    for (const ecoverseResult of membership.ecoverses) {
-      const community = storedEcoverse.find(
-        se => se.id === ecoverseResult.id
-      )?.community;
+    // Assign to the right hub
+    for (const hubResult of membership.hubs) {
+      const community = storedHub.find(se => se.id === hubResult.id)?.community;
       if (community) {
         membership.communities.push(community);
       }
 
       for (const challenge of storedChallenges) {
-        if (challenge.ecoverseID === ecoverseResult.ecoverseID) {
+        if (challenge.hubID === hubResult.hubID) {
           const challengeResult = new MembershipResultEntry(
             challenge.nameID,
             challenge.id,
             challenge.displayName
           );
-          ecoverseResult.challenges.push(challengeResult);
+          hubResult.challenges.push(challengeResult);
           if (challenge.community) {
             membership.communities.push(
               new MembershipCommunityResultEntry(
@@ -146,13 +144,13 @@ export class MembershipService {
         }
       }
       for (const opportunity of storedOpportunities) {
-        if (opportunity.ecoverseID === ecoverseResult.ecoverseID) {
+        if (opportunity.hubID === hubResult.hubID) {
           const opportunityResult = new MembershipResultEntry(
             opportunity.nameID,
             opportunity.id,
             opportunity.displayName
           );
-          ecoverseResult.opportunities.push(opportunityResult);
+          hubResult.opportunities.push(opportunityResult);
           if (opportunity.community) {
             membership.communities.push(
               new MembershipCommunityResultEntry(
@@ -166,13 +164,13 @@ export class MembershipService {
       for (const userGroupResult of storedCommunityUserGroupResults) {
         const parent = userGroupResult.userGroupParent;
         const group = userGroupResult.userGroup;
-        if ((parent as ICommunity).ecoverseID === ecoverseResult.ecoverseID) {
+        if ((parent as ICommunity).hubID === hubResult.hubID) {
           const groupResult = new MembershipResultEntry(
             group.name,
             group.id,
             group.name
           );
-          ecoverseResult.userGroups.push(groupResult);
+          hubResult.userGroups.push(groupResult);
         }
       }
     }
@@ -215,24 +213,24 @@ export class MembershipService {
     );
   }
 
-  async createEcoverseMembershipResult(
-    ecoverseID: string,
+  async createHubMembershipResult(
+    hubID: string,
     userID: string
   ): Promise<{
-    entry: MembershipUserResultEntryEcoverse;
-    ecoverse: IEcoverse;
+    entry: MembershipUserResultEntryHub;
+    hub: IHub;
   }> {
-    const ecoverse = await this.ecoverseService.getEcoverseOrFail(ecoverseID, {
+    const hub = await this.hubService.getHubOrFail(hubID, {
       relations: ['community'],
     });
     return {
-      entry: new MembershipUserResultEntryEcoverse(
-        ecoverse.nameID,
-        ecoverse.id,
-        ecoverse.displayName,
+      entry: new MembershipUserResultEntryHub(
+        hub.nameID,
+        hub.id,
+        hub.displayName,
         userID
       ),
-      ecoverse,
+      hub,
     };
   }
 
@@ -251,14 +249,12 @@ export class MembershipService {
     const agent = organization?.agent;
     if (agent?.credentials) {
       for (const credential of agent.credentials) {
-        if (credential.type === AuthorizationCredential.ECOVERSE_HOST) {
-          const ecoverse = await this.ecoverseService.getEcoverseOrFail(
-            credential.resourceID
-          );
-          membership.ecoversesHosting.push({
-            nameID: ecoverse.nameID,
-            id: `${ecoverse.id}`, // note: may way to make this a unique membership identifier for client caching
-            displayName: ecoverse.displayName,
+        if (credential.type === AuthorizationCredential.HUB_HOST) {
+          const hub = await this.hubService.getHubOrFail(credential.resourceID);
+          membership.hubsHosting.push({
+            nameID: hub.nameID,
+            id: `${hub.id}`, // note: may way to make this a unique membership identifier for client caching
+            displayName: hub.displayName,
           });
         } else if (credential.type === AuthorizationCredential.CHALLENGE_LEAD) {
           const challenge = await this.challengeService.getChallengeOrFail(
@@ -268,7 +264,7 @@ export class MembershipService {
             nameID: challenge.nameID,
             id: `${challenge.id}`, // note: may way to make this a unique membership identifier for client caching
             displayName: challenge.displayName,
-            ecoverseID: challenge.ecoverseID,
+            hubID: challenge.hubID,
           });
         }
       }
@@ -297,7 +293,7 @@ export class MembershipService {
           community.displayName,
           state,
           application.id,
-          community.ecoverseID, // Store the ecoverse the application is for, regardless of level
+          community.hubID, // Store the hub the application is for, regardless of level
           application.createdDate,
           application.updatedDate
         );
@@ -306,7 +302,7 @@ export class MembershipService {
           community
         );
 
-        // not an ecoverse
+        // not an hub
         if (communityParent) {
           // For Challenge or an Opportunity, need to dig deeper...
           const challengeForCommunity = await this.challengeRepository

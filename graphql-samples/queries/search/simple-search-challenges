@@ -15,7 +15,7 @@ query search($searchData: SearchInput!){
       }
       ... on Challenge {
         nameID
-        ecoverseID
+        hubID
       }
       ... on Opportunity {
         nameID

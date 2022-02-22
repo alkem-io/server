@@ -13,7 +13,7 @@ import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { EcoverseModule } from '@domain/challenge/ecoverse/ecoverse.module';
+import { HubModule } from '@domain/challenge/hub/hub.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -153,7 +153,7 @@ import { join } from 'path';
     ScalarsModule,
     AuthenticationModule,
     AuthorizationModule,
-    EcoverseModule,
+    HubModule,
     MetadataModule,
     BootstrapModule,
     SearchModule,

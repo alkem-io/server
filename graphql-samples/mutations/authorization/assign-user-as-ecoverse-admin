@@ -1,5 +1,5 @@
-mutation assignUserAsEcoverseAdmin($membershipData: AssignEcoverseAdminInput!) {
-  assignUserAsEcoverseAdmin(membershipData: $membershipData) {
+mutation assignUserAsHubAdmin($membershipData: AssignHubAdminInput!) {
+  assignUserAsHubAdmin(membershipData: $membershipData) {
     id,
   }
 }
@@ -8,6 +8,6 @@ Variables:
 {
   "membershipData": {
     "userID": "uuid",
-    "ecoverseID": "uuid"
+    "hubID": "uuid"
   }
 }
