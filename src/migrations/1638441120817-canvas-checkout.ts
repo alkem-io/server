@@ -1,5 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { RandomGenerator } from 'typeorm/util/RandomGenerator';
+import { randomUUID } from 'crypto';
 
 export class canvasCheckout21638441120817 implements MigrationInterface {
   name = 'canvasCheckout21638441120817';
@@ -54,7 +54,7 @@ export class canvasCheckout21638441120817 implements MigrationInterface {
     const canvases: any[] = await queryRunner.query(`SELECT id from canvas`);
     canvases.forEach(async canvas => {
       // create auth policy
-      const authId = RandomGenerator.uuid4();
+      const authId = randomUUID();
       await queryRunner.query(
         `insert into authorization_policy
             values ('${authId}', NOW(), NOW(), 1, '', '', 0)`
