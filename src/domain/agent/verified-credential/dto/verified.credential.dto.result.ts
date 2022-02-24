@@ -18,6 +18,11 @@ export class VerifiedCredential {
   })
   issued?: string;
 
+  @Field(() => String, {
+    description: 'The time at which the credential is no longer valid',
+  })
+  expires?: string;
+
   @Field(() => JSON, {
     description: 'JSON for the claim in the credential',
   })
