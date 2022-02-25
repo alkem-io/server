@@ -40,7 +40,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   AlkemioUserClaim,
   ReadCommunityClaim,
-} from '@domain/agent/claim/claim.entity';
+} from '@services/platform/trust-registry-adapter/claim/claim.entity';
 
 @Resolver()
 export class CommunityResolverMutations {

@@ -33,7 +33,7 @@ import { ConfigurationTypes } from '@common/enums';
 import { v4 } from 'uuid';
 import { ConfigService } from '@nestjs/config';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AlkemioUserClaim } from '@domain/agent/claim/claim.entity';
+import { AlkemioUserClaim } from '@services/platform/trust-registry-adapter/claim/claim.entity';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {

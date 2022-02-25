@@ -1,45 +1,46 @@
+import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
+import { Profiling } from '@common/decorators/profiling.decorator';
+import { ConfigurationTypes, LogContext } from '@common/enums';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+  ValidationException,
+} from '@common/exceptions';
+import { SsiException } from '@common/exceptions/ssi.exception';
+import { ssiConfig } from '@config/ssi.config';
+import { CredentialMetadata } from '@core/credentials/credential.provider.interface';
+import {
+  Agent,
+  CreateAgentInput,
+  GrantCredentialInput,
+  IAgent,
+  RevokeCredentialInput,
+} from '@domain/agent/agent';
+import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
+import { VerifiedCredential } from '@domain/agent/verified-credential';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import {
   CACHE_MANAGER,
   Inject,
   Injectable,
   LoggerService,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-  ValidationException,
-} from '@common/exceptions';
-import {
-  Agent,
-  IAgent,
-  RevokeCredentialInput,
-  GrantCredentialInput,
-  CreateAgentInput,
-} from '@domain/agent/agent';
-import { ConfigurationTypes, LogContext } from '@common/enums';
-import { CredentialService } from '../credential/credential.service';
-import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
-import { VerifiedCredential } from '@domain/agent/verified-credential';
 import { ConfigService } from '@nestjs/config';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { ClientProxy } from '@nestjs/microservices';
-import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
-import { firstValueFrom } from 'rxjs';
+import { InjectRepository } from '@nestjs/typeorm';
+import { TrustRegistryAdapter } from '@services/platform/trust-registry-adapter/trust.registry.adapter';
+import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { SsiException } from '@common/exceptions/ssi.exception';
-import { Profiling } from '@common/decorators/profiling.decorator';
+import { firstValueFrom } from 'rxjs';
+import { FindOneOptions, Repository } from 'typeorm';
+import { IClaim } from '../../../services/platform/trust-registry-adapter/claim/claim.entity';
 import {
   BeginCredentialOfferOutput,
   BeginCredentialRequestOutput,
 } from '../credential/credential.dto.interactions';
-import { Cache } from 'cache-manager';
-import { ssiConfig } from '@config/ssi.config';
-import { IClaim } from '../claim/claim.entity';
-import { ClaimService } from '../claim/claim.service';
 import { CredentialMetadataOutput } from '../credential/credential.dto.metadata';
+import { CredentialService } from '../credential/credential.service';
 
 @Injectable()
 export class AgentService {
@@ -47,11 +48,11 @@ export class AgentService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private configService: ConfigService,
     private credentialService: CredentialService,
-    private claimsService: ClaimService,
     @Inject(WALLET_MANAGEMENT_SERVICE)
     private walletManagementClient: ClientProxy,
     @InjectRepository(Agent)
     private agentRepository: Repository<Agent>,
+    private readonly trustRegistryAdapter: TrustRegistryAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER)
@@ -233,11 +234,15 @@ export class AgentService {
 
   @Profiling.api
   async getVerifiedCredentials(agent: IAgent): Promise<VerifiedCredential[]> {
+    const credentialMetadata =
+      this.trustRegistryAdapter.getSupportedCredentialMetadata();
+
     const identityInfo$ = this.walletManagementClient.send(
       { cmd: 'getIdentityInfo' },
       {
         did: agent.did,
         password: agent.password,
+        credentialMetadata: credentialMetadata,
       }
     );
 
@@ -291,7 +296,10 @@ export class AgentService {
       {
         issuerDId: issuerAgent.did,
         issuerPassword: issuerAgent.password,
-        types: credentialTypes,
+        credentialMetadata:
+          this.trustRegistryAdapter.getSupportedCredentialMetadata(
+            credentialTypes
+          ),
         uniqueCallbackURL: uniqueCallbackURL,
       }
     );
@@ -360,15 +368,15 @@ export class AgentService {
     nonce: string,
     credentials: { type: string; claims: IClaim[] }[]
   ): Promise<BeginCredentialOfferOutput> {
+    const offeredCredentials =
+      this.trustRegistryAdapter.getCredentialOffers(credentials);
+
     const credentialOffer$ = this.walletManagementClient.send(
       { cmd: 'beginCredentialOfferInteraction' },
       {
         issuerDId: issuerAgent.did,
         issuerPassword: issuerAgent.password,
-        offeredCredentials: credentials.map(cred => ({
-          type: cred.type,
-          claim: this.claimsService.createClaimObject(cred.claims),
-        })),
+        offeredCredentials: offeredCredentials,
         uniqueCallbackURL: uniqueCallbackURL,
       }
     );
@@ -379,9 +387,16 @@ export class AgentService {
       );
 
       const requestExpirationTtl = request.expiresOn - new Date().getTime();
-      this.cacheManager.set<IAgent>(request.interactionId, issuerAgent, {
-        ttl: requestExpirationTtl,
-      });
+      this.cacheManager.set<{
+        agent: IAgent;
+        offeredCredentials: typeof offeredCredentials;
+      }>(
+        request.interactionId,
+        { agent: issuerAgent, offeredCredentials },
+        {
+          ttl: requestExpirationTtl,
+        }
+      );
       this.cacheManager.set(nonce, request.interactionId, {
         ttl: requestExpirationTtl,
       });
@@ -403,8 +418,16 @@ export class AgentService {
     if (!interactionId) {
       throw new Error('The interaction is not valid');
     }
-    const agent = await this.cacheManager.get<IAgent>(interactionId);
-    if (!agent) {
+    const { agent, offeredCredentials } =
+      (await this.cacheManager.get<{
+        agent: IAgent;
+        offeredCredentials: {
+          metadata: CredentialMetadata;
+          claim: Record<string, any>;
+        }[];
+      }>(interactionId)) || {};
+
+    if (!agent || !offeredCredentials) {
       throw new Error('An agent could not be found for the interactionId');
     }
 
@@ -417,6 +440,7 @@ export class AgentService {
       { cmd: ssiConfig.endpoints.completeCredentialOfferInteraction },
       {
         interactionId: interactionId,
+        credentialMetadata: offeredCredentials.map(c => c.metadata),
         jwt: token,
       }
     );
@@ -432,15 +456,13 @@ export class AgentService {
 
   @Profiling.api
   async getSupportedCredentialMetadata(): Promise<CredentialMetadataOutput[]> {
-    const credentialMetadata$ = this.walletManagementClient.send(
-      {
-        cmd: 'getSupportedCredentialMetadata',
-      },
-      {}
-    );
-
     try {
-      return await firstValueFrom(credentialMetadata$);
+      return this.trustRegistryAdapter
+        .getSupportedCredentialMetadata()
+        .map(x => ({
+          ...x,
+          context: JSON.stringify(x.context),
+        }));
     } catch (err: any) {
       throw new SsiException(
         `[completeCredentialOfferInteraction]:Failed to offer credential: ${err.message}`

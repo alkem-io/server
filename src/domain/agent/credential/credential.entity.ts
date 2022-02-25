@@ -11,11 +11,11 @@ export class Credential extends BaseAlkemioEntity implements ICredential {
   @Column()
   type: string;
 
-  @ManyToOne(
-    () => Agent,
-    agent => agent.credentials,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
-  )
+  @ManyToOne(() => Agent, agent => agent.credentials, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
   agent?: Agent;
 
   constructor(type: string, resourceID: string) {
