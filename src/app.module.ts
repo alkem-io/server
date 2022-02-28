@@ -109,16 +109,16 @@ import { print } from 'graphql/language/printer';
         },
         fieldResolverEnhancers: ['guards'],
         sortSchema: true,
-        installSubscriptionHandlers: true,
-        context: ({ req, connection }) =>
+        context: (any: any) =>
           // once the connection is established in onConnect, the context will have the user populated
-          connection ? { req: connection.context } : { req },
+          any.connection ? { req: any.connection.context } : { req: any.req },
         subscriptions: {
+          'graphql-ws': true,
           keepAlive: 5000,
           onConnect: async (
             _: { [key: string]: any },
             __: { [key: string]: any },
-            context
+            context: any
           ) => {
             const authHeader: string =
               context.request.headers.authorization || '';
@@ -175,7 +175,7 @@ import { print } from 'graphql/language/printer';
   ],
 })
 export class AppModule {
-  configure(consummer: MiddlewareConsumer) {
-    consummer.apply(RequestLoggerMiddleware).forRoutes('/');
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestLoggerMiddleware).forRoutes('/');
   }
 }

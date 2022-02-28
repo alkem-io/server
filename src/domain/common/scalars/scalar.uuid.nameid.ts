@@ -9,7 +9,7 @@ import { UUID } from './scalar.uuid';
 export class UUID_NAMEID implements CustomScalar<string, string> {
   description = 'A UUID or NameID identifier.';
 
-  parseValue(value: string): string {
+  parseValue(value: unknown): string {
     return this.validate(value).toLowerCase();
   }
 

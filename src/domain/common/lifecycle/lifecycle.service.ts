@@ -181,9 +181,7 @@ export class LifecycleService {
     return await this.lifecycleRepository.save(lifecycle);
   }
 
-  getRestoredState(
-    lifecycle: ILifecycle
-  ): State<any, any, any, { value: any; context: any }> {
+  getRestoredState(lifecycle: ILifecycle) {
     const machineDef = JSON.parse(lifecycle.machineDef);
     const machine = createMachine(machineDef);
     const restoredStateDefinition = this.getRestoredStateDefinition(lifecycle);
