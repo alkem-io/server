@@ -355,3 +355,42 @@ platform:
 
   # About the platform
   about: ${PLATFORM_ABOUT}:https://alkem.io/platform/about
+
+credentials:
+  proof_of_community_membership:
+    name: Community Member
+    description: The holder is a member of an Alkemio hub,challenge or opportunity community
+    schema: https://schema.org/EducationalOccupationalCredential
+    types:
+      - Credential
+      - CommunityMemberCredential
+    uniqueType: CommunityMemberCredential
+    context:
+      alkemioUser_userID: 'schema:uuid'
+      alkemioUser_email: 'schema:email'
+      communityMember_communityID: 'schema:uuid'
+  proof_of_alkemio_membership:
+    name: Alkemio User
+    description: The holder is a verified Alkemio user
+    schema: https://schema.org/EducationalOccupationalCredential
+    types:
+      - Credential
+      - AlkemioMemberCredential
+    uniqueType: AlkemioMemberCredential
+    context:
+      alkemioUser_userID: 'schema:uuid'
+      alkemioUser_email: 'schema:email'
+  proof_of_postal_address:
+    name: Postal Address
+    description: The holder's location is confirmed by the issuer
+    schema: https://schema.org/EducationalOccupationalCredential
+    types:
+      - Credential
+      - postalAddress
+    uniqueType: postalAddress
+    context:
+      addressLine1: 'schema:streetAddress'
+      addressLine2: 'schema:streetAddress'
+      postalCode: 'schema:postalCode'
+      city: 'schema:addressLocality'
+      country: 'schema:addressLocality'
