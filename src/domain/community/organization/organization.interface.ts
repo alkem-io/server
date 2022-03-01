@@ -17,7 +17,7 @@ export abstract class IOrganization extends INameable {
 
   @Field(() => String, {
     nullable: true,
-    description: 'Legal name - required if hosting an Ecoverse',
+    description: 'Legal name - required if hosting an Hub',
   })
   legalEntityName?: string;
 

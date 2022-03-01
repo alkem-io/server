@@ -1,6 +1,6 @@
 export * from './application.template.entity';
 export * from './challenge.template.entity';
-export * from './ecoverse.template.entity';
+export * from './hub.template.entity';
 export * from './opportunity.template.entity';
 export * from './question.template.entity';
 export * from './template.entity';

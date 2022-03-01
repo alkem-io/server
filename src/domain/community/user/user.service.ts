@@ -40,8 +40,8 @@ import { DirectRoomResult } from './dto/user.dto.communication.room.direct.resul
 import { UserPreferenceService } from '../user-preferences';
 import { KonfigService } from '@services/platform/configuration/config/config.service';
 import { IUserTemplate } from '@services/platform/configuration';
-import { generateRandomArraySelection } from '@common/utils/random.util';
 import { NamingService } from '@services/domain/naming/naming.service';
+import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 
 @Injectable()
 export class UserService {
@@ -483,22 +483,7 @@ export class UserService {
       LogContext.COMMUNITY
     );
     const users = await this.userRepository.find({ serviceProfile: false });
-    if (!users) return [];
-    if (!limit) return users;
-
-    // Need to restrict the set of users to return
-    if (shuffle) {
-      const randomIndexes = generateRandomArraySelection(
-        Math.min(limit, users.length),
-        users.length
-      );
-      const limitedResult: IUser[] = [];
-      for (const index of randomIndexes) {
-        limitedResult.push(users[index]);
-      }
-      return limitedResult;
-    }
-    return users.slice(0, limit);
+    return limitAndShuffle(users, limit, shuffle);
   }
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {

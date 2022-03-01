@@ -1,11 +1,11 @@
-mutation UpdateEcoverse($ecoverseData: UpdateEcoverseInput!) {
-  updateEcoverse(ecoverseData: $ecoverseData) {
+mutation UpdateHub($hubData: UpdateHubInput!) {
+  updateHub(hubData: $hubData) {
     displayName,
     id
   }
 }
 {
-  "ecoverseData":
+  "hubData":
 		{
       "ID": "uuid",
       "displayName": "New CT 3",

@@ -17,7 +17,7 @@ export type MicroserviceOptions = {
   queueName: string;
 };
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
+import { Hub } from '@domain/challenge/hub/hub.entity';
 import { Opportunity } from '@domain/collaboration';
 import { Communication } from '@domain/communication';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
@@ -32,7 +32,7 @@ import { subscriptionDiscussionUpdatedFactory } from './subscription.discussion.
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([Ecoverse]),
+    TypeOrmModule.forFeature([Hub]),
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([Opportunity]),
     TypeOrmModule.forFeature([Community]),

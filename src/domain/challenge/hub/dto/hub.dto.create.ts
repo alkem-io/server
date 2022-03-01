@@ -3,10 +3,10 @@ import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/base.
 import { UUID_NAMEID } from '@domain/common/scalars/scalar.uuid.nameid';
 
 @InputType()
-export class CreateEcoverseInput extends CreateBaseChallengeInput {
+export class CreateHubInput extends CreateBaseChallengeInput {
   @Field(() => UUID_NAMEID, {
     nullable: false,
-    description: 'The host Organization for the ecoverse',
+    description: 'The host Organization for the hub',
   })
   hostID!: string;
 }

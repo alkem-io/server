@@ -1,5 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { RandomGenerator } from 'typeorm/util/RandomGenerator';
+import { randomUUID } from 'crypto';
 
 const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
 const contextVisuals = [
@@ -56,8 +56,8 @@ export class visual1642233654294 implements MigrationInterface {
       );
       console.log(`==> Old visual retrieved with  id: ${oldVisual.id}`);
       for (const contextVisual of contextVisuals) {
-        const visualID = RandomGenerator.uuid4();
-        const authID = RandomGenerator.uuid4();
+        const visualID = randomUUID();
+        const authID = randomUUID();
         let oldUri = 'not retrieved';
         if (contextVisual.name === 'banner') {
           oldUri = oldVisual.banner;
@@ -105,8 +105,8 @@ export class visual1642233654294 implements MigrationInterface {
     );
     for (const profile of profiles) {
       console.log(`Retrieved profile with id: ${profile.id}`);
-      const visualID = RandomGenerator.uuid4();
-      const authID = RandomGenerator.uuid4();
+      const visualID = randomUUID();
+      const authID = randomUUID();
       await queryRunner.query(
         //console.log(
         `insert into authorization_policy

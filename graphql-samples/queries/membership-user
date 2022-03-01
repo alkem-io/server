@@ -1,6 +1,6 @@
 query {
   membershipUser(membershipData: {userID: "luveniakena"}) {
-   	ecoverses {
+   	hubs {
       nameID
       id
       challenges {

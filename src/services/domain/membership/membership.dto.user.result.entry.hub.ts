@@ -2,11 +2,11 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { MembershipResultEntry } from './membership.dto.result.entry';
 
 @ObjectType()
-export class MembershipUserResultEntryEcoverse extends MembershipResultEntry {
+export class MembershipUserResultEntryHub extends MembershipResultEntry {
   @Field(() => String, {
-    description: 'The Ecoverse ID',
+    description: 'The Hub ID',
   })
-  ecoverseID: string;
+  hubID: string;
 
   @Field(() => [MembershipResultEntry], {
     description: 'Details of the Challenges the user is a member of',
@@ -25,11 +25,11 @@ export class MembershipUserResultEntryEcoverse extends MembershipResultEntry {
 
   constructor(
     nameID: string,
-    ecoverseID: string,
+    hubID: string,
     displayName: string,
     userID: string
   ) {
-    super(nameID, `${userID}/${ecoverseID}`, displayName);
-    this.ecoverseID = ecoverseID;
+    super(nameID, `${userID}/${hubID}`, displayName);
+    this.hubID = hubID;
   }
 }

@@ -10,7 +10,7 @@ export class Communication
   implements ICommunication
 {
   @Column()
-  ecoverseID: string;
+  hubID: string;
 
   @OneToMany(() => Discussion, discussion => discussion.communication, {
     eager: false,
@@ -34,7 +34,7 @@ export class Communication
 
   constructor(displayName: string) {
     super();
-    this.ecoverseID = '';
+    this.hubID = '';
     this.communicationGroupID = '';
     this.displayName = displayName || '';
   }

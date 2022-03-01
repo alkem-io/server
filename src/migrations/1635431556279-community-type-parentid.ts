@@ -24,7 +24,7 @@ export class communityTypeParentid1635431556279 implements MigrationInterface {
     await queryRunner.query(
       `update community as com
             inner join ecoverse as eco on com.id = eco.communityId
-            set com.type = 'hub', com.parentID = eco.id`
+            set com.type = 'ecoverse', com.parentID = eco.id`
     );
   }
 

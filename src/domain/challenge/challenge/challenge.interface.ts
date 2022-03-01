@@ -11,5 +11,5 @@ export abstract class IChallenge extends IBaseChallenge implements ISearchable {
   opportunities?: IOpportunity[];
 
   @Field(() => String)
-  ecoverseID!: string;
+  hubID!: string;
 }

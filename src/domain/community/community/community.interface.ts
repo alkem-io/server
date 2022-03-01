@@ -26,7 +26,7 @@ export abstract class ICommunity extends IAuthorizable {
   // The credential profile that is used for determining membership of this community
   credential?: ICredential;
 
-  ecoverseID!: string;
+  hubID!: string;
 
   communication?: ICommunication;
   type!: CommunityType;

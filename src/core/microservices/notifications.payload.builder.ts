@@ -3,7 +3,7 @@ import { CommunityType } from '@common/enums/community.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Ecoverse } from '@domain/challenge/ecoverse/ecoverse.entity';
+import { Hub } from '@domain/challenge/hub/hub.entity';
 import { Opportunity } from '@domain/collaboration';
 import { Communication } from '@domain/communication';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
@@ -18,8 +18,8 @@ import { Repository } from 'typeorm';
 @Injectable()
 export class NotificationsPayloadBuilder {
   constructor(
-    @InjectRepository(Ecoverse)
-    private hubRepository: Repository<Ecoverse>,
+    @InjectRepository(Hub)
+    private hubRepository: Repository<Hub>,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @InjectRepository(Opportunity)
@@ -46,8 +46,8 @@ export class NotificationsPayloadBuilder {
         type: community.type,
       },
       hub: {
-        nameID: await this.getHubNameID(community.ecoverseID),
-        id: community.ecoverseID,
+        nameID: await this.getHubNameID(community.hubID),
+        id: community.hubID,
       },
     };
 
@@ -77,8 +77,8 @@ export class NotificationsPayloadBuilder {
         type: community.type,
       },
       hub: {
-        nameID: await this.getHubNameID(community.ecoverseID),
-        id: community.ecoverseID,
+        nameID: await this.getHubNameID(community.hubID),
+        id: community.hubID,
       },
     };
 
@@ -112,8 +112,8 @@ export class NotificationsPayloadBuilder {
         type: community.type,
       },
       hub: {
-        nameID: await this.getHubNameID(community.ecoverseID),
-        id: community.ecoverseID,
+        nameID: await this.getHubNameID(community.hubID),
+        id: community.hubID,
       },
     };
 
@@ -154,8 +154,8 @@ export class NotificationsPayloadBuilder {
 
   private async getHubNameID(hubID: string): Promise<string | undefined> {
     const hub = await this.hubRepository
-      .createQueryBuilder('ecoverse')
-      .where('ecoverse.id = :id')
+      .createQueryBuilder('hub')
+      .where('hub.id = :id')
       .setParameters({ id: `${hubID}` })
       .getOne();
 

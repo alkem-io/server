@@ -27,7 +27,7 @@ export class Opportunity extends BaseChallenge implements IOpportunity {
   relations?: Relation[];
 
   @Column()
-  ecoverseID!: string;
+  hubID!: string;
 
   constructor() {
     super();
