@@ -109,42 +109,44 @@ import { print } from 'graphql/language/printer';
         },
         fieldResolverEnhancers: ['guards'],
         sortSchema: true,
-        context: (any: any) =>
+        installSubscriptionHandlers: true,
+        context: ({ req, connection }) =>
           // once the connection is established in onConnect, the context will have the user populated
-          any.connection ? { req: any.connection.context } : { req: any.req },
+          connection ? { req: connection.context } : { req },
         subscriptions: {
-          'graphql-ws': true,
-          keepAlive: 5000,
-          onConnect: async (
-            _: { [key: string]: any },
-            __: { [key: string]: any },
-            context: any
-          ) => {
-            const authHeader: string =
-              context.request.headers.authorization || '';
-            const msg = `[Websocket] Opening for user with token: ${authHeader.substring(
-              0,
-              20
-            )}`;
+          'subscriptions-transport-ws': {
+            keepAlive: 5000,
+            onConnect: async (
+              _: { [key: string]: any },
+              __: { [key: string]: any },
+              context: any
+            ) => {
+              const authHeader: string =
+                context.request.headers.authorization || '';
+              const msg = `[Websocket] Opening for user with token: ${authHeader.substring(
+                0,
+                20
+              )}`;
 
-            // dummy code to not trigger warnings
-            if (msg.length === 0) {
-              return; // console.log(msg);
-            }
-            // Note: passing through headers so can leverage http authentication setup
-            // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
-            return { headers: { authorization: `${authHeader}` } };
-          },
-          onDisconnect: async (_: any, context: any) => {
-            const authHeader: string = context.request.headers.authorization;
-            const msg = `[Websocket] Closing for user with token: ${authHeader.substring(
-              0,
-              20
-            )}`;
-            // dummy code to not trigger warnings
-            if (msg.length === 0) {
-              return; // console.log(msg);
-            }
+              // dummy code to not trigger warnings
+              if (msg.length === 0) {
+                return; // console.log(msg);
+              }
+              // Note: passing through headers so can leverage http authentication setup
+              // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
+              return { headers: { authorization: `${authHeader}` } };
+            },
+            onDisconnect: async (_: any, context: any) => {
+              const authHeader: string = context.request.headers.authorization;
+              const msg = `[Websocket] Closing for user with token: ${authHeader.substring(
+                0,
+                20
+              )}`;
+              // dummy code to not trigger warnings
+              if (msg.length === 0) {
+                return; // console.log(msg);
+              }
+            },
           },
         },
       }),
