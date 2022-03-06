@@ -37,11 +37,11 @@ import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
-import { UserPreferenceService } from '../user-preferences';
 import { KonfigService } from '@services/platform/configuration/config/config.service';
 import { IUserTemplate } from '@services/platform/configuration';
 import { NamingService } from '@services/domain/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
+import { PreferenceService } from '@domain/common/preferences/preference.service';
 
 @Injectable()
 export class UserService {
@@ -54,8 +54,7 @@ export class UserService {
     private roomService: RoomService,
     private namingService: NamingService,
     private agentService: AgentService,
-    @Inject(UserPreferenceService)
-    private userPreferenceService: UserPreferenceService,
+    private preferenceService: PreferenceService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -111,7 +110,7 @@ export class UserService {
     const response = await this.userRepository.save(user);
 
     user.preferences =
-      await this.userPreferenceService.createInitialUserPreferences(response);
+      await this.preferenceService.createInitialUserPreferences(response);
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
@@ -220,7 +219,7 @@ export class UserService {
 
     if (user.preferences) {
       for (const preference of user.preferences) {
-        await this.userPreferenceService.removeUserPreference(preference);
+        await this.preferenceService.removeUserPreference(preference);
       }
     }
 

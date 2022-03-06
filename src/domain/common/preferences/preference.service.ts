@@ -7,39 +7,39 @@ import { EntityNotFoundException } from '@src/common/exceptions';
 import {
   LogContext,
   UserPreferenceType,
-  UserPreferenceValueType,
+  PreferenceValueType,
 } from '@src/common/enums';
-import { IUser } from '../user';
-import { UserPreferenceDefinition } from './user.preference.definition.entity';
-import { IUserPreferenceDefinition } from './user.preference.definition.interface';
-import { UserPreference } from './user.preference.entity';
-import { IUserPreference } from './user.preference.interface';
-import { CreateUserPreferenceDefinitionInput } from './dto';
+import { PreferenceDefinition } from './preference.definition.entity';
+import { IPreferenceDefinition } from './preference.definition.interface';
+import { Preference } from './preference.entity';
+import { IPreference } from './preference.interface';
 import { getDefaultPreferenceValue, validateValue } from './utils';
+import { CreatePreferenceDefinitionInput } from './dto/preference-definition.dto.create';
+import { IUser } from '@domain/community/user/user.interface';
 
 @Injectable()
-export class UserPreferenceService {
+export class PreferenceService {
   constructor(
-    @InjectRepository(UserPreferenceDefinition)
-    private definitionRepository: Repository<UserPreferenceDefinition>,
-    @InjectRepository(UserPreference)
-    private preferenceRepository: Repository<UserPreference>,
+    @InjectRepository(PreferenceDefinition)
+    private definitionRepository: Repository<PreferenceDefinition>,
+    @InjectRepository(Preference)
+    private preferenceRepository: Repository<Preference>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
   async createDefinition(
-    definitionData: CreateUserPreferenceDefinitionInput
-  ): Promise<IUserPreferenceDefinition> {
-    const definition = UserPreferenceDefinition.create(definitionData);
+    definitionData: CreatePreferenceDefinitionInput
+  ): Promise<IPreferenceDefinition> {
+    const definition = PreferenceDefinition.create(definitionData);
 
     return await this.definitionRepository.save(definition);
   }
 
   async definitionExists(
     group: string,
-    valueType: UserPreferenceValueType,
-    type: UserPreferenceType
+    valueType: PreferenceValueType,
+    type: string
   ) {
     const res = await this.definitionRepository.findOne({
       group,
@@ -68,15 +68,27 @@ export class UserPreferenceService {
     return await this.preferenceRepository.save(newPreferences);
   }
 
-  async getUserPreferenceOrFail(
+  async getPreferenceOrFail(peferenceID: string): Promise<IPreference> {
+    const reference = await this.preferenceRepository.findOne({
+      id: peferenceID,
+    });
+    if (!reference)
+      throw new EntityNotFoundException(
+        `Not able to locate preference with the specified ID: ${peferenceID}`,
+        LogContext.CHALLENGES
+      );
+    return reference;
+  }
+
+  async getUserXPreferenceOrFail(
     user: IUser,
     type: UserPreferenceType
-  ): Promise<IUserPreference> {
+  ): Promise<IPreference> {
     const userPreferenceDefinition = await this.getDefinitionOrFail(type);
 
     const preference = await this.preferenceRepository.findOne({
       user,
-      userPreferenceDefinition,
+      preferenceDefinition: userPreferenceDefinition,
     });
 
     if (!preference) {
@@ -89,7 +101,7 @@ export class UserPreferenceService {
     return preference;
   }
 
-  async getUserPreferencesOrFail(user: IUser): Promise<IUserPreference[]> {
+  async getUserPreferencesOrFail(user: IUser): Promise<IPreference[]> {
     const preferences = await this.preferenceRepository.find({ user });
 
     if (!preferences) {
@@ -102,25 +114,16 @@ export class UserPreferenceService {
     return preferences;
   }
 
-  async removeUserPreference(
-    preference: IUserPreference
-  ): Promise<IUserPreference> {
-    return await this.preferenceRepository.remove(preference as UserPreference);
+  async removeUserPreference(preference: IPreference): Promise<IPreference> {
+    return await this.preferenceRepository.remove(preference as Preference);
   }
 
-  async updateUserPreference(
-    user: IUser,
-    type: UserPreferenceType,
-    value: string
-  ) {
-    const preference = await this.getUserPreferenceOrFail(user, type);
+  async updatePreference(preference: IPreference, value: string) {
     const newValue = value;
 
-    if (
-      !validateValue(newValue, preference.userPreferenceDefinition.valueType)
-    ) {
+    if (!validateValue(newValue, preference.preferenceDefinition.valueType)) {
       throw new TypeError(
-        `Expected value of type: ${preference.userPreferenceDefinition.valueType}`
+        `Expected value of type: ${preference.preferenceDefinition.valueType}`
       );
     }
 

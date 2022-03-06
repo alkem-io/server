@@ -1,14 +1,14 @@
 import { Column, Entity, OneToMany } from 'typeorm';
-import { UserPreferenceValueType, UserPreferenceType } from '@common/enums';
+import { PreferenceValueType } from '@common/enums';
 import { SMALL_TEXT_LENGTH, TINY_TEXT_LENGTH } from '@src/common/constants';
-import { IUserPreferenceDefinition } from './user.preference.definition.interface';
-import { UserPreference } from './user.preference.entity';
+import { IPreferenceDefinition as IPreferenceDefinition } from './preference.definition.interface';
+import { Preference } from './preference.entity';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity/base.alkemio.entity';
 
 @Entity()
-export class UserPreferenceDefinition
+export class PreferenceDefinition
   extends BaseAlkemioEntity
-  implements IUserPreferenceDefinition
+  implements IPreferenceDefinition
 {
   @Column({
     name: 'groupName',
@@ -27,22 +27,22 @@ export class UserPreferenceDefinition
   @Column({
     length: TINY_TEXT_LENGTH,
   })
-  valueType!: UserPreferenceValueType;
+  valueType!: PreferenceValueType;
 
   @Column({
     length: SMALL_TEXT_LENGTH,
   })
-  type!: UserPreferenceType;
+  type!: string;
 
-  @OneToMany(() => UserPreference, pref => pref.userPreferenceDefinition)
-  userPreference?: UserPreference;
+  @OneToMany(() => Preference, pref => pref.preferenceDefinition)
+  preference?: Preference;
 
   constructor(
     group: string,
     displayName: string,
     description: string,
-    valueType: UserPreferenceValueType,
-    type: UserPreferenceType
+    valueType: PreferenceValueType,
+    type: string
   ) {
     super();
 
