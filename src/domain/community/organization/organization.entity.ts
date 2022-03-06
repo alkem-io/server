@@ -39,7 +39,7 @@ export class Organization
   contactEmail?: string = '';
 
   @OneToOne(() => OrganizationVerification, {
-    eager: true,
+    eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
