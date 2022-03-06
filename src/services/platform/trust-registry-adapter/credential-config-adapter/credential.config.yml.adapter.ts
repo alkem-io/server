@@ -1,7 +1,7 @@
 import {
   CredentialConfig,
   ICredentialConfigProvider,
-} from '@core/credentials/credential.provider.interface';
+} from '@services/platform/trust-registry-adapter/credentials/credential.provider.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes } from '@src/common';
@@ -16,7 +16,9 @@ export class CredentialConfigYmlAdapter implements ICredentialConfigProvider {
   ) {}
 
   getCredentials(): CredentialConfig {
-    const credentials = this.configService.get(ConfigurationTypes.CREDENTIALS);
+    const credentials = this.configService.get(
+      ConfigurationTypes.SSI
+    ).credentials;
 
     return {
       credentials: Object.values(credentials),

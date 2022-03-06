@@ -2,7 +2,7 @@ import { CREDENTIAL_CONFIG_YML_ADAPTER } from '@common/enums/providers';
 import {
   CredentialMetadata,
   ICredentialConfigProvider,
-} from '@core/credentials/credential.provider.interface';
+} from '@services/platform/trust-registry-adapter/credentials/credential.provider.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 

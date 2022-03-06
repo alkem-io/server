@@ -12,11 +12,7 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import {
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-  ConfigurationTypes,
-} from '@common/enums';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -31,12 +27,8 @@ import { NotificationsPayloadBuilder } from '@core/microservices';
 import { DeleteApplicationInput } from '../application/dto/application.dto.delete';
 import { ApplicationEventInput } from '../application/dto/application.dto.event';
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
-import { BeginCredentialOfferOutput } from '@domain/agent/credential/credential.dto.interactions';
-import { AuthenticationException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { ssiConfig } from '@config/ssi.config';
-import { v4 } from 'uuid';
-import { ConfigService } from '@nestjs/config';
+import { BeginCredentialOfferOutput } from '@domain/agent/credential/credential.dto.interactions';
 import {
   AlkemioUserClaim,
   ReadCommunityClaim,
@@ -56,7 +48,6 @@ export class CommunityResolverMutations {
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService,
     private agentService: AgentService,
-    private configService: ConfigService,
     private applicationAuthorizationService: ApplicationAuthorizationService,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
@@ -242,21 +233,6 @@ export class CommunityResolverMutations {
     );
   }
 
-  private generateCredentialOfferUrl() {
-    // TODO - the api/public/rest needs to be configurable
-    const nonce = v4();
-    const url = `${
-      this.configService.get(ConfigurationTypes.HOSTING)?.endpoint
-    }/api/public/rest/${
-      ssiConfig.endpoints.completeCredentialOfferInteraction
-    }/${nonce}`;
-
-    return {
-      nonce,
-      url,
-    };
-  }
-
   @UseGuards(GraphqlGuard)
   @Mutation(() => BeginCredentialOfferOutput, {
     description: 'Generate community member credential offer',
@@ -265,13 +241,6 @@ export class CommunityResolverMutations {
     @Args({ name: 'communityID', type: () => String }) communityID: string,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<BeginCredentialOfferOutput> {
-    const userID = agentInfo.userID;
-    if (!userID || userID.length == 0) {
-      throw new AuthenticationException(
-        'Unable to retrieve authenticated user; no identifier'
-      );
-    }
-
     const community = await this.communityService.getCommunityOrFail(
       communityID
     );
@@ -282,19 +251,16 @@ export class CommunityResolverMutations {
       `beginCommunityMemberCredentialOfferInteraction: ${community.id}`
     );
 
-    const agent = await this.userService.getAgent(agentInfo.userID);
-
-    const { nonce, url } = this.generateCredentialOfferUrl();
-
     return await this.agentService.beginCredentialOfferInteraction(
-      agent,
-      url,
-      nonce,
+      agentInfo.agentID,
       [
         {
           type: 'CommunityMemberCredential',
           claims: [
-            new AlkemioUserClaim({ userID, email: agentInfo.email }),
+            new AlkemioUserClaim({
+              userID: agentInfo.userID,
+              email: agentInfo.email,
+            }),
             new ReadCommunityClaim({ communityID: community.id }),
           ],
         },

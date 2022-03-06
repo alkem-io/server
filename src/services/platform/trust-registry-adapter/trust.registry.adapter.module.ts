@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { CredentialConfigAdapterModule } from '@src/application/credential-config-adapter/credential.config.adapter.module';
+import { CredentialConfigAdapterModule } from '@services/platform/trust-registry-adapter/credential-config-adapter/credential.config.adapter.module';
 import { MicroservicesModule } from '../../../core/microservices/microservices.module';
 import { ClaimService } from './claim/claim.service';
 import { TrustRegistryAdapter } from './trust.registry.adapter';

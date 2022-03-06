@@ -1,4 +1,4 @@
-import { ssiConfig } from '@config/ssi.config';
+import { RestEndpoint } from '@common/enums/rest.endpoint';
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { AppService } from './app.service';
 
@@ -11,8 +11,8 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  @Post(`${ssiConfig.endpoints.completeCredentialRequestInteraction}/:nonce`)
-  async [ssiConfig.endpoints.completeCredentialRequestInteraction](
+  @Post(`${RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION}/:nonce`)
+  async [RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION](
     @Param('nonce') nonce: string,
     @Body() payload: { token: string }
   ) {
@@ -23,8 +23,8 @@ export class AppController {
     //TODO Once this completes publish the credential share complete with the interaction id to the client
   }
 
-  @Post(`${ssiConfig.endpoints.completeCredentialOfferInteraction}/:nonce`)
-  async [ssiConfig.endpoints.completeCredentialOfferInteraction](
+  @Post(`${RestEndpoint.COMPLETE_CREDENTIAL_OFFER_INTERACTION}/:nonce`)
+  async [RestEndpoint.COMPLETE_CREDENTIAL_OFFER_INTERACTION](
     @Param('nonce') nonce: string,
     @Body() payload: { token: string }
   ) {

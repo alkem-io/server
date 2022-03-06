@@ -10,5 +10,5 @@ export enum ConfigurationTypes {
   NOTIFICATIONS = 'notifications',
   MICROSERVICES = 'microservices',
   COLLABORATION = 'collaboration',
-  CREDENTIALS = 'credentials',
+  SSI = 'ssi',
 }

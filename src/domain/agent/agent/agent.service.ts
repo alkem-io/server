@@ -2,13 +2,13 @@ import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
 import { Profiling } from '@common/decorators/profiling.decorator';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import {
+  AuthenticationException,
   EntityNotFoundException,
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
 import { SsiException } from '@common/exceptions/ssi.exception';
-import { ssiConfig } from '@config/ssi.config';
-import { CredentialMetadata } from '@core/credentials/credential.provider.interface';
+import { CredentialMetadata } from '@services/platform/trust-registry-adapter/credentials/credential.provider.interface';
 import {
   Agent,
   CreateAgentInput,
@@ -41,6 +41,8 @@ import {
 } from '../credential/credential.dto.interactions';
 import { CredentialMetadataOutput } from '../credential/credential.dto.metadata';
 import { CredentialService } from '../credential/credential.service';
+import { RestEndpoint } from '@common/enums/rest.endpoint';
+import { WalletManagerCommand } from '@common/enums/wallet.manager.command';
 
 @Injectable()
 export class AgentService {
@@ -64,8 +66,7 @@ export class AgentService {
     agent.credentials = [];
     agent.authorization = new AuthorizationPolicy();
 
-    const ssiEnabled = this.configService.get(ConfigurationTypes.IDENTITY).ssi
-      .enabled;
+    const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
 
     if (ssiEnabled) {
       return await this.createDidOnAgent(agent);
@@ -217,7 +218,7 @@ export class AgentService {
     agent.password = Math.random().toString(36).substr(2, 10);
 
     const did$ = this.walletManagementClient.send(
-      { cmd: 'createIdentity' },
+      { cmd: WalletManagerCommand.CREATE_IDENTITY },
       {
         password: agent.password,
       }
@@ -238,7 +239,7 @@ export class AgentService {
       this.trustRegistryAdapter.getSupportedCredentialMetadata();
 
     const identityInfo$ = this.walletManagementClient.send(
-      { cmd: 'getIdentityInfo' },
+      { cmd: WalletManagerCommand.GET_IDENTITY_INFO },
       {
         did: agent.did,
         password: agent.password,
@@ -247,8 +248,8 @@ export class AgentService {
     );
 
     try {
-      const verificedCredentials = await firstValueFrom(identityInfo$);
-      return verificedCredentials;
+      const verifiedCredentials = await firstValueFrom(identityInfo$);
+      return verifiedCredentials;
     } catch (err: any) {
       throw new SsiException(
         `Failed to get identity info from wallet manager: ${err.message}`
@@ -264,7 +265,7 @@ export class AgentService {
     userID: string
   ): Promise<VerifiedCredential[]> {
     const identityInfo$ = this.walletManagementClient.send(
-      { cmd: 'grantStateTransitionVC' },
+      { cmd: WalletManagerCommand.GRANT_STATE_TRANSITION_VC },
       {
         issuerDid: challengeAgent.did,
         issuerPW: challengeAgent.password,
@@ -286,13 +287,14 @@ export class AgentService {
 
   @Profiling.api
   async beginCredentialRequestInteraction(
-    issuerAgent: IAgent,
-    uniqueCallbackURL: string,
-    nonce: string,
+    issuerAgentID: string,
     credentialTypes: string[]
   ): Promise<BeginCredentialRequestOutput> {
+    const { nonce, uniqueCallbackURL } =
+      this.trustRegistryAdapter.generateCredentialRequestUrl();
+    const issuerAgent = await this.getAgentOrFail(issuerAgentID);
     const credentialRequest$ = this.walletManagementClient.send(
-      { cmd: 'beginCredentialRequestInteraction' },
+      { cmd: WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION },
       {
         issuerDId: issuerAgent.did,
         issuerPassword: issuerAgent.password,
@@ -345,7 +347,7 @@ export class AgentService {
     );
 
     const credentialStoreRequest$ = this.walletManagementClient.send(
-      { cmd: ssiConfig.endpoints.completeCredentialRequestInteraction },
+      { cmd: RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION },
       {
         interactionId: interactionId,
         jwt: token,
@@ -363,16 +365,24 @@ export class AgentService {
 
   @Profiling.api
   async beginCredentialOfferInteraction(
-    issuerAgent: IAgent,
-    uniqueCallbackURL: string,
-    nonce: string,
+    issuerAgentID: string,
     credentials: { type: string; claims: IClaim[] }[]
   ): Promise<BeginCredentialOfferOutput> {
+    if (!issuerAgentID || issuerAgentID.length == 0) {
+      throw new AuthenticationException(
+        'Unable to retrieve authenticated agent; no identifier'
+      );
+    }
+    const issuerAgent = await this.getAgentOrFail(issuerAgentID);
+
+    const { nonce, uniqueCallbackURL } =
+      this.trustRegistryAdapter.generateCredentialOfferUrl();
+
     const offeredCredentials =
       this.trustRegistryAdapter.getCredentialOffers(credentials);
 
     const credentialOffer$ = this.walletManagementClient.send(
-      { cmd: 'beginCredentialOfferInteraction' },
+      { cmd: WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION },
       {
         issuerDId: issuerAgent.did,
         issuerPassword: issuerAgent.password,
@@ -404,7 +414,7 @@ export class AgentService {
       return request;
     } catch (err: any) {
       throw new SsiException(
-        `[beginCredentialOfferInteraction]: Failed to offer credential: ${err.message}`
+        `[${WalletManagerCommand.BEGIN_CREDENTIAL_OFFER_INTERACTION}]: Failed to offer credential: ${err.message}`
       );
     }
   }
@@ -437,7 +447,7 @@ export class AgentService {
     );
 
     const credentialOfferSelection$ = this.walletManagementClient.send(
-      { cmd: ssiConfig.endpoints.completeCredentialOfferInteraction },
+      { cmd: RestEndpoint.COMPLETE_CREDENTIAL_OFFER_INTERACTION },
       {
         interactionId: interactionId,
         credentialMetadata: offeredCredentials.map(c => c.metadata),
@@ -449,7 +459,7 @@ export class AgentService {
       return await firstValueFrom(credentialOfferSelection$);
     } catch (err: any) {
       throw new SsiException(
-        `[completeCredentialOfferInteraction]:Failed to offer credential: ${err.message}`
+        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}]:Failed to offer credential: ${err.message}`
       );
     }
   }
@@ -465,7 +475,7 @@ export class AgentService {
         }));
     } catch (err: any) {
       throw new SsiException(
-        `[completeCredentialOfferInteraction]:Failed to offer credential: ${err.message}`
+        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}]:Failed to offer credential: ${err.message}`
       );
     }
   }
@@ -479,7 +489,7 @@ export class AgentService {
     credentialContext: any
   ): Promise<void> {
     const credentialRequest$ = this.walletManagementClient.send(
-      { cmd: 'issueVerifiedCredential' },
+      { cmd: WalletManagerCommand.ISSUE_VERIFIED_CREDENTIAL },
       {
         issuerDId: issuerAgent.did,
         issuerPassword: issuerAgent.password,
