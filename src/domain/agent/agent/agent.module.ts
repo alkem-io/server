@@ -7,6 +7,7 @@ import { AgentResolverFields } from './agent.resolver.fields';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { TrustRegistryAdapterModule } from '../../../services/platform/trust-registry-adapter/trust.registry.adapter.module';
+import { AgentResolverMutations } from './agent.resolver.mutations';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { TrustRegistryAdapterModule } from '../../../services/platform/trust-reg
     CacheModule.register(),
     TrustRegistryAdapterModule,
   ],
-  providers: [AgentService, AgentResolverFields],
+  providers: [AgentService, AgentResolverMutations, AgentResolverFields],
   exports: [AgentService],
 })
 export class AgentModule {}

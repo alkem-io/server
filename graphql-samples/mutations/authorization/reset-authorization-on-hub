@@ -1,0 +1,11 @@
+mutation authorizationPolicyResetOnHub($authorizationResetData: HubAuthorizationResetInput!) {
+  authorizationPolicyResetOnHub(authorizationResetData: $authorizationResetData) {
+    nameID
+  }
+}
+
+{
+  "authorizationResetData": {
+    "hubID": "Eco1"
+  }
+}

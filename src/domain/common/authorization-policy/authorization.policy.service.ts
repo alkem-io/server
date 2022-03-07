@@ -21,6 +21,7 @@ import { AuthorizationPolicyRuleCredential } from '@core/authorization/authoriza
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 
 @Injectable()
 export class AuthorizationPolicyService {
@@ -131,6 +132,24 @@ export class AuthorizationPolicyService {
       existingRules.push(additionalRule);
     }
     auth.privilegeRules = JSON.stringify(existingRules);
+    return auth;
+  }
+
+  appendVerifiedCredentialAuthorizationRules(
+    authorization: IAuthorizationPolicy | undefined,
+    additionalRules: AuthorizationPolicyRuleVerifiedCredential[]
+  ): IAuthorizationPolicy {
+    const auth = this.validateAuthorization(authorization);
+
+    const existingRules =
+      this.authorizationService.convertVerifiedCredentialRulesStr(
+        auth.verifiedCredentialRules
+      );
+    for (const additionalRule of additionalRules) {
+      existingRules.push(additionalRule);
+    }
+
+    auth.verifiedCredentialRules = JSON.stringify(existingRules);
     return auth;
   }
 
