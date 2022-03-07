@@ -2,7 +2,6 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { IUser } from '@domain/community/user';
 import { AgentInfo } from '@core/authentication';
 import {
   BeginCredentialOfferOutput,
@@ -10,9 +9,10 @@ import {
 } from '@domain/agent/credential/credential.dto.interactions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AlkemioUserClaim } from '@services/platform/trust-registry-adapter/claim/claim.entity';
+import { Agent } from './agent.entity';
 
-@Resolver(() => IUser)
-export class UserResolverMutations {
+@Resolver(() => Agent)
+export class AgentResolverMutations {
   constructor(private agentService: AgentService) {}
 
   @UseGuards(GraphqlGuard)
