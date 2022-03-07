@@ -30,8 +30,7 @@ export class KonfigService {
         featureFlags: [
           {
             name: 'ssi',
-            enabled: this.configService.get(ConfigurationTypes.IDENTITY)?.ssi
-              .enabled,
+            enabled: this.configService.get(ConfigurationTypes.SSI)?.enabled,
           },
           {
             name: 'communications',

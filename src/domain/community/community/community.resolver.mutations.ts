@@ -27,6 +27,12 @@ import { NotificationsPayloadBuilder } from '@core/microservices';
 import { DeleteApplicationInput } from '../application/dto/application.dto.delete';
 import { ApplicationEventInput } from '../application/dto/application.dto.event';
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { BeginCredentialOfferOutput } from '@domain/agent/credential/credential.dto.interactions';
+import {
+  AlkemioUserClaim,
+  ReadCommunityClaim,
+} from '@services/platform/trust-registry-adapter/claim/claim.entity';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -41,6 +47,7 @@ export class CommunityResolverMutations {
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService,
+    private agentService: AgentService,
     private applicationAuthorizationService: ApplicationAuthorizationService,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
@@ -223,6 +230,41 @@ export class CommunityResolverMutations {
     return await this.communityLifecycleOptionsProvider.eventOnApplication(
       applicationEventData,
       agentInfo
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => BeginCredentialOfferOutput, {
+    description: 'Generate community member credential offer',
+  })
+  async beginCommunityMemberCredentialOfferInteraction(
+    @Args({ name: 'communityID', type: () => String }) communityID: string,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<BeginCredentialOfferOutput> {
+    const community = await this.communityService.getCommunityOrFail(
+      communityID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.READ,
+      `beginCommunityMemberCredentialOfferInteraction: ${community.id}`
+    );
+
+    return await this.agentService.beginCredentialOfferInteraction(
+      agentInfo.agentID,
+      [
+        {
+          type: 'CommunityMemberCredential',
+          claims: [
+            new AlkemioUserClaim({
+              userID: agentInfo.userID,
+              email: agentInfo.email,
+            }),
+            new ReadCommunityClaim({ communityID: community.id }),
+          ],
+        },
+      ]
     );
   }
 }

@@ -1,31 +1,48 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
+import { Profiling } from '@common/decorators/profiling.decorator';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import {
+  AuthenticationException,
   EntityNotFoundException,
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
+import { SsiException } from '@common/exceptions/ssi.exception';
+import { CredentialMetadata } from '@services/platform/trust-registry-adapter/credentials/credential.provider.interface';
 import {
   Agent,
+  CreateAgentInput,
+  GrantCredentialInput,
   IAgent,
   RevokeCredentialInput,
-  GrantCredentialInput,
-  CreateAgentInput,
 } from '@domain/agent/agent';
-import { ConfigurationTypes, LogContext } from '@common/enums';
-import { CredentialService } from '../credential/credential.service';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { VerifiedCredential } from '@domain/agent/verified-credential';
-import { ConfigService } from '@nestjs/config';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import {
+  CACHE_MANAGER,
+  Inject,
+  Injectable,
+  LoggerService,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ClientProxy } from '@nestjs/microservices';
-import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
-import { firstValueFrom } from 'rxjs';
+import { InjectRepository } from '@nestjs/typeorm';
+import { TrustRegistryAdapter } from '@services/platform/trust-registry-adapter/trust.registry.adapter';
+import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { SsiException } from '@common/exceptions/ssi.exception';
-import { Profiling } from '@common/decorators/profiling.decorator';
+import { firstValueFrom } from 'rxjs';
+import { FindOneOptions, Repository } from 'typeorm';
+import { IClaim } from '../../../services/platform/trust-registry-adapter/claim/claim.entity';
+import {
+  BeginCredentialOfferOutput,
+  BeginCredentialRequestOutput,
+} from '../credential/credential.dto.interactions';
+import { CredentialMetadataOutput } from '../credential/credential.dto.metadata';
+import { CredentialService } from '../credential/credential.service';
+import { RestEndpoint } from '@common/enums/rest.endpoint';
+import { WalletManagerCommand } from '@common/enums/wallet.manager.command';
 
 @Injectable()
 export class AgentService {
@@ -37,7 +54,11 @@ export class AgentService {
     private walletManagementClient: ClientProxy,
     @InjectRepository(Agent)
     private agentRepository: Repository<Agent>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private readonly trustRegistryAdapter: TrustRegistryAdapter,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache
   ) {}
 
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
@@ -45,8 +66,7 @@ export class AgentService {
     agent.credentials = [];
     agent.authorization = new AuthorizationPolicy();
 
-    const ssiEnabled = this.configService.get(ConfigurationTypes.IDENTITY).ssi
-      .enabled;
+    const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
 
     if (ssiEnabled) {
       return await this.createDidOnAgent(agent);
@@ -198,7 +218,7 @@ export class AgentService {
     agent.password = Math.random().toString(36).substr(2, 10);
 
     const did$ = this.walletManagementClient.send(
-      { cmd: 'createIdentity' },
+      { cmd: WalletManagerCommand.CREATE_IDENTITY },
       {
         password: agent.password,
       }
@@ -215,17 +235,21 @@ export class AgentService {
 
   @Profiling.api
   async getVerifiedCredentials(agent: IAgent): Promise<VerifiedCredential[]> {
+    const credentialMetadata =
+      this.trustRegistryAdapter.getSupportedCredentialMetadata();
+
     const identityInfo$ = this.walletManagementClient.send(
-      { cmd: 'getIdentityInfo' },
+      { cmd: WalletManagerCommand.GET_IDENTITY_INFO },
       {
         did: agent.did,
         password: agent.password,
+        credentialMetadata: credentialMetadata,
       }
     );
 
     try {
-      const verificedCredentials = await firstValueFrom(identityInfo$);
-      return verificedCredentials;
+      const verifiedCredentials = await firstValueFrom(identityInfo$);
+      return verifiedCredentials;
     } catch (err: any) {
       throw new SsiException(
         `Failed to get identity info from wallet manager: ${err.message}`
@@ -241,7 +265,7 @@ export class AgentService {
     userID: string
   ): Promise<VerifiedCredential[]> {
     const identityInfo$ = this.walletManagementClient.send(
-      { cmd: 'grantStateTransitionVC' },
+      { cmd: WalletManagerCommand.GRANT_STATE_TRANSITION_VC },
       {
         issuerDid: challengeAgent.did,
         issuerPW: challengeAgent.password,
@@ -258,6 +282,229 @@ export class AgentService {
       throw new SsiException(
         `Failed to grant state transition Verified Credential: ${err.message}`
       );
+    }
+  }
+
+  @Profiling.api
+  async beginCredentialRequestInteraction(
+    issuerAgentID: string,
+    credentialTypes: string[]
+  ): Promise<BeginCredentialRequestOutput> {
+    const { nonce, uniqueCallbackURL } =
+      this.trustRegistryAdapter.generateCredentialRequestUrl();
+    const issuerAgent = await this.getAgentOrFail(issuerAgentID);
+    const credentialRequest$ = this.walletManagementClient.send(
+      { cmd: WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION },
+      {
+        issuerDId: issuerAgent.did,
+        issuerPassword: issuerAgent.password,
+        credentialMetadata:
+          this.trustRegistryAdapter.getSupportedCredentialMetadata(
+            credentialTypes
+          ),
+        uniqueCallbackURL: uniqueCallbackURL,
+      }
+    );
+
+    try {
+      const request = await firstValueFrom<BeginCredentialRequestOutput>(
+        credentialRequest$
+      );
+
+      const requestExpirationTtl = request.expiresOn - new Date().getTime();
+      this.cacheManager.set<IAgent>(request.interactionId, issuerAgent, {
+        ttl: requestExpirationTtl,
+      });
+      this.cacheManager.set(nonce, request.interactionId, {
+        ttl: requestExpirationTtl,
+      });
+
+      return request;
+    } catch (err: any) {
+      throw new SsiException(
+        `[beginCredentialRequestInteraction]: Failed to request credential: ${err.message}`
+      );
+    }
+  }
+
+  @Profiling.api
+  async completeCredentialRequestInteraction(
+    nonce: string,
+    token: string
+  ): Promise<void> {
+    const interactionId = await this.cacheManager.get<string>(nonce);
+    if (!interactionId) {
+      throw new Error('The interaction is not valid');
+    }
+    const agent = await this.cacheManager.get<IAgent>(interactionId);
+    if (!agent) {
+      throw new Error('An agent could not be found for the interactionId');
+    }
+
+    this.logger.verbose?.(
+      `InteractionId with agent: ${interactionId} - ${agent.did} received ${token}`,
+      LogContext.SSI
+    );
+
+    const credentialStoreRequest$ = this.walletManagementClient.send(
+      { cmd: RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION },
+      {
+        interactionId: interactionId,
+        jwt: token,
+      }
+    );
+
+    try {
+      await firstValueFrom<boolean>(credentialStoreRequest$);
+    } catch (err: any) {
+      throw new SsiException(
+        `[completeCredentialRequestInteraction]: Failed to request credential: ${err.message}`
+      );
+    }
+  }
+
+  @Profiling.api
+  async beginCredentialOfferInteraction(
+    issuerAgentID: string,
+    credentials: { type: string; claims: IClaim[] }[]
+  ): Promise<BeginCredentialOfferOutput> {
+    if (!issuerAgentID || issuerAgentID.length == 0) {
+      throw new AuthenticationException(
+        'Unable to retrieve authenticated agent; no identifier'
+      );
+    }
+    const issuerAgent = await this.getAgentOrFail(issuerAgentID);
+
+    const { nonce, uniqueCallbackURL } =
+      this.trustRegistryAdapter.generateCredentialOfferUrl();
+
+    const offeredCredentials =
+      this.trustRegistryAdapter.getCredentialOffers(credentials);
+
+    const credentialOffer$ = this.walletManagementClient.send(
+      { cmd: WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION },
+      {
+        issuerDId: issuerAgent.did,
+        issuerPassword: issuerAgent.password,
+        offeredCredentials: offeredCredentials,
+        uniqueCallbackURL: uniqueCallbackURL,
+      }
+    );
+
+    try {
+      const request = await firstValueFrom<BeginCredentialOfferOutput>(
+        credentialOffer$
+      );
+
+      const requestExpirationTtl = request.expiresOn - new Date().getTime();
+      this.cacheManager.set<{
+        agent: IAgent;
+        offeredCredentials: typeof offeredCredentials;
+      }>(
+        request.interactionId,
+        { agent: issuerAgent, offeredCredentials },
+        {
+          ttl: requestExpirationTtl,
+        }
+      );
+      this.cacheManager.set(nonce, request.interactionId, {
+        ttl: requestExpirationTtl,
+      });
+
+      return request;
+    } catch (err: any) {
+      throw new SsiException(
+        `[${WalletManagerCommand.BEGIN_CREDENTIAL_OFFER_INTERACTION}]: Failed to offer credential: ${err.message}`
+      );
+    }
+  }
+
+  @Profiling.api
+  async completeCredentialOfferInteraction(
+    nonce: string,
+    token: string
+  ): Promise<any> {
+    const interactionId = await this.cacheManager.get<string>(nonce);
+    if (!interactionId) {
+      throw new Error('The interaction is not valid');
+    }
+    const { agent, offeredCredentials } =
+      (await this.cacheManager.get<{
+        agent: IAgent;
+        offeredCredentials: {
+          metadata: CredentialMetadata;
+          claim: Record<string, any>;
+        }[];
+      }>(interactionId)) || {};
+
+    if (!agent || !offeredCredentials) {
+      throw new Error('An agent could not be found for the interactionId');
+    }
+
+    this.logger.verbose?.(
+      `InteractionId with agent: ${interactionId} - ${agent.did} received ${token}`,
+      LogContext.SSI
+    );
+
+    const credentialOfferSelection$ = this.walletManagementClient.send(
+      { cmd: RestEndpoint.COMPLETE_CREDENTIAL_OFFER_INTERACTION },
+      {
+        interactionId: interactionId,
+        credentialMetadata: offeredCredentials.map(c => c.metadata),
+        jwt: token,
+      }
+    );
+
+    try {
+      return await firstValueFrom(credentialOfferSelection$);
+    } catch (err: any) {
+      throw new SsiException(
+        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}]:Failed to offer credential: ${err.message}`
+      );
+    }
+  }
+
+  @Profiling.api
+  async getSupportedCredentialMetadata(): Promise<CredentialMetadataOutput[]> {
+    try {
+      return this.trustRegistryAdapter
+        .getSupportedCredentialMetadata()
+        .map(x => ({
+          ...x,
+          context: JSON.stringify(x.context),
+        }));
+    } catch (err: any) {
+      throw new SsiException(
+        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}]:Failed to offer credential: ${err.message}`
+      );
+    }
+  }
+
+  @Profiling.api
+  async issueVerifiedCredential(
+    issuerAgent: IAgent,
+    receiverAgent: IAgent,
+    credentialType: string,
+    credentialName: string,
+    credentialContext: any
+  ): Promise<void> {
+    const credentialRequest$ = this.walletManagementClient.send(
+      { cmd: WalletManagerCommand.ISSUE_VERIFIED_CREDENTIAL },
+      {
+        issuerDId: issuerAgent.did,
+        issuerPassword: issuerAgent.password,
+        receiverDId: receiverAgent.did,
+        receiverPassword: receiverAgent.password,
+        types: credentialType,
+        name: credentialName,
+        context: credentialContext,
+      }
+    );
+
+    try {
+      await firstValueFrom(credentialRequest$);
+    } catch (err: any) {
+      throw new SsiException(`Failed to issue credential: ${err.message}`);
     }
   }
 

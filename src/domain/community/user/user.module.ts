@@ -17,6 +17,7 @@ import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
 import { UserPreferenceModule } from '../user-preferences';
 import { KonfigModule } from '@services/platform/configuration/config/config.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { KonfigModule } from '@services/platform/configuration/config/config.mod
     KonfigModule,
     TypeOrmModule.forFeature([User]),
     CacheModule.register({ max: 250, ttl: 300 }),
+    ConfigModule,
   ],
   providers: [
     UserService,
