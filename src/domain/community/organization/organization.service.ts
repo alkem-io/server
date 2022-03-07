@@ -191,7 +191,7 @@ export class OrganizationService {
   ): Promise<IOrganization> {
     const orgID = deleteData.ID;
     const organization = await this.getOrganizationOrFail(orgID, {
-      relations: ['profile', 'groups', 'agent'],
+      relations: ['profile', 'groups', 'agent', 'verification'],
     });
     const isHubHost = await this.isHubHost(organization);
     if (isHubHost) {
@@ -574,16 +574,19 @@ export class OrganizationService {
   }
 
   async getVerification(
-    organization: IOrganization
+    organizationParent: IOrganization
   ): Promise<IOrganizationVerification> {
+    const organization = await this.getOrganizationOrFail(
+      organizationParent.id,
+      {
+        relations: ['verification'],
+      }
+    );
     if (!organization.verification) {
-      // create and add the verification
-      organization.verification =
-        await this.organizationVerificationService.createOrganizationVerification(
-          { organizationID: organization.id }
-        );
-
-      await this.organizationRepository.save(organization);
+      throw new EntityNotFoundException(
+        `Unable to load verification for organisation: ${organization.displayName}`,
+        LogContext.COMMUNITY
+      );
     }
     return organization.verification;
   }

@@ -210,7 +210,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_wallet_manager
     hostname: wallet-manager
-    image: alkemio/wallet-manager:v0.2.0
+    image: alkemio/wallet-manager:v0.3.0
     environment:
       - DATABASE_HOST
       - MYSQL_ROOT_PASSWORD

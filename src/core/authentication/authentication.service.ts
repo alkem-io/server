@@ -51,6 +51,7 @@ export class AuthenticationService {
     const { user, agent } = await this.userService.getUserAndAgent(
       agentInfo.email
     );
+    agentInfo.agentID = agent.id;
     if (!agent.credentials) {
       this.logger.warn?.(
         `Authentication Info: Unable to retrieve credentials for registered user: ${agentInfo.email}`,
@@ -63,8 +64,7 @@ export class AuthenticationService {
     agentInfo.communicationID = user.communicationID;
 
     // Store also retrieved verified credentials; todo: likely slow, need to evaluate other options
-    const ssiEnabled = this.configService.get(ConfigurationTypes.IDENTITY).ssi
-      .enabled;
+    const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
 
     if (ssiEnabled) {
       agentInfo.verifiedCredentials =

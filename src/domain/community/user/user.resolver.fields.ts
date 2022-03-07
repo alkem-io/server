@@ -10,8 +10,8 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { UserService } from './user.service';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
-import { IUserPreference } from '../user-preferences/user.preference.interface';
 import { IProfile } from '../profile/profile.interface';
+import { IPreference } from '@domain/common/preferences/preference.interface';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -38,12 +38,12 @@ export class UserResolverFields {
     return await this.userService.getAgent(user.id);
   }
 
-  @ResolveField('preferences', () => [IUserPreference], {
+  @ResolveField('preferences', () => [IPreference], {
     nullable: false,
     description: 'The preferences for this user',
   })
   @Profiling.api
-  async preferences(@Parent() user: User): Promise<IUserPreference[]> {
+  async preferences(@Parent() user: User): Promise<IPreference[]> {
     return await this.userService.getPreferences(user.id);
   }
 

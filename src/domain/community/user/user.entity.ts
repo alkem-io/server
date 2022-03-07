@@ -5,7 +5,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { Application } from '@domain/community/application/application.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
-import { UserPreference } from '../user-preferences/user.preference.entity';
+import { Preference } from '@domain/common/preferences/preference.entity';
 
 @Entity()
 export class User extends NameableEntity implements IUser {
@@ -57,12 +57,12 @@ export class User extends NameableEntity implements IUser {
   })
   applications?: Application[];
 
-  @OneToMany(() => UserPreference, preference => preference.user, {
+  @OneToMany(() => Preference, preference => preference.user, {
     eager: false,
     cascade: true,
     onDelete: 'CASCADE',
   })
-  preferences!: UserPreference[];
+  preferences!: Preference[];
 
   constructor() {
     super();
