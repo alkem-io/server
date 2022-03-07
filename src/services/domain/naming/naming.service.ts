@@ -129,7 +129,7 @@ export class NamingService {
   }
 
   createNameID(base: string, useRandomSuffix = true): string {
-    const nameIDExcludedCharacters = /[^a-zA-Z0-9/-]/g;
+    const nameIDExcludedCharacters = /[^a-zA-Z0-9-]/g;
     let randomSuffix = '';
     if (useRandomSuffix) {
       const randomNumber = Math.floor(Math.random() * 10000).toString();
@@ -139,7 +139,8 @@ export class NamingService {
     // replace spaces + trim to 25 characters
     const nameID = `${baseMaxLength}${randomSuffix}`.replace(/\s/g, '');
     // replace characters with umlouts etc to normal characters
-    const nameIDNoSpecialCharacters = this.replaceSpecialCharacters(nameID);
+    const nameIDNoSpecialCharacters: string =
+      this.replaceSpecialCharacters(nameID);
     // Remove any characters that are not allowed
     return nameIDNoSpecialCharacters
       .replace(nameIDExcludedCharacters, '')
