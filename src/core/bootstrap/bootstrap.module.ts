@@ -8,9 +8,9 @@ import { UserModule } from '@domain/community/user/user.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AdminAuthorizationModule } from '@services/admin/authorization/admin.authorization.module';
-import { UserPreferenceModule } from '@domain/community/user-preferences';
 import { BootstrapService } from './bootstrap.service';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
+import { PreferenceModule } from '@domain/common/preferences/preference.module';
 
 @Module({
   imports: [
@@ -19,7 +19,7 @@ import { CommunicationModule } from '@domain/communication/communication/communi
     ProfileModule,
     TagsetModule,
     UserModule,
-    UserPreferenceModule,
+    PreferenceModule,
     AdminAuthorizationModule,
     CommunicationModule,
     OrganizationModule,

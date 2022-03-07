@@ -1,5 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { RandomGenerator } from 'typeorm/util/RandomGenerator';
+import { randomUUID } from 'crypto';
 
 export class userPreferences1636644627179 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -54,7 +54,7 @@ export class userPreferences1636644627179 implements MigrationInterface {
     );
     usersWithoutPreference.forEach(user =>
       definitions.forEach(async def => {
-        const uuid = RandomGenerator.uuid4();
+        const uuid = randomUUID();
         await queryRunner.query(
           `INSERT INTO authorization_policy VALUES ('${uuid}', NOW(), NOW(), 1, '', '', 0)`
         );

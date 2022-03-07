@@ -1,24 +1,29 @@
-import { UseGuards } from '@nestjs/common';
-import { Args, Float, Query, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
-import { IUser } from '@domain/community/user';
-import { UserService } from './user.service';
-import { AuthenticationException } from '@common/exceptions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AgentInfo } from '@src/core/authentication/agent-info';
+import { AuthorizationPrivilege } from '@common/enums';
+import { AuthenticationException } from '@common/exceptions';
 import { UserNotRegisteredException } from '@common/exceptions/registration.exception';
 import { GraphqlGuard } from '@core/authorization';
-import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { CredentialMetadataOutput } from '@domain/agent/credential/credential.dto.metadata';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationPrivilege } from '@common/enums';
+import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
+import { IUser } from '@domain/community/user';
+import { UseGuards } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Args, Float, Query, Resolver } from '@nestjs/graphql';
+import { Profiling } from '@src/common/decorators';
+import { AgentInfo } from '@src/core/authentication/agent-info';
+import { UserService } from './user.service';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
   constructor(
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private userService: UserService
+    private userService: UserService,
+    private agentService: AgentService,
+    private configService: ConfigService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -134,5 +139,24 @@ export class UserResolverQueries {
       throw new UserNotRegisteredException();
     }
     return user;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Query(() => [CredentialMetadataOutput], {
+    nullable: false,
+    description: 'Get supported credential metadata',
+  })
+  @Profiling.api
+  async getSupportedCredentialMetadata(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<CredentialMetadataOutput[]> {
+    const userID = agentInfo.userID;
+    if (!userID || userID.length == 0) {
+      throw new AuthenticationException(
+        'Unable to retrieve authenticated user; no identifier'
+      );
+    }
+
+    return await this.agentService.getSupportedCredentialMetadata();
   }
 }

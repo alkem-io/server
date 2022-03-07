@@ -1,0 +1,27 @@
+mutation UpdateHub($hubData: UpdateHubInput!) {
+  updateHub(hubData: $hubData) {
+    id
+    template {
+      aspectTemplates {
+        type,
+        description
+      }
+    }
+  }
+}
+
+{
+  "hubData":
+		{
+      "ID": "un-sdgs",
+      "template": {
+        "aspectTemplates": [
+            {
+                "type": "video",
+                "description": "Video explainer for the challenge"
+            }
+          ]
+      }
+
+		}
+}

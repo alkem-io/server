@@ -1,0 +1,16 @@
+mutation CreateHub($hubData: CreateHubInput!) {
+  createHub(hubData: $hubData) {
+    displayName,
+    id
+  }
+}
+
+query variables:
+{
+  "hubData":
+  {
+    "displayName": "Test hub2",
+    "nameID": "eco2",
+    "hostID": "Eco1Host"
+  }
+}
