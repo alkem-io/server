@@ -31,8 +31,7 @@ export class AgentResolverFields {
   async verifiedCredentials(
     @Parent() agent: Agent
   ): Promise<VerifiedCredential[]> {
-    const ssiEnabled = this.configService.get(ConfigurationTypes.IDENTITY).ssi
-      .enabled;
+    const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
     if (!ssiEnabled) {
       throw new NotEnabledException('SSI is not enabled', LogContext.SSI);
     }

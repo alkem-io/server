@@ -9,5 +9,5 @@ export * from './challenge.lifecycle.template';
 export * from './authorization.privilege';
 export * from './authorization.verified.credential';
 export * from './communications.synapse.endpoint';
-export * from './user.preference.value.type';
+export * from './preference.value.type';
 export * from './user.preference.type';

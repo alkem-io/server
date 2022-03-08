@@ -1,12 +1,12 @@
 import { registerEnumType } from '@nestjs/graphql';
 
-export enum UserPreferenceValueType {
+export enum PreferenceValueType {
   BOOLEAN = 'boolean',
   INT = 'int',
   FLOAT = 'float',
   STRING = 'string',
 }
 
-registerEnumType(UserPreferenceValueType, {
-  name: 'UserPreferenceValueType',
+registerEnumType(PreferenceValueType, {
+  name: 'PreferenceValueType',
 });

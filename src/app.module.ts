@@ -1,11 +1,18 @@
 import { ConfigurationTypes } from '@common/enums';
 import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
+import {
+  configQuery,
+  hubsQuery,
+  meQuery,
+  serverMetadataQuery,
+} from '@config/graphql';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
+import { AgentModule } from '@domain/agent/agent/agent.module';
 import { HubModule } from '@domain/challenge/hub/hub.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { MiddlewareConsumer, Module } from '@nestjs/common';
@@ -22,15 +29,9 @@ import { MetadataModule } from '@src/services/domain/metadata/metadata.module';
 import { SearchModule } from '@src/services/domain/search/search.module';
 import { KonfigModule } from '@src/services/platform/configuration/config/config.module';
 import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
+import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
-import {
-  configQuery,
-  hubsQuery,
-  meQuery,
-  serverMetadataQuery,
-} from '@config/graphql';
-import { print } from 'graphql/language/printer';
 
 @Module({
   imports: [
@@ -114,37 +115,39 @@ import { print } from 'graphql/language/printer';
           // once the connection is established in onConnect, the context will have the user populated
           connection ? { req: connection.context } : { req },
         subscriptions: {
-          keepAlive: 5000,
-          onConnect: async (
-            _: { [key: string]: any },
-            __: { [key: string]: any },
-            context
-          ) => {
-            const authHeader: string =
-              context.request.headers.authorization || '';
-            const msg = `[Websocket] Opening for user with token: ${authHeader.substring(
-              0,
-              20
-            )}`;
+          'subscriptions-transport-ws': {
+            keepAlive: 5000,
+            onConnect: async (
+              _: { [key: string]: any },
+              __: { [key: string]: any },
+              context: any
+            ) => {
+              const authHeader: string =
+                context.request.headers.authorization || '';
+              const msg = `[Websocket] Opening for user with token: ${authHeader.substring(
+                0,
+                20
+              )}`;
 
-            // dummy code to not trigger warnings
-            if (msg.length === 0) {
-              return; // console.log(msg);
-            }
-            // Note: passing through headers so can leverage http authentication setup
-            // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
-            return { headers: { authorization: `${authHeader}` } };
-          },
-          onDisconnect: async (_: any, context: any) => {
-            const authHeader: string = context.request.headers.authorization;
-            const msg = `[Websocket] Closing for user with token: ${authHeader.substring(
-              0,
-              20
-            )}`;
-            // dummy code to not trigger warnings
-            if (msg.length === 0) {
-              return; // console.log(msg);
-            }
+              // dummy code to not trigger warnings
+              if (msg.length === 0) {
+                return; // console.log(msg);
+              }
+              // Note: passing through headers so can leverage http authentication setup
+              // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
+              return { headers: { authorization: `${authHeader}` } };
+            },
+            onDisconnect: async (_: any, context: any) => {
+              const authHeader: string = context.request.headers.authorization;
+              const msg = `[Websocket] Closing for user with token: ${authHeader.substring(
+                0,
+                20
+              )}`;
+              // dummy code to not trigger warnings
+              if (msg.length === 0) {
+                return; // console.log(msg);
+              }
+            },
           },
         },
       }),
@@ -160,6 +163,7 @@ import { print } from 'graphql/language/printer';
     KonfigModule,
     IpfsModule,
     AdminCommunicationModule,
+    AgentModule,
   ],
   controllers: [AppController],
   providers: [
@@ -175,7 +179,7 @@ import { print } from 'graphql/language/printer';
   ],
 })
 export class AppModule {
-  configure(consummer: MiddlewareConsumer) {
-    consummer.apply(RequestLoggerMiddleware).forRoutes('/');
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestLoggerMiddleware).forRoutes('/');
   }
 }

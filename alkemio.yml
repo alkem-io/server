@@ -20,11 +20,22 @@ hosting:
   #
   port: ${GRAPHQL_PORT}:4000
 
-  # The graphql endpoint.
-  # This is then used for routing the requests from the public-facing endpoint (e.g. https://dev.alkem.io/graphql)
+  # The endpoint for all cluster requests.
+  # This is then used for routing the requests from the public-facing endpoint (e.g. https://dev.alkem.io/)
   # to the alkemio-server service, orchestrated with the orchestration engine of your choice, e.g. kubernetes or docker-compose.
   #
+  # TODO: the env var name is no longer acccurate
   endpoint: ${GRAPHQL_ENDPOINT}:http://localhost:3000
+
+  # The path from the end point for all public api rest requests.
+  # It is combined with the `endpoint` above to provide the full path for incoming requests targeting the public Rest api.
+  #
+  path_api_public_rest: ${PATH_API_PUBLIC_REST}:/api/public/rest
+
+  # The path from the end point for all public api rest requests.
+  # It is combined with the `endpoint` above to provide the full path for incoming requests targeting the public Rest api.
+  #
+  path_api_public_graphql: ${PATH_API_PUBLIC_GRAPHQL}:/api/public/graphql
 
   # The type of environment is used in multiple places to determine whether dev tooling is enabled.
   # The tyoe of environment can also be used for monitoring / logging / analysis in an ELK cluster / ElasticCloud instance.
@@ -166,13 +177,6 @@ identity:
 
         # Ory Kratos URL for usage by the Alkemio server when inside a cluster.
         kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:3000/identity/ory/kratos/public
-
-  ssi:
-    # Jolocom SDK is used for providing SSI capabilities on the platform.
-    # Note: NOT FOR PRODUCTION USAGE, experimental functionality,
-    # In particular, the migrations of the Jolocom database are still not setup, so any DID's created are not
-    # guaranteed to be migrated properly.
-    enabled: ${SSI_ENABLED}:false
 
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
@@ -324,10 +328,10 @@ microservices:
       port: ${RABBITMQ_PORT}:5672
 
       # RabbitMQ user
-      user: ${RABBITMQ_USER}:user
+      user: ${RABBITMQ_USER}:alkemio-admin
 
       # RabbitMQ password
-      password: ${RABBITMQ_PASSWORD}:bitnami
+      password: ${RABBITMQ_PASSWORD}:alkemio!
 
 notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true
@@ -355,3 +359,49 @@ platform:
 
   # About the platform
   about: ${PLATFORM_ABOUT}:https://alkem.io/platform/about
+
+ssi:
+  # Jolocom SDK is used for providing SSI capabilities on the platform.
+  # Note: NOT FOR PRODUCTION USAGE, experimental functionality,
+  # In particular, the migrations of the Jolocom database are still not setup, so any DID's created are not
+  # guaranteed to be migrated properly.
+  enabled: ${SSI_ENABLED}:false
+
+  credentials:
+    proof_of_community_membership:
+      name: Community Member
+      description: The holder is a member of an Alkemio hub,challenge or opportunity community
+      schema: https://schema.org/EducationalOccupationalCredential
+      types:
+        - Credential
+        - CommunityMemberCredential
+      uniqueType: CommunityMemberCredential
+      context:
+        alkemioUser_userID: 'schema:uuid'
+        alkemioUser_email: 'schema:email'
+        communityMember_communityID: 'schema:uuid'
+    proof_of_alkemio_membership:
+      name: Alkemio User
+      description: The holder is a verified Alkemio user
+      schema: https://schema.org/EducationalOccupationalCredential
+      types:
+        - Credential
+        - AlkemioMemberCredential
+      uniqueType: AlkemioMemberCredential
+      context:
+        alkemioUser_userID: 'schema:uuid'
+        alkemioUser_email: 'schema:email'
+    proof_of_postal_address:
+      name: Postal Address
+      description: The holder's location is confirmed by the issuer
+      schema: https://schema.org/EducationalOccupationalCredential
+      types:
+        - Credential
+        - postalAddress
+      uniqueType: postalAddress
+      context:
+        addressLine1: 'schema:streetAddress'
+        addressLine2: 'schema:streetAddress'
+        postalCode: 'schema:postalCode'
+        city: 'schema:addressLocality'
+        country: 'schema:addressLocality'

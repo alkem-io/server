@@ -8,9 +8,9 @@ export class UUID implements CustomScalar<string, string> {
   static LENGTH = 36;
   static REGEX = /^[a-zA-Z0-9.\-_]+$/;
 
-  description = 'A uuid identifier. Length 36 charachters.';
+  description = 'A uuid identifier. Length 36 characters.';
 
-  parseValue(value: string): string {
+  parseValue(value: unknown): string {
     return this.validate(value).toLowerCase();
   }
 

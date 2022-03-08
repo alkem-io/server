@@ -1,26 +1,23 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { TINY_TEXT_LENGTH } from '@src/common/constants';
-import { IUserPreference } from './user.preference.interface';
-import { UserPreferenceDefinition } from './user.preference.definition.entity';
-import { User } from '../user/user.entity';
+import { IPreference as IPreference } from './preference.interface';
+import { PreferenceDefinition } from './preference.definition.entity';
+import { User } from '@domain/community/user/user.entity';
 
 @Entity()
-export class UserPreference
-  extends AuthorizableEntity
-  implements IUserPreference
-{
+export class Preference extends AuthorizableEntity implements IPreference {
   @Column({
     length: TINY_TEXT_LENGTH,
   })
   value!: string;
 
-  @ManyToOne(() => UserPreferenceDefinition, def => def.userPreference, {
+  @ManyToOne(() => PreferenceDefinition, def => def.preference, {
     eager: true,
     cascade: false,
     onDelete: 'NO ACTION',
   })
-  userPreferenceDefinition!: UserPreferenceDefinition;
+  preferenceDefinition!: PreferenceDefinition;
 
   @ManyToOne(() => User, user => user.preferences, {
     eager: false,

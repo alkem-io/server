@@ -1,0 +1,13 @@
+mutation assignUserAsHubAdmin($membershipData: AssignHubAdminInput!) {
+  assignUserAsHubAdmin(membershipData: $membershipData) {
+    id,
+  }
+}
+
+Variables:
+{
+  "membershipData": {
+    "userID": "uuid",
+    "hubID": "uuid"
+  }
+}
