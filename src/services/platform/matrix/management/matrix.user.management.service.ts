@@ -1,3 +1,4 @@
+import { AxiosError } from 'axios';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
@@ -71,16 +72,26 @@ export class MatrixUserManagementService {
     const nonce = nonceResponse.data['nonce'];
     const hmac = this.cryptographyServive.generateHmac(user, nonce, isAdmin);
 
+    const registerBody = {
+      nonce,
+      username: user.name,
+      password: user.password,
+      bind_emails: [],
+      admin: isAdmin,
+      mac: hmac,
+    };
+
     const registrationResponse = await this.httpService
-      .post<{ user_id: string; access_token: string }>(url.href, {
-        nonce,
-        username: user.name,
-        password: user.password,
-        bind_emails: [],
-        admin: isAdmin,
-        mac: hmac,
-      })
-      .toPromise();
+      .post<{ user_id: string; access_token: string }>(url.href, registerBody)
+      .toPromise()
+      .catch((err: unknown) => {
+        const error = err as AxiosError;
+        this.logger.error(
+          `Matrix user registration failed: ${error.message}${
+            error.response && JSON.stringify(error.response?.data)
+          }`
+        );
+      });
 
     if (!registrationResponse)
       throw new MatrixUserRegistrationException(
@@ -101,7 +112,7 @@ export class MatrixUserManagementService {
     // Check to ensure that the response home server matches the request
     if (registrationResponse.data.user_id !== user.username) {
       throw new MatrixUserRegistrationException(
-        `Registration response user_id '${registrationResponse.data.user_id}' is not equal to the supplied username: ${user.username} - please check configuraiton`,
+        `Registration response user_id '${registrationResponse.data.user_id}' is not equal to the supplied username: ${user.username} - please check configuration`,
         LogContext.COMMUNICATION
       );
     }
@@ -149,10 +160,12 @@ export class MatrixUserManagementService {
 
   //@Profiling.asyncApi
   async isRegistered(matrixUserID: string): Promise<boolean> {
-    try {
+    const username =
+      this.matrixUserAdapter.convertMatrixIDToUsername(matrixUserID);
+    /*try {
       const username =
         this.matrixUserAdapter.convertMatrixIDToUsername(matrixUserID);
-      await this._matrixClient.isUsernameAvailable(username);
+      const isUsernameAvailable = await this._matrixClient.isUsernameAvailable(username);
       return false;
     } catch (error: any) {
       const errcode = error.errcode;
@@ -164,6 +177,18 @@ export class MatrixUserManagementService {
         LogContext.COMMUNICATION
       );
       throw error;
+    }*/
+    try {
+      const isUsernameAvailable = await this._matrixClient.isUsernameAvailable(
+        username
+      );
+      return !isUsernameAvailable;
+    } catch (error: unknown) {
+      this.logger.error(
+        `Unable to check if username is available: ${error}`,
+        LogContext.COMMUNICATION
+      );
+      return false;
     }
   }
 }
