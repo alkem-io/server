@@ -5,7 +5,8 @@ import { IBaseAlkemio } from '@src/domain/common';
 @ObjectType('PreferenceDefinition')
 export abstract class IPreferenceDefinition extends IBaseAlkemio {
   @Field(() => String, {
-    description: 'The group',
+    description:
+      'The group for the preference within the containing entity type.',
   })
   group!: string;
 

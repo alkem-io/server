@@ -42,6 +42,8 @@ import { IUserTemplate } from '@services/platform/configuration';
 import { NamingService } from '@services/domain/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { PreferenceService } from '@domain/common/preferences/preference.service';
+import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
+import { IPreference } from '@domain/common/preferences/preference.interface';
 
 @Injectable()
 export class UserService {
@@ -109,8 +111,8 @@ export class UserService {
 
     const response = await this.userRepository.save(user);
 
-    user.preferences =
-      await this.preferenceService.createInitialUserPreferences(response);
+    user.preferences = await this.createInitialUserPreferences(response);
+
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
@@ -175,6 +177,25 @@ export class UserService {
     }
 
     return result;
+  }
+
+  async createInitialUserPreferences(user: IUser): Promise<IPreference[]> {
+    const definitions = await this.preferenceService.getAllDefinitionsInSet(
+      PreferenceDefinitionSet.USER
+    );
+    const preferences: IPreference[] = [];
+    for (const definition of definitions) {
+      const preference = await this.preferenceService.createPreference({
+        value: this.preferenceService.getDefaultPreferenceValue(
+          definition.valueType
+        ),
+        preferenceDefinition: definition,
+        user: user,
+      });
+      preferences.push(preference);
+    }
+
+    return preferences;
   }
 
   async getUserTemplate(): Promise<IUserTemplate | undefined> {

@@ -2,6 +2,7 @@ import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -42,6 +43,9 @@ import { CommunityType } from '@common/enums/community.type';
 import { HubTemplate } from './dto/hub.dto.template.hub';
 import { AgentInfo } from '@src/core';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
+import { PreferenceService } from '@domain/common/preferences/preference.service';
+import { IPreference } from '@domain/common/preferences/preference.interface';
+import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 
 @Injectable()
 export class HubService {
@@ -56,6 +60,7 @@ export class HubService {
     private userService: UserService,
     private communityService: CommunityService,
     private challengeService: ChallengeService,
+    private preferenceService: PreferenceService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -87,6 +92,7 @@ export class HubService {
     if (hub.community) {
       hub.community.parentID = hub.id;
     }
+    hub.preferences = await this.createInitialHubPreferences(hub);
 
     // Lifecycle
     const machineConfig: any = challengeLifecycleConfigDefault;
@@ -110,6 +116,25 @@ export class HubService {
     }
 
     return savedHub;
+  }
+
+  async createInitialHubPreferences(hub: IHub): Promise<IPreference[]> {
+    const definitions = await this.preferenceService.getAllDefinitionsInSet(
+      PreferenceDefinitionSet.HUB
+    );
+    const preferences: IPreference[] = [];
+    for (const definition of definitions) {
+      const preference = await this.preferenceService.createPreference({
+        value: this.preferenceService.getDefaultPreferenceValue(
+          definition.valueType
+        ),
+        preferenceDefinition: definition,
+        hub: hub,
+      });
+      preferences.push(preference);
+    }
+
+    return preferences;
   }
 
   async validateHubData(hubData: CreateHubInput) {
@@ -613,5 +638,22 @@ export class HubService {
     }
 
     return template;
+  }
+
+  async getPreferences(hubID: string) {
+    const hub = await this.getHubOrFail(hubID, {
+      relations: ['preferences'],
+    });
+
+    const preferences = hub.preferences;
+
+    if (!preferences) {
+      throw new EntityNotInitializedException(
+        `Hub preferences not initialized: ${hubID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return preferences;
   }
 }

@@ -27,6 +27,7 @@ import { IAgent } from '@domain/agent/agent';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { HubTemplate } from './dto/hub.dto.template.hub';
+import { IPreference } from '@domain/common/preferences/preference.interface';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -71,6 +72,15 @@ export class HubResolverFields {
   @Profiling.api
   async agent(@Parent() hub: Hub): Promise<IAgent> {
     return await this.hubService.getAgent(hub.id);
+  }
+
+  @ResolveField('preferences', () => [IPreference], {
+    nullable: false,
+    description: 'The preferences for this user',
+  })
+  @Profiling.api
+  async preferences(@Parent() hub: Hub): Promise<IPreference[]> {
+    return await this.hubService.getPreferences(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

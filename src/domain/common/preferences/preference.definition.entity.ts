@@ -11,6 +11,11 @@ export class PreferenceDefinition
   implements IPreferenceDefinition
 {
   @Column({
+    length: SMALL_TEXT_LENGTH,
+  })
+  definitionSet!: string;
+
+  @Column({
     name: 'groupName',
     length: SMALL_TEXT_LENGTH,
   })

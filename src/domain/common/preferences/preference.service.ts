@@ -4,18 +4,15 @@ import { Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EntityNotFoundException } from '@src/common/exceptions';
-import {
-  LogContext,
-  UserPreferenceType,
-  PreferenceValueType,
-} from '@src/common/enums';
+import { LogContext, PreferenceValueType } from '@src/common/enums';
 import { PreferenceDefinition } from './preference.definition.entity';
 import { IPreferenceDefinition } from './preference.definition.interface';
 import { Preference } from './preference.entity';
 import { IPreference } from './preference.interface';
 import { getDefaultPreferenceValue, validateValue } from './utils';
 import { CreatePreferenceDefinitionInput } from './dto/preference-definition.dto.create';
-import { IUser } from '@domain/community/user/user.interface';
+import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
+import { CreatePreferenceInput } from './dto/preference.dto.create';
 
 @Injectable()
 export class PreferenceService {
@@ -27,6 +24,14 @@ export class PreferenceService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  async createPreference(
+    preferenceData: CreatePreferenceInput
+  ): Promise<IPreference> {
+    const preference: IPreference = Preference.create(preferenceData);
+    preference.authorization = new AuthorizationPolicy();
+    return await this.preferenceRepository.save(preference);
+  }
 
   async createDefinition(
     definitionData: CreatePreferenceDefinitionInput
@@ -49,23 +54,8 @@ export class PreferenceService {
     return Boolean(res);
   }
 
-  async createInitialUserPreferences(user: IUser) {
-    // todo: probably define which definition types/groups to fetch
-    const definitions = await this.getAllDefinitions();
-
-    const prefInputs = definitions.map(def => ({
-      userPreferenceDefinition: def,
-      value: getDefaultPreferenceValue(def.valueType),
-      user,
-    }));
-
-    const newPreferences = this.preferenceRepository.create(prefInputs);
-
-    newPreferences.forEach(
-      pref => (pref.authorization = new AuthorizationPolicy())
-    );
-
-    return await this.preferenceRepository.save(newPreferences);
+  getDefaultPreferenceValue(valueType: PreferenceValueType) {
+    return getDefaultPreferenceValue(valueType);
   }
 
   async getPreferenceOrFail(peferenceID: string): Promise<IPreference> {
@@ -78,40 +68,6 @@ export class PreferenceService {
         LogContext.CHALLENGES
       );
     return reference;
-  }
-
-  async getUserXPreferenceOrFail(
-    user: IUser,
-    type: UserPreferenceType
-  ): Promise<IPreference> {
-    const userPreferenceDefinition = await this.getDefinitionOrFail(type);
-
-    const preference = await this.preferenceRepository.findOne({
-      user,
-      preferenceDefinition: userPreferenceDefinition,
-    });
-
-    if (!preference) {
-      throw new EntityNotFoundException(
-        `Unable to find preference of type ${type} for user with ID: ${user.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return preference;
-  }
-
-  async getUserPreferencesOrFail(user: IUser): Promise<IPreference[]> {
-    const preferences = await this.preferenceRepository.find({ user });
-
-    if (!preferences) {
-      throw new EntityNotFoundException(
-        `Unable to find preferences for user with ID: ${user.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return preferences;
   }
 
   async removeUserPreference(preference: IPreference): Promise<IPreference> {
@@ -135,22 +91,11 @@ export class PreferenceService {
     return preference;
   }
 
-  private async getDefinitionOrFail(type: UserPreferenceType) {
-    const definition = await this.definitionRepository.findOne({
-      type,
+  async getAllDefinitionsInSet(
+    definitionSet: PreferenceDefinitionSet
+  ): Promise<IPreferenceDefinition[]> {
+    return await this.definitionRepository.find({
+      definitionSet: definitionSet,
     });
-
-    if (!definition) {
-      throw new EntityNotFoundException(
-        `Unable to fine preference definition of type ${type}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return definition;
-  }
-
-  private async getAllDefinitions() {
-    return await this.definitionRepository.find();
   }
 }
