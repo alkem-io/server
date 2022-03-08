@@ -46,6 +46,7 @@ import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { PreferenceService } from '@domain/common/preferences/preference.service';
 import { IPreference } from '@domain/common/preferences/preference.interface';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
+import { HubPreferenceType } from '@common/enums/hub.preference.type';
 
 @Injectable()
 export class HubService {
@@ -124,13 +125,26 @@ export class HubService {
     );
     const preferences: IPreference[] = [];
     for (const definition of definitions) {
+      let value = this.preferenceService.getDefaultPreferenceValue(
+        definition.valueType
+      );
+      if (
+        definition.type === HubPreferenceType.MEMBERSHIP_APPLICATIONS_ALLOWED
+      ) {
+        value = 'true';
+      }
+      if (
+        definition.type ===
+        HubPreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
+      ) {
+        value = 'true';
+      }
       const preference = await this.preferenceService.createPreference({
-        value: this.preferenceService.getDefaultPreferenceValue(
-          definition.valueType
-        ),
+        value: value,
         preferenceDefinition: definition,
         hub: hub,
       });
+
       preferences.push(preference);
     }
 
@@ -650,10 +664,26 @@ export class HubService {
     if (!preferences) {
       throw new EntityNotInitializedException(
         `Hub preferences not initialized: ${hubID}`,
-        LogContext.COMMUNITY
+        LogContext.CHALLENGES
       );
     }
 
     return preferences;
+  }
+
+  getPreferenceValue(
+    preferences: IPreference[],
+    type: HubPreferenceType
+  ): boolean {
+    const preference = preferences.find(
+      preference => preference.preferenceDefinition.type === type
+    );
+    if (!preference) {
+      throw new EntityNotInitializedException(
+        `Hub preferences does not contain the required preference: ${type}`,
+        LogContext.CHALLENGES
+      );
+    }
+    return preference.value === 'true';
   }
 }

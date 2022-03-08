@@ -72,13 +72,6 @@ export class HubResolverMutations {
     // ensure working with UUID
     hubData.ID = hub.id;
 
-    if (hubData.authorizationPolicy) {
-      await this.hubAuthorizationService.applyAuthorizationPolicy(
-        hub,
-        hubData.authorizationPolicy
-      );
-    }
-
     return await this.hubService.update(hubData);
   }
 

@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { PreferenceValueType, UserPreferenceType } from '@src/common/enums';
+import { PreferenceValueType } from '@src/common/enums';
 import { IBaseAlkemio } from '@src/domain/common';
 
 @ObjectType('PreferenceDefinition')
@@ -20,10 +20,7 @@ export abstract class IPreferenceDefinition extends IBaseAlkemio {
   })
   description!: string;
 
-  // todo: this should be an enum of User / Hub / Org preferences etc.
-  @Field(() => UserPreferenceType, {
-    description: 'Type of preference',
-  })
+  // Moved to field resolver to allow for explicitly having the type returned
   type!: string;
 
   @Field(() => PreferenceValueType, {
