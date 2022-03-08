@@ -176,12 +176,14 @@ services:
       - RABBITMQ_DEFAULT_USER=alkemio-admin
       - RABBITMQ_DEFAULT_PASS=alkemio!
     volumes:
-      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
+      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/mnesia
       - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
-    entrypoint:
-      - 'rabbitmq-server'
-      - '--hostname'
-      - 'rmq'
+    command:
+      [
+        'bash',
+        '-c',
+        'chmod 400 /var/lib/rabbitmq/.erlang.cookie; rabbitmq-server --hostname rmq',
+      ]
 
   notification:
     extra_hosts:
