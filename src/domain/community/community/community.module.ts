@@ -1,19 +1,20 @@
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
+import { CommunicationModule } from '@domain/communication/communication/communication.module';
+import { ApplicationModule } from '@domain/community/application/application.module';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { ApplicationModule } from '@domain/community/application/application.module';
+import { TrustRegistryAdapterModule } from '@services/platform/trust-registry-adapter/trust.registry.adapter.module';
 import { Community } from './community.entity';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { CommunityResolverFields } from './community.resolver.fields';
 import { CommunityResolverMutations } from './community.resolver.mutations';
 import { CommunityService } from './community.service';
 import { CommunityAuthorizationService } from './community.service.authorization';
-import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { CommunicationModule } from '@domain/communication/communication/communication.module';
 
 @Module({
   imports: [
@@ -25,7 +26,9 @@ import { CommunicationModule } from '@domain/communication/communication/communi
     ApplicationModule,
     CommunicationModule,
     LifecycleModule,
+    AgentModule,
     TypeOrmModule.forFeature([Community]),
+    TrustRegistryAdapterModule,
   ],
   providers: [
     CommunityService,

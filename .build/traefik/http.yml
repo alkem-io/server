@@ -133,6 +133,14 @@ http:
       entryPoints:
         - 'web'
 
+    api-public-rest:
+      rule: 'PathPrefix(`/api/public/rest`)'
+      service: 'alkemio-server'
+      middlewares:
+        - strip-api-public-prefix
+      entryPoints:
+        - 'web'
+
     kratos-public:
       rule: 'PathPrefix(`/identity/ory/kratos/public`)'
       service: 'kratos-public'

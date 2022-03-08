@@ -16,8 +16,6 @@ import { UserAuthorizationService } from './user.service.authorization';
 import { UserSendMessageInput } from './dto/user.dto.communication.message.send';
 import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization';
 import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
-import { IUserPreference, UserPreferenceService } from '../user-preferences';
-import { UpdateUserPreferenceInput } from '../user-preferences/dto';
 import { ClientProxy } from '@nestjs/microservices';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
@@ -32,7 +30,6 @@ export class UserResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private readonly userService: UserService,
     private readonly userAuthorizationService: UserAuthorizationService,
-    private readonly preferenceService: UserPreferenceService,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
@@ -180,35 +177,5 @@ export class UserResolverMutations {
       `reset authorization definition on user: ${authorizationResetData.userID}`
     );
     return await this.userAuthorizationService.applyAuthorizationPolicy(user);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUserPreference, {
-    description: 'Updates an user preference',
-  })
-  @Profiling.api
-  async updateUserPreference(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('userPreferenceData') userPreferenceData: UpdateUserPreferenceInput
-  ) {
-    const user = await this.userService.getUserOrFail(
-      userPreferenceData.userID
-    );
-
-    const preference = await this.preferenceService.getUserPreferenceOrFail(
-      user,
-      userPreferenceData.type
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      preference.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `user preference update: ${preference.id}`
-    );
-    return await this.preferenceService.updateUserPreference(
-      user,
-      userPreferenceData.type,
-      userPreferenceData.value
-    );
   }
 }

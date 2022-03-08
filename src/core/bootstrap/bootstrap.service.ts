@@ -24,16 +24,16 @@ import { OrganizationService } from '@domain/community/organization/organization
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@services/admin/authorization/admin.authorization.service';
-import { UserPreferenceService } from '@domain/community/user-preferences';
-import { CreateUserPreferenceDefinitionInput } from '@domain/community/user-preferences/dto';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
+import { PreferenceService } from '@domain/common/preferences/preference.service';
+import { CreatePreferenceDefinitionInput } from '@domain/common/preferences/dto/preference-definition.dto.create';
 
 @Injectable()
 export class BootstrapService {
   constructor(
     private agentService: AgentService,
     private hubService: HubService,
-    private preferenceService: UserPreferenceService,
+    private preferenceService: PreferenceService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
     private hubAuthorizationService: HubAuthorizationService,
@@ -152,7 +152,7 @@ export class BootstrapService {
     }
 
     const preferenceDef =
-      bootstrapJson.userPreferenceDefinition as CreateUserPreferenceDefinitionInput[];
+      bootstrapJson.userPreferenceDefinition as CreatePreferenceDefinitionInput[];
     if (!preferenceDef) {
       this.logger.verbose?.(
         'No preference definitions in the authorization bootstrap file!',
@@ -207,7 +207,7 @@ export class BootstrapService {
 
   @Profiling.api
   async createUserPreferenceDefinitions(
-    definitionData: CreateUserPreferenceDefinitionInput[]
+    definitionData: CreatePreferenceDefinitionInput[]
   ) {
     try {
       definitionData.forEach(
@@ -236,8 +236,7 @@ export class BootstrapService {
   }
 
   async ensureSsiPopulated() {
-    const ssiEnabled = this.configService.get(ConfigurationTypes.IDENTITY).ssi
-      .enabled;
+    const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
     if (ssiEnabled) {
       await this.agentService.ensureDidsCreated();
     }
