@@ -129,7 +129,8 @@ export class HubService {
         definition.valueType
       );
       if (
-        definition.type === HubPreferenceType.MEMBERSHIP_APPLICATIONS_ALLOWED
+        definition.type ===
+        HubPreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE
       ) {
         value = 'true';
       }

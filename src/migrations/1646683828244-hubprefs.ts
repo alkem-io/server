@@ -22,29 +22,24 @@ export class hubprefs1646683828244 implements MigrationInterface {
     // populate some initial definitions
     await queryRunner.query(
       `INSERT INTO preference_definition (id, version, definitionSet, groupName, displayName, description, valueType, type)
-      VALUES (UUID(), 1, 'hub', 'Membership', 'Host Organization Join', 'Allow members of the host organization to join', 'boolean', 'MembershipHostOrganizationMembersCanJoin')`
+      VALUES (UUID(), 1, 'hub', 'MembershipHub', 'Applications allowed', 'Allow applications to this Hub', 'boolean', 'MembershipApplicationsFromAnyone')`
     );
     await queryRunner.query(
       `INSERT INTO preference_definition (id, version, definitionSet, groupName, displayName, description, valueType, type)
-      VALUES (UUID(), 1, 'hub', 'Membership', 'Hub members to join Challenges', 'Allow members of the Hub to join Challenges', 'boolean', 'MembershipHubMembersJoinChallenges')`
+      VALUES (UUID(), 1, 'hub', 'MembershipHub', 'Anyone can join', 'Allow any registered user to join this Hub', 'boolean', 'MembershipJoinHubFromAnyone')`
     );
     await queryRunner.query(
       `INSERT INTO preference_definition (id, version, definitionSet, groupName, displayName, description, valueType, type)
-      VALUES (UUID(), 1, 'hub', 'Membership', 'Applications allowed', 'Allow applications to this Hub', 'boolean', 'MembershipApplicationsAllowed')`
+      VALUES (UUID(), 1, 'hub', 'MembershipHub', 'Host Organization Join', 'Allow members of the host organization to join', 'boolean', 'MembershipJoinHubFromHostOrganizationMembers')`
+    );
+    await queryRunner.query(
+      `INSERT INTO preference_definition (id, version, definitionSet, groupName, displayName, description, valueType, type)
+      VALUES (UUID(), 1, 'hub', 'MembershipChallenges', 'Hub members to join Challenges', 'Allow members of the Hub to join Challenges', 'boolean', 'MembershipJoinChallengesFromHubMembers')`
     );
     await queryRunner.query(
       `INSERT INTO preference_definition (id, version, definitionSet, groupName, displayName, description, valueType, type)
       VALUES (UUID(), 1, 'hub', 'Authorization', 'Anonymous read access', 'Allow non-members to read the contents of this Hub', 'boolean', 'AuthorizationAnonymousReadAccess')`
     );
-
-    // todo: test code for generating a hub for validating the migration
-    // const uuid = randomUUID();
-    // await queryRunner.query(
-    //   `INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES ('${uuid}', NOW(), NOW(), 1, '', '', 1, '')`
-    // );
-    // await queryRunner.query(
-    //   `INSERT INTO hub (id, createdDate, updatedDate, version, authorizationId)  VALUES (UUID(), NOW(), NOW(), 1, '${uuid}')`
-    // );
 
     // popuplate preferences on existing hubs
     const hubDefinitions: any[] = await queryRunner.query(

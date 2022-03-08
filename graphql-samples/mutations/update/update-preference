@@ -1,5 +1,5 @@
 mutation updatePreference($preferenceData: UpdatePreferenceInput!) {
-  updatePreference(preferenceData: $PreferenceData) {
+  updatePreference(preferenceData: $preferenceData) {
     id
     value
   }

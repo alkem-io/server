@@ -57,7 +57,7 @@ export class HubAuthorizationService {
     const allowHostOrganizationMemberToJoin =
       this.hubService.getPreferenceValue(
         preferences,
-        HubPreferenceType.MEMBERSHIP_HOST_ORGANIZATION_MEMBERS_CAN_JOIN
+        HubPreferenceType.MEMBERSHIP_JOIN_HUB_FROM_HOST_ORGANIZATION_MEMBERS
       );
     hub.community.authorization =
       await this.extendMembershipAuthorizationPolicy(
@@ -83,6 +83,15 @@ export class HubAuthorizationService {
           [AuthorizationPrivilege.DELETE]
         );
     }
+
+    for (const preference of preferences) {
+      preference.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          preference.authorization,
+          hub.authorization
+        );
+    }
+    hub.preferences = preferences;
 
     return await this.hubRepository.save(hub);
   }

@@ -9,7 +9,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { PreferenceService } from '@domain/common/preferences/preference.service';
 import { IPreference } from '@domain/common/preferences/preference.interface';
-import { UpdatePreferenceInput } from '@domain/common/preferences/dto/user-preference.dto.update';
+import { UpdatePreferenceInput } from '@domain/common/preferences/dto/preference.dto.update';
 
 @Resolver(() => IPreference)
 export class PreferenceResolverMutations {
