@@ -37,7 +37,7 @@ services:
 
   mysql_db:
     container_name: alkemio_dev_mysql_db
-    image: mysql:8.0.11
+    image: mariadb:10.7.1
     networks:
       - alkemio_dev_net
     environment:
@@ -49,7 +49,7 @@ services:
     volumes:
       - alkemio_dev_mysql_db:/var/lib/mysql
       - ./.scripts/schema.sql:/bootstrap_scripts/1.sql
-    command: --default-authentication-plugin=mysql_native_password --init-file /bootstrap_scripts/1.sql
+    command: --sql_mode="" --default-authentication-plugin=mysql_native_password --init-file /bootstrap_scripts/1.sql
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
@@ -164,19 +164,24 @@ services:
 
   rabbitmq:
     container_name: alkemio_dev_rabbitmq
-    image: docker.io/bitnami/rabbitmq:3.9
+    image: rabbitmq:3.9.13-management
     restart: always
     networks:
       - alkemio_dev_net
     ports:
-      - 4369
       - 5672
-      - 25672
       - 15672
     environment:
       - RABBITMQ_SECURE_PASSWORD=yes
+      - RABBITMQ_DEFAULT_USER=alkemio-admin
+      - RABBITMQ_DEFAULT_PASS=alkemio!
     volumes:
-      - 'rabbitmq_data:/bitnami'
+      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
+      - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
+    entrypoint:
+      - 'rabbitmq-server'
+      - '--hostname'
+      - 'rmq'
 
   notification:
     extra_hosts:
@@ -186,6 +191,8 @@ services:
     image: alkemio/notifications:v0.4.5
     environment:
       - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
       - LOGGING_CONSOLE_ENABLED
       - LOGGING_LEVEL_CONSOLE
       - EMAIL_SMTP_HOST
@@ -215,6 +222,8 @@ services:
       - DATABASE_HOST
       - MYSQL_ROOT_PASSWORD
       - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
       - LOGGING_CONSOLE_ENABLED
       - LOGGING_LEVEL_CONSOLE
       - ENVIRONMENT=dev
