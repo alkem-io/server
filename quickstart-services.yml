@@ -176,7 +176,7 @@ services:
       - RABBITMQ_DEFAULT_USER=alkemio-admin
       - RABBITMQ_DEFAULT_PASS=alkemio!
     volumes:
-      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
+      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/mnesia
       - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
     command:
       [
