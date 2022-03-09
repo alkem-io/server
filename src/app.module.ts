@@ -118,37 +118,39 @@ const opportunity: Opportunity | undefined = undefined;
           // once the connection is established in onConnect, the context will have the user populated
           connection ? { req: connection.context } : { req },
         subscriptions: {
-          keepAlive: 5000,
-          onConnect: async (
-            _: { [key: string]: any },
-            __: { [key: string]: any },
-            context
-          ) => {
-            const authHeader: string =
-              context.request.headers.authorization || '';
-            const msg = `[Websocket] Opening for user with token: ${authHeader.substring(
-              0,
-              20
-            )}`;
+          'subscriptions-transport-ws': {
+            keepAlive: 5000,
+            onConnect: async (
+              _: { [key: string]: any },
+              __: { [key: string]: any },
+              context: any
+            ) => {
+              const authHeader: string =
+                context.request.headers.authorization || '';
+              const msg = `[Websocket] Opening for user with token: ${authHeader.substring(
+                0,
+                20
+              )}`;
 
-            // dummy code to not trigger warnings
-            if (msg.length === 0) {
-              return; // console.log(msg);
-            }
-            // Note: passing through headers so can leverage http authentication setup
-            // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
-            return { headers: { authorization: `${authHeader}` } };
-          },
-          onDisconnect: async (_: any, context: any) => {
-            const authHeader: string = context.request.headers.authorization;
-            const msg = `[Websocket] Closing for user with token: ${authHeader.substring(
-              0,
-              20
-            )}`;
-            // dummy code to not trigger warnings
-            if (msg.length === 0) {
-              return; // console.log(msg);
-            }
+              // dummy code to not trigger warnings
+              if (msg.length === 0) {
+                return; // console.log(msg);
+              }
+              // Note: passing through headers so can leverage http authentication setup
+              // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
+              return { headers: { authorization: `${authHeader}` } };
+            },
+            onDisconnect: async (_: any, context: any) => {
+              const authHeader: string = context.request.headers.authorization;
+              const msg = `[Websocket] Closing for user with token: ${authHeader.substring(
+                0,
+                20
+              )}`;
+              // dummy code to not trigger warnings
+              if (msg.length === 0) {
+                return; // console.log(msg);
+              }
+            },
           },
         },
       }),
@@ -180,7 +182,7 @@ const opportunity: Opportunity | undefined = undefined;
   ],
 })
 export class AppModule {
-  configure(consummer: MiddlewareConsumer) {
-    consummer.apply(RequestLoggerMiddleware).forRoutes('/');
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestLoggerMiddleware).forRoutes('/');
   }
 }

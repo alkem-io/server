@@ -11,7 +11,7 @@ export class NameID implements CustomScalar<string, string> {
   description =
     'A human readable identifier, 3 <= length <= 25. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.';
 
-  parseValue(value: string): string {
+  parseValue(value: unknown): string {
     return this.validate(value).toLowerCase();
   }
 

@@ -10,7 +10,7 @@ export class MessageID implements CustomScalar<string, string> {
   description =
     'An identifier that originates from the underlying messaging platform.';
 
-  parseValue(value: string): string {
+  parseValue(value: unknown): string {
     return this.validate(value);
   }
 
