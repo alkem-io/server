@@ -10,7 +10,7 @@ query variables:
 {
   "preferenceData": {
     "hubID": "UUID_NAMEID",
-    "type": "AuthorizationAnonymousReadAccess",
+    "type": "",
     "value": "true"
   }
 }
