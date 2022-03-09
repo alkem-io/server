@@ -14,7 +14,6 @@ import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filte
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { HubModule } from '@domain/challenge/hub/hub.module';
-import { Opportunity } from '@domain/collaboration';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -33,11 +32,6 @@ import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
 import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
-
-// Todo: nasty hack to affect the JS definitions loading order to avoid issues with migration failing
-// due to objects being undefined.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const opportunity: Opportunity | undefined = undefined;
 @Module({
   imports: [
     ConfigModule.forRoot({
