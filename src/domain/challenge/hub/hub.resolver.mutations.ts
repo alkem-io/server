@@ -21,6 +21,10 @@ import { RemoveHubAdminInput } from './dto/hub.dto.remove.admin';
 import { HubAuthorizationResetInput } from './dto/hub.dto.reset.authorization';
 import { CreateChallengeOnHubInput } from '../challenge/dto/challenge.dto.create.in.hub';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { PreferenceService } from '@domain/common/preferences/preference.service';
+import { IPreference } from '@domain/common/preferences/preference.interface';
+import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
+import { UpdateHubPreferenceInput } from './dto/hub.dto.update.preference';
 @Resolver()
 export class HubResolverMutations {
   constructor(
@@ -28,7 +32,8 @@ export class HubResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private hubService: HubService,
     private hubAuthorizationService: HubAuthorizationService,
-    private challengeAuthorizationService: ChallengeAuthorizationService
+    private challengeAuthorizationService: ChallengeAuthorizationService,
+    private preferenceService: PreferenceService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -73,6 +78,40 @@ export class HubResolverMutations {
     hubData.ID = hub.id;
 
     return await this.hubService.update(hubData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IPreference, {
+    description: 'Updates one of the Preferences on a Hub',
+  })
+  @Profiling.api
+  async updatePreferenceOnHub(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('preferenceData') preferenceData: UpdateHubPreferenceInput
+  ) {
+    const hub = await this.hubService.getHubOrFail(preferenceData.hubID);
+    const preference = await this.hubService.getPreferenceOrFail(
+      hub,
+      preferenceData.type
+    );
+    this.preferenceService.validatePreferenceTypeOrFail(
+      preference,
+      PreferenceDefinitionSet.HUB
+    );
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      preference.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `hub preference update: ${preference.id}`
+    );
+    const preferenceUpdated = await this.preferenceService.updatePreference(
+      preference,
+      preferenceData.value
+    );
+    // As the preferences may update the authorization for the Hub, the authorization policy will need to be reset
+    await this.hubAuthorizationService.applyAuthorizationPolicy(hub);
+    return preferenceUpdated;
   }
 
   @UseGuards(GraphqlGuard)

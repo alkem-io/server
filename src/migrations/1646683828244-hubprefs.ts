@@ -34,10 +34,6 @@ export class hubprefs1646683828244 implements MigrationInterface {
     );
     await queryRunner.query(
       `INSERT INTO preference_definition (id, version, definitionSet, groupName, displayName, description, valueType, type)
-      VALUES (UUID(), 1, 'hub', 'MembershipChallenges', 'Hub members to join Challenges', 'Allow members of the Hub to join Challenges', 'boolean', 'MembershipJoinChallengesFromHubMembers')`
-    );
-    await queryRunner.query(
-      `INSERT INTO preference_definition (id, version, definitionSet, groupName, displayName, description, valueType, type)
       VALUES (UUID(), 1, 'hub', 'Authorization', 'Anonymous read access', 'Allow non-members to read the contents of this Hub', 'boolean', 'AuthorizationAnonymousReadAccess')`
     );
 

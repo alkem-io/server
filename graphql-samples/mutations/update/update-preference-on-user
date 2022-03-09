@@ -1,0 +1,16 @@
+mutation updatePreferenceOnUser($preferenceData: UpdateUserPreferenceInput!) {
+  updatePreferenceOnUser(preferenceData: $preferenceData) {
+    id
+    value
+  }
+}
+
+
+query variables:
+{
+  "preferenceData": {
+    "userID": "UUID_NAMEID_EMAIL",
+    "type": "",
+    "value": "true"
+  }
+}

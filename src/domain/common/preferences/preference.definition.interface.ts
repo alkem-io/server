@@ -20,11 +20,15 @@ export abstract class IPreferenceDefinition extends IBaseAlkemio {
   })
   description!: string;
 
-  // Moved to field resolver to allow for explicitly having the type returned
+  @Field(() => String, {
+    description: 'The type of the Preference, specific to the Entity it is on.',
+  })
   type!: string;
 
   @Field(() => PreferenceValueType, {
     description: 'Preference value type',
   })
   valueType!: PreferenceValueType;
+
+  definitionSet!: string;
 }

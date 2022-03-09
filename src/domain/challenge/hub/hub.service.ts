@@ -194,7 +194,7 @@ export class HubService {
 
   async deleteHub(deleteData: DeleteHubInput): Promise<IHub> {
     const hub = await this.getHubOrFail(deleteData.ID, {
-      relations: ['challenges'],
+      relations: ['challenges', 'preferences'],
     });
 
     // Do not remove an hub that has child challenges , require these to be individually first removed
@@ -219,6 +219,12 @@ export class HubService {
         resourceID: hub.id,
       });
       await this.organizationService.save(hostOrg);
+    }
+
+    if (hub.preferences) {
+      for (const preference of hub.preferences) {
+        await this.preferenceService.removeUserPreference(preference);
+      }
     }
 
     const result = await this.hubRepository.remove(hub as Hub);
@@ -329,6 +335,25 @@ export class HubService {
         LogContext.CHALLENGES
       );
     return hub;
+  }
+
+  async getPreferenceOrFail(
+    hub: IHub,
+    type: HubPreferenceType
+  ): Promise<IPreference> {
+    const preferences = await this.getPreferences(hub.id);
+    const preference = preferences.find(
+      preference => preference.preferenceDefinition.type === type.toString()
+    );
+
+    if (!preference) {
+      throw new EntityNotFoundException(
+        `Unable to find preference of type ${type} for hub with ID: ${hub.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return preference;
   }
 
   async setHubHost(hubID: string, hostOrgID: string): Promise<IHub> {

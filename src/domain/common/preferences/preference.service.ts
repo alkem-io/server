@@ -3,7 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { EntityNotFoundException } from '@src/common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@src/common/exceptions';
 import { LogContext, PreferenceValueType } from '@src/common/enums';
 import { PreferenceDefinition } from './preference.definition.entity';
 import { IPreferenceDefinition } from './preference.definition.interface';
@@ -89,6 +92,18 @@ export class PreferenceService {
     }
 
     return preference;
+  }
+
+  validatePreferenceTypeOrFail(
+    preference: IPreference,
+    definitionSet: PreferenceDefinitionSet
+  ) {
+    if (preference.preferenceDefinition.definitionSet !== definitionSet) {
+      throw new ValidationException(
+        `Expected preference to be in the following definition set: ${definitionSet}`,
+        LogContext.CHALLENGES
+      );
+    }
   }
 
   async getAllDefinitionsInSet(

@@ -1,5 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import { LogContext } from '@common/enums';
+import { LogContext, UserPreferenceType } from '@common/enums';
 import {
   AuthenticationException,
   EntityNotFoundException,
@@ -206,6 +206,25 @@ export class UserService {
       return userTemplates[0];
     }
     return undefined;
+  }
+
+  async getPreferenceOrFail(
+    user: IUser,
+    type: UserPreferenceType
+  ): Promise<IPreference> {
+    const preferences = await this.getPreferences(user.id);
+    const preference = preferences.find(
+      preference => preference.preferenceDefinition.type === type
+    );
+
+    if (!preference) {
+      throw new EntityNotFoundException(
+        `Unable to find preference of type ${type} for user with ID: ${user.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return preference;
   }
 
   async createUserFromAgentInfo(agentInfo: AgentInfo): Promise<IUser> {
