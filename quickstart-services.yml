@@ -1,7 +1,7 @@
 version: '3.7'
 
 volumes:
-  alkemio_dev_mysql_db:
+  alkemio_dev_mariadb:
   rabbitmq_data:
     driver: local
 
@@ -35,8 +35,8 @@ services:
         source: ./.build/traefik/
         target: /etc/traefik/
 
-  mysql_db:
-    container_name: alkemio_dev_mysql_db
+  mariadb:
+    container_name: alkemio_dev_mariadb
     image: mariadb:10.7.1
     networks:
       - alkemio_dev_net
@@ -47,7 +47,7 @@ services:
     ports:
       - 3306
     volumes:
-      - alkemio_dev_mysql_db:/var/lib/mysql
+      - alkemio_dev_mariadb:/var/lib/mysql
       - ./.scripts/schema.sql:/bootstrap_scripts/1.sql
     command: --sql_mode="" --default-authentication-plugin=mysql_native_password --init-file /bootstrap_scripts/1.sql
 
@@ -55,7 +55,7 @@ services:
     container_name: alkemio_dev_kratos_migrate
     image: oryd/kratos:v0.8.0-alpha.3
     depends_on:
-      - mysql_db
+      - mariadb
     environment:
       - DSN=mysql://root:${MYSQL_ROOT_PASSWORD}@tcp(${DATABASE_HOST}:3306)/kratos?max_conns=20&max_idle_conns=4
     restart: on-failure
