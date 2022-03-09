@@ -34,6 +34,8 @@ import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
 
+// Todo: nasty hack to affect the JS definitions loading order to avoid issues with migration failing
+// due to objects being undefined.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const opportunity: Opportunity | undefined = undefined;
 @Module({

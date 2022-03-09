@@ -21,8 +21,8 @@ import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IPreference } from '@domain/common/preferences/preference.interface';
-import { PreferenceService } from '@domain/common/preferences';
+import { IPreference } from '@domain/common/preference/preference.interface';
+import { PreferenceService } from '@domain/common/preference';
 import { UpdateUserPreferenceInput } from './dto/user.dto.update.preference';
 
 @Resolver(() => IUser)

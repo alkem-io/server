@@ -43,8 +43,8 @@ import { CommunityType } from '@common/enums/community.type';
 import { HubTemplate } from './dto/hub.dto.template.hub';
 import { AgentInfo } from '@src/core';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { PreferenceService } from '@domain/common/preferences/preference.service';
-import { IPreference } from '@domain/common/preferences/preference.interface';
+import { PreferenceService } from '@domain/common/preference/preference.service';
+import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { HubPreferenceType } from '@common/enums/hub.preference.type';
 

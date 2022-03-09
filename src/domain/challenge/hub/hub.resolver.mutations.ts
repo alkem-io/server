@@ -21,8 +21,8 @@ import { RemoveHubAdminInput } from './dto/hub.dto.remove.admin';
 import { HubAuthorizationResetInput } from './dto/hub.dto.reset.authorization';
 import { CreateChallengeOnHubInput } from '../challenge/dto/challenge.dto.create.in.hub';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PreferenceService } from '@domain/common/preferences/preference.service';
-import { IPreference } from '@domain/common/preferences/preference.interface';
+import { PreferenceService } from '@domain/common/preference/preference.service';
+import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { UpdateHubPreferenceInput } from './dto/hub.dto.update.preference';
 @Resolver()

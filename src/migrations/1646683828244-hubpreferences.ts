@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
-export class hubprefs1646683828244 implements MigrationInterface {
-  name = 'hubprefs1646683828244';
+export class hubpreferences1646683828244 implements MigrationInterface {
+  name = 'hubpreferences1646683828244';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(

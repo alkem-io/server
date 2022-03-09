@@ -22,7 +22,7 @@ import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { UserModule } from '@domain/community/user/user.module';
-import { PreferenceModule } from '@domain/common/preferences';
+import { PreferenceModule } from '@domain/common/preference';
 
 @Module({
   imports: [

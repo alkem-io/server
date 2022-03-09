@@ -41,9 +41,9 @@ import { KonfigService } from '@services/platform/configuration/config/config.se
 import { IUserTemplate } from '@services/platform/configuration';
 import { NamingService } from '@services/domain/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { PreferenceService } from '@domain/common/preferences/preference.service';
+import { PreferenceService } from '@domain/common/preference/preference.service';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { IPreference } from '@domain/common/preferences/preference.interface';
+import { IPreference } from '@domain/common/preference/preference.interface';
 
 @Injectable()
 export class UserService {

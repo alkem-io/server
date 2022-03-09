@@ -14,6 +14,7 @@ import { Hub } from './hub.entity';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { HubPreferenceType } from '@common/enums/hub.preference.type';
 import { IOrganization } from '@domain/community';
+import { IPreference } from '@domain/common/preference/preference.interface';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -54,15 +55,10 @@ export class HubAuthorizationService {
 
     hub.community = await this.hubService.getCommunity(hub);
     const hostOrg = await this.hubService.getHost(hub.id);
-    const allowHostOrganizationMemberToJoin =
-      this.hubService.getPreferenceValue(
-        preferences,
-        HubPreferenceType.MEMBERSHIP_JOIN_HUB_FROM_HOST_ORGANIZATION_MEMBERS
-      );
     hub.community.authorization =
       await this.extendMembershipAuthorizationPolicy(
         hub.community.authorization,
-        allowHostOrganizationMemberToJoin,
+        preferences,
         hostOrg
       );
 
@@ -145,7 +141,7 @@ export class HubAuthorizationService {
 
   private extendMembershipAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    allowHostOrganizationMemberToJoin: boolean,
+    preferences: IPreference[],
     hostOrg?: IOrganization
   ): IAuthorizationPolicy {
     if (!authorization)
@@ -156,6 +152,40 @@ export class HubAuthorizationService {
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
+    // Any registered user can apply
+    const allowAnyRegisteredUserToApply = this.hubService.getPreferenceValue(
+      preferences,
+      HubPreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE
+    );
+    if (allowAnyRegisteredUserToApply) {
+      const anyUserCanApply = new AuthorizationPolicyRuleCredential(
+        [AuthorizationPrivilege.COMMUNITY_APPLY],
+        AuthorizationCredential.GLOBAL_REGISTERED
+      );
+      anyUserCanApply.inheritable = false;
+      newRules.push(anyUserCanApply);
+    }
+
+    // Any registered user can join
+    const allowAnyRegisteredUserToJoin = this.hubService.getPreferenceValue(
+      preferences,
+      HubPreferenceType.MEMBERSHIP_JOIN_HUB_FROM_ANYONE
+    );
+    if (allowAnyRegisteredUserToJoin) {
+      const anyUserCanJoin = new AuthorizationPolicyRuleCredential(
+        [AuthorizationPrivilege.COMMUNITY_JOIN],
+        AuthorizationCredential.GLOBAL_REGISTERED
+      );
+      anyUserCanJoin.inheritable = false;
+      newRules.push(anyUserCanJoin);
+    }
+
+    // Host Org members to join
+    const allowHostOrganizationMemberToJoin =
+      this.hubService.getPreferenceValue(
+        preferences,
+        HubPreferenceType.MEMBERSHIP_JOIN_HUB_FROM_HOST_ORGANIZATION_MEMBERS
+      );
     if (allowHostOrganizationMemberToJoin) {
       if (!hostOrg)
         throw new EntityNotInitializedException(
@@ -167,6 +197,7 @@ export class HubAuthorizationService {
         AuthorizationCredential.ORGANIZATION_MEMBER,
         hostOrg.id
       );
+      hostOrgMembersCanJoin.inheritable = false;
       newRules.push(hostOrgMembersCanJoin);
     }
 

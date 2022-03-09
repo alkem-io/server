@@ -54,6 +54,16 @@ export class ChallengeAuthorizationService {
       challenge,
       this.challengeRepository
     );
+
+    challenge.community = await this.challengeService.getCommunity(
+      challenge.id
+    );
+    challenge.community.authorization =
+      await this.extendMembershipAuthorizationPolicy(
+        challenge.community.authorization
+      );
+
+    // Cascade
     challenge.childChallenges = await this.challengeService.getChildChallenges(
       challenge
     );
@@ -146,5 +156,32 @@ export class ChallengeAuthorizationService {
     rules.push(stateChange);
 
     return JSON.stringify(rules);
+  }
+
+  private extendMembershipAuthorizationPolicy(
+    authorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        'Authorization definition not found',
+        LogContext.CHALLENGES
+      );
+
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
+
+    // Any registered user can apply
+    const anyUserCanApply = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.COMMUNITY_APPLY],
+      AuthorizationCredential.GLOBAL_REGISTERED
+    );
+    anyUserCanApply.inheritable = false;
+    newRules.push(anyUserCanApply);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
+
+    return authorization;
   }
 }
