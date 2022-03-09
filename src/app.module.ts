@@ -20,6 +20,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { AdminCommunicationModule } from '@services/admin/communication/admin.communication.module';
 import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
@@ -64,7 +65,8 @@ import { join } from 'path';
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
     }),
-    GraphQLModule.forRootAsync({
+    GraphQLModule.forRootAsync<ApolloDriverConfig>({
+      driver: ApolloDriver,
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
@@ -110,9 +112,9 @@ import { join } from 'path';
         fieldResolverEnhancers: ['guards'],
         sortSchema: true,
         installSubscriptionHandlers: true,
-        context: ({ req, connection }) =>
+        context: (ctx: any) =>
           // once the connection is established in onConnect, the context will have the user populated
-          connection ? { req: connection.context } : { req },
+          ctx.connection ? { req: ctx.connection.context } : { req: ctx.req },
         subscriptions: {
           'subscriptions-transport-ws': {
             keepAlive: 5000,
