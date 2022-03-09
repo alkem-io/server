@@ -33,6 +33,12 @@ import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
 import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
+import { Context } from 'graphql-ws';
+
+type ContextExtra = {
+  request: any;
+  socket: any;
+};
 
 @Module({
   imports: [
@@ -112,7 +118,6 @@ import { join } from 'path';
         },
         fieldResolverEnhancers: ['guards'],
         sortSchema: true,
-        installSubscriptionHandlers: true,
         context: (ctx: any) =>
           // once the connection is established in onConnect, the context will have the user populated
           ctx.connection ? { req: ctx.connection.context } : { req: ctx.req },
@@ -149,6 +154,24 @@ import { join } from 'path';
               if (msg.length === 0) {
                 return; // console.log(msg);
               }
+            },
+          },
+          'graphql-ws': {
+            onConnect: (ctx: Context) => {
+              const context = ctx as Context<any, ContextExtra>;
+              const authHeader: string =
+                context.extra.request?.headers?.authorization ?? '';
+
+              // can add debug message
+
+              // Note: passing through headers so can leverage http authentication setup
+              // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
+              return { headers: { authorization: authHeader } };
+            },
+            // onDisconnect: (ctx: any, code: number, reason: string) => {
+            onDisconnect: () => {
+              // can add debug message
+              return;
             },
           },
         },
