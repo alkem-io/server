@@ -9,7 +9,7 @@ log:
 entryPoints:
   web:
     address: ':80'
-  mysql:
+  mariadb:
     address: ':3306'
   synapse:
     address: ':8008'

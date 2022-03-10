@@ -21,16 +21,20 @@ import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IPreference } from '@domain/common/preference/preference.interface';
+import { PreferenceService } from '@domain/common/preference';
+import { UpdateUserPreferenceInput } from './dto/user.dto.update.preference';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
   constructor(
-    private readonly communicationAdapter: CommunicationAdapter,
+    private communicationAdapter: CommunicationAdapter,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private readonly userService: UserService,
-    private readonly userAuthorizationService: UserAuthorizationService,
+    private userService: UserService,
+    private userAuthorizationService: UserAuthorizationService,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
+    private preferenceService: PreferenceService,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
@@ -109,6 +113,33 @@ export class UserResolverMutations {
       `userUpdate: ${user.nameID}`
     );
     return await this.userService.updateUser(userData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IPreference, {
+    description: 'Updates one of the Preferences on a Hub',
+  })
+  @Profiling.api
+  async updatePreferenceOnUser(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('preferenceData') preferenceData: UpdateUserPreferenceInput
+  ) {
+    const user = await this.userService.getUserOrFail(preferenceData.userID);
+    const preference = await this.userService.getPreferenceOrFail(
+      user,
+      preferenceData.type
+    );
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      preference.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `user preference update: ${preference.id}`
+    );
+    return await this.preferenceService.updatePreference(
+      preference,
+      preferenceData.value
+    );
   }
 
   @UseGuards(GraphqlGuard)

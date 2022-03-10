@@ -2,6 +2,7 @@ import { UUID_LENGTH } from '@common/constants';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -42,6 +43,10 @@ import { CommunityType } from '@common/enums/community.type';
 import { HubTemplate } from './dto/hub.dto.template.hub';
 import { AgentInfo } from '@src/core';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
+import { PreferenceService } from '@domain/common/preference/preference.service';
+import { IPreference } from '@domain/common/preference/preference.interface';
+import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
+import { HubPreferenceType } from '@common/enums/hub.preference.type';
 
 @Injectable()
 export class HubService {
@@ -56,6 +61,7 @@ export class HubService {
     private userService: UserService,
     private communityService: CommunityService,
     private challengeService: ChallengeService,
+    private preferenceService: PreferenceService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -87,6 +93,7 @@ export class HubService {
     if (hub.community) {
       hub.community.parentID = hub.id;
     }
+    hub.preferences = await this.createInitialHubPreferences(hub);
 
     // Lifecycle
     const machineConfig: any = challengeLifecycleConfigDefault;
@@ -110,6 +117,39 @@ export class HubService {
     }
 
     return savedHub;
+  }
+
+  async createInitialHubPreferences(hub: IHub): Promise<IPreference[]> {
+    const definitions = await this.preferenceService.getAllDefinitionsInSet(
+      PreferenceDefinitionSet.HUB
+    );
+    const preferences: IPreference[] = [];
+    for (const definition of definitions) {
+      let value = this.preferenceService.getDefaultPreferenceValue(
+        definition.valueType
+      );
+      if (
+        definition.type ===
+        HubPreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE
+      ) {
+        value = 'true';
+      }
+      if (
+        definition.type ===
+        HubPreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
+      ) {
+        value = 'true';
+      }
+      const preference = await this.preferenceService.createPreference({
+        value: value,
+        preferenceDefinition: definition,
+        hub: hub,
+      });
+
+      preferences.push(preference);
+    }
+
+    return preferences;
   }
 
   async validateHubData(hubData: CreateHubInput) {
@@ -154,7 +194,7 @@ export class HubService {
 
   async deleteHub(deleteData: DeleteHubInput): Promise<IHub> {
     const hub = await this.getHubOrFail(deleteData.ID, {
-      relations: ['challenges'],
+      relations: ['challenges', 'preferences'],
     });
 
     // Do not remove an hub that has child challenges , require these to be individually first removed
@@ -179,6 +219,12 @@ export class HubService {
         resourceID: hub.id,
       });
       await this.organizationService.save(hostOrg);
+    }
+
+    if (hub.preferences) {
+      for (const preference of hub.preferences) {
+        await this.preferenceService.removeUserPreference(preference);
+      }
     }
 
     const result = await this.hubRepository.remove(hub as Hub);
@@ -289,6 +335,25 @@ export class HubService {
         LogContext.CHALLENGES
       );
     return hub;
+  }
+
+  async getPreferenceOrFail(
+    hub: IHub,
+    type: HubPreferenceType
+  ): Promise<IPreference> {
+    const preferences = await this.getPreferences(hub.id);
+    const preference = preferences.find(
+      preference => preference.preferenceDefinition.type === type.toString()
+    );
+
+    if (!preference) {
+      throw new EntityNotFoundException(
+        `Unable to find preference of type ${type} for hub with ID: ${hub.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return preference;
   }
 
   async setHubHost(hubID: string, hostOrgID: string): Promise<IHub> {
@@ -613,5 +678,38 @@ export class HubService {
     }
 
     return template;
+  }
+
+  async getPreferences(hubID: string) {
+    const hub = await this.getHubOrFail(hubID, {
+      relations: ['preferences'],
+    });
+
+    const preferences = hub.preferences;
+
+    if (!preferences) {
+      throw new EntityNotInitializedException(
+        `Hub preferences not initialized: ${hubID}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return preferences;
+  }
+
+  getPreferenceValue(
+    preferences: IPreference[],
+    type: HubPreferenceType
+  ): boolean {
+    const preference = preferences.find(
+      preference => preference.preferenceDefinition.type === type
+    );
+    if (!preference) {
+      throw new EntityNotInitializedException(
+        `Hub preferences does not contain the required preference: ${type}`,
+        LogContext.CHALLENGES
+      );
+    }
+    return preference.value === 'true';
   }
 }

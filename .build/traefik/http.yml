@@ -215,10 +215,10 @@ http:
 
 tcp:
   services:
-    mysql:
+    mariadb:
       loadBalancer:
         servers:
-          - address: 'mysql_db:3306'
+          - address: 'mariadb:3306'
 
     rabbitmq-amqp:
       loadBalancer:
@@ -226,11 +226,11 @@ tcp:
           - address: 'rabbitmq:5672'
 
   routers:
-    mysql:
+    mariadb:
       rule: 'HostSNI(`*`)'
-      service: 'mysql'
+      service: 'mariadb'
       entryPoints:
-        - 'mysql'
+        - 'mariadb'
 
     rabbitmq-amqp:
       rule: 'HostSNI(`*`)'

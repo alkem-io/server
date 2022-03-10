@@ -1,15 +1,21 @@
 import { Column, Entity, OneToMany } from 'typeorm';
-import { PreferenceValueType } from '@common/enums';
+import { PreferenceValueType, UserPreferenceType } from '@common/enums';
 import { SMALL_TEXT_LENGTH, TINY_TEXT_LENGTH } from '@src/common/constants';
 import { IPreferenceDefinition as IPreferenceDefinition } from './preference.definition.interface';
 import { Preference } from './preference.entity';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity/base.alkemio.entity';
+import { HubPreferenceType } from '@common/enums/hub.preference.type';
 
 @Entity()
 export class PreferenceDefinition
   extends BaseAlkemioEntity
   implements IPreferenceDefinition
 {
+  @Column({
+    length: SMALL_TEXT_LENGTH,
+  })
+  definitionSet!: string;
+
   @Column({
     name: 'groupName',
     length: SMALL_TEXT_LENGTH,
@@ -32,7 +38,7 @@ export class PreferenceDefinition
   @Column({
     length: SMALL_TEXT_LENGTH,
   })
-  type!: string;
+  type!: UserPreferenceType | HubPreferenceType;
 
   @OneToMany(() => Preference, pref => pref.preferenceDefinition)
   preference?: Preference;
@@ -41,8 +47,7 @@ export class PreferenceDefinition
     group: string,
     displayName: string,
     description: string,
-    valueType: PreferenceValueType,
-    type: string
+    valueType: PreferenceValueType
   ) {
     super();
 
@@ -50,6 +55,5 @@ export class PreferenceDefinition
     this.displayName = displayName;
     this.description = description;
     this.valueType = valueType;
-    this.type = type;
   }
 }
