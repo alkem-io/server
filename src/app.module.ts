@@ -33,6 +33,12 @@ import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
 import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
+import {
+  ConnectionContext,
+  SubscriptionsTransportWsWebsocket,
+  WebsocketContext,
+} from '@src/types';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -111,45 +117,27 @@ import { join } from 'path';
         },
         fieldResolverEnhancers: ['guards'],
         sortSchema: true,
-        installSubscriptionHandlers: true,
-        context: (ctx: any) =>
-          // once the connection is established in onConnect, the context will have the user populated
-          ctx.connection ? { req: ctx.connection.context } : { req: ctx.req },
+        /***
+         * graphql-ws requires passing the request object through the context method
+         * !!! this is graphql-ws ONLY
+         */
+        context: (ctx: ConnectionContext) => ({
+          req: isWebsocketContext(ctx) ? ctx.extra.request : ctx.req,
+        }),
         subscriptions: {
           'subscriptions-transport-ws': {
-            keepAlive: 5000,
-            onConnect: async (
-              _: { [key: string]: any },
-              __: { [key: string]: any },
-              context: any
+            /***
+             * subscriptions-transport-ws required passing the request object
+             * through the onConnect method
+             */
+            onConnect: (
+              connectionParams: Record<string, any>,
+              websocket: SubscriptionsTransportWsWebsocket // couldn't find a better type
             ) => {
-              const authHeader: string =
-                context.request.headers.authorization || '';
-              const msg = `[Websocket] Opening for user with token: ${authHeader.substring(
-                0,
-                20
-              )}`;
-
-              // dummy code to not trigger warnings
-              if (msg.length === 0) {
-                return; // console.log(msg);
-              }
-              // Note: passing through headers so can leverage http authentication setup
-              // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
-              return { headers: { authorization: `${authHeader}` } };
-            },
-            onDisconnect: async (_: any, context: any) => {
-              const authHeader: string = context.request.headers.authorization;
-              const msg = `[Websocket] Closing for user with token: ${authHeader.substring(
-                0,
-                20
-              )}`;
-              // dummy code to not trigger warnings
-              if (msg.length === 0) {
-                return; // console.log(msg);
-              }
+              return { req: { headers: websocket?.upgradeReq?.headers } };
             },
           },
+          'graphql-ws': true,
         },
       }),
     }),
@@ -184,3 +172,6 @@ export class AppModule {
     consumer.apply(RequestLoggerMiddleware).forRoutes('/');
   }
 }
+
+const isWebsocketContext = (context: unknown): context is WebsocketContext =>
+  !!(context as WebsocketContext)?.extra;
