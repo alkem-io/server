@@ -4,7 +4,7 @@ import { EcosystemModel } from '@domain/context/ecosystem-model/ecosystem-model.
 import { Reference } from '@domain/common/reference/reference.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
-import { Canvas } from '@domain/common/canvas';
+import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { Visual } from '@domain/common/visual/visual.entity';
 @Entity()
 export class Context extends AuthorizableEntity implements IContext {

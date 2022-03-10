@@ -33,7 +33,6 @@ import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
 import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
-
 @Module({
   imports: [
     ConfigModule.forRoot({

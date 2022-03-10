@@ -11,7 +11,7 @@ import { UserService } from './user.service';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { IProfile } from '../profile/profile.interface';
-import { IPreference } from '@domain/common/preferences/preference.interface';
+import { IPreference } from '@domain/common/preference/preference.interface';
 
 @Resolver(() => IUser)
 export class UserResolverFields {

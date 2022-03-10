@@ -5,7 +5,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { Application } from '@domain/community/application/application.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
-import { Preference } from '@domain/common/preferences/preference.entity';
+import { Preference } from '@domain/common/preference/preference.entity';
 
 @Entity()
 export class User extends NameableEntity implements IUser {

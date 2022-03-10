@@ -4,6 +4,7 @@ import { TINY_TEXT_LENGTH } from '@src/common/constants';
 import { IPreference as IPreference } from './preference.interface';
 import { PreferenceDefinition } from './preference.definition.entity';
 import { User } from '@domain/community/user/user.entity';
+import { Hub } from '@domain/challenge/hub/hub.entity';
 
 @Entity()
 export class Preference extends AuthorizableEntity implements IPreference {
@@ -25,4 +26,11 @@ export class Preference extends AuthorizableEntity implements IPreference {
     onDelete: 'NO ACTION',
   })
   user?: User;
+
+  @ManyToOne(() => User, hub => hub.preferences, {
+    eager: false,
+    cascade: false,
+    onDelete: 'NO ACTION',
+  })
+  hub?: Hub;
 }
