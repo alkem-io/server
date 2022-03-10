@@ -16,7 +16,7 @@ import { IdentityResolverModule } from '@domain/communication/identity-resolver/
 import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
 import { KonfigModule } from '@services/platform/configuration/config/config.module';
-import { PreferenceModule } from '@domain/common/preferences/preference.module';
+import { PreferenceModule } from '@domain/common/preference/preference.module';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({

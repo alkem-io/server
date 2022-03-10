@@ -27,6 +27,7 @@ import { IAgent } from '@domain/agent/agent';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { HubTemplate } from './dto/hub.dto.template.hub';
+import { IPreference } from '@domain/common/preference/preference.interface';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -68,9 +69,20 @@ export class HubResolverFields {
     nullable: true,
     description: 'The Agent representing this Hub.',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async agent(@Parent() hub: Hub): Promise<IAgent> {
     return await this.hubService.getAgent(hub.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('preferences', () => [IPreference], {
+    nullable: false,
+    description: 'The preferences for this user',
+  })
+  @UseGuards(GraphqlGuard)
+  async preferences(@Parent() hub: Hub): Promise<IPreference[]> {
+    return await this.hubService.getPreferences(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

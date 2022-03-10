@@ -120,7 +120,9 @@ type ContextExtra = {
         sortSchema: true,
         context: (ctx: any) =>
           // once the connection is established in onConnect, the context will have the user populated
-          ctx.connection ? { req: ctx.connection.context } : { req: ctx.req },
+          ctx.connection
+            ? { req: ctx.connection.context }
+            : { req: ctx.req ?? ctx.extra.request },
         subscriptions: {
           'subscriptions-transport-ws': {
             keepAlive: 5000,
@@ -166,7 +168,8 @@ type ContextExtra = {
 
               // Note: passing through headers so can leverage http authentication setup
               // Details in https://github.com/nestjs/docs.nestjs.com/issues/394
-              return { headers: { authorization: authHeader } };
+              const res = { headers: { authorization: authHeader } };
+              return res;
             },
             // onDisconnect: (ctx: any, code: number, reason: string) => {
             onDisconnect: () => {

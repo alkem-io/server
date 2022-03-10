@@ -25,8 +25,8 @@ import { OrganizationAuthorizationService } from '@domain/community/organization
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@services/admin/authorization/admin.authorization.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
-import { PreferenceService } from '@domain/common/preferences/preference.service';
-import { CreatePreferenceDefinitionInput } from '@domain/common/preferences/dto/preference-definition.dto.create';
+import { PreferenceService } from '@domain/common/preference/preference.service';
+import { CreatePreferenceDefinitionInput } from '@domain/common/preference/dto/preference-definition.dto.create';
 
 @Injectable()
 export class BootstrapService {

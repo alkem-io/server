@@ -1,5 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import { LogContext } from '@common/enums';
+import { LogContext, UserPreferenceType } from '@common/enums';
 import {
   AuthenticationException,
   EntityNotFoundException,
@@ -41,7 +41,9 @@ import { KonfigService } from '@services/platform/configuration/config/config.se
 import { IUserTemplate } from '@services/platform/configuration';
 import { NamingService } from '@services/domain/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { PreferenceService } from '@domain/common/preferences/preference.service';
+import { PreferenceService } from '@domain/common/preference/preference.service';
+import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
+import { IPreference } from '@domain/common/preference/preference.interface';
 
 @Injectable()
 export class UserService {
@@ -109,8 +111,8 @@ export class UserService {
 
     const response = await this.userRepository.save(user);
 
-    user.preferences =
-      await this.preferenceService.createInitialUserPreferences(response);
+    user.preferences = await this.createInitialUserPreferences(response);
+
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
@@ -177,6 +179,25 @@ export class UserService {
     return result;
   }
 
+  async createInitialUserPreferences(user: IUser): Promise<IPreference[]> {
+    const definitions = await this.preferenceService.getAllDefinitionsInSet(
+      PreferenceDefinitionSet.USER
+    );
+    const preferences: IPreference[] = [];
+    for (const definition of definitions) {
+      const preference = await this.preferenceService.createPreference({
+        value: this.preferenceService.getDefaultPreferenceValue(
+          definition.valueType
+        ),
+        preferenceDefinition: definition,
+        user: user,
+      });
+      preferences.push(preference);
+    }
+
+    return preferences;
+  }
+
   async getUserTemplate(): Promise<IUserTemplate | undefined> {
     const template = await this.konfigService.getTemplate();
     const userTemplates = template.users;
@@ -185,6 +206,25 @@ export class UserService {
       return userTemplates[0];
     }
     return undefined;
+  }
+
+  async getPreferenceOrFail(
+    user: IUser,
+    type: UserPreferenceType
+  ): Promise<IPreference> {
+    const preferences = await this.getPreferences(user.id);
+    const preference = preferences.find(
+      preference => preference.preferenceDefinition.type === type
+    );
+
+    if (!preference) {
+      throw new EntityNotFoundException(
+        `Unable to find preference of type ${type} for user with ID: ${user.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return preference;
   }
 
   async createUserFromAgentInfo(agentInfo: AgentInfo): Promise<IUser> {

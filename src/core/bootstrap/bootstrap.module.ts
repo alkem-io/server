@@ -10,7 +10,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AdminAuthorizationModule } from '@services/admin/authorization/admin.authorization.module';
 import { BootstrapService } from './bootstrap.service';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
-import { PreferenceModule } from '@domain/common/preferences/preference.module';
+import { PreferenceModule } from '@domain/common/preference/preference.module';
 
 @Module({
   imports: [
