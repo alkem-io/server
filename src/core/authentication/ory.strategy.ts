@@ -30,7 +30,6 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
       issuer: configService.get(ConfigurationTypes.IDENTITY)?.authentication
         ?.providers?.ory?.issuer,
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      // jwtFromRequest: TokenExtractor,
       ignoreExpiration: true,
     });
   }
@@ -63,32 +62,3 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
     return false;
   }
 }
-
-// const TokenExtractor = function (req: any) {
-//   let token = null;
-
-//   if (
-//     (req.headers && req.headers.authorization) ||
-//     (req.query && req.query.authorization)
-//   ) {
-//     let parts;
-//     if (req.headers.authorization) parts = req.headers.authorization.split(' ');
-//     else if (req.query.authorization)
-//       parts = req.query.authorization.split(' ');
-
-//     if (parts.length == 2) {
-//       const scheme = parts[0],
-//         credentials = parts[1];
-
-//       if (/^MyBearer$/i.test(scheme)) {
-//         //<-- replace MyBearer by your own.
-//         token = credentials;
-//       }
-//     }
-//   } else if (req.param('token')) {
-//     token = req.param('token');
-//     delete req.query.token;
-//   }
-
-//   return token;
-// };
