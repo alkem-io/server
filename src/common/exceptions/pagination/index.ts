@@ -1,2 +1,2 @@
-export * from './pagination.input.exception';
-export * from './pagination.notfound.exception';
+export * from './pagination.input.out.of.bounds.exception';
+export * from './pagination.not.found.exception';

@@ -68,7 +68,7 @@ export class UserResolverQueries {
     description: 'The users who have profiles on this platform',
   })
   @Profiling.api
-  async users2(
+  async usersPaginated(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
       name: 'first',

@@ -1,8 +1,8 @@
 import { LogContext, AlkemioErrorStatus } from '@common/enums';
 import { BaseException } from '../base.exception';
 
-export class PaginationNotfoundException extends BaseException {
+export class PaginationInputOutOfBoundException extends BaseException {
   constructor(error: string, context: LogContext) {
-    super(error, context, AlkemioErrorStatus.PAGINATION_NOT_FOUND);
+    super(error, context, AlkemioErrorStatus.PAGINATION_INPUT_OUT_OF_BOUND);
   }
 }

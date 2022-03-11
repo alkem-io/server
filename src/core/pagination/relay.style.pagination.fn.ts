@@ -1,7 +1,7 @@
 import {
   LogContext,
-  PaginationInputException,
-  PaginationNotfoundException,
+  PaginationInputOutOfBoundException,
+  PaginationNotFoundException,
 } from '@src/common';
 import { IBaseAlkemio } from '@src/domain';
 import { IRelayStylePaginatedType } from './';
@@ -53,7 +53,7 @@ export const getRelayStylePaginationResults = <T extends IBaseAlkemio>(
 
   if (first) {
     if (first < 0) {
-      throw new PaginationInputException(
+      throw new PaginationInputOutOfBoundException(
         'Non-negative integer expected for parameter "first"',
         LogContext.COMMUNITY
       );
@@ -68,7 +68,7 @@ export const getRelayStylePaginationResults = <T extends IBaseAlkemio>(
   if (after) {
     const index = list.findIndex(x => x.id === after);
     if (index === -1) {
-      throw new PaginationNotfoundException(
+      throw new PaginationNotFoundException(
         `Cursor item not found with id: (${after})`,
         LogContext.COMMUNITY
       );
