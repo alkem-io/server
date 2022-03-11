@@ -1,5 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ApplicationTemplate } from '@src/services/platform/configuration/config/template/application.template.entity';
+import { HubAspectTemplate } from './hub.aspect.template.entity';
 
 @ObjectType()
 export class PlatformHubTemplate {
@@ -14,6 +15,12 @@ export class PlatformHubTemplate {
     description: 'Application templates.',
   })
   applications?: ApplicationTemplate[];
+
+  @Field(() => [HubAspectTemplate], {
+    nullable: true,
+    description: 'Application templates.',
+  })
+  aspects?: HubAspectTemplate[];
 
   constructor();
   constructor(name: string);
