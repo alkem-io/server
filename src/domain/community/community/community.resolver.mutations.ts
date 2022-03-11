@@ -12,10 +12,9 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
@@ -33,11 +32,12 @@ import {
   AlkemioUserClaim,
   ReadCommunityClaim,
 } from '@services/platform/trust-registry-adapter/claim/claim.entity';
+import { NotSupportedException } from '@common/exceptions';
+import { CommunityJoinInput } from './dto/community.dto.join';
 
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
@@ -133,33 +133,30 @@ export class CommunityResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IApplication, {
-    description: 'Creates Application for a User to join this Community.',
+    description: 'Apply to join the specified Community as a member.',
   })
   @Profiling.api
-  async createApplication(
+  async applyForCommunityMembership(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('applicationData') applicationData: CreateApplicationInput
   ): Promise<IApplication> {
     const community = await this.communityService.getCommunityOrFail(
       applicationData.parentID
     );
-    // Check that the application creation is authorized, after first updating the rules for the community entity
-    // so that the current user can also update their details (by creating an application)
+
     const user = await this.userService.getUserOrFail(applicationData.userID);
-    const authorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRule(
-        community.authorization,
-        {
-          type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-          resourceID: user.id,
-        },
-        [AuthorizationPrivilege.UPDATE]
+    // A user can only apply for themselves
+    if (user.id !== agentInfo.userID) {
+      throw new NotSupportedException(
+        `Applications for community membership must be made by the current user: ${applicationData.userID} - ${user.nameID}`,
+        LogContext.COMMUNITY
       );
+    }
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      authorization,
-      AuthorizationPrivilege.UPDATE,
+      community.authorization,
+      AuthorizationPrivilege.COMMUNITY_APPLY,
       `create application community: ${community.displayName}`
     );
 
@@ -187,6 +184,51 @@ export class CommunityResolverMutations {
     );
 
     return savedApplication;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICommunity, {
+    description: 'Join the specified Community as a member.',
+  })
+  @Profiling.api
+  async joinCommunity(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('joinCommunityData') joiningData: CommunityJoinInput
+  ): Promise<ICommunity> {
+    const community = await this.communityService.getCommunityOrFail(
+      joiningData.communityID
+    );
+
+    const user = await this.userService.getUserOrFail(joiningData.userID);
+    // A user can only apply for themselves
+    if (user.id !== agentInfo.userID) {
+      throw new NotSupportedException(
+        `Applications for community membership must be made by the current user: ${joiningData.userID} - ${user.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.COMMUNITY_APPLY,
+      `create application community: ${community.displayName}`
+    );
+
+    // Todo: notification for new community membership
+    // const payload =
+    //   await this.notificationsPayloadBuilder.buildApplicationCreatedNotificationPayload(
+    //     agentInfo.userID,
+    //     joiningData.userID,
+    //     community
+    //   );
+
+    // this.notificationsClient.emit<number>(
+    //   EventType.COMMUNITY_APPLICATION_CREATED,
+    //   payload
+    // );
+
+    return await this.communityService.assignMember(joiningData);
   }
 
   @UseGuards(GraphqlGuard)
