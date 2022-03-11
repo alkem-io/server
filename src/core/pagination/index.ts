@@ -1,4 +1,4 @@
-export * from './relay.style.pagination.result';
+export * from './relay.style.paginated.type';
 
 export * from './paginated.user';
 

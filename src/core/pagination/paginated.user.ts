@@ -1,9 +1,11 @@
 import { ObjectType } from '@nestjs/graphql';
 import { IUser } from '@src/domain';
-import { RelayStylePaginate } from './relay.style.pagination.result';
+import { RelayStylePaginate } from './relay.style.paginated.type';
 
 @ObjectType()
-class ConcreteUser extends IUser {}
+class PaginatedUser extends IUser {}
 
 @ObjectType()
-export class RelayStylePaginatedUser extends RelayStylePaginate(ConcreteUser) {}
+export class RelayStylePaginatedUser extends RelayStylePaginate(
+  PaginatedUser
+) {}
