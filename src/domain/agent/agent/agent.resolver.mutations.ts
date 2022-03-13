@@ -3,13 +3,11 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import {
-  BeginCredentialOfferOutput,
-  BeginCredentialRequestOutput,
-} from '@domain/agent/credential/credential.dto.interactions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AlkemioUserClaim } from '@services/platform/trust-registry-adapter/claim/claim.entity';
 import { Agent } from './agent.entity';
+import { BeginCredentialRequestOutput } from '../credential/dto/credential.request.dto.begin.output';
+import { BeginCredentialOfferOutput } from '../credential/dto/credential.offer.dto.begin.output';
 
 @Resolver(() => Agent)
 export class AgentResolverMutations {

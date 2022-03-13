@@ -5,12 +5,11 @@ import { UserNotRegisteredException } from '@common/exceptions/registration.exce
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { CredentialMetadataOutput } from '@domain/agent/credential/credential.dto.metadata';
+import { CredentialMetadataOutput } from '@domain/agent/credential/dto/credential.dto.metadata';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { IUser } from '@domain/community/user';
 import { UseGuards } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Args, Float, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { AgentInfo } from '@src/core/authentication/agent-info';
@@ -22,8 +21,7 @@ export class UserResolverQueries {
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
-    private agentService: AgentService,
-    private configService: ConfigService
+    private agentService: AgentService
   ) {}
 
   @UseGuards(GraphqlGuard)

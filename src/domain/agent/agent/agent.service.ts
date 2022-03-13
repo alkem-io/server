@@ -34,15 +34,13 @@ import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { firstValueFrom } from 'rxjs';
 import { FindOneOptions, Repository } from 'typeorm';
-import { IClaim } from '../../../services/platform/trust-registry-adapter/claim/claim.entity';
-import {
-  BeginCredentialOfferOutput,
-  BeginCredentialRequestOutput,
-} from '../credential/credential.dto.interactions';
-import { CredentialMetadataOutput } from '../credential/credential.dto.metadata';
+import { IClaim } from '@services/platform/trust-registry-adapter/claim/claim.entity';
 import { CredentialService } from '../credential/credential.service';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
 import { WalletManagerCommand } from '@common/enums/wallet.manager.command';
+import { BeginCredentialRequestOutput } from '../credential/dto/credential.request.dto.begin.output';
+import { BeginCredentialOfferOutput } from '../credential/dto/credential.offer.dto.begin.output';
+import { CredentialMetadataOutput } from '../credential/dto/credential.dto.metadata';
 
 @Injectable()
 export class AgentService {

@@ -28,11 +28,11 @@ import { DeleteApplicationInput } from '../application/dto/application.dto.delet
 import { ApplicationEventInput } from '../application/dto/application.dto.event';
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { BeginCredentialOfferOutput } from '@domain/agent/credential/credential.dto.interactions';
 import {
   AlkemioUserClaim,
   ReadCommunityClaim,
 } from '@services/platform/trust-registry-adapter/claim/claim.entity';
+import { BeginCredentialOfferOutput } from '@domain/agent/credential/dto/credential.offer.dto.begin.output';
 
 @Resolver()
 export class CommunityResolverMutations {

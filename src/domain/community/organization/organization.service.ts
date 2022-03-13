@@ -27,7 +27,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CredentialsSearchInput } from '@domain/agent/credential/credentials.dto.search';
+import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
 import { RemoveOrganizationMemberInput } from './dto/organization.dto.remove.member';
 import { AssignOrganizationMemberInput } from './dto/organization.dto.assign.member';
 import { AssignOrganizationAdminInput } from './dto/organization.dto.assign.admin';
