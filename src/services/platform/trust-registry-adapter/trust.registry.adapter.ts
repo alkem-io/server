@@ -1,24 +1,24 @@
-import { CredentialMetadata } from '@services/platform/trust-registry-adapter/credentials/credential.provider.interface';
 import { Injectable } from '@nestjs/common';
-import { IClaim } from './claim/claim.entity';
 import { ClaimService } from './claim/claim.service';
-import { TrustRegistryService } from './trust.registry.service';
 import { v4 } from 'uuid';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes } from '@common/enums';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
+import { CredentialMetadata } from './configuration/credential.metadata';
+import { IClaim } from './claim/claim.interface';
+import { TrustRegistryConfigurationAdapter } from './configuration/trust.registry.configuration.adapter';
 
 @Injectable()
 export class TrustRegistryAdapter {
   constructor(
     private configService: ConfigService,
-    private readonly trustRegistryService: TrustRegistryService,
-    private readonly claimsService: ClaimService
+    private trustRegistryConfigurationProvider: TrustRegistryConfigurationAdapter,
+    private claimsService: ClaimService
   ) {}
 
   getSupportedCredentialMetadata(types?: string[]): CredentialMetadata[] {
     const supportedCredentials =
-      this.trustRegistryService.getSupportedCredentialMetadata();
+      this.trustRegistryConfigurationProvider.getCredentials();
     if (types)
       return supportedCredentials.filter(
         c => types?.indexOf(c.uniqueType) !== -1

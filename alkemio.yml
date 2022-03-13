@@ -373,7 +373,7 @@ ssi:
   credentials:
     proof_of_community_membership:
       name: Community Member
-      description: The holder is a member of an Alkemio hub,challenge or opportunity community
+      description: The holder is a member of an Alkemio hub, challenge or opportunity community
       schema: https://schema.org/EducationalOccupationalCredential
       types:
         - Credential

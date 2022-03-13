@@ -4,10 +4,10 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AlkemioUserClaim } from '@services/platform/trust-registry-adapter/claim/claim.entity';
 import { Agent } from './agent.entity';
 import { BeginCredentialRequestOutput } from '../credential/dto/credential.request.dto.begin.output';
 import { BeginCredentialOfferOutput } from '../credential/dto/credential.offer.dto.begin.output';
+import { AlkemioUserClaim } from '@services/platform/trust-registry-adapter/claim/claim.alkemio.user';
 
 @Resolver(() => Agent)
 export class AgentResolverMutations {
