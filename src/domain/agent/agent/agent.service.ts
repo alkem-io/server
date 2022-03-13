@@ -41,6 +41,7 @@ import { WalletManagerCommand } from '@common/enums/wallet.manager.command';
 import { BeginCredentialRequestOutput } from '../credential/dto/credential.request.dto.begin.output';
 import { BeginCredentialOfferOutput } from '../credential/dto/credential.offer.dto.begin.output';
 import { CredentialMetadataOutput } from '../credential/dto/credential.dto.metadata';
+import jwt_decode from 'jwt-decode';
 
 @Injectable()
 export class AgentService {
@@ -316,6 +317,10 @@ export class AgentService {
       this.cacheManager.set(nonce, request.interactionId, {
         ttl: requestExpirationTtl,
       });
+      this.logTokenAsJson(
+        request.jwt,
+        WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION
+      );
 
       return request;
     } catch (err: any) {
@@ -340,8 +345,15 @@ export class AgentService {
     }
 
     this.logger.verbose?.(
-      `InteractionId with agent: ${interactionId} - ${agent.did} received ${token}`,
+      `InteractionId with agent: ${interactionId} - ${
+        agent.did
+      } received ${token.substring(0, 25)}...`,
       LogContext.SSI
+    );
+
+    this.logTokenAsJson(
+      token,
+      WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION
     );
 
     const credentialStoreRequest$ = this.walletManagementClient.send(
@@ -359,6 +371,14 @@ export class AgentService {
         `[completeCredentialRequestInteraction]: Failed to request credential: ${err.message}`
       );
     }
+  }
+
+  private logTokenAsJson(jwt: string, prefix: string) {
+    const tokenJson = jwt_decode(jwt);
+    this.logger.verbose?.(
+      `[${prefix}] - Token converted to JSON: ${JSON.stringify(tokenJson)}`,
+      LogContext.AGENT
+    );
   }
 
   @Profiling.api
@@ -409,6 +429,11 @@ export class AgentService {
         ttl: requestExpirationTtl,
       });
 
+      this.logTokenAsJson(
+        request.jwt,
+        WalletManagerCommand.BEGIN_CREDENTIAL_OFFER_INTERACTION
+      );
+
       return request;
     } catch (err: any) {
       throw new SsiException(
@@ -440,8 +465,15 @@ export class AgentService {
     }
 
     this.logger.verbose?.(
-      `InteractionId with agent: ${interactionId} - ${agent.did} received ${token}`,
+      `InteractionId with agent: ${interactionId} - ${
+        agent.did
+      } received ${token.substring(0, 25)}......`,
       LogContext.SSI
+    );
+
+    this.logTokenAsJson(
+      token,
+      WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION
     );
 
     const credentialOfferSelection$ = this.walletManagementClient.send(
@@ -454,7 +486,12 @@ export class AgentService {
     );
 
     try {
-      return await firstValueFrom(credentialOfferSelection$);
+      const result = await firstValueFrom(credentialOfferSelection$);
+      this.logTokenAsJson(
+        token,
+        `${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}-issued`
+      );
+      return result;
     } catch (err: any) {
       throw new SsiException(
         `[${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}]:Failed to offer credential: ${err.message}`

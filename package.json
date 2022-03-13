@@ -71,6 +71,7 @@
     "image-size": "^1.0.0",
     "ipfs-http-client": "^51.0.1",
     "jwks-rsa": "^2.0.4",
+    "jwt-decode": "^3.1.2",
     "logform": "^2.3.2",
     "matrix-js-sdk": "^15.2.0",
     "module-alias": "^2.2.2",
