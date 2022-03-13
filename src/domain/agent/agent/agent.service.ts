@@ -382,7 +382,7 @@ export class AgentService {
       this.trustRegistryAdapter.getCredentialOffers(credentials);
 
     const credentialOffer$ = this.walletManagementClient.send(
-      { cmd: WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION },
+      { cmd: WalletManagerCommand.BEGIN_CREDENTIAL_OFFER_INTERACTION },
       {
         issuerDId: issuerAgent.did,
         issuerPassword: issuerAgent.password,
