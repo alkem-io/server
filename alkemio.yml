@@ -27,6 +27,9 @@ hosting:
   # TODO: the env var name is no longer acccurate
   endpoint: ${GRAPHQL_ENDPOINT}:http://localhost:3000
 
+  # The entry point for the cluster
+  endpoint_cluster: ${ENDPOINT_CLUSTER}:http://localhost:3000
+
   # The path from the end point for all public api rest requests.
   # It is combined with the `endpoint` above to provide the full path for incoming requests targeting the public Rest api.
   #

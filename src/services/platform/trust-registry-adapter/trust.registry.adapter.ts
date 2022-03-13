@@ -63,7 +63,7 @@ export class TrustRegistryAdapter {
 
   private generatePublicRestApiUrl() {
     const url = `${
-      this.configService.get(ConfigurationTypes.HOSTING)?.endpoint
+      this.configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
     }${
       this.configService.get(ConfigurationTypes.HOSTING)?.path_api_public_rest
     }`;
