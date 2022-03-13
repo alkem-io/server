@@ -3,7 +3,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IClaim } from './claim.interface';
 
 @Injectable()
-export class ClaimService {
+export class TrustRegistryClaimService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService

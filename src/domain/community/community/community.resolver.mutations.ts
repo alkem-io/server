@@ -29,8 +29,8 @@ import { ApplicationEventInput } from '../application/dto/application.dto.event'
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { BeginCredentialOfferOutput } from '@domain/agent/credential/dto/credential.offer.dto.begin.output';
-import { AlkemioUserClaim } from '@services/platform/trust-registry-adapter/claim/claim.alkemio.user';
-import { CommunityMemberClaim } from '@services/platform/trust-registry-adapter/claim/claim.community.member';
+import { AlkemioUserClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.alkemio.user';
+import { CommunityMemberClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.community.member';
 
 @Resolver()
 export class CommunityResolverMutations {

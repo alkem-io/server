@@ -28,7 +28,6 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
-import { TrustRegistryAdapter } from '@services/platform/trust-registry-adapter/trust.registry.adapter';
 import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { firstValueFrom } from 'rxjs';
@@ -40,8 +39,9 @@ import { BeginCredentialRequestOutput } from '../credential/dto/credential.reque
 import { BeginCredentialOfferOutput } from '../credential/dto/credential.offer.dto.begin.output';
 import { CredentialMetadataOutput } from '../credential/dto/credential.dto.metadata';
 import jwt_decode from 'jwt-decode';
-import { IClaim } from '@services/platform/trust-registry-adapter/claim/claim.interface';
-import { CredentialMetadata } from '@services/platform/trust-registry-adapter/configuration/credential.metadata';
+import { IClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.interface';
+import { CredentialMetadata } from '@services/platform/trust-registry/trust.registry.configuration/credential.metadata';
+import { TrustRegistryAdapter } from '@services/platform/trust-registry/trust.registry.adapter/trust.registry.adapter';
 
 @Injectable()
 export class AgentService {

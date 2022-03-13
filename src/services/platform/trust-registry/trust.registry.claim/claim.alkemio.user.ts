@@ -1,4 +1,4 @@
-import { SystemClaims } from './claim.enum';
+import { Claim } from './claim.enum';
 import { IClaim } from './claim.interface';
 
 export class AlkemioUserClaim implements IClaim {
@@ -12,8 +12,8 @@ export class AlkemioUserClaim implements IClaim {
 
   asClaimObject(): Record<string, any> {
     return {
-      [`${SystemClaims.AlkemioUser}_userID`]: this.userID,
-      [`${SystemClaims.AlkemioUser}_email`]: this.email,
+      [`${Claim.AlkemioUser}_userID`]: this.userID,
+      [`${Claim.AlkemioUser}_email`]: this.email,
     };
   }
 }

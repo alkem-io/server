@@ -1,19 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { ClaimService } from './claim/claim.service';
 import { v4 } from 'uuid';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes } from '@common/enums';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
-import { CredentialMetadata } from './configuration/credential.metadata';
-import { IClaim } from './claim/claim.interface';
-import { TrustRegistryConfigurationAdapter } from './configuration/trust.registry.configuration.adapter';
+import { CredentialMetadata } from '../trust.registry.configuration/credential.metadata';
+import { TrustRegistryConfigurationAdapter } from '../trust.registry.configuration/trust.registry.configuration.adapter';
+import { IClaim } from '../trust.registry.claim/claim.interface';
+import { TrustRegistryClaimService } from '../trust.registry.claim/trust.registry.claim.service';
 
 @Injectable()
 export class TrustRegistryAdapter {
   constructor(
     private configService: ConfigService,
     private trustRegistryConfigurationProvider: TrustRegistryConfigurationAdapter,
-    private claimsService: ClaimService
+    private trustRegistryClaimService: TrustRegistryClaimService
   ) {}
 
   getSupportedCredentialMetadata(types?: string[]): CredentialMetadata[] {
@@ -33,7 +33,7 @@ export class TrustRegistryAdapter {
 
     return targetMetadata.map(metadata => ({
       metadata,
-      claim: this.claimsService.createClaimObject(
+      claim: this.trustRegistryClaimService.createClaimObject(
         proposedOffers.find(o => o.type === metadata.uniqueType)?.claims || []
       ),
     }));
