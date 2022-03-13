@@ -5,24 +5,24 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { Agent } from './agent.entity';
-import { BeginCredentialRequestOutput } from '../credential/dto/credential.request.dto.begin.output';
-import { BeginCredentialOfferOutput } from '../credential/dto/credential.offer.dto.begin.output';
 import { AlkemioUserClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.alkemio.user';
+import { AgentBeginVerifiedCredentialRequestOutput } from './dto/agent.dto.verified.credential.request.begin.output';
+import { AgentBeginVerifiedCredentialOfferOutput } from './dto/agent.dto.verified.credential.offer.begin.output';
 
 @Resolver(() => Agent)
 export class AgentResolverMutations {
   constructor(private agentService: AgentService) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => BeginCredentialRequestOutput, {
+  @Mutation(() => AgentBeginVerifiedCredentialRequestOutput, {
     nullable: false,
-    description: 'Generate credential share request',
+    description: 'Generate verified credential share request',
   })
   @Profiling.api
-  async beginCredentialRequestInteraction(
+  async beginVerifiedCredentialRequestInteraction(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ name: 'types', type: () => [String] }) types: string[]
-  ): Promise<BeginCredentialRequestOutput> {
+  ): Promise<AgentBeginVerifiedCredentialRequestOutput> {
     return await this.agentService.beginCredentialRequestInteraction(
       agentInfo.agentID,
       types
@@ -30,13 +30,13 @@ export class AgentResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => BeginCredentialOfferOutput, {
+  @Mutation(() => AgentBeginVerifiedCredentialOfferOutput, {
     description: 'Generate Alkemio user credential offer',
   })
   @Profiling.api
-  async beginAlkemioUserCredentialOfferInteraction(
+  async beginAlkemioUserVerifiedCredentialOfferInteraction(
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<BeginCredentialOfferOutput> {
+  ): Promise<AgentBeginVerifiedCredentialOfferOutput> {
     return await this.agentService.beginCredentialOfferInteraction(
       agentInfo.agentID,
       [

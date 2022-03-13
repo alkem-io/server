@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
-export class BeginCredentialOfferOutput {
+export class AgentBeginVerifiedCredentialOfferOutput {
   @Field({
     nullable: false,
     description: 'The interaction id for this credential offer.',

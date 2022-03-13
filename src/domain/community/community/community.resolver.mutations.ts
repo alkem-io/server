@@ -28,9 +28,9 @@ import { DeleteApplicationInput } from '../application/dto/application.dto.delet
 import { ApplicationEventInput } from '../application/dto/application.dto.event';
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { BeginCredentialOfferOutput } from '@domain/agent/credential/dto/credential.offer.dto.begin.output';
 import { AlkemioUserClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.alkemio.user';
 import { CommunityMemberClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.community.member';
+import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto/agent.dto.verified.credential.offer.begin.output';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -232,13 +232,13 @@ export class CommunityResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => BeginCredentialOfferOutput, {
+  @Mutation(() => AgentBeginVerifiedCredentialOfferOutput, {
     description: 'Generate community member credential offer',
   })
-  async beginCommunityMemberCredentialOfferInteraction(
+  async beginCommunityMemberVerifiedCredentialOfferInteraction(
     @Args({ name: 'communityID', type: () => String }) communityID: string,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<BeginCredentialOfferOutput> {
+  ): Promise<AgentBeginVerifiedCredentialOfferOutput> {
     const community = await this.communityService.getCommunityOrFail(
       communityID
     );

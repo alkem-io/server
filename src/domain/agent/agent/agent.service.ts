@@ -8,13 +8,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { SsiException } from '@common/exceptions/ssi.exception';
-import {
-  Agent,
-  CreateAgentInput,
-  GrantCredentialInput,
-  IAgent,
-  RevokeCredentialInput,
-} from '@domain/agent/agent';
+import { Agent, CreateAgentInput, IAgent } from '@domain/agent/agent';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { VerifiedCredential } from '@domain/agent/verified-credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -35,13 +29,15 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { CredentialService } from '../credential/credential.service';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
 import { WalletManagerCommand } from '@common/enums/wallet.manager.command';
-import { BeginCredentialRequestOutput } from '../credential/dto/credential.request.dto.begin.output';
-import { BeginCredentialOfferOutput } from '../credential/dto/credential.offer.dto.begin.output';
-import { CredentialMetadataOutput } from '../credential/dto/credential.dto.metadata';
+import { CredentialMetadataOutput } from '../verified-credential/dto/verified.credential.dto.metadata';
 import jwt_decode from 'jwt-decode';
 import { IClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.interface';
 import { CredentialMetadata } from '@services/platform/trust-registry/trust.registry.configuration/credential.metadata';
 import { TrustRegistryAdapter } from '@services/platform/trust-registry/trust.registry.adapter/trust.registry.adapter';
+import { GrantCredentialInput } from './dto/agent.dto.credential.grant';
+import { RevokeCredentialInput } from './dto/agent.dto.credential.revoke';
+import { AgentBeginVerifiedCredentialRequestOutput } from './dto/agent.dto.verified.credential.request.begin.output';
+import { AgentBeginVerifiedCredentialOfferOutput } from './dto/agent.dto.verified.credential.offer.begin.output';
 
 @Injectable()
 export class AgentService {
@@ -53,7 +49,7 @@ export class AgentService {
     private walletManagementClient: ClientProxy,
     @InjectRepository(Agent)
     private agentRepository: Repository<Agent>,
-    private readonly trustRegistryAdapter: TrustRegistryAdapter,
+    private trustRegistryAdapter: TrustRegistryAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER)
@@ -288,7 +284,7 @@ export class AgentService {
   async beginCredentialRequestInteraction(
     issuerAgentID: string,
     credentialTypes: string[]
-  ): Promise<BeginCredentialRequestOutput> {
+  ): Promise<AgentBeginVerifiedCredentialRequestOutput> {
     const { nonce, uniqueCallbackURL } =
       this.trustRegistryAdapter.generateCredentialRequestUrl();
     const issuerAgent = await this.getAgentOrFail(issuerAgentID);
@@ -306,9 +302,10 @@ export class AgentService {
     );
 
     try {
-      const request = await firstValueFrom<BeginCredentialRequestOutput>(
-        credentialRequest$
-      );
+      const request =
+        await firstValueFrom<AgentBeginVerifiedCredentialRequestOutput>(
+          credentialRequest$
+        );
 
       const requestExpirationTtl = request.expiresOn - new Date().getTime();
       this.cacheManager.set<IAgent>(request.interactionId, issuerAgent, {
@@ -317,9 +314,10 @@ export class AgentService {
       this.cacheManager.set(nonce, request.interactionId, {
         ttl: requestExpirationTtl,
       });
-      this.logTokenAsJson(
+      this.logVerifiedCredentialInteraction(
         request.jwt,
-        WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION
+        WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION,
+        'begin'
       );
 
       return request;
@@ -351,9 +349,10 @@ export class AgentService {
       LogContext.SSI
     );
 
-    this.logTokenAsJson(
+    this.logVerifiedCredentialInteraction(
       token,
-      WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION
+      WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION,
+      'response'
     );
 
     const credentialStoreRequest$ = this.walletManagementClient.send(
@@ -365,7 +364,11 @@ export class AgentService {
     );
 
     try {
-      await firstValueFrom<boolean>(credentialStoreRequest$);
+      const result = await firstValueFrom<boolean>(credentialStoreRequest$);
+      this.logger.verbose?.(
+        `[RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION] - completed with result: ${result}`,
+        LogContext.AGENT
+      );
     } catch (err: any) {
       throw new SsiException(
         `[completeCredentialRequestInteraction]: Failed to request credential: ${err.message}`
@@ -373,10 +376,16 @@ export class AgentService {
     }
   }
 
-  private logTokenAsJson(jwt: string, prefix: string) {
+  private logVerifiedCredentialInteraction(
+    jwt: string,
+    interaction: string,
+    stage: string
+  ) {
     const tokenJson = jwt_decode(jwt);
     this.logger.verbose?.(
-      `[${prefix}] - Token converted to JSON: ${JSON.stringify(tokenJson)}`,
+      `[${interaction}] - [${stage}] - Token converted to JSON: ${JSON.stringify(
+        tokenJson
+      )}`,
       LogContext.AGENT
     );
   }
@@ -385,7 +394,7 @@ export class AgentService {
   async beginCredentialOfferInteraction(
     issuerAgentID: string,
     credentials: { type: string; claims: IClaim[] }[]
-  ): Promise<BeginCredentialOfferOutput> {
+  ): Promise<AgentBeginVerifiedCredentialOfferOutput> {
     if (!issuerAgentID || issuerAgentID.length == 0) {
       throw new AuthenticationException(
         'Unable to retrieve authenticated agent; no identifier'
@@ -410,9 +419,10 @@ export class AgentService {
     );
 
     try {
-      const request = await firstValueFrom<BeginCredentialOfferOutput>(
-        credentialOffer$
-      );
+      const request =
+        await firstValueFrom<AgentBeginVerifiedCredentialOfferOutput>(
+          credentialOffer$
+        );
 
       const requestExpirationTtl = request.expiresOn - new Date().getTime();
       this.cacheManager.set<{
@@ -429,9 +439,10 @@ export class AgentService {
         ttl: requestExpirationTtl,
       });
 
-      this.logTokenAsJson(
+      this.logVerifiedCredentialInteraction(
         request.jwt,
-        WalletManagerCommand.BEGIN_CREDENTIAL_OFFER_INTERACTION
+        WalletManagerCommand.BEGIN_CREDENTIAL_OFFER_INTERACTION,
+        'begin'
       );
 
       return request;
@@ -471,9 +482,10 @@ export class AgentService {
       LogContext.SSI
     );
 
-    this.logTokenAsJson(
+    this.logVerifiedCredentialInteraction(
       token,
-      WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION
+      WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION,
+      '2-received'
     );
 
     const credentialOfferSelection$ = this.walletManagementClient.send(
@@ -487,9 +499,10 @@ export class AgentService {
 
     try {
       const result = await firstValueFrom(credentialOfferSelection$);
-      this.logTokenAsJson(
-        token,
-        `${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}-issued`
+      this.logVerifiedCredentialInteraction(
+        result.token,
+        WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION,
+        '3-completed'
       );
       return result;
     } catch (err: any) {

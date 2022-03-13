@@ -5,7 +5,7 @@ import { UserNotRegisteredException } from '@common/exceptions/registration.exce
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { CredentialMetadataOutput } from '@domain/agent/credential/dto/credential.dto.metadata';
+import { CredentialMetadataOutput } from '@domain/agent/verified-credential/dto/verified.credential.dto.metadata';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { IUser } from '@domain/community/user';
@@ -145,7 +145,7 @@ export class UserResolverQueries {
     description: 'Get supported credential metadata',
   })
   @Profiling.api
-  async getSupportedCredentialMetadata(
+  async getSupportedVerifiedCredentialMetadata(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<CredentialMetadataOutput[]> {
     const userID = agentInfo.userID;
