@@ -3,6 +3,6 @@ import { BaseException } from './base.exception';
 
 export class SsiVcNotVerifiable extends BaseException {
   constructor(error: string, context: LogContext) {
-    super(error, context, AlkemioErrorStatus.SSI_ERROR);
+    super(error, context, AlkemioErrorStatus.SSI_VC_NOT_VERIABLE);
   }
 }
