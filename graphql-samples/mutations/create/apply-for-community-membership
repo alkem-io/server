@@ -15,8 +15,7 @@ mutation applyForCommunityMembership($applicationData: CreateApplicationInput!) 
 query variables:
 {
   "applicationData": {
-    "parentID": "uuid",
-    "userID": "uuid",
+    "communityID": "uuid",
     "questions": [
       {"name": "Question 1", "value": "No", "sortOrder": 1},
       {"name": "Question 2", "value": "Yes", "sortOrder": 2},

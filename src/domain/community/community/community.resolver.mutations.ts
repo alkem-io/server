@@ -3,16 +3,13 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
 import { CommunityService } from './community.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import {
-  CreateApplicationInput,
-  IApplication,
-} from '@domain/community/application';
+import { IApplication } from '@domain/community/application';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
@@ -32,8 +29,8 @@ import {
   AlkemioUserClaim,
   ReadCommunityClaim,
 } from '@services/platform/trust-registry-adapter/claim/claim.entity';
-import { NotSupportedException } from '@common/exceptions';
 import { CommunityJoinInput } from './dto/community.dto.join';
+import { CommunityApplyInput } from './dto/community.dto.apply';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -138,20 +135,11 @@ export class CommunityResolverMutations {
   @Profiling.api
   async applyForCommunityMembership(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('applicationData') applicationData: CreateApplicationInput
+    @Args('applicationData') applicationData: CommunityApplyInput
   ): Promise<IApplication> {
     const community = await this.communityService.getCommunityOrFail(
-      applicationData.parentID
+      applicationData.communityID
     );
-
-    const user = await this.userService.getUserOrFail(applicationData.userID);
-    // A user can only apply for themselves
-    if (user.id !== agentInfo.userID) {
-      throw new NotSupportedException(
-        `Applications for community membership must be made by the current user: ${applicationData.userID} - ${user.nameID}`,
-        LogContext.COMMUNITY
-      );
-    }
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -160,10 +148,11 @@ export class CommunityResolverMutations {
       `create application community: ${community.displayName}`
     );
 
-    // Authorized, so create + return
-    const application = await this.communityService.createApplication(
-      applicationData
-    );
+    const application = await this.communityService.createApplication({
+      parentID: community.id,
+      questions: applicationData.questions,
+      userID: agentInfo.userID,
+    });
 
     const savedApplication =
       await this.applicationAuthorizationService.applyAuthorizationPolicy(
@@ -174,7 +163,7 @@ export class CommunityResolverMutations {
     const payload =
       await this.notificationsPayloadBuilder.buildApplicationCreatedNotificationPayload(
         agentInfo.userID,
-        applicationData.userID,
+        agentInfo.userID,
         community
       );
 
@@ -188,7 +177,8 @@ export class CommunityResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICommunity, {
-    description: 'Join the specified Community as a member.',
+    description:
+      'Join the specified Community as a member, without going through an approval process.',
   })
   @Profiling.api
   async joinCommunity(
@@ -198,15 +188,6 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       joiningData.communityID
     );
-
-    const user = await this.userService.getUserOrFail(joiningData.userID);
-    // A user can only apply for themselves
-    if (user.id !== agentInfo.userID) {
-      throw new NotSupportedException(
-        `Applications for community membership must be made by the current user: ${joiningData.userID} - ${user.nameID}`,
-        LogContext.COMMUNITY
-      );
-    }
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -228,7 +209,10 @@ export class CommunityResolverMutations {
     //   payload
     // );
 
-    return await this.communityService.assignMember(joiningData);
+    return await this.communityService.assignMember({
+      userID: agentInfo.userID,
+      communityID: joiningData.communityID,
+    });
   }
 
   @UseGuards(GraphqlGuard)
