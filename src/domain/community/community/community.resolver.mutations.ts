@@ -24,13 +24,11 @@ import { DeleteApplicationInput } from '../application/dto/application.dto.delet
 import { ApplicationEventInput } from '../application/dto/application.dto.event';
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { BeginCredentialOfferOutput } from '@domain/agent/credential/credential.dto.interactions';
-import {
-  AlkemioUserClaim,
-  ReadCommunityClaim,
-} from '@services/platform/trust-registry-adapter/claim/claim.entity';
 import { CommunityJoinInput } from './dto/community.dto.join';
 import { CommunityApplyInput } from './dto/community.dto.apply';
+import { CommunityMemberClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.community.member';
+import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto/agent.dto.verified.credential.offer.begin.output';
+import { AlkemioUserClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.alkemio.user';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -260,13 +258,13 @@ export class CommunityResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => BeginCredentialOfferOutput, {
+  @Mutation(() => AgentBeginVerifiedCredentialOfferOutput, {
     description: 'Generate community member credential offer',
   })
-  async beginCommunityMemberCredentialOfferInteraction(
+  async beginCommunityMemberVerifiedCredentialOfferInteraction(
     @Args({ name: 'communityID', type: () => String }) communityID: string,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<BeginCredentialOfferOutput> {
+  ): Promise<AgentBeginVerifiedCredentialOfferOutput> {
     const community = await this.communityService.getCommunityOrFail(
       communityID
     );
@@ -287,7 +285,10 @@ export class CommunityResolverMutations {
               userID: agentInfo.userID,
               email: agentInfo.email,
             }),
-            new ReadCommunityClaim({ communityID: community.id }),
+            new CommunityMemberClaim({
+              communityID: community.id,
+              communityDisplayName: community.displayName,
+            }),
           ],
         },
       ]

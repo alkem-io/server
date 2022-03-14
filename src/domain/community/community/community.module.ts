@@ -8,7 +8,7 @@ import { UserGroupModule } from '@domain/community/user-group/user-group.module'
 import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { TrustRegistryAdapterModule } from '@services/platform/trust-registry-adapter/trust.registry.adapter.module';
+import { TrustRegistryAdapterModule } from '@services/platform/trust-registry/trust.registry.adapter/trust.registry.adapter.module';
 import { Community } from './community.entity';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { CommunityResolverFields } from './community.resolver.fields';
