@@ -355,6 +355,25 @@ export class AgentService {
       'response'
     );
 
+    // Retrieve the credential to store
+    const tokenDecoded: any = jwt_decode(token);
+    const vcToBeStored = tokenDecoded.interactionToken.suppliedCredentials[0];
+    const vcName = vcToBeStored.name;
+    this.logger.verbose?.(
+      `[completeCredentialRequestInteraction]: received VC with name '${vcName}' to be stored`,
+      LogContext.SSI
+    );
+    const trustedIssuers =
+      this.trustRegistryAdapter.getTrustedIssuersForCredentialNameOrFail(
+        vcName
+      );
+    this.logger.verbose?.(
+      `[completeCredentialRequestInteraction]: retrieved trusted issuers for VC with name '${vcName}': ${trustedIssuers}`,
+      LogContext.SSI
+    );
+    // const issuer = vcToBeStored.issuer;
+    // this.trustRegistryAdapter.validateIssuerOrFail(vcName, issuer);
+
     const credentialStoreRequest$ = this.walletManagementClient.send(
       { cmd: RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION },
       {

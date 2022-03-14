@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { v4 } from 'uuid';
 import { ConfigService } from '@nestjs/config';
-import { ConfigurationTypes } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
 import { CredentialMetadata } from '../trust.registry.configuration/credential.metadata';
 import { TrustRegistryConfigurationAdapter } from '../trust.registry.configuration/trust.registry.configuration.adapter';
 import { IClaim } from '../trust.registry.claim/claim.interface';
 import { TrustRegistryClaimService } from '../trust.registry.claim/trust.registry.claim.service';
+import { SsiVcNotVerifiable } from '@common/exceptions/ssi.vc.not.verifiable';
 
 @Injectable()
 export class TrustRegistryAdapter {
@@ -59,6 +60,34 @@ export class TrustRegistryAdapter {
       nonce,
       uniqueCallbackURL,
     };
+  }
+
+  getTrustedIssuersForCredentialNameOrFail(name: string): string[] {
+    const credentials =
+      this.trustRegistryConfigurationProvider.getCredentials();
+    const credentialMetadata = credentials.find(
+      credDef => credDef.name === name
+    );
+    if (!credentialMetadata) {
+      throw new SsiVcNotVerifiable(
+        `Unable to identify trusted issuers for credential type: ${name}`,
+        LogContext.SSI
+      );
+    }
+    const trustedIssuers = credentialMetadata.trusted_issuers;
+    return trustedIssuers || [];
+  }
+
+  validateIssuerOrFail(vcName: string, issuer: string) {
+    const trustedIssuers =
+      this.getTrustedIssuersForCredentialNameOrFail(vcName);
+
+    if (!trustedIssuers.includes(issuer)) {
+      throw new SsiVcNotVerifiable(
+        `Issuer '${issuer}' for credential '${vcName}' is not in list of trusted issuers: ${trustedIssuers}`,
+        LogContext.SSI
+      );
+    }
   }
 
   private generatePublicRestApiUrl() {

@@ -383,6 +383,9 @@ ssi:
         alkemioUser_userID: 'schema:uuid'
         alkemioUser_email: 'schema:email'
         communityMember_communityID: 'schema:uuid'
+        communityMember_displayName: 'schema:description'
+      trusted_issuers:
+        - did:jolo:d5b5b072b25dbc4aedcb677755808904d5f5f89f8a9e4d7384db17900314053c
     proof_of_alkemio_membership:
       name: Alkemio User
       description: The holder is a verified Alkemio user

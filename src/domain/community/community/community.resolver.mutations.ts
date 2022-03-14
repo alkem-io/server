@@ -259,7 +259,10 @@ export class CommunityResolverMutations {
               userID: agentInfo.userID,
               email: agentInfo.email,
             }),
-            new CommunityMemberClaim({ communityID: community.id }),
+            new CommunityMemberClaim({
+              communityID: community.id,
+              communityDisplayName: community.displayName,
+            }),
           ],
         },
       ]
