@@ -3,19 +3,15 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
 import { CommunityService } from './community.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import {
-  CreateApplicationInput,
-  IApplication,
-} from '@domain/community/application';
+import { IApplication } from '@domain/community/application';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
@@ -33,11 +29,12 @@ import {
   AlkemioUserClaim,
   ReadCommunityClaim,
 } from '@services/platform/trust-registry-adapter/claim/claim.entity';
+import { CommunityJoinInput } from './dto/community.dto.join';
+import { CommunityApplyInput } from './dto/community.dto.apply';
 
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
@@ -133,40 +130,29 @@ export class CommunityResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IApplication, {
-    description: 'Creates Application for a User to join this Community.',
+    description: 'Apply to join the specified Community as a member.',
   })
   @Profiling.api
-  async createApplication(
+  async applyForCommunityMembership(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('applicationData') applicationData: CreateApplicationInput
+    @Args('applicationData') applicationData: CommunityApplyInput
   ): Promise<IApplication> {
     const community = await this.communityService.getCommunityOrFail(
-      applicationData.parentID
+      applicationData.communityID
     );
-    // Check that the application creation is authorized, after first updating the rules for the community entity
-    // so that the current user can also update their details (by creating an application)
-    const user = await this.userService.getUserOrFail(applicationData.userID);
-    const authorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRule(
-        community.authorization,
-        {
-          type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-          resourceID: user.id,
-        },
-        [AuthorizationPrivilege.UPDATE]
-      );
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      authorization,
-      AuthorizationPrivilege.UPDATE,
+      community.authorization,
+      AuthorizationPrivilege.COMMUNITY_APPLY,
       `create application community: ${community.displayName}`
     );
 
-    // Authorized, so create + return
-    const application = await this.communityService.createApplication(
-      applicationData
-    );
+    const application = await this.communityService.createApplication({
+      parentID: community.id,
+      questions: applicationData.questions,
+      userID: agentInfo.userID,
+    });
 
     const savedApplication =
       await this.applicationAuthorizationService.applyAuthorizationPolicy(
@@ -177,7 +163,7 @@ export class CommunityResolverMutations {
     const payload =
       await this.notificationsPayloadBuilder.buildApplicationCreatedNotificationPayload(
         agentInfo.userID,
-        applicationData.userID,
+        agentInfo.userID,
         community
       );
 
@@ -187,6 +173,46 @@ export class CommunityResolverMutations {
     );
 
     return savedApplication;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICommunity, {
+    description:
+      'Join the specified Community as a member, without going through an approval process.',
+  })
+  @Profiling.api
+  async joinCommunity(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('joinCommunityData') joiningData: CommunityJoinInput
+  ): Promise<ICommunity> {
+    const community = await this.communityService.getCommunityOrFail(
+      joiningData.communityID
+    );
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.COMMUNITY_APPLY,
+      `create application community: ${community.displayName}`
+    );
+
+    // Todo: notification for new community membership
+    // const payload =
+    //   await this.notificationsPayloadBuilder.buildApplicationCreatedNotificationPayload(
+    //     agentInfo.userID,
+    //     joiningData.userID,
+    //     community
+    //   );
+
+    // this.notificationsClient.emit<number>(
+    //   EventType.COMMUNITY_APPLICATION_CREATED,
+    //   payload
+    // );
+
+    return await this.communityService.assignMember({
+      userID: agentInfo.userID,
+      communityID: joiningData.communityID,
+    });
   }
 
   @UseGuards(GraphqlGuard)

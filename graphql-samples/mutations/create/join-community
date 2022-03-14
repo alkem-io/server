@@ -1,0 +1,12 @@
+mutation joinCommunity($joiningData: CreateApplicationInput!) {
+  joinCommunity(joiningData:$joiningData){
+    id
+  }
+}
+
+query variables:
+{
+  "joiningData": {
+    "communityID": "uuid"
+  }
+}
