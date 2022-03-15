@@ -27,6 +27,9 @@ hosting:
   # TODO: the env var name is no longer acccurate
   endpoint: ${GRAPHQL_ENDPOINT}:http://localhost:3000
 
+  # The entry point for the cluster
+  endpoint_cluster: ${ENDPOINT_CLUSTER}:http://localhost:3000
+
   # The path from the end point for all public api rest requests.
   # It is combined with the `endpoint` above to provide the full path for incoming requests targeting the public Rest api.
   #
@@ -370,7 +373,7 @@ ssi:
   credentials:
     proof_of_community_membership:
       name: Community Member
-      description: The holder is a member of an Alkemio hub,challenge or opportunity community
+      description: The holder is a member of an Alkemio hub, challenge or opportunity community
       schema: https://schema.org/EducationalOccupationalCredential
       types:
         - Credential
@@ -380,6 +383,9 @@ ssi:
         alkemioUser_userID: 'schema:uuid'
         alkemioUser_email: 'schema:email'
         communityMember_communityID: 'schema:uuid'
+        communityMember_displayName: 'schema:description'
+      trusted_issuers:
+        - did:jolo:d5b5b072b25dbc4aedcb677755808904d5f5f89f8a9e4d7384db17900314053c
     proof_of_alkemio_membership:
       name: Alkemio User
       description: The holder is a verified Alkemio user

@@ -13,6 +13,7 @@ export class AppService {
     await this.agentService.completeCredentialRequestInteraction(nonce, token);
   }
 
+  // todo: return type?!
   async completeCredentialOfferInteraction(nonce: string, token: string) {
     return this.agentService.completeCredentialOfferInteraction(nonce, token);
   }
