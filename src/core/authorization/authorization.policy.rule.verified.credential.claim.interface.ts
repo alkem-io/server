@@ -1,17 +1,14 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('AuthorizationPolicyRuleCredential')
-export abstract class IAuthorizationPolicyRuleCredential {
+@ObjectType('AuthorizationPolicyRuleVerifiedCredentialClaim')
+export abstract class IAuthorizationPolicyRuleVerifiedCredentialClaim {
   @Field(() => String)
-  type!: string;
+  name!: string;
 
   @Field(() => String)
-  resourceID!: string;
+  value!: string;
 
   @Field(() => [AuthorizationPrivilege])
   grantedPrivileges!: AuthorizationPrivilege[];
-
-  @Field(() => Boolean)
-  inheritable!: boolean;
 }

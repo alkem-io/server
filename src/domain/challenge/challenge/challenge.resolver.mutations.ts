@@ -24,7 +24,6 @@ import { IUser } from '@domain/community/user/user.interface';
 import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
 import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
-import { ChallengeAuthorizeStateModificationInput } from './dto/challenge.dto.authorize.state.modification';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -157,32 +156,6 @@ export class ChallengeResolverMutations {
         ID: challengeEventData.ID,
       },
       agentInfo
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description:
-      'Authorizes a User to be able to modify the state on the specified Challenge.',
-  })
-  @Profiling.api
-  async grantStateModificationOnChallenge(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('grantStateModificationVCData')
-    grantStateModificationVCData: ChallengeAuthorizeStateModificationInput
-  ): Promise<IUser> {
-    const challenge = await this.challengeService.getChallengeOrFail(
-      grantStateModificationVCData.challengeID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      challenge.authorization,
-      AuthorizationPrivilege.CREATE,
-      `create VC on challenge (${challenge.nameID}) for user ${grantStateModificationVCData.userID}`
-    );
-
-    return await this.challengeService.authorizeStateModification(
-      grantStateModificationVCData
     );
   }
 

@@ -61,6 +61,7 @@ export class AdminAuthorizationResolverQueries {
       `authorization query: ${agentInfo.email}`
     );
     return await this.adminAuthorizationService.userAuthorizationPrivileges(
+      agentInfo,
       userAuthorizationPrivilegesData
     );
   }

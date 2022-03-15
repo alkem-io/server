@@ -5,10 +5,11 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { AuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential';
-import { AuthorizationPolicyRuleVerifiedCredential } from './authorization.policy.rule.verified.credential';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyRulePrivilege } from './authorization.policy.rule.privilege';
+import { IAuthorizationPolicyRuleVerifiedCredentialClaim } from './authorization.policy.rule.verified.credential.claim.interface';
+import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
+import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class AuthorizationService {
@@ -95,8 +96,9 @@ export class AuthorizationService {
     // Keep track of all the granted privileges via Credential rules so can use with Privilege rules
     const grantedPrivileges: AuthorizationPrivilege[] = [];
 
-    const credentialRules: AuthorizationPolicyRuleCredential[] =
-      this.convertCredentialRulesStr(authorization.credentialRules);
+    const credentialRules = this.convertCredentialRulesStr(
+      authorization.credentialRules
+    );
     for (const rule of credentialRules) {
       for (const credential of agentInfo.credentials) {
         if (this.isCredentialMatch(credential, rule)) {
@@ -107,16 +109,17 @@ export class AuthorizationService {
         }
       }
     }
-    const verifiedCredentialRules: AuthorizationPolicyRuleVerifiedCredential[] =
+    const verifiedCredentialRules: IAuthorizationPolicyRuleVerifiedCredentialClaim[] =
       this.convertVerifiedCredentialRulesStr(
         authorization.verifiedCredentialRules
       );
     for (const rule of verifiedCredentialRules) {
       for (const verifiedCredential of agentInfo.verifiedCredentials) {
-        if (
-          verifiedCredential.type === rule.type &&
-          verifiedCredential.issuer === rule.resourceID
-        ) {
+        const isMatch = this.isVerifiedCredentialMatch(
+          verifiedCredential,
+          rule
+        );
+        if (isMatch) {
           for (const privilege of rule.grantedPrivileges) {
             if (privilege === privilegeRequired) {
               this.logger.verbose?.(
@@ -143,6 +146,7 @@ export class AuthorizationService {
 
   getGrantedPrivileges(
     credentials: ICredential[],
+    verifiedCredentials: IVerifiedCredential[],
     authorization: IAuthorizationPolicy
   ) {
     const grantedPrivileges: AuthorizationPrivilege[] = [];
@@ -151,11 +155,25 @@ export class AuthorizationService {
       grantedPrivileges.push(AuthorizationPrivilege.READ);
     }
 
-    const credentialRules: AuthorizationPolicyRuleCredential[] =
-      this.convertCredentialRulesStr(authorization.credentialRules);
+    const credentialRules = this.convertCredentialRulesStr(
+      authorization.credentialRules
+    );
     for (const rule of credentialRules) {
       for (const credential of credentials) {
         if (this.isCredentialMatch(credential, rule)) {
+          for (const privilege of rule.grantedPrivileges) {
+            grantedPrivileges.push(privilege);
+          }
+        }
+      }
+    }
+
+    const verifiedCredentialRules = this.convertVerifiedCredentialRulesStr(
+      authorization.verifiedCredentialRules
+    );
+    for (const rule of verifiedCredentialRules) {
+      for (const credential of verifiedCredentials) {
+        if (this.isVerifiedCredentialMatch(credential, rule)) {
           for (const privilege of rule.grantedPrivileges) {
             grantedPrivileges.push(privilege);
           }
@@ -180,7 +198,7 @@ export class AuthorizationService {
 
   private isCredentialMatch(
     credential: ICredential,
-    credentialRule: AuthorizationPolicyRuleCredential
+    credentialRule: IAuthorizationPolicyRuleCredential
   ): boolean {
     if (credential.type === credentialRule.type) {
       if (
@@ -193,12 +211,29 @@ export class AuthorizationService {
     return false;
   }
 
+  private isVerifiedCredentialMatch(
+    verifiedCredential: IVerifiedCredential,
+    credentialRule: IAuthorizationPolicyRuleVerifiedCredentialClaim
+  ): boolean {
+    for (const claim of verifiedCredential.claims) {
+      if (claim.name === credentialRule.name) {
+        if (
+          credentialRule.value === '' ||
+          claim.value === credentialRule.value
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   convertCredentialRulesStr(
     rulesStr: string
-  ): AuthorizationPolicyRuleCredential[] {
+  ): IAuthorizationPolicyRuleCredential[] {
     if (!rulesStr || rulesStr.length == 0) return [];
     try {
-      const rules: AuthorizationPolicyRuleCredential[] = JSON.parse(rulesStr);
+      const rules: IAuthorizationPolicyRuleCredential[] = JSON.parse(rulesStr);
       return rules;
     } catch (error) {
       const msg = `Unable to convert rules to json: ${error}`;
@@ -209,10 +244,10 @@ export class AuthorizationService {
 
   convertVerifiedCredentialRulesStr(
     rulesStr: string
-  ): AuthorizationPolicyRuleVerifiedCredential[] {
+  ): IAuthorizationPolicyRuleVerifiedCredentialClaim[] {
     if (!rulesStr || rulesStr.length == 0) return [];
     try {
-      const rules: AuthorizationPolicyRuleVerifiedCredential[] =
+      const rules: IAuthorizationPolicyRuleVerifiedCredentialClaim[] =
         JSON.parse(rulesStr);
       return rules;
     } catch (error) {

@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationVerifiedCredential,
+  LogContext,
+} from '@common/enums';
 import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
 import { HubService } from './hub.service';
@@ -15,6 +19,7 @@ import { AuthorizationPolicyRuleCredential } from '@core/authorization/authoriza
 import { HubPreferenceType } from '@common/enums/hub.preference.type';
 import { IOrganization } from '@domain/community';
 import { IPreference } from '@domain/common/preference/preference.interface';
+import { AuthorizationPolicyRuleVerifiedCredentialClaim } from '@core/authorization/authorization.policy.rule.verified.credential.claim';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -42,6 +47,7 @@ export class HubAuthorizationService {
       hub.authorization,
       hub.id
     );
+    hub.authorization = this.appendVerifiedCredentialRules(hub.authorization);
 
     hub.authorization.anonymousReadAccess = this.hubService.getPreferenceValue(
       preferences,
@@ -207,5 +213,28 @@ export class HubAuthorizationService {
     );
 
     return authorization;
+  }
+
+  appendVerifiedCredentialRules(
+    authorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        'Authorization definition not found for: ${hostOrg?.id}',
+        LogContext.CHALLENGES
+      );
+    const rules: AuthorizationPolicyRuleVerifiedCredentialClaim[] = [];
+
+    const communityMember = {
+      name: AuthorizationVerifiedCredential.COMMUNITY_MEMBER,
+      value: '',
+      grantedPrivileges: [AuthorizationPrivilege.COMMUNITY_JOIN],
+    };
+    rules.push(communityMember);
+
+    return this.authorizationPolicyService.appendVerifiedCredentialAuthorizationRules(
+      authorization,
+      rules
+    );
   }
 }
