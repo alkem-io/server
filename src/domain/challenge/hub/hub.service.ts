@@ -138,7 +138,7 @@ export class HubService {
         definition.type ===
         HubPreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
       ) {
-        value = 'true';
+        value = 'false';
       }
       const preference = await this.preferenceService.createPreference({
         value: value,
