@@ -23,9 +23,6 @@ export class VerifiedCredential {
   })
   expires?: string;
 
-  @Field(() => JSON, {
-    description: 'JSON for the claim in the credential',
-  })
   claim: string;
 
   @Field(() => JSON, {

@@ -8,12 +8,14 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { TrustRegistryAdapterModule } from '../../../services/platform/trust-registry/trust.registry.adapter/trust.registry.adapter.module';
 import { AgentResolverMutations } from './agent.resolver.mutations';
+import { VerifiedCredentialModule } from '../verified-credential/verified.credential.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
     CredentialModule,
+    VerifiedCredentialModule,
     TrustRegistryAdapterModule,
     TypeOrmModule.forFeature([Agent]),
     CacheModule.register(),
