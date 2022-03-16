@@ -370,6 +370,8 @@ ssi:
   # guaranteed to be migrated properly.
   enabled: ${SSI_ENABLED}:false
 
+  issuer_validation_enabled: ${SSI_ISSUER_VALIDATION_ENABLED}:false
+
   credentials:
     proof_of_community_membership:
       name: Community Member

@@ -10,7 +10,6 @@ import {
 import { SsiException } from '@common/exceptions/ssi.exception';
 import { Agent, CreateAgentInput, IAgent } from '@domain/agent/agent';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
-import { VerifiedCredential } from '@domain/agent/verified-credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import {
@@ -38,6 +37,8 @@ import { GrantCredentialInput } from './dto/agent.dto.credential.grant';
 import { RevokeCredentialInput } from './dto/agent.dto.credential.revoke';
 import { AgentBeginVerifiedCredentialRequestOutput } from './dto/agent.dto.verified.credential.request.begin.output';
 import { AgentBeginVerifiedCredentialOfferOutput } from './dto/agent.dto.verified.credential.offer.begin.output';
+import { VerifiedCredentialService } from '../verified-credential/verified.credential.service';
+import { IVerifiedCredential } from '../verified-credential/verified.credential.interface';
 
 @Injectable()
 export class AgentService {
@@ -50,6 +51,7 @@ export class AgentService {
     @InjectRepository(Agent)
     private agentRepository: Repository<Agent>,
     private trustRegistryAdapter: TrustRegistryAdapter,
+    private verifiedCredentialService: VerifiedCredentialService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER)
@@ -229,7 +231,7 @@ export class AgentService {
   }
 
   @Profiling.api
-  async getVerifiedCredentials(agent: IAgent): Promise<VerifiedCredential[]> {
+  async getVerifiedCredentials(agent: IAgent): Promise<IVerifiedCredential[]> {
     const credentialMetadata =
       this.trustRegistryAdapter.getSupportedCredentialMetadata();
 
@@ -243,39 +245,17 @@ export class AgentService {
     );
 
     try {
-      const verifiedCredentials = await firstValueFrom(identityInfo$);
+      const verifiedCredentials: IVerifiedCredential[] = await firstValueFrom(
+        identityInfo$
+      );
+      for (const vc of verifiedCredentials) {
+        vc.claims = await this.verifiedCredentialService.getClaims(vc.claim);
+      }
+
       return verifiedCredentials;
     } catch (err: any) {
       throw new SsiException(
         `Failed to get identity info from wallet manager: ${err.message}`
-      );
-    }
-  }
-
-  @Profiling.api
-  async authorizeStateModification(
-    challengeAgent: IAgent,
-    challengeID: string,
-    userAgent: IAgent,
-    userID: string
-  ): Promise<VerifiedCredential[]> {
-    const identityInfo$ = this.walletManagementClient.send(
-      { cmd: WalletManagerCommand.GRANT_STATE_TRANSITION_VC },
-      {
-        issuerDid: challengeAgent.did,
-        issuerPW: challengeAgent.password,
-        receiverDid: userAgent.did,
-        receiverPw: userAgent.password,
-        challengeID: challengeID,
-        userID: userID,
-      }
-    );
-
-    try {
-      return await firstValueFrom(identityInfo$);
-    } catch (err: any) {
-      throw new SsiException(
-        `Failed to grant state transition Verified Credential: ${err.message}`
       );
     }
   }
@@ -363,16 +343,8 @@ export class AgentService {
       `[completeCredentialRequestInteraction]: received VC with name '${vcName}' to be stored`,
       LogContext.SSI
     );
-    const trustedIssuers =
-      this.trustRegistryAdapter.getTrustedIssuersForCredentialNameOrFail(
-        vcName
-      );
-    this.logger.verbose?.(
-      `[completeCredentialRequestInteraction]: retrieved trusted issuers for VC with name '${vcName}': ${trustedIssuers}`,
-      LogContext.SSI
-    );
-    // const issuer = vcToBeStored.issuer;
-    // this.trustRegistryAdapter.validateIssuerOrFail(vcName, issuer);
+
+    this.validateTrustedIssuerOrFail(vcName, vcToBeStored);
 
     const credentialStoreRequest$ = this.walletManagementClient.send(
       { cmd: RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION },
@@ -393,6 +365,24 @@ export class AgentService {
         `[completeCredentialRequestInteraction]: Failed to request credential: ${err.message}`
       );
     }
+  }
+
+  validateTrustedIssuerOrFail(vcName: string, vcToBeStored: any) {
+    const trustedIssuerValidationEnabled = this.configService.get(
+      ConfigurationTypes.SSI
+    ).issuer_validation_enabled;
+    if (!trustedIssuerValidationEnabled) return;
+
+    const trustedIssuers =
+      this.trustRegistryAdapter.getTrustedIssuersForCredentialNameOrFail(
+        vcName
+      );
+    this.logger.verbose?.(
+      `[completeCredentialRequestInteraction]: retrieved trusted issuers for VC with name '${vcName}': ${trustedIssuers}`,
+      LogContext.SSI
+    );
+    const issuer = vcToBeStored.issuer;
+    this.trustRegistryAdapter.validateIssuerOrFail(vcName, issuer);
   }
 
   private logVerifiedCredentialInteraction(

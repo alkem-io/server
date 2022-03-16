@@ -1,48 +1,30 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import JSON from 'graphql-type-json';
+import { IVerifiedCredential } from '../verified.credential.interface';
+import { VerifiedCredentialClaim } from './verified.credential.dto.claim.result';
 
-@ObjectType()
-export class VerifiedCredential {
-  @Field(() => String, {
-    description: 'The type of VC',
-  })
+export class VerifiedCredential implements IVerifiedCredential {
   type: string;
 
-  @Field(() => String, {
-    description: 'The challenge issuing the VC',
-  })
   issuer: string;
 
-  @Field(() => String, {
-    description: 'The time at which the credential was issued',
-  })
   issued?: string;
 
-  @Field(() => String, {
-    description: 'The time at which the credential is no longer valid',
-  })
   expires?: string;
 
-  @Field(() => JSON, {
-    description: 'JSON for the claim in the credential',
-  })
+  // Raw string with claims
   claim: string;
 
-  @Field(() => JSON, {
-    description: 'JSON for the context in the credential',
-  })
+  claims: VerifiedCredentialClaim[];
+
   context: string;
 
-  @Field(() => String, {
-    description: 'The name of the VC',
-  })
   name: string;
 
   constructor() {
     this.type = '';
     this.issuer = '';
-    this.claim = '';
+    this.claims = [];
     this.context = '';
     this.name = '';
+    this.claim = '';
   }
 }

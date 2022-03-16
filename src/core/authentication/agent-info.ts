@@ -1,5 +1,5 @@
 import { ICredential } from '@domain/agent/credential';
-import { VerifiedCredential } from '@domain/agent/verified-credential';
+import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
 
 export class AgentInfo {
   userID = '';
@@ -7,7 +7,7 @@ export class AgentInfo {
   firstName = '';
   lastName = '';
   credentials: ICredential[] = [];
-  verifiedCredentials: VerifiedCredential[] = [];
+  verifiedCredentials: IVerifiedCredential[] = [];
   communicationID = '';
   agentID = '';
 }

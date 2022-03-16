@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
-  AuthorizationVerifiedCredential,
   LogContext,
 } from '@common/enums';
 import { Repository } from 'typeorm';
@@ -18,7 +17,6 @@ import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { BaseChallengeService } from '../base-challenge/base.challenge.service';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
-import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -45,9 +43,6 @@ export class ChallengeAuthorizationService {
       challenge.authorization,
       challenge.id
     );
-    // Also update the verified credential rules
-    challenge.authorization.verifiedCredentialRules =
-      await this.appendVerifiedCredentialRules(challenge.id);
 
     // propagate authorization rules for child entities
     await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
@@ -142,20 +137,6 @@ export class ChallengeAuthorizationService {
     rules.push(challengeMember);
 
     return rules;
-  }
-
-  async appendVerifiedCredentialRules(challengeID: string): Promise<string> {
-    const rules: AuthorizationPolicyRuleVerifiedCredential[] = [];
-    const agent = await this.challengeService.getAgent(challengeID);
-
-    const stateChange = {
-      type: AuthorizationVerifiedCredential.STATE_MODIFICATION_CREDENTIAL,
-      resourceID: agent.did,
-      grantedPrivileges: [AuthorizationPrivilege.UPDATE],
-    };
-    rules.push(stateChange);
-
-    return JSON.stringify(rules);
   }
 
   private extendMembershipAuthorizationPolicy(

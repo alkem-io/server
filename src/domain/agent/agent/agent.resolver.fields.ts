@@ -10,9 +10,9 @@ import {
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { Agent, IAgent } from '@domain/agent/agent';
 import { GraphqlGuard } from '@core/authorization';
-import { VerifiedCredential } from '@domain/agent/verified-credential';
 import { ConfigService } from '@nestjs/config';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
+import { IVerifiedCredential } from '../verified-credential/verified.credential.interface';
 
 @Resolver(() => IAgent)
 export class AgentResolverFields {
@@ -23,18 +23,19 @@ export class AgentResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('verifiedCredentials', () => [VerifiedCredential], {
+  @ResolveField('verifiedCredentials', () => [IVerifiedCredential], {
     nullable: true,
     description: 'The Verfied Credentials for this Agent.',
   })
   @Profiling.api
   async verifiedCredentials(
     @Parent() agent: Agent
-  ): Promise<VerifiedCredential[]> {
+  ): Promise<IVerifiedCredential[]> {
     const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
     if (!ssiEnabled) {
       throw new NotEnabledException('SSI is not enabled', LogContext.SSI);
     }
-    return await this.agentService.getVerifiedCredentials(agent);
+    const result = await this.agentService.getVerifiedCredentials(agent);
+    return result;
   }
 }

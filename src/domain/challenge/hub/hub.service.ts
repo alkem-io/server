@@ -665,16 +665,18 @@ export class HubService {
   }
 
   async getHubTemplates(hub: IHub): Promise<HubTemplate> {
-    const templatesStr = hub.template || '';
+    const templateStr = hub.template || '';
     let template = new HubTemplate();
-    try {
-      template = JSON.parse(templatesStr);
-      return template;
-    } catch (error: any) {
-      this.logger.error(
-        `Unable to retrieve templates for Hub (${hub.nameID}): ${error}`,
-        LogContext.CHALLENGES
-      );
+    if (templateStr) {
+      try {
+        template = JSON.parse(templateStr);
+        return template;
+      } catch (error: any) {
+        this.logger.error(
+          `Unable to retrieve templates for Hub (${hub.nameID}): ${error}`,
+          LogContext.CHALLENGES
+        );
+      }
     }
 
     return template;

@@ -7,6 +7,7 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
+import { IAuthorizationPolicyRuleVerifiedCredentialClaim } from '@core/authorization/authorization.policy.rule.verified.credential.claim.interface';
 
 @Resolver(() => IAuthorizationPolicy)
 export class AuthorizationPolicyResolverFields {
@@ -25,8 +26,8 @@ export class AuthorizationPolicyResolverFields {
   }
 
   @ResolveField(
-    'verifiedCredentialRules',
-    () => [IAuthorizationPolicyRuleCredential],
+    'verifiedCredentialClaimRules',
+    () => [IAuthorizationPolicyRuleVerifiedCredentialClaim],
     {
       nullable: true,
       description:
@@ -34,10 +35,10 @@ export class AuthorizationPolicyResolverFields {
     }
   )
   @Profiling.api
-  verifiedCredentialRules(
+  verifiedCredentialClaimRules(
     @Parent() authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicyRuleCredential[] {
-    return this.authorizationPolicyService.getVerifiedCredentialRules(
+  ): IAuthorizationPolicyRuleVerifiedCredentialClaim[] {
+    return this.authorizationPolicyService.getVerifiedCredentialClaimRules(
       authorization
     );
   }

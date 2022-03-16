@@ -1,6 +1,9 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential.interface';
 
-export class AuthorizationPolicyRuleCredential {
+export class AuthorizationPolicyRuleCredential
+  implements IAuthorizationPolicyRuleCredential
+{
   type: string;
   resourceID: string;
   grantedPrivileges: AuthorizationPrivilege[];

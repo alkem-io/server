@@ -21,7 +21,8 @@ import { AuthorizationPolicyRuleCredential } from '@core/authorization/authoriza
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
+import { AuthorizationPolicyRuleVerifiedCredentialClaim } from '@core/authorization/authorization.policy.rule.verified.credential.claim';
+import { IAuthorizationPolicyRuleVerifiedCredentialClaim } from '@core/authorization/authorization.policy.rule.verified.credential.claim.interface';
 
 @Injectable()
 export class AuthorizationPolicyService {
@@ -47,6 +48,7 @@ export class AuthorizationPolicyService {
       );
     }
     authorizationPolicy.credentialRules = '';
+    authorizationPolicy.verifiedCredentialRules = '';
     return authorizationPolicy;
   }
 
@@ -137,7 +139,7 @@ export class AuthorizationPolicyService {
 
   appendVerifiedCredentialAuthorizationRules(
     authorization: IAuthorizationPolicy | undefined,
-    additionalRules: AuthorizationPolicyRuleVerifiedCredential[]
+    additionalRules: AuthorizationPolicyRuleVerifiedCredentialClaim[]
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
 
@@ -186,7 +188,7 @@ export class AuthorizationPolicyService {
     const inheritedRules = this.authorizationService.convertCredentialRulesStr(
       parent.credentialRules
     );
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
     for (const inheritedRule of inheritedRules) {
       if (inheritedRule.inheritable) {
         newRules.push(inheritedRule);
@@ -204,12 +206,13 @@ export class AuthorizationPolicyService {
     );
   }
 
-  getVerifiedCredentialRules(
+  getVerifiedCredentialClaimRules(
     authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicyRuleCredential[] {
-    return this.authorizationService.convertVerifiedCredentialRulesStr(
+  ): IAuthorizationPolicyRuleVerifiedCredentialClaim[] {
+    const result = this.authorizationService.convertVerifiedCredentialRulesStr(
       authorization.verifiedCredentialRules
     );
+    return result;
   }
   getAgentPrivileges(
     agentInfo: AgentInfo,
@@ -219,6 +222,7 @@ export class AuthorizationPolicyService {
 
     return this.authorizationService.getGrantedPrivileges(
       agentInfo.credentials,
+      agentInfo.verifiedCredentials,
       authorizationPolicy
     );
   }

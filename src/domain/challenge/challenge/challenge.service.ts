@@ -43,7 +43,6 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-import { ChallengeAuthorizeStateModificationInput } from './dto/challenge.dto.authorize.state.modification';
 import { UserService } from '@domain/community/user/user.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
@@ -645,26 +644,5 @@ export class ChallengeService {
     });
 
     return await this.userService.getUserWithAgent(removeData.userID);
-  }
-
-  async authorizeStateModification(
-    grantStateModificationVC: ChallengeAuthorizeStateModificationInput
-  ): Promise<IUser> {
-    const challengeAgent = await this.getAgent(
-      grantStateModificationVC.challengeID
-    );
-    const userAgent = await this.userService.getAgent(
-      grantStateModificationVC.userID
-    );
-
-    await this.agentService.authorizeStateModification(
-      challengeAgent,
-      grantStateModificationVC.challengeID,
-      userAgent,
-      grantStateModificationVC.userID
-    );
-    return await this.userService.getUserOrFail(
-      grantStateModificationVC.userID
-    );
   }
 }
