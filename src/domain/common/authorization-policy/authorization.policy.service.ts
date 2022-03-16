@@ -50,6 +50,7 @@ export class AuthorizationPolicyService {
     }
     authorizationPolicy.credentialRules = '';
     authorizationPolicy.verifiedCredentialRules = '';
+    authorizationPolicy.privilegeRules = '';
     return authorizationPolicy;
   }
 
@@ -221,7 +222,7 @@ export class AuthorizationPolicyService {
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRulePrivilege[] {
     const result = this.authorizationService.convertPrivilegeRulesStr(
-      authorization.verifiedCredentialRules
+      authorization.privilegeRules
     );
     return result;
   }
