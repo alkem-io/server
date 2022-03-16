@@ -47,6 +47,7 @@ import { PreferenceService } from '@domain/common/preference/preference.service'
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { HubPreferenceType } from '@common/enums/hub.preference.type';
+import { ICredential } from '@domain/agent/credential/credential.interface';
 
 @Injectable()
 export class HubService {
@@ -468,6 +469,13 @@ export class HubService {
 
   async getCommunity(hub: IHub): Promise<ICommunity> {
     return await this.baseChallengeService.getCommunity(
+      hub.id,
+      this.hubRepository
+    );
+  }
+
+  async getCommunityCredential(hub: IHub): Promise<ICredential> {
+    return await this.baseChallengeService.getCommunityCredential(
       hub.id,
       this.hubRepository
     );
