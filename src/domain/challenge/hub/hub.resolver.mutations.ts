@@ -152,9 +152,13 @@ export class HubResolverMutations {
       challengeData,
       agentInfo
     );
+    const hubCommunityCredential = await this.hubService.getCommunityCredential(
+      hub
+    );
     return await this.challengeAuthorizationService.applyAuthorizationPolicy(
       challenge,
-      hub.authorization
+      hub.authorization,
+      hubCommunityCredential
     );
   }
 

@@ -126,11 +126,11 @@ export class CommunityAuthorizationService {
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
-    const communityJoinPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.COMMUNITY_JOIN],
-      AuthorizationPrivilege.GRANT
-    );
-    privilegeRules.push(communityJoinPrivilege);
+    // const communityJoinPrivilege = new AuthorizationPolicyRulePrivilege(
+    //   [AuthorizationPrivilege.COMMUNITY_JOIN],
+    //   AuthorizationPrivilege.GRANT
+    // );
+    // privilegeRules.push(communityJoinPrivilege);
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,

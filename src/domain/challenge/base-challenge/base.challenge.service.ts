@@ -27,6 +27,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { CommunityType } from '@common/enums/community.type';
+import { ICredential } from '@domain/agent';
 
 @Injectable()
 export class BaseChallengeService {
@@ -217,6 +218,20 @@ export class BaseChallengeService {
         LogContext.COMMUNITY
       );
     return community;
+  }
+
+  async getCommunityCredential(
+    baseChallengeId: string,
+    repository: Repository<BaseChallenge>
+  ): Promise<ICredential> {
+    const community = await this.getCommunity(baseChallengeId, repository);
+    const credential = community.credential;
+    if (!credential)
+      throw new RelationshipNotFoundException(
+        `Unable to load credential for community on challenge/hub: ${baseChallengeId} `,
+        LogContext.COMMUNITY
+      );
+    return credential;
   }
 
   async getContext(

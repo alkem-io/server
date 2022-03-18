@@ -1,6 +1,9 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { IAuthorizationPolicyRulePrivilege } from './authorization.policy.rule.privilege.interface';
 
-export class AuthorizationPolicyRulePrivilege {
+export class AuthorizationPolicyRulePrivilege
+  implements IAuthorizationPolicyRulePrivilege
+{
   sourcePrivilege: AuthorizationPrivilege;
   grantedPrivileges: AuthorizationPrivilege[];
 

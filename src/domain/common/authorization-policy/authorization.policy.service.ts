@@ -23,6 +23,7 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { AuthorizationPolicyRuleVerifiedCredentialClaim } from '@core/authorization/authorization.policy.rule.verified.credential.claim';
 import { IAuthorizationPolicyRuleVerifiedCredentialClaim } from '@core/authorization/authorization.policy.rule.verified.credential.claim.interface';
+import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 
 @Injectable()
 export class AuthorizationPolicyService {
@@ -49,6 +50,7 @@ export class AuthorizationPolicyService {
     }
     authorizationPolicy.credentialRules = '';
     authorizationPolicy.verifiedCredentialRules = '';
+    authorizationPolicy.privilegeRules = '';
     return authorizationPolicy;
   }
 
@@ -198,6 +200,7 @@ export class AuthorizationPolicyService {
     resetAuthPolicy.credentialRules = JSON.stringify(newRules);
     return resetAuthPolicy;
   }
+
   getCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleCredential[] {
@@ -214,6 +217,16 @@ export class AuthorizationPolicyService {
     );
     return result;
   }
+
+  getPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicyRulePrivilege[] {
+    const result = this.authorizationService.convertPrivilegeRulesStr(
+      authorization.privilegeRules
+    );
+    return result;
+  }
+
   getAgentPrivileges(
     agentInfo: AgentInfo,
     authorizationPolicy: IAuthorizationPolicy

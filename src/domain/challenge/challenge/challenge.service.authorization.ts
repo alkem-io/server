@@ -17,6 +17,7 @@ import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { BaseChallengeService } from '../base-challenge/base.challenge.service';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { ICredential } from '@domain/agent/credential/credential.interface';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -32,7 +33,8 @@ export class ChallengeAuthorizationService {
 
   async applyAuthorizationPolicy(
     challenge: IChallenge,
-    parentAuthorization: IAuthorizationPolicy | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    parentCommunityCredential: ICredential
   ): Promise<IChallenge> {
     challenge.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -55,10 +57,13 @@ export class ChallengeAuthorizationService {
     );
     challenge.community.authorization =
       await this.extendMembershipAuthorizationPolicy(
-        challenge.community.authorization
+        challenge.community.authorization,
+        parentCommunityCredential
       );
 
     // Cascade
+    const challengeCommunityCredential =
+      await this.challengeService.getCommunityCredential(challenge.id);
     challenge.childChallenges = await this.challengeService.getChildChallenges(
       challenge
     );
@@ -66,7 +71,8 @@ export class ChallengeAuthorizationService {
       for (const childChallenge of challenge.childChallenges) {
         await this.applyAuthorizationPolicy(
           childChallenge,
-          challenge.authorization
+          challenge.authorization,
+          challengeCommunityCredential
         );
       }
     }
@@ -140,7 +146,8 @@ export class ChallengeAuthorizationService {
   }
 
   private extendMembershipAuthorizationPolicy(
-    authorization: IAuthorizationPolicy | undefined
+    authorization: IAuthorizationPolicy | undefined,
+    parentCommunityCredential: ICredential
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -150,10 +157,11 @@ export class ChallengeAuthorizationService {
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    // Any registered user can apply
+    // Any member of the parent community can apply
     const anyUserCanApply = new AuthorizationPolicyRuleCredential(
       [AuthorizationPrivilege.COMMUNITY_APPLY],
-      AuthorizationCredential.GLOBAL_REGISTERED
+      parentCommunityCredential.type,
+      parentCommunityCredential.resourceID
     );
     anyUserCanApply.inheritable = false;
     newRules.push(anyUserCanApply);
