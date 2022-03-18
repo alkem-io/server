@@ -190,8 +190,8 @@ export class CommunityResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
-      AuthorizationPrivilege.COMMUNITY_APPLY,
-      `create application community: ${community.displayName}`
+      AuthorizationPrivilege.COMMUNITY_JOIN,
+      `join community: ${community.displayName}`
     );
 
     // Todo: notification for new community membership
