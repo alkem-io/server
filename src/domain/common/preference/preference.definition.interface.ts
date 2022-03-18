@@ -1,6 +1,6 @@
-import { HubPreferenceType } from '@common/enums/hub.preference.type';
+import { PreferenceType } from '@common/enums/preference.type';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { PreferenceValueType, UserPreferenceType } from '@src/common/enums';
+import { PreferenceValueType } from '@src/common/enums';
 import { IBaseAlkemio } from '@src/domain/common';
 
 @ObjectType('PreferenceDefinition')
@@ -21,10 +21,10 @@ export abstract class IPreferenceDefinition extends IBaseAlkemio {
   })
   description!: string;
 
-  @Field(() => UserPreferenceType, {
+  @Field(() => PreferenceType, {
     description: 'The type of the Preference, specific to the Entity it is on.',
   })
-  type!: UserPreferenceType | HubPreferenceType;
+  type!: PreferenceType;
 
   @Field(() => PreferenceValueType, {
     description: 'Preference value type',

@@ -18,12 +18,6 @@ export class OpportunityTemplate implements IOpportunityTemplate {
 
   @Field(() => [String], {
     nullable: true,
-    description: 'Template aspects.',
-  })
-  aspects?: string[];
-
-  @Field(() => [String], {
-    nullable: true,
     description: 'Template relations.',
   })
   relations?: string[];

@@ -20,6 +20,7 @@ import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.crede
 import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke';
 import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.users.with.credential';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AgentInfo } from '@core/authentication';
 
 @Injectable()
 export class AdminAuthorizationService {
@@ -118,6 +119,7 @@ export class AdminAuthorizationService {
   }
 
   async userAuthorizationPrivileges(
+    agentInfo: AgentInfo,
     userAuthorizationPrivilegesData: UserAuthorizationPrivilegesInput
   ): Promise<AuthorizationPrivilege[]> {
     // get the user
@@ -132,6 +134,7 @@ export class AdminAuthorizationService {
 
     const privileges = await this.authorizationService.getGrantedPrivileges(
       credentials,
+      agentInfo.verifiedCredentials,
       authorizationPolicy
     );
     return privileges;

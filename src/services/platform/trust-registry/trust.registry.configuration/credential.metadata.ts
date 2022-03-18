@@ -5,12 +5,5 @@ export type CredentialMetadata = {
   types: string[];
   uniqueType: string;
   context: Record<string, string>;
+  trusted_issuers: string[];
 };
-
-export type CredentialConfig = {
-  credentials: CredentialMetadata[];
-};
-
-export interface ICredentialConfigProvider {
-  getCredentials(): CredentialConfig;
-}

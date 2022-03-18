@@ -4,3 +4,4 @@ export * from './bootstrap';
 export * from './error-handling';
 export * from './middleware';
 export * from './validation';
+export * from './pagination';

@@ -11,40 +11,6 @@
       ]
     },
     {
-      "email": "community.admin@alkem.io",
-      "firstName": "community",
-      "lastName": "admin",
-      "credentials": [
-        {
-          "type": "global-admin-community"
-        }
-      ]
-    },
-    {
-      "email": "hub.admin@alkem.io",
-      "firstName": "hub",
-      "lastName": "admin",
-      "credentials": []
-    },
-    {
-      "email": "hub.member@alkem.io",
-      "firstName": "hub",
-      "lastName": "member",
-      "credentials": []
-    },
-    {
-      "email": "qa.user@alkem.io",
-      "firstName": "qa",
-      "lastName": "user",
-      "credentials": []
-    },
-    {
-      "email": "non.hub@alkem.io",
-      "firstName": "non",
-      "lastName": "hub",
-      "credentials": []
-    },
-    {
       "email": "notifications@alkem.io",
       "firstName": "notifications",
       "lastName": "admin",

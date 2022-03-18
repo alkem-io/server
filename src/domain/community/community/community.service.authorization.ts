@@ -11,7 +11,7 @@ import { AuthorizationPolicyRuleCredential } from '@core/authorization/authoriza
 import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
+import { AuthorizationPolicyRuleVerifiedCredentialClaim } from '@core/authorization/authorization.policy.rule.verified.credential.claim';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -126,11 +126,11 @@ export class CommunityAuthorizationService {
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
-    const communityJoinPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.COMMUNITY_JOIN],
-      AuthorizationPrivilege.GRANT
-    );
-    privilegeRules.push(communityJoinPrivilege);
+    // const communityJoinPrivilege = new AuthorizationPolicyRulePrivilege(
+    //   [AuthorizationPrivilege.COMMUNITY_JOIN],
+    //   AuthorizationPrivilege.GRANT
+    // );
+    // privilegeRules.push(communityJoinPrivilege);
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,
@@ -141,16 +141,8 @@ export class CommunityAuthorizationService {
   private appendVerifiedCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicy {
-    const verifiedCredentialRules: AuthorizationPolicyRuleVerifiedCredential[] =
+    const verifiedCredentialRules: AuthorizationPolicyRuleVerifiedCredentialClaim[] =
       [];
-
-    // todo: to be updated
-    // const stateChange = {
-    //   type: AuthorizationVerifiedCredential.STATE_MODIFICATION_CREDENTIAL,
-    //   resourceID: 'todo-value',
-    //   grantedPrivileges: [AuthorizationPrivilege.COMMUNITY_JOIN],
-    // };
-    // verifiedCredentialRules.push(stateChange);
 
     return this.authorizationPolicyService.appendVerifiedCredentialAuthorizationRules(
       authorization,

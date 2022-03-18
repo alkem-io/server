@@ -15,13 +15,15 @@ import {
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CredentialsSearchInput } from '@domain/agent/credential/credentials.dto.search';
+import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
 import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
+import { AuthorizationPolicyRuleVerifiedCredentialClaim } from '@core/authorization/authorization.policy.rule.verified.credential.claim';
+import { IAuthorizationPolicyRuleVerifiedCredentialClaim } from '@core/authorization/authorization.policy.rule.verified.credential.claim.interface';
+import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 
 @Injectable()
 export class AuthorizationPolicyService {
@@ -47,6 +49,8 @@ export class AuthorizationPolicyService {
       );
     }
     authorizationPolicy.credentialRules = '';
+    authorizationPolicy.verifiedCredentialRules = '';
+    authorizationPolicy.privilegeRules = '';
     return authorizationPolicy;
   }
 
@@ -137,7 +141,7 @@ export class AuthorizationPolicyService {
 
   appendVerifiedCredentialAuthorizationRules(
     authorization: IAuthorizationPolicy | undefined,
-    additionalRules: AuthorizationPolicyRuleVerifiedCredential[]
+    additionalRules: AuthorizationPolicyRuleVerifiedCredentialClaim[]
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
 
@@ -186,7 +190,7 @@ export class AuthorizationPolicyService {
     const inheritedRules = this.authorizationService.convertCredentialRulesStr(
       parent.credentialRules
     );
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
     for (const inheritedRule of inheritedRules) {
       if (inheritedRule.inheritable) {
         newRules.push(inheritedRule);
@@ -196,6 +200,7 @@ export class AuthorizationPolicyService {
     resetAuthPolicy.credentialRules = JSON.stringify(newRules);
     return resetAuthPolicy;
   }
+
   getCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleCredential[] {
@@ -204,13 +209,24 @@ export class AuthorizationPolicyService {
     );
   }
 
-  getVerifiedCredentialRules(
+  getVerifiedCredentialClaimRules(
     authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicyRuleCredential[] {
-    return this.authorizationService.convertVerifiedCredentialRulesStr(
+  ): IAuthorizationPolicyRuleVerifiedCredentialClaim[] {
+    const result = this.authorizationService.convertVerifiedCredentialRulesStr(
       authorization.verifiedCredentialRules
     );
+    return result;
   }
+
+  getPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicyRulePrivilege[] {
+    const result = this.authorizationService.convertPrivilegeRulesStr(
+      authorization.privilegeRules
+    );
+    return result;
+  }
+
   getAgentPrivileges(
     agentInfo: AgentInfo,
     authorizationPolicy: IAuthorizationPolicy
@@ -219,6 +235,7 @@ export class AuthorizationPolicyService {
 
     return this.authorizationService.getGrantedPrivileges(
       agentInfo.credentials,
+      agentInfo.verifiedCredentials,
       authorizationPolicy
     );
   }

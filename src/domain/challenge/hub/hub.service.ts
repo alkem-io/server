@@ -47,6 +47,7 @@ import { PreferenceService } from '@domain/common/preference/preference.service'
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { HubPreferenceType } from '@common/enums/hub.preference.type';
+import { ICredential } from '@domain/agent/credential/credential.interface';
 
 @Injectable()
 export class HubService {
@@ -138,7 +139,7 @@ export class HubService {
         definition.type ===
         HubPreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
       ) {
-        value = 'true';
+        value = 'false';
       }
       const preference = await this.preferenceService.createPreference({
         value: value,
@@ -473,6 +474,13 @@ export class HubService {
     );
   }
 
+  async getCommunityCredential(hub: IHub): Promise<ICredential> {
+    return await this.baseChallengeService.getCommunityCredential(
+      hub.id,
+      this.hubRepository
+    );
+  }
+
   async getContext(hub: IHub): Promise<IContext> {
     return await this.baseChallengeService.getContext(
       hub.id,
@@ -665,16 +673,18 @@ export class HubService {
   }
 
   async getHubTemplates(hub: IHub): Promise<HubTemplate> {
-    const templatesStr = hub.template || '';
+    const templateStr = hub.template || '';
     let template = new HubTemplate();
-    try {
-      template = JSON.parse(templatesStr);
-      return template;
-    } catch (error: any) {
-      this.logger.error(
-        `Unable to retrieve templates for Hub (${hub.nameID}): ${error}`,
-        LogContext.CHALLENGES
-      );
+    if (templateStr) {
+      try {
+        template = JSON.parse(templateStr);
+        return template;
+      } catch (error: any) {
+        this.logger.error(
+          `Unable to retrieve templates for Hub (${hub.nameID}): ${error}`,
+          LogContext.CHALLENGES
+        );
+      }
     }
 
     return template;

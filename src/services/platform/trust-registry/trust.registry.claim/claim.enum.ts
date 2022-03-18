@@ -1,4 +1,4 @@
-export enum SystemClaims {
+export enum Claim {
   AlkemioUser = 'alkemioUser',
   CommunityMember = 'communityMember',
 }
