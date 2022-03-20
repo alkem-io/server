@@ -11,12 +11,6 @@ import { useContainer } from 'class-validator';
 import { graphqlUploadExpress } from 'graphql-upload';
 import { ConfigurationTypes } from '@common/enums';
 import { json } from 'body-parser';
-import { Hub } from '@domain/challenge/hub/hub.entity';
-
-// Todo: nasty hack to affect the JS definitions loading order to avoid issues with migration failing
-// due to objects being undefined.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const opportunity: Hub | undefined = undefined;
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
