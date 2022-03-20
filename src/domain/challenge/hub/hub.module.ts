@@ -23,6 +23,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { PreferenceModule } from '@domain/common/preference';
+import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { PreferenceModule } from '@domain/common/preference';
     UserModule,
     NamingModule,
     PreferenceModule,
+    PreferenceSetModule,
     TypeOrmModule.forFeature([Hub]),
   ],
   providers: [

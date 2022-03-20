@@ -12,12 +12,14 @@ import { DirectRoomResult } from './dto/user.dto.communication.room.direct.resul
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { IProfile } from '../profile/profile.interface';
 import { IPreference } from '@domain/common/preference/preference.interface';
+import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
-    private userService: UserService
+    private userService: UserService,
+    private preferenceSetService: PreferenceSetService
   ) {}
 
   @ResolveField('profile', () => IProfile, {
@@ -44,7 +46,10 @@ export class UserResolverFields {
   })
   @Profiling.api
   async preferences(@Parent() user: User): Promise<IPreference[]> {
-    return await this.userService.getPreferences(user.id);
+    const preferenceSet = await this.userService.getPreferenceSetOrFail(
+      user.id
+    );
+    return await this.preferenceSetService.getPreferencesOrFail(preferenceSet);
   }
 
   @ResolveField('communityRooms', () => [CommunicationRoomResult], {
