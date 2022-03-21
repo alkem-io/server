@@ -80,12 +80,12 @@ export class HubResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('preferences', () => [IPreference], {
     nullable: false,
-    description: 'The preferences for this user',
+    description: 'The preferences for this Hub',
   })
   @UseGuards(GraphqlGuard)
   async preferences(@Parent() hub: Hub): Promise<IPreference[]> {
     const preferenceSet = await this.hubService.getPreferenceSetOrFail(hub);
-    return await this.preferenceSetService.getPreferencesOrFail(preferenceSet);
+    return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

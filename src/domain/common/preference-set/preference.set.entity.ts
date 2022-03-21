@@ -9,7 +9,7 @@ export class PreferenceSet
   implements IPreferenceSet
 {
   @OneToMany(() => Preference, preference => preference.preferenceSet, {
-    eager: false,
+    eager: true,
     cascade: true,
   })
   preferences?: Preference[];

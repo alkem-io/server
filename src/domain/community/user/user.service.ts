@@ -110,13 +110,12 @@ export class UserService {
       );
     }
 
-    const response = await this.userRepository.save(user);
-
     user.preferenceSet = await this.preferenceSetService.createPreferenceSet(
       PreferenceDefinitionSet.USER,
       this.createPreferenceDefaults()
     );
 
+    const response = await this.userRepository.save(user);
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
@@ -185,6 +184,12 @@ export class UserService {
 
   createPreferenceDefaults(): Map<PreferenceType, string> {
     const defaults: Map<PreferenceType, string> = new Map();
+    defaults.set(PreferenceType.NOTIFICATION_COMMUNICATION_UPDATES, 'true');
+    defaults.set(
+      PreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED,
+      'true'
+    );
+    defaults.set(PreferenceType.NOTIFICATION_APPLICATION_RECEIVED, 'true');
 
     return defaults;
   }
