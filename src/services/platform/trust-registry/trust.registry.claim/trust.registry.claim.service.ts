@@ -9,7 +9,7 @@ export class TrustRegistryClaimService {
     private readonly logger: LoggerService
   ) {}
 
-  createClaimObject(claims: IClaim[]) {
+  createClaimObject(claims: IClaim[]): Record<string, any> {
     let claimObject: Record<string, any> = {};
 
     for (const claim of claims) {

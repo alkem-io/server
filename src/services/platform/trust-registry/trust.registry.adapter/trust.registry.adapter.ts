@@ -8,6 +8,7 @@ import { TrustRegistryConfigurationAdapter } from '../trust.registry.configurati
 import { IClaim } from '../trust.registry.claim/claim.interface';
 import { TrustRegistryClaimService } from '../trust.registry.claim/trust.registry.claim.service';
 import { SsiVcNotVerifiable } from '@common/exceptions/ssi.vc.not.verifiable';
+import { TrustRegistryVerifiedCredentialOffer } from './trust.registry.dto.offered.credential';
 
 @Injectable()
 export class TrustRegistryAdapter {
@@ -28,7 +29,9 @@ export class TrustRegistryAdapter {
     return supportedCredentials;
   }
 
-  getCredentialOffers(proposedOffers: { type: string; claims: IClaim[] }[]) {
+  getCredentialOffers(
+    proposedOffers: { type: string; claims: IClaim[] }[]
+  ): TrustRegistryVerifiedCredentialOffer[] {
     const offeredTypes = proposedOffers.map(x => x.type);
     const targetMetadata = this.getSupportedCredentialMetadata(offeredTypes);
 
