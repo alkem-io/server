@@ -1,4 +1,4 @@
-mutation joinCommunity($joiningData: CreateApplicationInput!) {
+mutation joinCommunity($joiningData: CommunityJoinInput!) {
   joinCommunity(joiningData:$joiningData){
     id
   }
