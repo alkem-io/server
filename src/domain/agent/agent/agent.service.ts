@@ -365,7 +365,7 @@ export class AgentService {
     const credentialStoreRequest$ = this.walletManagementClient.send(
       { cmd: RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION },
       {
-        interactionId: interactionInfo,
+        interactionId: interactionInfo.interactionId,
         jwt: token,
       }
     );

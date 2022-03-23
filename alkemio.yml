@@ -376,7 +376,7 @@ ssi:
     - alkemio:
         enabled: true
         interaction_type: jolocom
-        endpoint_verification:
+        endpoint_verification: http://localhost:3000
     - sovrhd:
         enabled: true
         interaction_type: sovrhd
