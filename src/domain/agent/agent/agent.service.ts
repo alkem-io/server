@@ -360,6 +360,7 @@ export class AgentService {
     );
 
     // todo: putting this as shortcut; remove later
+    // suppliedCredentials are not available at 378
     const eventID = `credentials-${Math.floor(Math.random() * 100)}`;
     const payload: ProfileCredentialVerified = {
       eventID,
@@ -386,7 +387,7 @@ export class AgentService {
     const credentialStoreRequest$ = this.walletManagementClient.send(
       { cmd: RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION },
       {
-        interactionId: interactionInfo.interactionId,
+        interactionId: interactionInfo?.interactionId,
         jwt: token,
       }
     );
