@@ -11,6 +11,7 @@ import {
   SUBSCRIPTION_CANVAS_CONTENT,
   WALLET_MANAGEMENT_SERVICE,
   SUBSCRIPTION_DISCUSSION_UPDATED,
+  SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
 } from '@common/constants/providers';
 
 export type MicroserviceOptions = {
@@ -27,6 +28,7 @@ import { NotificationsPayloadBuilder } from './notifications.payload.builder';
 import { subscriptionCanvasContentFactory } from './subscription.canvas.content.factory';
 import { subscriptionUpdateMessageFactory } from './subscription.update.message.factory';
 import { subscriptionDiscussionUpdatedFactory } from './subscription.discussion.updated.factory';
+import { subscriptionProfileVerifiedCredentialFactory } from './subscription.profile.verified.credential.factory';
 
 @Global()
 @Module({
@@ -63,6 +65,11 @@ import { subscriptionDiscussionUpdatedFactory } from './subscription.discussion.
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
+      provide: SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
+      useFactory: subscriptionProfileVerifiedCredentialFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
       provide: NOTIFICATIONS_SERVICE,
       useFactory: notificationsServiceFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
@@ -78,6 +85,7 @@ import { subscriptionDiscussionUpdatedFactory } from './subscription.discussion.
     SUBSCRIPTION_DISCUSSION_UPDATED,
     SUBSCRIPTION_UPDATE_MESSAGE,
     SUBSCRIPTION_CANVAS_CONTENT,
+    SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
     NOTIFICATIONS_SERVICE,
     WALLET_MANAGEMENT_SERVICE,
     NOTIFICATIONS_SERVICE,
