@@ -15,6 +15,7 @@ export enum AuthorizationPrivilege {
   UPDATE_CANVAS = 'update-canvas',
   COMMUNITY_JOIN = 'community-join',
   COMMUNITY_APPLY = 'community-apply',
+  COMMUNITY_CONTEXT_REVIEW = 'community-context-review',
 }
 
 registerEnumType(AuthorizationPrivilege, {
