@@ -359,20 +359,6 @@ export class AgentService {
       'response'
     );
 
-    // todo: putting this as shortcut; remove later
-    // suppliedCredentials are not available at 378
-    const eventID = `credentials-${Math.floor(Math.random() * 100)}`;
-    const payload: ProfileCredentialVerified = {
-      eventID,
-      vc: 'something something vc',
-    };
-
-    this.subscriptionVerifiedCredentials.publish(
-      SubscriptionType.PROFILE_VERIFIED_CREDENTIAL,
-      payload
-    );
-    return;
-
     // Retrieve the credential to store
     const tokenDecoded: any = jwt_decode(token);
     const vcToBeStored = tokenDecoded.interactionToken.suppliedCredentials[0];
