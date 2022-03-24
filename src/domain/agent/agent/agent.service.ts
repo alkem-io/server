@@ -1,4 +1,8 @@
-import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
+import { PubSubEngine } from 'graphql-subscriptions';
+import {
+  SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
+  WALLET_MANAGEMENT_SERVICE,
+} from '@common/constants';
 import { Profiling } from '@common/decorators/profiling.decorator';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import {
@@ -8,6 +12,8 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { SsiException } from '@common/exceptions/ssi.exception';
+import { SubscriptionType } from '@common/enums/subscription.type';
+import { ProfileCredentialVerified } from '@domain/common/agent/agent.dto.profile.credential.verified';
 import { Agent, CreateAgentInput, IAgent } from '@domain/agent/agent';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -58,7 +64,9 @@ export class AgentService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER)
-    private readonly cacheManager: Cache
+    private readonly cacheManager: Cache,
+    @Inject(SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL)
+    private subscriptionVerifiedCredentials: PubSubEngine
   ) {}
 
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
@@ -365,7 +373,7 @@ export class AgentService {
     const credentialStoreRequest$ = this.walletManagementClient.send(
       { cmd: RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION },
       {
-        interactionId: interactionInfo.interactionId,
+        interactionId: interactionInfo?.interactionId,
         jwt: token,
       }
     );
@@ -375,6 +383,17 @@ export class AgentService {
       this.logger.verbose?.(
         `[RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION] - completed with result: ${result}`,
         LogContext.AGENT
+      );
+
+      const eventID = `credentials-${Math.floor(Math.random() * 100)}`;
+      const payload: ProfileCredentialVerified = {
+        eventID,
+        vc: 'something something vc',
+      };
+
+      this.subscriptionVerifiedCredentials.publish(
+        SubscriptionType.PROFILE_VERIFIED_CREDENTIAL,
+        payload
       );
     } catch (err: any) {
       throw new SsiException(
