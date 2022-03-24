@@ -155,6 +155,23 @@
             }
           ]
         }
+      ],
+      "feedback": [
+        {
+          "name": "default",
+          "questions": [
+            {
+              "question": "Feedback question 1",
+              "required": true,
+              "sortOrder": 1
+            },
+            {
+              "question": "Feedback question 2",
+              "required": false,
+              "sortOrder": 2
+            }
+          ]
+        }
       ]
     }
   ]
