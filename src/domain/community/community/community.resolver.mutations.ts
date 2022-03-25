@@ -314,8 +314,20 @@ export class CommunityResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
-      AuthorizationPrivilege.READ,
+      AuthorizationPrivilege.COMMUNITY_CONTEXT_REVIEW,
       `creating feedback on community: ${community.id}`
+    );
+
+    const payload =
+      await this.notificationsPayloadBuilder.buildCommunityContextReviewSubmittedNotificationPayload(
+        agentInfo.userID,
+        feedbackData.communityID,
+        community.parentID,
+        feedbackData.questions
+      );
+    this.notificationsClient.emit(
+      EventType.COMMUNITY_CONTEXT_REVIEW_SUBMITTED,
+      payload
     );
 
     return true;
