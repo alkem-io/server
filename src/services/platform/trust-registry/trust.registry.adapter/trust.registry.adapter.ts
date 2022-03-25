@@ -8,7 +8,9 @@ import { TrustRegistryConfigurationAdapter } from '../trust.registry.configurati
 import { IClaim } from '../trust.registry.claim/claim.interface';
 import { TrustRegistryClaimService } from '../trust.registry.claim/trust.registry.claim.service';
 import { SsiVcNotVerifiable } from '@common/exceptions/ssi.vc.not.verifiable';
-import { TrustRegistryVerifiedCredentialOffer } from './trust.registry.dto.offered.credential';
+import { WalletManagerCredentialOfferMetadata } from '../../wallet-manager-adapter/dto/wallet.manager.dto.credential.offer.metadata';
+import { SsiCredentialTypeNotSupported } from '@common/exceptions/ssi.credential.type.not.supported';
+import { SsiIssuerType } from '@common/enums/ssi.issuer.type';
 
 @Injectable()
 export class TrustRegistryAdapter {
@@ -17,6 +19,34 @@ export class TrustRegistryAdapter {
     private trustRegistryConfigurationProvider: TrustRegistryConfigurationAdapter,
     private trustRegistryClaimService: TrustRegistryClaimService
   ) {}
+
+  getVerifiedCredentialMetadata(type: string): CredentialMetadata {
+    const supportedCredentials =
+      this.trustRegistryConfigurationProvider.getCredentials();
+    const credentialMetadata = supportedCredentials.find(
+      vc => vc.uniqueType === type
+    );
+    if (!credentialMetadata) {
+      throw new SsiCredentialTypeNotSupported(
+        `The requested verified credential type is not supported: ${type}`,
+        LogContext.SSI
+      );
+    }
+    return credentialMetadata;
+  }
+
+  getVcIssuerTypeOrFail(type: string): SsiIssuerType {
+    if (type === SsiIssuerType.JOLOCOM) {
+      return SsiIssuerType.JOLOCOM;
+    } else if (type === SsiIssuerType.SOVRHD) {
+      return SsiIssuerType.SOVRHD;
+    }
+
+    throw new SsiCredentialTypeNotSupported(
+      `The requested verified credential has an issuer type that is not supported: ${type}`,
+      LogContext.SSI
+    );
+  }
 
   getSupportedCredentialMetadata(types?: string[]): CredentialMetadata[] {
     const supportedCredentials =
@@ -31,7 +61,7 @@ export class TrustRegistryAdapter {
 
   getCredentialOffers(
     proposedOffers: { type: string; claims: IClaim[] }[]
-  ): TrustRegistryVerifiedCredentialOffer[] {
+  ): WalletManagerCredentialOfferMetadata[] {
     const offeredTypes = proposedOffers.map(x => x.type);
     const targetMetadata = this.getSupportedCredentialMetadata(offeredTypes);
 

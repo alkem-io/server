@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.22.2",
+  "version": "0.23.0",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -81,6 +81,7 @@
     "passport": "^0.4.1",
     "passport-custom": "^1.1.1",
     "passport-jwt": "^4.0.0",
+    "qrcode": "^1.5.0",
     "reflect-metadata": "^0.1.13",
     "replace-special-characters": "^1.2.5",
     "rimraf": "^3.0.2",
@@ -105,6 +106,7 @@
     "@types/module-alias": "^2.0.1",
     "@types/node": "^16.4.6",
     "@types/passport-jwt": "^3.0.6",
+    "@types/qrcode": "^1.4.2",
     "@types/supertest": "^2.0.11",
     "@types/uuid": "^8.3.4",
     "@types/yaml": "^1.9.7",

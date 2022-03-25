@@ -373,19 +373,16 @@ ssi:
   issuer_validation_enabled: ${SSI_ISSUER_VALIDATION_ENABLED}:false
 
   issuers:
-    - alkemio:
-        enabled: true
-        interaction_type: jolocom
-        endpoint_verification: http://localhost:3000
-    - sovrhd:
-        enabled: true
-        interaction_type: sovrhd
-        endpoint_verification: https://wallet-api.ovrhd.nl/api/v1/register
+    alkemio:
+      enabled: true
+    sovrhd:
+      enabled: true
+      endpoint: https://wallet-api.ovrhd.nl/api/v1
 
   credentials:
     proof_of_community_membership:
-      name: Community Member
-      verifier: jolocom
+      name: Alkemio Community Member
+      issuer: jolocom
       description: The holder is a member of an Alkemio hub, challenge or opportunity community
       schema: https://schema.org/EducationalOccupationalCredential
       types:
@@ -402,7 +399,7 @@ ssi:
     proof_of_alkemio_membership:
       name: Alkemio User
       description: The holder is a verified Alkemio user
-      verifier: jolocom
+      issuer: jolocom
       schema: https://schema.org/EducationalOccupationalCredential
       types:
         - Credential

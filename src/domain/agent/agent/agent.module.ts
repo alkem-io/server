@@ -10,6 +10,8 @@ import { TrustRegistryAdapterModule } from '../../../services/platform/trust-reg
 import { AgentResolverMutations } from './agent.resolver.mutations';
 import { VerifiedCredentialModule } from '../verified-credential/verified.credential.module';
 import { AgentResolverSubscriptions } from '@domain/agent/agent/agent.resolver.subscriptions';
+import { SsiSovrhdAdapterModule } from '@services/platform/ssi-sovrhd/ssi.sovrhd.adapter.module';
+import { WalletManagerAdapterModule } from '@services/platform/wallet-manager-adapter/wallet.manager.adapter.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { AgentResolverSubscriptions } from '@domain/agent/agent/agent.resolver.s
     TypeOrmModule.forFeature([Agent]),
     CacheModule.register(),
     TrustRegistryAdapterModule,
+    SsiSovrhdAdapterModule,
+    WalletManagerAdapterModule,
   ],
   providers: [
     AgentService,
