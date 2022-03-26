@@ -18,7 +18,8 @@ export enum LogContext {
   NOTIFICATIONS = 'notifications',
   SUBSCRIPTIONS = 'subscriptions',
   SSI = 'ssi',
-  WALLET_MANAGER = 'wallet-mgr',
+  SSI_WALLET_MANAGER = 'ssi-wallet-mgr',
+  SSI_SOVRHD = 'ssi-sovrhd',
   REQUESTS = 'requests',
   PLATFORM = 'platform',
 }

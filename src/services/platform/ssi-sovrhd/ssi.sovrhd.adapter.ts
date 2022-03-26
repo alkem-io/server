@@ -39,7 +39,7 @@ export class SsiSovrhdAdapter {
     const registerURL = `${this.sovrhdApiEndpoint}/${this.PATH_REGISTER}`;
     this.logger.verbose?.(
       `Registering session to: ${registerURL}`,
-      LogContext.SSI
+      LogContext.SSI_SOVRHD
     );
     const sessionInitiationOptions = {
       webhook: callbackURL,
@@ -55,12 +55,12 @@ export class SsiSovrhdAdapter {
         `Interaction with Sovrhd api failed: no session response: ${JSON.stringify(
           sovrhdResponseData
         )}`,
-        LogContext.SSI
+        LogContext.SSI_SOVRHD
       );
     }
     this.logger.verbose?.(
-      `Sovrhd session initiated: ${JSON.stringify(sovrhdResponseData)}`,
-      LogContext.SSI
+      `Sovrhd session initiated: ${sovrhdResponseData.session} with callback on ${sovrhdResponseData.webhook}`,
+      LogContext.SSI_SOVRHD
     );
     return sovrhdResponseData;
   }
