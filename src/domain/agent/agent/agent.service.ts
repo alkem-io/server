@@ -270,7 +270,7 @@ export class AgentService {
         uniqueCallbackURL
       );
     const clientResponse: AgentBeginVerifiedCredentialRequestOutput = {
-      qrCode: '',
+      qrCodeImg: '',
       jwt: '',
     };
     const interactionInfo: AgentInteractionVerifiedCredentialRequest = {
@@ -286,7 +286,7 @@ export class AgentService {
       const sovrhdRegisterResponse =
         await this.ssiSovrhdAdapter.establishSession(uniqueCallbackURL);
       interactionInfo.sovrhdSessionId = sovrhdRegisterResponse.session;
-      clientResponse.qrCode = sovrhdRegisterResponse.qr;
+      clientResponse.qrCodeImg = sovrhdRegisterResponse.qr;
     } else if (vcIssuerType === SsiIssuerType.JOLOCOM) {
       clientResponse.jwt = agentWalletResponse.jwt;
     }

@@ -7,7 +7,7 @@ export class AgentBeginVerifiedCredentialRequestOutput {
     description:
       'The QR Code Image to be offered on the client for scanning by a mobile wallet',
   })
-  qrCode!: string;
+  qrCodeImg!: string;
 
   @Field({
     nullable: false,

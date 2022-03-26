@@ -14,7 +14,6 @@ import { WalletManagerCredentialOfferMetadata } from './dto/wallet.manager.dto.c
 import { WalletManagerOfferVcCompleteResponse } from './dto/wallet.manager.dto.offer.vc.complete.response';
 import jwt_decode from 'jwt-decode';
 import { WalletManagerOfferVcBegin } from './dto/wallet.manager.dto.offer.vc.begin';
-import qrcode from 'qrcode';
 import { WalletManagerOfferVcComplete } from './dto/wallet.manager.dto.offer.vc.complete';
 import { WalletManagerRequestVcBeginResponse } from './dto/wallet.manager.dto.request.vc.begin.response';
 import { WalletManagerRequestVcComplete } from './dto/wallet.manager.dto.request.vc.complete';
@@ -215,10 +214,5 @@ export class WalletManagerAdapter {
 
   decodeJwt(token: string): any {
     return jwt_decode(token);
-  }
-
-  async convertJwtToImage(token: string): Promise<string> {
-    const canvas = await qrcode.toString(token);
-    return canvas;
   }
 }
