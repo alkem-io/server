@@ -4,9 +4,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
 import { WalletManagerCommand } from '@common/enums/wallet.manager.command';
 import { firstValueFrom } from 'rxjs';
-import { SsiException } from '@common/exceptions/ssi.exception';
 import { TrustRegistryAdapter } from '../trust-registry/trust.registry.adapter/trust.registry.adapter';
-import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
 import { LogContext } from '@common/enums';
 import { WalletManagerRequestVcCompleteResponse } from './dto/wallet.manager.dto.request.vc.complete.response';
 import { WalletManagerOfferVcBeginResponse } from './dto/wallet.manager.dto.offer.vc.begin.response';
@@ -17,6 +15,12 @@ import { WalletManagerOfferVcBegin } from './dto/wallet.manager.dto.offer.vc.beg
 import { WalletManagerOfferVcComplete } from './dto/wallet.manager.dto.offer.vc.complete';
 import { WalletManagerRequestVcBeginResponse } from './dto/wallet.manager.dto.request.vc.begin.response';
 import { WalletManagerRequestVcComplete } from './dto/wallet.manager.dto.request.vc.complete';
+import { SsiWalletManagerCommandFailed } from '@common/exceptions/ssi.wallet.manager.command.failed';
+import { WalletManagerGetAgentInfo } from './dto/wallet.manager.dto.get.agent.info';
+import { WalletManagerCreateIdentity } from './dto/wallet.manager.dto.create.identity';
+import { WalletManagerCreateIdentityResponse } from './dto/wallet.manager.dto.create.identity.response';
+import { WalletManagerVerifiedCredential } from './dto/wallet.manager.dto.verified.credential';
+import { WalletManagerGetAgentInfoResponse } from './dto/wallet.manager.dto.get.agent.info.response';
 
 @Injectable()
 export class WalletManagerAdapter {
@@ -28,46 +32,59 @@ export class WalletManagerAdapter {
     private walletManagementClient: ClientProxy
   ) {}
 
-  async createSsiIdentity(password: string): Promise<string> {
-    const did$ = this.walletManagementClient.send(
+  async createIdentity(password: string): Promise<string> {
+    const inputPayload: WalletManagerCreateIdentity = {
+      password: password,
+    };
+    const response = this.walletManagementClient.send(
       { cmd: WalletManagerCommand.CREATE_IDENTITY },
-      {
-        password: password,
-      }
+      inputPayload
     );
 
     try {
-      return await firstValueFrom(did$);
+      const responseData =
+        await firstValueFrom<WalletManagerCreateIdentityResponse>(response);
+      return responseData.did;
     } catch (err: any) {
-      throw new SsiException(`Failed to create DID on agent: ${err.message}`);
+      throw new SsiWalletManagerCommandFailed(
+        `Failed to create DID on agent: ${err.message}`,
+        LogContext.WALLET_MANAGER
+      );
     }
   }
 
   async getVerifiedCredentials(
     did: string,
     password: string
-  ): Promise<IVerifiedCredential[]> {
+  ): Promise<WalletManagerVerifiedCredential[]> {
     const credentialMetadata =
       this.trustRegistryAdapter.getSupportedCredentialMetadata();
 
-    const identityInfo$ = this.walletManagementClient.send(
+    const inputPayload: WalletManagerGetAgentInfo = {
+      did: did,
+      password: password,
+      credentialMetadata: credentialMetadata,
+    };
+
+    const response = this.walletManagementClient.send(
       { cmd: WalletManagerCommand.GET_IDENTITY_INFO },
-      {
-        did: did,
-        password: password,
-        credentialMetadata: credentialMetadata,
-      }
+      inputPayload
     );
 
     try {
-      const verifiedCredentials: IVerifiedCredential[] = await firstValueFrom(
-        identityInfo$
+      const responseData =
+        await firstValueFrom<WalletManagerGetAgentInfoResponse>(response);
+
+      this.logger.verbose?.(
+        `[${WalletManagerCommand.GET_IDENTITY_INFO}] - Retrieved ${responseData.verifiedCredentials.length} credentials for: ${inputPayload.did}`,
+        LogContext.WALLET_MANAGER
       );
 
-      return verifiedCredentials;
+      return responseData.verifiedCredentials;
     } catch (err: any) {
-      throw new SsiException(
-        `Failed to get identity info from wallet manager: ${err.message}`
+      throw new SsiWalletManagerCommandFailed(
+        `Failed to get identity info from wallet manager: ${err.message}`,
+        LogContext.WALLET_MANAGER
       );
     }
   }
@@ -79,23 +96,29 @@ export class WalletManagerAdapter {
   ): Promise<WalletManagerRequestVcBeginResponse> {
     const credentialMetadata =
       this.trustRegistryAdapter.getSupportedCredentialMetadata();
-    const credentialRequest$ = this.walletManagementClient.send(
-      { cmd: WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION },
-      {
-        issuerDId: did,
-        issuerPassword: password,
-        credentialMetadata: credentialMetadata,
-        uniqueCallbackURL: uniqueCallbackURL,
-      }
-    );
 
     try {
-      return await firstValueFrom<WalletManagerRequestVcBeginResponse>(
+      const credentialRequest$ = this.walletManagementClient.send(
+        { cmd: WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION },
+        {
+          issuerDId: did,
+          issuerPassword: password,
+          credentialMetadata: credentialMetadata,
+          uniqueCallbackURL: uniqueCallbackURL,
+        }
+      );
+      const result = await firstValueFrom<WalletManagerRequestVcBeginResponse>(
         credentialRequest$
       );
+      this.logger.verbose?.(
+        `[${WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION}] - Initiated for interactionId: ${result.interactionId}`,
+        LogContext.WALLET_MANAGER
+      );
+      return result;
     } catch (err: any) {
-      throw new SsiException(
-        `[beginCredentialRequestInteraction]: Failed to request credential: ${err.message}`
+      throw new SsiWalletManagerCommandFailed(
+        `[beginCredentialRequestInteraction]: Failed to request credential: ${err.message}`,
+        LogContext.WALLET_MANAGER
       );
     }
   }
@@ -106,6 +129,10 @@ export class WalletManagerAdapter {
     interactionId: string,
     token: string
   ): Promise<WalletManagerRequestVcCompleteResponse> {
+    this.logger.verbose?.(
+      `[${WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION}] - Completing for interactionId: ${interactionId}`,
+      LogContext.WALLET_MANAGER
+    );
     try {
       const payload: WalletManagerRequestVcComplete = {
         issuerDID: did,
@@ -126,8 +153,9 @@ export class WalletManagerAdapter {
       );
       return { result: response };
     } catch (err: any) {
-      throw new SsiException(
-        `[completeCredentialRequestInteraction]: Failed to request credential: ${err.message}`
+      throw new SsiWalletManagerCommandFailed(
+        `[completeCredentialRequestInteraction]: Failed to request credential: ${err.message}`,
+        LogContext.WALLET_MANAGER
       );
     }
   }
@@ -153,10 +181,15 @@ export class WalletManagerAdapter {
       const response = await firstValueFrom<WalletManagerOfferVcBeginResponse>(
         credentialOffer
       );
+      this.logger.verbose?.(
+        `[${WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION}] - Initiated for interactionId: ${response.interactionId}`,
+        LogContext.WALLET_MANAGER
+      );
       return response;
     } catch (err: any) {
-      throw new SsiException(
-        `[${WalletManagerCommand.BEGIN_CREDENTIAL_OFFER_INTERACTION}]: Failed to offer credential: ${err.message}`
+      throw new SsiWalletManagerCommandFailed(
+        `[${WalletManagerCommand.BEGIN_CREDENTIAL_OFFER_INTERACTION}]: Failed to offer credential: ${err.message}`,
+        LogContext.WALLET_MANAGER
       );
     }
   }
@@ -183,17 +216,24 @@ export class WalletManagerAdapter {
     );
 
     try {
-      const response: WalletManagerOfferVcCompleteResponse =
-        await firstValueFrom(credentialOfferSelection$);
+      const response =
+        await firstValueFrom<WalletManagerOfferVcCompleteResponse>(
+          credentialOfferSelection$
+        );
       this.logVerifiedCredentialInteraction(
         response.token,
         WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION,
         '3-completed'
       );
+      this.logger.verbose?.(
+        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}] - Completed for interactionId: ${interactionId}`,
+        LogContext.WALLET_MANAGER
+      );
       return response;
     } catch (err: any) {
-      throw new SsiException(
-        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}]:Failed to offer credential: ${err.message}`
+      throw new SsiWalletManagerCommandFailed(
+        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}]: Failed to offer credential: ${err.message}`,
+        LogContext.WALLET_MANAGER
       );
     }
   }
@@ -208,7 +248,7 @@ export class WalletManagerAdapter {
       `[${interaction}] - [${stage}] - Token converted to JSON: ${JSON.stringify(
         tokenJson
       )}`,
-      LogContext.AGENT
+      LogContext.SSI
     );
   }
 

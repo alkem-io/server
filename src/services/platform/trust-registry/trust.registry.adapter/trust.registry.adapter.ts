@@ -3,7 +3,7 @@ import { v4 } from 'uuid';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
-import { CredentialMetadata } from '../trust.registry.configuration/credential.metadata';
+import { TrustRegistryCredentialMetadata } from '../trust.registry.configuration/trust.registry.dto.credential.metadata';
 import { TrustRegistryConfigurationAdapter } from '../trust.registry.configuration/trust.registry.configuration.adapter';
 import { IClaim } from '../trust.registry.claim/claim.interface';
 import { TrustRegistryClaimService } from '../trust.registry.claim/trust.registry.claim.service';
@@ -20,7 +20,7 @@ export class TrustRegistryAdapter {
     private trustRegistryClaimService: TrustRegistryClaimService
   ) {}
 
-  getVerifiedCredentialMetadata(type: string): CredentialMetadata {
+  getVerifiedCredentialMetadata(type: string): TrustRegistryCredentialMetadata {
     const supportedCredentials =
       this.trustRegistryConfigurationProvider.getCredentials();
     const credentialMetadata = supportedCredentials.find(
@@ -48,7 +48,9 @@ export class TrustRegistryAdapter {
     );
   }
 
-  getSupportedCredentialMetadata(types?: string[]): CredentialMetadata[] {
+  getSupportedCredentialMetadata(
+    types?: string[]
+  ): TrustRegistryCredentialMetadata[] {
     const supportedCredentials =
       this.trustRegistryConfigurationProvider.getCredentials();
     if (types)

@@ -43,6 +43,7 @@ import { SsiInteractionNotFound } from '@common/exceptions/ssi.interaction.not.f
 import { AgentInteractionVerifiedCredentialOffer } from './dto/agent.dto.interaction.verified.credential.offer';
 import { SsiSovrhdAdapter } from '@services/platform/ssi-sovrhd/ssi.sovrhd.adapter';
 import { WalletManagerAdapter } from '@services/platform/wallet-manager-adapter/wallet.manager.adapter';
+import { VerifiedCredential } from '../verified-credential/dto/verified.credential.dto.result';
 
 @Injectable()
 export class AgentService {
@@ -220,21 +221,27 @@ export class AgentService {
   async createDidOnAgent(agent: IAgent): Promise<IAgent> {
     agent.password = Math.random().toString(36).substr(2, 10);
 
-    agent.did = await this.walletManagerAdapter.createSsiIdentity(
-      agent.password
-    );
+    agent.did = await this.walletManagerAdapter.createIdentity(agent.password);
     return agent;
   }
 
   @Profiling.api
   async getVerifiedCredentials(agent: IAgent): Promise<IVerifiedCredential[]> {
-    const verifiedCredentials =
+    const verifiedCredentialsWalletMgr =
       await this.walletManagerAdapter.getVerifiedCredentials(
         agent.did,
         agent.password
       );
-    for (const vc of verifiedCredentials) {
-      vc.claims = await this.verifiedCredentialService.getClaims(vc.claim);
+    const verifiedCredentials: IVerifiedCredential[] = [];
+    for (const vcWalletMgr of verifiedCredentialsWalletMgr) {
+      const verifiedCredential = new VerifiedCredential();
+      verifiedCredential.name = vcWalletMgr.name;
+      verifiedCredential.type = vcWalletMgr.type;
+      verifiedCredential.issued = vcWalletMgr.issued;
+      verifiedCredential.issuer = vcWalletMgr.issuer;
+      verifiedCredential.claims =
+        await this.verifiedCredentialService.getClaims(vcWalletMgr.claim);
+      verifiedCredentials.push(verifiedCredential);
     }
 
     return verifiedCredentials;
