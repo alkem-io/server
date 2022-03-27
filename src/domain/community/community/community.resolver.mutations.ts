@@ -29,6 +29,7 @@ import { CommunityApplyInput } from './dto/community.dto.apply';
 import { CommunityMemberClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.community.member';
 import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto/agent.dto.verified.credential.offer.begin.output';
 import { AlkemioUserClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.alkemio.user';
+import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -293,5 +294,42 @@ export class CommunityResolverMutations {
         },
       ]
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => Boolean, {
+    description:
+      'Creates feedback on community context from users having COMMUNITY_CONTEXT_REVIEW privilege',
+  })
+  @Profiling.api
+  async createFeedbackOnCommunityContext(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('feedbackData') feedbackData: CreateFeedbackOnCommunityContextInput
+  ): Promise<boolean> {
+    const community = await this.communityService.getCommunityOrFail(
+      feedbackData.communityID
+    );
+
+    // todo: must check COMMUNITY_CONTEXT_REVIEW on Challenge
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.COMMUNITY_CONTEXT_REVIEW,
+      `creating feedback on community: ${community.id}`
+    );
+
+    const payload =
+      await this.notificationsPayloadBuilder.buildCommunityContextReviewSubmittedNotificationPayload(
+        agentInfo.userID,
+        feedbackData.communityID,
+        community.parentID,
+        feedbackData.questions
+      );
+    this.notificationsClient.emit(
+      EventType.COMMUNITY_CONTEXT_REVIEW_SUBMITTED,
+      payload
+    );
+
+    return true;
   }
 }

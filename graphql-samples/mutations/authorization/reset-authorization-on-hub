@@ -6,6 +6,6 @@ mutation authorizationPolicyResetOnHub($authorizationResetData: HubAuthorization
 
 {
   "authorizationResetData": {
-    "hubID": "Eco1"
+    "hubID": "eco1"
   }
 }
