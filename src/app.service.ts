@@ -9,8 +9,21 @@ export class AppService {
     return 'Hello Alkemio!';
   }
 
-  async completeCredentialRequestInteraction(nonce: string, token: string) {
-    await this.agentService.completeCredentialRequestInteraction(nonce, token);
+  async completeCredentialRequestInteractionJolocom(
+    nonce: string,
+    token: string
+  ) {
+    await this.agentService.completeCredentialRequestInteractionJolocom(
+      nonce,
+      token
+    );
+  }
+
+  async completeCredentialRequestInteractionSovrhd(nonce: string, data: any) {
+    await this.agentService.completeCredentialRequestInteractionSovrhd(
+      nonce,
+      data
+    );
   }
 
   // todo: return type?!

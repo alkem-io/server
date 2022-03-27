@@ -8,5 +8,5 @@ export class AgentInteractionVerifiedCredentialRequest {
   interactionId!: string;
   sovrhdSessionId?: string;
 
-  agent?: IAgent;
+  agent!: IAgent;
 }

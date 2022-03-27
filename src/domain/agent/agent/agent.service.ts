@@ -252,8 +252,6 @@ export class AgentService {
     issuerAgentID: string,
     credentialTypes: string[]
   ): Promise<AgentBeginVerifiedCredentialRequestOutput> {
-    const { nonce, uniqueCallbackURL } =
-      this.trustRegistryAdapter.generateCredentialRequestUrl();
     const issuerAgent = await this.getAgentOrFail(issuerAgentID);
     // todo: for now only support a single type per request; may want to enforce this.
     if (credentialTypes.length !== 1) {
@@ -269,6 +267,14 @@ export class AgentService {
     const vcIssuer = requestedCredentialMetadata.issuer;
     const vcIssuerType =
       this.trustRegistryAdapter.getVcIssuerTypeOrFail(vcIssuer);
+
+    const nonce = this.trustRegistryAdapter.generateNonceForInteraction();
+    let uniqueCallbackURL =
+      this.trustRegistryAdapter.generateCredentialRequestUrlJolocom(nonce);
+    if (vcIssuerType === SsiIssuerType.SOVRHD) {
+      uniqueCallbackURL =
+        this.trustRegistryAdapter.generateCredentialRequestUrlSovrhd(nonce);
+    }
 
     const agentWalletResponse =
       await this.walletManagerAdapter.beginCredentialRequestInteraction(
@@ -316,11 +322,9 @@ export class AgentService {
     return clientResponse;
   }
 
-  @Profiling.api
-  async completeCredentialRequestInteraction(
-    nonce: string,
-    token: string
-  ): Promise<void> {
+  private async getRequestInteractionInfoFromCache(
+    nonce: string
+  ): Promise<AgentInteractionVerifiedCredentialRequest> {
     const interactionInfo =
       await this.cacheManager.get<AgentInteractionVerifiedCredentialRequest>(
         nonce
@@ -337,10 +341,18 @@ export class AgentService {
     }
 
     this.logger.verbose?.(
-      `InteractionId with agent: ${interactionInfo} - ${
-        agent.did
-      } received ${token.substring(0, 25)}...`,
+      `InteractionId with agent: ${interactionInfo} - ${agent.did} received`,
       LogContext.SSI
+    );
+    return interactionInfo;
+  }
+
+  async completeCredentialRequestInteractionJolocom(
+    nonce: string,
+    token: string
+  ): Promise<void> {
+    const interactionInfo = await this.getRequestInteractionInfoFromCache(
+      nonce
     );
 
     this.walletManagerAdapter.logVerifiedCredentialInteraction(
@@ -360,6 +372,41 @@ export class AgentService {
 
     this.validateTrustedIssuerOrFail(vcName, vcToBeStored);
 
+    const agent = interactionInfo.agent;
+    await this.walletManagerAdapter.completeCredentialRequestInteraction(
+      agent.did,
+      agent.password,
+      interactionInfo?.interactionId,
+      token
+    );
+
+    const eventID = `credentials-${Math.floor(Math.random() * 100)}`;
+    const payload: ProfileCredentialVerified = {
+      eventID,
+      vc: 'something something vc',
+    };
+
+    this.subscriptionVerifiedCredentials.publish(
+      SubscriptionType.PROFILE_VERIFIED_CREDENTIAL,
+      payload
+    );
+  }
+  async completeCredentialRequestInteractionSovrhd(
+    nonce: string,
+    data: any
+  ): Promise<void> {
+    const interactionInfo = await this.getRequestInteractionInfoFromCache(
+      nonce
+    );
+    // Retrieve the credential to store
+    const tokenDecoded: any = this.ssiSovrhdAdapter.requestCredentials(
+      data.session,
+      '',
+      ''
+    );
+    const token = tokenDecoded;
+
+    const agent = interactionInfo.agent;
     await this.walletManagerAdapter.completeCredentialRequestInteraction(
       agent.did,
       agent.password,
@@ -446,7 +493,7 @@ export class AgentService {
       'begin'
     );
 
-    return { jwt: credentialOfferResponse.jwt };
+    return { jwt: credentialOfferResponse.jwt, qrCodeImg: '' };
   }
 
   @Profiling.api

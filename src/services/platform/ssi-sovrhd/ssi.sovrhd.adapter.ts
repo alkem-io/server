@@ -1,11 +1,14 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { SsiSovrhdApiError } from '@common/exceptions/ssi.sovrhd.api.exception';
+import { SsiSovrhdApiException } from '@common/exceptions/ssi.sovrhd.api.exception';
+import { SsiSovrhdCredentialTypeNotFoundException } from '@common/exceptions/ssi.sovrhd.credential.type.not.found.exception';
 import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { lastValueFrom, map } from 'rxjs';
+import { SsiSovrhdRegister } from './dto/ssi.sovrhd.dto.register';
 import { SsiSovrhdRegisterResponse } from './dto/ssi.sovrhd.dto.register.response';
+import { SsiSovrhdRequestResponse } from './dto/ssi.sovrhd.dto.request.response';
 
 @Injectable()
 export class SsiSovrhdAdapter {
@@ -16,6 +19,7 @@ export class SsiSovrhdAdapter {
     timeout: 5000,
     maxRedirects: 5,
   };
+  private credentialTypesMap: Map<string, string>;
 
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -26,6 +30,29 @@ export class SsiSovrhdAdapter {
     const sovrhdConfig = this.configService.get(ConfigurationTypes.SSI)?.issuers
       ?.sovrhd;
     this.sovrhdApiEndpoint = sovrhdConfig.endpoint;
+
+    this.credentialTypesMap = new Map();
+    const credentialTypes = sovrhdConfig.credential_types;
+    for (const credentialType of credentialTypes) {
+      const name = credentialType.name;
+      const identifier = credentialType.identifier;
+      this.credentialTypesMap.set(name, identifier);
+    }
+    this.logger.verbose?.(
+      `Loaded in ${this.credentialTypesMap.size} credential types`,
+      LogContext.SSI_SOVRHD
+    );
+  }
+
+  getCredentialType(name: string): string {
+    const identifier = this.credentialTypesMap.get(name);
+    if (!identifier) {
+      throw new SsiSovrhdCredentialTypeNotFoundException(
+        `Unable to locate credential type identifier for: ${name}`,
+        LogContext.SSI_SOVRHD
+      );
+    }
+    return identifier;
   }
 
   async establishSession(
@@ -33,7 +60,7 @@ export class SsiSovrhdAdapter {
   ): Promise<SsiSovrhdRegisterResponse> {
     this.logger.verbose?.(
       `Establishing session with callback hook: ${callbackURL}`,
-      LogContext.SSI
+      LogContext.SSI_SOVRHD
     );
     // Todo: retrieve the session ID properly
     const registerURL = `${this.sovrhdApiEndpoint}/${this.PATH_REGISTER}`;
@@ -41,17 +68,17 @@ export class SsiSovrhdAdapter {
       `Registering session to: ${registerURL}`,
       LogContext.SSI_SOVRHD
     );
-    const sessionInitiationOptions = {
+    const sessionInitiationOptions: SsiSovrhdRegister = {
       webhook: callbackURL,
     };
 
-    const sovrhdResponseData: SsiSovrhdRegisterResponse = await lastValueFrom(
+    const sovrhdResponseData = await lastValueFrom<SsiSovrhdRegisterResponse>(
       this.httpService
         .post(registerURL, sessionInitiationOptions, this.axiosOptions)
         .pipe(map(resp => resp.data))
     );
     if (!sovrhdResponseData.session) {
-      throw new SsiSovrhdApiError(
+      throw new SsiSovrhdApiException(
         `Interaction with Sovrhd api failed: no session response: ${JSON.stringify(
           sovrhdResponseData
         )}`,
@@ -63,5 +90,51 @@ export class SsiSovrhdAdapter {
       LogContext.SSI_SOVRHD
     );
     return sovrhdResponseData;
+  }
+
+  async requestCredentials(
+    sessionId: string,
+    did: string,
+    credentialName: string
+  ): Promise<SsiSovrhdRequestResponse> {
+    this.logger.verbose?.(
+      `Using session (${sessionId}) to requesting credential of name: ${credentialName} for did ${did}`,
+      LogContext.SSI_SOVRHD
+    );
+    const credentialTypeIdentifier = this.getCredentialType(credentialName);
+
+    const requestURL = `${this.sovrhdApiEndpoint}/${this.PATH_API}`;
+
+    const requestPayload = {
+      session: sessionId,
+      data: {
+        did: did,
+        credentialSchema: [credentialTypeIdentifier],
+        type: 'request',
+      },
+    };
+
+    const sovrhdRequestResponseData = await lastValueFrom<any>(
+      this.httpService
+        .post(requestURL, requestPayload, this.axiosOptions)
+        .pipe(map(resp => resp.data))
+    );
+    this.logger.verbose?.(
+      `Request returned: ${JSON.stringify(sovrhdRequestResponseData)}`,
+      LogContext.SSI_SOVRHD
+    );
+    // if (!sovrhdRequestResponseData.session) {
+    //   throw new SsiSovrhdApiError(
+    //     `Interaction with Sovrhd api failed: no session response: ${JSON.stringify(
+    //       sovrhdRequestResponseData
+    //     )}`,
+    //     LogContext.SSI_SOVRHD
+    //   );
+    // }
+    // this.logger.verbose?.(
+    //   `Sovrhd credentials returned: ${sovrhdRequestResponseData.session} with callback on ${sovrhdRequestResponseData.webhook}`,
+    //   LogContext.SSI_SOVRHD
+    // );
+    return sovrhdRequestResponseData;
   }
 }

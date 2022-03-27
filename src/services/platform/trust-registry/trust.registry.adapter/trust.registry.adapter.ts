@@ -86,15 +86,23 @@ export class TrustRegistryAdapter {
     };
   }
 
-  generateCredentialRequestUrl() {
-    const nonce = v4();
+  generateCredentialRequestUrlJolocom(nonce: string) {
     const publicRestApi = this.generatePublicRestApiUrl();
-    const uniqueCallbackURL = `${publicRestApi}/${RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION}/${nonce}`;
+    const uniqueCallbackURL = `${publicRestApi}/${RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_JOLOCOM}/${nonce}`;
 
-    return {
-      nonce,
-      uniqueCallbackURL,
-    };
+    return uniqueCallbackURL;
+  }
+
+  generateNonceForInteraction() {
+    const nonce = v4();
+    return nonce;
+  }
+
+  generateCredentialRequestUrlSovrhd(nonce: string) {
+    const publicRestApi = this.generatePublicRestApiUrl();
+    const uniqueCallbackURL = `${publicRestApi}/${RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_SOVRHD}/${nonce}`;
+
+    return uniqueCallbackURL;
   }
 
   getTrustedIssuersForCredentialNameOrFail(name: string): string[] {

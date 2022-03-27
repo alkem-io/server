@@ -11,12 +11,26 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  @Post(`${RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION}/:nonce`)
-  async [RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION](
+  @Post(
+    `${RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_JOLOCOM}/:nonce`
+  )
+  async [RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_JOLOCOM](
     @Param('nonce') nonce: string,
     @Body() payload: { token: string }
   ) {
-    await this.appService.completeCredentialRequestInteraction(
+    await this.appService.completeCredentialRequestInteractionJolocom(
+      nonce,
+      payload.token
+    );
+    //TODO Once this completes publish the credential share complete with the interaction id to the client
+  }
+
+  @Post(`${RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_SOVRHD}/:nonce`)
+  async [RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_SOVRHD](
+    @Param('nonce') nonce: string,
+    @Body() payload: { token: string }
+  ) {
+    await this.appService.completeCredentialRequestInteractionSovrhd(
       nonce,
       payload.token
     );
