@@ -1,5 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ApplicationTemplate } from '@src/services/platform/configuration/config/template/application.template.entity';
+import { ApplicationTemplate } from './application.template.entity';
+import { FeedbackTemplate } from './feedback.template.entity';
 
 @ObjectType()
 export class ChallengeTemplate {
@@ -14,6 +15,12 @@ export class ChallengeTemplate {
     description: 'Application templates.',
   })
   applications?: ApplicationTemplate[];
+
+  @Field(() => [FeedbackTemplate], {
+    nullable: true,
+    description: 'Feedback templates.',
+  })
+  feedback?: FeedbackTemplate[];
 
   constructor();
   constructor(name: string);

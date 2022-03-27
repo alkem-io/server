@@ -14,6 +14,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { CreateNVPInput } from '@src/domain/common/nvp/nvp.dto.create';
 
 @Injectable()
 export class NotificationsPayloadBuilder {
@@ -89,6 +90,30 @@ export class NotificationsPayloadBuilder {
 
   async buildUserRegisteredNotificationPayload(userID: string) {
     return { userID: userID };
+  }
+
+  async buildCommunityContextReviewSubmittedNotificationPayload(
+    userId: string,
+    communityId: string,
+    challengeId: string,
+    questions: CreateNVPInput[]
+  ) {
+    const community = await this.getCommunity(communityId);
+    if (!community) {
+      throw new NotificationEventException(
+        `Could not acquire community with id: ${communityId}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return {
+      userId,
+      challengeId,
+      community: {
+        name: community.displayName,
+      },
+      questions,
+    };
   }
 
   async buildCommunicationDiscussionCreatedNotificationPayload(
@@ -183,6 +208,14 @@ export class NotificationsPayloadBuilder {
       .getOne();
 
     return opportunity?.nameID;
+  }
+
+  private async getCommunity(communityID: string) {
+    return await this.communityRepository
+      .createQueryBuilder('community')
+      .where('community.id = :id')
+      .setParameters({ id: communityID })
+      .getOne();
   }
 
   private async getCommunityWithParent(
