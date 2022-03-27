@@ -1,5 +1,6 @@
 import { RestEndpoint } from '@common/enums/rest.endpoint';
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { SsiSovrhdRegisterCallback } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback';
 import { AppService } from './app.service';
 
 @Controller('/rest')
@@ -28,11 +29,11 @@ export class AppController {
   @Post(`${RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_SOVRHD}/:nonce`)
   async [RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_SOVRHD](
     @Param('nonce') nonce: string,
-    @Body() payload: { token: string }
+    @Body() payload: SsiSovrhdRegisterCallback
   ) {
     await this.appService.completeCredentialRequestInteractionSovrhd(
       nonce,
-      payload.token
+      payload
     );
     //TODO Once this completes publish the credential share complete with the interaction id to the client
   }

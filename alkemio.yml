@@ -379,10 +379,12 @@ ssi:
       enabled: true
       endpoint: https://wallet-api.ovrhd.nl/api/v1
       credential_types:
-        - name: address
-          identifier: blob:dock:asdfasdfsdfasdfasdf
-        - name: leeftijd
-          identifier: blob:dock:asdfasdfsdfasdfasdf
+        - name: EmailAddress
+          identifier: blob:dock:5DEGLCGsuWLkVrfiCqXTPQQEekt2kibSeyWTdUt35mmsmimn
+        - name: dutchAddress
+          identifier: blob:dock:5EoxGBnZ7JVg9kHonEYtz6tfHV5FufL86VEsZ34Ae8ge478n
+        - name: hoplrCode
+          identifier: blob:dock:5CgrXvgVaUAgzmqW2uUhuonewKmAY8VgVDfyQzziUV2ntGWz
 
   credentials:
     proof_of_community_membership:

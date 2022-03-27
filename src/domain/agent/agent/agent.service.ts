@@ -44,6 +44,7 @@ import { AgentInteractionVerifiedCredentialOffer } from './dto/agent.dto.interac
 import { SsiSovrhdAdapter } from '@services/platform/ssi-sovrhd/ssi.sovrhd.adapter';
 import { WalletManagerAdapter } from '@services/platform/wallet-manager-adapter/wallet.manager.adapter';
 import { VerifiedCredential } from '../verified-credential/dto/verified.credential.dto.result';
+import { SsiSovrhdRegisterCallback } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback';
 
 @Injectable()
 export class AgentService {
@@ -393,16 +394,16 @@ export class AgentService {
   }
   async completeCredentialRequestInteractionSovrhd(
     nonce: string,
-    data: any
+    data: SsiSovrhdRegisterCallback
   ): Promise<void> {
     const interactionInfo = await this.getRequestInteractionInfoFromCache(
       nonce
     );
     // Retrieve the credential to store
-    const tokenDecoded: any = this.ssiSovrhdAdapter.requestCredentials(
+    const tokenDecoded: any = await this.ssiSovrhdAdapter.requestCredentials(
       data.session,
-      '',
-      ''
+      data.id,
+      interactionInfo.interactionId // todo: should be the cred name
     );
     const token = tokenDecoded;
 
