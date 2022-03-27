@@ -378,6 +378,11 @@ ssi:
     sovrhd:
       enabled: true
       endpoint: https://wallet-api.ovrhd.nl/api/v1
+      credential_types:
+        - name: address
+          identifier: blob:dock:asdfasdfsdfasdfasdf
+        - name: leeftijd
+          identifier: blob:dock:asdfasdfsdfasdfasdf
 
   credentials:
     proof_of_community_membership:
