@@ -1,4 +1,8 @@
-import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
+import { PubSubEngine } from 'graphql-subscriptions';
+import {
+  SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
+  WALLET_MANAGEMENT_SERVICE,
+} from '@common/constants';
 import { Profiling } from '@common/decorators/profiling.decorator';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import {
@@ -8,6 +12,8 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { SsiException } from '@common/exceptions/ssi.exception';
+import { SubscriptionType } from '@common/enums/subscription.type';
+import { ProfileCredentialVerified } from '@domain/common/agent/agent.dto.profile.credential.verified';
 import { Agent, CreateAgentInput, IAgent } from '@domain/agent/agent';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -31,7 +37,6 @@ import { WalletManagerCommand } from '@common/enums/wallet.manager.command';
 import { CredentialMetadataOutput } from '../verified-credential/dto/verified.credential.dto.metadata';
 import jwt_decode from 'jwt-decode';
 import { IClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.interface';
-import { CredentialMetadata } from '@services/platform/trust-registry/trust.registry.configuration/credential.metadata';
 import { TrustRegistryAdapter } from '@services/platform/trust-registry/trust.registry.adapter/trust.registry.adapter';
 import { GrantCredentialInput } from './dto/agent.dto.credential.grant';
 import { RevokeCredentialInput } from './dto/agent.dto.credential.revoke';
@@ -39,6 +44,10 @@ import { AgentBeginVerifiedCredentialRequestOutput } from './dto/agent.dto.verif
 import { AgentBeginVerifiedCredentialOfferOutput } from './dto/agent.dto.verified.credential.offer.begin.output';
 import { VerifiedCredentialService } from '../verified-credential/verified.credential.service';
 import { IVerifiedCredential } from '../verified-credential/verified.credential.interface';
+import { AgentInteractionVerifiedCredentialRequest } from './dto/agent.dto.interaction.verified.credential.request';
+import { SsiIssuerType } from '@common/enums/ssi.issuer.type';
+import { SsiInteractionNotFound } from '@common/exceptions/ssi.interaction.not.found';
+import { AgentInteractionVerifiedCredentialOffer } from './dto/agent.dto.interaction.verified.credential.offer';
 
 @Injectable()
 export class AgentService {
@@ -55,7 +64,9 @@ export class AgentService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER)
-    private readonly cacheManager: Cache
+    private readonly cacheManager: Cache,
+    @Inject(SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL)
+    private subscriptionVerifiedCredentials: PubSubEngine
   ) {}
 
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
@@ -288,12 +299,19 @@ export class AgentService {
         );
 
       const requestExpirationTtl = request.expiresOn - new Date().getTime();
-      this.cacheManager.set<IAgent>(request.interactionId, issuerAgent, {
-        ttl: requestExpirationTtl,
-      });
-      this.cacheManager.set(nonce, request.interactionId, {
-        ttl: requestExpirationTtl,
-      });
+      const interactionInfo: AgentInteractionVerifiedCredentialRequest = {
+        nonce: nonce,
+        interactionId: request.interactionId,
+        issuer: SsiIssuerType.JOLOCOM,
+        agent: issuerAgent,
+      };
+      this.cacheManager.set<AgentInteractionVerifiedCredentialRequest>(
+        nonce,
+        interactionInfo,
+        {
+          ttl: requestExpirationTtl,
+        }
+      );
       this.logVerifiedCredentialInteraction(
         request.jwt,
         WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION,
@@ -313,17 +331,23 @@ export class AgentService {
     nonce: string,
     token: string
   ): Promise<void> {
-    const interactionId = await this.cacheManager.get<string>(nonce);
-    if (!interactionId) {
-      throw new Error('The interaction is not valid');
+    const interactionInfo =
+      await this.cacheManager.get<AgentInteractionVerifiedCredentialRequest>(
+        nonce
+      );
+    if (!interactionInfo) {
+      throw new SsiInteractionNotFound(
+        `Unable to find interaction for nonce: ${nonce}`,
+        LogContext.SSI
+      );
     }
-    const agent = await this.cacheManager.get<IAgent>(interactionId);
+    const agent = interactionInfo.agent;
     if (!agent) {
       throw new Error('An agent could not be found for the interactionId');
     }
 
     this.logger.verbose?.(
-      `InteractionId with agent: ${interactionId} - ${
+      `InteractionId with agent: ${interactionInfo} - ${
         agent.did
       } received ${token.substring(0, 25)}...`,
       LogContext.SSI
@@ -349,7 +373,7 @@ export class AgentService {
     const credentialStoreRequest$ = this.walletManagementClient.send(
       { cmd: RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION },
       {
-        interactionId: interactionId,
+        interactionId: interactionInfo?.interactionId,
         jwt: token,
       }
     );
@@ -359,6 +383,17 @@ export class AgentService {
       this.logger.verbose?.(
         `[RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION] - completed with result: ${result}`,
         LogContext.AGENT
+      );
+
+      const eventID = `credentials-${Math.floor(Math.random() * 100)}`;
+      const payload: ProfileCredentialVerified = {
+        eventID,
+        vc: 'something something vc',
+      };
+
+      this.subscriptionVerifiedCredentials.publish(
+        SubscriptionType.PROFILE_VERIFIED_CREDENTIAL,
+        payload
       );
     } catch (err: any) {
       throw new SsiException(
@@ -434,19 +469,20 @@ export class AgentService {
         );
 
       const requestExpirationTtl = request.expiresOn - new Date().getTime();
-      this.cacheManager.set<{
-        agent: IAgent;
-        offeredCredentials: typeof offeredCredentials;
-      }>(
-        request.interactionId,
-        { agent: issuerAgent, offeredCredentials },
+      const interactionInfo: AgentInteractionVerifiedCredentialOffer = {
+        nonce: nonce,
+        issuer: SsiIssuerType.JOLOCOM,
+        agent: issuerAgent,
+        interactionId: request.interactionId,
+        offeredCredentials: offeredCredentials,
+      };
+      this.cacheManager.set<AgentInteractionVerifiedCredentialOffer>(
+        nonce,
+        interactionInfo,
         {
           ttl: requestExpirationTtl,
         }
       );
-      this.cacheManager.set(nonce, request.interactionId, {
-        ttl: requestExpirationTtl,
-      });
 
       this.logVerifiedCredentialInteraction(
         request.jwt,
@@ -467,21 +503,22 @@ export class AgentService {
     nonce: string,
     token: string
   ): Promise<any> {
-    const interactionId = await this.cacheManager.get<string>(nonce);
-    if (!interactionId) {
-      throw new Error('The interaction is not valid');
+    const interactionInfo =
+      await this.cacheManager.get<AgentInteractionVerifiedCredentialOffer>(
+        nonce
+      );
+    if (!interactionInfo) {
+      throw new SsiInteractionNotFound(
+        `Unable to locate intereaction: ${nonce}`,
+        LogContext.SSI
+      );
     }
-    const { agent, offeredCredentials } =
-      (await this.cacheManager.get<{
-        agent: IAgent;
-        offeredCredentials: {
-          metadata: CredentialMetadata;
-          claim: Record<string, any>;
-        }[];
-      }>(interactionId)) || {};
+    const interactionId = interactionInfo.interactionId;
+    const agent = interactionInfo.agent;
+    const offeredCredentials = interactionInfo.offeredCredentials;
 
     if (!agent || !offeredCredentials) {
-      throw new Error('An agent could not be found for the interactionId');
+      throw new Error('An agent could not be found for the interaction');
     }
 
     this.logger.verbose?.(

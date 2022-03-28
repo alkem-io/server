@@ -136,7 +136,10 @@ export class ChallengeAuthorizationService {
     rules.push(challengeAdmin);
 
     const challengeMember = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.READ],
+      [
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.COMMUNITY_CONTEXT_REVIEW,
+      ],
       AuthorizationCredential.CHALLENGE_MEMBER,
       challengeID
     );

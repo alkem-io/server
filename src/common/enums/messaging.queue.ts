@@ -5,4 +5,5 @@ export enum MessagingQueue {
   SUBSCRIPTION_DISCUSSION_UPDATED = 'alkemio-subscriptions-discussion-updated',
   SUBSCRIPTION_UPDATE_MESSAGE = 'alkemio-subscriptions-update-message',
   SUBSCRIPTION_CANVAS_CONTENT = 'alkemio-subscriptions-canvas-content',
+  SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL = 'alkemio-subscriptions-profile-verified-credential',
 }
