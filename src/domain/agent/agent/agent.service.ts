@@ -223,7 +223,7 @@ export class AgentService {
     agent.password = Math.random().toString(36).substr(2, 10);
 
     agent.did = await this.walletManagerAdapter.createIdentity(agent.password);
-    return agent;
+    return await this.saveAgent(agent);
   }
 
   @Profiling.api
@@ -392,6 +392,7 @@ export class AgentService {
       payload
     );
   }
+
   async completeCredentialRequestInteractionSovrhd(
     nonce: string,
     data: SsiSovrhdRegisterCallback
@@ -400,12 +401,18 @@ export class AgentService {
       nonce
     );
     // Retrieve the credential to store
-    const tokenDecoded: any = await this.ssiSovrhdAdapter.requestCredentials(
-      data.session,
-      data.id,
-      interactionInfo.interactionId // todo: should be the cred name
-    );
-    const token = tokenDecoded;
+    const credentialName = 'dutchAddress';
+    const requestCredentialsResponse =
+      await this.ssiSovrhdAdapter.requestCredentials(
+        data.session,
+        data.id,
+        credentialName
+      );
+    if (requestCredentialsResponse.result === 'ok') {
+      // request has been made, await now the second call back
+      return;
+    }
+    const token = requestCredentialsResponse.result;
 
     const agent = interactionInfo.agent;
     await this.walletManagerAdapter.completeCredentialRequestInteraction(

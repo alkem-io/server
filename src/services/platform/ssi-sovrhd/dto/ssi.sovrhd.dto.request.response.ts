@@ -1,4 +1,6 @@
+import { SsiSovrhdRequestResponseSession } from './ssi.sovrhd.dto.request.response.session';
+
 export class SsiSovrhdRequestResponse {
-  session!: string;
-  id!: string;
+  session!: SsiSovrhdRequestResponseSession;
+  result!: string;
 }

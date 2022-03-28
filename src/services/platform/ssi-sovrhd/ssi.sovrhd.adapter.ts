@@ -103,10 +103,8 @@ export class SsiSovrhdAdapter {
       `Using session (${sessionId}) to requesting credential of name: ${credentialName} for did ${did}`,
       LogContext.SSI_SOVRHD
     );
-    // Todo: use the name dynamically
-    const credentialTypeIdentifierHoplr = this.getCredentialType('hoplrCode');
-    const credentialTypeIdentifierAddress =
-      this.getCredentialType('dutchAddress');
+
+    const credentialTypeIdentifier = this.getCredentialType(credentialName);
 
     const requestURL = `${this.sovrhdApiEndpoint}/${this.PATH_REQUEST}`;
 
@@ -114,10 +112,7 @@ export class SsiSovrhdAdapter {
       session: sessionId,
       data: {
         did: did,
-        credentialSchema: [
-          credentialTypeIdentifierHoplr,
-          credentialTypeIdentifierAddress,
-        ],
+        credentialSchema: [credentialTypeIdentifier],
         type: 'request',
       },
     };
@@ -128,11 +123,12 @@ export class SsiSovrhdAdapter {
     );
 
     try {
-      const sovrhdRequestResponseData = await lastValueFrom<any>(
-        this.httpService
-          .post(requestURL, requestPayload, this.axiosOptions)
-          .pipe(map(resp => resp.data))
-      );
+      const sovrhdRequestResponseData =
+        await lastValueFrom<SsiSovrhdRequestResponse>(
+          this.httpService
+            .post(requestURL, requestPayload, this.axiosOptions)
+            .pipe(map(resp => resp.data))
+        );
       this.logger.verbose?.(
         `Request returned: ${JSON.stringify(sovrhdRequestResponseData)}`,
         LogContext.SSI_SOVRHD

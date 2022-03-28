@@ -415,15 +415,15 @@ ssi:
       context:
         alkemioUser_userID: 'schema:uuid'
         alkemioUser_email: 'schema:email'
-    proof_of_postal_address:
-      name: Postal Address
+    the_hague_proof_of_postal_address:
+      name: The Hague Postal Address
       issuer: sovrhd
       description: The holder's location is confirmed by the issuer
       schema: https://schema.org/EducationalOccupationalCredential
       types:
         - Credential
-        - postalAddress
-      uniqueType: postalAddress
+        - dutchAddress
+      uniqueType: dutchAddress
       context:
         addressLine1: 'schema:streetAddress'
         addressLine2: 'schema:streetAddress'
