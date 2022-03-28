@@ -1,5 +1,6 @@
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { Injectable } from '@nestjs/common';
+import { SsiSovrhdRegisterCallback } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback';
 
 @Injectable()
 export class AppService {
@@ -9,8 +10,24 @@ export class AppService {
     return 'Hello Alkemio!';
   }
 
-  async completeCredentialRequestInteraction(nonce: string, token: string) {
-    await this.agentService.completeCredentialRequestInteraction(nonce, token);
+  async completeCredentialRequestInteractionJolocom(
+    nonce: string,
+    token: string
+  ) {
+    await this.agentService.completeCredentialRequestInteractionJolocom(
+      nonce,
+      token
+    );
+  }
+
+  async completeCredentialRequestInteractionSovrhd(
+    nonce: string,
+    data: SsiSovrhdRegisterCallback
+  ) {
+    await this.agentService.completeCredentialRequestInteractionSovrhd(
+      nonce,
+      data
+    );
   }
 
   // todo: return type?!

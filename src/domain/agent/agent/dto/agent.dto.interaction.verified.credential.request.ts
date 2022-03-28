@@ -6,6 +6,7 @@ export class AgentInteractionVerifiedCredentialRequest {
   issuer!: SsiIssuerType;
 
   interactionId!: string;
+  sovrhdSessionId?: string;
 
-  agent?: IAgent;
+  agent!: IAgent;
 }

@@ -3,12 +3,14 @@ import { v4 } from 'uuid';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
-import { CredentialMetadata } from '../trust.registry.configuration/credential.metadata';
+import { TrustRegistryCredentialMetadata } from '../trust.registry.configuration/trust.registry.dto.credential.metadata';
 import { TrustRegistryConfigurationAdapter } from '../trust.registry.configuration/trust.registry.configuration.adapter';
 import { IClaim } from '../trust.registry.claim/claim.interface';
 import { TrustRegistryClaimService } from '../trust.registry.claim/trust.registry.claim.service';
 import { SsiVcNotVerifiable } from '@common/exceptions/ssi.vc.not.verifiable';
-import { TrustRegistryVerifiedCredentialOffer } from './trust.registry.dto.offered.credential';
+import { WalletManagerCredentialOfferMetadata } from '../../wallet-manager-adapter/dto/wallet.manager.dto.credential.offer.metadata';
+import { SsiCredentialTypeNotSupported } from '@common/exceptions/ssi.credential.type.not.supported';
+import { SsiIssuerType } from '@common/enums/ssi.issuer.type';
 
 @Injectable()
 export class TrustRegistryAdapter {
@@ -18,7 +20,37 @@ export class TrustRegistryAdapter {
     private trustRegistryClaimService: TrustRegistryClaimService
   ) {}
 
-  getSupportedCredentialMetadata(types?: string[]): CredentialMetadata[] {
+  getVerifiedCredentialMetadata(type: string): TrustRegistryCredentialMetadata {
+    const supportedCredentials =
+      this.trustRegistryConfigurationProvider.getCredentials();
+    const credentialMetadata = supportedCredentials.find(
+      vc => vc.uniqueType === type
+    );
+    if (!credentialMetadata) {
+      throw new SsiCredentialTypeNotSupported(
+        `The requested verified credential type is not supported: ${type}`,
+        LogContext.SSI
+      );
+    }
+    return credentialMetadata;
+  }
+
+  getVcIssuerTypeOrFail(type: string): SsiIssuerType {
+    if (type === SsiIssuerType.JOLOCOM) {
+      return SsiIssuerType.JOLOCOM;
+    } else if (type === SsiIssuerType.SOVRHD) {
+      return SsiIssuerType.SOVRHD;
+    }
+
+    throw new SsiCredentialTypeNotSupported(
+      `The requested verified credential has an issuer type that is not supported: ${type}`,
+      LogContext.SSI
+    );
+  }
+
+  getSupportedCredentialMetadata(
+    types?: string[]
+  ): TrustRegistryCredentialMetadata[] {
     const supportedCredentials =
       this.trustRegistryConfigurationProvider.getCredentials();
     if (types)
@@ -31,7 +63,7 @@ export class TrustRegistryAdapter {
 
   getCredentialOffers(
     proposedOffers: { type: string; claims: IClaim[] }[]
-  ): TrustRegistryVerifiedCredentialOffer[] {
+  ): WalletManagerCredentialOfferMetadata[] {
     const offeredTypes = proposedOffers.map(x => x.type);
     const targetMetadata = this.getSupportedCredentialMetadata(offeredTypes);
 
@@ -54,15 +86,23 @@ export class TrustRegistryAdapter {
     };
   }
 
-  generateCredentialRequestUrl() {
-    const nonce = v4();
+  generateCredentialRequestUrlJolocom(nonce: string) {
     const publicRestApi = this.generatePublicRestApiUrl();
-    const uniqueCallbackURL = `${publicRestApi}/${RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION}/${nonce}`;
+    const uniqueCallbackURL = `${publicRestApi}/${RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_JOLOCOM}/${nonce}`;
 
-    return {
-      nonce,
-      uniqueCallbackURL,
-    };
+    return uniqueCallbackURL;
+  }
+
+  generateNonceForInteraction() {
+    const nonce = v4();
+    return nonce;
+  }
+
+  generateCredentialRequestUrlSovrhd(nonce: string) {
+    const publicRestApi = this.generatePublicRestApiUrl();
+    const uniqueCallbackURL = `${publicRestApi}/${RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_SOVRHD}/${nonce}`;
+
+    return uniqueCallbackURL;
   }
 
   getTrustedIssuersForCredentialNameOrFail(name: string): string[] {
