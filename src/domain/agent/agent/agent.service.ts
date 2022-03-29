@@ -479,16 +479,28 @@ export class AgentService {
     data: SsiSovrhdRegisterCallbackCredential,
     interactionInfo: AgentInteractionVerifiedCredentialRequestSovrhd
   ): Promise<void> {
-    const token = JSON.stringify(data.content);
+    this.logger.verbose?.(
+      `Sovhrd credential callback: ${interactionInfo.credentialType}`,
+      LogContext.SSI_SOVRHD
+    );
+    const validateCredential =
+      this.ssiSovrhdAdapter.validateSovrhdCredentialResponse(data);
+    if (!validateCredential) {
+      return;
+    }
 
-    this.logger.verbose?.(`Sovhrd credential: ${token}`, LogContext.SSI_SOVRHD);
+    const credentials = data.content.verifiableCredential;
+    this.logger.verbose?.(
+      `Sovhrd credentials returned: ${credentials.length}`,
+      LogContext.SSI_SOVRHD
+    );
 
     const agent = interactionInfo.agent;
     await this.walletManagerAdapter.completeCredentialRequestInteractionSovrhd(
       agent.did,
       agent.password,
       interactionInfo?.interactionId,
-      token,
+      JSON.stringify(credentials[0]),
       interactionInfo.credentialType
     );
 

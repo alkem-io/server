@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { lastValueFrom, map } from 'rxjs';
 import { SsiSovrhdRegister } from './dto/ssi.sovrhd.dto.register';
+import { SsiSovrhdRegisterCallbackCredential } from './dto/ssi.sovrhd.dto.register.callback.credential';
 import { SsiSovrhdRegisterResponse } from './dto/ssi.sovrhd.dto.register.response';
 import { SsiSovrhdRequest } from './dto/ssi.sovrhd.dto.request';
 import { SsiSovrhdRequestResponse } from './dto/ssi.sovrhd.dto.request.response';
@@ -170,5 +171,27 @@ export class SsiSovrhdAdapter {
         LogContext.SSI_SOVRHD
       );
     }
+  }
+
+  validateSovrhdCredentialResponse(
+    credentialCallback: SsiSovrhdRegisterCallbackCredential
+  ): boolean {
+    this.logger.verbose?.(
+      `Validating credential response: ${credentialCallback.session}`,
+      LogContext.SSI_SOVRHD
+    );
+
+    const credential = credentialCallback.content.verifiableCredential;
+    if (credential.length === 0) {
+      this.logger.error(
+        `No validate credentials returned: ${JSON.stringify(
+          credentialCallback
+        )}`,
+        LogContext.SSI_SOVRHD
+      );
+      return false;
+    }
+
+    return true;
   }
 }

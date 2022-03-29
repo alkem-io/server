@@ -402,6 +402,17 @@ ssi:
         postalCode: 'schema:postalCode'
         city: 'schema:addressLocality'
         country: 'schema:addressLocality'
+    the_hague_hoplr:
+      name: The Hague Hoplr Code [Sovrhd]
+      issuer: sovrhd
+      description: The holder's code to participate in Hoplr on behalf of The Hague (type 'HoplrCode')
+      schema: https://schema.org/EducationalOccupationalCredential
+      types:
+        - Credential
+        - hoplrCode
+      uniqueType: hoplrCode
+      context:
+        the_hague_hoplr: 'schema:description'
     proof_of_email_address:
       name: Email Address [Sovrhd]
       issuer: sovrhd
