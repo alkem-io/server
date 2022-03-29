@@ -22,6 +22,7 @@ import { WalletManagerCreateIdentityResponse } from './dto/wallet.manager.dto.cr
 import { WalletManagerVerifiedCredential } from './dto/wallet.manager.dto.verified.credential';
 import { WalletManagerGetAgentInfoResponse } from './dto/wallet.manager.dto.get.agent.info.response';
 import { WalletManagerRequestVcBegin } from './dto/wallet.manager.dto.request.vc.begin';
+import { WalletManagerRequestVcCompleteSovrhd } from './dto/wallet.manager.dto.request.vc.complete.sovrhd';
 
 @Injectable()
 export class WalletManagerAdapter {
@@ -124,14 +125,14 @@ export class WalletManagerAdapter {
     }
   }
 
-  async completeCredentialRequestInteraction(
+  async completeCredentialRequestInteractionJolocom(
     did: string,
     password: string,
     interactionId: string,
     token: string
   ): Promise<WalletManagerRequestVcCompleteResponse> {
     this.logger.verbose?.(
-      `[${WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION}] - Completing for interactionId: ${interactionId}`,
+      `[${WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_JOLOCOM}] - Completing for interactionId: ${interactionId}`,
       LogContext.SSI_WALLET_MANAGER
     );
     try {
@@ -142,20 +143,63 @@ export class WalletManagerAdapter {
         jwt: token,
       };
       const credentialStoreRequest = this.walletManagementClient.send(
-        { cmd: WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION },
+        {
+          cmd: WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_JOLOCOM,
+        },
         payload
       );
       const response: boolean = await firstValueFrom<boolean>(
         credentialStoreRequest
       );
       this.logger.verbose?.(
-        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION}] - completed with result: ${response}`,
+        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_JOLOCOM}] - completed with result: ${response}`,
         LogContext.SSI
       );
       return { result: response };
     } catch (err: any) {
       throw new SsiWalletManagerCommandFailed(
-        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION}]: Failed to request credential: ${err.message}`,
+        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_JOLOCOM}]: Failed to request credential: ${err.message}`,
+        LogContext.SSI_WALLET_MANAGER
+      );
+    }
+  }
+
+  async completeCredentialRequestInteractionSovrhd(
+    did: string,
+    password: string,
+    interactionId: string,
+    token: string,
+    credentialType: string
+  ): Promise<WalletManagerRequestVcCompleteResponse> {
+    this.logger.verbose?.(
+      `[${WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_SOVRHD}] - Completing for interactionId: ${interactionId}`,
+      LogContext.SSI_WALLET_MANAGER
+    );
+    try {
+      const payload: WalletManagerRequestVcCompleteSovrhd = {
+        issuerDID: did,
+        issuerPassword: password,
+        interactionId: interactionId,
+        jwt: token,
+        credentialType: credentialType,
+      };
+      const credentialStoreRequest = this.walletManagementClient.send(
+        {
+          cmd: WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_SOVRHD,
+        },
+        payload
+      );
+      const response: boolean = await firstValueFrom<boolean>(
+        credentialStoreRequest
+      );
+      this.logger.verbose?.(
+        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_SOVRHD}] - completed with result: ${response}`,
+        LogContext.SSI
+      );
+      return { result: response };
+    } catch (err: any) {
+      throw new SsiWalletManagerCommandFailed(
+        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_SOVRHD}]: Failed to request credential: ${err.message}`,
         LogContext.SSI_WALLET_MANAGER
       );
     }

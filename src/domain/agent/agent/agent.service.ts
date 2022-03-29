@@ -242,6 +242,8 @@ export class AgentService {
       verifiedCredential.type = vcWalletMgr.type;
       verifiedCredential.issued = vcWalletMgr.issued;
       verifiedCredential.issuer = vcWalletMgr.issuer;
+      verifiedCredential.expires = vcWalletMgr.issued; // todo
+      verifiedCredential.context = vcWalletMgr.context || '';
       verifiedCredential.claims =
         await this.verifiedCredentialService.getClaims(vcWalletMgr.claim);
       verifiedCredentials.push(verifiedCredential);
@@ -396,7 +398,7 @@ export class AgentService {
 
     this.walletManagerAdapter.logVerifiedCredentialInteraction(
       token,
-      WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION,
+      WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_JOLOCOM,
       'response'
     );
 
@@ -412,7 +414,7 @@ export class AgentService {
     this.validateTrustedIssuerOrFail(vcName, vcToBeStored);
 
     const agent = interactionInfo.agent;
-    await this.walletManagerAdapter.completeCredentialRequestInteraction(
+    await this.walletManagerAdapter.completeCredentialRequestInteractionJolocom(
       agent.did,
       agent.password,
       interactionInfo?.interactionId,
@@ -482,11 +484,12 @@ export class AgentService {
     this.logger.verbose?.(`Sovhrd credential: ${token}`, LogContext.SSI_SOVRHD);
 
     const agent = interactionInfo.agent;
-    await this.walletManagerAdapter.completeCredentialRequestInteraction(
+    await this.walletManagerAdapter.completeCredentialRequestInteractionSovrhd(
       agent.did,
       agent.password,
       interactionInfo?.interactionId,
-      token
+      token,
+      interactionInfo.credentialType
     );
 
     const eventID = `credentials-${Math.floor(Math.random() * 100)}`;
