@@ -267,6 +267,12 @@ export class OrganizationService {
       );
     }
 
+    if (organization.preferenceSet) {
+      await this.preferenceSetService.deletePreferenceSet(
+        organization.preferenceSet.id
+      );
+    }
+
     const result = await this.organizationRepository.remove(
       organization as Organization
     );
@@ -437,15 +443,15 @@ export class OrganizationService {
     return await this.organizationRepository.count();
   }
 
-  async getPreferenceSetOrFail(org: IOrganization): Promise<IPreferenceSet> {
-    const orgWithPreferences = await this.getOrganizationOrFail(org.id, {
+  async getPreferenceSetOrFail(orgId: string): Promise<IPreferenceSet> {
+    const orgWithPreferences = await this.getOrganizationOrFail(orgId, {
       relations: ['preferenceSet'],
     });
     const preferenceSet = orgWithPreferences.preferenceSet;
 
     if (!preferenceSet) {
       throw new EntityNotFoundException(
-        `Unable to find preferenceSet for organization with ID: ${org.nameID}`,
+        `Unable to find preferenceSet for organization with nameID: ${orgWithPreferences.nameID}`,
         LogContext.COMMUNITY
       );
     }

@@ -116,7 +116,7 @@ export class OrganizationResolverFields {
   @UseGuards(GraphqlGuard)
   async preferences(@Parent() org: Organization): Promise<IPreference[]> {
     const preferenceSet = await this.organizationService.getPreferenceSetOrFail(
-      org
+      org.id
     );
     return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
   }

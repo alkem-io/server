@@ -132,7 +132,7 @@ export class ChallengeResolverFields {
   @UseGuards(GraphqlGuard)
   async preferences(@Parent() challenge: Challenge): Promise<IPreference[]> {
     const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
-      challenge
+      challenge.id
     );
     return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
   }

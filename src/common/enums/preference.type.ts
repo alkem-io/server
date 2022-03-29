@@ -1,21 +1,21 @@
 import { registerEnumType } from '@nestjs/graphql';
 import { HubPreferenceType } from './hub.preference.type';
 import { UserPreferenceType } from './user.preference.type';
-import { ChallengePrefenceType } from '@common/enums/challenge.preference.type';
-import { OrganizationPrefenceType } from '@common/enums/organization.preference.type';
+import { ChallengePreferenceType } from '@common/enums/challenge.preference.type';
+import { OrganizationPreferenceType } from '@common/enums/organization.preference.type';
 
 export const PreferenceType = {
   ...UserPreferenceType,
   ...HubPreferenceType,
-  ...ChallengePrefenceType,
-  ...OrganizationPrefenceType,
+  ...ChallengePreferenceType,
+  ...OrganizationPreferenceType,
 };
 
 export type PreferenceType =
   | UserPreferenceType
   | HubPreferenceType
-  | ChallengePrefenceType
-  | OrganizationPrefenceType;
+  | ChallengePreferenceType
+  | OrganizationPreferenceType;
 
 registerEnumType(PreferenceType, {
   name: 'PreferenceType',

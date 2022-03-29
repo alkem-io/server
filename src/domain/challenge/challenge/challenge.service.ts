@@ -209,6 +209,12 @@ export class ChallengeService {
       await this.organizationService.save(challengeLead);
     }
 
+    if (challenge.preferenceSet) {
+      await this.preferenceSetService.deletePreferenceSet(
+        challenge.preferenceSet.id
+      );
+    }
+
     const baseChallenge = await this.getChallengeOrFail(challengeID, {
       relations: ['community', 'context', 'lifecycle', 'agent'],
     });
@@ -551,16 +557,16 @@ export class ChallengeService {
     return organizations;
   }
 
-  async getPreferenceSetOrFail(challenge: IChallenge): Promise<IPreferenceSet> {
+  async getPreferenceSetOrFail(challengeId: string): Promise<IPreferenceSet> {
     const challengeWithPreferences = await this.getChallengeOrFail(
-      challenge.id,
+      challengeId,
       { relations: ['preferenceSet'] }
     );
     const preferenceSet = challengeWithPreferences.preferenceSet;
 
     if (!preferenceSet) {
       throw new EntityNotFoundException(
-        `Unable to find preferenceSet for challenge with ID: ${challenge.nameID}`,
+        `Unable to find preferenceSet for challenge with nameID: ${challengeWithPreferences.nameID}`,
         LogContext.COMMUNITY
       );
     }
