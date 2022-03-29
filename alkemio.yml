@@ -387,10 +387,36 @@ ssi:
           identifier: blob:dock:5CgrXvgVaUAgzmqW2uUhuonewKmAY8VgVDfyQzziUV2ntGWz
 
   credentials:
+    the_hague_proof_of_postal_address:
+      name: The Hague Postal Address [Sovrhd]
+      issuer: sovrhd
+      description: The holder's dutch address (type 'dutchAdress') as issued by Gemeente Den Haag
+      schema: https://schema.org/EducationalOccupationalCredential
+      types:
+        - Credential
+        - dutchAddress
+      uniqueType: dutchAddress
+      context:
+        addressLine1: 'schema:streetAddress'
+        addressLine2: 'schema:streetAddress'
+        postalCode: 'schema:postalCode'
+        city: 'schema:addressLocality'
+        country: 'schema:addressLocality'
+    proof_of_email_address:
+      name: Email Address [Sovrhd]
+      issuer: sovrhd
+      description: The holder's email address (type 'EmailAdress') as issued by Sovrhd
+      schema: https://schema.org/EducationalOccupationalCredential
+      types:
+        - Credential
+        - EmailAddress
+      uniqueType: EmailAddress
+      context:
+        emailAddress: 'schema:emailAddress'
     proof_of_community_membership:
-      name: Alkemio Community Member
+      name: Alkemio Community Member [Test]
       issuer: jolocom
-      description: The holder is a member of an Alkemio hub, challenge or opportunity community
+      description: The holder is a member of an Alkemio hub, challenge or opportunity community. (Issued by Alkemio, so for testing purposes)
       schema: https://schema.org/EducationalOccupationalCredential
       types:
         - Credential
@@ -403,30 +429,4 @@ ssi:
         communityMember_displayName: 'schema:description'
       trusted_issuers:
         - jolocom
-    proof_of_alkemio_membership:
-      name: Alkemio User
-      description: The holder is a verified Alkemio user
-      issuer: jolocom
-      schema: https://schema.org/EducationalOccupationalCredential
-      types:
-        - Credential
-        - AlkemioMemberCredential
-      uniqueType: AlkemioMemberCredential
-      context:
-        alkemioUser_userID: 'schema:uuid'
-        alkemioUser_email: 'schema:email'
-    the_hague_proof_of_postal_address:
-      name: The Hague Postal Address
-      issuer: sovrhd
-      description: The holder's location is confirmed by the issuer
-      schema: https://schema.org/EducationalOccupationalCredential
-      types:
-        - Credential
-        - dutchAddress
-      uniqueType: dutchAddress
-      context:
-        addressLine1: 'schema:streetAddress'
-        addressLine2: 'schema:streetAddress'
-        postalCode: 'schema:postalCode'
-        city: 'schema:addressLocality'
-        country: 'schema:addressLocality'
+

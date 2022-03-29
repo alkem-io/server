@@ -1,6 +1,5 @@
 import { RestEndpoint } from '@common/enums/rest.endpoint';
 import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
-import { SsiSovrhdRegisterCallback } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback';
 import { AppService } from './app.service';
 
 @Controller('/rest')
@@ -30,12 +29,10 @@ export class AppController {
   @HttpCode(200)
   async [RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_SOVRHD](
     @Param('nonce') nonce: string,
-    @Body() payload: SsiSovrhdRegisterCallback
+    @Body() payload: any //SsiSovrhdRegisterCallback
   ) {
-    await this.appService.completeCredentialRequestInteractionSovrhd(
-      nonce,
-      payload
-    );
+    // try not awaiting...
+    this.appService.completeCredentialRequestInteractionSovrhd(nonce, payload);
   }
 
   @Post(`${RestEndpoint.COMPLETE_CREDENTIAL_OFFER_INTERACTION}/:nonce`)

@@ -37,7 +37,7 @@ import { AgentBeginVerifiedCredentialRequestOutput } from './dto/agent.dto.verif
 import { AgentBeginVerifiedCredentialOfferOutput } from './dto/agent.dto.verified.credential.offer.begin.output';
 import { VerifiedCredentialService } from '../verified-credential/verified.credential.service';
 import { IVerifiedCredential } from '../verified-credential/verified.credential.interface';
-import { AgentInteractionVerifiedCredentialRequest } from './dto/agent.dto.interaction.verified.credential.request';
+import { AgentInteractionVerifiedCredentialRequestJolocom } from './dto/agent.dto.interaction.verified.credential.request.jolocom';
 import { SsiIssuerType } from '@common/enums/ssi.issuer.type';
 import { SsiInteractionNotFound } from '@common/exceptions/ssi.interaction.not.found';
 import { AgentInteractionVerifiedCredentialOffer } from './dto/agent.dto.interaction.verified.credential.offer';
@@ -45,6 +45,7 @@ import { SsiSovrhdAdapter } from '@services/platform/ssi-sovrhd/ssi.sovrhd.adapt
 import { WalletManagerAdapter } from '@services/platform/wallet-manager-adapter/wallet.manager.adapter';
 import { VerifiedCredential } from '../verified-credential/dto/verified.credential.dto.result';
 import { SsiSovrhdRegisterCallback } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback';
+import { AgentInteractionVerifiedCredentialRequestSovrhd } from './dto/agent.dto.interaction.verified.credential.request.sovrhd';
 
 @Injectable()
 export class AgentService {
@@ -287,33 +288,45 @@ export class AgentService {
       qrCodeImg: '',
       jwt: '',
     };
-    const interactionInfo: AgentInteractionVerifiedCredentialRequest = {
-      nonce: nonce,
-      interactionId: agentWalletResponse.interactionId,
-      issuer: vcIssuerType,
-      agent: issuerAgent,
-      sovrhdSessionId: '',
-    };
 
     // Adapt behaviour based on IssuerType
+    const requestExpirationTtl =
+      agentWalletResponse.expiresOn - new Date().getTime();
     if (vcIssuerType === SsiIssuerType.SOVRHD) {
       const sovrhdRegisterResponse =
         await this.ssiSovrhdAdapter.establishSession(uniqueCallbackURL);
-      interactionInfo.sovrhdSessionId = sovrhdRegisterResponse.session;
+      const interactionInfo: AgentInteractionVerifiedCredentialRequestSovrhd = {
+        nonce: nonce,
+        interactionId: agentWalletResponse.interactionId,
+        agent: issuerAgent,
+        sovrhdSessionId: sovrhdRegisterResponse.session,
+        credentialType: requestedCredentialMetadata.uniqueType,
+      };
+      this.cacheManager.set<AgentInteractionVerifiedCredentialRequestSovrhd>(
+        nonce,
+        interactionInfo,
+        {
+          ttl: requestExpirationTtl,
+        }
+      );
       clientResponse.qrCodeImg = sovrhdRegisterResponse.qr;
     } else if (vcIssuerType === SsiIssuerType.JOLOCOM) {
       clientResponse.jwt = agentWalletResponse.jwt;
+      const interactionInfo: AgentInteractionVerifiedCredentialRequestJolocom =
+        {
+          nonce: nonce,
+          interactionId: agentWalletResponse.interactionId,
+          agent: issuerAgent,
+        };
+      this.cacheManager.set<AgentInteractionVerifiedCredentialRequestJolocom>(
+        nonce,
+        interactionInfo,
+        {
+          ttl: requestExpirationTtl,
+        }
+      );
     }
 
-    const requestExpirationTtl =
-      agentWalletResponse.expiresOn - new Date().getTime();
-    this.cacheManager.set<AgentInteractionVerifiedCredentialRequest>(
-      nonce,
-      interactionInfo,
-      {
-        ttl: requestExpirationTtl,
-      }
-    );
     this.walletManagerAdapter.logVerifiedCredentialInteraction(
       agentWalletResponse.jwt,
       WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION,
@@ -323,11 +336,11 @@ export class AgentService {
     return clientResponse;
   }
 
-  private async getRequestInteractionInfoFromCache(
+  private async getRequestInteractionJolocomInfoFromCache(
     nonce: string
-  ): Promise<AgentInteractionVerifiedCredentialRequest> {
+  ): Promise<AgentInteractionVerifiedCredentialRequestJolocom> {
     const interactionInfo =
-      await this.cacheManager.get<AgentInteractionVerifiedCredentialRequest>(
+      await this.cacheManager.get<AgentInteractionVerifiedCredentialRequestJolocom>(
         nonce
       );
     if (!interactionInfo) {
@@ -342,7 +355,32 @@ export class AgentService {
     }
 
     this.logger.verbose?.(
-      `InteractionId with agent: ${interactionInfo} - ${agent.did} received`,
+      `Interaction with agent ${agent.did} retrieved`,
+      LogContext.SSI
+    );
+    return interactionInfo;
+  }
+
+  private async getRequestInteractionSovrhdInfoFromCache(
+    nonce: string
+  ): Promise<AgentInteractionVerifiedCredentialRequestSovrhd> {
+    const interactionInfo =
+      await this.cacheManager.get<AgentInteractionVerifiedCredentialRequestSovrhd>(
+        nonce
+      );
+    if (!interactionInfo) {
+      throw new SsiInteractionNotFound(
+        `Unable to find interaction for nonce: ${nonce}`,
+        LogContext.SSI
+      );
+    }
+    const agent = interactionInfo.agent;
+    if (!agent) {
+      throw new Error('An agent could not be found for the interactionId');
+    }
+
+    this.logger.verbose?.(
+      `InteractionId with agent ${agent.did} retrieved`,
       LogContext.SSI
     );
     return interactionInfo;
@@ -352,9 +390,8 @@ export class AgentService {
     nonce: string,
     token: string
   ): Promise<void> {
-    const interactionInfo = await this.getRequestInteractionInfoFromCache(
-      nonce
-    );
+    const interactionInfo =
+      await this.getRequestInteractionJolocomInfoFromCache(nonce);
 
     this.walletManagerAdapter.logVerifiedCredentialInteraction(
       token,
@@ -397,16 +434,14 @@ export class AgentService {
     nonce: string,
     data: SsiSovrhdRegisterCallback
   ): Promise<void> {
-    const interactionInfo = await this.getRequestInteractionInfoFromCache(
+    const interactionInfo = await this.getRequestInteractionSovrhdInfoFromCache(
       nonce
     );
-    // Retrieve the credential to store
-    const credentialName = 'dutchAddress';
     const requestCredentialsResponse =
       await this.ssiSovrhdAdapter.requestCredentials(
         data.session,
         data.id,
-        credentialName
+        interactionInfo.credentialType
       );
     if (requestCredentialsResponse.result === 'ok') {
       // request has been made, await now the second call back
