@@ -4,8 +4,12 @@ import { ConfigurationTypes, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
 import { AgentInfo } from './agent-info';
-import { NotSupportedException } from '@common/exceptions';
+import {
+  AuthenticationException,
+  NotSupportedException,
+} from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { VerifiableIdentityAddress } from '@ory/kratos-client/api';
 @Injectable()
 export class AuthenticationService {
   constructor(
@@ -32,6 +36,17 @@ export class AuthenticationService {
     agentInfo.email = oryTraits.email;
     agentInfo.firstName = oryTraits.name.first;
     agentInfo.lastName = oryTraits.name.last;
+
+    /**
+     * This check isn't needed if the Kratos is configured
+     * to block logins from users without a verified email.
+     */
+    const hasVerifiedEmail = oryTraits.verifiable_addresses?.some(
+      (address: VerifiableIdentityAddress) => address.verified
+    );
+    if (!hasVerifiedEmail) {
+      throw new AuthenticationException('No verified email present');
+    }
 
     const userExists = await this.userService.isRegisteredUser(agentInfo.email);
     if (!userExists) {
