@@ -5,5 +5,4 @@ export enum WalletManagerCommand {
   GET_IDENTITY_INFO = 'getIdentityInfo',
   BEGIN_CREDENTIAL_REQUEST_INTERACTION = 'beginCredentialRequestInteraction',
   BEGIN_CREDENTIAL_OFFER_INTERACTION = 'beginCredentialOfferInteraction',
-  ISSUE_VERIFIED_CREDENTIAL = 'issueVerifiedCredential',
 }
