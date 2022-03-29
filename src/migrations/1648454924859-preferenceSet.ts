@@ -83,7 +83,9 @@ export class preferenceSet1648454924859 implements MigrationInterface {
         `INSERT INTO preference_set VALUES ('${prefSetId}', NOW(), NOW(), 1, '${authID}')`
       );
       // set preferenceSetId on user
-      await queryRunner.query(`UPDATE user SET preferenceSetId='${prefSetId}'`);
+      await queryRunner.query(
+        `UPDATE user SET preferenceSetId='${prefSetId} WHERE id='${user.id}'`
+      );
       // Find all preferences that pointed to this user
       // Update all preferences for the user above updated to point to the newly created preference set
       await queryRunner.query(
