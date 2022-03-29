@@ -385,6 +385,8 @@ ssi:
           identifier: blob:dock:5EoxGBnZ7JVg9kHonEYtz6tfHV5FufL86VEsZ34Ae8ge478n
         - name: hoplrCode
           identifier: blob:dock:5CgrXvgVaUAgzmqW2uUhuonewKmAY8VgVDfyQzziUV2ntGWz
+        - name: TheHagueAddress
+          identifier: blob:dock:5D2nkGSBs56D2ndc2LCMYysTGk61Mb7VLPNMGhF8GsECU2SQ
 
   credentials:
     the_hague_proof_of_postal_address:
@@ -394,8 +396,8 @@ ssi:
       schema: https://schema.org/EducationalOccupationalCredential
       types:
         - Credential
-        - dutchAddress
-      uniqueType: dutchAddress
+        - TheHagueAddress
+      uniqueType: TheHagueAddress
       context:
         addressLine1: 'schema:streetAddress'
         addressLine2: 'schema:streetAddress'
