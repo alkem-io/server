@@ -19,8 +19,8 @@ import { IPreference } from './preference.interface';
 import { getDefaultPreferenceValue, validateValue } from './utils';
 import { CreatePreferenceDefinitionInput } from './dto/preference-definition.dto.create';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { CreatePreferenceInput } from './dto/preference.dto.create';
 import { HubPreferenceType } from '@common/enums/hub.preference.type';
+import { PreferenceType } from '@common/enums/preference.type';
 
 @Injectable()
 export class PreferenceService {
@@ -34,9 +34,17 @@ export class PreferenceService {
   ) {}
 
   async createPreference(
-    preferenceData: CreatePreferenceInput
+    definition: IPreferenceDefinition,
+    defaults: Map<PreferenceType, string>
   ): Promise<IPreference> {
-    const preference: IPreference = Preference.create(preferenceData);
+    const preference: IPreference = new Preference();
+    preference.preferenceDefinition = definition;
+    const defaultValue = defaults.get(definition.type);
+    if (defaultValue) {
+      preference.value = defaultValue;
+    } else {
+      preference.value = this.getDefaultPreferenceValue(definition.valueType);
+    }
     preference.authorization = new AuthorizationPolicy();
     return await this.preferenceRepository.save(preference);
   }
@@ -78,7 +86,7 @@ export class PreferenceService {
     return reference;
   }
 
-  async removeUserPreference(preference: IPreference): Promise<IPreference> {
+  async removePreference(preference: IPreference): Promise<IPreference> {
     return await this.preferenceRepository.remove(preference as Preference);
   }
 

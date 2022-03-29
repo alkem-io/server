@@ -18,8 +18,10 @@ import { Hub } from './hub.entity';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { HubPreferenceType } from '@common/enums/hub.preference.type';
 import { IOrganization } from '@domain/community';
-import { IPreference } from '@domain/common/preference/preference.interface';
 import { AuthorizationPolicyRuleVerifiedCredentialClaim } from '@core/authorization/authorization.policy.rule.verified.credential.claim';
+import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
+import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
+import { IPreferenceSet } from '@domain/common/preference-set';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -27,13 +29,15 @@ export class HubAuthorizationService {
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
+    private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
+    private preferenceSetService: PreferenceSetService,
     private hubService: HubService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>
   ) {}
 
   async applyAuthorizationPolicy(hub: IHub): Promise<IHub> {
-    const preferences = await this.hubService.getPreferences(hub.id);
+    const preferenceSet = await this.hubService.getPreferenceSetOrFail(hub);
 
     // Ensure always applying from a clean state
     hub.authorization = await this.authorizationPolicyService.reset(
@@ -49,10 +53,11 @@ export class HubAuthorizationService {
     );
     hub.authorization = this.appendVerifiedCredentialRules(hub.authorization);
 
-    hub.authorization.anonymousReadAccess = this.hubService.getPreferenceValue(
-      preferences,
-      HubPreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
-    );
+    hub.authorization.anonymousReadAccess =
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
+        HubPreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
+      );
 
     hub = await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
       hub,
@@ -64,7 +69,7 @@ export class HubAuthorizationService {
     hub.community.authorization =
       await this.extendMembershipAuthorizationPolicy(
         hub.community.authorization,
-        preferences,
+        preferenceSet,
         hostOrg
       );
 
@@ -90,14 +95,11 @@ export class HubAuthorizationService {
         );
     }
 
-    for (const preference of preferences) {
-      preference.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          preference.authorization,
-          hub.authorization
-        );
-    }
-    hub.preferences = preferences;
+    hub.preferenceSet =
+      await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
+        preferenceSet,
+        hub.authorization
+      );
 
     return await this.hubRepository.save(hub);
   }
@@ -151,7 +153,7 @@ export class HubAuthorizationService {
 
   private extendMembershipAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    preferences: IPreference[],
+    preferenceSet: IPreferenceSet,
     hostOrg?: IOrganization
   ): IAuthorizationPolicy {
     if (!authorization)
@@ -163,10 +165,11 @@ export class HubAuthorizationService {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
     // Any registered user can apply
-    const allowAnyRegisteredUserToApply = this.hubService.getPreferenceValue(
-      preferences,
-      HubPreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE
-    );
+    const allowAnyRegisteredUserToApply =
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
+        HubPreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE
+      );
     if (allowAnyRegisteredUserToApply) {
       const anyUserCanApply = new AuthorizationPolicyRuleCredential(
         [AuthorizationPrivilege.COMMUNITY_APPLY],
@@ -177,10 +180,11 @@ export class HubAuthorizationService {
     }
 
     // Any registered user can join
-    const allowAnyRegisteredUserToJoin = this.hubService.getPreferenceValue(
-      preferences,
-      HubPreferenceType.MEMBERSHIP_JOIN_HUB_FROM_ANYONE
-    );
+    const allowAnyRegisteredUserToJoin =
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
+        HubPreferenceType.MEMBERSHIP_JOIN_HUB_FROM_ANYONE
+      );
     if (allowAnyRegisteredUserToJoin) {
       const anyUserCanJoin = new AuthorizationPolicyRuleCredential(
         [AuthorizationPrivilege.COMMUNITY_JOIN],
@@ -192,8 +196,8 @@ export class HubAuthorizationService {
 
     // Host Org members to join
     const allowHostOrganizationMemberToJoin =
-      this.hubService.getPreferenceValue(
-        preferences,
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
         HubPreferenceType.MEMBERSHIP_JOIN_HUB_FROM_HOST_ORGANIZATION_MEMBERS
       );
     if (allowHostOrganizationMemberToJoin) {
