@@ -429,4 +429,17 @@ ssi:
         communityMember_displayName: 'schema:description'
       trusted_issuers:
         - jolocom
+    proof_of_alkemio_membership:
+      name: Alkemio User
+      description: The holder is a verified Alkemio user
+      issuer: jolocom
+      schema: https://schema.org/EducationalOccupationalCredential
+      types:
+        - Credential
+        - AlkemioMemberCredential
+      uniqueType: AlkemioMemberCredential
+      context:
+        alkemioUser_userID: 'schema:uuid'
+        alkemioUser_email: 'schema:email'
+
 
