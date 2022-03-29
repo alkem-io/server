@@ -55,7 +55,9 @@ export class preferenceSet1648454924859 implements MigrationInterface {
         `INSERT INTO preference_set VALUES ('${prefSetId}', NOW(), NOW(), 1, '${authID}')`
       );
       // set preferenceSetId on Hub
-      await queryRunner.query(`UPDATE hub SET preferenceSetId='${prefSetId}'`);
+      await queryRunner.query(
+        `UPDATE hub SET preferenceSetId='${prefSetId}' WHERE id='${hub.id}'`
+      );
       // Find all preferences that pointed to this hub
       // Update all preferences for the Hub above updated to point to the newly created preference set
       await queryRunner.query(
