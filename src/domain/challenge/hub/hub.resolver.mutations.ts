@@ -25,6 +25,7 @@ import { PreferenceService } from '@domain/common/preference/preference.service'
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { UpdateHubPreferenceInput } from './dto/hub.dto.update.preference';
+import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 @Resolver()
 export class HubResolverMutations {
   constructor(
@@ -33,7 +34,8 @@ export class HubResolverMutations {
     private hubService: HubService,
     private hubAuthorizationService: HubAuthorizationService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
-    private preferenceService: PreferenceService
+    private preferenceService: PreferenceService,
+    private preferenceSetService: PreferenceSetService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -90,8 +92,10 @@ export class HubResolverMutations {
     @Args('preferenceData') preferenceData: UpdateHubPreferenceInput
   ) {
     const hub = await this.hubService.getHubOrFail(preferenceData.hubID);
-    const preference = await this.hubService.getPreferenceOrFail(
-      hub,
+    const preferenceSet = await this.hubService.getPreferenceSetOrFail(hub);
+
+    const preference = await this.preferenceSetService.getPreferenceOrFail(
+      preferenceSet,
       preferenceData.type
     );
     this.preferenceService.validatePreferenceTypeOrFail(
