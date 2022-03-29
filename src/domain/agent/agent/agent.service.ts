@@ -10,7 +10,7 @@ import {
 } from '@common/exceptions';
 import { SsiException } from '@common/exceptions/ssi.exception';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { ProfileCredentialVerified } from '@domain/common/agent/agent.dto.profile.credential.verified';
+import { ProfileCredentialVerified } from '@domain/agent/agent/dto/agent.dto.profile.credential.verified';
 import { Agent, CreateAgentInput, IAgent } from '@domain/agent/agent';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -44,8 +44,9 @@ import { AgentInteractionVerifiedCredentialOffer } from './dto/agent.dto.interac
 import { SsiSovrhdAdapter } from '@services/platform/ssi-sovrhd/ssi.sovrhd.adapter';
 import { WalletManagerAdapter } from '@services/platform/wallet-manager-adapter/wallet.manager.adapter';
 import { VerifiedCredential } from '../verified-credential/dto/verified.credential.dto.result';
-import { SsiSovrhdRegisterCallback } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback';
+import { SsiSovrhdRegisterCallbackSession } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.session';
 import { AgentInteractionVerifiedCredentialRequestSovrhd } from './dto/agent.dto.interaction.verified.credential.request.sovrhd';
+import { SsiSovrhdRegisterCallbackCredential } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.credential';
 
 @Injectable()
 export class AgentService {
@@ -422,9 +423,10 @@ export class AgentService {
     const payload: ProfileCredentialVerified = {
       eventID,
       vc: 'something something vc',
+      userID: '',
     };
 
-    this.subscriptionVerifiedCredentials.publish(
+    await this.subscriptionVerifiedCredentials.publish(
       SubscriptionType.PROFILE_VERIFIED_CREDENTIAL,
       payload
     );
@@ -432,11 +434,33 @@ export class AgentService {
 
   async completeCredentialRequestInteractionSovrhd(
     nonce: string,
-    data: SsiSovrhdRegisterCallback
+    data: any
   ): Promise<void> {
     const interactionInfo = await this.getRequestInteractionSovrhdInfoFromCache(
       nonce
     );
+
+    this.logger.verbose?.(
+      `sovhrd callback data: ${JSON.stringify(data)}`,
+      LogContext.SSI_SOVRHD
+    );
+    if (data.id) {
+      // assume the callback to establish the session
+      await this.callbackCredentialRequestSovrhdSession(data, interactionInfo);
+      return;
+    } else {
+      await this.callbackCredentialRequestSovrhdCredential(
+        data,
+        interactionInfo
+      );
+      return;
+    }
+  }
+
+  async callbackCredentialRequestSovrhdSession(
+    data: SsiSovrhdRegisterCallbackSession,
+    interactionInfo: AgentInteractionVerifiedCredentialRequestSovrhd
+  ): Promise<void> {
     const requestCredentialsResponse =
       await this.ssiSovrhdAdapter.requestCredentials(
         data.session,
@@ -447,7 +471,15 @@ export class AgentService {
       // request has been made, await now the second call back
       return;
     }
-    const token = requestCredentialsResponse.result;
+  }
+
+  async callbackCredentialRequestSovrhdCredential(
+    data: SsiSovrhdRegisterCallbackCredential,
+    interactionInfo: AgentInteractionVerifiedCredentialRequestSovrhd
+  ): Promise<void> {
+    const token = JSON.stringify(data.content);
+
+    this.logger.verbose?.(`Sovhrd credential: ${token}`, LogContext.SSI_SOVRHD);
 
     const agent = interactionInfo.agent;
     await this.walletManagerAdapter.completeCredentialRequestInteraction(
@@ -461,9 +493,10 @@ export class AgentService {
     const payload: ProfileCredentialVerified = {
       eventID,
       vc: 'something something vc',
+      userID: '',
     };
 
-    this.subscriptionVerifiedCredentials.publish(
+    await this.subscriptionVerifiedCredentials.publish(
       SubscriptionType.PROFILE_VERIFIED_CREDENTIAL,
       payload
     );

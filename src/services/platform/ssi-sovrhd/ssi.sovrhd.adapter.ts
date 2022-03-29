@@ -70,14 +70,28 @@ export class SsiSovrhdAdapter {
       `Registering session to: ${registerURL}`,
       LogContext.SSI_SOVRHD
     );
-    const sessionInitiationOptions: SsiSovrhdRegister = {
+    const sessionInitiationPayload: SsiSovrhdRegister = {
       webhook: callbackURL,
     };
 
+    this.logger.verbose?.(
+      `Submitting establish session request: ${JSON.stringify(
+        sessionInitiationPayload
+      )}`,
+      LogContext.SSI_SOVRHD
+    );
+
     const sovrhdResponseData = await lastValueFrom<SsiSovrhdRegisterResponse>(
       this.httpService
-        .post(registerURL, sessionInitiationOptions, this.axiosOptions)
+        .post(registerURL, sessionInitiationPayload, this.axiosOptions)
         .pipe(map(resp => resp.data))
+    );
+
+    this.logger.verbose?.(
+      `response establish session request: ${JSON.stringify(
+        sovrhdResponseData
+      )}`,
+      LogContext.SSI_SOVRHD
     );
     if (!sovrhdResponseData.session) {
       throw new SsiSovrhdApiException(
@@ -112,7 +126,7 @@ export class SsiSovrhdAdapter {
       session: sessionId,
       data: {
         did: did,
-        credentialSchema: [credentialTypeIdentifier],
+        credentialSchema: JSON.stringify([credentialTypeIdentifier]),
         type: 'request',
       },
     };

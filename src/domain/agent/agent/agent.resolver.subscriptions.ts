@@ -8,7 +8,7 @@ import {
 } from '@src/common';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { AgentInfo, GraphqlGuard } from '@src/core';
-import { ProfileCredentialVerified } from '@domain/common/agent/agent.dto.profile.credential.verified';
+import { ProfileCredentialVerified } from '@domain/agent/agent/dto/agent.dto.profile.credential.verified';
 import { SubscriptionType } from '@common/enums/subscription.type';
 
 @Resolver()
@@ -25,13 +25,18 @@ export class AgentResolverSubscriptions {
     description: 'Received on verified credentials change',
     async resolve(
       this: AgentResolverSubscriptions,
-      value: ProfileCredentialVerified
+      payload: ProfileCredentialVerified,
+      _: any,
+      context: any
     ): Promise<ProfileCredentialVerified> {
+      const agentInfo = context.req?.user;
+      const logMsgPrefix = `[User (${agentInfo.email}) VC added] - `;
       this.logger.verbose?.(
-        `[ProfileCredentialVerified Resolve] sending out event for Profile: ${value.vc} `,
+        `${logMsgPrefix} Sending out event: ${payload.vc} `,
         LogContext.SUBSCRIPTIONS
       );
-      return value;
+
+      return payload;
     },
     async filter(
       this: AgentResolverSubscriptions,
@@ -39,7 +44,14 @@ export class AgentResolverSubscriptions {
       variables: any,
       context: any
     ): Promise<boolean> {
-      return true;
+      const agentInfo: AgentInfo = context.req?.user;
+      const isMatch = payload.userID === agentInfo.userID;
+
+      this.logger.verbose?.(
+        `[User (${agentInfo.email}) VC Added] - Filtering event id '${payload.eventID}' - match? ${isMatch}`,
+        LogContext.SUBSCRIPTIONS
+      );
+      return isMatch;
     },
   })
   async profileVerifiedCredential(@CurrentUser() agentInfo: AgentInfo) {

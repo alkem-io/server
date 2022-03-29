@@ -29,7 +29,7 @@ export class AppController {
   @HttpCode(200)
   async [RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_SOVRHD](
     @Param('nonce') nonce: string,
-    @Body() payload: any //SsiSovrhdRegisterCallback
+    @Body() payload: any
   ) {
     // try not awaiting...
     this.appService.completeCredentialRequestInteractionSovrhd(nonce, payload);
