@@ -12,6 +12,7 @@ import { OrganizationService } from './organization.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { OrganizationVerificationAuthorizationService } from '../organization-verification/organization.verification.service.authorization';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 
 @Injectable()
 export class OrganizationAuthorizationService {
@@ -22,6 +23,7 @@ export class OrganizationAuthorizationService {
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private organizationVerificationAuthorizationService: OrganizationVerificationAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
+    private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>
   ) {}
@@ -76,6 +78,18 @@ export class OrganizationAuthorizationService {
         organization.verification,
         organization.id
       );
+
+    const preferenceSet = await this.organizationService.getPreferenceSetOrFail(
+      organization.id
+    );
+
+    if (preferenceSet) {
+      organization.preferenceSet =
+        await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
+          preferenceSet,
+          organization.authorization
+        );
+    }
 
     return await this.organizationRepository.save(organization);
   }

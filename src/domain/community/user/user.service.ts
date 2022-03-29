@@ -295,7 +295,7 @@ export class UserService {
 
     if (!user.preferenceSet) {
       throw new EntityNotInitializedException(
-        `User preferences not initialized: ${userID}`,
+        `User preferences not initialized or not found for user with nameID: ${user.nameID}`,
         LogContext.COMMUNITY
       );
     }

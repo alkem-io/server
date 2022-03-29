@@ -13,10 +13,15 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IAgent } from '@domain/agent/agent';
 import { IOrganization } from '@domain/community/organization/organization.interface';
+import { IPreference } from '@domain/common/preference';
+import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
-  constructor(private challengeService: ChallengeService) {}
+  constructor(
+    private challengeService: ChallengeService,
+    private preferenceSetService: PreferenceSetService
+  ) {}
 
   @ResolveField('community', () => ICommunity, {
     nullable: true,
@@ -117,5 +122,18 @@ export class ChallengeResolverFields {
   @Profiling.api
   async leadOrganizations(@Parent() challenge: Challenge) {
     return await this.challengeService.getLeadOrganizations(challenge.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('preferences', () => [IPreference], {
+    nullable: false,
+    description: 'The preferences for this Challenge',
+  })
+  @UseGuards(GraphqlGuard)
+  async preferences(@Parent() challenge: Challenge): Promise<IPreference[]> {
+    const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
+      challenge.id
+    );
+    return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
   }
 }

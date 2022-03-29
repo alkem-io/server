@@ -11,13 +11,13 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
 import { ChallengeService } from './challenge.service';
-
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { BaseChallengeService } from '../base-challenge/base.challenge.service';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { ICredential } from '@domain/agent/credential/credential.interface';
+import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -27,6 +27,7 @@ export class ChallengeAuthorizationService {
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private challengeService: ChallengeService,
     private opportunityAuthorizationService: OpportunityAuthorizationService,
+    private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
   ) {}
@@ -93,6 +94,17 @@ export class ChallengeAuthorizationService {
         await this.baseChallengeService.setMembershipCredential(
           challenge,
           AuthorizationCredential.CHALLENGE_MEMBER
+        );
+    }
+
+    const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
+      challenge.id
+    );
+    if (preferenceSet) {
+      challenge.preferenceSet =
+        await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
+          preferenceSet,
+          challenge.authorization
         );
     }
 

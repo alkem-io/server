@@ -6,6 +6,7 @@ import { IGroupable } from '@domain/common/interfaces/groupable.interface';
 import { INameable } from '@domain/common/entity/nameable-entity';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
+import { IPreferenceSet } from '@domain/common/preference-set';
 
 @ObjectType('Organization', {
   implements: () => [IGroupable, ISearchable],
@@ -41,4 +42,6 @@ export abstract class IOrganization extends INameable {
 
   @Field(() => IOrganizationVerification, { nullable: false })
   verification?: IOrganizationVerification;
+
+  preferenceSet?: IPreferenceSet;
 }

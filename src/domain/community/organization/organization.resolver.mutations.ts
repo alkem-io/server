@@ -24,6 +24,10 @@ import { AssignOrganizationAdminInput } from './dto/organization.dto.assign.admi
 import { AssignOrganizationOwnerInput } from './dto/organization.dto.assign.owner';
 import { RemoveOrganizationOwnerInput } from './dto/organization.dto.remove.owner';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IPreference, PreferenceService } from '@domain/common/preference';
+import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
+import { UpdateOrganizationPreferenceInput } from '@domain/community/organization/dto/organization.dto.update.preference';
+import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverMutations {
@@ -32,7 +36,9 @@ export class OrganizationResolverMutations {
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private organizationService: OrganizationService,
-    private authorizationService: AuthorizationService
+    private authorizationService: AuthorizationService,
+    private preferenceService: PreferenceService,
+    private preferenceSetService: PreferenceSetService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -290,5 +296,47 @@ export class OrganizationResolverMutations {
     return await this.organizationService.removeOrganizationOwner(
       membershipData
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IPreference, {
+    description: 'Updates one of the Preferences on an Organization',
+  })
+  @Profiling.api
+  async updatePreferenceOnOrganization(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('preferenceData') preferenceData: UpdateOrganizationPreferenceInput
+  ) {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      preferenceData.organizationID
+    );
+    const preferenceSet = await this.organizationService.getPreferenceSetOrFail(
+      organization.id
+    );
+
+    const preference = await this.preferenceSetService.getPreferenceOrFail(
+      preferenceSet,
+      preferenceData.type
+    );
+    this.preferenceService.validatePreferenceTypeOrFail(
+      preference,
+      PreferenceDefinitionSet.ORGANIZATION
+    );
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      preference.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `organization preference update: ${preference.id}`
+    );
+    const preferenceUpdated = await this.preferenceService.updatePreference(
+      preference,
+      preferenceData.value
+    );
+    // As the preferences may update the authorization, the authorization policy will need to be reset
+    await this.organizationAuthorizationService.applyAuthorizationPolicy(
+      organization
+    );
+    return preferenceUpdated;
   }
 }

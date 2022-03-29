@@ -37,7 +37,7 @@ export class HubAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(hub: IHub): Promise<IHub> {
-    const preferenceSet = await this.hubService.getPreferenceSetOrFail(hub);
+    const preferenceSet = await this.hubService.getPreferenceSetOrFail(hub.id);
 
     // Ensure always applying from a clean state
     hub.authorization = await this.authorizationPolicyService.reset(

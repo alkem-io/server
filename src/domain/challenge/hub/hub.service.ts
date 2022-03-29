@@ -315,15 +315,15 @@ export class HubService {
     return hub;
   }
 
-  async getPreferenceSetOrFail(hub: IHub): Promise<IPreferenceSet> {
-    const hubWithPreferences = await this.getHubOrFail(hub.id, {
+  async getPreferenceSetOrFail(hubId: string): Promise<IPreferenceSet> {
+    const hubWithPreferences = await this.getHubOrFail(hubId, {
       relations: ['preferenceSet'],
     });
     const preferenceSet = hubWithPreferences.preferenceSet;
 
     if (!preferenceSet) {
       throw new EntityNotFoundException(
-        `Unable to find preferenceSet for hub with ID: ${hub.nameID}`,
+        `Unable to find preferenceSet for hub with nameID: ${hubWithPreferences.nameID}`,
         LogContext.COMMUNITY
       );
     }
@@ -665,7 +665,7 @@ export class HubService {
   }
 
   async getPreferences(hub: IHub): Promise<IPreference[]> {
-    const preferenceSet = await this.getPreferenceSetOrFail(hub);
+    const preferenceSet = await this.getPreferenceSetOrFail(hub.id);
 
     const preferences = preferenceSet.preferences;
 
