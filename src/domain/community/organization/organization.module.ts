@@ -15,6 +15,8 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { OrganizationVerificationModule } from '../organization-verification/organization.verification.module';
+import { PreferenceModule } from '@domain/common/preference';
+import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { OrganizationVerificationModule } from '../organization-verification/org
     TagsetModule,
     NamingModule,
     ProfileModule,
+    PreferenceModule,
+    PreferenceSetModule,
     TypeOrmModule.forFeature([Organization]),
   ],
   providers: [

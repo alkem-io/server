@@ -101,7 +101,7 @@ export class PreferenceSetService {
 
     if (!preference) {
       throw new EntityNotFoundException(
-        `Unable to find preference of type ${type} for preferneceSet with ID: ${preferenceSet.id}`,
+        `Unable to find preference of type ${type} for preferenceSet with ID: ${preferenceSet.id}`,
         LogContext.COMMUNITY
       );
     }

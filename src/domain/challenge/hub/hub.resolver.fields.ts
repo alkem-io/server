@@ -84,7 +84,7 @@ export class HubResolverFields {
   })
   @UseGuards(GraphqlGuard)
   async preferences(@Parent() hub: Hub): Promise<IPreference[]> {
-    const preferenceSet = await this.hubService.getPreferenceSetOrFail(hub);
+    const preferenceSet = await this.hubService.getPreferenceSetOrFail(hub.id);
     return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
   }
 

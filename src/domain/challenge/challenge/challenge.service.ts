@@ -24,13 +24,12 @@ import {
   ChallengeLifecycleTemplate,
   LogContext,
 } from '@common/enums';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LoggerService } from '@nestjs/common';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
 import { challengeLifecycleConfigDefault } from './challenge.lifecycle.config.default';
@@ -52,6 +51,10 @@ import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ICredential } from '@domain/agent/credential/credential.interface';
+import { IPreferenceSet } from '@domain/common/preference-set';
+import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
+import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
+import { PreferenceType } from '@common/enums/preference.type';
 
 @Injectable()
 export class ChallengeService {
@@ -64,6 +67,7 @@ export class ChallengeService {
     private lifecycleService: LifecycleService,
     private organizationService: OrganizationService,
     private userService: UserService,
+    private preferenceSetService: PreferenceSetService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -92,6 +96,12 @@ export class ChallengeService {
     if (challenge.community) {
       challenge.community.parentID = challenge.id;
     }
+
+    challenge.preferenceSet =
+      await this.preferenceSetService.createPreferenceSet(
+        PreferenceDefinitionSet.CHALLENGE,
+        this.createPreferenceDefaults()
+      );
 
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = challengeLifecycleConfigDefault;
@@ -197,6 +207,12 @@ export class ChallengeService {
         resourceID: challengeID,
       });
       await this.organizationService.save(challengeLead);
+    }
+
+    if (challenge.preferenceSet) {
+      await this.preferenceSetService.deletePreferenceSet(
+        challenge.preferenceSet.id
+      );
     }
 
     const baseChallenge = await this.getChallengeOrFail(challengeID, {
@@ -541,6 +557,23 @@ export class ChallengeService {
     return organizations;
   }
 
+  async getPreferenceSetOrFail(challengeId: string): Promise<IPreferenceSet> {
+    const challengeWithPreferences = await this.getChallengeOrFail(
+      challengeId,
+      { relations: ['preferenceSet'] }
+    );
+    const preferenceSet = challengeWithPreferences.preferenceSet;
+
+    if (!preferenceSet) {
+      throw new EntityNotFoundException(
+        `Unable to find preferenceSet for challenge with nameID: ${challengeWithPreferences.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return preferenceSet;
+  }
+
   async assignChallengeLead(
     assignData: AssignChallengeLeadInput
   ): Promise<IChallenge> {
@@ -649,5 +682,23 @@ export class ChallengeService {
     });
 
     return await this.userService.getUserWithAgent(removeData.userID);
+  }
+
+  createPreferenceDefaults(): Map<PreferenceType, string> {
+    const defaults: Map<PreferenceType, string> = new Map();
+    defaults.set(
+      PreferenceType.MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS,
+      'false'
+    );
+    defaults.set(
+      PreferenceType.MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS,
+      'true'
+    );
+    defaults.set(
+      PreferenceType.MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT,
+      'false'
+    );
+
+    return defaults;
   }
 }
