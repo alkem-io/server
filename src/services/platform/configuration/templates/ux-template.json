@@ -161,14 +161,24 @@
           "name": "default",
           "questions": [
             {
-              "question": "Feedback question 1",
+              "question": "Vision: How does the end destination of this Challenge resonate?",
               "required": true,
               "sortOrder": 1
             },
             {
-              "question": "Feedback question 2",
-              "required": false,
+              "question": "Background: Any additional context needed to describe the current situation?",
+              "required": true,
               "sortOrder": 2
+            },
+            {
+              "question": "Impact: Any other change that you see??",
+              "required": true,
+              "sortOrder": 3
+            },
+            {
+              "question": "Who: Is the right set of stakeholders identified?",
+              "required": false,
+              "sortOrder": 4
             }
           ]
         }

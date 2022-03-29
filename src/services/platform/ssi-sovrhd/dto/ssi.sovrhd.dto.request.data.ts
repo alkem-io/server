@@ -1,5 +1,5 @@
 export class SsiSovrhdRequestData {
   did!: string;
-  credentialSchema!: any[];
+  credentialSchema!: string;
   type!: string;
 }

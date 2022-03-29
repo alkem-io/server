@@ -1,6 +1,5 @@
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { Injectable } from '@nestjs/common';
-import { SsiSovrhdRegisterCallback } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback';
 
 @Injectable()
 export class AppService {
@@ -20,10 +19,7 @@ export class AppService {
     );
   }
 
-  async completeCredentialRequestInteractionSovrhd(
-    nonce: string,
-    data: SsiSovrhdRegisterCallback
-  ) {
+  async completeCredentialRequestInteractionSovrhd(nonce: string, data: any) {
     await this.agentService.completeCredentialRequestInteractionSovrhd(
       nonce,
       data

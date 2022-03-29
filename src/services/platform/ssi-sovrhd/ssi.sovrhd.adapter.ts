@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { lastValueFrom, map } from 'rxjs';
 import { SsiSovrhdRegister } from './dto/ssi.sovrhd.dto.register';
+import { SsiSovrhdRegisterCallbackCredential } from './dto/ssi.sovrhd.dto.register.callback.credential';
 import { SsiSovrhdRegisterResponse } from './dto/ssi.sovrhd.dto.register.response';
 import { SsiSovrhdRequest } from './dto/ssi.sovrhd.dto.request';
 import { SsiSovrhdRequestResponse } from './dto/ssi.sovrhd.dto.request.response';
@@ -70,14 +71,28 @@ export class SsiSovrhdAdapter {
       `Registering session to: ${registerURL}`,
       LogContext.SSI_SOVRHD
     );
-    const sessionInitiationOptions: SsiSovrhdRegister = {
+    const sessionInitiationPayload: SsiSovrhdRegister = {
       webhook: callbackURL,
     };
 
+    this.logger.verbose?.(
+      `Submitting establish session request: ${JSON.stringify(
+        sessionInitiationPayload
+      )}`,
+      LogContext.SSI_SOVRHD
+    );
+
     const sovrhdResponseData = await lastValueFrom<SsiSovrhdRegisterResponse>(
       this.httpService
-        .post(registerURL, sessionInitiationOptions, this.axiosOptions)
+        .post(registerURL, sessionInitiationPayload, this.axiosOptions)
         .pipe(map(resp => resp.data))
+    );
+
+    this.logger.verbose?.(
+      `response establish session request: ${JSON.stringify(
+        sovrhdResponseData
+      )}`,
+      LogContext.SSI_SOVRHD
     );
     if (!sovrhdResponseData.session) {
       throw new SsiSovrhdApiException(
@@ -103,10 +118,8 @@ export class SsiSovrhdAdapter {
       `Using session (${sessionId}) to requesting credential of name: ${credentialName} for did ${did}`,
       LogContext.SSI_SOVRHD
     );
-    // Todo: use the name dynamically
-    const credentialTypeIdentifierHoplr = this.getCredentialType('hoplrCode');
-    const credentialTypeIdentifierAddress =
-      this.getCredentialType('dutchAddress');
+
+    const credentialTypeIdentifier = this.getCredentialType(credentialName);
 
     const requestURL = `${this.sovrhdApiEndpoint}/${this.PATH_REQUEST}`;
 
@@ -114,10 +127,7 @@ export class SsiSovrhdAdapter {
       session: sessionId,
       data: {
         did: did,
-        credentialSchema: [
-          credentialTypeIdentifierHoplr,
-          credentialTypeIdentifierAddress,
-        ],
+        credentialSchema: JSON.stringify([credentialTypeIdentifier]),
         type: 'request',
       },
     };
@@ -128,11 +138,12 @@ export class SsiSovrhdAdapter {
     );
 
     try {
-      const sovrhdRequestResponseData = await lastValueFrom<any>(
-        this.httpService
-          .post(requestURL, requestPayload, this.axiosOptions)
-          .pipe(map(resp => resp.data))
-      );
+      const sovrhdRequestResponseData =
+        await lastValueFrom<SsiSovrhdRequestResponse>(
+          this.httpService
+            .post(requestURL, requestPayload, this.axiosOptions)
+            .pipe(map(resp => resp.data))
+        );
       this.logger.verbose?.(
         `Request returned: ${JSON.stringify(sovrhdRequestResponseData)}`,
         LogContext.SSI_SOVRHD
@@ -160,5 +171,27 @@ export class SsiSovrhdAdapter {
         LogContext.SSI_SOVRHD
       );
     }
+  }
+
+  validateSovrhdCredentialResponse(
+    credentialCallback: SsiSovrhdRegisterCallbackCredential
+  ): boolean {
+    this.logger.verbose?.(
+      `Validating credential response: ${credentialCallback.session}`,
+      LogContext.SSI_SOVRHD
+    );
+
+    const credential = credentialCallback.content.verifiableCredential;
+    if (credential.length === 0) {
+      this.logger.error(
+        `No validate credentials returned: ${JSON.stringify(
+          credentialCallback
+        )}`,
+        LogContext.SSI_SOVRHD
+      );
+      return false;
+    }
+
+    return true;
   }
 }
