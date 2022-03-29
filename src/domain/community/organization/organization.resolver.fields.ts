@@ -16,11 +16,14 @@ import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
+import { IPreference } from '@domain/common/preference';
+import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
   constructor(
     private organizationService: OrganizationService,
-    private groupService: UserGroupService
+    private groupService: UserGroupService,
+    private preferenceSetService: PreferenceSetService
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -103,5 +106,18 @@ export class OrganizationResolverFields {
   @Profiling.api
   async activity(@Parent() organization: Organization) {
     return await this.organizationService.getActivity(organization);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('preferences', () => [IPreference], {
+    nullable: false,
+    description: 'The preferences for this Organization',
+  })
+  @UseGuards(GraphqlGuard)
+  async preferences(@Parent() org: Organization): Promise<IPreference[]> {
+    const preferenceSet = await this.organizationService.getPreferenceSetOrFail(
+      org
+    );
+    return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
   }
 }

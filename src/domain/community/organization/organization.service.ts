@@ -40,6 +40,10 @@ import { NVP } from '@domain/common/nvp/nvp.entity';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { AgentInfo } from '@core/authentication';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
+import { IPreferenceSet } from '@domain/common/preference-set';
+import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
+import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
+import { PreferenceType } from '@common/enums/preference.type';
 
 @Injectable()
 export class OrganizationService {
@@ -50,6 +54,7 @@ export class OrganizationService {
     private agentService: AgentService,
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
+    private preferenceSetService: PreferenceSetService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -96,6 +101,12 @@ export class OrganizationService {
         userID: agentInfo.userID,
       });
     }
+
+    organization.preferenceSet =
+      await this.preferenceSetService.createPreferenceSet(
+        PreferenceDefinitionSet.ORGANIZATION,
+        this.createPreferenceDefaults()
+      );
 
     return await this.organizationRepository.save(organization);
   }
@@ -426,6 +437,22 @@ export class OrganizationService {
     return await this.organizationRepository.count();
   }
 
+  async getPreferenceSetOrFail(org: IOrganization): Promise<IPreferenceSet> {
+    const orgWithPreferences = await this.getOrganizationOrFail(org.id, {
+      relations: ['preferenceSet'],
+    });
+    const preferenceSet = orgWithPreferences.preferenceSet;
+
+    if (!preferenceSet) {
+      throw new EntityNotFoundException(
+        `Unable to find preferenceSet for organization with ID: ${org.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return preferenceSet;
+  }
+
   async organizationsWithCredentials(
     credentialCriteria: CredentialsSearchInput
   ): Promise<IOrganization[]> {
@@ -589,5 +616,15 @@ export class OrganizationService {
       );
     }
     return organization.verification;
+  }
+
+  createPreferenceDefaults(): Map<PreferenceType, string> {
+    const defaults: Map<PreferenceType, string> = new Map();
+    defaults.set(
+      PreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN,
+      'false'
+    );
+
+    return defaults;
   }
 }
