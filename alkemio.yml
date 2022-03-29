@@ -392,7 +392,7 @@ ssi:
     the_hague_proof_of_postal_address:
       name: The Hague Postal Address [Sovrhd]
       issuer: sovrhd
-      description: The holder's dutch address (type 'dutchAdress') as issued by Gemeente Den Haag
+      description: The holder's dutch address (type 'ThehagueAddress') as issued by Gemeente Den Haag
       schema: https://schema.org/EducationalOccupationalCredential
       types:
         - Credential
