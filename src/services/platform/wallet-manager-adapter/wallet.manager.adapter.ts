@@ -23,6 +23,7 @@ import { WalletManagerVerifiedCredential } from './dto/wallet.manager.dto.verifi
 import { WalletManagerGetAgentInfoResponse } from './dto/wallet.manager.dto.get.agent.info.response';
 import { WalletManagerRequestVcBegin } from './dto/wallet.manager.dto.request.vc.begin';
 import { WalletManagerRequestVcCompleteSovrhd } from './dto/wallet.manager.dto.request.vc.complete.sovrhd';
+import { TrustRegistryCredentialMetadata } from '../trust-registry/trust.registry.configuration/trust.registry.dto.credential.metadata';
 
 @Injectable()
 export class WalletManagerAdapter {
@@ -94,10 +95,10 @@ export class WalletManagerAdapter {
   async beginCredentialRequestInteraction(
     did: string,
     password: string,
-    uniqueCallbackURL: string
+    uniqueCallbackURL: string,
+    requestedCredentialMetadata: TrustRegistryCredentialMetadata
   ): Promise<WalletManagerRequestVcBeginResponse> {
-    const credentialMetadata =
-      this.trustRegistryAdapter.getSupportedCredentialMetadata();
+    const credentialMetadata = [requestedCredentialMetadata];
 
     const inputPayload: WalletManagerRequestVcBegin = {
       issuerDID: did,
