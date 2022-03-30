@@ -242,7 +242,7 @@ export class AgentService {
       verifiedCredential.type = vcWalletMgr.type;
       verifiedCredential.issued = vcWalletMgr.issued;
       verifiedCredential.issuer = vcWalletMgr.issuer;
-      verifiedCredential.expires = vcWalletMgr.issued; // todo
+      verifiedCredential.expires = vcWalletMgr.expires;
       verifiedCredential.context = vcWalletMgr.context || '';
       verifiedCredential.claims =
         await this.verifiedCredentialService.getClaims(vcWalletMgr.claim);
@@ -285,7 +285,8 @@ export class AgentService {
       await this.walletManagerAdapter.beginCredentialRequestInteraction(
         issuerAgent.did,
         issuerAgent.password,
-        uniqueCallbackURL
+        uniqueCallbackURL,
+        requestedCredentialMetadata
       );
     const clientResponse: AgentBeginVerifiedCredentialRequestOutput = {
       qrCodeImg: '',
@@ -643,7 +644,7 @@ export class AgentService {
         }));
     } catch (err: any) {
       throw new SsiException(
-        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}]:Failed to offer credential: ${err.message}`
+        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}]: Failed to offer credential: ${err.message}`
       );
     }
   }
