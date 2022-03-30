@@ -1,10 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  AuthorizationCredential,
-  AuthorizationVerifiedCredential,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
 import { HubService } from './hub.service';
@@ -18,7 +14,7 @@ import { Hub } from './hub.entity';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { HubPreferenceType } from '@common/enums/hub.preference.type';
 import { IOrganization } from '@domain/community';
-import { AuthorizationPolicyRuleVerifiedCredentialClaim } from '@core/authorization/authorization.policy.rule.verified.credential.claim';
+import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { IPreferenceSet } from '@domain/common/preference-set';
@@ -231,14 +227,7 @@ export class HubAuthorizationService {
         'Authorization definition not found for: ${hostOrg?.id}',
         LogContext.CHALLENGES
       );
-    const rules: AuthorizationPolicyRuleVerifiedCredentialClaim[] = [];
-
-    const communityMember = {
-      name: AuthorizationVerifiedCredential.COMMUNITY_MEMBER,
-      value: '',
-      grantedPrivileges: [AuthorizationPrivilege.COMMUNITY_JOIN],
-    };
-    rules.push(communityMember);
+    const rules: AuthorizationPolicyRuleVerifiedCredential[] = [];
 
     return this.authorizationPolicyService.appendVerifiedCredentialAuthorizationRules(
       authorization,

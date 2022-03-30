@@ -21,9 +21,9 @@ import { AuthorizationPolicyRuleCredential } from '@core/authorization/authoriza
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { AuthorizationPolicyRuleVerifiedCredentialClaim } from '@core/authorization/authorization.policy.rule.verified.credential.claim';
-import { IAuthorizationPolicyRuleVerifiedCredentialClaim } from '@core/authorization/authorization.policy.rule.verified.credential.claim.interface';
+import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
+import { IAuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential.interface';
 
 @Injectable()
 export class AuthorizationPolicyService {
@@ -141,7 +141,7 @@ export class AuthorizationPolicyService {
 
   appendVerifiedCredentialAuthorizationRules(
     authorization: IAuthorizationPolicy | undefined,
-    additionalRules: AuthorizationPolicyRuleVerifiedCredentialClaim[]
+    additionalRules: AuthorizationPolicyRuleVerifiedCredential[]
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
 
@@ -185,8 +185,10 @@ export class AuthorizationPolicyService {
       child = new AuthorizationPolicy();
     }
     const parent = this.validateAuthorization(parentAuthorization);
-    // Reset the child to a base state for authorization definition
     const resetAuthPolicy = this.reset(child);
+    // (a) Inherit the visibility
+    resetAuthPolicy.anonymousReadAccess = parent.anonymousReadAccess;
+    // (b) Inherit the credential rules
     const inheritedRules = this.authorizationService.convertCredentialRulesStr(
       parent.credentialRules
     );
@@ -196,8 +198,19 @@ export class AuthorizationPolicyService {
         newRules.push(inheritedRule);
       }
     }
-    resetAuthPolicy.anonymousReadAccess = parent.anonymousReadAccess;
     resetAuthPolicy.credentialRules = JSON.stringify(newRules);
+
+    // (c) Inherit the verified credential rules
+    const inheritedVCRules =
+      this.authorizationService.convertVerifiedCredentialRulesStr(
+        parent.verifiedCredentialRules
+      );
+    const newVcRules: IAuthorizationPolicyRuleVerifiedCredential[] = [];
+    for (const inheritedVcRule of inheritedVCRules) {
+      newVcRules.push(inheritedVcRule);
+    }
+    resetAuthPolicy.verifiedCredentialRules = JSON.stringify(newVcRules);
+
     return resetAuthPolicy;
   }
 
@@ -209,9 +222,9 @@ export class AuthorizationPolicyService {
     );
   }
 
-  getVerifiedCredentialClaimRules(
+  getVerifiedCredentialRules(
     authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicyRuleVerifiedCredentialClaim[] {
+  ): IAuthorizationPolicyRuleVerifiedCredential[] {
     const result = this.authorizationService.convertVerifiedCredentialRulesStr(
       authorization.verifiedCredentialRules
     );

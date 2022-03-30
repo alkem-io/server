@@ -11,7 +11,7 @@ import { AuthorizationPolicyRuleCredential } from '@core/authorization/authoriza
 import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { AuthorizationPolicyRuleVerifiedCredentialClaim } from '@core/authorization/authorization.policy.rule.verified.credential.claim';
+import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -141,7 +141,7 @@ export class CommunityAuthorizationService {
   private appendVerifiedCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicy {
-    const verifiedCredentialRules: AuthorizationPolicyRuleVerifiedCredentialClaim[] =
+    const verifiedCredentialRules: AuthorizationPolicyRuleVerifiedCredential[] =
       [];
 
     return this.authorizationPolicyService.appendVerifiedCredentialAuthorizationRules(
