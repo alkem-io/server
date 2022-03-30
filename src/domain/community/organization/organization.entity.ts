@@ -6,6 +6,7 @@ import { IOrganization } from './organization.interface';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
+import { PreferenceSet } from '@domain/common/preference-set';
 
 @Entity()
 export class Organization
@@ -45,6 +46,14 @@ export class Organization
   })
   @JoinColumn()
   verification!: OrganizationVerification;
+
+  @OneToOne(() => PreferenceSet, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  preferenceSet?: PreferenceSet;
 
   constructor() {
     super();

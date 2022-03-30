@@ -12,12 +12,14 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 
 @Injectable()
 export class UserAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
+    private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private agentService: AgentService,
     private userService: UserService
   ) {}
@@ -63,17 +65,16 @@ export class UserAuthorizationService {
         user.authorization
       );
 
-    const preferences = await this.userService.getPreferences(user.id);
+    const preferenceSet = await this.userService.getPreferenceSetOrFail(
+      user.id
+    );
 
-    if (preferences) {
-      for (const preference of preferences) {
-        preference.authorization =
-          this.authorizationPolicyService.inheritParentAuthorization(
-            preference.authorization,
-            user.authorization
-          );
-      }
-      user.preferences = preferences;
+    if (preferenceSet) {
+      user.preferenceSet =
+        await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
+          preferenceSet,
+          user.authorization
+        );
     }
 
     return await this.userService.saveUser(user);

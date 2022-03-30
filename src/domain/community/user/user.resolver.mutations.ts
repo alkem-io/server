@@ -24,6 +24,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceService } from '@domain/common/preference';
 import { UpdateUserPreferenceInput } from './dto/user.dto.update.preference';
+import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -35,6 +36,7 @@ export class UserResolverMutations {
     private userAuthorizationService: UserAuthorizationService,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     private preferenceService: PreferenceService,
+    private preferenceSetService: PreferenceSetService,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
@@ -125,8 +127,11 @@ export class UserResolverMutations {
     @Args('preferenceData') preferenceData: UpdateUserPreferenceInput
   ) {
     const user = await this.userService.getUserOrFail(preferenceData.userID);
-    const preference = await this.userService.getPreferenceOrFail(
-      user,
+    const preferenceSet = await this.userService.getPreferenceSetOrFail(
+      user.id
+    );
+    const preference = await this.preferenceSetService.getPreferenceOrFail(
+      preferenceSet,
       preferenceData.type
     );
 

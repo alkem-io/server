@@ -1,0 +1,16 @@
+mutation updatePreferenceOnOrganization($preferenceData: UpdateOrganizationPreferenceInput!) {
+  updatePreferenceOnOrganization(preferenceData: $preferenceData) {
+    id
+    value
+  }
+}
+
+
+query variables:
+{
+  "preferenceData": {
+    "organizationID": "UUID_NAMEID",
+    "type": "",
+    "value": ""
+  }
+}

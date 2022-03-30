@@ -52,8 +52,8 @@ export class userPreferences1636644627179 implements MigrationInterface {
       LEFT JOIN user_preference on user_preference.userId = user.id
       WHERE user_preference.userId IS NULL`
     );
-    usersWithoutPreference.forEach(user =>
-      definitions.forEach(async def => {
+    for (const user of usersWithoutPreference) {
+      for (const def of definitions) {
         const uuid = randomUUID();
         await queryRunner.query(
           `INSERT INTO authorization_policy VALUES ('${uuid}', NOW(), NOW(), 1, '', '', 0)`
@@ -61,8 +61,8 @@ export class userPreferences1636644627179 implements MigrationInterface {
         await queryRunner.query(
           `INSERT INTO user_preference VALUES (UUID(), NOW(), NOW(), 1, 'false', '${uuid}', '${def.id}', '${user.id}')`
         );
-      })
-    );
+      }
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

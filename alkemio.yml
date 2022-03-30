@@ -373,20 +373,63 @@ ssi:
   issuer_validation_enabled: ${SSI_ISSUER_VALIDATION_ENABLED}:false
 
   issuers:
-    - alkemio:
-        enabled: true
-        interaction_type: jolocom
-        endpoint_verification: http://localhost:3000
-    - sovrhd:
-        enabled: true
-        interaction_type: sovrhd
-        endpoint_verification: https://wallet-api.ovrhd.nl/api/v1/register
+    alkemio:
+      enabled: true
+    sovrhd:
+      enabled: true
+      endpoint: https://wallet-api.ovrhd.nl/api/v1
+      credential_types:
+        - name: EmailAddress
+          identifier: blob:dock:5DEGLCGsuWLkVrfiCqXTPQQEekt2kibSeyWTdUt35mmsmimn
+        - name: dutchAddress
+          identifier: blob:dock:5EoxGBnZ7JVg9kHonEYtz6tfHV5FufL86VEsZ34Ae8ge478n
+        - name: hoplrCode
+          identifier: blob:dock:5CgrXvgVaUAgzmqW2uUhuonewKmAY8VgVDfyQzziUV2ntGWz
+        - name: TheHagueAddress
+          identifier: blob:dock:5D2nkGSBs56D2ndc2LCMYysTGk61Mb7VLPNMGhF8GsECU2SQ
 
   credentials:
+    the_hague_proof_of_postal_address:
+      name: The Hague Postal Address [Sovrhd]
+      issuer: sovrhd
+      description: The holder's dutch address (type 'ThehagueAddress') as issued by Gemeente Den Haag
+      schema: https://schema.org/EducationalOccupationalCredential
+      types:
+        - Credential
+        - TheHagueAddress
+      uniqueType: TheHagueAddress
+      context:
+        addressLine1: 'schema:streetAddress'
+        addressLine2: 'schema:streetAddress'
+        postalCode: 'schema:postalCode'
+        city: 'schema:addressLocality'
+        country: 'schema:addressLocality'
+    the_hague_hoplr:
+      name: The Hague Hoplr Code [Sovrhd]
+      issuer: sovrhd
+      description: The holder's code to participate in Hoplr on behalf of The Hague (type 'HoplrCode')
+      schema: https://schema.org/EducationalOccupationalCredential
+      types:
+        - Credential
+        - hoplrCode
+      uniqueType: hoplrCode
+      context:
+        the_hague_hoplr: 'schema:description'
+    proof_of_email_address:
+      name: Email Address [Sovrhd]
+      issuer: sovrhd
+      description: The holder's email address (type 'EmailAdress') as issued by Sovrhd
+      schema: https://schema.org/EducationalOccupationalCredential
+      types:
+        - Credential
+        - EmailAddress
+      uniqueType: EmailAddress
+      context:
+        emailAddress: 'schema:emailAddress'
     proof_of_community_membership:
-      name: Community Member
-      verifier: jolocom
-      description: The holder is a member of an Alkemio hub, challenge or opportunity community
+      name: Alkemio Community Member [Test]
+      issuer: jolocom
+      description: The holder is a member of an Alkemio hub, challenge or opportunity community. (Issued by Alkemio, so for testing purposes)
       schema: https://schema.org/EducationalOccupationalCredential
       types:
         - Credential
@@ -402,7 +445,7 @@ ssi:
     proof_of_alkemio_membership:
       name: Alkemio User
       description: The holder is a verified Alkemio user
-      verifier: jolocom
+      issuer: jolocom
       schema: https://schema.org/EducationalOccupationalCredential
       types:
         - Credential
@@ -411,18 +454,5 @@ ssi:
       context:
         alkemioUser_userID: 'schema:uuid'
         alkemioUser_email: 'schema:email'
-    proof_of_postal_address:
-      name: Postal Address
-      issuer: sovrhd
-      description: The holder's location is confirmed by the issuer
-      schema: https://schema.org/EducationalOccupationalCredential
-      types:
-        - Credential
-        - postalAddress
-      uniqueType: postalAddress
-      context:
-        addressLine1: 'schema:streetAddress'
-        addressLine2: 'schema:streetAddress'
-        postalCode: 'schema:postalCode'
-        city: 'schema:addressLocality'
-        country: 'schema:addressLocality'
+
+

@@ -19,6 +19,8 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { ProjectModule } from '@domain/collaboration/project/project.module';
 import { UserModule } from '@domain/community/user/user.module';
+import { PreferenceModule } from '@domain/common/preference';
+import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { UserModule } from '@domain/community/user/user.module';
     LifecycleModule,
     ProjectModule,
     UserModule,
+    PreferenceModule,
+    PreferenceSetModule,
     TypeOrmModule.forFeature([Challenge]),
   ],
   providers: [

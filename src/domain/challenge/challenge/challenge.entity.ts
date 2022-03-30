@@ -1,9 +1,17 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
 import { Hub } from '@domain/challenge/hub/hub.entity';
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
-import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
+import { PreferenceSet } from '@domain/common/preference-set';
+import { IChallenge } from './challenge.interface';
+import { BaseChallenge } from '../base-challenge/base.challenge.entity';
 
 @Entity()
 export class Challenge extends BaseChallenge implements IChallenge {
@@ -35,6 +43,14 @@ export class Challenge extends BaseChallenge implements IChallenge {
 
   @Column()
   hubID!: string;
+
+  @OneToOne(() => PreferenceSet, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  preferenceSet?: PreferenceSet;
 
   constructor() {
     super();

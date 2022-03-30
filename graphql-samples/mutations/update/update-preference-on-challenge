@@ -1,0 +1,16 @@
+mutation updatePreferenceOnChallenge($preferenceData: UpdateChallengePreferenceInput!) {
+  updatePreferenceOnChallenge(preferenceData: $preferenceData) {
+    id
+    value
+  }
+}
+
+
+query variables:
+{
+  "preferenceData": {
+    "challengeID": "UUID_NAMEID",
+    "type": "",
+    "value": ""
+  }
+}

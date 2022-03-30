@@ -4,21 +4,15 @@ import { Field, ObjectType } from '@nestjs/graphql';
 export class AgentBeginVerifiedCredentialOfferOutput {
   @Field({
     nullable: false,
-    description: 'The interaction id for this credential offer.',
-  })
-  interactionId!: string;
-
-  @Field({
-    nullable: false,
     description:
       'The token containing the information about issuer, callback endpoint and the credentials offered',
   })
   jwt!: string;
 
-  @Field({
+  @Field(() => String, {
     nullable: false,
     description:
-      'The token can be consumed until the expiresOn date (milliseconds since the UNIX epoch) is reached',
+      'The QR Code Image to be offered on the client for scanning by a mobile wallet',
   })
-  expiresOn!: number;
+  qrCodeImg!: string;
 }

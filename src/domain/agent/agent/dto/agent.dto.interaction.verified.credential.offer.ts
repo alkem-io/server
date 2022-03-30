@@ -1,5 +1,5 @@
 import { SsiIssuerType } from '@common/enums/ssi.issuer.type';
-import { TrustRegistryVerifiedCredentialOffer } from '@services/platform/trust-registry/trust.registry.adapter/trust.registry.dto.offered.credential';
+import { WalletManagerCredentialOfferMetadata } from '@services/platform/wallet-manager-adapter/dto/wallet.manager.dto.credential.offer.metadata';
 import { IAgent } from '../agent.interface';
 
 export class AgentInteractionVerifiedCredentialOffer {
@@ -8,7 +8,7 @@ export class AgentInteractionVerifiedCredentialOffer {
 
   interactionId!: string;
 
-  offeredCredentials: TrustRegistryVerifiedCredentialOffer[] = [];
+  offeredCredentials: WalletManagerCredentialOfferMetadata[] = [];
 
   agent?: IAgent;
 }
