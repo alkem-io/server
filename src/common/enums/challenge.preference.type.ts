@@ -1,0 +1,11 @@
+import { registerEnumType } from '@nestjs/graphql';
+
+export enum ChallengePreferenceType {
+  MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS = 'MembershipJoinChallengeFromHubMembers',
+  MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS = 'MembershipApplyChallengeFromHubMembers',
+  MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT = 'MembershipFeedbackOnChallengeContext',
+}
+
+registerEnumType(ChallengePreferenceType, {
+  name: 'ChallengePreferenceType',
+});
