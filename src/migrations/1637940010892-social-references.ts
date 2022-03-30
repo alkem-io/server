@@ -20,8 +20,8 @@ export class socialReferences1637940010892 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // select user profileId
     const users: any[] = await queryRunner.query(`SELECT profileId from user`);
-    users.forEach(async user =>
-      newReferenceNames.forEach(async ({ name, description }) => {
+    for (const user of users) {
+      for (const { name, description } of newReferenceNames) {
         // does ref with this name exist
         const [refExists] = await queryRunner.query(
           `SELECT id FROM reference
@@ -44,8 +44,8 @@ export class socialReferences1637940010892 implements MigrationInterface {
                   values (UUID(), 1, '${name}', '', '${description}', '${authId}', '${user.profileId}')`
           );
         }
-      })
-    );
+      }
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}

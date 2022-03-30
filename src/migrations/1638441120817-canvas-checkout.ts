@@ -52,7 +52,7 @@ export class canvasCheckout21638441120817 implements MigrationInterface {
 
     // Todo: update existing Canvas with a canvas_checkout
     const canvases: any[] = await queryRunner.query(`SELECT id from canvas`);
-    canvases.forEach(async canvas => {
+    for (const canvas of canvases) {
       // create auth policy
       const authId = randomUUID();
       await queryRunner.query(
@@ -63,7 +63,7 @@ export class canvasCheckout21638441120817 implements MigrationInterface {
       await queryRunner.query(
         `update canvas set authorizationId = '${authId}' WHERE (id = '${canvas.id}')`
       );
-    });
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

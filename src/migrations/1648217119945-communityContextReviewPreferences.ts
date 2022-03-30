@@ -16,7 +16,7 @@ export class communityContextReviewPreferences1648217119945
 
     const users: any[] = await queryRunner.query(`SELECT user.id FROM user`);
 
-    users.forEach(async user => {
+    for (const user of users) {
       const userAuthUUID = randomUUID();
       const adminAuthUUID = randomUUID();
       await queryRunner.query(
@@ -31,7 +31,7 @@ export class communityContextReviewPreferences1648217119945
               (UUID(), NOW(), NOW(), 1, 'true', '${userAuthUUID}', '${defUserUUID}', '${user.id}', NULL),
               (UUID(), NOW(), NOW(), 1, 'true', '${adminAuthUUID}', '${defAdminUUID}', '${user.id}', NULL)`
       );
-    });
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

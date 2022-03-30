@@ -19,14 +19,13 @@ const buildSymbolRemoveQuery = (tableName: string, symbol: string) =>
 
 export class cleanNameids1636110445512 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    tableNames.forEach(async tableName => {
+    for (const tableName of tableNames) {
       await queryRunner.query(buildUnderscoreQuery(tableName));
       // remove symbols
-      symbolsToRemove.forEach(
-        async symbol =>
-          await queryRunner.query(buildSymbolRemoveQuery(tableName, symbol))
-      );
-    });
+      for (const symbol of symbolsToRemove) {
+        await queryRunner.query(buildSymbolRemoveQuery(tableName, symbol));
+      }
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
