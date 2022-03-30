@@ -426,7 +426,7 @@ export class AgentService {
     const payload: ProfileCredentialVerified = {
       eventID,
       vc: 'something something vc',
-      userID: '',
+      userEmail: agent.parentDisplayID ?? '',
     };
 
     await this.subscriptionVerifiedCredentials.publish(
@@ -509,7 +509,7 @@ export class AgentService {
     const payload: ProfileCredentialVerified = {
       eventID,
       vc: 'something something vc',
-      userID: '',
+      userEmail: agent.parentDisplayID ?? '',
     };
 
     await this.subscriptionVerifiedCredentials.publish(

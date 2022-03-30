@@ -1,4 +1,3 @@
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('ProfileCredentialVerified')
@@ -12,9 +11,9 @@ export class ProfileCredentialVerified {
   })
   vc!: string;
 
-  @Field(() => UUID, {
+  @Field(() => String, {
     nullable: false,
-    description: 'The userID',
+    description: 'The email',
   })
-  userID!: string;
+  userEmail!: string;
 }
