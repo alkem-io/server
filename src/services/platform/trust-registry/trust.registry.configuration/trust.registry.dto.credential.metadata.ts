@@ -3,4 +3,5 @@ import { WalletManagerCredentialMetadata } from '@services/platform/wallet-manag
 export class TrustRegistryCredentialMetadata extends WalletManagerCredentialMetadata {
   issuer!: string;
   trusted_issuers?: string[];
+  requestable!: boolean;
 }

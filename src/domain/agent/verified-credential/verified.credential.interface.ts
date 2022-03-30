@@ -10,7 +10,7 @@ export abstract class IVerifiedCredential {
   type!: string;
 
   @Field(() => String, {
-    description: 'The challenge issuing the VC',
+    description: 'The party issuing the VC',
   })
   issuer!: string;
 

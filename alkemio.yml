@@ -443,8 +443,8 @@ ssi:
       trusted_issuers:
         - jolocom
     proof_of_alkemio_membership:
-      name: Alkemio User
-      description: The holder is a verified Alkemio user
+      name: Alkemio User [Test]
+      description: The holder is a verified Alkemio user. (Issued by Alkemio, so for testing purposes)
       issuer: jolocom
       schema: https://schema.org/EducationalOccupationalCredential
       types:

@@ -13,7 +13,8 @@ export class VerifiedCredentialService {
         claims.push(new VerifiedCredentialClaim(key, value));
       }
     }
+    const sortedClaims = claims.sort((a, b) => (a.name > b.name ? 1 : -1));
 
-    return claims || [];
+    return sortedClaims;
   }
 }
