@@ -22,8 +22,8 @@ export class updatedPreferenceDefinitions1639406613479
       `SELECT * FROM user_preference_definition as upd WHERE upd.type='NotificationCommunityUpdateSentAdmin' || upd.type='NotificationCommunityDiscussionCreatedAdmin';`
     );
 
-    users.forEach(user =>
-      definitions.forEach(async def => {
+    for (const user of users) {
+      for (const def of definitions) {
         const uuid = randomUUID();
         await queryRunner.query(
           `INSERT INTO authorization_policy VALUES ('${uuid}', NOW(), NOW(), 1, '', '', 0)`
@@ -31,8 +31,8 @@ export class updatedPreferenceDefinitions1639406613479
         await queryRunner.query(
           `INSERT INTO user_preference VALUES (UUID(), NOW(), NOW(), 1, 'false', '${uuid}', '${def.id}', '${user.id}')`
         );
-      })
-    );
+      }
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}

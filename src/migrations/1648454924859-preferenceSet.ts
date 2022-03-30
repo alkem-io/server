@@ -43,7 +43,7 @@ export class preferenceSet1648454924859 implements MigrationInterface {
       'SELECT id from hub'
     );
     // for each hub:
-    hubs.forEach(async hub => {
+    for (const hub of hubs) {
       // create authorization ID for new preference set
       const authID = randomUUID();
       await queryRunner.query(
@@ -63,7 +63,7 @@ export class preferenceSet1648454924859 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE preference SET preferenceSetId='${prefSetId}' where hubId='${hub.id}'`
       );
-    });
+    }
     // remove the hubId column on preference
     await queryRunner.query(
       `ALTER TABLE preference DROP FOREIGN KEY FK_77741fbd1fef95a0540f7e7d1e2, DROP COLUMN hubId`
@@ -72,7 +72,7 @@ export class preferenceSet1648454924859 implements MigrationInterface {
     const users: { id: string }[] = await queryRunner.query(
       `SELECT id FROM user`
     );
-    users.forEach(async user => {
+    for (const user of users) {
       const authID = randomUUID();
       await queryRunner.query(
         `INSERT INTO authorization_policy VALUES ('${authID}', NOW(), NOW(), 1, '', '', 0, '')`
@@ -84,14 +84,14 @@ export class preferenceSet1648454924859 implements MigrationInterface {
       );
       // set preferenceSetId on user
       await queryRunner.query(
-        `UPDATE user SET preferenceSetId='${prefSetId} WHERE id='${user.id}'`
+        `UPDATE user SET preferenceSetId='${prefSetId}' WHERE id='${user.id}'`
       );
       // Find all preferences that pointed to this user
       // Update all preferences for the user above updated to point to the newly created preference set
       await queryRunner.query(
         `UPDATE preference SET preferenceSetId='${prefSetId}' where userId='${user.id}'`
       );
-    });
+    }
     // remove the userId column on preference
     await queryRunner.query(`
             ALTER TABLE preference DROP FOREIGN KEY FK_5b141fbd1fef95a0540f7e7d1e2, DROP COLUMN userId
@@ -145,8 +145,8 @@ export class preferenceSet1648454924859 implements MigrationInterface {
     const hubs: any[] = await queryRunner.query(
       `SELECT hub.id, hub.authorizationId FROM hub`
     );
-    hubs.forEach(hub =>
-      hubDefinitions.forEach(async def => {
+    for (const hub of hubs) {
+      for (const def of hubDefinitions) {
         const uuid = randomUUID();
         await queryRunner.query(
           `INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES ('${uuid}', NOW(), NOW(), 1, '', '', 0, '')`
@@ -165,7 +165,7 @@ export class preferenceSet1648454924859 implements MigrationInterface {
         await queryRunner.query(
           `INSERT INTO preference (id, createdDate, updatedDate, version, value, authorizationId, preferenceDefinitionId, userId, hubId) VALUES (UUID(), NOW(), NOW(), 1, '${initialValue}', '${uuid}', '${def.id}', NULL,'${hub.id}')`
         );
-      })
-    );
+      }
+    }
   }
 }

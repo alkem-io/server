@@ -46,8 +46,8 @@ export class hubpreferences1646683828244 implements MigrationInterface {
       `SELECT hub.id, hub.authorizationId FROM hub`
     );
     console.log(`Found ${hubs.length} hubs`);
-    hubs.forEach(hub =>
-      hubDefinitions.forEach(async def => {
+    for (const hub of hubs) {
+      for (const def of hubDefinitions) {
         const uuid = randomUUID();
         await queryRunner.query(
           `INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES ('${uuid}', NOW(), NOW(), 1, '', '', 0, '')`
@@ -66,8 +66,8 @@ export class hubpreferences1646683828244 implements MigrationInterface {
         await queryRunner.query(
           `INSERT INTO preference (id, createdDate, updatedDate, version, value, authorizationId, preferenceDefinitionId, userId, hubId) VALUES (UUID(), NOW(), NOW(), 1, '${initialValue}', '${uuid}', '${def.id}', NULL,'${hub.id}')`
         );
-      })
-    );
+      }
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -77,19 +77,19 @@ export class hubpreferences1646683828244 implements MigrationInterface {
     const hubDefinitions: any[] = await queryRunner.query(
       `SELECT * FROM preference_definition WHERE preference_definition.definitionSet = 'hub'`
     );
-    hubDefinitions.forEach(async hubDef => {
+    for (const hubDef of hubDefinitions) {
       const hubPrefereces: any[] = await queryRunner.query(
         `SELECT * FROM preference WHERE preference.preferenceDefinitionId = '${hubDef.id}'`
       );
-      hubPrefereces.forEach(async hubPref => {
+      for (const hubPref of hubPrefereces) {
         await queryRunner.query(
           `DELETE FROM preference WHERE preference.id = '${hubPref.id}'`
         );
-      });
+      }
       await queryRunner.query(
         `DELETE FROM preference_definition WHERE preference_definition.id = '${hubDef.id}'`
       );
-    });
+    }
     await queryRunner.query(
       `ALTER TABLE \`preference_definition\` DROP COLUMN \`definitionSet\``
     );
