@@ -45,7 +45,7 @@ export class AgentResolverSubscriptions {
       context: any
     ): Promise<boolean> {
       const agentInfo: AgentInfo = context.req?.user;
-      const isMatch = payload.userID === agentInfo.userID;
+      const isMatch = payload.userEmail === agentInfo.email;
 
       this.logger.verbose?.(
         `[User (${agentInfo.email}) VC Added] - Filtering event id '${payload.eventID}' - match? ${isMatch}`,
