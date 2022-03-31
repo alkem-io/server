@@ -254,12 +254,11 @@ export class UserResolverMutations {
       return;
     }
 
-    const orgMatchDomain = Boolean(
+    const orgMatchDomain =
       this.preferenceSetService.getPreferenceOrFail(
         org.preferenceSet,
         OrganizationPreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN
-      ).value
-    );
+      ).value === 'true';
 
     if (!orgMatchDomain) {
       return;
