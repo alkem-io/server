@@ -1,0 +1,14 @@
+mutation createFeedbackOnCommunityContext($feedbackData: CreateFeedbackOnCommunityContextInput!) {
+  createFeedbackOnCommunityContext(feedbackData: $feedbackData)
+}
+
+query variables:
+{
+  "feedbackData": {
+    "communityID": "UUID",
+    "questions": [
+      { "name": "Is the name sufficient?", "value": "No", "sortOrder": 1 },
+      { "name": "Is the description sufficient?", "value": "Yes", "sortOrder": 2 }
+    ]
+  }
+}

@@ -7,9 +7,9 @@ import { AgentInfo } from '@core/authentication';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyRulePrivilege } from './authorization.policy.rule.privilege';
-import { IAuthorizationPolicyRuleVerifiedCredentialClaim } from './authorization.policy.rule.verified.credential.claim.interface';
 import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
 import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential.interface';
+import { IAuthorizationPolicyRuleVerifiedCredential } from './authorization.policy.rule.verified.credential.interface';
 
 @Injectable()
 export class AuthorizationService {
@@ -109,7 +109,7 @@ export class AuthorizationService {
         }
       }
     }
-    const verifiedCredentialRules: IAuthorizationPolicyRuleVerifiedCredentialClaim[] =
+    const verifiedCredentialRules: IAuthorizationPolicyRuleVerifiedCredential[] =
       this.convertVerifiedCredentialRulesStr(
         authorization.verifiedCredentialRules
       );
@@ -213,14 +213,15 @@ export class AuthorizationService {
 
   private isVerifiedCredentialMatch(
     verifiedCredential: IVerifiedCredential,
-    credentialRule: IAuthorizationPolicyRuleVerifiedCredentialClaim
+    credentialRule: IAuthorizationPolicyRuleVerifiedCredential
   ): boolean {
-    for (const claim of verifiedCredential.claims) {
-      if (claim.name === credentialRule.name) {
-        if (
-          credentialRule.value === '' ||
-          claim.value === credentialRule.value
-        ) {
+    if (verifiedCredential.name === credentialRule.credentialName) {
+      const claimRuleStr = credentialRule.claimRule;
+      if (claimRuleStr.length === 0) return true;
+      const claimRule: { name: string; value: string } =
+        JSON.parse(claimRuleStr);
+      for (const claim of verifiedCredential.claims) {
+        if (claim.name === claimRule.name && claim.value === claimRule.value) {
           return true;
         }
       }
@@ -244,10 +245,10 @@ export class AuthorizationService {
 
   convertVerifiedCredentialRulesStr(
     rulesStr: string
-  ): IAuthorizationPolicyRuleVerifiedCredentialClaim[] {
+  ): IAuthorizationPolicyRuleVerifiedCredential[] {
     if (!rulesStr || rulesStr.length == 0) return [];
     try {
-      const rules: IAuthorizationPolicyRuleVerifiedCredentialClaim[] =
+      const rules: IAuthorizationPolicyRuleVerifiedCredential[] =
         JSON.parse(rulesStr);
       return rules;
     } catch (error) {

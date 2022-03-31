@@ -16,8 +16,9 @@ import { IdentityResolverModule } from '@domain/communication/identity-resolver/
 import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
 import { KonfigModule } from '@services/platform/configuration/config/config.module';
-import { PreferenceModule } from '@domain/common/preference/preference.module';
 import { ConfigModule } from '@nestjs/config';
+import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
+import { PreferenceModule } from '@domain/common/preference';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { ConfigModule } from '@nestjs/config';
     RoomModule,
     MicroservicesModule,
     PreferenceModule,
+    PreferenceSetModule,
     KonfigModule,
     TypeOrmModule.forFeature([User]),
     CacheModule.register({ max: 250, ttl: 300 }),

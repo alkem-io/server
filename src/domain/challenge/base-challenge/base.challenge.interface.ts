@@ -5,6 +5,7 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { INameable } from '@domain/common/entity/nameable-entity';
 import { IAgent } from '@domain/agent/agent/agent.interface';
+import { IPreferenceSet } from '@domain/common/preference-set';
 
 @ObjectType('IBaseChallenge')
 export abstract class IBaseChallenge extends INameable {
@@ -19,4 +20,5 @@ export abstract class IBaseChallenge extends INameable {
   context?: IContext;
   community?: ICommunity;
   lifecycle?: ILifecycle;
+  preferenceSet?: IPreferenceSet;
 }

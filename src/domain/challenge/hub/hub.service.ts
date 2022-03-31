@@ -43,11 +43,12 @@ import { CommunityType } from '@common/enums/community.type';
 import { HubTemplate } from './dto/hub.dto.template.hub';
 import { AgentInfo } from '@src/core';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { PreferenceService } from '@domain/common/preference/preference.service';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { HubPreferenceType } from '@common/enums/hub.preference.type';
 import { ICredential } from '@domain/agent/credential/credential.interface';
+import { IPreferenceSet } from '@domain/common/preference-set';
+import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
+import { PreferenceType } from '@common/enums/preference.type';
 
 @Injectable()
 export class HubService {
@@ -62,7 +63,7 @@ export class HubService {
     private userService: UserService,
     private communityService: CommunityService,
     private challengeService: ChallengeService,
-    private preferenceService: PreferenceService,
+    private preferenceSetService: PreferenceSetService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -94,7 +95,10 @@ export class HubService {
     if (hub.community) {
       hub.community.parentID = hub.id;
     }
-    hub.preferences = await this.createInitialHubPreferences(hub);
+    hub.preferenceSet = await this.preferenceSetService.createPreferenceSet(
+      PreferenceDefinitionSet.HUB,
+      this.createPreferenceDefaults()
+    );
 
     // Lifecycle
     const machineConfig: any = challengeLifecycleConfigDefault;
@@ -120,37 +124,12 @@ export class HubService {
     return savedHub;
   }
 
-  async createInitialHubPreferences(hub: IHub): Promise<IPreference[]> {
-    const definitions = await this.preferenceService.getAllDefinitionsInSet(
-      PreferenceDefinitionSet.HUB
-    );
-    const preferences: IPreference[] = [];
-    for (const definition of definitions) {
-      let value = this.preferenceService.getDefaultPreferenceValue(
-        definition.valueType
-      );
-      if (
-        definition.type ===
-        HubPreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE
-      ) {
-        value = 'true';
-      }
-      if (
-        definition.type ===
-        HubPreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
-      ) {
-        value = 'false';
-      }
-      const preference = await this.preferenceService.createPreference({
-        value: value,
-        preferenceDefinition: definition,
-        hub: hub,
-      });
+  createPreferenceDefaults(): Map<PreferenceType, string> {
+    const defaults: Map<PreferenceType, string> = new Map();
+    defaults.set(PreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE, 'true');
+    defaults.set(PreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS, 'false');
 
-      preferences.push(preference);
-    }
-
-    return preferences;
+    return defaults;
   }
 
   async validateHubData(hubData: CreateHubInput) {
@@ -195,7 +174,7 @@ export class HubService {
 
   async deleteHub(deleteData: DeleteHubInput): Promise<IHub> {
     const hub = await this.getHubOrFail(deleteData.ID, {
-      relations: ['challenges', 'preferences'],
+      relations: ['challenges', 'preferenceSet'],
     });
 
     // Do not remove an hub that has child challenges , require these to be individually first removed
@@ -222,10 +201,8 @@ export class HubService {
       await this.organizationService.save(hostOrg);
     }
 
-    if (hub.preferences) {
-      for (const preference of hub.preferences) {
-        await this.preferenceService.removeUserPreference(preference);
-      }
+    if (hub.preferenceSet) {
+      await this.preferenceSetService.deletePreferenceSet(hub.preferenceSet.id);
     }
 
     const result = await this.hubRepository.remove(hub as Hub);
@@ -338,23 +315,20 @@ export class HubService {
     return hub;
   }
 
-  async getPreferenceOrFail(
-    hub: IHub,
-    type: HubPreferenceType
-  ): Promise<IPreference> {
-    const preferences = await this.getPreferences(hub.id);
-    const preference = preferences.find(
-      preference => preference.preferenceDefinition.type === type.toString()
-    );
+  async getPreferenceSetOrFail(hubId: string): Promise<IPreferenceSet> {
+    const hubWithPreferences = await this.getHubOrFail(hubId, {
+      relations: ['preferenceSet'],
+    });
+    const preferenceSet = hubWithPreferences.preferenceSet;
 
-    if (!preference) {
+    if (!preferenceSet) {
       throw new EntityNotFoundException(
-        `Unable to find preference of type ${type} for hub with ID: ${hub.id}`,
+        `Unable to find preferenceSet for hub with nameID: ${hubWithPreferences.nameID}`,
         LogContext.COMMUNITY
       );
     }
 
-    return preference;
+    return preferenceSet;
   }
 
   async setHubHost(hubID: string, hostOrgID: string): Promise<IHub> {
@@ -690,36 +664,18 @@ export class HubService {
     return template;
   }
 
-  async getPreferences(hubID: string) {
-    const hub = await this.getHubOrFail(hubID, {
-      relations: ['preferences'],
-    });
+  async getPreferences(hub: IHub): Promise<IPreference[]> {
+    const preferenceSet = await this.getPreferenceSetOrFail(hub.id);
 
-    const preferences = hub.preferences;
+    const preferences = preferenceSet.preferences;
 
     if (!preferences) {
       throw new EntityNotInitializedException(
-        `Hub preferences not initialized: ${hubID}`,
+        `Hub preferences not initialized: ${hub.id}`,
         LogContext.CHALLENGES
       );
     }
 
     return preferences;
-  }
-
-  getPreferenceValue(
-    preferences: IPreference[],
-    type: HubPreferenceType
-  ): boolean {
-    const preference = preferences.find(
-      preference => preference.preferenceDefinition.type === type
-    );
-    if (!preference) {
-      throw new EntityNotInitializedException(
-        `Hub preferences does not contain the required preference: ${type}`,
-        LogContext.CHALLENGES
-      );
-    }
-    return preference.value === 'true';
   }
 }

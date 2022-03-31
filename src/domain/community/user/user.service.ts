@@ -1,5 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import { LogContext, UserPreferenceType } from '@common/enums';
+import { LogContext } from '@common/enums';
 import {
   AuthenticationException,
   EntityNotFoundException,
@@ -41,9 +41,10 @@ import { KonfigService } from '@services/platform/configuration/config/config.se
 import { IUserTemplate } from '@services/platform/configuration';
 import { NamingService } from '@services/domain/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { PreferenceService } from '@domain/common/preference/preference.service';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { IPreference } from '@domain/common/preference/preference.interface';
+import { PreferenceType } from '@common/enums/preference.type';
+import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
+import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
 
 @Injectable()
 export class UserService {
@@ -56,7 +57,7 @@ export class UserService {
     private roomService: RoomService,
     private namingService: NamingService,
     private agentService: AgentService,
-    private preferenceService: PreferenceService,
+    private preferenceSetService: PreferenceSetService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -109,10 +110,12 @@ export class UserService {
       );
     }
 
+    user.preferenceSet = await this.preferenceSetService.createPreferenceSet(
+      PreferenceDefinitionSet.USER,
+      this.createPreferenceDefaults()
+    );
+
     const response = await this.userRepository.save(user);
-
-    user.preferences = await this.createInitialUserPreferences(response);
-
     // all users need to be registered for communications at the absolute beginning
     // there are cases where a user could be messaged before they actually log-in
     // which will result in failure in communication (either missing user or unsent messages)
@@ -179,23 +182,16 @@ export class UserService {
     return result;
   }
 
-  async createInitialUserPreferences(user: IUser): Promise<IPreference[]> {
-    const definitions = await this.preferenceService.getAllDefinitionsInSet(
-      PreferenceDefinitionSet.USER
+  createPreferenceDefaults(): Map<PreferenceType, string> {
+    const defaults: Map<PreferenceType, string> = new Map();
+    defaults.set(PreferenceType.NOTIFICATION_COMMUNICATION_UPDATES, 'true');
+    defaults.set(
+      PreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED,
+      'true'
     );
-    const preferences: IPreference[] = [];
-    for (const definition of definitions) {
-      const preference = await this.preferenceService.createPreference({
-        value: this.preferenceService.getDefaultPreferenceValue(
-          definition.valueType
-        ),
-        preferenceDefinition: definition,
-        user: user,
-      });
-      preferences.push(preference);
-    }
+    defaults.set(PreferenceType.NOTIFICATION_APPLICATION_RECEIVED, 'true');
 
-    return preferences;
+    return defaults;
   }
 
   async getUserTemplate(): Promise<IUserTemplate | undefined> {
@@ -206,25 +202,6 @@ export class UserService {
       return userTemplates[0];
     }
     return undefined;
-  }
-
-  async getPreferenceOrFail(
-    user: IUser,
-    type: UserPreferenceType
-  ): Promise<IPreference> {
-    const preferences = await this.getPreferences(user.id);
-    const preference = preferences.find(
-      preference => preference.preferenceDefinition.type === type
-    );
-
-    if (!preference) {
-      throw new EntityNotFoundException(
-        `Unable to find preference of type ${type} for user with ID: ${user.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return preference;
   }
 
   async createUserFromAgentInfo(agentInfo: AgentInfo): Promise<IUser> {
@@ -248,7 +225,7 @@ export class UserService {
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
     const user = await this.getUserOrFail(userID, {
-      relations: ['profile', 'agent', 'preferences'],
+      relations: ['profile', 'agent', 'preferenceSet'],
     });
     const { id } = user;
     await this.clearUserCache(user);
@@ -257,10 +234,10 @@ export class UserService {
       await this.profileService.deleteProfile(user.profile.id);
     }
 
-    if (user.preferences) {
-      for (const preference of user.preferences) {
-        await this.preferenceService.removeUserPreference(preference);
-      }
+    if (user.preferenceSet) {
+      await this.preferenceSetService.deletePreferenceSet(
+        user.preferenceSet.id
+      );
     }
 
     if (user.agent) {
@@ -311,21 +288,19 @@ export class UserService {
     return await this.userRepository.save(user);
   }
 
-  async getPreferences(userID: string) {
+  async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {
     const user = await this.getUserOrFail(userID, {
-      relations: ['preferences'],
+      relations: ['preferenceSet'],
     });
 
-    const preferences = user.preferences;
-
-    if (!preferences) {
+    if (!user.preferenceSet) {
       throw new EntityNotInitializedException(
-        `User preferences not initialized: ${userID}`,
+        `User preferences not initialized or not found for user with nameID: ${user.nameID}`,
         LogContext.COMMUNITY
       );
     }
 
-    return preferences;
+    return user.preferenceSet;
   }
 
   async getUserOrFail(

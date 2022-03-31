@@ -1,4 +1,5 @@
-import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL } from '@common/constants';
 import { Profiling } from '@common/decorators/profiling.decorator';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import {
@@ -8,6 +9,8 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { SsiException } from '@common/exceptions/ssi.exception';
+import { SubscriptionType } from '@common/enums/subscription.type';
+import { ProfileCredentialVerified } from '@domain/agent/agent/dto/agent.dto.profile.credential.verified';
 import { Agent, CreateAgentInput, IAgent } from '@domain/agent/agent';
 import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -19,19 +22,14 @@ import {
   LoggerService,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { firstValueFrom } from 'rxjs';
 import { FindOneOptions, Repository } from 'typeorm';
 import { CredentialService } from '../credential/credential.service';
-import { RestEndpoint } from '@common/enums/rest.endpoint';
 import { WalletManagerCommand } from '@common/enums/wallet.manager.command';
 import { CredentialMetadataOutput } from '../verified-credential/dto/verified.credential.dto.metadata';
-import jwt_decode from 'jwt-decode';
 import { IClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.interface';
-import { CredentialMetadata } from '@services/platform/trust-registry/trust.registry.configuration/credential.metadata';
 import { TrustRegistryAdapter } from '@services/platform/trust-registry/trust.registry.adapter/trust.registry.adapter';
 import { GrantCredentialInput } from './dto/agent.dto.credential.grant';
 import { RevokeCredentialInput } from './dto/agent.dto.credential.revoke';
@@ -39,6 +37,16 @@ import { AgentBeginVerifiedCredentialRequestOutput } from './dto/agent.dto.verif
 import { AgentBeginVerifiedCredentialOfferOutput } from './dto/agent.dto.verified.credential.offer.begin.output';
 import { VerifiedCredentialService } from '../verified-credential/verified.credential.service';
 import { IVerifiedCredential } from '../verified-credential/verified.credential.interface';
+import { AgentInteractionVerifiedCredentialRequestJolocom } from './dto/agent.dto.interaction.verified.credential.request.jolocom';
+import { SsiIssuerType } from '@common/enums/ssi.issuer.type';
+import { SsiInteractionNotFound } from '@common/exceptions/ssi.interaction.not.found';
+import { AgentInteractionVerifiedCredentialOffer } from './dto/agent.dto.interaction.verified.credential.offer';
+import { SsiSovrhdAdapter } from '@services/platform/ssi-sovrhd/ssi.sovrhd.adapter';
+import { WalletManagerAdapter } from '@services/platform/wallet-manager-adapter/wallet.manager.adapter';
+import { VerifiedCredential } from '../verified-credential/dto/verified.credential.dto.result';
+import { SsiSovrhdRegisterCallbackSession } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.session';
+import { AgentInteractionVerifiedCredentialRequestSovrhd } from './dto/agent.dto.interaction.verified.credential.request.sovrhd';
+import { SsiSovrhdRegisterCallbackCredential } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.credential';
 
 @Injectable()
 export class AgentService {
@@ -46,16 +54,18 @@ export class AgentService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private configService: ConfigService,
     private credentialService: CredentialService,
-    @Inject(WALLET_MANAGEMENT_SERVICE)
-    private walletManagementClient: ClientProxy,
     @InjectRepository(Agent)
     private agentRepository: Repository<Agent>,
     private trustRegistryAdapter: TrustRegistryAdapter,
+    private ssiSovrhdAdapter: SsiSovrhdAdapter,
+    private walletManagerAdapter: WalletManagerAdapter,
     private verifiedCredentialService: VerifiedCredentialService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER)
-    private readonly cacheManager: Cache
+    private readonly cacheManager: Cache,
+    @Inject(SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL)
+    private subscriptionVerifiedCredentials: PubSubEngine
   ) {}
 
   async createAgent(inputData: CreateAgentInput): Promise<IAgent> {
@@ -214,50 +224,32 @@ export class AgentService {
   async createDidOnAgent(agent: IAgent): Promise<IAgent> {
     agent.password = Math.random().toString(36).substr(2, 10);
 
-    const did$ = this.walletManagementClient.send(
-      { cmd: WalletManagerCommand.CREATE_IDENTITY },
-      {
-        password: agent.password,
-      }
-    );
-
-    try {
-      const did = await firstValueFrom(did$);
-      agent.did = did;
-      return await this.saveAgent(agent);
-    } catch (err: any) {
-      throw new SsiException(`Failed to create DID on agent: ${err.message}`);
-    }
+    agent.did = await this.walletManagerAdapter.createIdentity(agent.password);
+    return await this.saveAgent(agent);
   }
 
   @Profiling.api
   async getVerifiedCredentials(agent: IAgent): Promise<IVerifiedCredential[]> {
-    const credentialMetadata =
-      this.trustRegistryAdapter.getSupportedCredentialMetadata();
-
-    const identityInfo$ = this.walletManagementClient.send(
-      { cmd: WalletManagerCommand.GET_IDENTITY_INFO },
-      {
-        did: agent.did,
-        password: agent.password,
-        credentialMetadata: credentialMetadata,
-      }
-    );
-
-    try {
-      const verifiedCredentials: IVerifiedCredential[] = await firstValueFrom(
-        identityInfo$
+    const verifiedCredentialsWalletMgr =
+      await this.walletManagerAdapter.getVerifiedCredentials(
+        agent.did,
+        agent.password
       );
-      for (const vc of verifiedCredentials) {
-        vc.claims = await this.verifiedCredentialService.getClaims(vc.claim);
-      }
-
-      return verifiedCredentials;
-    } catch (err: any) {
-      throw new SsiException(
-        `Failed to get identity info from wallet manager: ${err.message}`
-      );
+    const verifiedCredentials: IVerifiedCredential[] = [];
+    for (const vcWalletMgr of verifiedCredentialsWalletMgr) {
+      const verifiedCredential = new VerifiedCredential();
+      verifiedCredential.name = vcWalletMgr.name;
+      verifiedCredential.type = vcWalletMgr.type;
+      verifiedCredential.issued = vcWalletMgr.issued;
+      verifiedCredential.issuer = vcWalletMgr.issuer;
+      verifiedCredential.expires = vcWalletMgr.expires;
+      verifiedCredential.context = vcWalletMgr.context || '';
+      verifiedCredential.claims =
+        await this.verifiedCredentialService.getClaims(vcWalletMgr.claim);
+      verifiedCredentials.push(verifiedCredential);
     }
+
+    return verifiedCredentials;
   }
 
   @Profiling.api
@@ -265,78 +257,154 @@ export class AgentService {
     issuerAgentID: string,
     credentialTypes: string[]
   ): Promise<AgentBeginVerifiedCredentialRequestOutput> {
-    const { nonce, uniqueCallbackURL } =
-      this.trustRegistryAdapter.generateCredentialRequestUrl();
     const issuerAgent = await this.getAgentOrFail(issuerAgentID);
-    const credentialRequest$ = this.walletManagementClient.send(
-      { cmd: WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION },
-      {
-        issuerDId: issuerAgent.did,
-        issuerPassword: issuerAgent.password,
-        credentialMetadata:
-          this.trustRegistryAdapter.getSupportedCredentialMetadata(
-            credentialTypes
-          ),
-        uniqueCallbackURL: uniqueCallbackURL,
-      }
+    // todo: for now only support a single type per request; may want to enforce this.
+    if (credentialTypes.length !== 1) {
+      throw new SsiException(
+        `[beginCredentialRequestInteraction]: Only a single credential must be requested: ${credentialTypes.length}`
+      );
+    }
+
+    const requestedCredentialMetadata =
+      this.trustRegistryAdapter.getVerifiedCredentialMetadata(
+        credentialTypes[0]
+      );
+    const vcIssuer = requestedCredentialMetadata.issuer;
+    const vcIssuerType =
+      this.trustRegistryAdapter.getVcIssuerTypeOrFail(vcIssuer);
+
+    const nonce = this.trustRegistryAdapter.generateNonceForInteraction();
+    let uniqueCallbackURL =
+      this.trustRegistryAdapter.generateCredentialRequestUrlJolocom(nonce);
+    if (vcIssuerType === SsiIssuerType.SOVRHD) {
+      uniqueCallbackURL =
+        this.trustRegistryAdapter.generateCredentialRequestUrlSovrhd(nonce);
+    }
+
+    const agentWalletResponse =
+      await this.walletManagerAdapter.beginCredentialRequestInteraction(
+        issuerAgent.did,
+        issuerAgent.password,
+        uniqueCallbackURL,
+        requestedCredentialMetadata
+      );
+    const clientResponse: AgentBeginVerifiedCredentialRequestOutput = {
+      qrCodeImg: '',
+      jwt: '',
+    };
+
+    // Adapt behaviour based on IssuerType
+    const requestExpirationTtl =
+      agentWalletResponse.expiresOn - new Date().getTime();
+    if (vcIssuerType === SsiIssuerType.SOVRHD) {
+      const sovrhdRegisterResponse =
+        await this.ssiSovrhdAdapter.establishSession(uniqueCallbackURL);
+      const interactionInfo: AgentInteractionVerifiedCredentialRequestSovrhd = {
+        nonce: nonce,
+        interactionId: agentWalletResponse.interactionId,
+        agent: issuerAgent,
+        sovrhdSessionId: sovrhdRegisterResponse.session,
+        credentialType: requestedCredentialMetadata.uniqueType,
+      };
+      this.cacheManager.set<AgentInteractionVerifiedCredentialRequestSovrhd>(
+        nonce,
+        interactionInfo,
+        {
+          ttl: requestExpirationTtl,
+        }
+      );
+      clientResponse.qrCodeImg = sovrhdRegisterResponse.qr;
+    } else if (vcIssuerType === SsiIssuerType.JOLOCOM) {
+      clientResponse.jwt = agentWalletResponse.jwt;
+      const interactionInfo: AgentInteractionVerifiedCredentialRequestJolocom =
+        {
+          nonce: nonce,
+          interactionId: agentWalletResponse.interactionId,
+          agent: issuerAgent,
+        };
+      this.cacheManager.set<AgentInteractionVerifiedCredentialRequestJolocom>(
+        nonce,
+        interactionInfo,
+        {
+          ttl: requestExpirationTtl,
+        }
+      );
+    }
+
+    this.walletManagerAdapter.logVerifiedCredentialInteraction(
+      agentWalletResponse.jwt,
+      WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION,
+      'begin'
     );
 
-    try {
-      const request =
-        await firstValueFrom<AgentBeginVerifiedCredentialRequestOutput>(
-          credentialRequest$
-        );
-
-      const requestExpirationTtl = request.expiresOn - new Date().getTime();
-      this.cacheManager.set<IAgent>(request.interactionId, issuerAgent, {
-        ttl: requestExpirationTtl,
-      });
-      this.cacheManager.set(nonce, request.interactionId, {
-        ttl: requestExpirationTtl,
-      });
-      this.logVerifiedCredentialInteraction(
-        request.jwt,
-        WalletManagerCommand.BEGIN_CREDENTIAL_REQUEST_INTERACTION,
-        'begin'
-      );
-
-      return request;
-    } catch (err: any) {
-      throw new SsiException(
-        `[beginCredentialRequestInteraction]: Failed to request credential: ${err.message}`
-      );
-    }
+    return clientResponse;
   }
 
-  @Profiling.api
-  async completeCredentialRequestInteraction(
-    nonce: string,
-    token: string
-  ): Promise<void> {
-    const interactionId = await this.cacheManager.get<string>(nonce);
-    if (!interactionId) {
-      throw new Error('The interaction is not valid');
+  private async getRequestInteractionJolocomInfoFromCache(
+    nonce: string
+  ): Promise<AgentInteractionVerifiedCredentialRequestJolocom> {
+    const interactionInfo =
+      await this.cacheManager.get<AgentInteractionVerifiedCredentialRequestJolocom>(
+        nonce
+      );
+    if (!interactionInfo) {
+      throw new SsiInteractionNotFound(
+        `Unable to find interaction for nonce: ${nonce}`,
+        LogContext.SSI
+      );
     }
-    const agent = await this.cacheManager.get<IAgent>(interactionId);
+    const agent = interactionInfo.agent;
     if (!agent) {
       throw new Error('An agent could not be found for the interactionId');
     }
 
     this.logger.verbose?.(
-      `InteractionId with agent: ${interactionId} - ${
-        agent.did
-      } received ${token.substring(0, 25)}...`,
+      `Interaction with agent ${agent.did} retrieved`,
       LogContext.SSI
     );
+    return interactionInfo;
+  }
 
-    this.logVerifiedCredentialInteraction(
+  private async getRequestInteractionSovrhdInfoFromCache(
+    nonce: string
+  ): Promise<AgentInteractionVerifiedCredentialRequestSovrhd> {
+    const interactionInfo =
+      await this.cacheManager.get<AgentInteractionVerifiedCredentialRequestSovrhd>(
+        nonce
+      );
+    if (!interactionInfo) {
+      throw new SsiInteractionNotFound(
+        `Unable to find interaction for nonce: ${nonce}`,
+        LogContext.SSI
+      );
+    }
+    const agent = interactionInfo.agent;
+    if (!agent) {
+      throw new Error('An agent could not be found for the interactionId');
+    }
+
+    this.logger.verbose?.(
+      `InteractionId with agent ${agent.did} retrieved`,
+      LogContext.SSI
+    );
+    return interactionInfo;
+  }
+
+  async completeCredentialRequestInteractionJolocom(
+    nonce: string,
+    token: string
+  ): Promise<void> {
+    const interactionInfo =
+      await this.getRequestInteractionJolocomInfoFromCache(nonce);
+
+    this.walletManagerAdapter.logVerifiedCredentialInteraction(
       token,
-      WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION,
+      WalletManagerCommand.COMPLETE_CREDENTIAL_REQUEST_INTERACTION_JOLOCOM,
       'response'
     );
 
     // Retrieve the credential to store
-    const tokenDecoded: any = jwt_decode(token);
+    const tokenDecoded: any = this.walletManagerAdapter.decodeJwt(token);
     const vcToBeStored = tokenDecoded.interactionToken.suppliedCredentials[0];
     const vcName = vcToBeStored.name;
     this.logger.verbose?.(
@@ -346,25 +414,108 @@ export class AgentService {
 
     this.validateTrustedIssuerOrFail(vcName, vcToBeStored);
 
-    const credentialStoreRequest$ = this.walletManagementClient.send(
-      { cmd: RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION },
-      {
-        interactionId: interactionId,
-        jwt: token,
-      }
+    const agent = interactionInfo.agent;
+    await this.walletManagerAdapter.completeCredentialRequestInteractionJolocom(
+      agent.did,
+      agent.password,
+      interactionInfo?.interactionId,
+      token
     );
 
-    try {
-      const result = await firstValueFrom<boolean>(credentialStoreRequest$);
-      this.logger.verbose?.(
-        `[RestEndpoint.COMPLETE_CREDENTIAL_REQUEST_INTERACTION] - completed with result: ${result}`,
-        LogContext.AGENT
+    const eventID = `credentials-${Math.floor(Math.random() * 100)}`;
+    const payload: ProfileCredentialVerified = {
+      eventID,
+      vc: 'something something vc',
+      userEmail: agent.parentDisplayID ?? '',
+    };
+
+    await this.subscriptionVerifiedCredentials.publish(
+      SubscriptionType.PROFILE_VERIFIED_CREDENTIAL,
+      payload
+    );
+  }
+
+  async completeCredentialRequestInteractionSovrhd(
+    nonce: string,
+    data: any
+  ): Promise<void> {
+    const interactionInfo = await this.getRequestInteractionSovrhdInfoFromCache(
+      nonce
+    );
+
+    this.logger.verbose?.(
+      `sovhrd callback data: ${JSON.stringify(data)}`,
+      LogContext.SSI_SOVRHD
+    );
+    if (data.id) {
+      // assume the callback to establish the session
+      await this.callbackCredentialRequestSovrhdSession(data, interactionInfo);
+      return;
+    } else {
+      await this.callbackCredentialRequestSovrhdCredential(
+        data,
+        interactionInfo
       );
-    } catch (err: any) {
-      throw new SsiException(
-        `[completeCredentialRequestInteraction]: Failed to request credential: ${err.message}`
-      );
+      return;
     }
+  }
+
+  async callbackCredentialRequestSovrhdSession(
+    data: SsiSovrhdRegisterCallbackSession,
+    interactionInfo: AgentInteractionVerifiedCredentialRequestSovrhd
+  ): Promise<void> {
+    const requestCredentialsResponse =
+      await this.ssiSovrhdAdapter.requestCredentials(
+        data.session,
+        data.id,
+        interactionInfo.credentialType
+      );
+    if (requestCredentialsResponse.result === 'ok') {
+      // request has been made, await now the second call back
+      return;
+    }
+  }
+
+  async callbackCredentialRequestSovrhdCredential(
+    data: SsiSovrhdRegisterCallbackCredential,
+    interactionInfo: AgentInteractionVerifiedCredentialRequestSovrhd
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `Sovhrd credential callback: ${interactionInfo.credentialType}`,
+      LogContext.SSI_SOVRHD
+    );
+    const validateCredential =
+      this.ssiSovrhdAdapter.validateSovrhdCredentialResponse(data);
+    if (!validateCredential) {
+      return;
+    }
+
+    const credentials = data.content.verifiableCredential;
+    this.logger.verbose?.(
+      `Sovhrd credentials returned: ${credentials.length}`,
+      LogContext.SSI_SOVRHD
+    );
+
+    const agent = interactionInfo.agent;
+    await this.walletManagerAdapter.completeCredentialRequestInteractionSovrhd(
+      agent.did,
+      agent.password,
+      interactionInfo?.interactionId,
+      JSON.stringify(credentials[0]),
+      interactionInfo.credentialType
+    );
+
+    const eventID = `credentials-${Math.floor(Math.random() * 100)}`;
+    const payload: ProfileCredentialVerified = {
+      eventID,
+      vc: 'something something vc',
+      userEmail: agent.parentDisplayID ?? '',
+    };
+
+    await this.subscriptionVerifiedCredentials.publish(
+      SubscriptionType.PROFILE_VERIFIED_CREDENTIAL,
+      payload
+    );
   }
 
   validateTrustedIssuerOrFail(vcName: string, vcToBeStored: any) {
@@ -385,20 +536,6 @@ export class AgentService {
     this.trustRegistryAdapter.validateIssuerOrFail(vcName, issuer);
   }
 
-  private logVerifiedCredentialInteraction(
-    jwt: string,
-    interaction: string,
-    stage: string
-  ) {
-    const tokenJson = jwt_decode(jwt);
-    this.logger.verbose?.(
-      `[${interaction}] - [${stage}] - Token converted to JSON: ${JSON.stringify(
-        tokenJson
-      )}`,
-      LogContext.AGENT
-    );
-  }
-
   @Profiling.api
   async beginCredentialOfferInteraction(
     issuerAgentID: string,
@@ -417,49 +554,38 @@ export class AgentService {
     const offeredCredentials =
       this.trustRegistryAdapter.getCredentialOffers(credentials);
 
-    const credentialOffer$ = this.walletManagementClient.send(
-      { cmd: WalletManagerCommand.BEGIN_CREDENTIAL_OFFER_INTERACTION },
+    const credentialOfferResponse =
+      await this.walletManagerAdapter.beingCredentialOfferInteraction(
+        issuerAgent.did,
+        issuerAgent.password,
+        uniqueCallbackURL,
+        offeredCredentials
+      );
+
+    const requestExpirationTtl =
+      credentialOfferResponse.expiresOn - new Date().getTime();
+    const interactionInfo: AgentInteractionVerifiedCredentialOffer = {
+      nonce: nonce,
+      issuer: SsiIssuerType.JOLOCOM,
+      agent: issuerAgent,
+      interactionId: credentialOfferResponse.interactionId,
+      offeredCredentials: offeredCredentials,
+    };
+    this.cacheManager.set<AgentInteractionVerifiedCredentialOffer>(
+      nonce,
+      interactionInfo,
       {
-        issuerDId: issuerAgent.did,
-        issuerPassword: issuerAgent.password,
-        offeredCredentials: offeredCredentials,
-        uniqueCallbackURL: uniqueCallbackURL,
+        ttl: requestExpirationTtl,
       }
     );
 
-    try {
-      const request =
-        await firstValueFrom<AgentBeginVerifiedCredentialOfferOutput>(
-          credentialOffer$
-        );
+    this.walletManagerAdapter.logVerifiedCredentialInteraction(
+      credentialOfferResponse.jwt,
+      WalletManagerCommand.BEGIN_CREDENTIAL_OFFER_INTERACTION,
+      'begin'
+    );
 
-      const requestExpirationTtl = request.expiresOn - new Date().getTime();
-      this.cacheManager.set<{
-        agent: IAgent;
-        offeredCredentials: typeof offeredCredentials;
-      }>(
-        request.interactionId,
-        { agent: issuerAgent, offeredCredentials },
-        {
-          ttl: requestExpirationTtl,
-        }
-      );
-      this.cacheManager.set(nonce, request.interactionId, {
-        ttl: requestExpirationTtl,
-      });
-
-      this.logVerifiedCredentialInteraction(
-        request.jwt,
-        WalletManagerCommand.BEGIN_CREDENTIAL_OFFER_INTERACTION,
-        'begin'
-      );
-
-      return request;
-    } catch (err: any) {
-      throw new SsiException(
-        `[${WalletManagerCommand.BEGIN_CREDENTIAL_OFFER_INTERACTION}]: Failed to offer credential: ${err.message}`
-      );
-    }
+    return { jwt: credentialOfferResponse.jwt, qrCodeImg: '' };
   }
 
   @Profiling.api
@@ -467,21 +593,22 @@ export class AgentService {
     nonce: string,
     token: string
   ): Promise<any> {
-    const interactionId = await this.cacheManager.get<string>(nonce);
-    if (!interactionId) {
-      throw new Error('The interaction is not valid');
+    const interactionInfo =
+      await this.cacheManager.get<AgentInteractionVerifiedCredentialOffer>(
+        nonce
+      );
+    if (!interactionInfo) {
+      throw new SsiInteractionNotFound(
+        `Unable to locate intereaction: ${nonce}`,
+        LogContext.SSI
+      );
     }
-    const { agent, offeredCredentials } =
-      (await this.cacheManager.get<{
-        agent: IAgent;
-        offeredCredentials: {
-          metadata: CredentialMetadata;
-          claim: Record<string, any>;
-        }[];
-      }>(interactionId)) || {};
+    const interactionId = interactionInfo.interactionId;
+    const agent = interactionInfo.agent;
+    const offeredCredentials = interactionInfo.offeredCredentials;
 
     if (!agent || !offeredCredentials) {
-      throw new Error('An agent could not be found for the interactionId');
+      throw new Error('An agent could not be found for the interaction');
     }
 
     this.logger.verbose?.(
@@ -491,34 +618,19 @@ export class AgentService {
       LogContext.SSI
     );
 
-    this.logVerifiedCredentialInteraction(
+    this.walletManagerAdapter.logVerifiedCredentialInteraction(
       token,
       WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION,
       '2-received'
     );
 
-    const credentialOfferSelection$ = this.walletManagementClient.send(
-      { cmd: RestEndpoint.COMPLETE_CREDENTIAL_OFFER_INTERACTION },
-      {
-        interactionId: interactionId,
-        credentialMetadata: offeredCredentials.map(c => c.metadata),
-        jwt: token,
-      }
+    return await this.walletManagerAdapter.completeCredentialOfferInteraction(
+      agent?.did,
+      agent?.password,
+      interactionId,
+      token,
+      offeredCredentials.map(c => c.metadata)
     );
-
-    try {
-      const result = await firstValueFrom(credentialOfferSelection$);
-      this.logVerifiedCredentialInteraction(
-        result.token,
-        WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION,
-        '3-completed'
-      );
-      return result;
-    } catch (err: any) {
-      throw new SsiException(
-        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}]:Failed to offer credential: ${err.message}`
-      );
-    }
   }
 
   @Profiling.api
@@ -532,36 +644,8 @@ export class AgentService {
         }));
     } catch (err: any) {
       throw new SsiException(
-        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}]:Failed to offer credential: ${err.message}`
+        `[${WalletManagerCommand.COMPLETE_CREDENTIAL_OFFER_INTERACTION}]: Failed to offer credential: ${err.message}`
       );
-    }
-  }
-
-  @Profiling.api
-  async issueVerifiedCredential(
-    issuerAgent: IAgent,
-    receiverAgent: IAgent,
-    credentialType: string,
-    credentialName: string,
-    credentialContext: any
-  ): Promise<void> {
-    const credentialRequest$ = this.walletManagementClient.send(
-      { cmd: WalletManagerCommand.ISSUE_VERIFIED_CREDENTIAL },
-      {
-        issuerDId: issuerAgent.did,
-        issuerPassword: issuerAgent.password,
-        receiverDId: receiverAgent.did,
-        receiverPassword: receiverAgent.password,
-        types: credentialType,
-        name: credentialName,
-        context: credentialContext,
-      }
-    );
-
-    try {
-      await firstValueFrom(credentialRequest$);
-    } catch (err: any) {
-      throw new SsiException(`Failed to issue credential: ${err.message}`);
     }
   }
 

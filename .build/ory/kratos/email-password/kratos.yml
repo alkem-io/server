@@ -54,15 +54,15 @@ selfservice:
       lifespan: 10m
       after:
         default_browser_return_url: http://localhost:3000/identity/login/success
+        password:
+          hooks:
+            - hook: require_verified_address
 
     registration:
       lifespan: 10m
       ui_url: http://localhost:3000/identity/registration
       after:
         default_browser_return_url: http://localhost:3000/identity/registration/success
-        password:
-          hooks:
-            - hook: session
 
 log:
   level: debug

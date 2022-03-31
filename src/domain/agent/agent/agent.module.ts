@@ -9,6 +9,9 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { TrustRegistryAdapterModule } from '../../../services/platform/trust-registry/trust.registry.adapter/trust.registry.adapter.module';
 import { AgentResolverMutations } from './agent.resolver.mutations';
 import { VerifiedCredentialModule } from '../verified-credential/verified.credential.module';
+import { AgentResolverSubscriptions } from '@domain/agent/agent/agent.resolver.subscriptions';
+import { SsiSovrhdAdapterModule } from '@services/platform/ssi-sovrhd/ssi.sovrhd.adapter.module';
+import { WalletManagerAdapterModule } from '@services/platform/wallet-manager-adapter/wallet.manager.adapter.module';
 
 @Module({
   imports: [
@@ -20,8 +23,15 @@ import { VerifiedCredentialModule } from '../verified-credential/verified.creden
     TypeOrmModule.forFeature([Agent]),
     CacheModule.register(),
     TrustRegistryAdapterModule,
+    SsiSovrhdAdapterModule,
+    WalletManagerAdapterModule,
   ],
-  providers: [AgentService, AgentResolverMutations, AgentResolverFields],
+  providers: [
+    AgentService,
+    AgentResolverMutations,
+    AgentResolverFields,
+    AgentResolverSubscriptions,
+  ],
   exports: [AgentService],
 })
 export class AgentModule {}

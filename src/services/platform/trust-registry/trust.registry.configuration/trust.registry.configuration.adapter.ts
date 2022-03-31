@@ -2,7 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes } from '@src/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CredentialMetadata } from './credential.metadata';
+import { TrustRegistryCredentialMetadata } from './trust.registry.dto.credential.metadata';
 
 @Injectable()
 export class TrustRegistryConfigurationAdapter {
@@ -12,12 +12,12 @@ export class TrustRegistryConfigurationAdapter {
     private readonly logger: LoggerService
   ) {}
 
-  getCredentials(): CredentialMetadata[] {
-    const credentials: CredentialMetadata[] = this.configService.get(
-      ConfigurationTypes.SSI
-    ).credentials;
+  getCredentials(): TrustRegistryCredentialMetadata[] {
+    const credentials: TrustRegistryCredentialMetadata[] =
+      this.configService.get(ConfigurationTypes.SSI).credentials;
 
-    const credentialValues: CredentialMetadata[] = Object.values(credentials);
+    const credentialValues: TrustRegistryCredentialMetadata[] =
+      Object.values(credentials);
 
     return credentialValues;
   }

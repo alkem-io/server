@@ -18,7 +18,7 @@ export class PlatformHubTemplate {
 
   @Field(() => [HubAspectTemplate], {
     nullable: true,
-    description: 'Application templates.',
+    description: 'Hub aspect templates.',
   })
   aspects?: HubAspectTemplate[];
 
