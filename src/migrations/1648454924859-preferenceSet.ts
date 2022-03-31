@@ -10,7 +10,7 @@ export class preferenceSet1648454924859 implements MigrationInterface {
       `CREATE TABLE \`preference_set\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
            \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
             \`version\` int NOT NULL,
-             \`authorizationId\` char(36) NULL,
+             \`authorizationId\` varchar(36) NULL,
               UNIQUE INDEX \`REL_8888dccdda9ba57d8e3a634cd8\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
