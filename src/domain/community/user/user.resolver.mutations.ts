@@ -1,12 +1,13 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Repository } from 'typeorm';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import {
   CreateUserInput,
-  UpdateUserInput,
-  IUser,
   DeleteUserInput,
+  IUser,
+  UpdateUserInput,
 } from '@domain/community/user';
 import { UserService } from './user.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -25,6 +26,12 @@ import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceService } from '@domain/common/preference';
 import { UpdateUserPreferenceInput } from './dto/user.dto.update.preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Organization } from '@src/domain';
+import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { OrganizationPreferenceType } from '@common/enums/organization.preference.type';
+import { AuthorizationCredential } from '@src/common';
+import { AgentService } from '@domain/agent/agent/agent.service';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -34,9 +41,14 @@ export class UserResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
+    private agentService: AgentService,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     private preferenceService: PreferenceService,
     private preferenceSetService: PreferenceSetService,
+    // todo: refactor to not reference organization
+    // repository is used to avoid circular dependency between org and user
+    @InjectRepository(Organization)
+    private organizationRepository: Repository<Organization>,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
@@ -95,6 +107,9 @@ export class UserResolverMutations {
       );
 
     this.notificationsClient.emit<number>(EventType.USER_REGISTERED, payload);
+
+    await this.assignUserToOrganizationByDomain(agentInfo, savedUser);
+
     return savedUser;
   }
 
@@ -213,5 +228,49 @@ export class UserResolverMutations {
       `reset authorization definition on user: ${authorizationResetData.userID}`
     );
     return await this.userAuthorizationService.applyAuthorizationPolicy(user);
+  }
+
+  private async assignUserToOrganizationByDomain(
+    agentInfo: AgentInfo,
+    user: IUser
+  ): Promise<void> {
+    if (!agentInfo.emailVerified) {
+      return;
+    }
+
+    const userEmailDomain = user.email.split('@')[1];
+    // todo refactor to not use repository directly
+    const org = await this.organizationRepository.findOne(
+      { domain: userEmailDomain },
+      { relations: ['preferenceSet', 'verification'] }
+    );
+
+    if (
+      !org ||
+      org.verification.status !==
+        OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION ||
+      !org.preferenceSet
+    ) {
+      return;
+    }
+
+    const orgMatchDomain = Boolean(
+      this.preferenceSetService.getPreferenceOrFail(
+        org.preferenceSet,
+        OrganizationPreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN
+      ).value
+    );
+
+    if (!orgMatchDomain) {
+      return;
+    }
+
+    const { agent } = await this.userService.getUserAndAgent(user.id);
+
+    user.agent = await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: AuthorizationCredential.ORGANIZATION_MEMBER,
+      resourceID: org.id,
+    });
   }
 }
