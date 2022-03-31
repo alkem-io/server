@@ -40,7 +40,7 @@ export class challengeOrgPrefs1648469585965 implements MigrationInterface {
            `);
       await queryRunner.query(`
                 INSERT INTO preference (id, createdDate, updatedDate, version, value, authorizationId, preferenceDefinitionId, preferenceSetId)
-                VALUES (UUID(), NOW(), NOW(), 1, 0, '${prefAuthId}', '${orgPrefDef}', '${prefSetId}')
+                VALUES (UUID(), NOW(), NOW(), 1, 'false', '${prefAuthId}', '${orgPrefDef}', '${prefSetId}')
             `);
       // update org with pref set
       await queryRunner.query(
