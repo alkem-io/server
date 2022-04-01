@@ -26,7 +26,7 @@ export class challengeOrgPrefs1648469585965 implements MigrationInterface {
       const prefSetAuthId = randomUUID();
       await queryRunner.query(`
                 INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules)
-                VALUES ('${prefSetAuthId}', NOW(), NOW(), 1, '', '', 'false', '')
+                VALUES ('${prefSetAuthId}', NOW(), NOW(), 1, '', '', 0, '')
            `);
       const prefSetId = randomUUID();
       await queryRunner.query(
@@ -36,7 +36,7 @@ export class challengeOrgPrefs1648469585965 implements MigrationInterface {
       const prefAuthId = randomUUID();
       await queryRunner.query(`
                 INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules)
-                VALUES ('${prefAuthId}', NOW(), NOW(), 1, '', '', 'false', '')
+                VALUES ('${prefAuthId}', NOW(), NOW(), 1, '', '', 0, '')
            `);
       await queryRunner.query(`
                 INSERT INTO preference (id, createdDate, updatedDate, version, value, authorizationId, preferenceDefinitionId, preferenceSetId)
@@ -73,7 +73,7 @@ export class challengeOrgPrefs1648469585965 implements MigrationInterface {
       const prefSetAuthId = randomUUID();
       await queryRunner.query(`
                 INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules)
-                VALUES ('${prefSetAuthId}', NOW(), NOW(), 1, '', '', 'false', '')
+                VALUES ('${prefSetAuthId}', NOW(), NOW(), 1, '', '', 0, '')
            `);
       const prefSetId = randomUUID();
       await queryRunner.query(
@@ -86,9 +86,9 @@ export class challengeOrgPrefs1648469585965 implements MigrationInterface {
       await queryRunner.query(`
                 INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules)
                 VALUES
-                ('${prefJoinAuthId}', NOW(), NOW(), 1, '', '', 'false', ''),
-                ('${prefApplyAuthId}', NOW(), NOW(), 1, '', '', 'false', ''),
-                ('${prefFeedbackAuthId}', NOW(), NOW(), 1, '', '', 'false', '')
+                ('${prefJoinAuthId}', NOW(), NOW(), 1, '', '', 0, ''),
+                ('${prefApplyAuthId}', NOW(), NOW(), 1, '', '', 0, ''),
+                ('${prefFeedbackAuthId}', NOW(), NOW(), 1, '', '', 0, '')
            `);
       await queryRunner.query(`
                 INSERT INTO preference (id, createdDate, updatedDate, version, value, authorizationId, preferenceDefinitionId, preferenceSetId)
