@@ -1,4 +1,4 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { Repository } from 'typeorm';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -21,6 +21,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
+import { UserNotVerifiedException } from '@common/exceptions/user';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceService } from '@domain/common/preference';
@@ -30,8 +31,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Organization } from '@src/domain';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { OrganizationPreferenceType } from '@common/enums/organization.preference.type';
-import { AuthorizationCredential } from '@src/common';
+import {
+  AuthorizationCredential,
+  EntityNotInitializedException,
+  getEmailDomain,
+  LogContext,
+} from '@src/common';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -49,7 +56,9 @@ export class UserResolverMutations {
     // repository is used to avoid circular dependency between org and user
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -233,25 +242,45 @@ export class UserResolverMutations {
   private async assignUserToOrganizationByDomain(
     agentInfo: AgentInfo,
     user: IUser
-  ): Promise<void> {
+  ): Promise<boolean> {
     if (!agentInfo.emailVerified) {
-      return;
+      throw new UserNotVerifiedException(
+        `User '${user.nameID}' not verified`,
+        LogContext.COMMUNITY
+      );
     }
 
-    const userEmailDomain = user.email.split('@')[1];
+    const userEmailDomain = getEmailDomain(user.email);
     // todo refactor to not use repository directly
     const org = await this.organizationRepository.findOne(
       { domain: userEmailDomain },
       { relations: ['preferenceSet', 'verification'] }
     );
 
+    if (!org) {
+      this.logger.verbose?.(
+        `Organization matching user's domain '${userEmailDomain}' not found.`,
+        LogContext.COMMUNITY
+      );
+      return false;
+    }
+
+    if (!org.preferenceSet) {
+      throw new EntityNotInitializedException(
+        `Organization preferences not initialized or not found for organization with nameID: ${org.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
     if (
-      !org ||
       org.verification.status !==
-        OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION ||
-      !org.preferenceSet
+      OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION
     ) {
-      return;
+      this.logger.verbose?.(
+        `Organization '${org.nameID}' not verified`,
+        LogContext.COMMUNITY
+      );
+      return false;
     }
 
     const orgMatchDomain =
@@ -261,7 +290,11 @@ export class UserResolverMutations {
       ).value === 'true';
 
     if (!orgMatchDomain) {
-      return;
+      this.logger.verbose?.(
+        `Organization '${org.nameID}' preference ${OrganizationPreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN} is disabled`,
+        LogContext.COMMUNITY
+      );
+      return false;
     }
 
     const { agent } = await this.userService.getUserAndAgent(user.id);
@@ -271,5 +304,11 @@ export class UserResolverMutations {
       type: AuthorizationCredential.ORGANIZATION_MEMBER,
       resourceID: org.id,
     });
+
+    this.logger.verbose?.(
+      `User ${user.nameID} successfully added to Organization '${org.nameID}'`,
+      LogContext.COMMUNITY
+    );
+    return true;
   }
 }
