@@ -6,6 +6,7 @@ import { Strategy } from 'passport-custom';
 import { AuthenticationService } from './authentication.service';
 import { Configuration, PublicApi } from '@ory/kratos-client';
 import { ConfigurationTypes, LogContext } from '@common/enums';
+import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 
 @Injectable()
 export class OryApiStrategy extends PassportStrategy(
@@ -34,7 +35,7 @@ export class OryApiStrategy extends PassportStrategy(
       })
     );
 
-    let oryIdentity = undefined;
+    let oryIdentity: OryDefaultIdentitySchema | undefined = undefined;
     const authorizationHeader = payload.headers.authorization;
 
     if (apiAccessEnabled && authorizationHeader) {
@@ -44,7 +45,7 @@ export class OryApiStrategy extends PassportStrategy(
       this.logger.verbose?.(user.data.identity, LogContext.AUTH);
 
       if (user) {
-        oryIdentity = user.data.identity;
+        oryIdentity = user.data.identity as OryDefaultIdentitySchema;
       }
     }
     return await this.authService.createAgentInfo(oryIdentity);

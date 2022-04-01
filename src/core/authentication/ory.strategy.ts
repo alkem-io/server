@@ -11,6 +11,7 @@ import { Strategy, ExtractJwt } from 'passport-jwt';
 import { AuthenticationService } from './authentication.service';
 import { passportJwtSecret } from 'jwks-rsa';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 
 @Injectable()
 export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
@@ -45,9 +46,9 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
       );
 
     // Todo: not sure this is correct, but am hitting a case whereby session is null
-    let oryIdentity = undefined;
+    let oryIdentity: OryDefaultIdentitySchema | undefined = undefined;
     if (payload.session) {
-      oryIdentity = payload.session.identity;
+      oryIdentity = payload.session.identity as OryDefaultIdentitySchema;
     } else {
       this.logger.verbose?.('No Ory Kratos session', LogContext.AUTH);
     }

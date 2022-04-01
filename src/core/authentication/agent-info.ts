@@ -4,6 +4,7 @@ import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.
 export class AgentInfo {
   userID = '';
   email = '';
+  emailVerified = false;
   firstName = '';
   lastName = '';
   credentials: ICredential[] = [];
