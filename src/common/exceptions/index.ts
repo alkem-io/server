@@ -16,3 +16,4 @@ export * from './matrix.registration.exception';
 export * from './matrix.entity.not.found.exception';
 
 export * from './pagination';
+export * from './user';

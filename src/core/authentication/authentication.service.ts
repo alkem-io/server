@@ -4,6 +4,7 @@ import { ConfigurationTypes, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
 import { AgentInfo } from './agent-info';
+import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 import { NotSupportedException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 @Injectable()
@@ -15,7 +16,9 @@ export class AuthenticationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createAgentInfo(oryIdentity: any): Promise<AgentInfo> {
+  async createAgentInfo(
+    oryIdentity?: OryDefaultIdentitySchema
+  ): Promise<AgentInfo> {
     const agentInfo = new AgentInfo();
     if (!oryIdentity) {
       return agentInfo;
@@ -28,8 +31,12 @@ export class AuthenticationService {
         LogContext.AUTH
       );
     }
+    const isEmailVerified =
+      oryIdentity.verifiable_addresses.find(x => x.via === 'email')?.verified ??
+      false;
     // Have a valid identity, get the information from Ory
     agentInfo.email = oryTraits.email;
+    agentInfo.emailVerified = isEmailVerified;
     agentInfo.firstName = oryTraits.name.first;
     agentInfo.lastName = oryTraits.name.last;
 
