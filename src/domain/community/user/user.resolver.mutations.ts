@@ -1,6 +1,5 @@
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { Repository } from 'typeorm';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import {
@@ -21,23 +20,11 @@ import { ClientProxy } from '@nestjs/microservices';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
-import { UserNotVerifiedException } from '@common/exceptions/user';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceService } from '@domain/common/preference';
 import { UpdateUserPreferenceInput } from './dto/user.dto.update.preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Organization } from '@src/domain';
-import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
-import { OrganizationPreferenceType } from '@common/enums/organization.preference.type';
-import {
-  AuthorizationCredential,
-  EntityNotInitializedException,
-  getEmailDomain,
-  LogContext,
-} from '@src/common';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Resolver(() => IUser)
@@ -48,14 +35,9 @@ export class UserResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
-    private agentService: AgentService,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     private preferenceService: PreferenceService,
     private preferenceSetService: PreferenceSetService,
-    // todo: refactor to not reference organization
-    // repository is used to avoid circular dependency between org and user
-    @InjectRepository(Organization)
-    private organizationRepository: Repository<Organization>,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
@@ -90,34 +72,6 @@ export class UserResolverMutations {
       );
 
     this.notificationsClient.emit<number>(EventType.USER_REGISTERED, payload);
-
-    return savedUser;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description:
-      'Creates a new User profile on the platform for a user that has a valid Authentication session.',
-  })
-  @Profiling.api
-  async createUserNewRegistration(
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IUser> {
-    // If a user has a valid session, and hence email / names etc set, then they can create a User profile
-    let user = await this.userService.createUserFromAgentInfo(agentInfo);
-    user = await this.userAuthorizationService.grantCredentials(user);
-
-    const savedUser =
-      await this.userAuthorizationService.applyAuthorizationPolicy(user);
-
-    const payload =
-      await this.notificationsPayloadBuilder.buildUserRegisteredNotificationPayload(
-        user.id
-      );
-
-    this.notificationsClient.emit<number>(EventType.USER_REGISTERED, payload);
-
-    await this.assignUserToOrganizationByDomain(agentInfo, savedUser);
 
     return savedUser;
   }
@@ -237,78 +191,5 @@ export class UserResolverMutations {
       `reset authorization definition on user: ${authorizationResetData.userID}`
     );
     return await this.userAuthorizationService.applyAuthorizationPolicy(user);
-  }
-
-  private async assignUserToOrganizationByDomain(
-    agentInfo: AgentInfo,
-    user: IUser
-  ): Promise<boolean> {
-    if (!agentInfo.emailVerified) {
-      throw new UserNotVerifiedException(
-        `User '${user.nameID}' not verified`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    const userEmailDomain = getEmailDomain(user.email);
-    // todo refactor to not use repository directly
-    const org = await this.organizationRepository.findOne(
-      { domain: userEmailDomain },
-      { relations: ['preferenceSet', 'verification'] }
-    );
-
-    if (!org) {
-      this.logger.verbose?.(
-        `Organization matching user's domain '${userEmailDomain}' not found.`,
-        LogContext.COMMUNITY
-      );
-      return false;
-    }
-
-    if (!org.preferenceSet) {
-      throw new EntityNotInitializedException(
-        `Organization preferences not initialized or not found for organization with nameID: ${org.nameID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    if (
-      org.verification.status !==
-      OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION
-    ) {
-      this.logger.verbose?.(
-        `Organization '${org.nameID}' not verified`,
-        LogContext.COMMUNITY
-      );
-      return false;
-    }
-
-    const orgMatchDomain =
-      this.preferenceSetService.getPreferenceOrFail(
-        org.preferenceSet,
-        OrganizationPreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN
-      ).value === 'true';
-
-    if (!orgMatchDomain) {
-      this.logger.verbose?.(
-        `Organization '${org.nameID}' preference ${OrganizationPreferenceType.AUTHORIZATION_ORGANIZATION_MATCH_DOMAIN} is disabled`,
-        LogContext.COMMUNITY
-      );
-      return false;
-    }
-
-    const { agent } = await this.userService.getUserAndAgent(user.id);
-
-    user.agent = await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.ORGANIZATION_MEMBER,
-      resourceID: org.id,
-    });
-
-    this.logger.verbose?.(
-      `User ${user.nameID} successfully added to Organization '${org.nameID}'`,
-      LogContext.COMMUNITY
-    );
-    return true;
   }
 }

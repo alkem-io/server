@@ -633,4 +633,11 @@ export class OrganizationService {
 
     return defaults;
   }
+
+  async getOrganizationByDomain(
+    domain: string
+  ): Promise<IOrganization | undefined> {
+    const org = await this.organizationRepository.findOne({ domain: domain });
+    return org;
+  }
 }

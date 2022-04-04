@@ -38,6 +38,7 @@ import {
   SubscriptionsTransportWsWebsocket,
   WebsocketContext,
 } from '@src/types';
+import { RegistrationModule } from '@services/domain/registration/registration.module';
 
 @Module({
   imports: [
@@ -153,6 +154,7 @@ import {
     IpfsModule,
     AdminCommunicationModule,
     AgentModule,
+    RegistrationModule,
   ],
   controllers: [AppController],
   providers: [
