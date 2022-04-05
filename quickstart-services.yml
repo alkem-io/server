@@ -221,7 +221,8 @@ services:
     hostname: wallet-manager
     image: alkemio/wallet-manager:v0.4.2
     environment:
-      - DATABASE_HOST
+      - DID_METHOD
+      - JOLOCOM_DATABASE_HOST
       - MYSQL_ROOT_PASSWORD
       - RABBITMQ_HOST
       - RABBITMQ_USER
