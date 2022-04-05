@@ -15,6 +15,11 @@ http:
         servers:
           - url: 'http://mailslurper:4437'
 
+    mailslurper-smtp:
+      loadBalancer:
+        servers:
+          - url: 'http://mailslurper:1025'
+
     ipfs-http-adapter:
       loadBalancer:
         servers:
@@ -200,6 +205,12 @@ http:
       service: 'mailslurper-client'
       entryPoints:
         - 'mailslurper-client'
+
+    mailslurper-smtp:
+      rule: 'PathPrefix(`/`)'
+      service: 'mailslurper-smtp'
+      entryPoints:
+        - 'mailslurper-smtp'
 
     ipfs-api:
       rule: 'PathPrefix(`/`)'

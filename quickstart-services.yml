@@ -24,6 +24,7 @@ services:
       - 5001:5001
       - 4436:4436
       - 4437:4437
+      - 1025:1025
       - 5672:5672
       - 15672:15672
     networks:
@@ -110,6 +111,8 @@ services:
     command: serve proxy -c "/etc/config/oathkeeper/oathkeeper.yml"
 
   mailslurper:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_kratos_mailslurper
     image: oryd/mailslurper:latest-smtps
     restart: always
