@@ -15,11 +15,6 @@ http:
         servers:
           - url: 'http://mailslurper:4437'
 
-    mailslurper-smtp:
-      loadBalancer:
-        servers:
-          - url: 'http://mailslurper:1025'
-
     ipfs-http-adapter:
       loadBalancer:
         servers:
@@ -206,12 +201,6 @@ http:
       entryPoints:
         - 'mailslurper-client'
 
-    mailslurper-smtp:
-      rule: 'PathPrefix(`/`)'
-      service: 'mailslurper-smtp'
-      entryPoints:
-        - 'mailslurper-smtp'
-
     ipfs-api:
       rule: 'PathPrefix(`/`)'
       service: 'ipfs-api'
@@ -236,6 +225,11 @@ tcp:
         servers:
           - address: 'rabbitmq:5672'
 
+    mailslurper-smtp:
+      loadBalancer:
+        servers:
+          - address: 'mailslurper:1025'
+
   routers:
     mariadb:
       rule: 'HostSNI(`*`)'
@@ -248,3 +242,9 @@ tcp:
       service: 'rabbitmq-amqp'
       entryPoints:
         - 'rabbitmq-amqp'
+
+    mailslurper-smtp:
+      rule: 'HostSNI(`*`)'
+      service: 'mailslurper-smtp'
+      entryPoints:
+        - 'mailslurper-smtp'

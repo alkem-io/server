@@ -122,8 +122,6 @@ services:
       - 1025
     networks:
       - alkemio_dev_net
-    volumes:
-      - ./.build/mailslurper/config.json:/go/src/github.com/mailslurper/mailslurper/cmd/mailslurper/config.json
 
   ipfs:
     container_name: alkemio_dev_ipfs
