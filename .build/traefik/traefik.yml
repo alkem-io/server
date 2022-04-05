@@ -21,6 +21,8 @@ entryPoints:
     address: ':4436'
   mailslurper-api:
     address: ':4437'
+  mailslurper-smtp:
+    address: ':1025'
   rabbitmq-amqp:
     address: ':5672'
   rabbitmq-management:
