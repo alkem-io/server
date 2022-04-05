@@ -210,25 +210,19 @@ export class BootstrapService {
     definitionData: CreatePreferenceDefinitionInput[]
   ) {
     try {
-      definitionData.forEach(
-        async ({ group, displayName, description, valueType, type }) => {
-          const exists = await this.preferenceService.definitionExists(
-            group,
-            valueType,
-            type
+      for (const preferenceDefinitionInput of definitionData) {
+        const exists = await this.preferenceService.definitionExists(
+          preferenceDefinitionInput.group,
+          preferenceDefinitionInput.valueType,
+          preferenceDefinitionInput.type
+        );
+        if (!exists) {
+          await this.preferenceService.createDefinition(
+            preferenceDefinitionInput
           );
-          if (!exists) {
-            await this.preferenceService.createDefinition({
-              group,
-              displayName,
-              description,
-              valueType,
-              type,
-            });
-          }
         }
-      );
-    } catch (err: unknown) {
+      }
+    } catch (err) {
       throw new BootstrapException(
         `Unable to create preference definitions ${(err as Error).message}`
       );
