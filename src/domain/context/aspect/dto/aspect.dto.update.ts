@@ -8,7 +8,11 @@ import { IsOptional, MaxLength } from 'class-validator';
 export class UpdateAspectInput extends UpdateNameableInput {
   @Field({ nullable: true })
   @MaxLength(LONG_TEXT_LENGTH)
-  description?: string;
+  defaultDescription?: string;
+
+  @Field({ nullable: true })
+  @MaxLength(LONG_TEXT_LENGTH)
+  typeDescription?: string;
 
   @Field(() => [String], {
     nullable: true,

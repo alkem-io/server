@@ -1,6 +1,6 @@
 {
   "name": "default-ux-template",
-  "description": "sample hub template based on Odyssey hub setup; used by CT Web Client to configure the display / options to end users",
+  "description": "sample hub template based on Odyssey hub setup; used by Alkemio Web Client to configure the display / options to end users",
   "users": [
     {
       "name": "default",
@@ -105,23 +105,28 @@
       "aspects": [
         {
           "type": "knowledge",
-          "description": "Please describe the knowledge that is relevant."
+          "typeDescription": "To share relevant knowledge, building blocks etc.",
+          "defaultDescription": "Please describe the knowledge that is relevant."
         },
         {
           "type": "stakeholder persona",
-          "description": "Please describe the stakeholder persona that is relevant."
+          "typeDescription": "Type of stakeholder, relevant to the hub, challenge or opportunity.",
+          "defaultDescription": "Please describe the stakeholder persona that is relevant."
         },
         {
           "type": "related initiative",
-          "description": "Please describe the related initiative that is relevant."
+          "typeDescription": "Similar initiatives that have valuable insights that can contribute to solving a challenge or opportunity.",
+          "defaultDescription": "Please describe the related initiative that is relevant."
         },
         {
           "type": "idea",
-          "description": "Please describe the idea that is relevant."
+          "typeDescription": "Ideas that are later elicited and can transform into opportunities.",
+          "defaultDescription": "Please describe the idea that is relevant."
         },
         {
           "type": "other",
-          "description": "Please describe the the aspect that you wish to share."
+          "typeDescription": "Any other relevant information that can contribute to progress towards resolving a challenge or opportunity.",
+          "defaultDescription": "Please describe the the aspect that you wish to share."
         }
       ]
     }
