@@ -6,5 +6,8 @@ export class UpdateAspectTemplateInput {
   type!: string;
 
   @Field({ nullable: true })
-  description!: string;
+  defaultDescription!: string;
+
+  @Field({ nullable: true })
+  typeDescription!: string;
 }

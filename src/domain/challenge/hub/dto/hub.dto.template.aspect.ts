@@ -6,10 +6,18 @@ export class AspectTemplate {
   type: string;
 
   @Field(() => String)
-  description: string;
+  defaultDescription: string;
 
-  constructor(type: string, description?: string) {
+  @Field(() => String)
+  typeDescription: string;
+
+  constructor(
+    type: string,
+    defaultDescription?: string,
+    typeDescription?: string
+  ) {
     this.type = type;
-    this.description = description || '';
+    this.defaultDescription = defaultDescription || '';
+    this.typeDescription = typeDescription || '';
   }
 }
