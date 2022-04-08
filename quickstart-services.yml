@@ -24,6 +24,7 @@ services:
       - 5001:5001
       - 4436:4436
       - 4437:4437
+      - 1025:1025
       - 5672:5672
       - 15672:15672
     networks:
@@ -110,12 +111,15 @@ services:
     command: serve proxy -c "/etc/config/oathkeeper/oathkeeper.yml"
 
   mailslurper:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_kratos_mailslurper
     image: oryd/mailslurper:latest-smtps
     restart: always
     ports:
       - 4436
       - 4437
+      - 1025
     networks:
       - alkemio_dev_net
 
@@ -221,7 +225,8 @@ services:
     hostname: wallet-manager
     image: alkemio/wallet-manager:v0.4.2
     environment:
-      - DATABASE_HOST
+      - DID_METHOD
+      - JOLOCOM_DATABASE_HOST
       - MYSQL_ROOT_PASSWORD
       - RABBITMQ_HOST
       - RABBITMQ_USER

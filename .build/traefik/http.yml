@@ -225,6 +225,11 @@ tcp:
         servers:
           - address: 'rabbitmq:5672'
 
+    mailslurper-smtp:
+      loadBalancer:
+        servers:
+          - address: 'mailslurper:1025'
+
   routers:
     mariadb:
       rule: 'HostSNI(`*`)'
@@ -237,3 +242,9 @@ tcp:
       service: 'rabbitmq-amqp'
       entryPoints:
         - 'rabbitmq-amqp'
+
+    mailslurper-smtp:
+      rule: 'HostSNI(`*`)'
+      service: 'mailslurper-smtp'
+      entryPoints:
+        - 'mailslurper-smtp'

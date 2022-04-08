@@ -19,7 +19,6 @@ import { KonfigModule } from '@services/platform/configuration/config/config.mod
 import { ConfigModule } from '@nestjs/config';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PreferenceModule } from '@domain/common/preference';
-import { Organization } from '../organization';
 
 @Module({
   imports: [
@@ -35,7 +34,7 @@ import { Organization } from '../organization';
     PreferenceModule,
     PreferenceSetModule,
     KonfigModule,
-    TypeOrmModule.forFeature([User, Organization]),
+    TypeOrmModule.forFeature([User]),
     CacheModule.register({ max: 250, ttl: 300 }),
     ConfigModule,
   ],
