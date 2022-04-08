@@ -29,10 +29,6 @@ export class CreateAspectInput {
   @MaxLength(LONG_TEXT_LENGTH)
   description!: string;
 
-  @Field({ nullable: false })
-  @MaxLength(LONG_TEXT_LENGTH)
-  typeDescription!: string;
-
   @Field(() => [String], { nullable: true })
   @IsOptional()
   tags?: string[];
