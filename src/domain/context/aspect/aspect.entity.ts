@@ -21,9 +21,6 @@ export class Aspect extends NameableEntity implements IAspect {
   description: string;
 
   @Column('text')
-  typeDescription: string;
-
-  @Column('text')
   type: string;
 
   @Column('varchar', { length: 36, nullable: true })
@@ -70,10 +67,9 @@ export class Aspect extends NameableEntity implements IAspect {
   @JoinColumn()
   tagset?: Tagset;
 
-  constructor(type: string, typeDescription: string, description: string) {
+  constructor(type: string, description: string) {
     super();
     this.type = type;
-    this.typeDescription = typeDescription;
     this.description = description;
   }
 }

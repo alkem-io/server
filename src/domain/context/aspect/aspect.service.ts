@@ -120,10 +120,6 @@ export class AspectService {
       aspect.description = aspectData.description;
     }
 
-    if (aspectData.typeDescription) {
-      aspect.typeDescription = aspectData.typeDescription;
-    }
-
     if (aspectData.tags) {
       if (!aspect.tagset) {
         throw new EntityNotInitializedException(

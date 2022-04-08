@@ -2,13 +2,19 @@ import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('AspectTemplate')
 export class AspectTemplate {
-  @Field(() => String)
+  @Field(() => String, {
+    description: 'The type of the templated aspect',
+  })
   type: string;
 
-  @Field(() => String)
+  @Field(() => String, {
+    description: 'Default description of an aspect of this type',
+  })
   defaultDescription: string;
 
-  @Field(() => String)
+  @Field(() => String, {
+    description: 'Default description of this type of aspect',
+  })
   typeDescription: string;
 
   constructor(

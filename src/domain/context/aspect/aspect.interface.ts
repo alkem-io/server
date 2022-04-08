@@ -7,13 +7,15 @@ import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Aspect')
 export abstract class IAspect extends INameable {
-  @Field(() => String)
+  @Field(() => String, {
+    description: 'The description of this aspect',
+  })
   description!: string;
 
-  @Field(() => String)
-  typeDescription!: string;
-
-  @Field(() => String)
+  @Field(() => String, {
+    description:
+      'The aspect type, e.g. knowledge, idea, stakeholder persona etc.',
+  })
   type!: string;
 
   @Field(() => ITagset, {

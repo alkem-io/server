@@ -1,8 +1,7 @@
 mutation CreateAspect($aspectData: CreateAspectInput!) {
   createAspectOnContext(aspectData: $aspectData) {
     displayName,
-    defaultDescription,
-    typeDescription,
+    description,
     type
   }
 }
@@ -15,8 +14,7 @@ query variables:
     "contextID": "uuid",
     "type": "test",
     "displayName": "TechStack2",
-    "defaultDescription": "How do I handle scalability?",
-    "typeDescription": "test type description",
+    "description": "How do I handle scalability?",
     "tags": ["tag1", "tag2"]
   }
 }
