@@ -10,10 +10,6 @@ export class UpdateAspectInput extends UpdateNameableInput {
   @MaxLength(LONG_TEXT_LENGTH)
   description?: string;
 
-  @Field({ nullable: true })
-  @MaxLength(LONG_TEXT_LENGTH)
-  typeDescription?: string;
-
   @Field(() => [String], {
     nullable: true,
     description: 'Update the tags on the Aspect.',
