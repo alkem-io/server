@@ -27,7 +27,7 @@ export class CreateAspectInput {
 
   @Field({ nullable: false })
   @MaxLength(LONG_TEXT_LENGTH)
-  defaultDescription!: string;
+  description!: string;
 
   @Field({ nullable: false })
   @MaxLength(LONG_TEXT_LENGTH)

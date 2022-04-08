@@ -116,8 +116,8 @@ export class AspectService {
     if (aspectData.displayName) {
       aspect.displayName = aspectData.displayName;
     }
-    if (aspectData.defaultDescription) {
-      aspect.defaultDescription = aspectData.defaultDescription;
+    if (aspectData.description) {
+      aspect.description = aspectData.description;
     }
 
     if (aspectData.typeDescription) {

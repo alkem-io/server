@@ -18,7 +18,7 @@ import { Tagset } from '@domain/common/tagset/tagset.entity';
 @Entity()
 export class Aspect extends NameableEntity implements IAspect {
   @Column('text')
-  defaultDescription: string;
+  description: string;
 
   @Column('text')
   typeDescription: string;
@@ -70,14 +70,10 @@ export class Aspect extends NameableEntity implements IAspect {
   @JoinColumn()
   tagset?: Tagset;
 
-  constructor(
-    type: string,
-    typeDescription: string,
-    defaultDescription: string
-  ) {
+  constructor(type: string, typeDescription: string, description: string) {
     super();
     this.type = type;
     this.typeDescription = typeDescription;
-    this.defaultDescription = defaultDescription;
+    this.description = description;
   }
 }
