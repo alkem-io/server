@@ -12,5 +12,11 @@ export class HubAspectTemplate {
     nullable: false,
     description: 'A default description for this Aspect.',
   })
-  description!: string;
+  defaultDescription!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'A description for this Aspect type.',
+  })
+  typeDescription!: string;
 }
