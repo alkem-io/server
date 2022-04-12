@@ -126,7 +126,7 @@
         {
           "type": "other",
           "typeDescription": "Any other relevant information that can contribute to progress towards resolving a challenge or opportunity.",
-          "defaultDescription": "Please describe the the aspect that you wish to share."
+          "defaultDescription": "Please describe the aspect that you wish to share."
         }
       ]
     }
