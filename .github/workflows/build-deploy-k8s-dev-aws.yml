@@ -1,8 +1,7 @@
 name: Build & Deploy to Dev on AWS
 
 on:
-  push:
-    branches: [develop]
+  workflow_dispatch:
 
 env:
   ECR_REGISTRY: ${{ secrets.ECR_DEV_TEST_REGISTRY }}
