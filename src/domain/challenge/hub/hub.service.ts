@@ -166,6 +166,10 @@ export class HubService {
 
     if (hubData.template) {
       const hubTemplate: HubTemplate = hubData.template;
+      for (const aspectTemplate of hubTemplate.aspectTemplates) {
+        if (!aspectTemplate.defaultDescription)
+          aspectTemplate.defaultDescription = '';
+      }
       hub.template = JSON.stringify(hubTemplate);
     }
 
