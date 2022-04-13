@@ -170,6 +170,7 @@ export class HubService {
         if (!aspectTemplate.defaultDescription) {
           aspectTemplate.defaultDescription = '';
         }
+        // todo: remove this once https://github.com/alkem-io/server/issues/1872 is addressed
         if (aspectTemplate.type.length < 3) {
           throw new ValidationException(
             `AspectTemplate types have a minimum length of 3: ${aspectTemplate.type}`,
