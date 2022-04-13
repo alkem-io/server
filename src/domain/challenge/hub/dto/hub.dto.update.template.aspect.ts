@@ -4,12 +4,13 @@ import {
   TINY_TEXT_LENGTH,
 } from '@common/constants/entity.field.length.constants';
 import { InputType, Field } from '@nestjs/graphql';
-import { IsOptional, MaxLength } from 'class-validator';
+import { IsOptional, MaxLength, MinLength } from 'class-validator';
 
 @InputType()
 export class UpdateAspectTemplateInput {
   @Field({ nullable: false })
   @MaxLength(TINY_TEXT_LENGTH)
+  @MinLength(3)
   type!: string;
 
   @Field({ nullable: true })

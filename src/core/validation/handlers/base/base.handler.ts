@@ -31,6 +31,7 @@ import { UpdateUserGroupInput } from '@domain/community/user-group';
 import { CreateAspectOnContextInput } from '@domain/context/context/dto/context.dto.create.aspect';
 import { CreateAspectInput } from '@domain/context/aspect/dto/aspect.dto.create';
 import { UpdateAspectTemplateInput } from '@domain/challenge/hub/dto/hub.dto.update.template.aspect';
+import { UpdateHubTemplateInput } from '@domain/challenge/hub/dto/hub.dto.update.template';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -59,6 +60,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateUserInput,
       UpdateProjectInput,
       UpdateAspectTemplateInput,
+      UpdateHubTemplateInput,
     ];
 
     if (types.includes(metatype)) {

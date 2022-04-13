@@ -167,8 +167,15 @@ export class HubService {
     if (hubData.template) {
       const hubTemplate: HubTemplate = hubData.template;
       for (const aspectTemplate of hubTemplate.aspectTemplates) {
-        if (!aspectTemplate.defaultDescription)
+        if (!aspectTemplate.defaultDescription) {
           aspectTemplate.defaultDescription = '';
+        }
+        if (aspectTemplate.type.length < 3) {
+          throw new ValidationException(
+            `AspectTemplate types have a minimum length of 3: ${aspectTemplate.type}`,
+            LogContext.CHALLENGES
+          );
+        }
       }
       hub.template = JSON.stringify(hubTemplate);
     }
