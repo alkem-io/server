@@ -37,6 +37,7 @@ import { RemoveOpportunityAdminInput } from './dto/opportunity.dto.remove.admin'
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core';
+import { AspectService } from '@domain/context/aspect/aspect.service';
 
 @Injectable()
 export class OpportunityService {
@@ -48,6 +49,7 @@ export class OpportunityService {
     private relationService: RelationService,
     private userService: UserService,
     private agentService: AgentService,
+    private aspectService: AspectService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -328,6 +330,14 @@ export class OpportunityService {
     const relationsTopic = new NVP('relations', relationsCount.toString());
     relationsTopic.id = `relations-${opportunity.id}`;
     activity.push(relationsTopic);
+
+    const { id: contextId } = await this.getContext(opportunity.id);
+    const aspectsCount = await this.aspectService.getAspectsInContextCount(
+      contextId
+    );
+    const aspectsTopic = new NVP('aspects', aspectsCount.toString());
+    aspectsTopic.id = `aspects-${opportunity.id}`;
+    activity.push(aspectsTopic);
 
     return activity;
   }
