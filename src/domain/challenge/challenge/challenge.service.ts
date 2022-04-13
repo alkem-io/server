@@ -55,6 +55,7 @@ import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
+import { AspectService } from '@domain/context/aspect/aspect.service';
 
 @Injectable()
 export class ChallengeService {
@@ -68,6 +69,7 @@ export class ChallengeService {
     private organizationService: OrganizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
+    private aspectService: AspectService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -544,6 +546,14 @@ export class ChallengeService {
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     challengesTopic.id = `challenges-${challenge.id}`;
     activity.push(challengesTopic);
+
+    const { id: contextId } = await this.getContext(challenge.id);
+    const aspectsCount = await this.aspectService.getAspectsInContextCount(
+      contextId
+    );
+    const aspectsTopic = new NVP('aspects', aspectsCount.toString());
+    aspectsTopic.id = `aspects-${challenge.id}`;
+    activity.push(aspectsTopic);
 
     return activity;
   }

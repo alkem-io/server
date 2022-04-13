@@ -190,4 +190,10 @@ export class AspectService {
 
     return aspectLoaded.references;
   }
+
+  getAspectsInContextCount(contextId: string) {
+    return this.aspectRepository.count({
+      where: { context: { id: contextId } },
+    });
+  }
 }
