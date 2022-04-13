@@ -12,10 +12,14 @@ import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { UUID_NAMEID } from '@domain/common/scalars';
+import { AspectService } from '@domain/context/aspect/aspect.service';
 
 @Resolver(() => IContext)
 export class ContextResolverFields {
-  constructor(private contextService: ContextService) {}
+  constructor(
+    private contextService: ContextService,
+    private aspectService: AspectService
+  ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
@@ -35,6 +39,17 @@ export class ContextResolverFields {
   @Profiling.api
   async visuals(@Parent() context: Context) {
     return await this.contextService.getVisuals(context);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('aspectsCount', () => Number, {
+    nullable: true,
+    description: 'The total number of Aspects for this Context.',
+  })
+  @Profiling.api
+  aspectsCount(@Parent() context: Context) {
+    return this.aspectService.getAspectsInContextCount(context.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
