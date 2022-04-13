@@ -110,23 +110,23 @@
         },
         {
           "type": "stakeholder persona",
-          "typeDescription": "Type of stakeholder, relevant to the hub, challenge or opportunity.",
+          "typeDescription": "To share a relevant persona, who would be either actively engaged, impacted by results, needs to informed, supportive etc",
           "defaultDescription": "Please describe the stakeholder persona that is relevant."
         },
         {
           "type": "related initiative",
-          "typeDescription": "Similar initiatives that have valuable insights that can contribute to solving a challenge or opportunity.",
+          "typeDescription": "Other initiatives that are relevant, be they similar in nature, supporting or just to be aware of.",
           "defaultDescription": "Please describe the related initiative that is relevant."
         },
         {
           "type": "idea",
-          "typeDescription": "Ideas that are later elicited and can transform into opportunities.",
+          "typeDescription": "Ideas that are later elicited and can be used to make progress.",
           "defaultDescription": "Please describe the idea that is relevant."
         },
         {
           "type": "other",
-          "typeDescription": "Any other relevant information that can contribute to progress towards resolving a challenge or opportunity.",
-          "defaultDescription": "Please describe the the aspect that you wish to share."
+          "typeDescription": "Any other relevant information that can contribute to make progress.",
+          "defaultDescription": "Please describe the aspect that you wish to share."
         }
       ]
     }
