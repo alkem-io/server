@@ -35,6 +35,17 @@ export class AspectAuthorizationService {
         parentAuthorization
       );
 
+    // Inherit for comments before extending so that the creating user does not
+    // have rights to delete comments
+    if (aspect.comments) {
+      aspect.comments =
+        await this.commentsAuthorizationService.applyAuthorizationPolicy(
+          aspect.comments,
+          aspect.authorization
+        );
+    }
+
+    // Extend to give the user creating the aspect more rights
     aspect.authorization = this.appendCredentialRules(aspect);
 
     // cascade
@@ -49,14 +60,6 @@ export class AspectAuthorizationService {
       aspect.bannerNarrow.authorization =
         this.authorizationPolicyService.inheritParentAuthorization(
           aspect.bannerNarrow.authorization,
-          aspect.authorization
-        );
-    }
-
-    if (aspect.comments) {
-      aspect.comments =
-        await this.commentsAuthorizationService.applyAuthorizationPolicy(
-          aspect.comments,
           aspect.authorization
         );
     }

@@ -25,6 +25,7 @@ import { CreateCanvasOnContextInput } from './dto/context.dto.create.canvas';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { NamingService } from '@services/domain/naming/naming.service';
+import { limitAndShuffle } from '@src/common';
 
 @Injectable()
 export class ContextService {
@@ -322,19 +323,29 @@ export class ContextService {
 
   async getAspects(
     context: IContext,
-    aspectIDs?: string[]
+    aspectIDs?: string[],
+    limit?: number,
+    shuffle?: boolean
   ): Promise<IAspect[]> {
     const contextLoaded = await this.getContextOrFail(context.id, {
       relations: ['aspects'],
     });
-    if (!contextLoaded.aspects)
+    if (!contextLoaded.aspects) {
       throw new EntityNotFoundException(
         `Context not initialised: ${context.id}`,
         LogContext.CONTEXT
       );
-
+    }
     if (!aspectIDs) {
-      return contextLoaded.aspects;
+      const limitAndShuffled = limitAndShuffle(
+        contextLoaded.aspects,
+        limit,
+        shuffle
+      );
+      const sortedAspects = limitAndShuffled.sort((a, b) =>
+        a.displayName > b.displayName ? 1 : -1
+      );
+      return sortedAspects;
     }
     const results: IAspect[] = [];
     for (const aspectID of aspectIDs) {
@@ -349,6 +360,7 @@ export class ContextService {
         );
       results.push(aspect);
     }
+
     return results;
   }
 

@@ -4,12 +4,13 @@ mutation UpdateHub($hubData: UpdateHubInput!) {
     template {
       aspectTemplates {
         type,
-        description
+        typeDescription
       }
     }
   }
 }
 
+Variables:
 {
   "hubData":
 		{
@@ -18,7 +19,8 @@ mutation UpdateHub($hubData: UpdateHubInput!) {
         "aspectTemplates": [
             {
                 "type": "video",
-                "description": "Video explainer for the challenge"
+                "defaultDescription": "Video explainer for the challenge",
+                "typeDescription": "explainer of the type"
             }
           ]
       }

@@ -49,6 +49,7 @@ import { ICredential } from '@domain/agent/credential/credential.interface';
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceType } from '@common/enums/preference.type';
+import { AspectService } from '@domain/context/aspect/aspect.service';
 
 @Injectable()
 export class HubService {
@@ -64,6 +65,7 @@ export class HubService {
     private communityService: CommunityService,
     private challengeService: ChallengeService,
     private preferenceSetService: PreferenceSetService,
+    private aspectService: AspectService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -166,6 +168,18 @@ export class HubService {
 
     if (hubData.template) {
       const hubTemplate: HubTemplate = hubData.template;
+      for (const aspectTemplate of hubTemplate.aspectTemplates) {
+        if (!aspectTemplate.defaultDescription) {
+          aspectTemplate.defaultDescription = '';
+        }
+        // todo: remove this once https://github.com/alkem-io/server/issues/1872 is addressed
+        if (aspectTemplate.type.length < 3) {
+          throw new ValidationException(
+            `AspectTemplate types have a minimum length of 3: ${aspectTemplate.type}`,
+            LogContext.CHALLENGES
+          );
+        }
+      }
       hub.template = JSON.stringify(hubTemplate);
     }
 
@@ -563,6 +577,15 @@ export class HubService {
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${hub.id}`;
     activity.push(membersTopic);
+
+    // Aspects
+    const { id: contextId } = await this.getContext(hub);
+    const aspectsCount = await this.aspectService.getAspectsInContextCount(
+      contextId
+    );
+    const aspectsTopic = new NVP('aspects', aspectsCount.toString());
+    aspectsTopic.id = `aspects-${hub.id}`;
+    activity.push(aspectsTopic);
 
     return activity;
   }

@@ -1,5 +1,5 @@
 import { Context, IContext } from '@domain/context/context';
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ContextService } from './context.service';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
@@ -52,9 +52,25 @@ export class ContextResolverFields {
       description: 'The IDs (either UUID or nameID) of the aspects to return',
       nullable: true,
     })
-    ids: string[]
+    ids: string[],
+    @Args({
+      name: 'limit',
+      type: () => Float,
+      description:
+        'The number of Aspects to return; if omitted returns all Aspects.',
+      nullable: true,
+    })
+    limit: number,
+    @Args({
+      name: 'shuffle',
+      type: () => Boolean,
+      description:
+        'If true and limit is specified then return the Aspects based on a random selection.',
+      nullable: true,
+    })
+    shuffle: boolean
   ) {
-    return await this.contextService.getAspects(context, ids);
+    return await this.contextService.getAspects(context, ids, limit, shuffle);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
