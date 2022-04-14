@@ -386,7 +386,14 @@ export class ChallengeService {
       `Querying all Opportunities with limit: ${limit} and shuffle: ${shuffle}`,
       LogContext.CHALLENGES
     );
-    return limitAndShuffle(opportunities, limit, shuffle);
+
+    const limitAndShuffled = limitAndShuffle(opportunities, limit, shuffle);
+
+    // Sort the opportunities base on their display name
+    const sortedOpportunities = limitAndShuffled.sort((a, b) =>
+      a.displayName > b.displayName ? 1 : -1
+    );
+    return sortedOpportunities;
   }
 
   // Loads the challenges into the challenge entity if not already present

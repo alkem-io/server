@@ -337,8 +337,15 @@ export class ContextService {
       );
     }
     if (!aspectIDs) {
-      const aspects = limitAndShuffle(contextLoaded.aspects, limit, shuffle);
-      return aspects;
+      const limitAndShuffled = limitAndShuffle(
+        contextLoaded.aspects,
+        limit,
+        shuffle
+      );
+      const sortedAspects = limitAndShuffled.sort((a, b) =>
+        a.displayName > b.displayName ? 1 : -1
+      );
+      return sortedAspects;
     }
     const results: IAspect[] = [];
     for (const aspectID of aspectIDs) {
