@@ -15,12 +15,14 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_UPDATE_MESSAGE } from '@common/constants/providers';
 import { CommentsMessageReceived } from './dto/comments.dto.event.message.received';
+import { CommentsAuthorizationService } from './comments.service.authorization';
 
 @Resolver()
 export class CommentsResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private commentsService: CommentsService,
+    private commentsAuthorizationService: CommentsAuthorizationService,
     @Inject(SUBSCRIPTION_UPDATE_MESSAGE)
     private readonly subscriptionUpdateMessage: PubSubEngine
   ) {}
@@ -78,11 +80,19 @@ export class CommentsResolverMutations {
     const comments = await this.commentsService.getCommentsOrFail(
       messageData.commentsID
     );
+    // The choice was made **not** to wrap every message in an AuthorizationPolicy.
+    // So we also allow users who sent the message in question to remove the message by
+    // extending the authorization policy in memory but do not persist it.
+    const extendedAuthorization =
+      await this.commentsAuthorizationService.extendAuthorizationPolicyForMessageSender(
+        comments,
+        messageData.messageID
+      );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      comments.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `communication send message: ${comments.displayName}`
+      extendedAuthorization,
+      AuthorizationPrivilege.DELETE,
+      `comments remove message: ${comments.displayName}`
     );
     return await this.commentsService.removeCommentsMessage(
       comments,
