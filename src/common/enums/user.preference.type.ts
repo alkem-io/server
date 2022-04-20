@@ -11,6 +11,8 @@ export enum UserPreferenceType {
   NOTIFICATION_USER_SIGN_UP = 'NotificationUserSignUp',
   NOTIFICATION_COMMUNITY_REVIEW_SUBMITTED = 'NotificationCommunityReviewSubmitted',
   NOTIFICATION_COMMUNITY_REVIEW_SUBMITTED_ADMIN = 'NotificationCommunityReviewSubmittedAdmin',
+  NOTIFICATION_COMMUNITY_NEW_MEMBER = 'NotificationCommunityNewMember',
+  NOTIFICATION_COMMUNITY_NEW_MEMBER_ADMIN = 'NotificationCommunityNewMemberAdmin',
 }
 
 registerEnumType(UserPreferenceType, {

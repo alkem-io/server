@@ -57,6 +57,24 @@ export class NotificationsPayloadBuilder {
     return payload;
   }
 
+  async buildCommunityNewMemberPayload(userID: string, community: ICommunity) {
+    const payload = {
+      userID,
+      community: {
+        name: community.displayName,
+        type: community.type,
+      },
+      hub: {
+        nameID: await this.getHubNameID(community.hubID),
+        id: community.hubID,
+      },
+    };
+
+    await this.buildHubPayload(payload, community);
+
+    return payload;
+  }
+
   async buildCommunicationUpdateSentNotificationPayload(
     updateCreatorId: string,
     updates: IUpdates
