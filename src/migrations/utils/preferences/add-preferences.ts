@@ -32,6 +32,8 @@ export const addPreferencesToUsers = async (
     );
   }
 
-  const prefValue = prefValues.join(',\n');
-  await queryRunner.query(`INSERT INTO preference VALUES ${prefValue}`);
+  if (prefValues.length) {
+    const prefValue = prefValues.join(',\n');
+    await queryRunner.query(`INSERT INTO preference VALUES ${prefValue}`);
+  }
 };
