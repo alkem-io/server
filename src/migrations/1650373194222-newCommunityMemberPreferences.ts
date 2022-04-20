@@ -18,8 +18,7 @@ export class newCommunityMemberPreferences1650373194222
         definitionSet: 'user',
         group: 'Notification',
         displayName: 'Community new member',
-        description:
-          'Receiver notification when a new user joins a community I am member of',
+        description: 'Receiver notification when I join a community',
         valueType: 'boolean',
         type: UserPreferenceType.NOTIFICATION_COMMUNITY_NEW_MEMBER,
       },
