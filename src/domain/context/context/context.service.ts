@@ -343,7 +343,7 @@ export class ContextService {
         shuffle
       );
       const sortedAspects = limitAndShuffled.sort((a, b) =>
-        a.displayName > b.displayName ? 1 : -1
+        a.displayName.toLowerCase() > b.displayName.toLowerCase() ? 1 : -1
       );
       return sortedAspects;
     }
