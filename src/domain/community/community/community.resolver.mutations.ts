@@ -195,18 +195,12 @@ export class CommunityResolverMutations {
       `join community: ${community.displayName}`
     );
 
-    // Todo: notification for new community membership
-    // const payload =
-    //   await this.notificationsPayloadBuilder.buildApplicationCreatedNotificationPayload(
-    //     agentInfo.userID,
-    //     joiningData.userID,
-    //     community
-    //   );
-
-    // this.notificationsClient.emit<number>(
-    //   EventType.COMMUNITY_APPLICATION_CREATED,
-    //   payload
-    // );
+    const payload =
+      await this.notificationsPayloadBuilder.buildCommunityNewMemberPayload(
+        agentInfo.userID,
+        community
+      );
+    this.notificationsClient.emit(EventType.COMMUNITY_NEW_MEMBER, payload);
 
     return await this.communityService.assignMember({
       userID: agentInfo.userID,
