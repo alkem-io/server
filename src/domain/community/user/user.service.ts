@@ -1,5 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import { LogContext } from '@common/enums';
+import { LogContext, UserPreferenceType } from '@common/enums';
 import {
   AuthenticationException,
   EntityNotFoundException,
@@ -184,12 +184,31 @@ export class UserService {
 
   createPreferenceDefaults(): Map<PreferenceType, string> {
     const defaults: Map<PreferenceType, string> = new Map();
-    defaults.set(PreferenceType.NOTIFICATION_COMMUNICATION_UPDATES, 'true');
+    defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_UPDATES, 'true');
     defaults.set(
-      PreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED,
+      UserPreferenceType.NOTIFICATION_COMMUNICATION_UPDATE_SENT_ADMIN,
       'true'
     );
-    defaults.set(PreferenceType.NOTIFICATION_APPLICATION_RECEIVED, 'true');
+
+    defaults.set(
+      UserPreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED,
+      'true'
+    );
+    defaults.set(
+      UserPreferenceType.NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED_ADMIN,
+      'true'
+    );
+
+    defaults.set(UserPreferenceType.NOTIFICATION_APPLICATION_RECEIVED, 'true');
+    defaults.set(UserPreferenceType.NOTIFICATION_APPLICATION_SUBMITTED, 'true');
+
+    defaults.set(UserPreferenceType.NOTIFICATION_ASPECT_CREATED, 'true');
+    defaults.set(UserPreferenceType.NOTIFICATION_ASPECT_CREATED_ADMIN, 'true');
+    defaults.set(
+      UserPreferenceType.NOTIFICATION_ASPECT_COMMENT_CREATED_BY,
+      'true'
+    );
+    defaults.set(UserPreferenceType.NOTIFICATION_ASPECT_COMMENT_ADMIN, 'true');
 
     return defaults;
   }
