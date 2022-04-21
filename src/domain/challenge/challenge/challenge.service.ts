@@ -391,7 +391,7 @@ export class ChallengeService {
 
     // Sort the opportunities base on their display name
     const sortedOpportunities = limitAndShuffled.sort((a, b) =>
-      a.displayName > b.displayName ? 1 : -1
+      a.displayName.toLowerCase() > b.displayName.toLowerCase() ? 1 : -1
     );
     return sortedOpportunities;
   }
