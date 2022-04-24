@@ -1,4 +1,4 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Mutation } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
@@ -16,6 +16,8 @@ import { CanvasContentUpdated } from '@domain/common/canvas/dto/canvas.dto.event
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_CANVAS_CONTENT } from '@common/constants/providers';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums/logging.context';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverMutations {
@@ -25,7 +27,8 @@ export class CanvasResolverMutations {
     private canvasCheckoutAuthorizationService: CanvasCheckoutAuthorizationService,
     private canvasCheckoutLifecycleOptionsProvider: CanvasCheckoutLifecycleOptionsProvider,
     @Inject(SUBSCRIPTION_CANVAS_CONTENT)
-    private readonly subscriptionCanvasContent: PubSubEngine
+    private readonly subscriptionCanvasContent: PubSubEngine,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -79,6 +82,10 @@ export class CanvasResolverMutations {
       canvasID: updatedCanvas.id,
       value: updatedCanvas.value ?? '', //todo how to handle this?
     };
+    this.logger.verbose?.(
+      `[Canvas updated] - event published: '${eventID}'`,
+      LogContext.SUBSCRIPTIONS
+    );
     this.subscriptionCanvasContent.publish(
       SubscriptionType.CANVAS_CONTENT_UPDATED,
       subscriptionPayload
