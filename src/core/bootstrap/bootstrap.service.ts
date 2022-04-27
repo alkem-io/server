@@ -7,7 +7,6 @@ import { UserService } from '@domain/community/user/user.service';
 import { Repository } from 'typeorm';
 import fs from 'fs';
 import * as defaultRoles from '@templates/authorization-bootstrap.json';
-import * as preferenceDefinition from '@templates/user-preference-definition.json';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@common/decorators';
 import { ConfigurationTypes, LogContext } from '@common/enums';
@@ -25,15 +24,12 @@ import { OrganizationAuthorizationService } from '@domain/community/organization
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@services/admin/authorization/admin.authorization.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
-import { PreferenceService } from '@domain/common/preference/preference.service';
-import { CreatePreferenceDefinitionInput } from '@domain/common/preference/dto/preference-definition.dto.create';
 
 @Injectable()
 export class BootstrapService {
   constructor(
     private agentService: AgentService,
     private hubService: HubService,
-    private preferenceService: PreferenceService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
     private hubAuthorizationService: HubAuthorizationService,
@@ -114,7 +110,6 @@ export class BootstrapService {
 
     let bootstrapJson = {
       ...defaultRoles,
-      ...preferenceDefinition,
     };
 
     if (
@@ -149,17 +144,6 @@ export class BootstrapService {
       );
     } else {
       await this.createUserProfiles(users);
-    }
-
-    const preferenceDef =
-      bootstrapJson.userPreferenceDefinition as CreatePreferenceDefinitionInput[];
-    if (!preferenceDef) {
-      this.logger.verbose?.(
-        'No preference definitions in the authorization bootstrap file!',
-        LogContext.BOOTSTRAP
-      );
-    } else {
-      await this.createUserPreferenceDefinitions(preferenceDef);
     }
   }
 
@@ -201,30 +185,6 @@ export class BootstrapService {
     } catch (error: any) {
       throw new BootstrapException(
         `Unable to create profiles ${error.message}`
-      );
-    }
-  }
-
-  @Profiling.api
-  async createUserPreferenceDefinitions(
-    definitionData: CreatePreferenceDefinitionInput[]
-  ) {
-    try {
-      for (const preferenceDefinitionInput of definitionData) {
-        const exists = await this.preferenceService.definitionExists(
-          preferenceDefinitionInput.group,
-          preferenceDefinitionInput.valueType,
-          preferenceDefinitionInput.type
-        );
-        if (!exists) {
-          await this.preferenceService.createDefinition(
-            preferenceDefinitionInput
-          );
-        }
-      }
-    } catch (err) {
-      throw new BootstrapException(
-        `Unable to create preference definitions ${(err as Error).message}`
       );
     }
   }
