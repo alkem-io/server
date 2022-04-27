@@ -9,6 +9,8 @@ import { IPreferenceSet } from '@domain/common/preference-set';
   implements: () => [ISearchable],
 })
 export abstract class IUser extends INameable {
+  rowId!: number;
+
   @Field(() => String, {
     description:
       'The unique personal identifier (upn) for the account associated with this user profile',
