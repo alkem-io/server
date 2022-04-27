@@ -1,0 +1,14 @@
+{
+	usersPaginated(first:3) {
+    users {
+      id
+      nameID
+    }
+    pageInfo {
+      startCursor
+      endCursor
+      hasNextPage
+      hasPreviousPage
+    }
+  }
+}
