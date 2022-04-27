@@ -15,7 +15,7 @@ import { Type } from '@nestjs/common';
  * @typedef IRelayStyleEdge
  * @prop {T} node A generic node, containing the queried object
  */
-interface IRelayStyleEdge<T> {
+export interface IRelayStyleEdge<T> {
   node: T;
 }
 
@@ -28,10 +28,11 @@ interface IRelayStyleEdge<T> {
  * @prop {string} endCursor The cursor of the last object in the page
  * @prop {boolean} hasNextPage If there are additional pages after this one
  */
-interface IRelayStylePageInfo {
-  startCursor: string;
-  endCursor: string;
+export interface IRelayStylePageInfo {
+  startCursor?: string;
+  endCursor?: string;
   hasNextPage: boolean;
+  hasPreviousPage: boolean;
 }
 
 /**
@@ -62,24 +63,39 @@ export function RelayStylePaginate<T>(
 
   @ObjectType(`${classRef.name}PageInfo`)
   abstract class RelayStylePageInfo {
-    @Field(() => String)
+    @Field(() => String, {
+      description: 'The first cursor of the page result',
+      nullable: true,
+    })
     startCursor!: string;
 
-    @Field(() => String)
+    @Field(() => String, {
+      description: 'The last cursor of the page result',
+      nullable: true,
+    })
     endCursor!: string;
 
-    @Field(() => Boolean)
+    @Field(() => Boolean, {
+      description: 'Indicate whether more items exist after the returned once',
+      nullable: false,
+    })
     hasNextPage!: boolean;
+
+    @Field(() => Boolean, {
+      description: 'Indicate whether more items exist before the returned once',
+      nullable: false,
+    })
+    hasPreviousPage!: boolean;
   }
 
   @ObjectType({ isAbstract: true })
   abstract class RelayStylePaginatedType
     implements IRelayStylePaginatedType<T>
   {
-    @Field(() => [RelayStyleEdge], { nullable: true })
+    @Field(() => [RelayStyleEdge])
     edges!: RelayStyleEdge[];
 
-    @Field(() => RelayStylePageInfo, { nullable: true })
+    @Field(() => RelayStylePageInfo)
     pageInfo!: RelayStylePageInfo;
   }
   return RelayStylePaginatedType as Type<IRelayStylePaginatedType<T>>;

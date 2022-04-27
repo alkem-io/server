@@ -45,6 +45,10 @@ import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set
 import { PreferenceType } from '@common/enums/preference.type';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
+import { PaginationArgs } from '@core/pagination';
+import { FilterArgs } from '@core/filtering';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
+import { IPaginatedType } from '@core/pagination/paginated.type';
 
 @Injectable()
 export class UserService {
@@ -517,6 +521,18 @@ export class UserService {
     );
     const users = await this.userRepository.find({ serviceProfile: false });
     return limitAndShuffle(users, limit, shuffle);
+  }
+
+  async getPaginatedUsers(
+    paginationArgs: PaginationArgs,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter: FilterArgs
+  ): Promise<IPaginatedType<IUser>> {
+    const query = await this.userRepository.createQueryBuilder().select();
+
+    // todo... you can apply filters here to the query as where clauses
+
+    return getPaginationResults(query, paginationArgs);
   }
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
