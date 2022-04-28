@@ -59,7 +59,7 @@ At first glance, these results just seem wrong, but let’s dive deeper into wha
 
 # Technical design
 
-![Pagination design](images/alkemio-pagination-design.png)
+![Pagination design](images/alkemio-pagination-design.svg)
 
 - A query is sent to the server and it's intercepted by a query resolver.
 - Pagination args
