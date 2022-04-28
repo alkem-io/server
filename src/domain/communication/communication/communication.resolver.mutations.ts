@@ -1,4 +1,4 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CommunicationService } from './communication.service';
@@ -6,7 +6,7 @@ import { CurrentUser } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { IDiscussion } from '../discussion/discussion.interface';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
 import { DiscussionService } from '../discussion/discussion.service';
@@ -21,6 +21,7 @@ import {
 import { PubSubEngine } from 'graphql-subscriptions';
 import { CommunicationDiscussionUpdated } from './dto/communication.dto.event.discussion.updated';
 import { SubscriptionType } from '@common/enums/subscription.type';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Resolver()
 export class CommunicationResolverMutations {
@@ -32,7 +33,8 @@ export class CommunicationResolverMutations {
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
     @Inject(SUBSCRIPTION_DISCUSSION_UPDATED)
-    private readonly subscriptionDiscussionMessage: PubSubEngine
+    private readonly subscriptionDiscussionMessage: PubSubEngine,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -84,6 +86,10 @@ export class CommunicationResolverMutations {
       eventID: eventID,
       discussionID: discussion.id,
     };
+    this.logger.verbose?.(
+      `[Discussion updated] - event published: '${eventID}'`,
+      LogContext.SUBSCRIPTIONS
+    );
     this.subscriptionDiscussionMessage.publish(
       SubscriptionType.COMMUNICATION_DISCUSSION_UPDATED,
       subscriptionPayload
