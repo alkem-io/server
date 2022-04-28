@@ -8,7 +8,7 @@ import { IPreferenceSet } from '@domain/common/preference-set';
 @ObjectType('User', {
   implements: () => [ISearchable],
 })
-export abstract class IUser extends INameable {
+export class IUser extends INameable {
   rowId!: number;
 
   @Field(() => String, {

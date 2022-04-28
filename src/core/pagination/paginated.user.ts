@@ -11,8 +11,5 @@ export class RelayStylePaginatedUser extends RelayStylePaginate(
   RelayPaginatedUser
 ) {}
 
-@ObjectType('User1')
-class User extends IUser {}
-
 @ObjectType()
-export class PaginatedUsers extends Paginate(User, 'users') {}
+export class PaginatedUsers extends Paginate(IUser, 'users') {}
