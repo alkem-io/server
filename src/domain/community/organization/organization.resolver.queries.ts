@@ -1,8 +1,13 @@
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { Args, Float, Query, Resolver } from '@nestjs/graphql';
-import { Profiling } from '@src/common/decorators';
+import { CurrentUser, Profiling } from '@src/common/decorators';
 import { IOrganization } from './organization.interface';
 import { OrganizationService } from './organization.service';
+import { AgentInfo, GraphqlGuard } from '@src/core';
+import { PaginationArgs } from '@core/pagination';
+import { FilterArgs } from '@core/filtering';
+import { UseGuards } from '@nestjs/common';
+import { PaginatedOrganization } from '@core/pagination/paginated.organization';
 
 @Resolver()
 export class OrganizationResolverQueries {
@@ -43,5 +48,22 @@ export class OrganizationResolverQueries {
     @Args('ID', { type: () => UUID_NAMEID, nullable: false }) id: string
   ): Promise<IOrganization> {
     return await this.organizationService.getOrganizationOrFail(id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Query(() => PaginatedOrganization, {
+    nullable: false,
+    description: 'The Organizations on this platform in paginated format',
+  })
+  @Profiling.api
+  async organizationsPaginated(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args() pagination: PaginationArgs,
+    @Args() filter: FilterArgs
+  ): Promise<PaginatedOrganization> {
+    return this.organizationService.getPaginatedOrganizations(
+      pagination,
+      filter
+    );
   }
 }

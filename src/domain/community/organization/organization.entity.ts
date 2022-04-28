@@ -1,4 +1,11 @@
-import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Generated,
+  JoinColumn,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
@@ -13,6 +20,12 @@ export class Organization
   extends NameableEntity
   implements IOrganization, IGroupable
 {
+  @Column({
+    unique: true,
+  })
+  @Generated('increment')
+  rowId!: number;
+
   @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'SET NULL' })
   @JoinColumn()
   profile?: Profile;

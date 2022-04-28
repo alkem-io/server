@@ -41,7 +41,7 @@ const SORTING_COLUMN: keyof Paginationable = 'rowId';
   }
 
  * !!! The pagination algorithm provided in the link about is not strictly followed !!!
- * @param query
+ * @param query A *SelectQueryBuilder*. You can provided it from  from the entity's repository class
  * @param paginationArgs
  * @param cursorColumn
  */
