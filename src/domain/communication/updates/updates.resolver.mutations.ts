@@ -1,4 +1,4 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -22,6 +22,8 @@ import {
   NOTIFICATIONS_SERVICE,
   SUBSCRIPTION_UPDATE_MESSAGE,
 } from '@common/constants/providers';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums';
 
 @Resolver()
 export class UpdatesResolverMutations {
@@ -31,7 +33,8 @@ export class UpdatesResolverMutations {
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
     @Inject(SUBSCRIPTION_UPDATE_MESSAGE)
-    private readonly subscriptionUpdateMessage: PubSubEngine
+    private readonly subscriptionUpdateMessage: PubSubEngine,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -78,6 +81,10 @@ export class UpdatesResolverMutations {
       message: updateSent,
       updatesID: updates.id,
     };
+    this.logger.verbose?.(
+      `[Update message sent] - event published: '${eventID}'`,
+      LogContext.SUBSCRIPTIONS
+    );
     this.subscriptionUpdateMessage.publish(
       SubscriptionType.COMMUNICATION_UPDATE_MESSAGE_RECEIVED,
       subscriptionPayload
