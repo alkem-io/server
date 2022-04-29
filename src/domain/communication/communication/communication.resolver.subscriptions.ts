@@ -15,6 +15,8 @@ import { IDiscussion } from '../discussion/discussion.interface';
 import { DiscussionService } from '../discussion/discussion.service';
 import { CommunicationService } from './communication.service';
 import { CommunicationDiscussionUpdated } from './dto/communication.dto.event.discussion.updated';
+import { UUID_LENGTH } from '@common/constants';
+import { SubscriptionUserNotAuthenticated } from '@common/exceptions/subscription.user.not.authenticated';
 
 @Resolver()
 export class CommunicationResolverSubscriptions {
@@ -74,6 +76,13 @@ export class CommunicationResolverSubscriptions {
     })
     communicationID: string
   ) {
+    // Only allow subscriptions for logged in users
+    if (agentInfo.userID.length !== UUID_LENGTH) {
+      throw new SubscriptionUserNotAuthenticated(
+        'Subscription attempted to DiscussionsUpdated for non-authenticated user',
+        LogContext.SUBSCRIPTIONS
+      );
+    }
     const logMsgPrefix = `[User (${agentInfo.email}) Discussion Update] - `;
     this.logger.verbose?.(
       `${logMsgPrefix} Subscribing to Discussions on Communication: ${communicationID}`,

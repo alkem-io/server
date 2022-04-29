@@ -80,7 +80,13 @@ export class WinstonConfigService {
       }
 
       const myFormat = winston.format.combine(
-        winston.format.timestamp(),
+        winston.format.timestamp({
+          format: 'MM-DD hh:mm:ss',
+        }),
+        winston.format.printf(
+          info =>
+            `${info.timestamp} ${info.level} [${info.context}] - ${info.message}`
+        ),
         winston.format.align(),
         filterMessagesFormat(
           (info: any) =>
