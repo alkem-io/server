@@ -13,6 +13,8 @@ import { UpdatesService } from './updates.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SUBSCRIPTION_UPDATE_MESSAGE } from '@common/constants/providers';
+import { UUID_LENGTH } from '@common/constants';
+import { SubscriptionUserNotAuthenticated } from '@common/exceptions/subscription.user.not.authenticated';
 
 @Resolver()
 export class UpdatesResolverSubscriptions {
@@ -98,6 +100,13 @@ export class UpdatesResolverSubscriptions {
     })
     updatesIDs: string[]
   ) {
+    // Only allow subscriptions for logged in users
+    if (agentInfo.userID.length !== UUID_LENGTH) {
+      throw new SubscriptionUserNotAuthenticated(
+        'Subscription attempted to Updates for non-authenticated user',
+        LogContext.SUBSCRIPTIONS
+      );
+    }
     const logMsgPrefix = `[User (${agentInfo.email}) Updates] - `;
     if (updatesIDs) {
       this.logger.verbose?.(
