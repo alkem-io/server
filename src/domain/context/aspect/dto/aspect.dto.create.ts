@@ -1,9 +1,9 @@
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { InputType, Field } from '@nestjs/graphql';
 import {
-  LONG_TEXT_LENGTH,
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
+  VERY_LONG_TEXT_LENGTH,
 } from '@src/common/constants';
 import { IsOptional, MaxLength, MinLength } from 'class-validator';
 
@@ -26,7 +26,7 @@ export class CreateAspectInput {
   type!: string;
 
   @Field({ nullable: false })
-  @MaxLength(LONG_TEXT_LENGTH)
+  @MaxLength(VERY_LONG_TEXT_LENGTH)
   description!: string;
 
   @Field(() => [String], { nullable: true })
