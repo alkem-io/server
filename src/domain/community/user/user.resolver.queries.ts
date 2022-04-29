@@ -69,7 +69,7 @@ export class UserResolverQueries {
   async usersPaginated(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) pagination: PaginationArgs,
-    @Args('filter', { nullable: true }) filter: UserFilterInput
+    @Args('filter', { nullable: true }) filter?: UserFilterInput
   ): Promise<PaginatedUsers> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,

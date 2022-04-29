@@ -5,7 +5,7 @@ import { IOrganization } from './organization.interface';
 import { OrganizationService } from './organization.service';
 import { AgentInfo, GraphqlGuard } from '@src/core';
 import { PaginationArgs } from '@core/pagination';
-import { FilterArgs } from '@core/filtering';
+import { OrganizationFilterInput } from '@core/filtering';
 import { UseGuards } from '@nestjs/common';
 import { PaginatedOrganization } from '@core/pagination/paginated.organization';
 
@@ -59,7 +59,7 @@ export class OrganizationResolverQueries {
   async organizationsPaginated(
     @CurrentUser() agentInfo: AgentInfo,
     @Args() pagination: PaginationArgs,
-    @Args() filter: FilterArgs
+    @Args('filter', { nullable: true }) filter?: OrganizationFilterInput
   ): Promise<PaginatedOrganization> {
     return this.organizationService.getPaginatedOrganizations(
       pagination,

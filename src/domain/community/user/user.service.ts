@@ -525,16 +525,15 @@ export class UserService {
 
   async getPaginatedUsers(
     paginationArgs: PaginationArgs,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
-    const query = await this.userRepository.createQueryBuilder().select();
+    const qb = await this.userRepository.createQueryBuilder().select();
 
     if (filter) {
-      applyFiltering(query, filter);
+      applyFiltering(qb, filter);
     }
 
-    return getPaginationResults(query, paginationArgs);
+    return getPaginationResults(qb, paginationArgs);
   }
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
