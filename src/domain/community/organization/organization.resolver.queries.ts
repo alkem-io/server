@@ -1,9 +1,9 @@
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { Args, Float, Query, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { Profiling } from '@src/common/decorators';
 import { IOrganization } from './organization.interface';
 import { OrganizationService } from './organization.service';
-import { AgentInfo, GraphqlGuard } from '@src/core';
+import { GraphqlGuard } from '@src/core';
 import { PaginationArgs } from '@core/pagination';
 import { FilterArgs } from '@core/filtering';
 import { UseGuards } from '@nestjs/common';
@@ -57,7 +57,6 @@ export class OrganizationResolverQueries {
   })
   @Profiling.api
   async organizationsPaginated(
-    @CurrentUser() agentInfo: AgentInfo,
     @Args() pagination: PaginationArgs,
     @Args() filter: FilterArgs
   ): Promise<PaginatedOrganization> {
