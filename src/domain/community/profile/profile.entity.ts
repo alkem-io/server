@@ -35,7 +35,7 @@ export class Profile extends AuthorizableEntity implements IProfile {
   description = '';
 
   @OneToOne(() => Location, {
-    eager: true,
+    eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })

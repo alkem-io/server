@@ -73,6 +73,16 @@ export class ContextResolverFields {
     return await this.contextService.getAspects(context, ids, limit, shuffle);
   }
 
+  // @UseGuards(GraphqlGuard)
+  // @ResolveField('location', () => ILocation, {
+  //   nullable: false,
+  //   description: 'The location for this Context.',
+  // })
+  // @Profiling.api
+  // async location(@Parent() context: IContext): Promise<ILocation> {
+  //   return await this.contextService.getLocation(context);
+  // }
+
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('canvases', () => [ICanvas], {

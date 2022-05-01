@@ -6,6 +6,7 @@ import { IEcosystemModel } from '@domain/context/ecosystem-model/ecosystem-model
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { ICanvas } from '@domain/common/canvas';
 import { IVisual } from '@domain/common/visual/visual.interface';
+import { ILocation } from '@domain/common/location/location.interface';
 
 @ObjectType('Context')
 export abstract class IContext extends IAuthorizable {
@@ -38,6 +39,8 @@ export abstract class IContext extends IAuthorizable {
     description: 'Who should get involved in this challenge',
   })
   who?: string;
+
+  location?: ILocation;
 
   references?: IReference[];
 

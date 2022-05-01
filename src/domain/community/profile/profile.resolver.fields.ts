@@ -7,6 +7,7 @@ import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ProfileService } from './profile.service';
 import { ITagset } from '@domain/common';
+import { ILocation } from '@domain/common/location/location.interface';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
@@ -40,5 +41,15 @@ export class ProfileResolverFields {
   @Profiling.api
   async tagsets(@Parent() profile: IProfile): Promise<ITagset[]> {
     return await this.profileService.getTagsets(profile);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('location', () => ILocation, {
+    nullable: true,
+    description: 'The location for this Profile.',
+  })
+  @Profiling.api
+  async location(@Parent() profile: IProfile): Promise<ILocation> {
+    return await this.profileService.getLocation(profile);
   }
 }

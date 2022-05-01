@@ -23,7 +23,7 @@ import {
   UpdateProfileInput,
 } from './dto';
 import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
-import { LocationService } from '@domain/common/location';
+import { ILocation, LocationService } from '@domain/common/location';
 
 @Injectable()
 export class ProfileService {
@@ -243,5 +243,18 @@ export class ProfileService {
       );
     }
     return profile.tagsets;
+  }
+
+  async getLocation(profileInput: IProfile): Promise<ILocation> {
+    const profile = await this.getProfileOrFail(profileInput.id, {
+      relations: ['location'],
+    });
+    if (!profile.location) {
+      throw new EntityNotInitializedException(
+        `Profile not initialized: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return profile.location;
   }
 }

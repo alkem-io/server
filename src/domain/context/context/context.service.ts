@@ -26,6 +26,7 @@ import { VisualService } from '@domain/common/visual/visual.service';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { NamingService } from '@services/domain/naming/naming.service';
 import { limitAndShuffle } from '@src/common';
+import { ILocation } from '@domain/common/location/location.interface';
 
 @Injectable()
 export class ContextService {
@@ -362,6 +363,19 @@ export class ContextService {
     }
 
     return results;
+  }
+
+  async getLocation(contextInput: IContext): Promise<ILocation> {
+    const context = await this.getContextOrFail(contextInput.id, {
+      relations: ['location'],
+    });
+    if (!context.location) {
+      throw new EntityNotInitializedException(
+        `Profile not initialized: ${context.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return context.location;
   }
 
   async getReferences(context: IContext): Promise<IReference[]> {
