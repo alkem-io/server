@@ -8,7 +8,7 @@ import {
   IOrganization,
   DeleteOrganizationInput,
 } from '@domain/community/organization';
-import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
+import { IUserGroup } from '@domain/community/user-group';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { OrganizationAuthorizationService } from './organization.service.authorization';
@@ -28,6 +28,7 @@ import { IPreference, PreferenceService } from '@domain/common/preference';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { UpdateOrganizationPreferenceInput } from '@domain/community/organization/dto/organization.dto.update.preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
+import { CreateUserGroupInput } from '../user-group/dto';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverMutations {

@@ -1,11 +1,6 @@
 import { IReference } from '@domain/common/reference';
 import { ITagset } from '@domain/common/tagset';
-import {
-  CreateReferenceOnProfileInput,
-  CreateTagsetOnProfileInput,
-  IProfile,
-  UpdateProfileInput,
-} from '@domain/community/profile';
+import { IProfile } from '@domain/community/profile';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -17,6 +12,8 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CreateTagsetOnProfileInput, UpdateProfileInput } from './dto';
+import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
 
 @Resolver()
 export class ProfileResolverMutations {

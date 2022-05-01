@@ -7,6 +7,7 @@ import {
 import { IProfile } from './profile.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Visual } from '@domain/common/visual/visual.entity';
+import { Location } from '@domain/common/location/location.entity';
 
 @Entity()
 export class Profile extends AuthorizableEntity implements IProfile {
@@ -32,6 +33,14 @@ export class Profile extends AuthorizableEntity implements IProfile {
 
   @Column('text', { nullable: true })
   description = '';
+
+  @OneToOne(() => Location, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  location?: Location;
 
   restrictedTagsetNames?: string[];
 

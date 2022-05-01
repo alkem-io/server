@@ -1,4 +1,5 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { ILocation } from '@domain/common/location';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { IVisual } from '@domain/common/visual';
@@ -10,6 +11,8 @@ export abstract class IProfile extends IAuthorizable {
   tagsets?: ITagset[];
 
   avatar?: IVisual;
+
+  location?: ILocation;
 
   @Field(() => String, {
     nullable: true,

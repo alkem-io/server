@@ -12,18 +12,18 @@ import { Reference, IReference } from '@domain/common/reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { ITagset } from '@domain/common/tagset';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import {
-  UpdateProfileInput,
-  Profile,
-  IProfile,
-  CreateReferenceOnProfileInput,
-  CreateProfileInput,
-  CreateTagsetOnProfileInput,
-} from '@domain/community/profile';
+import { Profile, IProfile } from '@domain/community/profile';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { IVisual } from '@domain/common/visual';
+import {
+  CreateProfileInput,
+  CreateTagsetOnProfileInput,
+  UpdateProfileInput,
+} from './dto';
+import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
+import { LocationService } from '@domain/common/location';
 
 @Injectable()
 export class ProfileService {
@@ -32,6 +32,7 @@ export class ProfileService {
     private tagsetService: TagsetService,
     private referenceService: ReferenceService,
     private visualService: VisualService,
+    private locationService: LocationService,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -47,6 +48,9 @@ export class ProfileService {
     });
     profile.authorization = new AuthorizationPolicy();
     profile.avatar = await this.visualService.createVisualAvatar();
+    profile.location = await this.locationService.createLocation(
+      profileData?.location
+    );
 
     if (!profile.references) {
       profile.references = [];
@@ -87,13 +91,26 @@ export class ProfileService {
       );
     }
 
+    if (profileData.location) {
+      this.locationService.updateLocationValues(
+        profile.location,
+        profileData.location
+      );
+    }
+
     return await this.profileRepository.save(profile);
   }
 
   async deleteProfile(profileID: string): Promise<IProfile> {
     // Note need to load it in with all contained entities so can remove fully
     const profile = await this.getProfileOrFail(profileID, {
-      relations: ['references', 'avatar', 'tagsets', 'authorization'],
+      relations: [
+        'references',
+        'avatar',
+        'location',
+        'tagsets',
+        'authorization',
+      ],
     });
 
     if (profile.tagsets) {
@@ -112,6 +129,10 @@ export class ProfileService {
 
     if (profile.avatar) {
       await this.visualService.deleteVisual({ ID: profile.avatar.id });
+    }
+
+    if (profile.location) {
+      await this.locationService.removeLocation(profile.location);
     }
 
     if (profile.authorization)

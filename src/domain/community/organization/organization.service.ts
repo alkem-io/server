@@ -19,7 +19,7 @@ import {
   Organization,
   UpdateOrganizationInput,
 } from '@domain/community/organization';
-import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
+import { IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { UUID_LENGTH } from '@common/constants';
@@ -44,6 +44,7 @@ import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
+import { CreateUserGroupInput } from '../user-group/dto';
 
 @Injectable()
 export class OrganizationService {

@@ -3,6 +3,7 @@ import { IsOptional, MaxLength } from 'class-validator';
 import { CreateTagsetInput } from '@domain/common/tagset';
 import { LONG_TEXT_LENGTH } from '@src/common/constants';
 import { CreateReferenceInput } from '@domain/common/reference';
+import { CreateLocationInput } from '@domain/common/location/dto';
 
 @InputType()
 export class CreateProfileInput {
@@ -10,6 +11,11 @@ export class CreateProfileInput {
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
   description?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @MaxLength(LONG_TEXT_LENGTH)
+  location?: CreateLocationInput;
 
   @Field(() => [CreateTagsetInput], { nullable: true })
   tagsetsData?: CreateTagsetInput[];

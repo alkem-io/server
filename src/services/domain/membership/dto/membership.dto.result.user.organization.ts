@@ -1,17 +1,18 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { MembershipResultEntry } from './membership.dto.result.entry';
+import { MembershipResult as MembershipResult } from './membership.dto.result';
 
 @ObjectType()
-export class MembershipUserResultEntryOrganization extends MembershipResultEntry {
+export class MembershipResultUserinOrganization extends MembershipResult {
   @Field(() => String, {
     description: 'The Organization ID.',
   })
   organizationID: string;
 
-  @Field(() => [MembershipResultEntry], {
-    description: 'Details of the Organizations the user is a member of',
+  @Field(() => [MembershipResult], {
+    description:
+      'Details of the Groups in the Organizations the user is a member of',
   })
-  userGroups: MembershipResultEntry[] = [];
+  userGroups: MembershipResult[] = [];
 
   constructor(
     nameID: string,

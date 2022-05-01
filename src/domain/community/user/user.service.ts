@@ -16,7 +16,6 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
-import { CreateProfileInput, IProfile } from '@domain/community/profile';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import {
   CreateUserInput,
@@ -45,6 +44,9 @@ import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set
 import { PreferenceType } from '@common/enums/preference.type';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
+import { CreateProfileInput } from '../profile/dto';
+import { IProfile } from '../profile/profile.interface';
+import { LocationService } from '@domain/common/location';
 
 @Injectable()
 export class UserService {
@@ -58,6 +60,7 @@ export class UserService {
     private namingService: NamingService,
     private agentService: AgentService,
     private preferenceSetService: PreferenceSetService,
+    private locationService: LocationService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -92,6 +95,11 @@ export class UserService {
       userData.profileData
     );
     user.profile = await this.profileService.createProfile(profileData);
+    // Todo: remove later
+    this.locationService.updateLocationValues(user.profile.location, {
+      city: userData.city,
+      country: userData.country,
+    });
 
     user.agent = await this.agentService.createAgent({
       parentDisplayID: user.email,
@@ -541,12 +549,12 @@ export class UserService {
     if (userInput.phone !== undefined) {
       user.phone = userInput.phone;
     }
-    if (userInput.city !== undefined) {
-      user.city = userInput.city;
-    }
-    if (userInput.country !== undefined) {
-      user.country = userInput.country;
-    }
+    // Todo: remove later
+    this.locationService.updateLocationValues(user.profile?.location, {
+      city: userInput.city,
+      country: userInput.country,
+    });
+
     if (userInput.gender !== undefined) {
       user.gender = userInput.gender;
     }
