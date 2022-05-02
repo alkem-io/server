@@ -27,6 +27,7 @@ import { IVisual } from '@domain/common/visual/visual.interface';
 import { NamingService } from '@services/domain/naming/naming.service';
 import { limitAndShuffle } from '@src/common';
 import { ILocation } from '@domain/common/location/location.interface';
+import { LocationService } from '@domain/common/location';
 
 @Injectable()
 export class ContextService {
@@ -38,6 +39,7 @@ export class ContextService {
     private visualService: VisualService,
     private referenceService: ReferenceService,
     private namingService: NamingService,
+    private locationService: LocationService,
     @InjectRepository(Context)
     private contextRepository: Repository<Context>
   ) {}
@@ -47,6 +49,9 @@ export class ContextService {
     context.ecosystemModel =
       await this.ecosystemModelService.createEcosystemModel({});
     context.authorization = new AuthorizationPolicy();
+    context.location = await this.locationService.createLocation(
+      contextData?.location
+    );
     if (!context.references) context.references = [];
     context.visuals = [];
     context.visuals.push(await this.visualService.createVisualBanner());
@@ -72,30 +77,39 @@ export class ContextService {
   }
 
   async updateContext(
-    context: IContext,
-    contextInput: UpdateContextInput
+    contextInput: IContext,
+    contextUpdateData: UpdateContextInput
   ): Promise<IContext> {
-    if (contextInput.tagline) {
-      context.tagline = contextInput.tagline;
+    const context = await this.getContextOrFail(contextInput.id, {
+      relations: ['references', 'location'],
+    });
+    if (contextUpdateData.tagline) {
+      context.tagline = contextUpdateData.tagline;
     }
-    if (contextInput.background) {
-      context.background = contextInput.background;
+    if (contextUpdateData.background) {
+      context.background = contextUpdateData.background;
     }
-    if (contextInput.vision) {
-      context.vision = contextInput.vision;
+    if (contextUpdateData.vision) {
+      context.vision = contextUpdateData.vision;
     }
-    if (contextInput.impact) {
-      context.impact = contextInput.impact;
+    if (contextUpdateData.impact) {
+      context.impact = contextUpdateData.impact;
     }
-    if (contextInput.who) {
-      context.who = contextInput.who;
+    if (contextUpdateData.who) {
+      context.who = contextUpdateData.who;
     }
 
-    if (contextInput.references) {
-      const references = await this.getReferences(context);
+    if (contextUpdateData.location) {
+      this.locationService.updateLocationValues(
+        context.location,
+        contextUpdateData.location
+      );
+    }
+
+    if (contextUpdateData.references) {
       context.references = await this.referenceService.updateReferences(
-        references,
-        contextInput.references
+        context.references,
+        contextUpdateData.references
       );
     }
 
@@ -111,6 +125,7 @@ export class ContextService {
         'ecosystemModel',
         'visuals',
         'canvases',
+        'location',
       ],
     });
 
@@ -140,6 +155,10 @@ export class ContextService {
           ID: visual?.id,
         });
       }
+    }
+
+    if (context.location) {
+      await this.locationService.removeLocation(context.location);
     }
 
     if (context.authorization)

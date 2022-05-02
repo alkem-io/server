@@ -1,8 +1,9 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsOptional, MaxLength } from 'class-validator';
+import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
 import { CreateReferenceInput } from '@domain/common/reference/reference.dto.create';
 import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { CreateLocationInput } from '@domain/common/location/dto/location.dto.create';
 
 @InputType()
 export class CreateContextInput {
@@ -36,4 +37,9 @@ export class CreateContextInput {
     description: 'Set of References for the new Context.',
   })
   references?: CreateReferenceInput[];
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  location?: CreateLocationInput;
 }

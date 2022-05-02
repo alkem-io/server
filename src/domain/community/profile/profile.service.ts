@@ -70,7 +70,13 @@ export class ProfileService {
 
   async updateProfile(profileData: UpdateProfileInput): Promise<IProfile> {
     const profile = await this.getProfileOrFail(profileData.ID, {
-      relations: ['references', 'avatar', 'tagsets', 'authorization'],
+      relations: [
+        'references',
+        'avatar',
+        'tagsets',
+        'authorization',
+        'location',
+      ],
     });
 
     if (profileData.description) {

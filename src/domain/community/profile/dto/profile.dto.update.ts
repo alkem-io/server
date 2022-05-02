@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsOptional, MaxLength } from 'class-validator';
+import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
 import { LONG_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateReferenceInput } from '@domain/common/reference';
 import { UpdateTagsetInput } from '@domain/common/tagset';
@@ -20,6 +20,6 @@ export class UpdateProfileInput extends UpdateBaseAlkemioInput {
 
   @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(LONG_TEXT_LENGTH)
+  @ValidateNested()
   location?: UpdateLocationInput;
 }
