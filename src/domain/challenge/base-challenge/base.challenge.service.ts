@@ -90,7 +90,7 @@ export class BaseChallengeService {
         LogContext.CHALLENGES
       );
     }
-    community.credential = membershipCredential;
+    community.membershipCredential = membershipCredential;
     return community;
   }
 
@@ -145,8 +145,10 @@ export class BaseChallengeService {
     const community = baseChallenge.community;
     if (community) {
       await this.communityService.removeCommunity(community.id);
-      if (community.credential) {
-        await this.credentialService.deleteCredential(community.credential.id);
+      if (community.membershipCredential) {
+        await this.credentialService.deleteCredential(
+          community.membershipCredential.id
+        );
       }
     }
 
@@ -225,7 +227,7 @@ export class BaseChallengeService {
     repository: Repository<BaseChallenge>
   ): Promise<ICredential> {
     const community = await this.getCommunity(baseChallengeId, repository);
-    const credential = community.credential;
+    const credential = community.membershipCredential;
     if (!credential)
       throw new RelationshipNotFoundException(
         `Unable to load credential for community on challenge/hub: ${baseChallengeId} `,

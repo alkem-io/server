@@ -103,7 +103,7 @@ export class ChallengeAuthorizationService {
       }
     }
 
-    if (!challenge.community?.credential) {
+    if (!challenge.community?.membershipCredential) {
       challenge.community =
         await this.baseChallengeService.setMembershipCredential(
           challenge,

@@ -24,7 +24,12 @@ export abstract class ICommunity extends IAuthorizable {
   parentCommunity?: ICommunity;
 
   // The credential profile that is used for determining membership of this community
-  credential?: ICredential;
+  membershipCredential?: ICredential;
+
+  // The credential profile that is used for determining leadership of this community
+  leadershipCredential?: ICredential;
+
+  leadershipPolicy!: string;
 
   hubID!: string;
 

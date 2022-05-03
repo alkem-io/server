@@ -27,7 +27,7 @@ export class BaseChallengeAuthorizationService {
       baseChallenge.id,
       repository
     );
-    const communityCredential = community.credential;
+    const communityCredential = community.membershipCredential;
     if (!communityCredential) {
       throw new EntityNotInitializedException(
         `Unable to retrieve community credential: ${community.displayName}`,

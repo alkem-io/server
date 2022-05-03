@@ -32,6 +32,7 @@ import { CommunicationService } from '@domain/communication/communication/commun
 import { ICommunication } from '@domain/communication/communication';
 import { LogContext } from '@common/enums/logging.context';
 import { CommunityType } from '@common/enums/community.type';
+import { CommunityPolicyLeadership } from './community.policy.leadership';
 
 @Injectable()
 export class CommunityService {
@@ -176,6 +177,16 @@ export class CommunityService {
     return undefined;
   }
 
+  getCommunityPolicyLeadership(
+    community: ICommunity
+  ): CommunityPolicyLeadership | undefined {
+    if (community.leadershipPolicy) {
+      const policy = JSON.parse(community.leadershipPolicy);
+      return policy;
+    }
+    return undefined;
+  }
+
   async setParentCommunity(
     community?: ICommunity,
     parentCommunity?: ICommunity
@@ -265,7 +276,7 @@ export class CommunityService {
   }
 
   getMembershipCredential(community: ICommunity): ICredential {
-    const credential = community.credential;
+    const credential = community.membershipCredential;
     if (!credential) {
       throw new EntityNotInitializedException(
         `Unable to locate credential type for community: ${community.displayName}`,

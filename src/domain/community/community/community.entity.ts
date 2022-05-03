@@ -58,7 +58,19 @@ export class Community
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  credential!: Credential;
+  membershipCredential!: Credential;
+
+  // The credential profile  that is used for determining leadership of this community
+  @OneToOne(() => Credential, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  leadCredential!: Credential;
+
+  @Column('text')
+  leadershipPolicy: string;
 
   // The parent community can have many child communities; the relationship is controlled by the child.
   @ManyToOne(() => Community, {
@@ -84,5 +96,6 @@ export class Community
     this.type = type;
     this.hubID = '';
     this.parentID = '';
+    this.leadershipPolicy = '';
   }
 }
