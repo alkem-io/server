@@ -7,16 +7,13 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CredentialMetadataOutput } from '@domain/agent/verified-credential/dto/verified.credential.dto.metadata';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { UUID, UUID_NAMEID_EMAIL } from '@domain/common/scalars';
+import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
-
-import { Args, Float, Int, Query, Resolver } from '@nestjs/graphql';
+import { Args, Float, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { AgentInfo } from '@src/core/authentication/agent-info';
-import {
-  RelayStylePaginatedUser,
-  getRelayStylePaginationResults,
-} from '@src/core';
+import { PaginationArgs, PaginatedUsers } from '@core/pagination';
+import { FilterArgs } from '@core/filtering';
 import { UserService } from './user.service';
 import { IUser } from './';
 
@@ -64,28 +61,16 @@ export class UserResolverQueries {
   }
 
   @UseGuards(GraphqlGuard)
-  @Query(() => RelayStylePaginatedUser, {
+  @Query(() => PaginatedUsers, {
     nullable: false,
     description: 'The users who have profiles on this platform',
   })
   @Profiling.api
   async usersPaginated(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args({
-      name: 'first',
-      type: () => Int,
-      description: 'Amount of users after the cursor',
-      nullable: true,
-    })
-    first: number,
-    @Args({
-      name: 'after',
-      type: () => UUID,
-      description: 'Selects the items after the cursor',
-      nullable: true,
-    })
-    after: string
-  ): Promise<RelayStylePaginatedUser> {
+    @Args() pagination: PaginationArgs,
+    @Args() filter: FilterArgs
+  ): Promise<PaginatedUsers> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
@@ -93,9 +78,7 @@ export class UserResolverQueries {
       `users query: ${agentInfo.email}`
     );
 
-    // todo: use different method without offset based pagination
-    const list = await this.userService.getUsers();
-    return getRelayStylePaginationResults(list, first, after);
+    return this.userService.getPaginatedUsers(pagination, filter);
   }
 
   @UseGuards(GraphqlGuard)

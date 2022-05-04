@@ -1,6 +1,13 @@
 import { Profile } from '@domain/community/profile/profile.entity';
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import { Column, Entity, JoinColumn, OneToOne, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToOne,
+  OneToMany,
+  Generated,
+} from 'typeorm';
 import { IUser } from '@domain/community/user/user.interface';
 import { Application } from '@domain/community/application/application.entity';
 import { Agent } from '@domain/agent/agent/agent.entity';
@@ -9,6 +16,12 @@ import { PreferenceSet } from '@domain/common/preference-set/preference.set.enti
 
 @Entity()
 export class User extends NameableEntity implements IUser {
+  @Column({
+    unique: true,
+  })
+  @Generated('increment')
+  rowId!: number;
+
   @Column()
   accountUpn: string = '';
 
