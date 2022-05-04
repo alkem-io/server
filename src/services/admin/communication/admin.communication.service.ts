@@ -34,7 +34,9 @@ export class AdminCommunicationService {
     const community = await this.communityService.getCommunityOrFail(
       communicationData.communityID
     );
-    const communityMembers = await this.communityService.getMembers(community);
+    const communityMembers = await this.communityService.getUserMembers(
+      community
+    );
     const communication = await this.communityService.getCommunication(
       community.id
     );
@@ -115,7 +117,9 @@ export class AdminCommunicationService {
     const communication = await this.communityService.getCommunication(
       community.id
     );
-    const communityMembers = await this.communityService.getMembers(community);
+    const communityMembers = await this.communityService.getUserMembers(
+      community
+    );
     for (const communityMember of communityMembers) {
       await this.communicationService.addUserToCommunications(
         communication,

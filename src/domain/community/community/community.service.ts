@@ -20,8 +20,8 @@ import { CreateUserGroupInput } from '@domain/community/user-group/dto';
 import {
   Community,
   ICommunity,
-  AssignCommunityMemberInput,
-  RemoveCommunityMemberInput,
+  AssignCommunityMemberUserInput,
+  RemoveCommunityMemberUserInput,
 } from '@domain/community/community';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
@@ -33,6 +33,9 @@ import { ICommunication } from '@domain/communication/communication';
 import { LogContext } from '@common/enums/logging.context';
 import { CommunityType } from '@common/enums/community.type';
 import { CommunityPolicyLeadership } from './community.policy.leadership';
+import { OrganizationService } from '../organization/organization.service';
+import { IOrganization } from '../organization/organization.interface';
+import { IAgent } from '@domain/agent/agent/agent.interface';
 
 @Injectable()
 export class CommunityService {
@@ -40,6 +43,7 @@ export class CommunityService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private userService: UserService,
+    private organizationService: OrganizationService,
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
     private communicationService: CommunicationService,
@@ -136,7 +140,7 @@ export class CommunityService {
     }
 
     // Remove all issued membership credentials
-    const members = await this.getMembers(community);
+    const members = await this.getUserMembers(community);
     for (const member of members) {
       await this.removeMember({ userID: member.id, communityID: community.id });
     }
@@ -201,7 +205,7 @@ export class CommunityService {
     return community;
   }
 
-  async getMembers(community: ICommunity): Promise<IUser[]> {
+  async getUserMembers(community: ICommunity): Promise<IUser[]> {
     const membershipCredential = this.getMembershipCredential(community);
     return await this.userService.usersWithCredentials({
       type: membershipCredential.type,
@@ -209,8 +213,18 @@ export class CommunityService {
     });
   }
 
-  async assignMember(
-    membershipData: AssignCommunityMemberInput
+  async getOrganizationMembers(
+    community: ICommunity
+  ): Promise<IOrganization[]> {
+    const membershipCredential = this.getMembershipCredential(community);
+    return await this.organizationService.organizationsWithCredentials({
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
+    });
+  }
+
+  async assignMemberUser(
+    membershipData: AssignCommunityMemberUserInput
   ): Promise<ICommunity> {
     const community = await this.getCommunityOrFail(
       membershipData.communityID,
@@ -219,11 +233,15 @@ export class CommunityService {
       }
     );
     const userID = membershipData.userID;
+    const { user, agent } = await this.userService.getUserAndAgent(
+      membershipData.userID
+    );
+    const membershipCredential = this.getMembershipCredential(community);
 
     // If the parent community is set, then check if the user is also a member there
     if (community.parentCommunity) {
       const isParentMember = await this.isMember(
-        userID,
+        agent,
         community.parentCommunity.id
       );
       if (!isParentMember)
@@ -234,17 +252,7 @@ export class CommunityService {
     }
 
     // Assign a credential for community membership
-    const { user, agent } = await this.userService.getUserAndAgent(
-      membershipData.userID
-    );
-
-    const membershipCredential = this.getMembershipCredential(community);
-
-    user.agent = await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: membershipCredential.type,
-      resourceID: membershipCredential.resourceID,
-    });
+    user.agent = await this.grantCommunityRole(agent, membershipCredential);
 
     // register the user for the community rooms
     const communication = await this.getCommunication(community.id);
@@ -258,6 +266,17 @@ export class CommunityService {
       );
 
     return community;
+  }
+
+  async grantCommunityRole(
+    agent: IAgent,
+    roleCredential: ICredential
+  ): Promise<IAgent> {
+    return await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: roleCredential.type,
+      resourceID: roleCredential.resourceID,
+    });
   }
 
   async getCommunication(communityID: string): Promise<ICommunication> {
@@ -287,7 +306,7 @@ export class CommunityService {
   }
 
   async removeMember(
-    membershipData: RemoveCommunityMemberInput
+    membershipData: RemoveCommunityMemberUserInput
   ): Promise<ICommunity> {
     const { user, agent } = await this.userService.getUserAndAgent(
       membershipData.userID
@@ -314,8 +333,7 @@ export class CommunityService {
     return await this.getCommunityOrFail(membershipData.communityID);
   }
 
-  async isMember(userID: string, communityID: string): Promise<boolean> {
-    const agent = await this.userService.getAgent(userID);
+  async isMember(agent: IAgent, communityID: string): Promise<boolean> {
     const community = await this.getCommunityOrFail(communityID);
     const membershipCredential = this.getMembershipCredential(community);
 
@@ -339,7 +357,9 @@ export class CommunityService {
   async createApplication(
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
-    const user = await this.userService.getUserOrFail(applicationData.userID);
+    const { user, agent } = await this.userService.getUserAndAgent(
+      applicationData.userID
+    );
     const community = (await this.getCommunityOrFail(applicationData.parentID, {
       relations: ['applications', 'parentCommunity'],
     })) as Community;
@@ -364,10 +384,7 @@ export class CommunityService {
     }
 
     // Check if the user is already a member; if so do not allow an application
-    const isExistingMember = await this.isMember(
-      applicationData.userID,
-      community.id
-    );
+    const isExistingMember = await this.isMember(agent, community.id);
     if (isExistingMember)
       throw new InvalidStateTransitionException(
         `User ${applicationData.userID} is already a member of the Community: ${community.displayName}.`,

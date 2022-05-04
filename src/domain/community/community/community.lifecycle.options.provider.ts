@@ -76,7 +76,7 @@ export class CommunityLifecycleOptionsProvider {
             LogContext.COMMUNITY
           );
 
-        await this.communityService.assignMember({
+        await this.communityService.assignMemberUser({
           userID: userID,
           communityID: communityID,
         });

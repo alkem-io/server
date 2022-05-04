@@ -15,8 +15,8 @@ import { UserService } from '@domain/community/user/user.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
-import { AssignCommunityMemberInput } from './dto/community.dto.assign.member';
-import { RemoveCommunityMemberInput } from './dto/community.dto.remove.member';
+import { AssignCommunityMemberUserInput } from './dto/community.dto.assign.member.user';
+import { RemoveCommunityMemberUserInput } from './dto/community.dto.remove.member.user';
 import { ClientProxy } from '@nestjs/microservices';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
@@ -31,6 +31,7 @@ import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto
 import { AlkemioUserClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.alkemio.user';
 import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 import { CreateUserGroupInput } from '../user-group/dto';
+import { AssignCommunityMemberOrganizationInput } from './dto/community.dto.assign.member.organization';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -79,9 +80,9 @@ export class CommunityResolverMutations {
     description: 'Assigns a User as a member of the specified Community.',
   })
   @Profiling.api
-  async assignUserToCommunity(
+  async assignUserAsCommunityMember(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignCommunityMemberInput
+    @Args('membershipData') membershipData: AssignCommunityMemberUserInput
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
       membershipData.communityID
@@ -92,7 +93,7 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.GRANT,
       `assign user community: ${community.displayName}`
     );
-    await this.communityService.assignMember(membershipData);
+    await this.communityService.assignMemberUser(membershipData);
 
     // reset the user authorization policy so that their profile is visible to other community members
     const user = await this.userService.getUserOrFail(membershipData.userID);
@@ -103,12 +104,37 @@ export class CommunityResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICommunity, {
+    description:
+      'Assigns an Organization as a member of the specified Community.',
+  })
+  @Profiling.api
+  async assignOrganizationAsCommunityMember(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData')
+    membershipData: AssignCommunityMemberOrganizationInput
+  ): Promise<ICommunity> {
+    const community = await this.communityService.getCommunityOrFail(
+      membershipData.communityID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.GRANT,
+      `assign organizatino community member: ${community.displayName}`
+    );
+    //await this.communityService.assignMemberOrganization(membershipData); // todo: implement!!
+
+    return community;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICommunity, {
     description: 'Removes a User as a member of the specified Community.',
   })
   @Profiling.api
-  async removeUserFromCommunity(
+  async removeUserAsCommunityMember(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveCommunityMemberInput
+    @Args('membershipData') membershipData: RemoveCommunityMemberUserInput
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
       membershipData.communityID
@@ -203,7 +229,7 @@ export class CommunityResolverMutations {
       );
     this.notificationsClient.emit(EventType.COMMUNITY_NEW_MEMBER, payload);
 
-    return await this.communityService.assignMember({
+    return await this.communityService.assignMemberUser({
       userID: agentInfo.userID,
       communityID: joiningData.communityID,
     });
