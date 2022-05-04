@@ -44,9 +44,13 @@ import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set
 import { PreferenceType } from '@common/enums/preference.type';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
-import { CreateProfileInput } from '../profile/dto';
 import { IProfile } from '../profile/profile.interface';
-import { LocationService } from '@domain/common/location';
+import { PaginationArgs } from '@core/pagination';
+import { applyFiltering, UserFilterInput } from '@core/filtering';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
+import { IPaginatedType } from '@core/pagination/paginated.type';
+import { LocationService } from '@domain/common/location/location.service';
+import { CreateProfileInput } from '../profile/dto/profile.dto.create';
 
 @Injectable()
 export class UserService {
@@ -525,6 +529,19 @@ export class UserService {
     );
     const users = await this.userRepository.find({ serviceProfile: false });
     return limitAndShuffle(users, limit, shuffle);
+  }
+
+  async getPaginatedUsers(
+    paginationArgs: PaginationArgs,
+    filter?: UserFilterInput
+  ): Promise<IPaginatedType<IUser>> {
+    const qb = await this.userRepository.createQueryBuilder().select();
+
+    if (filter) {
+      applyFiltering(qb, filter);
+    }
+
+    return getPaginationResults(qb, paginationArgs);
   }
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {

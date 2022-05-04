@@ -22,4 +22,5 @@ export enum LogContext {
   SSI_SOVRHD = 'ssi-sovrhd',
   REQUESTS = 'requests',
   PLATFORM = 'platform',
+  PAGINATION = 'pagination',
 }

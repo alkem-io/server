@@ -10,7 +10,7 @@ import { IOrganization } from '@domain/community/organization';
 import { IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { IProfile } from '@domain/community/profile';
-import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
+import { CurrentUser, Profiling } from '@common/decorators';
 import { IAgent } from '@domain/agent/agent';
 import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
@@ -18,26 +18,42 @@ import { IOrganizationVerification } from '../organization-verification/organiza
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { IPreference } from '@domain/common/preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
+import { AgentInfo } from '@src/core';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
   constructor(
+    private authorizationService: AuthorizationService,
     private organizationService: OrganizationService,
     private groupService: UserGroupService,
     private preferenceSetService: PreferenceSetService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
     nullable: true,
     description: 'Groups defined on this organization.',
   })
   @Profiling.api
-  async groups(@Parent() organization: Organization) {
-    return await this.organizationService.getUserGroups(organization);
+  async groups(
+    @Parent() organization: Organization,
+    @CurrentUser() agentInfo: AgentInfo
+  ) {
+    if (
+      await this.isAccessGranted(
+        organization,
+        agentInfo,
+        AuthorizationPrivilege.READ
+      )
+    ) {
+      return await this.organizationService.getUserGroups(organization);
+    }
+
+    return 'not accessible';
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('group', () => IUserGroup, {
     nullable: true,
@@ -45,23 +61,47 @@ export class OrganizationResolverFields {
   })
   @Profiling.api
   async group(
+    @CurrentUser() agentInfo: AgentInfo,
     @Parent() organization: Organization,
     @Args('ID', { type: () => UUID }) groupID: string
-  ): Promise<IUserGroup> {
-    return await this.groupService.getUserGroupOrFail(groupID, {
-      where: { organization: organization },
-    });
+  ): Promise<IUserGroup | 'not accessible'> {
+    if (
+      await this.isAccessGranted(
+        organization,
+        agentInfo,
+        AuthorizationPrivilege.READ
+      )
+    ) {
+      return await this.groupService.getUserGroupOrFail(groupID, {
+        where: { organization: organization },
+      });
+    }
+
+    return 'not accessible';
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('members', () => [IUser], {
     nullable: true,
     description: 'All users that are members of this Organization.',
   })
   @Profiling.api
-  async members(@Parent() organization: Organization) {
-    return await this.organizationService.getMembers(organization);
+  async members(
+    @Parent() organization: Organization,
+    @CurrentUser() agentInfo: AgentInfo
+  ) {
+    if (
+      await this.isAccessGranted(
+        organization,
+        agentInfo,
+        AuthorizationPrivilege.READ
+      )
+    ) {
+      return await this.organizationService.getMembers(organization);
+    }
+
+    return 'not accessible';
   }
 
   @ResolveField('profile', () => IProfile, {
@@ -70,7 +110,13 @@ export class OrganizationResolverFields {
   })
   @Profiling.api
   async profile(@Parent() organization: Organization) {
-    const profile = organization.profile;
+    const profile =
+      organization.profile ??
+      (
+        await this.organizationService.getOrganizationOrFail(organization.id, {
+          relations: ['profile'],
+        })
+      ).profile;
     if (!profile) {
       throw new EntityNotInitializedException(
         `Profile not initialised on organization: ${organization.displayName}`,
@@ -78,7 +124,7 @@ export class OrganizationResolverFields {
       );
     }
 
-    return organization.profile;
+    return profile;
   }
 
   @ResolveField('verification', () => IOrganizationVerification, {
@@ -108,16 +154,43 @@ export class OrganizationResolverFields {
     return await this.organizationService.getActivity(organization);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('preferences', () => [IPreference], {
     nullable: false,
     description: 'The preferences for this Organization',
   })
   @UseGuards(GraphqlGuard)
-  async preferences(@Parent() org: Organization): Promise<IPreference[]> {
-    const preferenceSet = await this.organizationService.getPreferenceSetOrFail(
-      org.id
+  async preferences(
+    @Parent() org: Organization,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IPreference[] | 'not accessible'> {
+    if (
+      await this.isAccessGranted(org, agentInfo, AuthorizationPrivilege.READ)
+    ) {
+      const preferenceSet =
+        await this.organizationService.getPreferenceSetOrFail(org.id);
+      return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
+    }
+
+    return 'not accessible';
+  }
+
+  private async isAccessGranted(
+    organization: IOrganization,
+    agentInfo: AgentInfo,
+    privilege: AuthorizationPrivilege
+  ) {
+    // needs to be loaded if you are not going through the orm layer
+    // e.g. pagination is going around the orm layer
+    const { authorization } =
+      await this.organizationService.getOrganizationOrFail(organization.id, {
+        relations: ['authorization'],
+      });
+
+    return await this.authorizationService.isAccessGranted(
+      agentInfo,
+      authorization,
+      privilege
     );
-    return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
   }
 }
