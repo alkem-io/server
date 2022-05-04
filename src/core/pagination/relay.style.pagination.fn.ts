@@ -1,22 +1,22 @@
-import {
-  LogContext,
-  PaginationInputOutOfBoundException,
-  PaginationNotFoundException,
-} from '@src/common';
+import { LessThan, MoreThan, SelectQueryBuilder } from 'typeorm';
+import { Logger } from '@nestjs/common';
 import { IBaseAlkemio } from '@src/domain';
-import { IRelayStylePaginatedType } from './';
+import { LogContext } from '@src/common';
+import { IRelayStyleEdge, IRelayStylePaginatedType, PaginationArgs } from './';
+import { tryValidateArgs } from './validate.pagination.args';
 
-const DEFAULT_FIRST_VALUE = 5;
+export type Paginationable = { rowId: number };
+
+const DEFAULT_PAGE_ITEMS = 25;
+const DEFAULT_CURSOR_COLUMN: keyof IBaseAlkemio = 'id';
+const SORTING_COLUMN: keyof Paginationable = 'rowId';
 
 /***
  * @see https://relay.dev/graphql/connections.htm#sec-Pagination-algorithm
  * Generic function taking an object as a type
  * and returning relay styled paginated result based on the passed parameters
- * @param list The full list to extract a page from
- * @param first Non-negative integer. The amount of nodes after the cursor
- * @param after Cursor type. Object's UUID is used here
  * @example
-   "users": {
+ "users": {
     "pageInfo": {
       "hasNextPage": true
     },
@@ -43,50 +43,100 @@ const DEFAULT_FIRST_VALUE = 5;
   }
 
  * !!! The pagination algorithm provided in the link about is not strictly followed !!!
+ * @param query A *SelectQueryBuilder*. You can provided it from  from the entity's repository class
+ * @param paginationArgs
+ * @param cursorColumn
  */
-export const getRelayStylePaginationResults = <T extends IBaseAlkemio>(
-  list: T[],
-  first?: number,
-  after?: string
-): IRelayStylePaginatedType<T> => {
-  let useFirst = DEFAULT_FIRST_VALUE;
+// todo: simplify; break in smaller functions; fix jsdoc
+export const getRelayStylePaginationResults = async <
+  T extends IBaseAlkemio & Paginationable
+>(
+  query: SelectQueryBuilder<T>,
+  paginationArgs: PaginationArgs,
+  cursorColumn = DEFAULT_CURSOR_COLUMN
+): Promise<IRelayStylePaginatedType<T>> => {
+  const logger = new Logger(LogContext.PAGINATION);
 
-  if (first) {
-    if (first < 0) {
-      throw new PaginationInputOutOfBoundException(
-        'Non-negative integer expected for parameter "first"',
-        LogContext.COMMUNITY
-      );
-    }
+  try {
+    tryValidateArgs(paginationArgs);
+  } catch (e) {
+    const error = e as Error;
 
-    useFirst = first;
+    logger.error(error.name, error.message);
+
+    throw e;
   }
 
-  // initialize cursor
-  let useAfter = list[0]?.id;
-  // todo: validate for UUID
-  if (after) {
-    const index = list.findIndex(x => x.id === after);
-    if (index === -1) {
-      throw new PaginationNotFoundException(
-        `Cursor item not found with id: (${after})`,
-        LogContext.COMMUNITY
-      );
-    }
-    useAfter = list[index + 1]?.id;
-  }
-  const indexAfter = list.findIndex(x => x.id === useAfter);
+  const { first, after, last, before } = paginationArgs;
 
-  const paginatedList = list.slice(indexAfter, indexAfter + useFirst);
-  const firstItem = paginatedList[0];
-  const lastItem = paginatedList[paginatedList.length - 1];
+  query.orderBy({ [SORTING_COLUMN]: 'ASC' });
+
+  const originalQuery = query.clone();
+  const hasWhere =
+    query.expressionMap.wheres && query.expressionMap.wheres.length > 0;
+
+  // FORWARD pagination
+  if (first && after) {
+    query[hasWhere ? 'andWhere' : 'where']({ [cursorColumn]: MoreThan(after) });
+    logger.verbose(`First ${first} After ${after}`);
+  }
+  // REVERSE pagination
+  else if (last && before) {
+    query[hasWhere ? 'andWhere' : 'where']({
+      [cursorColumn]: LessThan(before),
+    });
+    logger.verbose(`Last ${last} Before ${before}`);
+  }
+  const limit = first ?? last ?? DEFAULT_PAGE_ITEMS;
+  query.take(limit);
+
+  // todo: can we use getManyAndCount to optimize?
+  const result = await query.getMany();
+  logger.verbose(query.getQuery());
+
+  const startCursorItem = result?.[0];
+  const startCursor = startCursorItem?.[cursorColumn];
+
+  const endCursorItem = result.slice(-1)?.[0];
+  const endCursor = endCursorItem?.[cursorColumn];
+
+  const beforeQuery = originalQuery.clone();
+  const afterQuery = originalQuery.clone();
+
+  let countBefore = 0;
+  let countAfter = 0;
+  // todo: can we simplify?
+  if (hasWhere) {
+    countBefore = await beforeQuery
+      .andWhere({ [cursorColumn]: LessThan(startCursor) })
+      .getCount();
+    countAfter = await afterQuery
+      .andWhere({ [cursorColumn]: MoreThan(endCursor) })
+      .getCount();
+  } else {
+    countBefore = await beforeQuery
+      .where({ [cursorColumn]: LessThan(startCursor) })
+      .getCount();
+    countAfter = await afterQuery
+      .where({ [cursorColumn]: MoreThan(endCursor) })
+      .getCount();
+  }
+
+  logger.verbose(`Items before ${startCursor}: ${countBefore}`);
+  logger.verbose(`Items after ${endCursor}: ${countAfter}`);
+
+  const edges = result.map<IRelayStyleEdge<T>>(x => ({ node: x }));
+
+  const hasNextPage = countAfter > 0;
+  const hasPreviousPage = countBefore > 0;
 
   return {
-    edges: paginatedList.map(x => ({ node: x })),
+    edges,
     pageInfo: {
-      startCursor: firstItem.id,
-      endCursor: lastItem.id,
-      hasNextPage: indexAfter + useFirst < list.length,
+      startCursor,
+      endCursor,
+      hasNextPage,
+      hasPreviousPage,
     },
   };
 };
