@@ -72,15 +72,19 @@ export const getRelayStylePaginationResults = async <
   query.orderBy({ [SORTING_COLUMN]: 'ASC' });
 
   const originalQuery = query.clone();
+  const hasWhere =
+    query.expressionMap.wheres && query.expressionMap.wheres.length > 0;
 
   // FORWARD pagination
   if (first && after) {
-    query.where({ [cursorColumn]: MoreThan(after) });
+    query[hasWhere ? 'andWhere' : 'where']({ [cursorColumn]: MoreThan(after) });
     logger.verbose(`First ${first} After ${after}`);
   }
   // REVERSE pagination
   else if (last && before) {
-    query.where({ [cursorColumn]: LessThan(before) });
+    query[hasWhere ? 'andWhere' : 'where']({
+      [cursorColumn]: LessThan(before),
+    });
     logger.verbose(`Last ${last} Before ${before}`);
   }
   const limit = first ?? last ?? DEFAULT_PAGE_ITEMS;
@@ -102,10 +106,7 @@ export const getRelayStylePaginationResults = async <
   let countBefore = 0;
   let countAfter = 0;
   // todo: can we simplify?
-  if (
-    beforeQuery.expressionMap.wheres &&
-    beforeQuery.expressionMap.wheres.length
-  ) {
+  if (hasWhere) {
     countBefore = await beforeQuery
       .andWhere({ [cursorColumn]: LessThan(startCursor) })
       .getCount();

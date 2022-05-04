@@ -13,9 +13,9 @@ import { Args, Float, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { PaginationArgs, PaginatedUsers } from '@core/pagination';
-import { FilterArgs } from '@core/filtering';
 import { UserService } from './user.service';
 import { IUser } from './';
+import { UserFilterInput } from '@core/filtering';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
@@ -68,8 +68,8 @@ export class UserResolverQueries {
   @Profiling.api
   async usersPaginated(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args() pagination: PaginationArgs,
-    @Args() filter: FilterArgs
+    @Args({ nullable: true }) pagination: PaginationArgs,
+    @Args('filter', { nullable: true }) filter?: UserFilterInput
   ): Promise<PaginatedUsers> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,

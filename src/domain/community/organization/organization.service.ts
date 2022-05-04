@@ -45,7 +45,7 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
 import { PaginationArgs } from '@core/pagination';
-import { FilterArgs } from '@core/filtering';
+import { applyFiltering, OrganizationFilterInput } from '@core/filtering';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 
@@ -346,11 +346,13 @@ export class OrganizationService {
   async getPaginatedOrganizations(
     paginationArgs: PaginationArgs,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    filter: FilterArgs
+    filter?: OrganizationFilterInput
   ): Promise<IPaginatedType<IOrganization>> {
     const qb = await this.organizationRepository.createQueryBuilder().select();
 
-    // todo... you can apply filters here to the query as where clauses
+    if (filter) {
+      applyFiltering(qb, filter);
+    }
 
     return getPaginationResults(qb, paginationArgs);
   }

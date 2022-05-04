@@ -70,12 +70,13 @@ At first glance, these results just seem wrong, but let’s dive deeper into wha
 - The entity service applies the filtering and then applies the pagination through a generic pagination function
 - The pagination function is building SQL queries based on the provided pagination args,
   in order to retrieve the paged data and look around if data is available before or after the paged section
+- Filter args -Dependant on the Entity. The arguments represent field names of the filtered Entity and are name, value pairs
 
 # Usage
 
 ```graphql
 {
-  usersPaginated(first: 1) {
+  usersPaginated(first: 1, filter: { firstName: 'admin' }) {
     users {
       nameID
     }
