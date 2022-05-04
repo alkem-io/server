@@ -44,6 +44,10 @@ import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
+import { PaginationArgs } from '@core/pagination';
+import { applyFiltering, OrganizationFilterInput } from '@core/filtering';
+import { IPaginatedType } from '@core/pagination/paginated.type';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
 
 @Injectable()
 export class OrganizationService {
@@ -337,6 +341,20 @@ export class OrganizationService {
       await this.organizationRepository.find();
 
     return limitAndShuffle(organizations, limit, shuffle);
+  }
+
+  async getPaginatedOrganizations(
+    paginationArgs: PaginationArgs,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter?: OrganizationFilterInput
+  ): Promise<IPaginatedType<IOrganization>> {
+    const qb = await this.organizationRepository.createQueryBuilder().select();
+
+    if (filter) {
+      applyFiltering(qb, filter);
+    }
+
+    return getPaginationResults(qb, paginationArgs);
   }
 
   async getActivity(organization: IOrganization): Promise<INVP[]> {

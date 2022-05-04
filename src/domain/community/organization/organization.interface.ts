@@ -11,7 +11,8 @@ import { IPreferenceSet } from '@domain/common/preference-set';
 @ObjectType('Organization', {
   implements: () => [IGroupable, ISearchable],
 })
-export abstract class IOrganization extends INameable {
+export class IOrganization extends INameable {
+  rowId!: number;
   profile?: IProfile;
   groups?: IUserGroup[];
   agent?: IAgent;
