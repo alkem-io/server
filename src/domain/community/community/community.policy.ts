@@ -1,4 +1,4 @@
-export type CommunityPolicyLeadership = {
+export type CommunityPolicy = {
   minUser: number;
   maxUser: number;
   minOrg: number;

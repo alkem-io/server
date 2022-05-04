@@ -93,9 +93,10 @@ export class OpportunityService {
     );
 
     // set the credential type in use by the community
-    await this.baseChallengeService.setMembershipCredential(
+    await this.baseChallengeService.setCommunityCredentials(
       opportunity,
-      AuthorizationCredential.OPPORTUNITY_MEMBER
+      AuthorizationCredential.OPPORTUNITY_MEMBER,
+      AuthorizationCredential.OPPORTUNITY_LEAD
     );
 
     if (agentInfo) {

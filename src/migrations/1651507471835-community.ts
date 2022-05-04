@@ -4,14 +4,14 @@ import { randomUUID } from 'crypto';
 export class community1651507471835 implements MigrationInterface {
   name = 'community1651507471835';
 
-  hubLeadershipPolicy = {
+  hubCommunityPolicy = {
     minOrg: 1,
     maxOrg: 1,
     minUser: 0,
     maxUser: 2,
   };
 
-  challengeLeadershipPolicy = {
+  defaultCommunityPolicy = {
     minOrg: 0,
     maxOrg: 9,
     minUser: 0,
@@ -23,13 +23,14 @@ export class community1651507471835 implements MigrationInterface {
       `ALTER TABLE \`community\` ADD \`leadershipCredentialId\` char(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`community\` ADD \`leadershipPolicy\` text NULL`
-    );
-    await queryRunner.query(
       `ALTER TABLE \`community\` ADD UNIQUE INDEX \`IDX_99999ca8ac212b8357637794d6\` (\`leadershipCredentialId\`)`
     );
     await queryRunner.query(
       `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_99999ca8ac212b8357637794d6f\` FOREIGN KEY (\`leadershipCredentialId\`) REFERENCES \`credential\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`community\` ADD \`policy\` text NULL`
     );
 
     await queryRunner.query(
@@ -53,24 +54,24 @@ export class community1651507471835 implements MigrationInterface {
         if (credential.type === 'hub-member') {
           leadCredentialType = 'hub-host';
           await queryRunner.query(
-            `update community set leadershipPolicy = '${JSON.stringify(
-              this.hubLeadershipPolicy
+            `update community set policy = '${JSON.stringify(
+              this.hubCommunityPolicy
             )}' WHERE (id = '${community.id}')`
           );
         }
         if (credential.type === 'challenge-member') {
           leadCredentialType = 'challenge-lead';
           await queryRunner.query(
-            `update community set leadershipPolicy = '${JSON.stringify(
-              this.challengeLeadershipPolicy
+            `update community set policy = '${JSON.stringify(
+              this.defaultCommunityPolicy
             )}' WHERE (id = '${community.id}')`
           );
         }
         if (credential.type === 'opportunity-member') {
           leadCredentialType = 'opportunity-lead';
           await queryRunner.query(
-            `update community set leadershipPolicy = '${JSON.stringify(
-              this.challengeLeadershipPolicy
+            `update community set policy = '${JSON.stringify(
+              this.defaultCommunityPolicy
             )}' WHERE (id = '${community.id}')`
           );
         }

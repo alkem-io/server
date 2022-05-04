@@ -67,10 +67,10 @@ export class Community
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  leadCredential!: Credential;
+  leadershipCredential!: Credential;
 
   @Column('text')
-  leadershipPolicy: string;
+  policy: string;
 
   // The parent community can have many child communities; the relationship is controlled by the child.
   @ManyToOne(() => Community, {
@@ -96,6 +96,6 @@ export class Community
     this.type = type;
     this.hubID = '';
     this.parentID = '';
-    this.leadershipPolicy = '';
+    this.policy = '';
   }
 }

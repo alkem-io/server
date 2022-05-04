@@ -78,7 +78,9 @@ export class ChallengeAuthorizationService {
 
     // Cascade
     const challengeCommunityCredential =
-      await this.challengeService.getCommunityCredential(challenge.id);
+      await this.challengeService.getCommunityMembershipCredential(
+        challenge.id
+      );
     challenge.childChallenges = await this.challengeService.getChildChallenges(
       challenge
     );
@@ -105,9 +107,10 @@ export class ChallengeAuthorizationService {
 
     if (!challenge.community?.membershipCredential) {
       challenge.community =
-        await this.baseChallengeService.setMembershipCredential(
+        await this.baseChallengeService.setCommunityCredentials(
           challenge,
-          AuthorizationCredential.CHALLENGE_MEMBER
+          AuthorizationCredential.CHALLENGE_MEMBER,
+          AuthorizationCredential.CHALLENGE_LEAD
         );
     }
 

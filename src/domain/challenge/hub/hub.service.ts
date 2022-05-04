@@ -53,6 +53,13 @@ import { AspectService } from '@domain/context/aspect/aspect.service';
 
 @Injectable()
 export class HubService {
+  private hubCommunityPolicy = {
+    minOrg: 1,
+    maxOrg: 1,
+    minUser: 0,
+    maxUser: 2,
+  };
+
   constructor(
     private agentService: AgentService,
     private organizationService: OrganizationService,
@@ -88,14 +95,19 @@ export class HubService {
       CommunityType.HUB
     );
     // set the credential type in use by the community
-    await this.baseChallengeService.setMembershipCredential(
+    await this.baseChallengeService.setCommunityCredentials(
       hub,
-      AuthorizationCredential.HUB_MEMBER
+      AuthorizationCredential.HUB_MEMBER,
+      AuthorizationCredential.HUB_HOST
     );
 
-    // set immediate community parent
+    // set immediate community parent and  community policy
     if (hub.community) {
       hub.community.parentID = hub.id;
+      this.communityService.setCommunityPolicy(
+        hub.community,
+        this.hubCommunityPolicy
+      );
     }
     hub.preferenceSet = await this.preferenceSetService.createPreferenceSet(
       PreferenceDefinitionSet.HUB,
@@ -462,8 +474,15 @@ export class HubService {
     );
   }
 
-  async getCommunityCredential(hub: IHub): Promise<ICredential> {
-    return await this.baseChallengeService.getCommunityCredential(
+  async getCommunityMembershipCredential(hub: IHub): Promise<ICredential> {
+    return await this.baseChallengeService.getCommunityMembershipCredential(
+      hub.id,
+      this.hubRepository
+    );
+  }
+
+  async getCommunityLeadershipCredential(hub: IHub): Promise<ICredential> {
+    return await this.baseChallengeService.getCommunityLeadershipCredential(
       hub.id,
       this.hubRepository
     );

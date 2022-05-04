@@ -75,14 +75,11 @@ export class BaseChallengeService {
     });
   }
 
-  async setMembershipCredential(
+  async setCommunityCredentials(
     baseChallenge: IBaseChallenge,
-    membershipCredentialType: AuthorizationCredential
+    membershipCredentialType: AuthorizationCredential,
+    leadershipCredentialType: AuthorizationCredential
   ): Promise<ICommunity> {
-    const membershipCredential = await this.credentialService.createCredential({
-      type: membershipCredentialType,
-      resourceID: baseChallenge.id,
-    });
     const community = baseChallenge.community;
     if (!community) {
       throw new EntityNotInitializedException(
@@ -90,7 +87,17 @@ export class BaseChallengeService {
         LogContext.CHALLENGES
       );
     }
+    const membershipCredential = await this.credentialService.createCredential({
+      type: membershipCredentialType,
+      resourceID: baseChallenge.id,
+    });
     community.membershipCredential = membershipCredential;
+
+    const leadershipCredential = await this.credentialService.createCredential({
+      type: leadershipCredentialType,
+      resourceID: baseChallenge.id,
+    });
+    community.leadershipCredential = leadershipCredential;
     return community;
   }
 
@@ -149,6 +156,11 @@ export class BaseChallengeService {
         await this.credentialService.deleteCredential(
           community.membershipCredential.id
         );
+        if (community.leadershipCredential) {
+          await this.credentialService.deleteCredential(
+            community.leadershipCredential.id
+          );
+        }
       }
     }
 
@@ -222,7 +234,7 @@ export class BaseChallengeService {
     return community;
   }
 
-  async getCommunityCredential(
+  async getCommunityMembershipCredential(
     baseChallengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<ICredential> {
@@ -231,6 +243,20 @@ export class BaseChallengeService {
     if (!credential)
       throw new RelationshipNotFoundException(
         `Unable to load credential for community on challenge/hub: ${baseChallengeId} `,
+        LogContext.COMMUNITY
+      );
+    return credential;
+  }
+
+  async getCommunityLeadershipCredential(
+    baseChallengeId: string,
+    repository: Repository<BaseChallenge>
+  ): Promise<ICredential> {
+    const community = await this.getCommunity(baseChallengeId, repository);
+    const credential = community.leadershipCredential;
+    if (!credential)
+      throw new RelationshipNotFoundException(
+        `Unable to load leadership credential for community on challenge/hub: ${baseChallengeId} `,
         LogContext.COMMUNITY
       );
     return credential;

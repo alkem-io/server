@@ -32,6 +32,7 @@ import { AlkemioUserClaim } from '@services/platform/trust-registry/trust.regist
 import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 import { CreateUserGroupInput } from '../user-group/dto';
 import { AssignCommunityMemberOrganizationInput } from './dto/community.dto.assign.member.organization';
+import { RemoveCommunityMemberOrganizationInput } from './dto/community.dto.remove.member.organization';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -122,9 +123,7 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.GRANT,
       `assign organizatino community member: ${community.displayName}`
     );
-    //await this.communityService.assignMemberOrganization(membershipData); // todo: implement!!
-
-    return community;
+    return await this.communityService.assignMemberOrganization(membershipData);
   }
 
   @UseGuards(GraphqlGuard)
@@ -132,7 +131,7 @@ export class CommunityResolverMutations {
     description: 'Removes a User as a member of the specified Community.',
   })
   @Profiling.api
-  async removeUserAsCommunityMember(
+  async removeCommunityMemberUser(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('membershipData') membershipData: RemoveCommunityMemberUserInput
   ): Promise<ICommunity> {
@@ -146,12 +145,36 @@ export class CommunityResolverMutations {
       `remove user community: ${community.displayName}`
     );
 
-    await this.communityService.removeMember(membershipData);
+    await this.communityService.removeMemberUser(membershipData);
     // reset the user authorization policy so that their profile is not visible
     // to other community members
     const user = await this.userService.getUserOrFail(membershipData.userID);
     await this.userAuthorizationService.applyAuthorizationPolicy(user);
     return community;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICommunity, {
+    description:
+      'Removes an Organization as a member of the specified Community.',
+  })
+  @Profiling.api
+  async removeCommunityMemberOrganization(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData')
+    membershipData: RemoveCommunityMemberOrganizationInput
+  ): Promise<ICommunity> {
+    const community = await this.communityService.getCommunityOrFail(
+      membershipData.communityID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.GRANT,
+      `remove community member organization: ${community.displayName}`
+    );
+
+    return await this.communityService.removeMemberOrganization(membershipData);
   }
 
   @UseGuards(GraphqlGuard)

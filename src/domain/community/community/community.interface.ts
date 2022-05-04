@@ -29,7 +29,7 @@ export abstract class ICommunity extends IAuthorizable {
   // The credential profile that is used for determining leadership of this community
   leadershipCredential?: ICredential;
 
-  leadershipPolicy!: string;
+  policy!: string;
 
   hubID!: string;
 
