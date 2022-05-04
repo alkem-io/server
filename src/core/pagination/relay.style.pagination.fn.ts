@@ -1,7 +1,9 @@
 import { LessThan, MoreThan, SelectQueryBuilder } from 'typeorm';
-import { IBaseAlkemio } from '@src/domain';
-import { IRelayStyleEdge, IRelayStylePaginatedType, PaginationArgs } from './';
 import { Logger } from '@nestjs/common';
+import { IBaseAlkemio } from '@src/domain';
+import { LogContext } from '@src/common';
+import { IRelayStyleEdge, IRelayStylePaginatedType, PaginationArgs } from './';
+import { tryValidateArgs } from './validate.pagination.args';
 
 export type Paginationable = { rowId: number };
 
@@ -53,7 +55,17 @@ export const getRelayStylePaginationResults = async <
   paginationArgs: PaginationArgs,
   cursorColumn = DEFAULT_CURSOR_COLUMN
 ): Promise<IRelayStylePaginatedType<T>> => {
-  const logger = new Logger('Pagination');
+  const logger = new Logger(LogContext.PAGINATION);
+
+  try {
+    tryValidateArgs(paginationArgs);
+  } catch (e) {
+    const error = e as Error;
+
+    logger.error(error.name, error.message);
+
+    throw e;
+  }
 
   const { first, after, last, before } = paginationArgs;
 

@@ -76,13 +76,13 @@ export function RelayStylePaginate<T>(
     endCursor!: string;
 
     @Field(() => Boolean, {
-      description: 'Indicate whether more items exist after the returned once',
+      description: 'Indicate whether more items exist after the returned ones',
       nullable: false,
     })
     hasNextPage!: boolean;
 
     @Field(() => Boolean, {
-      description: 'Indicate whether more items exist before the returned once',
+      description: 'Indicate whether more items exist before the returned ones',
       nullable: false,
     })
     hasPreviousPage!: boolean;

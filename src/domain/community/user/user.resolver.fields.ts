@@ -84,16 +84,9 @@ export class UserResolverFields {
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
-    // Need to do inside rather than as decorator so can return a replacement string
-    const userWithAuth = await this.userService.getUserOrFail(user.id, {
-      relations: ['authorization'],
-    });
-    const accessGranted = await this.authorizationService.isAccessGranted(
-      agentInfo,
-      userWithAuth.authorization,
-      AuthorizationPrivilege.READ
-    );
-    if (accessGranted) {
+    if (
+      await this.isAccessGranted(user, agentInfo, AuthorizationPrivilege.READ)
+    ) {
       return user.email;
     }
     return 'not accessible';
@@ -109,14 +102,28 @@ export class UserResolverFields {
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
-    const accessGranted = await this.authorizationService.isAccessGranted(
-      agentInfo,
-      user.authorization,
-      AuthorizationPrivilege.READ
-    );
-    if (accessGranted) {
+    if (
+      await this.isAccessGranted(user, agentInfo, AuthorizationPrivilege.READ)
+    ) {
       return user.phone;
     }
     return 'not accessible';
+  }
+
+  private async isAccessGranted(
+    user: IUser,
+    agentInfo: AgentInfo,
+    privilege: AuthorizationPrivilege
+  ) {
+    // needs to be loaded if you are not going through the orm layer
+    // e.g. pagination is going around the orm layer
+    const { authorization } = await this.userService.getUserOrFail(user.id, {
+      relations: ['authorization'],
+    });
+    return await this.authorizationService.isAccessGranted(
+      agentInfo,
+      authorization,
+      privilege
+    );
   }
 }
