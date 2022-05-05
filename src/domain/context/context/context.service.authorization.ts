@@ -14,9 +14,9 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
-import { ICredential } from '@domain/agent/credential/credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { AspectAuthorizationService } from '../aspect/aspect.service.authorization';
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @Injectable()
 export class ContextAuthorizationService {
@@ -33,7 +33,7 @@ export class ContextAuthorizationService {
   async applyAuthorizationPolicy(
     context: IContext,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityCredential: ICredential
+    communityCredential: CredentialDefinition
   ): Promise<IContext> {
     context.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -104,7 +104,7 @@ export class ContextAuthorizationService {
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
     contextID: string,
-    communityCredential: ICredential
+    membershipCredential: CredentialDefinition
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -119,8 +119,8 @@ export class ContextAuthorizationService {
         AuthorizationPrivilege.CREATE_ASPECT,
         AuthorizationPrivilege.CREATE_CANVAS,
       ],
-      communityCredential.type,
-      communityCredential.resourceID
+      membershipCredential.type,
+      membershipCredential.resourceID
     );
     communityMemberNotInherited.inheritable = false;
     newRules.push(communityMemberNotInherited);
@@ -131,8 +131,8 @@ export class ContextAuthorizationService {
         AuthorizationPrivilege.UPDATE_CANVAS,
         AuthorizationPrivilege.CREATE_COMMENT,
       ],
-      communityCredential.type,
-      communityCredential.resourceID
+      membershipCredential.type,
+      membershipCredential.resourceID
     );
     newRules.push(communityMemberInherited);
 

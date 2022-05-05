@@ -6,7 +6,7 @@ import { AuthorizationPolicyRuleCredential } from '@core/authorization/authoriza
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { CommunicationService } from './communication.service';
-import { ICredential } from '@domain/agent';
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @Injectable()
 export class CommunicationAuthorizationService {
@@ -19,7 +19,7 @@ export class CommunicationAuthorizationService {
   async applyAuthorizationPolicy(
     communication: ICommunication,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityCredential: ICredential
+    membershipCredential: CredentialDefinition
   ): Promise<ICommunication> {
     communication.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -29,7 +29,7 @@ export class CommunicationAuthorizationService {
 
     communication.authorization = this.extendAuthorizationPolicy(
       communication.authorization,
-      communityCredential
+      membershipCredential
     );
 
     communication.discussions = await this.communicationService.getDiscussions(
@@ -54,7 +54,7 @@ export class CommunicationAuthorizationService {
 
   private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    communityCredential: ICredential
+    communityCredential: CredentialDefinition
   ): IAuthorizationPolicy {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 

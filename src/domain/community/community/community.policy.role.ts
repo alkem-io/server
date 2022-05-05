@@ -1,6 +1,7 @@
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+
 export type CommunityPolicyRole = {
-  credentialType: string;
-  credentialResourceID: string;
+  credential: CredentialDefinition;
   minUser: number;
   maxUser: number;
   minOrg: number;

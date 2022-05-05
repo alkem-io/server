@@ -45,27 +45,31 @@ import { AgentInfo } from '@src/core';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { ICredential } from '@domain/agent/credential/credential.interface';
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceType } from '@common/enums/preference.type';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { CommunityPolicy } from '@domain/community/community/community.policy';
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @Injectable()
 export class HubService {
   private hubCommunityPolicy: CommunityPolicy = {
     member: {
-      credentialType: AuthorizationCredential.HUB_MEMBER,
-      credentialResourceID: '',
+      credential: {
+        type: AuthorizationCredential.HUB_MEMBER,
+        resourceID: '',
+      },
       minOrg: 0,
       maxOrg: -1,
       minUser: 0,
       maxUser: -1,
     },
     leader: {
-      credentialType: AuthorizationCredential.HUB_HOST,
-      credentialResourceID: '',
+      credential: {
+        type: AuthorizationCredential.HUB_HOST,
+        resourceID: '',
+      },
       minOrg: 0,
       maxOrg: 9,
       minUser: 0,
@@ -478,14 +482,18 @@ export class HubService {
     );
   }
 
-  async getCommunityMembershipCredential(hub: IHub): Promise<ICredential> {
+  async getCommunityMembershipCredential(
+    hub: IHub
+  ): Promise<CredentialDefinition> {
     return await this.baseChallengeService.getCommunityMembershipCredential(
       hub.id,
       this.hubRepository
     );
   }
 
-  async getCommunityLeadershipCredential(hub: IHub): Promise<ICredential> {
+  async getCommunityLeadershipCredential(
+    hub: IHub
+  ): Promise<CredentialDefinition> {
     return await this.baseChallengeService.getCommunityLeadershipCredential(
       hub.id,
       this.hubRepository

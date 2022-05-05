@@ -26,7 +26,6 @@ import {
 import { ApplicationService } from '@domain/community/application/application.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { ICommunication } from '@domain/communication/communication';
@@ -40,6 +39,7 @@ import { AssignCommunityMemberOrganizationInput } from './dto/community.dto.assi
 import { RemoveCommunityMemberOrganizationInput } from './dto/community.dto.remove.member.organization';
 import { RemoveCommunityLeadOrganizationInput } from './dto/community.dto.remove.lead.organization';
 import { AssignCommunityLeadOrganizationInput } from './dto/community.dto.assign.lead.organization';
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @Injectable()
 export class CommunityService {
@@ -347,7 +347,7 @@ export class CommunityService {
 
   async grantCommunityRole(
     agent: IAgent,
-    roleCredential: ICredential
+    roleCredential: CredentialDefinition
   ): Promise<IAgent> {
     return await this.agentService.grantCredential({
       agentID: agent.id,
@@ -371,21 +371,19 @@ export class CommunityService {
     return communication;
   }
 
-  getMembershipCredential(community: ICommunity): ICredential {
+  getMembershipCredential(community: ICommunity): CredentialDefinition {
     const policy = this.getCommunityPolicy(community);
     return {
-      id: '', // todo: should not need this
-      type: policy.member.credentialType,
-      resourceID: policy.member.credentialResourceID,
+      type: policy.member.credential.type,
+      resourceID: policy.member.credential.resourceID,
     };
   }
 
-  getLeadershipCredential(community: ICommunity): ICredential {
+  getLeadershipCredential(community: ICommunity): CredentialDefinition {
     const policy = this.getCommunityPolicy(community);
     return {
-      id: '', // todo: should not need this
-      type: policy.leader.credentialType,
-      resourceID: policy.leader.credentialResourceID,
+      type: policy.leader.credential.type,
+      resourceID: policy.leader.credential.resourceID,
     };
   }
 

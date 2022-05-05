@@ -8,16 +8,20 @@ export class community1651507471835 implements MigrationInterface {
 
   private challengeCommunityPolicy: CommunityPolicy = {
     member: {
-      credentialType: AuthorizationCredential.CHALLENGE_MEMBER,
-      credentialResourceID: '',
+      credential: {
+        type: AuthorizationCredential.CHALLENGE_MEMBER,
+        resourceID: '',
+      },
       minOrg: 0,
       maxOrg: -1,
       minUser: 0,
       maxUser: -1,
     },
     leader: {
-      credentialType: AuthorizationCredential.CHALLENGE_LEAD,
-      credentialResourceID: '',
+      credential: {
+        type: AuthorizationCredential.CHALLENGE_LEAD,
+        resourceID: '',
+      },
       minOrg: 0,
       maxOrg: 9,
       minUser: 0,
@@ -27,16 +31,20 @@ export class community1651507471835 implements MigrationInterface {
 
   private opportunityCommunityPolicy: CommunityPolicy = {
     member: {
-      credentialType: AuthorizationCredential.OPPORTUNITY_MEMBER,
-      credentialResourceID: '',
+      credential: {
+        type: AuthorizationCredential.OPPORTUNITY_MEMBER,
+        resourceID: '',
+      },
       minOrg: 0,
       maxOrg: -1,
       minUser: 0,
       maxUser: -1,
     },
     leader: {
-      credentialType: AuthorizationCredential.OPPORTUNITY_LEAD,
-      credentialResourceID: '',
+      credential: {
+        type: AuthorizationCredential.OPPORTUNITY_LEAD,
+        resourceID: '',
+      },
       minOrg: 0,
       maxOrg: 9,
       minUser: 0,
@@ -46,16 +54,20 @@ export class community1651507471835 implements MigrationInterface {
 
   private hubCommunityPolicy: CommunityPolicy = {
     member: {
-      credentialType: AuthorizationCredential.HUB_MEMBER,
-      credentialResourceID: '',
+      credential: {
+        type: AuthorizationCredential.HUB_MEMBER,
+        resourceID: '',
+      },
       minOrg: 0,
       maxOrg: -1,
       minUser: 0,
       maxUser: -1,
     },
     leader: {
-      credentialType: AuthorizationCredential.HUB_HOST,
-      credentialResourceID: '',
+      credential: {
+        type: AuthorizationCredential.HUB_HOST,
+        resourceID: '',
+      },
       minOrg: 0,
       maxOrg: 9,
       minUser: 0,
@@ -91,8 +103,8 @@ export class community1651507471835 implements MigrationInterface {
         } else {
           throw new Error(`Credential type not defined`);
         }
-        policy.member.credentialResourceID = credential.resourceID;
-        policy.leader.credentialResourceID = credential.resourceID;
+        policy.member.credential.resourceID = credential.resourceID;
+        policy.leader.credential.resourceID = credential.resourceID;
         await queryRunner.query(
           `update community set policy = '${JSON.stringify(
             policy

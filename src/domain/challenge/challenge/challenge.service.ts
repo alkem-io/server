@@ -48,28 +48,32 @@ import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.c
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { ICredential } from '@domain/agent/credential/credential.interface';
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { CommunityPolicy } from '@domain/community/community/community.policy';
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @Injectable()
 export class ChallengeService {
   private challengeCommunityPolicy: CommunityPolicy = {
     member: {
-      credentialType: AuthorizationCredential.CHALLENGE_MEMBER,
-      credentialResourceID: '',
+      credential: {
+        type: AuthorizationCredential.CHALLENGE_MEMBER,
+        resourceID: '',
+      },
       minOrg: 0,
       maxOrg: -1,
       minUser: 0,
       maxUser: -1,
     },
     leader: {
-      credentialType: AuthorizationCredential.CHALLENGE_LEAD,
-      credentialResourceID: '',
+      credential: {
+        type: AuthorizationCredential.CHALLENGE_LEAD,
+        resourceID: '',
+      },
       minOrg: 0,
       maxOrg: 9,
       minUser: 0,
@@ -358,7 +362,7 @@ export class ChallengeService {
 
   async getCommunityMembershipCredential(
     challengeId: string
-  ): Promise<ICredential> {
+  ): Promise<CredentialDefinition> {
     return await this.baseChallengeService.getCommunityMembershipCredential(
       challengeId,
       this.challengeRepository
@@ -367,7 +371,7 @@ export class ChallengeService {
 
   async getCommunityLeadershipCredential(
     challengeId: string
-  ): Promise<ICredential> {
+  ): Promise<CredentialDefinition> {
     return await this.baseChallengeService.getCommunityLeadershipCredential(
       challengeId,
       this.challengeRepository

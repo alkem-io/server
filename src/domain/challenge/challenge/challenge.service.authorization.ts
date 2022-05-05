@@ -17,12 +17,12 @@ import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { BaseChallengeService } from '../base-challenge/base.challenge.service';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
-import { ICredential } from '@domain/agent/credential/credential.interface';
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ChallengePreferenceType } from '@common/enums/challenge.preference.type';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -41,7 +41,7 @@ export class ChallengeAuthorizationService {
   async applyAuthorizationPolicy(
     challenge: IChallenge,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    parentCommunityCredential: ICredential
+    parentCommunityCredential: CredentialDefinition
   ): Promise<IChallenge> {
     const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
       challenge.id
@@ -203,7 +203,7 @@ export class ChallengeAuthorizationService {
   private extendMembershipAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
     challengePreferenceSet: IPreferenceSet,
-    parentCommunityCredential: ICredential
+    parentCommunityCredential: CredentialDefinition
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(

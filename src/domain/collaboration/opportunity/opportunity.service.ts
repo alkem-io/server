@@ -44,16 +44,20 @@ import { CommunityPolicy } from '@domain/community/community/community.policy';
 export class OpportunityService {
   private opportunityCommunityPolicy: CommunityPolicy = {
     member: {
-      credentialType: AuthorizationCredential.OPPORTUNITY_MEMBER,
-      credentialResourceID: '',
+      credential: {
+        type: AuthorizationCredential.OPPORTUNITY_MEMBER,
+        resourceID: '',
+      },
       minOrg: 0,
       maxOrg: -1,
       minUser: 0,
       maxUser: -1,
     },
     leader: {
-      credentialType: AuthorizationCredential.OPPORTUNITY_LEAD,
-      credentialResourceID: '',
+      credential: {
+        type: AuthorizationCredential.OPPORTUNITY_LEAD,
+        resourceID: '',
+      },
       minOrg: 0,
       maxOrg: 9,
       minUser: 0,

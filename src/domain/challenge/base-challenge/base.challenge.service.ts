@@ -26,8 +26,8 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { CommunityType } from '@common/enums/community.type';
-import { ICredential } from '@domain/agent';
 import { CommunityPolicy } from '@domain/community/community/community.policy';
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @Injectable()
 export class BaseChallengeService {
@@ -53,8 +53,8 @@ export class BaseChallengeService {
     await this.isNameAvailableOrFail(baseChallengeData.nameID, hubID);
 
     // Update the Community policy to have the right resource ID
-    communityPolicy.member.credentialResourceID = baseChallenge.id;
-    communityPolicy.leader.credentialResourceID = baseChallenge.id;
+    communityPolicy.member.credential.resourceID = baseChallenge.id;
+    communityPolicy.leader.credential.resourceID = baseChallenge.id;
 
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallenge.displayName,
@@ -207,7 +207,7 @@ export class BaseChallengeService {
   async getCommunityMembershipCredential(
     baseChallengeId: string,
     repository: Repository<BaseChallenge>
-  ): Promise<ICredential> {
+  ): Promise<CredentialDefinition> {
     const community = await this.getCommunity(baseChallengeId, repository);
     return this.communityService.getMembershipCredential(community);
   }
@@ -215,7 +215,7 @@ export class BaseChallengeService {
   async getCommunityLeadershipCredential(
     baseChallengeId: string,
     repository: Repository<BaseChallenge>
-  ): Promise<ICredential> {
+  ): Promise<CredentialDefinition> {
     const community = await this.getCommunity(baseChallengeId, repository);
     return this.communityService.getLeadershipCredential(community);
   }
