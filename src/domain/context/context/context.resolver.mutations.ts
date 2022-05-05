@@ -17,6 +17,12 @@ import { DeleteCanvasOnContextInput } from './dto/context.dto.delete.canvas';
 import { AspectAuthorizationService } from '../aspect/aspect.service.authorization';
 import { CreateAspectOnContextInput } from './dto/context.dto.create.aspect';
 import { IAspect } from '../aspect/aspect.interface';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { SubscriptionType } from '@common/enums/subscription.type';
+import { ContextAspectCreated } from '@domain/context/context/dto/context.dto.event.aspect.created';
+import { Inject } from '@nestjs/common';
+import { SUBSCRIPTION_CONTEXT_ASPECT_CREATED } from '@src/common/constants/providers';
+
 @Resolver()
 export class ContextResolverMutations {
   constructor(
@@ -25,7 +31,9 @@ export class ContextResolverMutations {
     private authorizationService: AuthorizationService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
-    private contextService: ContextService
+    private contextService: ContextService,
+    @Inject(SUBSCRIPTION_CONTEXT_ASPECT_CREATED)
+    private aspectCreatedSubscription: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -73,14 +81,25 @@ export class ContextResolverMutations {
       AuthorizationPrivilege.CREATE_ASPECT,
       `create aspect on context: ${context.id}`
     );
-    const aspect = await this.contextService.createAspect(
+    let aspect = await this.contextService.createAspect(
       aspectData,
       agentInfo.userID
     );
-    return await this.aspectAuthorizationService.applyAuthorizationPolicy(
+    aspect = await this.aspectAuthorizationService.applyAuthorizationPolicy(
       aspect,
       context.authorization
     );
+    const aspectCreatedEvent: ContextAspectCreated = {
+      eventID: `context-aspect-created-${Math.round(Math.random() * 100)}`,
+      contextID: context.id,
+      aspect,
+    };
+    await this.aspectCreatedSubscription.publish(
+      SubscriptionType.CONTEXT_ASPECT_CREATED,
+      aspectCreatedEvent
+    );
+
+    return aspect;
   }
 
   @UseGuards(GraphqlGuard)
