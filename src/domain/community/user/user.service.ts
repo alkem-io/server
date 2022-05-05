@@ -209,10 +209,13 @@ export class UserService {
     defaults.set(UserPreferenceType.NOTIFICATION_ASPECT_CREATED, 'true');
     defaults.set(UserPreferenceType.NOTIFICATION_ASPECT_CREATED_ADMIN, 'true');
     defaults.set(
-      UserPreferenceType.NOTIFICATION_ASPECT_COMMENT_CREATED_BY,
+      UserPreferenceType.NOTIFICATION_ASPECT_COMMENT_CREATED,
       'true'
     );
-    defaults.set(UserPreferenceType.NOTIFICATION_ASPECT_COMMENT_ADMIN, 'true');
+    defaults.set(
+      UserPreferenceType.NOTIFICATION_ASPECT_COMMENT_CREATED_ADMIN,
+      'true'
+    );
 
     return defaults;
   }

@@ -27,7 +27,7 @@ export const addPreferencesToUsers = async (
     prefValues.push(
       ...preferences.map(
         (x, i) =>
-          `(UUID(), NOW(), NOW(), 1, 'true', '${defAuthUUIDs[i]}', '${x.definitionId}', '${user.preferenceSetId}')`
+          `(UUID(), NOW(), NOW(), 1, '${x.value}', '${defAuthUUIDs[i]}', '${x.definitionId}', '${user.preferenceSetId}')`
       )
     );
   }
