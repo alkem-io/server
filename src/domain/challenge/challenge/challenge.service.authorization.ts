@@ -105,15 +105,6 @@ export class ChallengeAuthorizationService {
       }
     }
 
-    if (!challenge.community?.membershipCredential) {
-      challenge.community =
-        await this.baseChallengeService.setCommunityCredentials(
-          challenge,
-          AuthorizationCredential.CHALLENGE_MEMBER,
-          AuthorizationCredential.CHALLENGE_LEAD
-        );
-    }
-
     if (preferenceSet) {
       challenge.preferenceSet =
         await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(

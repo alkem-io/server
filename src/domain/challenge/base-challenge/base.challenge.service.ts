@@ -1,4 +1,4 @@
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -21,13 +21,13 @@ import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/base.
 import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
 import { NamingService } from '@src/services/domain/naming/naming.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { CredentialService } from '@domain/agent/credential/credential.service';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { CommunityType } from '@common/enums/community.type';
 import { ICredential } from '@domain/agent';
+import { CommunityPolicy } from '@domain/community/community/community.policy';
 
 @Injectable()
 export class BaseChallengeService {
@@ -35,7 +35,6 @@ export class BaseChallengeService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private contextService: ContextService,
     private agentService: AgentService,
-    private credentialService: CredentialService,
     private communityService: CommunityService,
     private namingService: NamingService,
     private tagsetService: TagsetService,
@@ -47,14 +46,21 @@ export class BaseChallengeService {
     baseChallenge: IBaseChallenge,
     baseChallengeData: CreateBaseChallengeInput,
     hubID: string,
-    communityType: CommunityType
+    communityType: CommunityType,
+    communityPolicy: CommunityPolicy
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
     await this.isNameAvailableOrFail(baseChallengeData.nameID, hubID);
+
+    // Update the Community policy to have the right resource ID
+    communityPolicy.member.credentialResourceID = baseChallenge.id;
+    communityPolicy.leader.credentialResourceID = baseChallenge.id;
+
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallenge.displayName,
       hubID,
-      communityType
+      communityType,
+      communityPolicy
     );
 
     if (!baseChallengeData.context) {
@@ -73,32 +79,6 @@ export class BaseChallengeService {
     baseChallenge.agent = await this.agentService.createAgent({
       parentDisplayID: `${baseChallenge.nameID}`,
     });
-  }
-
-  async setCommunityCredentials(
-    baseChallenge: IBaseChallenge,
-    membershipCredentialType: AuthorizationCredential,
-    leadershipCredentialType: AuthorizationCredential
-  ): Promise<ICommunity> {
-    const community = baseChallenge.community;
-    if (!community) {
-      throw new EntityNotInitializedException(
-        `Base challenge not initialised: ${baseChallenge.id}`,
-        LogContext.CHALLENGES
-      );
-    }
-    const membershipCredential = await this.credentialService.createCredential({
-      type: membershipCredentialType,
-      resourceID: baseChallenge.id,
-    });
-    community.membershipCredential = membershipCredential;
-
-    const leadershipCredential = await this.credentialService.createCredential({
-      type: leadershipCredentialType,
-      resourceID: baseChallenge.id,
-    });
-    community.leadershipCredential = leadershipCredential;
-    return community;
   }
 
   async update(
@@ -152,16 +132,6 @@ export class BaseChallengeService {
     const community = baseChallenge.community;
     if (community) {
       await this.communityService.removeCommunity(community.id);
-      if (community.membershipCredential) {
-        await this.credentialService.deleteCredential(
-          community.membershipCredential.id
-        );
-        if (community.leadershipCredential) {
-          await this.credentialService.deleteCredential(
-            community.leadershipCredential.id
-          );
-        }
-      }
     }
 
     if (baseChallenge.lifecycle) {
@@ -239,13 +209,7 @@ export class BaseChallengeService {
     repository: Repository<BaseChallenge>
   ): Promise<ICredential> {
     const community = await this.getCommunity(baseChallengeId, repository);
-    const credential = community.membershipCredential;
-    if (!credential)
-      throw new RelationshipNotFoundException(
-        `Unable to load credential for community on challenge/hub: ${baseChallengeId} `,
-        LogContext.COMMUNITY
-      );
-    return credential;
+    return this.communityService.getMembershipCredential(community);
   }
 
   async getCommunityLeadershipCredential(
@@ -253,13 +217,7 @@ export class BaseChallengeService {
     repository: Repository<BaseChallenge>
   ): Promise<ICredential> {
     const community = await this.getCommunity(baseChallengeId, repository);
-    const credential = community.leadershipCredential;
-    if (!credential)
-      throw new RelationshipNotFoundException(
-        `Unable to load leadership credential for community on challenge/hub: ${baseChallengeId} `,
-        LogContext.COMMUNITY
-      );
-    return credential;
+    return this.communityService.getLeadershipCredential(community);
   }
 
   async getContext(

@@ -1,6 +1,6 @@
+import { CommunityPolicyRole } from './community.policy.role';
+
 export type CommunityPolicy = {
-  minUser: number;
-  maxUser: number;
-  minOrg: number;
-  maxOrg: number;
+  member: CommunityPolicyRole;
+  leader: CommunityPolicyRole;
 };

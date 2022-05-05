@@ -1,6 +1,5 @@
-import { LogContext } from '@common/enums/logging.context';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CommunityService } from '@domain/community/community/community.service';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { Injectable } from '@nestjs/common';
@@ -15,7 +14,8 @@ export class BaseChallengeAuthorizationService {
     private baseChallengeService: BaseChallengeService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private contextAuthorizationService: ContextAuthorizationService,
-    private communityAuthorizationService: CommunityAuthorizationService
+    private communityAuthorizationService: CommunityAuthorizationService,
+    private communityService: CommunityService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -27,13 +27,8 @@ export class BaseChallengeAuthorizationService {
       baseChallenge.id,
       repository
     );
-    const communityCredential = community.membershipCredential;
-    if (!communityCredential) {
-      throw new EntityNotInitializedException(
-        `Unable to retrieve community credential: ${community.displayName}`,
-        LogContext.COMMUNITY
-      );
-    }
+    const membershipCredential =
+      this.communityService.getMembershipCredential(community);
 
     if (community.authorization) {
       baseChallenge.community =
@@ -60,7 +55,7 @@ export class BaseChallengeAuthorizationService {
       await this.contextAuthorizationService.applyAuthorizationPolicy(
         context,
         baseChallenge.authorization,
-        communityCredential
+        membershipCredential
       );
 
     baseChallenge.agent = await this.baseChallengeService.getAgent(

@@ -38,9 +38,29 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core';
 import { AspectService } from '@domain/context/aspect/aspect.service';
+import { CommunityPolicy } from '@domain/community/community/community.policy';
 
 @Injectable()
 export class OpportunityService {
+  private opportunityCommunityPolicy: CommunityPolicy = {
+    member: {
+      credentialType: AuthorizationCredential.OPPORTUNITY_MEMBER,
+      credentialResourceID: '',
+      minOrg: 0,
+      maxOrg: -1,
+      minUser: 0,
+      maxUser: -1,
+    },
+    leader: {
+      credentialType: AuthorizationCredential.OPPORTUNITY_LEAD,
+      credentialResourceID: '',
+      minOrg: 0,
+      maxOrg: 9,
+      minUser: 0,
+      maxUser: 2,
+    },
+  };
+
   constructor(
     private baseChallengeService: BaseChallengeService,
     private projectService: ProjectService,
@@ -69,7 +89,8 @@ export class OpportunityService {
       opportunity,
       opportunityData,
       hubID,
-      CommunityType.OPPORTUNITY
+      CommunityType.OPPORTUNITY,
+      this.opportunityCommunityPolicy
     );
 
     // Lifecycle, that has both a default and extended version
@@ -90,13 +111,6 @@ export class OpportunityService {
     opportunity.lifecycle = await this.lifecycleService.createLifecycle(
       opportunity.id,
       machineConfig
-    );
-
-    // set the credential type in use by the community
-    await this.baseChallengeService.setCommunityCredentials(
-      opportunity,
-      AuthorizationCredential.OPPORTUNITY_MEMBER,
-      AuthorizationCredential.OPPORTUNITY_LEAD
     );
 
     if (agentInfo) {

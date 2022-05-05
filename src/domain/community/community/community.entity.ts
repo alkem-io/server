@@ -11,7 +11,6 @@ import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { IApplication } from '@domain/community/application/application.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Credential } from '@domain/agent/credential/credential.entity';
 import { Application } from '@domain/community/application/application.entity';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { CommunityType } from '@common/enums/community.type';
@@ -50,24 +49,6 @@ export class Community
     cascade: true,
   })
   applications?: IApplication[];
-
-  // The credential profile  that is used for determining membership of this community
-  @OneToOne(() => Credential, {
-    eager: true,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  membershipCredential!: Credential;
-
-  // The credential profile  that is used for determining leadership of this community
-  @OneToOne(() => Credential, {
-    eager: true,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  leadershipCredential!: Credential;
 
   @Column('text')
   policy: string;

@@ -54,9 +54,29 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
 import { AspectService } from '@domain/context/aspect/aspect.service';
+import { CommunityPolicy } from '@domain/community/community/community.policy';
 
 @Injectable()
 export class ChallengeService {
+  private challengeCommunityPolicy: CommunityPolicy = {
+    member: {
+      credentialType: AuthorizationCredential.CHALLENGE_MEMBER,
+      credentialResourceID: '',
+      minOrg: 0,
+      maxOrg: -1,
+      minUser: 0,
+      maxUser: -1,
+    },
+    leader: {
+      credentialType: AuthorizationCredential.CHALLENGE_LEAD,
+      credentialResourceID: '',
+      minOrg: 0,
+      maxOrg: 9,
+      minUser: 0,
+      maxUser: 2,
+    },
+  };
+
   constructor(
     private agentService: AgentService,
     private communityService: CommunityService,
@@ -87,7 +107,8 @@ export class ChallengeService {
       challenge,
       challengeData,
       hubID,
-      CommunityType.CHALLENGE
+      CommunityType.CHALLENGE,
+      this.challengeCommunityPolicy
     );
 
     await this.challengeRepository.save(challenge);
@@ -115,13 +136,6 @@ export class ChallengeService {
     challenge.lifecycle = await this.lifecycleService.createLifecycle(
       challenge.id,
       machineConfig
-    );
-
-    // set the credential type in use by the community
-    await this.baseChallengeService.setCommunityCredentials(
-      challenge,
-      AuthorizationCredential.CHALLENGE_MEMBER,
-      AuthorizationCredential.CHALLENGE_LEAD
     );
 
     // save the challenge, just in case the lead orgs assignment fails. Note that

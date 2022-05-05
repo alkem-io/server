@@ -50,14 +50,27 @@ import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceType } from '@common/enums/preference.type';
 import { AspectService } from '@domain/context/aspect/aspect.service';
+import { CommunityPolicy } from '@domain/community/community/community.policy';
 
 @Injectable()
 export class HubService {
-  private hubCommunityPolicy = {
-    minOrg: 1,
-    maxOrg: 1,
-    minUser: 0,
-    maxUser: 2,
+  private hubCommunityPolicy: CommunityPolicy = {
+    member: {
+      credentialType: AuthorizationCredential.HUB_MEMBER,
+      credentialResourceID: '',
+      minOrg: 0,
+      maxOrg: -1,
+      minUser: 0,
+      maxUser: -1,
+    },
+    leader: {
+      credentialType: AuthorizationCredential.HUB_HOST,
+      credentialResourceID: '',
+      minOrg: 0,
+      maxOrg: 9,
+      minUser: 0,
+      maxUser: 2,
+    },
   };
 
   constructor(
@@ -92,22 +105,13 @@ export class HubService {
       hub,
       hubData,
       hub.id,
-      CommunityType.HUB
-    );
-    // set the credential type in use by the community
-    await this.baseChallengeService.setCommunityCredentials(
-      hub,
-      AuthorizationCredential.HUB_MEMBER,
-      AuthorizationCredential.HUB_HOST
+      CommunityType.HUB,
+      this.hubCommunityPolicy
     );
 
     // set immediate community parent and  community policy
     if (hub.community) {
       hub.community.parentID = hub.id;
-      this.communityService.setCommunityPolicy(
-        hub.community,
-        this.hubCommunityPolicy
-      );
     }
     hub.preferenceSet = await this.preferenceSetService.createPreferenceSet(
       PreferenceDefinitionSet.HUB,

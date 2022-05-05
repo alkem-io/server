@@ -43,13 +43,6 @@ import { AssignCommunityLeadOrganizationInput } from './dto/community.dto.assign
 
 @Injectable()
 export class CommunityService {
-  private defaultCommunityPolicy = {
-    minOrg: 0,
-    maxOrg: 9,
-    minUser: 0,
-    maxUser: 2,
-  };
-
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
@@ -66,7 +59,8 @@ export class CommunityService {
   async createCommunity(
     name: string,
     hubID: string,
-    type: CommunityType
+    type: CommunityType,
+    policy: CommunityPolicy
   ): Promise<ICommunity> {
     const community: ICommunity = new Community(name, type);
     community.authorization = new AuthorizationPolicy();
@@ -79,7 +73,7 @@ export class CommunityService {
         hubID
       );
 
-    this.setCommunityPolicy(community, this.defaultCommunityPolicy);
+    this.setCommunityPolicy(community, policy);
     return await this.communityRepository.save(community);
   }
 
@@ -203,12 +197,15 @@ export class CommunityService {
     return undefined;
   }
 
-  getCommunityPolicy(community: ICommunity): CommunityPolicy | undefined {
-    if (community.policy) {
-      const policy = JSON.parse(community.policy);
-      return policy;
+  getCommunityPolicy(community: ICommunity): CommunityPolicy {
+    if (!community.policy) {
+      throw new EntityNotInitializedException(
+        `Unable to locate communication for community: ${community.displayName}`,
+        LogContext.COMMUNITY
+      );
     }
-    return undefined;
+    const policy = JSON.parse(community.policy);
+    return policy;
   }
 
   setCommunityPolicy(
@@ -375,25 +372,21 @@ export class CommunityService {
   }
 
   getMembershipCredential(community: ICommunity): ICredential {
-    const credential = community.membershipCredential;
-    if (!credential) {
-      throw new EntityNotInitializedException(
-        `Unable to locate credential type for community: ${community.displayName}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return credential;
+    const policy = this.getCommunityPolicy(community);
+    return {
+      id: '', // todo: should not need this
+      type: policy.member.credentialType,
+      resourceID: policy.member.credentialResourceID,
+    };
   }
 
   getLeadershipCredential(community: ICommunity): ICredential {
-    const credential = community.leadershipCredential;
-    if (!credential) {
-      throw new EntityNotInitializedException(
-        `Unable to locate leadership credential for community: ${community.displayName}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return credential;
+    const policy = this.getCommunityPolicy(community);
+    return {
+      id: '', // todo: should not need this
+      type: policy.leader.credentialType,
+      resourceID: policy.leader.credentialResourceID,
+    };
   }
 
   async removeMemberUser(
