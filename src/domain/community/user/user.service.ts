@@ -566,11 +566,6 @@ export class UserService {
     if (userInput.phone !== undefined) {
       user.phone = userInput.phone;
     }
-    // Todo: remove later
-    this.locationService.updateLocationValues(user.profile?.location, {
-      city: userInput.city,
-      country: userInput.country,
-    });
 
     if (userInput.gender !== undefined) {
       user.gender = userInput.gender;

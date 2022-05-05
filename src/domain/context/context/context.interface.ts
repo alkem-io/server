@@ -40,6 +40,10 @@ export abstract class IContext extends IAuthorizable {
   })
   who?: string;
 
+  @Field(() => ILocation, {
+    nullable: true,
+    description: 'Location of this entity',
+  })
   location?: ILocation;
 
   references?: IReference[];

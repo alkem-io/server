@@ -32,16 +32,6 @@ export class UpdateUserInput extends UpdateContributorInput {
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
-  city?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @MaxLength(SMALL_TEXT_LENGTH)
-  country?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @MaxLength(SMALL_TEXT_LENGTH)
   gender?: string;
 
   @Field({
