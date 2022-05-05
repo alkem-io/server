@@ -9,6 +9,7 @@ import {
   SUBSCRIPTION_DISCUSSION_MESSAGE,
   SUBSCRIPTION_UPDATE_MESSAGE,
   SUBSCRIPTION_CANVAS_CONTENT,
+  SUBSCRIPTION_CONTEXT_ASPECT_CREATED,
   WALLET_MANAGEMENT_SERVICE,
   SUBSCRIPTION_DISCUSSION_UPDATED,
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
@@ -29,6 +30,7 @@ import { subscriptionCanvasContentFactory } from './subscription.canvas.content.
 import { subscriptionUpdateMessageFactory } from './subscription.update.message.factory';
 import { subscriptionDiscussionUpdatedFactory } from './subscription.discussion.updated.factory';
 import { subscriptionProfileVerifiedCredentialFactory } from './subscription.profile.verified.credential.factory';
+import { subscriptionContextAspectCreatedFactory } from '@core/microservices/subscription.context.aspect.created.factory';
 
 @Global()
 @Module({
@@ -65,6 +67,11 @@ import { subscriptionProfileVerifiedCredentialFactory } from './subscription.pro
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
+      provide: SUBSCRIPTION_CONTEXT_ASPECT_CREATED,
+      useFactory: subscriptionContextAspectCreatedFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
       provide: SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
       useFactory: subscriptionProfileVerifiedCredentialFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
@@ -85,6 +92,7 @@ import { subscriptionProfileVerifiedCredentialFactory } from './subscription.pro
     SUBSCRIPTION_DISCUSSION_UPDATED,
     SUBSCRIPTION_UPDATE_MESSAGE,
     SUBSCRIPTION_CANVAS_CONTENT,
+    SUBSCRIPTION_CONTEXT_ASPECT_CREATED,
     SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
     NOTIFICATIONS_SERVICE,
     WALLET_MANAGEMENT_SERVICE,
