@@ -120,7 +120,7 @@ export class community1651507471835 implements MigrationInterface {
       'ALTER TABLE `community` DROP FOREIGN KEY `FK_973fe78e64b8a79056d58ead433`'
     );
     await queryRunner.query(
-      `ALTER TABLE \`context\` DROP COLUMN \`credentialId\``
+      `ALTER TABLE \`community\` DROP COLUMN \`credentialId\``
     );
   }
 
