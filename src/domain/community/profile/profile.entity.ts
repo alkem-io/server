@@ -37,10 +37,10 @@ export class Profile extends AuthorizableEntity implements IProfile {
   @OneToOne(() => Location, {
     eager: false,
     cascade: true,
-    onDelete: 'SET NULL',
+    onDelete: 'CASCADE',
   })
   @JoinColumn()
-  location?: Location;
+  location!: Location;
 
   restrictedTagsetNames?: string[];
 

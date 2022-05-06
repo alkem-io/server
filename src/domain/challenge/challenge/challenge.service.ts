@@ -201,7 +201,7 @@ export class ChallengeService {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const challenge = await this.getChallengeOrFail(challengeID, {
-      relations: ['childChallenges', 'opportunities'],
+      relations: ['childChallenges', 'opportunities', 'preferenceSet'],
     });
 
     // Do not remove a challenge that has child challenges , require these to be individually first removed
