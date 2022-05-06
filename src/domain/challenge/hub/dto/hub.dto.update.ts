@@ -3,6 +3,7 @@ import { IsOptional, ValidateNested } from 'class-validator';
 import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.update';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { UpdateHubTemplateInput } from './hub.dto.update.template';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class UpdateHubInput extends UpdateBaseChallengeInput {
@@ -26,5 +27,6 @@ export class UpdateHubInput extends UpdateBaseChallengeInput {
   })
   @IsOptional()
   @ValidateNested()
+  @Type(() => UpdateHubTemplateInput)
   template?: UpdateHubTemplateInput;
 }
