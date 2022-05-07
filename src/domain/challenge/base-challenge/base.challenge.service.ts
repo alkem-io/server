@@ -28,6 +28,7 @@ import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { CommunityType } from '@common/enums/community.type';
 import { CommunityPolicy } from '@domain/community/community/community.policy';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Injectable()
 export class BaseChallengeService {
@@ -209,7 +210,10 @@ export class BaseChallengeService {
     repository: Repository<BaseChallenge>
   ): Promise<CredentialDefinition> {
     const community = await this.getCommunity(baseChallengeId, repository);
-    return this.communityService.getMembershipCredential(community);
+    return this.communityService.getCredentialDefinitionForRole(
+      community,
+      CommunityRole.MEMBER
+    );
   }
 
   async getCommunityLeadershipCredential(
@@ -217,7 +221,10 @@ export class BaseChallengeService {
     repository: Repository<BaseChallenge>
   ): Promise<CredentialDefinition> {
     const community = await this.getCommunity(baseChallengeId, repository);
-    return this.communityService.getLeadershipCredential(community);
+    return this.communityService.getCredentialDefinitionForRole(
+      community,
+      CommunityRole.LEAD
+    );
   }
 
   async getContext(

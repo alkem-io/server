@@ -1,3 +1,4 @@
+import { CommunityRole } from '@common/enums/community.role';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
@@ -28,7 +29,10 @@ export class BaseChallengeAuthorizationService {
       repository
     );
     const membershipCredential =
-      this.communityService.getMembershipCredential(community);
+      this.communityService.getCredentialDefinitionForRole(
+        community,
+        CommunityRole.MEMBER
+      );
 
     if (community.authorization) {
       baseChallenge.community =

@@ -55,6 +55,7 @@ import { PreferenceType } from '@common/enums/preference.type';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { CommunityPolicy } from '@domain/community/community/community.policy';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Injectable()
 export class ChallengeService {
@@ -154,10 +155,11 @@ export class ChallengeService {
     }
 
     if (agentInfo && challenge.community) {
-      await this.communityService.assignMemberUser({
-        userID: agentInfo.userID,
-        communityID: challenge.community.id,
-      });
+      await this.communityService.assignUserToRole(
+        challenge.community,
+        agentInfo.userID,
+        CommunityRole.MEMBER
+      );
 
       await this.assignChallengeAdmin({
         userID: agentInfo.userID,
@@ -327,10 +329,11 @@ export class ChallengeService {
         }
       }
       if (!inNewList) {
-        await this.communityService.removeLeadOrganization({
-          communityID: community.id,
-          organizationID: existingLeadOrg.id,
-        });
+        await this.communityService.removeOrganizationFromRole(
+          community,
+          existingLeadOrg.id,
+          CommunityRole.LEAD
+        );
       }
     }
 
@@ -343,10 +346,11 @@ export class ChallengeService {
         leadOrg => leadOrg.id === organization.id
       );
       if (!existingLead) {
-        await this.communityService.assignLeadOrganization({
-          communityID: community.id,
-          organizationID: organization.id,
-        });
+        await this.communityService.assignOrganizationToRole(
+          community,
+          organization.id,
+          CommunityRole.LEAD
+        );
       }
     }
 

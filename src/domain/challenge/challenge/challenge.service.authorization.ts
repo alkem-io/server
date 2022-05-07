@@ -15,7 +15,6 @@ import { ChallengeService } from './challenge.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
-import { BaseChallengeService } from '../base-challenge/base.challenge.service';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
@@ -28,7 +27,6 @@ import { CredentialDefinition } from '@domain/agent/credential/credential.defini
 export class ChallengeAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private baseChallengeService: BaseChallengeService,
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private challengeService: ChallengeService,
     private opportunityAuthorizationService: OpportunityAuthorizationService,

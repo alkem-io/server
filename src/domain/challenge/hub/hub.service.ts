@@ -491,15 +491,6 @@ export class HubService {
     );
   }
 
-  async getCommunityLeadershipCredential(
-    hub: IHub
-  ): Promise<CredentialDefinition> {
-    return await this.baseChallengeService.getCommunityLeadershipCredential(
-      hub.id,
-      this.hubRepository
-    );
-  }
-
   async getContext(hub: IHub): Promise<IContext> {
     return await this.baseChallengeService.getContext(
       hub.id,

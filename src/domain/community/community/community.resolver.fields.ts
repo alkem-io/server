@@ -10,6 +10,7 @@ import { IApplication } from '@domain/community/application';
 import { AuthorizationPrivilege } from '@common/enums';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { IOrganization } from '../organization';
+import { CommunityRole } from '@common/enums/community.role';
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}
@@ -33,7 +34,10 @@ export class CommunityResolverFields {
   })
   @Profiling.api
   async memberUsers(@Parent() community: Community) {
-    return await this.communityService.getUserMembers(community);
+    return await this.communityService.getUsersWithRole(
+      community,
+      CommunityRole.MEMBER
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -44,7 +48,10 @@ export class CommunityResolverFields {
   })
   @Profiling.api
   async memberOrganizations(@Parent() community: Community) {
-    return await this.communityService.getOrganizationMembers(community);
+    return await this.communityService.getOrganizationsWithRole(
+      community,
+      CommunityRole.MEMBER
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
