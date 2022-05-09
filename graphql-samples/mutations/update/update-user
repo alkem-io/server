@@ -20,6 +20,7 @@ query variables:
     "profileData": {
       "ID": "uuid",
       "location": {
+         "country": "Bulgaria",
          "city": "Sofia"
       }
     }
