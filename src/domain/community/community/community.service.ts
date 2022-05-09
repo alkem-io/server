@@ -16,7 +16,7 @@ import {
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IUser } from '@domain/community/user';
-import { CreateUserGroupInput } from '@domain/community/user-group';
+import { CreateUserGroupInput } from '@domain/community/user-group/dto';
 import {
   Community,
   ICommunity,

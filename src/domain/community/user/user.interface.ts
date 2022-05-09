@@ -22,11 +22,6 @@ export class IUser extends INameable {
 
   @Field(() => String)
   lastName!: string;
-  @Field(() => String)
-  city!: string;
-
-  @Field(() => String)
-  country!: string;
 
   @Field(() => String)
   gender!: string;

@@ -2,7 +2,7 @@ import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
-export class ApplicationResultEntry {
+export class ApplicationResult {
   @Field(() => UUID, {
     description: 'ID for the application',
   })
