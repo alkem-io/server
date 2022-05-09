@@ -7,17 +7,15 @@ import {
   OneToOne,
 } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { Profile } from '@domain/community/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { IOrganization } from './organization.interface';
-import { NameableEntity } from '@domain/common/entity/nameable-entity';
-import { Agent } from '@domain/agent/agent/agent.entity';
 import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
 import { PreferenceSet } from '@domain/common/preference-set';
+import { Contributor } from '../contributor/contributor.entity';
 
 @Entity()
 export class Organization
-  extends NameableEntity
+  extends Contributor
   implements IOrganization, IGroupable
 {
   @Column({
@@ -26,19 +24,11 @@ export class Organization
   @Generated('increment')
   rowId!: number;
 
-  @OneToOne(() => Profile, { eager: true, cascade: true, onDelete: 'SET NULL' })
-  @JoinColumn()
-  profile?: Profile;
-
   @OneToMany(() => UserGroup, userGroup => userGroup.organization, {
     eager: false,
     cascade: true,
   })
   groups?: UserGroup[];
-
-  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'SET NULL' })
-  @JoinColumn()
-  agent?: Agent;
 
   @Column()
   legalEntityName?: string = '';
