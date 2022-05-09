@@ -10,6 +10,7 @@ import { ProfileAuthorizationService } from './profile.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { ProfileResolverFields } from './profile.resolver.fields';
+import { LocationModule } from '@domain/common/location';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ProfileResolverFields } from './profile.resolver.fields';
     ReferenceModule,
     TypeOrmModule.forFeature([Profile]),
     VisualModule,
+    LocationModule,
   ],
   providers: [
     ProfileResolverMutations,

@@ -38,12 +38,6 @@ export class User extends NameableEntity implements IUser {
   phone: string = '';
 
   @Column()
-  city: string = '';
-
-  @Column()
-  country: string = '';
-
-  @Column()
   gender: string = '';
 
   @OneToOne(() => Profile, {

@@ -1,14 +1,10 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { UpdateProfileInput } from '@domain/community/profile';
-import { UpdateNameableInput } from '@domain/common/entity/nameable-entity';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { IsEmail, IsOptional, MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common';
+import { UpdateContributorInput } from '@domain/community/contributor/dto/contributor.dto.update';
 @InputType()
-export class UpdateOrganizationInput extends UpdateNameableInput {
-  @Field(() => UpdateProfileInput, { nullable: true })
-  profileData?: UpdateProfileInput;
-
+export class UpdateOrganizationInput extends UpdateContributorInput {
   // Override the type of entry accepted
   @Field(() => UUID_NAMEID, {
     nullable: false,

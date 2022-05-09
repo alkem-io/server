@@ -2,7 +2,7 @@ import { NameID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
-export class MembershipResultEntry {
+export class MembershipResult {
   @Field(() => NameID, {
     description: 'Name Identifier of the entity',
   })
