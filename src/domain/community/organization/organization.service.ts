@@ -19,7 +19,7 @@ import {
   Organization,
   UpdateOrganizationInput,
 } from '@domain/community/organization';
-import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
+import { IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { UUID_LENGTH } from '@common/constants';
@@ -48,6 +48,7 @@ import { PaginationArgs } from '@core/pagination';
 import { applyFiltering, OrganizationFilterInput } from '@core/filtering';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
+import { CreateUserGroupInput } from '../user-group/dto/user-group.dto.create';
 
 @Injectable()
 export class OrganizationService {

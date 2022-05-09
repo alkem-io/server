@@ -3,26 +3,17 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { HubService } from '@domain/challenge/hub/hub.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserService } from '@domain/community/user/user.service';
-import { MembershipUserInput } from './membership.dto.user.input';
-import { MembershipUserResultEntryHub } from './membership.dto.user.result.entry.hub';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { IOrganization } from '@domain/community/organization';
-import { MembershipUserResultEntryOrganization } from './membership.dto.user.result.entry.organization';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IUserGroup } from '@domain/community/user-group';
-import { MembershipResultEntry } from './membership.dto.result.entry';
 import { ICommunity } from '@domain/community/community';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
-import { UserMembership } from './membership.dto.user.result';
-import { MembershipOrganizationInput } from './membership.dto.organization.input';
-import { OrganizationMembership } from './membership.dto.organization.result';
 import { ApplicationService } from '@domain/community/application/application.service';
-import { ApplicationResultEntry } from './membership.dto.application.result.entry';
 import { IUser } from '@domain/community/user/user.interface';
-import { MembershipCommunityResultEntry } from './membership.dto.community.result.entry';
 import { IHub } from '@domain/challenge/hub/hub.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { Repository } from 'typeorm/repository/Repository';
@@ -31,6 +22,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { IGroupable } from '@domain/common';
+import { MembershipUserInput } from './dto/membership.dto.input.user';
+import { UserMembership } from './dto/membership.dto.result.user';
+import { MembershipResult } from './dto/membership.dto.result';
+import { MembershipResultCommunity } from './dto/membership.dto.result.community';
+import { MembershipResultUserinOrganization } from './dto/membership.dto.result.user.organization';
+import { MembershipResultContributorToHub } from './dto/membership.dto.result.contributor.hub';
+import { MembershipOrganizationInput } from './dto/membership.dto.input.organization';
+import { OrganizationMembership } from './dto/membership.dto.result.organization';
+import { ApplicationResult } from './dto/membership.dto.result.user.application';
 
 export type UserGroupResult = {
   userGroup: IUserGroup;
@@ -127,7 +127,7 @@ export class MembershipService {
 
       for (const challenge of storedChallenges) {
         if (challenge.hubID === hubResult.hubID) {
-          const challengeResult = new MembershipResultEntry(
+          const challengeResult = new MembershipResult(
             challenge.nameID,
             challenge.id,
             challenge.displayName
@@ -135,7 +135,7 @@ export class MembershipService {
           hubResult.challenges.push(challengeResult);
           if (challenge.community) {
             membership.communities.push(
-              new MembershipCommunityResultEntry(
+              new MembershipResultCommunity(
                 challenge.community?.id,
                 challenge.displayName
               )
@@ -145,7 +145,7 @@ export class MembershipService {
       }
       for (const opportunity of storedOpportunities) {
         if (opportunity.hubID === hubResult.hubID) {
-          const opportunityResult = new MembershipResultEntry(
+          const opportunityResult = new MembershipResult(
             opportunity.nameID,
             opportunity.id,
             opportunity.displayName
@@ -153,7 +153,7 @@ export class MembershipService {
           hubResult.opportunities.push(opportunityResult);
           if (opportunity.community) {
             membership.communities.push(
-              new MembershipCommunityResultEntry(
+              new MembershipResultCommunity(
                 opportunity.community?.id,
                 opportunity.displayName
               )
@@ -165,7 +165,7 @@ export class MembershipService {
         const parent = userGroupResult.userGroupParent;
         const group = userGroupResult.userGroup;
         if ((parent as ICommunity).hubID === hubResult.hubID) {
-          const groupResult = new MembershipResultEntry(
+          const groupResult = new MembershipResult(
             group.name,
             group.id,
             group.name
@@ -183,7 +183,7 @@ export class MembershipService {
         if (
           (parent as IOrganization).id === organizationResult.organizationID
         ) {
-          const groupResult = new MembershipResultEntry(
+          const groupResult = new MembershipResult(
             group.name,
             group.id,
             group.name
@@ -201,11 +201,11 @@ export class MembershipService {
   async createOrganizationResult(
     organizationID: string,
     userID: string
-  ): Promise<MembershipUserResultEntryOrganization> {
+  ): Promise<MembershipResultUserinOrganization> {
     const organization = await this.organizationService.getOrganizationOrFail(
       organizationID
     );
-    return new MembershipUserResultEntryOrganization(
+    return new MembershipResultUserinOrganization(
       organization.nameID,
       organization.id,
       organization.displayName,
@@ -217,14 +217,14 @@ export class MembershipService {
     hubID: string,
     userID: string
   ): Promise<{
-    entry: MembershipUserResultEntryHub;
+    entry: MembershipResultContributorToHub;
     hub: IHub;
   }> {
     const hub = await this.hubService.getHubOrFail(hubID, {
       relations: ['community'],
     });
     return {
-      entry: new MembershipUserResultEntryHub(
+      entry: new MembershipResultContributorToHub(
         hub.nameID,
         hub.id,
         hub.displayName,
@@ -272,8 +272,8 @@ export class MembershipService {
     return membership;
   }
 
-  async getApplications(user: IUser): Promise<ApplicationResultEntry[]> {
-    const applicationResults: ApplicationResultEntry[] = [];
+  async getApplications(user: IUser): Promise<ApplicationResult[]> {
+    const applicationResults: ApplicationResult[] = [];
     const applications = await this.applicationService.findApplicationsForUser(
       user.id
     );
@@ -288,7 +288,7 @@ export class MembershipService {
         application.id
       );
       if (community) {
-        const applicationResult = new ApplicationResultEntry(
+        const applicationResult = new ApplicationResult(
           community.id,
           community.displayName,
           state,

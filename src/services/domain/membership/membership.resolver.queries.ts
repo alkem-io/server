@@ -3,13 +3,14 @@ import { Args, Resolver, Query } from '@nestjs/graphql';
 import { MembershipService } from './membership.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { MembershipUserInput, UserMembership } from './index';
+import { MembershipUserInput } from './index';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
-import { OrganizationMembership } from './membership.dto.organization.result';
-import { MembershipOrganizationInput } from './membership.dto.organization.input';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { UserMembership } from './dto/membership.dto.result.user';
+import { OrganizationMembership } from './dto/membership.dto.result.organization';
+import { MembershipOrganizationInput } from './dto/membership.dto.input.organization';
 
 @Resolver()
 export class MembershipResolverQueries {

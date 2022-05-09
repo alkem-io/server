@@ -14,6 +14,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { CanvasModule } from '@domain/common/canvas/canvas.module';
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { NamingModule } from '@services/domain/naming/naming.module';
+import { LocationModule } from '@domain/common/location';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { NamingModule } from '@services/domain/naming/naming.module';
     EcosystemModelModule,
     VisualModule,
     NamingModule,
+    LocationModule,
     TypeOrmModule.forFeature([Context]),
   ],
   providers: [

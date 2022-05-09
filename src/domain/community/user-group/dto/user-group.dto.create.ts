@@ -1,7 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
-import { CreateProfileInput } from '@domain/community/profile';
+import { CreateProfileInput } from '@domain/community/profile/dto';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @InputType()

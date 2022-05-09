@@ -1,8 +1,8 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
-import { UpdateProfileInput } from '@domain/community/profile';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
+import { UpdateProfileInput } from '../../profile/dto';
 
 @InputType()
 export class UpdateUserGroupInput extends UpdateBaseAlkemioInput {

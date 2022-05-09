@@ -12,6 +12,7 @@ import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { UUID_NAMEID } from '@domain/common/scalars';
+import { ILocation } from '@domain/common/location';
 
 @Resolver(() => IContext)
 export class ContextResolverFields {
@@ -71,6 +72,16 @@ export class ContextResolverFields {
     shuffle: boolean
   ) {
     return await this.contextService.getAspects(context, ids, limit, shuffle);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('location', () => ILocation, {
+    nullable: false,
+    description: 'The location for this Context.',
+  })
+  @Profiling.api
+  async location(@Parent() context: IContext): Promise<ILocation> {
+    return await this.contextService.getLocation(context);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

@@ -6,6 +6,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Aspect } from '@domain/context/aspect/aspect.entity';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { Visual } from '@domain/common/visual/visual.entity';
+import { Location } from '@domain/common/location/location.entity';
 @Entity()
 export class Context extends AuthorizableEntity implements IContext {
   @Column('varchar', { length: 255, nullable: true })
@@ -34,6 +35,14 @@ export class Context extends AuthorizableEntity implements IContext {
     cascade: true,
   })
   references?: Reference[];
+
+  @OneToOne(() => Location, {
+    eager: false,
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn()
+  location!: Location;
 
   @OneToOne(() => EcosystemModel, {
     eager: false,

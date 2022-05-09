@@ -13,20 +13,19 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import {
-  UpdateUserGroupInput,
-  UserGroup,
-  IUserGroup,
-  AssignUserGroupMemberInput,
-  RemoveUserGroupMemberInput,
-  DeleteUserGroupInput,
-  CreateUserGroupInput,
-} from '@domain/community/user-group';
+import { UserGroup, IUserGroup } from '@domain/community/user-group';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IProfile } from '@domain/community/profile';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import {
+  AssignUserGroupMemberInput,
+  CreateUserGroupInput,
+  DeleteUserGroupInput,
+  RemoveUserGroupMemberInput,
+  UpdateUserGroupInput,
+} from './dto';
 
 @Injectable()
 export class UserGroupService {
