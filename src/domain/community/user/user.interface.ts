@@ -1,14 +1,12 @@
-import { IProfile } from '@domain/community/profile/profile.interface';
-import { IAgent } from '@domain/agent/agent/agent.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISearchable } from '@domain/common/interfaces/searchable.interface';
-import { INameable } from '@domain/common/entity/nameable-entity';
 import { IPreferenceSet } from '@domain/common/preference-set';
+import { IContributor } from '../contributor/contributor.interface';
 
 @ObjectType('User', {
   implements: () => [ISearchable],
 })
-export class IUser extends INameable {
+export class IUser extends IContributor {
   rowId!: number;
 
   @Field(() => String, {
@@ -25,10 +23,6 @@ export class IUser extends INameable {
 
   @Field(() => String)
   gender!: string;
-
-  profile?: IProfile;
-
-  agent?: IAgent;
 
   preferenceSet?: IPreferenceSet;
 
