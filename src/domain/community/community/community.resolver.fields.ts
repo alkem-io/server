@@ -56,6 +56,34 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
+  @ResolveField('leadUsers', () => [IUser], {
+    nullable: true,
+    description: 'All users that are leads in this Community.',
+  })
+  @Profiling.api
+  async leadUsers(@Parent() community: Community) {
+    return await this.communityService.getUsersWithRole(
+      community,
+      CommunityRole.LEAD
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('leadOrganizations', () => [IOrganization], {
+    nullable: true,
+    description: 'All Organizations that are leads in this Community.',
+  })
+  @Profiling.api
+  async leadOrganizations(@Parent() community: Community) {
+    return await this.communityService.getOrganizationsWithRole(
+      community,
+      CommunityRole.LEAD
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {
     nullable: true,
     description: 'Application available for this community.',

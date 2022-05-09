@@ -141,16 +141,16 @@ export class CommunityResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICommunity, {
     description:
-      'Assigns an Organization as a member of the specified Community.',
+      'Assigns an Organization as a Lead of the specified Community.',
   })
   @Profiling.api
   async assignOrganizationAsCommunityLead(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData')
-    membershipData: AssignCommunityLeadOrganizationInput
+    @Args('leadershipData')
+    leadershipData: AssignCommunityLeadOrganizationInput
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
-      membershipData.communityID
+      leadershipData.communityID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -160,7 +160,7 @@ export class CommunityResolverMutations {
     );
     return await this.communityService.assignOrganizationToRole(
       community,
-      membershipData.organizationID,
+      leadershipData.organizationID,
       CommunityRole.LEAD
     );
   }
@@ -253,7 +253,7 @@ export class CommunityResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICommunity, {
     description:
-      'Removes an Organization as a member of the specified Community.',
+      'Removes an Organization as a Lead of the specified Community.',
   })
   @Profiling.api
   async removeOrganizationAsCommunityLead(
