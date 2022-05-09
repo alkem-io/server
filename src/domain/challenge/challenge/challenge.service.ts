@@ -63,7 +63,7 @@ export class ChallengeService {
     member: {
       credential: {
         type: AuthorizationCredential.CHALLENGE_MEMBER,
-        resourceID: '',
+        resourceID: 'a',
       },
       minOrg: 0,
       maxOrg: -1,
@@ -73,7 +73,7 @@ export class ChallengeService {
     leader: {
       credential: {
         type: AuthorizationCredential.CHALLENGE_LEAD,
-        resourceID: '',
+        resourceID: 'a',
       },
       minOrg: 0,
       maxOrg: 9,
@@ -108,6 +108,7 @@ export class ChallengeService {
     challenge.childChallenges = [];
 
     challenge.opportunities = [];
+
     await this.baseChallengeService.initialise(
       challenge,
       challengeData,
@@ -118,9 +119,14 @@ export class ChallengeService {
 
     await this.challengeRepository.save(challenge);
 
-    // set immediate community parent
+    // set immediate community parent + resourceID
     if (challenge.community) {
       challenge.community.parentID = challenge.id;
+      challenge.community =
+        this.communityService.updateCommunityPolicyResourceID(
+          challenge.community,
+          challenge.id
+        );
     }
 
     challenge.preferenceSet =

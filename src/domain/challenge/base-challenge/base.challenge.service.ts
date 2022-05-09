@@ -53,10 +53,6 @@ export class BaseChallengeService {
     baseChallenge.authorization = new AuthorizationPolicy();
     await this.isNameAvailableOrFail(baseChallengeData.nameID, hubID);
 
-    // Update the Community policy to have the right resource ID
-    communityPolicy.member.credential.resourceID = baseChallenge.id;
-    communityPolicy.leader.credential.resourceID = baseChallenge.id;
-
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallenge.displayName,
       hubID,

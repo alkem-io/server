@@ -97,6 +97,8 @@ export class OpportunityService {
       this.opportunityCommunityPolicy
     );
 
+    await this.opportunityRepository.save(opportunity);
+
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = opportunityLifecycleConfigDefault;
     if (
@@ -106,10 +108,14 @@ export class OpportunityService {
       machineConfig = opportunityLifecycleConfigExtended;
     }
 
-    await this.opportunityRepository.save(opportunity);
     // set immediate community parent
     if (opportunity.community) {
       opportunity.community.parentID = opportunity.id;
+      opportunity.community =
+        this.communityService.updateCommunityPolicyResourceID(
+          opportunity.community,
+          opportunity.id
+        );
     }
 
     opportunity.lifecycle = await this.lifecycleService.createLifecycle(

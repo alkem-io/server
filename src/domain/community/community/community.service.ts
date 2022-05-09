@@ -216,6 +216,17 @@ export class CommunityService {
     return community;
   }
 
+  updateCommunityPolicyResourceID(
+    community: ICommunity,
+    resourceID: string
+  ): ICommunity {
+    const policy = this.getCommunityPolicy(community);
+    // Update the Community policy to have the right resource ID
+    policy.member.credential.resourceID = resourceID;
+    policy.leader.credential.resourceID = resourceID;
+    return this.setCommunityPolicy(community, policy);
+  }
+
   async setParentCommunity(
     community?: ICommunity,
     parentCommunity?: ICommunity
