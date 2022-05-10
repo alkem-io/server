@@ -1,4 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
 import { UpdateAspectTemplateInput } from './hub.dto.update.template.aspect';
 
@@ -9,6 +10,7 @@ export class UpdateHubTemplateInput {
     description:
       'The set of aspect type definitions to be supported by the Hub.',
   })
-  @ValidateNested()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateAspectTemplateInput)
   aspectTemplates!: UpdateAspectTemplateInput[];
 }
