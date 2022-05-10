@@ -220,10 +220,6 @@ export class UserService {
       UserPreferenceType.NOTIFICATION_ASPECT_COMMENT_CREATED,
       'true'
     );
-    defaults.set(
-      UserPreferenceType.NOTIFICATION_ASPECT_COMMENT_CREATED_ADMIN,
-      'true'
-    );
 
     return defaults;
   }

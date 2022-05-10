@@ -16,31 +16,24 @@ export class userPreferencesAspect1651759916148 implements MigrationInterface {
         definitionSet: 'user',
         group: 'NotificationCommunityAdmin',
         displayName: '[Admin] New aspect created',
-        description: 'Receive notification when an aspect is created',
+        description:
+          'Receive notification when an aspect is created in a community I am administrator of',
         valueType: 'boolean',
         type: UserPreferenceType.NOTIFICATION_ASPECT_CREATED_ADMIN,
       },
       {
         definitionSet: 'user',
         group: 'Notification',
-        displayName: 'New aspect created',
-        description: 'Receive notification when I create an aspect',
+        displayName: 'New comment on my aspect',
+        description:
+          'Receive notification when an aspect is created in community i am a member of',
         valueType: 'boolean',
         type: UserPreferenceType.NOTIFICATION_ASPECT_CREATED,
       },
       {
         definitionSet: 'user',
-        group: 'NotificationCommunityAdmin',
-        displayName: '[Admin] New comment on aspect created',
-        description:
-          'Receive notification when a comment is created on an aspect',
-        valueType: 'boolean',
-        type: UserPreferenceType.NOTIFICATION_ASPECT_COMMENT_CREATED_ADMIN,
-      },
-      {
-        definitionSet: 'user',
         group: 'Notification',
-        displayName: 'New comment on aspect created',
+        displayName: 'New comment on my aspect',
         description:
           'Receive notification when a comment is created on my aspect',
         valueType: 'boolean',
@@ -60,7 +53,6 @@ export class userPreferencesAspect1651759916148 implements MigrationInterface {
     await removePreferences(queryRunner, [
       PreferenceType.NOTIFICATION_ASPECT_CREATED_ADMIN,
       PreferenceType.NOTIFICATION_ASPECT_CREATED,
-      PreferenceType.NOTIFICATION_ASPECT_COMMENT_CREATED_ADMIN,
       PreferenceType.NOTIFICATION_ASPECT_COMMENT_CREATED,
     ]);
   }
