@@ -8,7 +8,7 @@ import {
   DeleteUserGroupInput,
   RemoveUserGroupMemberInput,
   UpdateUserGroupInput,
-} from '@domain/community/user-group';
+} from '@domain/community/user-group/dto';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';

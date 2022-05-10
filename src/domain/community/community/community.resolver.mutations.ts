@@ -1,6 +1,6 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
+import { IUserGroup } from '@domain/community/user-group';
 import { CommunityService } from './community.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { IApplication } from '@domain/community/application';
@@ -30,6 +30,7 @@ import { CommunityMemberClaim } from '@services/platform/trust-registry/trust.re
 import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto/agent.dto.verified.credential.offer.begin.output';
 import { AlkemioUserClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.alkemio.user';
 import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
+import { CreateUserGroupInput } from '../user-group/dto';
 
 @Resolver()
 export class CommunityResolverMutations {

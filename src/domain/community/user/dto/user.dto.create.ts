@@ -1,15 +1,14 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsEmail, IsOptional, MaxLength } from 'class-validator';
-import { CreateProfileInput } from '@domain/community/profile';
 import {
   LONG_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
   MID_TEXT_LENGTH,
 } from '@src/common/constants';
-import { CreateNameableInput } from '@domain/common/entity/nameable-entity';
+import { CreateContributorInput } from '@domain/community/contributor/dto/contributor.dto.create';
 
 @InputType()
-export class CreateUserInput extends CreateNameableInput {
+export class CreateUserInput extends CreateContributorInput {
   @Field({
     nullable: false,
   })
@@ -51,7 +50,4 @@ export class CreateUserInput extends CreateNameableInput {
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   gender?: string;
-
-  @Field(() => CreateProfileInput, { nullable: true })
-  profileData?: CreateProfileInput;
 }

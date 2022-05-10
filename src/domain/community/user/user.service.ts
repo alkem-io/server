@@ -16,7 +16,6 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
-import { CreateProfileInput, IProfile } from '@domain/community/profile';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import {
   CreateUserInput,
@@ -45,6 +44,13 @@ import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set
 import { PreferenceType } from '@common/enums/preference.type';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
+import { IProfile } from '../profile/profile.interface';
+import { PaginationArgs } from '@core/pagination';
+import { applyFiltering, UserFilterInput } from '@core/filtering';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
+import { IPaginatedType } from '@core/pagination/paginated.type';
+import { LocationService } from '@domain/common/location/location.service';
+import { CreateProfileInput } from '../profile/dto/profile.dto.create';
 
 @Injectable()
 export class UserService {
@@ -58,6 +64,7 @@ export class UserService {
     private namingService: NamingService,
     private agentService: AgentService,
     private preferenceSetService: PreferenceSetService,
+    private locationService: LocationService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -92,6 +99,11 @@ export class UserService {
       userData.profileData
     );
     user.profile = await this.profileService.createProfile(profileData);
+    // Todo: remove later
+    this.locationService.updateLocationValues(user.profile.location, {
+      city: userData.city,
+      country: userData.country,
+    });
 
     user.agent = await this.agentService.createAgent({
       parentDisplayID: user.email,
@@ -519,6 +531,19 @@ export class UserService {
     return limitAndShuffle(users, limit, shuffle);
   }
 
+  async getPaginatedUsers(
+    paginationArgs: PaginationArgs,
+    filter?: UserFilterInput
+  ): Promise<IPaginatedType<IUser>> {
+    const qb = await this.userRepository.createQueryBuilder().select();
+
+    if (filter) {
+      applyFiltering(qb, filter);
+    }
+
+    return getPaginationResults(qb, paginationArgs);
+  }
+
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
     const user = await this.getUserOrFail(userInput.ID);
 
@@ -541,12 +566,7 @@ export class UserService {
     if (userInput.phone !== undefined) {
       user.phone = userInput.phone;
     }
-    if (userInput.city !== undefined) {
-      user.city = userInput.city;
-    }
-    if (userInput.country !== undefined) {
-      user.country = userInput.country;
-    }
+
     if (userInput.gender !== undefined) {
       user.gender = userInput.gender;
     }

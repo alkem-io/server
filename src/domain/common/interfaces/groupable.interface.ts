@@ -5,10 +5,10 @@ import { ICommunity } from '@domain/community/community/community.interface';
 
 @InterfaceType('Groupable', {
   resolveType(groupable) {
-    if (groupable.profile) {
-      return IOrganization;
+    if (groupable.hubID) {
+      return ICommunity;
     }
-    return ICommunity;
+    return IOrganization;
   },
 })
 export abstract class IGroupable {

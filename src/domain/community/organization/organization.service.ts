@@ -19,7 +19,7 @@ import {
   Organization,
   UpdateOrganizationInput,
 } from '@domain/community/organization';
-import { CreateUserGroupInput, IUserGroup } from '@domain/community/user-group';
+import { IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { UUID_LENGTH } from '@common/constants';
@@ -44,6 +44,11 @@ import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
+import { PaginationArgs } from '@core/pagination';
+import { applyFiltering, OrganizationFilterInput } from '@core/filtering';
+import { IPaginatedType } from '@core/pagination/paginated.type';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
+import { CreateUserGroupInput } from '../user-group/dto/user-group.dto.create';
 
 @Injectable()
 export class OrganizationService {
@@ -202,7 +207,13 @@ export class OrganizationService {
   ): Promise<IOrganization> {
     const orgID = deleteData.ID;
     const organization = await this.getOrganizationOrFail(orgID, {
-      relations: ['profile', 'groups', 'agent', 'verification'],
+      relations: [
+        'profile',
+        'groups',
+        'agent',
+        'verification',
+        'preferenceSet',
+      ],
     });
     const isHubHost = await this.isHubHost(organization);
     if (isHubHost) {
@@ -337,6 +348,20 @@ export class OrganizationService {
       await this.organizationRepository.find();
 
     return limitAndShuffle(organizations, limit, shuffle);
+  }
+
+  async getPaginatedOrganizations(
+    paginationArgs: PaginationArgs,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    filter?: OrganizationFilterInput
+  ): Promise<IPaginatedType<IOrganization>> {
+    const qb = await this.organizationRepository.createQueryBuilder().select();
+
+    if (filter) {
+      applyFiltering(qb, filter);
+    }
+
+    return getPaginationResults(qb, paginationArgs);
   }
 
   async getActivity(organization: IOrganization): Promise<INVP[]> {

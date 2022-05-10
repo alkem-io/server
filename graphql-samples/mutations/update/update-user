@@ -2,6 +2,11 @@ mutation UpdateUser($userData: UpdateUserInput!) {
   updateUser(userData: $userData) {
     displayName,
   	email
+    profile {
+      location {
+        city
+      }
+    }
   }
 }
 
@@ -12,6 +17,12 @@ query variables:
   {
     "ID": "uuid",
     "displayName": "Valentin",
-    "city": "Sofia"
+    "profileData": {
+      "ID": "uuid",
+      "location": {
+         "country": "Bulgaria",
+         "city": "Sofia"
+      }
+    }
   }
 }

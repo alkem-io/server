@@ -2,7 +2,7 @@ import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
-export class MembershipCommunityResultEntry {
+export class MembershipResultCommunity {
   @Field(() => String, {
     description: 'Display name of the community',
   })

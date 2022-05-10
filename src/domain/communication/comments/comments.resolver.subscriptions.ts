@@ -48,30 +48,30 @@ export class CommentsResolverSubscriptions {
     async filter(
       this: CommentsResolverSubscriptions,
       payload: CommentsMessageReceived,
-      variables: any,
-      context: any
+      variables: { commentsID: string },
+      context: { req: { user: AgentInfo } }
     ) {
-      const agentInfo = context.req?.user;
+      const agentInfo = context.req.user;
       const logMsgPrefix = `[User (${agentInfo.email}) Comments] - `;
-      const commentsIDs: string[] = variables.commentsIDs;
       this.logger.verbose?.(
-        `${logMsgPrefix}  Filtering event '${payload.eventID}'`,
+        `${logMsgPrefix} Filtering event '${payload.eventID}'`,
         LogContext.SUBSCRIPTIONS
       );
 
-      const inList = commentsIDs.includes(payload.commentsID);
+      const isSameCommentsInstance =
+        payload.commentsID === variables.commentsID;
       this.logger.verbose?.(
-        `${logMsgPrefix} Filter result is ${inList}`,
+        `${logMsgPrefix} Filter result is ${isSameCommentsInstance}`,
         LogContext.SUBSCRIPTIONS
       );
-      return inList;
+      return isSameCommentsInstance;
     },
   })
-  async communicationUpdateMessageReceived(
+  async communicationCommentsMessageReceived(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
       name: 'commentsID',
-      type: () => [UUID],
+      type: () => UUID,
       description: 'The ID of the Comments to subscribe to.',
       nullable: false,
     })

@@ -1,14 +1,25 @@
-import { Profile } from '@domain/community/profile/profile.entity';
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import { Column, Entity, JoinColumn, OneToOne, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToOne,
+  OneToMany,
+  Generated,
+} from 'typeorm';
 import { IUser } from '@domain/community/user/user.interface';
 import { Application } from '@domain/community/application/application.entity';
-import { Agent } from '@domain/agent/agent/agent.entity';
-import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
+import { Contributor } from '../contributor/contributor.entity';
 
 @Entity()
-export class User extends NameableEntity implements IUser {
+export class User extends Contributor implements IUser {
+  @Column({
+    unique: true,
+  })
+  @Generated('increment')
+  rowId!: number;
+
   @Column()
   accountUpn: string = '';
 
@@ -25,25 +36,7 @@ export class User extends NameableEntity implements IUser {
   phone: string = '';
 
   @Column()
-  city: string = '';
-
-  @Column()
-  country: string = '';
-
-  @Column()
   gender: string = '';
-
-  @OneToOne(() => Profile, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  profile?: Profile;
-
-  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'SET NULL' })
-  @JoinColumn()
-  agent?: Agent;
 
   @Column()
   communicationID: string = '';
