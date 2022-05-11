@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
+import { escapeString } from './utils/escape-string';
 
 export class location1651384201504 implements MigrationInterface {
   name = 'location1651384201504';
@@ -44,10 +45,14 @@ export class location1651384201504 implements MigrationInterface {
       if (profiles.length === 1) {
         const profile = profiles[0];
         await queryRunner.query(
-          `UPDATE location SET city = '${userProfile.city}' WHERE (id = '${profile.locationId}')`
+          `UPDATE location SET city = '${escapeString(
+            userProfile.city
+          )}' WHERE (id = '${profile.locationId}')`
         );
         await queryRunner.query(
-          `UPDATE location SET country = '${userProfile.country}' WHERE (id = '${profile.locationId}')`
+          `UPDATE location SET country = '${escapeString(
+            userProfile.country
+          )}' WHERE (id = '${profile.locationId}')`
         );
       }
     }
