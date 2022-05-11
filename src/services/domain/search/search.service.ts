@@ -270,6 +270,7 @@ export class SearchService {
         .leftJoinAndSelect('challenge.context', 'context')
         .leftJoinAndSelect('context.aspects', 'aspects')
         .leftJoinAndSelect('aspects.tagset', 'aspect_tagset')
+        .leftJoinAndSelect('context.location', 'location')
         .where('challenge.nameID like :term')
         .orWhere('challenge.displayName like :term')
         .orWhere('tagset.tags like :term')
@@ -281,6 +282,8 @@ export class SearchService {
         .orWhere('context.impact like :term')
         .orWhere('context.vision like :term')
         .orWhere('context.who like :term')
+        .orWhere('location.country like :term')
+        .orWhere('location.city like :term')
         .setParameters({ term: `%${term}%` })
         .getMany();
       // Only show challenges that the current user has read access to
@@ -320,6 +323,7 @@ export class SearchService {
         .leftJoinAndSelect('opportunity.challenge', 'challenge')
         .leftJoinAndSelect('context.aspects', 'aspects')
         .leftJoinAndSelect('aspects.tagset', 'aspect_tagset')
+        .leftJoinAndSelect('context.location', 'location')
         .where('opportunity.nameID like :term')
         .orWhere('opportunity.displayName like :term')
         .orWhere('tagset.tags like :term')
@@ -331,6 +335,8 @@ export class SearchService {
         .orWhere('context.impact like :term')
         .orWhere('context.vision like :term')
         .orWhere('context.who like :term')
+        .orWhere('location.country like :term')
+        .orWhere('location.city like :term')
         .setParameters({ term: `%${term}%` })
         .getMany();
       // Only show challenges that the current user has read access to
