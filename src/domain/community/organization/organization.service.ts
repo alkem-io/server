@@ -150,7 +150,9 @@ export class OrganizationService {
   async updateOrganization(
     organizationData: UpdateOrganizationInput
   ): Promise<IOrganization> {
-    const organization = await this.getOrganizationOrFail(organizationData.ID);
+    const organization = await this.getOrganizationOrFail(organizationData.ID, {
+      relations: ['profile'],
+    });
 
     await this.checkDisplayNameOrFail(
       organizationData.displayName,
