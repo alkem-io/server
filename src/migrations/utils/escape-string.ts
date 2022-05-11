@@ -1,2 +1,2 @@
 export const escapeString = (str: string) =>
-  str.replace(/'/g, `\'`).replace(/"/g, `\"`);
+  str.replace(/'/g, `\\'`).replace(/"/g, `\\"`);
