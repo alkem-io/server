@@ -1,9 +1,16 @@
-import { LessThan, MoreThan, SelectQueryBuilder } from 'typeorm';
+import {
+  Equal,
+  LessThan,
+  MoreThan,
+  MoreThanOrEqual,
+  SelectQueryBuilder,
+} from 'typeorm';
 import { Logger } from '@nestjs/common';
 import { IBaseAlkemio } from '@src/domain';
 import { LogContext } from '@src/common';
 import { IRelayStyleEdge, IRelayStylePaginatedType, PaginationArgs } from './';
 import { tryValidateArgs } from './validate.pagination.args';
+import { EntityNotFoundException } from 'src/common/exceptions/entity.not.found.exception';
 
 export type Paginationable = { rowId: number };
 
@@ -75,19 +82,55 @@ export const getRelayStylePaginationResults = async <
   const hasWhere =
     query.expressionMap.wheres && query.expressionMap.wheres.length > 0;
 
+  let afterRowIdResult: T | undefined = undefined;
+  if (after) {
+    const queryAfterRowId = originalQuery.clone();
+    afterRowIdResult = await queryAfterRowId
+      .where({
+        [cursorColumn]: Equal(after),
+      })
+      .getOne();
+    if (afterRowIdResult == undefined) {
+      throw new EntityNotFoundException(
+        `Unable to find entity with ID: ${after}`,
+        LogContext.CHALLENGES
+      );
+    }
+  }
+
+  let beforeRowIdResult: T | undefined = undefined;
+  if (before) {
+    const queryBeforeRowId = originalQuery.clone();
+    beforeRowIdResult = await queryBeforeRowId
+      .where({
+        [cursorColumn]: Equal(before),
+      })
+      .getOne();
+    if (beforeRowIdResult == undefined) {
+      throw new EntityNotFoundException(
+        `Unable to find entity with ID: ${after}`,
+        LogContext.CHALLENGES
+      );
+    }
+  }
+
   // FORWARD pagination
-  if (first && after) {
-    query[hasWhere ? 'andWhere' : 'where']({ [cursorColumn]: MoreThan(after) });
+  if (first && afterRowIdResult) {
+    query[hasWhere ? 'andWhere' : 'where']({
+      [SORTING_COLUMN]: MoreThan(afterRowIdResult.rowId),
+    });
     logger.verbose(`First ${first} After ${after}`);
   }
   // REVERSE pagination
-  else if (last && before) {
+  else if (last && beforeRowIdResult) {
     query[hasWhere ? 'andWhere' : 'where']({
-      [cursorColumn]: LessThan(before),
+      [SORTING_COLUMN]: LessThan(beforeRowIdResult.rowId),
+    }).andWhere({
+      [SORTING_COLUMN]: MoreThanOrEqual(beforeRowIdResult.rowId - last),
     });
     logger.verbose(`Last ${last} Before ${before}`);
   }
-  const limit = first ?? last ?? DEFAULT_PAGE_ITEMS;
+  const limit = first ?? DEFAULT_PAGE_ITEMS;
   query.take(limit);
 
   // todo: can we use getManyAndCount to optimize?
