@@ -11,7 +11,7 @@ export const tryValidateArgs = (
 
   if (first && first < 0) {
     throw new PaginationInputOutOfBoundException(
-      'Parameter "first" needs to non-negative.'
+      'Parameter "first" needs to be non-negative.'
     );
   }
 
@@ -25,7 +25,7 @@ export const tryValidateArgs = (
 
   if (last && last < 0) {
     throw new PaginationInputOutOfBoundException(
-      'Parameter "last" needs to non-negative.'
+      'Parameter "last" needs to be non-negative.'
     );
   }
 
