@@ -9,23 +9,23 @@ export const tryValidateArgs = (
 ): boolean | never => {
   const { first, after, last, before } = paginationArgs;
 
-  if (first && first < 0) {
+  if (first && first > 0) {
     throw new PaginationInputOutOfBoundException(
-      'Parameter "first" needs to be non-negative.'
+      'Parameter "first" needs to be positive.'
     );
   }
 
   if (after) {
     if (!first) {
       throw new PaginationParameterNotFoundException(
-        'Cursor "after" requires having "after" parameter.'
+        'Cursor "after" requires having "first" parameter.'
       );
     }
   }
 
-  if (last && last < 0) {
+  if (last && last > 0) {
     throw new PaginationInputOutOfBoundException(
-      'Parameter "last" needs to be non-negative.'
+      'Parameter "last" needs to be positive.'
     );
   }
 
