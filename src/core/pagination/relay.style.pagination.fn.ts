@@ -10,7 +10,7 @@ import { IBaseAlkemio } from '@src/domain';
 import { LogContext } from '@src/common';
 import { IRelayStyleEdge, IRelayStylePaginatedType, PaginationArgs } from './';
 import { tryValidateArgs } from './validate.pagination.args';
-import { EntityNotFoundException } from 'src/common/exceptions/entity.not.found.exception';
+import { EntityNotFoundException } from '@src/common';
 
 export type Paginationable = { rowId: number };
 
