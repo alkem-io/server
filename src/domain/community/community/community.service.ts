@@ -476,7 +476,7 @@ export class CommunityService {
       if (action == CommunityContributorsUpdateType.REMOVE) {
         if (userMembersCount == communityPolicyRole.minUser) {
           throw new CommunityPolicyRoleLimitsException(
-            'Min limit of organizations reached, cannot remove organization.',
+            'Min limit of users reached, cannot remove users.',
             LogContext.COMMUNITY
           );
         }
