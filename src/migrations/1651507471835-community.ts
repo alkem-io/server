@@ -6,7 +6,8 @@ import {
   challengeCommunityPolicy,
 } from '@domain/challenge';
 import { opportunityCommunityPolicy } from '@domain/collaboration';
-import { AuthorizationCredential } from '@common/enums';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 
 export class community1651507471835 implements MigrationInterface {
   name = 'community1651507471835';
@@ -30,19 +31,21 @@ export class community1651507471835 implements MigrationInterface {
       if (credentials.length === 1) {
         const credential = credentials[0];
         let policy: CommunityPolicy;
-        if (credential.type === AuthorizationCredential.HUB_MEMBER) {
-          policy = hubCommunityPolicy;
-        } else if (
-          credential.type === AuthorizationCredential.CHALLENGE_MEMBER
-        ) {
-          policy = challengeCommunityPolicy;
-        } else if (
-          credential.type === AuthorizationCredential.OPPORTUNITY_MEMBER
-        ) {
-          policy = opportunityCommunityPolicy;
-        } else {
-          throw new Error(`Credential type not defined`);
+
+        switch (credential.type) {
+          case AuthorizationCredential.HUB_MEMBER:
+            policy = hubCommunityPolicy;
+            break;
+          case AuthorizationCredential.CHALLENGE_MEMBER:
+            policy = challengeCommunityPolicy;
+            break;
+          case AuthorizationCredential.OPPORTUNITY_MEMBER:
+            policy = opportunityCommunityPolicy;
+            break;
+          default:
+            throw new Error(`Credential type not defined`);
         }
+
         policy.member.credential.resourceID = credential.resourceID;
         policy.leader.credential.resourceID = credential.resourceID;
         await queryRunner.query(
@@ -59,12 +62,39 @@ export class community1651507471835 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `community` DROP FOREIGN KEY `FK_973fe78e64b8a79056d58ead433`'
     );
-    await queryRunner.query(
-      `ALTER TABLE \`community\` DROP COLUMN \`credentialId\``
-    );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`community\` DROP COLUMN \`credentialId\``
+    // );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // todo: down??
+    await queryRunner.query(
+      'ALTER TABLE `community` ADD CONSTRAINT `FK_973fe78e64b8a79056d58ead433` FOREIGN KEY (`credentialId`) REFERENCES `credential`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+    );
+
+    const communities: any[] = await queryRunner.query(
+      `SELECT id, policy FROM community`
+    );
+    for (const community of communities) {
+      console.log(`Retrieved community with id: ${community.id}`);
+      const policy: CommunityPolicy = community.policy;
+      const credentialID = randomUUID();
+      const credential: AuthorizationPolicyRuleCredential =
+        new AuthorizationPolicyRuleCredential(
+          [AuthorizationPrivilege.READ],
+          policy.member.credential.type,
+          policy.member.credential.resourceID
+        );
+
+      await queryRunner.query(
+        `INSERT INTO credential VALUES ('${credentialID}', NOW(), NOW(), 1, '${credential.resourceID}', '${credential.type}')`
+      );
+
+      await queryRunner.query(
+        `UPDATE community SET credentialId = '${credentialID}' WHERE (id = '${community.id}')`
+      );
+    }
+
+    await queryRunner.query(`ALTER TABLE \`community\` DROP COLUMN \`policy\``);
   }
 }
