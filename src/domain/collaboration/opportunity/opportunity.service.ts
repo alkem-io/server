@@ -11,6 +11,7 @@ import {
   IOpportunity,
   CreateOpportunityInput,
   UpdateOpportunityInput,
+  opportunityCommunityPolicy,
 } from '@domain/collaboration/opportunity';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProjectService } from '@domain/collaboration/project/project.service';
@@ -38,33 +39,9 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core';
 import { AspectService } from '@domain/context/aspect/aspect.service';
-import { CommunityPolicy } from '@domain/community/community/community.policy';
 
 @Injectable()
 export class OpportunityService {
-  private opportunityCommunityPolicy: CommunityPolicy = {
-    member: {
-      credential: {
-        type: AuthorizationCredential.OPPORTUNITY_MEMBER,
-        resourceID: '',
-      },
-      minOrg: 0,
-      maxOrg: -1,
-      minUser: 0,
-      maxUser: -1,
-    },
-    leader: {
-      credential: {
-        type: AuthorizationCredential.OPPORTUNITY_LEAD,
-        resourceID: '',
-      },
-      minOrg: 0,
-      maxOrg: 9,
-      minUser: 0,
-      maxUser: 2,
-    },
-  };
-
   constructor(
     private baseChallengeService: BaseChallengeService,
     private projectService: ProjectService,
@@ -94,7 +71,7 @@ export class OpportunityService {
       opportunityData,
       hubID,
       CommunityType.OPPORTUNITY,
-      this.opportunityCommunityPolicy
+      opportunityCommunityPolicy
     );
 
     await this.opportunityRepository.save(opportunity);

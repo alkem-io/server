@@ -49,34 +49,10 @@ import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceType } from '@common/enums/preference.type';
 import { AspectService } from '@domain/context/aspect/aspect.service';
-import { CommunityPolicy } from '@domain/community/community/community.policy';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @Injectable()
 export class HubService {
-  private hubCommunityPolicy: CommunityPolicy = {
-    member: {
-      credential: {
-        type: AuthorizationCredential.HUB_MEMBER,
-        resourceID: '',
-      },
-      minOrg: 0,
-      maxOrg: -1,
-      minUser: 0,
-      maxUser: -1,
-    },
-    leader: {
-      credential: {
-        type: AuthorizationCredential.HUB_HOST,
-        resourceID: '',
-      },
-      minOrg: 1,
-      maxOrg: 1,
-      minUser: 0,
-      maxUser: 2,
-    },
-  };
-
   constructor(
     private agentService: AgentService,
     private organizationService: OrganizationService,
@@ -110,7 +86,7 @@ export class HubService {
       hubData,
       hub.id,
       CommunityType.HUB,
-      this.hubCommunityPolicy
+      hubCommunityPolicy
     );
 
     // set immediate community parent and  community policy

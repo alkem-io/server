@@ -53,35 +53,12 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
 import { AspectService } from '@domain/context/aspect/aspect.service';
-import { CommunityPolicy } from '@domain/community/community/community.policy';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
+import { challengeCommunityPolicy } from './challenge.community.policy';
 
 @Injectable()
 export class ChallengeService {
-  private challengeCommunityPolicy: CommunityPolicy = {
-    member: {
-      credential: {
-        type: AuthorizationCredential.CHALLENGE_MEMBER,
-        resourceID: 'a',
-      },
-      minOrg: 0,
-      maxOrg: -1,
-      minUser: 0,
-      maxUser: -1,
-    },
-    leader: {
-      credential: {
-        type: AuthorizationCredential.CHALLENGE_LEAD,
-        resourceID: 'a',
-      },
-      minOrg: 0,
-      maxOrg: 9,
-      minUser: 0,
-      maxUser: 2,
-    },
-  };
-
   constructor(
     private agentService: AgentService,
     private communityService: CommunityService,
@@ -114,7 +91,7 @@ export class ChallengeService {
       challengeData,
       hubID,
       CommunityType.CHALLENGE,
-      this.challengeCommunityPolicy
+      challengeCommunityPolicy
     );
 
     await this.challengeRepository.save(challenge);
