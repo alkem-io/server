@@ -12,7 +12,7 @@ export const opportunityCommunityPolicy: CommunityPolicy = {
     minUser: 0,
     maxUser: -1,
   },
-  leader: {
+  lead: {
     credential: {
       type: AuthorizationCredential.OPPORTUNITY_LEAD,
       resourceID: '',

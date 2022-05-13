@@ -45,7 +45,7 @@ export class community1651507471835 implements MigrationInterface {
         }
 
         policy.member.credential.resourceID = credential.resourceID;
-        policy.leader.credential.resourceID = credential.resourceID;
+        policy.lead.credential.resourceID = credential.resourceID;
         await queryRunner.query(
           `UPDATE community SET policy = '${JSON.stringify(
             policy

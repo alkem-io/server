@@ -223,7 +223,7 @@ export class CommunityService {
     const policy = this.getCommunityPolicy(community);
     // Update the Community policy to have the right resource ID
     policy.member.credential.resourceID = resourceID;
-    policy.leader.credential.resourceID = resourceID;
+    policy.lead.credential.resourceID = resourceID;
     return this.setCommunityPolicy(community, policy);
   }
 
@@ -450,7 +450,7 @@ export class CommunityService {
     if (role === CommunityRole.MEMBER) {
       return policy.member;
     } else if (role === CommunityRole.LEAD) {
-      return policy.leader;
+      return policy.lead;
     }
     throw new EntityNotFoundException(
       `Unable to find Community role of type: ${role}`,

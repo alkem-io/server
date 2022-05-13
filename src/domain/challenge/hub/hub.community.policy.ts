@@ -12,7 +12,7 @@ export const hubCommunityPolicy: CommunityPolicy = {
     minUser: 0,
     maxUser: -1,
   },
-  leader: {
+  lead: {
     credential: {
       type: AuthorizationCredential.HUB_HOST,
       resourceID: '',
