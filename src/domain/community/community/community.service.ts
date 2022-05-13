@@ -572,7 +572,7 @@ export class CommunityService {
         type: membershipCredential.type,
         resourceID: membershipCredential.resourceID,
       });
-    // Need to reduce by one to take into account that the community itself also holds a credential as reference
-    return credentialMatches - 1;
+
+    return credentialMatches;
   }
 }
