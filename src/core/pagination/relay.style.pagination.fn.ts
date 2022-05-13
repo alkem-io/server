@@ -82,55 +82,45 @@ export const getRelayStylePaginationResults = async <
   const hasWhere =
     query.expressionMap.wheres && query.expressionMap.wheres.length > 0;
 
-  let afterRowIdResult: T | undefined = undefined;
-  if (after) {
-    const queryAfterRowId = originalQuery.clone();
-    afterRowIdResult = await queryAfterRowId
-      .where({
-        [cursorColumn]: Equal(after),
-      })
-      .getOne();
-    if (afterRowIdResult == undefined) {
+  // Transforms UUID cursor into rowId cursor
+  let rowIdcursor: number | undefined = undefined;
+  const cursorFromUser = before ?? after ?? undefined;
+  if (cursorFromUser) {
+    const queryRowId = originalQuery.clone();
+    const rowIdCursorResult = await queryRowId[hasWhere ? 'andWhere' : 'where'](
+      {
+        [cursorColumn]: Equal(cursorFromUser),
+      }
+    ).getOne();
+    if (rowIdCursorResult == undefined) {
       throw new EntityNotFoundException(
         `Unable to find entity with ID: ${after}`,
         LogContext.CHALLENGES
       );
     }
-  }
-
-  let beforeRowIdResult: T | undefined = undefined;
-  if (before) {
-    const queryBeforeRowId = originalQuery.clone();
-    beforeRowIdResult = await queryBeforeRowId
-      .where({
-        [cursorColumn]: Equal(before),
-      })
-      .getOne();
-    if (beforeRowIdResult == undefined) {
-      throw new EntityNotFoundException(
-        `Unable to find entity with ID: ${after}`,
-        LogContext.CHALLENGES
-      );
-    }
+    rowIdcursor = rowIdCursorResult.rowId;
   }
 
   // FORWARD pagination
-  if (first && afterRowIdResult) {
+  if (first && rowIdcursor) {
+    // Finds all rows for which rowId > rowIdcursor
     query[hasWhere ? 'andWhere' : 'where']({
-      [SORTING_COLUMN]: MoreThan(afterRowIdResult.rowId),
+      [SORTING_COLUMN]: MoreThan(rowIdcursor),
     });
     logger.verbose(`First ${first} After ${after}`);
   }
   // REVERSE pagination
-  else if (last && beforeRowIdResult) {
+  if (last && rowIdcursor) {
+    // Finds all rows for which rowIdcursor > rowId >= rowIdcursor - last
     query[hasWhere ? 'andWhere' : 'where']({
-      [SORTING_COLUMN]: LessThan(beforeRowIdResult.rowId),
+      [SORTING_COLUMN]: LessThan(rowIdcursor),
     }).andWhere({
-      [SORTING_COLUMN]: MoreThanOrEqual(beforeRowIdResult.rowId - last),
+      [SORTING_COLUMN]: MoreThanOrEqual(rowIdcursor - last),
     });
     logger.verbose(`Last ${last} Before ${before}`);
   }
-  const limit = first ?? DEFAULT_PAGE_ITEMS;
+
+  const limit = first ?? last ?? DEFAULT_PAGE_ITEMS;
   query.take(limit);
 
   // todo: can we use getManyAndCount to optimize?
