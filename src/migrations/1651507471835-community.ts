@@ -21,12 +21,10 @@ export class community1651507471835 implements MigrationInterface {
       `SELECT id, credentialId FROM community`
     );
     for (const community of communities) {
-      console.log(`Retrieved community with id: ${community.id}`);
-
       // Create the leadership Credential
       const leadCredentialId = randomUUID();
       const credentials: any[] = await queryRunner.query(
-        `SELECT id, type, resourceID FROM credential WHERE (id = '${community.membershipCredentialId}')`
+        `SELECT id, type, resourceID FROM credential WHERE (id = '${community.credentialId}')`
       );
       if (credentials.length === 1) {
         const credential = credentials[0];
@@ -62,12 +60,15 @@ export class community1651507471835 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `community` DROP FOREIGN KEY `FK_973fe78e64b8a79056d58ead433`'
     );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`community\` DROP COLUMN \`credentialId\``
-    // );
+    await queryRunner.query(
+      `ALTER TABLE \`community\` DROP COLUMN \`credentialId\``
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE \`community\` ADD \`credentialId\` varchar(36) NULL`
+    );
     await queryRunner.query(
       'ALTER TABLE `community` ADD CONSTRAINT `FK_973fe78e64b8a79056d58ead433` FOREIGN KEY (`credentialId`) REFERENCES `credential`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
@@ -76,25 +77,24 @@ export class community1651507471835 implements MigrationInterface {
       `SELECT id, policy FROM community`
     );
     for (const community of communities) {
-      console.log(`Retrieved community with id: ${community.id}`);
-      const policy: CommunityPolicy = community.policy;
+      const policy: CommunityPolicy = JSON.parse(community.policy);
+
       const credentialID = randomUUID();
-      const credential: AuthorizationPolicyRuleCredential =
-        new AuthorizationPolicyRuleCredential(
-          [AuthorizationPrivilege.READ],
-          policy.member.credential.type,
-          policy.member.credential.resourceID
+      if (
+        policy.member &&
+        policy.member.credential &&
+        policy.member.credential.type &&
+        policy.member.credential.resourceID
+      ) {
+        await queryRunner.query(
+          `INSERT INTO credential VALUES ('${credentialID}', NOW(), NOW(), 1, '${policy.member.credential.resourceID}', '${policy.member.credential.type}', NULL)`
         );
 
-      await queryRunner.query(
-        `INSERT INTO credential VALUES ('${credentialID}', NOW(), NOW(), 1, '${credential.resourceID}', '${credential.type}')`
-      );
-
-      await queryRunner.query(
-        `UPDATE community SET credentialId = '${credentialID}' WHERE (id = '${community.id}')`
-      );
+        await queryRunner.query(
+          `UPDATE community SET credentialId = '${credentialID}' WHERE (id = '${community.id}')`
+        );
+      }
     }
-
     await queryRunner.query(`ALTER TABLE \`community\` DROP COLUMN \`policy\``);
   }
 }
