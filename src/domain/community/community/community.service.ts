@@ -12,7 +12,7 @@ import {
   EntityNotInitializedException,
   InvalidStateTransitionException,
   ValidationException,
-  CommunityPolicyRoleLimitsViolatedException,
+  CommunityPolicyRoleLimitsException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -35,6 +35,7 @@ import { CredentialDefinition } from '@domain/agent/credential/credential.defini
 import { CommunityRole } from '@common/enums/community.role';
 import { CommunityPolicyRole } from './community.policy.role';
 import { CommunityContributorsUpdateType } from '@common/enums/community.contributors.update.type';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
 
 @Injectable()
 export class CommunityService {
@@ -257,6 +258,20 @@ export class CommunityService {
     });
   }
 
+  async countUsersWithRole(
+    community: ICommunity,
+    role: CommunityRole
+  ): Promise<number> {
+    const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      role
+    );
+    return await this.userService.countUsersWithCredentials({
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
+    });
+  }
+
   async getOrganizationsWithRole(
     community: ICommunity,
     role: CommunityRole
@@ -266,6 +281,20 @@ export class CommunityService {
       role
     );
     return await this.organizationService.organizationsWithCredentials({
+      type: membershipCredential.type,
+      resourceID: membershipCredential.resourceID,
+    });
+  }
+
+  async countOrganizationsWithRole(
+    community: ICommunity,
+    role: CommunityRole
+  ): Promise<number> {
+    const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      role
+    );
+    return await this.organizationService.countOrganizationsWithCredentials({
       type: membershipCredential.type,
       resourceID: membershipCredential.resourceID,
     });
@@ -371,7 +400,8 @@ export class CommunityService {
     organization.agent = await this.assignContributorToRole(
       community,
       agent,
-      role
+      role,
+      CommunityContributorType.ORGANIZATION
     );
 
     return community;
@@ -384,7 +414,12 @@ export class CommunityService {
   ): Promise<ICommunity> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
 
-    user.agent = await this.removeContributorFromRole(community, agent, role);
+    user.agent = await this.removeContributorFromRole(
+      community,
+      agent,
+      role,
+      CommunityContributorType.USER
+    );
 
     if (role === CommunityRole.MEMBER) {
       const communication = await this.getCommunication(community.id);
@@ -412,7 +447,8 @@ export class CommunityService {
     organization.agent = await this.removeContributorFromRole(
       community,
       agent,
-      role
+      role,
+      CommunityContributorType.ORGANIZATION
     );
 
     return community;
@@ -422,39 +458,53 @@ export class CommunityService {
     community: ICommunity,
     communityPolicyRole: CommunityPolicyRole,
     role: CommunityRole,
-    action: CommunityContributorsUpdateType
+    action: CommunityContributorsUpdateType,
+    contributorType: CommunityContributorType
   ) {
-    const orgMembers = await this.getOrganizationsWithRole(community, role);
-    const orgMemberCount = orgMembers.length;
-    const userMembers = await this.getUsersWithRole(community, role);
-    const userMembersCount = userMembers.length;
+    if (contributorType == CommunityContributorType.USER) {
+      const userMembersCount = await this.countUsersWithRole(community, role);
 
-    if (action == CommunityContributorsUpdateType.ADD) {
-      if (userMembersCount == communityPolicyRole.maxUser) {
-        throw new CommunityPolicyRoleLimitsViolatedException(
-          'Max limit of users reached, cannot add new user.',
-          LogContext.COMMUNITY
-        );
+      if (action == CommunityContributorsUpdateType.ADD) {
+        if (userMembersCount == communityPolicyRole.maxUser) {
+          throw new CommunityPolicyRoleLimitsException(
+            'Max limit of users reached, cannot add new user.',
+            LogContext.COMMUNITY
+          );
+        }
       }
-      if (orgMemberCount == communityPolicyRole.maxOrg)
-        throw new CommunityPolicyRoleLimitsViolatedException(
-          'Max limit of organizations reached, cannot add new organization.',
-          LogContext.COMMUNITY
-        );
+
+      if (action == CommunityContributorsUpdateType.REMOVE) {
+        if (userMembersCount == communityPolicyRole.minUser) {
+          throw new CommunityPolicyRoleLimitsException(
+            'Min limit of organizations reached, cannot remove organization.',
+            LogContext.COMMUNITY
+          );
+        }
+      }
     }
 
-    if (action == CommunityContributorsUpdateType.REMOVE) {
-      if (userMembersCount == communityPolicyRole.minUser) {
-        throw new CommunityPolicyRoleLimitsViolatedException(
-          'Min limit of organizations reached, cannot remove organization.',
-          LogContext.COMMUNITY
-        );
+    if (contributorType == CommunityContributorType.ORGANIZATION) {
+      const orgMemberCount = await this.countOrganizationsWithRole(
+        community,
+        role
+      );
+
+      if (action == CommunityContributorsUpdateType.ADD) {
+        if (orgMemberCount == communityPolicyRole.maxOrg) {
+          throw new CommunityPolicyRoleLimitsException(
+            'Max limit of organizations reached, cannot add new organization.',
+            LogContext.COMMUNITY
+          );
+        }
       }
-      if (orgMemberCount == communityPolicyRole.minOrg) {
-        throw new CommunityPolicyRoleLimitsViolatedException(
-          'Min limit of organizations reached, cannot remove organization.',
-          LogContext.COMMUNITY
-        );
+
+      if (action == CommunityContributorsUpdateType.REMOVE) {
+        if (orgMemberCount == communityPolicyRole.minOrg) {
+          throw new CommunityPolicyRoleLimitsException(
+            'Min limit of organizations reached, cannot remove organization.',
+            LogContext.COMMUNITY
+          );
+        }
       }
     }
   }
@@ -462,14 +512,16 @@ export class CommunityService {
   private async assignContributorToRole(
     community: ICommunity,
     agent: IAgent,
-    role: CommunityRole
+    role: CommunityRole,
+    contributorType: CommunityContributorType
   ): Promise<IAgent> {
     const communityPolicyRole = this.getCommunityPolicyForRole(community, role);
     await this.validateCommunityPolicyLimits(
       community,
       communityPolicyRole,
       role,
-      CommunityContributorsUpdateType.ADD
+      CommunityContributorsUpdateType.ADD,
+      contributorType
     );
 
     return await this.agentService.grantCredential({
@@ -482,14 +534,16 @@ export class CommunityService {
   private async removeContributorFromRole(
     community: ICommunity,
     agent: IAgent,
-    role: CommunityRole
+    role: CommunityRole,
+    contributorType: CommunityContributorType
   ): Promise<IAgent> {
     const communityPolicyRole = this.getCommunityPolicyForRole(community, role);
     await this.validateCommunityPolicyLimits(
       community,
       communityPolicyRole,
       role,
-      CommunityContributorsUpdateType.REMOVE
+      CommunityContributorsUpdateType.REMOVE,
+      contributorType
     );
 
     return await this.agentService.revokeCredential({
@@ -622,6 +676,21 @@ export class CommunityService {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
       CommunityRole.MEMBER
+    );
+
+    const credentialMatches =
+      await this.agentService.countAgentsWithMatchingCredentials({
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      });
+
+    return credentialMatches;
+  }
+
+  async getLeadsCount(community: ICommunity): Promise<number> {
+    const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      CommunityRole.LEAD
     );
 
     const credentialMatches =
