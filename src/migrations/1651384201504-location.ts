@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
+import { escapeString } from './utils/escape-string';
 
 export class location1651384201504 implements MigrationInterface {
   name = 'location1651384201504';
@@ -28,7 +29,7 @@ export class location1651384201504 implements MigrationInterface {
             values ('${locationID}', 1,  '', '')`
       );
       await queryRunner.query(
-        `update profile set locationId = '${locationID}' WHERE (id = '${profile.id}')`
+        `UPDATE profile SET locationId = '${locationID}' WHERE (id = '${profile.id}')`
       );
     }
 
@@ -44,10 +45,14 @@ export class location1651384201504 implements MigrationInterface {
       if (profiles.length === 1) {
         const profile = profiles[0];
         await queryRunner.query(
-          `update location set city = '${userProfile.city}' WHERE (id = '${profile.locationId}')`
+          `UPDATE location SET city = '${escapeString(
+            userProfile.city
+          )}' WHERE (id = '${profile.locationId}')`
         );
         await queryRunner.query(
-          `update location set country = '${userProfile.country}' WHERE (id = '${profile.locationId}')`
+          `UPDATE location SET country = '${escapeString(
+            userProfile.country
+          )}' WHERE (id = '${profile.locationId}')`
         );
       }
     }
@@ -73,18 +78,16 @@ export class location1651384201504 implements MigrationInterface {
                 values ('${locationID}', 1,  '', '')`
       );
       await queryRunner.query(
-        `update context set locationId = '${locationID}' WHERE (id = '${context.id}')`
+        `UPDATE context SET locationId = '${locationID}' WHERE (id = '${context.id}')`
       );
     }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`user\` ADD \`city\` varchar(255) NOT NULL,  \`country\` varchar(255) NOT NULL`
+      `ALTER TABLE \`user\` ADD \`city\` varchar(255) NOT NULL, ADD  \`country\` varchar(255) NOT NULL`
     );
 
-    // todo: populate the city, country fields to users
-    // Copy over the user city / country fields
     const userProfiles: any[] = await queryRunner.query(
       `SELECT id, profileId, city, country FROM user`
     );
@@ -101,27 +104,18 @@ export class location1651384201504 implements MigrationInterface {
         if (locations.length === 1) {
           const location = locations[0];
           await queryRunner.query(
-            `update user set city = '${location.city}' WHERE (id = '${userProfile.id}')`
-          );
-          await queryRunner.query(
-            `update user set country = '${location.country}' WHERE (id = '${userProfile.id}')`
+            `UPDATE user SET city = '${location.city}', country = '${location.country}' WHERE (id = '${userProfile.id}')`
           );
         }
       }
     }
 
     await queryRunner.query(
-      `ALTER TABLE \`context\` DROP FOREIGN KEY \`FK_88888ca8ac212b8357637794d6f\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`context\` DROP COLUMN \`locationId\``
+      `ALTER TABLE \`context\` DROP FOREIGN KEY \`FK_88888ca8ac212b8357637794d6f\`, DROP COLUMN \`locationId\``
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`profile\` DROP FOREIGN KEY \`FK_77777ca8ac212b8357637794d6f\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`profile\` DROP COLUMN \`locationId\``
+      `ALTER TABLE \`profile\` DROP FOREIGN KEY \`FK_77777ca8ac212b8357637794d6f\`, DROP COLUMN \`locationId\``
     );
 
     await queryRunner.query('DROP TABLE `location`');

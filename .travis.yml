@@ -1,9 +1,9 @@
 language: node_js
 node_js:
-  - v14.17.3
+  - v16.15.0
 env:
   matrix:
-    - DATABASE_HOST=localhost MYSQL_DATABASE=alkemio MYSQL_ROOT_PASSWORD=toor
+    - DATABASE_HOST=localhost MYSQL_DATABASE=alkemio MYSQL_ROOT_PASSWORD=toor NODE_OPTIONS="--max-old-space-size=4196"
 cache:
   directories:
     - node_modules
@@ -12,7 +12,7 @@ install:
 services:
   - mysql
 before_install:
-  - npm i -g npm@7.5.6
+  - npm i -g npm@8.5.5
   - mysql -e 'CREATE DATABASE IF NOT EXISTS alkemio;'
 before_script:
   - echo "USE mysql;ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password

@@ -150,7 +150,9 @@ export class OrganizationService {
   async updateOrganization(
     organizationData: UpdateOrganizationInput
   ): Promise<IOrganization> {
-    const organization = await this.getOrganizationOrFail(organizationData.ID);
+    const organization = await this.getOrganizationOrFail(organizationData.ID, {
+      relations: ['profile'],
+    });
 
     await this.checkDisplayNameOrFail(
       organizationData.displayName,
@@ -207,7 +209,13 @@ export class OrganizationService {
   ): Promise<IOrganization> {
     const orgID = deleteData.ID;
     const organization = await this.getOrganizationOrFail(orgID, {
-      relations: ['profile', 'groups', 'agent', 'verification'],
+      relations: [
+        'profile',
+        'groups',
+        'agent',
+        'verification',
+        'preferenceSet',
+      ],
     });
     const isHubHost = await this.isHubHost(organization);
     if (isHubHost) {
