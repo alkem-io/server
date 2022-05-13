@@ -24,7 +24,6 @@ export const tryValidateArgs = (
   }
 
   if (last !== undefined && last <= 0) {
-    console.log('\n\n\n nula prvi put ===================== \n\n\n');
     throw new PaginationInputOutOfBoundException(
       'Parameter "last" needs to be positive.'
     );
@@ -32,7 +31,6 @@ export const tryValidateArgs = (
 
   if (before) {
     if (last == undefined) {
-      console.log('\n\n\n nula ===================== \n\n\n');
       throw new PaginationParameterNotFoundException(
         'Cursor "before" requires having "last" parameter.'
       );
