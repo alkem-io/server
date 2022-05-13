@@ -6,8 +6,7 @@ import {
   challengeCommunityPolicy,
 } from '@domain/challenge';
 import { opportunityCommunityPolicy } from '@domain/collaboration';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { AuthorizationCredential } from '@common/enums';
 
 export class community1651507471835 implements MigrationInterface {
   name = 'community1651507471835';
@@ -22,7 +21,6 @@ export class community1651507471835 implements MigrationInterface {
     );
     for (const community of communities) {
       // Create the leadership Credential
-      const leadCredentialId = randomUUID();
       const credentials: any[] = await queryRunner.query(
         `SELECT id, type, resourceID FROM credential WHERE (id = '${community.credentialId}')`
       );
