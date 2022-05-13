@@ -6,6 +6,7 @@ import {
   challengeCommunityPolicy,
 } from '@domain/challenge';
 import { opportunityCommunityPolicy } from '@domain/collaboration';
+import { AuthorizationCredential } from '@common/enums';
 
 export class community1651507471835 implements MigrationInterface {
   name = 'community1651507471835';
@@ -16,7 +17,7 @@ export class community1651507471835 implements MigrationInterface {
     );
 
     const communities: any[] = await queryRunner.query(
-      `SELECT id, credentialId from community`
+      `SELECT id, credentialId FROM community`
     );
     for (const community of communities) {
       console.log(`Retrieved community with id: ${community.id}`);
@@ -24,16 +25,20 @@ export class community1651507471835 implements MigrationInterface {
       // Create the leadership Credential
       const leadCredentialId = randomUUID();
       const credentials: any[] = await queryRunner.query(
-        `SELECT id, type, resourceID from credential WHERE (id = '${community.membershipCredentialId}')`
+        `SELECT id, type, resourceID FROM credential WHERE (id = '${community.membershipCredentialId}')`
       );
       if (credentials.length === 1) {
         const credential = credentials[0];
         let policy: CommunityPolicy;
-        if (credential.type === 'hub-member') {
+        if (credential.type === AuthorizationCredential.HUB_MEMBER) {
           policy = hubCommunityPolicy;
-        } else if (credential.type === 'challenge-member') {
+        } else if (
+          credential.type === AuthorizationCredential.CHALLENGE_MEMBER
+        ) {
           policy = challengeCommunityPolicy;
-        } else if (credential.type === 'opportunity-member') {
+        } else if (
+          credential.type === AuthorizationCredential.OPPORTUNITY_MEMBER
+        ) {
           policy = opportunityCommunityPolicy;
         } else {
           throw new Error(`Credential type not defined`);
@@ -41,7 +46,7 @@ export class community1651507471835 implements MigrationInterface {
         policy.member.credential.resourceID = credential.resourceID;
         policy.leader.credential.resourceID = credential.resourceID;
         await queryRunner.query(
-          `update community set policy = '${JSON.stringify(
+          `UPDATE community SET policy = '${JSON.stringify(
             policy
           )}' WHERE (id = '${community.id}')`
         );
