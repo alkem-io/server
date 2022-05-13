@@ -8,7 +8,11 @@ import {
 } from '@common/exceptions';
 import { IAgent } from '@domain/agent/agent';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { CreateHubInput, DeleteHubInput } from '@domain/challenge/hub';
+import {
+  CreateHubInput,
+  DeleteHubInput,
+  hubCommunityPolicy,
+} from '@domain/challenge/hub';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { IProject } from '@domain/collaboration/project';
