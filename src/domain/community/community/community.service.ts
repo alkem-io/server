@@ -12,6 +12,7 @@ import {
   EntityNotInitializedException,
   InvalidStateTransitionException,
   ValidationException,
+  CommunityPolicyRoleLimitsViolatedException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -33,6 +34,7 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
 import { CommunityPolicyRole } from './community.policy.role';
+import { CommunityContributorsUpdateType } from '@common/enums/community.contributors.update.type';
 
 @Injectable()
 export class CommunityService {
@@ -416,12 +418,60 @@ export class CommunityService {
     return community;
   }
 
+  private async validateCommunityPolicyLimits(
+    community: ICommunity,
+    communityPolicyRole: CommunityPolicyRole,
+    role: CommunityRole,
+    action: CommunityContributorsUpdateType
+  ) {
+    const orgMembers = await this.getOrganizationsWithRole(community, role);
+    const orgMemberCount = orgMembers.length;
+    const userMembers = await this.getUsersWithRole(community, role);
+    const userMembersCount = userMembers.length;
+
+    if (action == CommunityContributorsUpdateType.ADD) {
+      if (userMembersCount == communityPolicyRole.maxUser) {
+        throw new CommunityPolicyRoleLimitsViolatedException(
+          'Max limit of users reached, cannot add new user.',
+          LogContext.COMMUNITY
+        );
+      }
+      if (orgMemberCount == communityPolicyRole.maxOrg)
+        throw new CommunityPolicyRoleLimitsViolatedException(
+          'Max limit of organizations reached, cannot add new organization.',
+          LogContext.COMMUNITY
+        );
+    }
+
+    if (action == CommunityContributorsUpdateType.REMOVE) {
+      if (userMembersCount == communityPolicyRole.minUser) {
+        throw new CommunityPolicyRoleLimitsViolatedException(
+          'Min limit of organizations reached, cannot remove organization.',
+          LogContext.COMMUNITY
+        );
+      }
+      if (orgMemberCount == communityPolicyRole.minOrg) {
+        throw new CommunityPolicyRoleLimitsViolatedException(
+          'Min limit of organizations reached, cannot remove organization.',
+          LogContext.COMMUNITY
+        );
+      }
+    }
+  }
+
   private async assignContributorToRole(
     community: ICommunity,
     agent: IAgent,
     role: CommunityRole
   ): Promise<IAgent> {
     const communityPolicyRole = this.getCommunityPolicyForRole(community, role);
+    await this.validateCommunityPolicyLimits(
+      community,
+      communityPolicyRole,
+      role,
+      CommunityContributorsUpdateType.ADD
+    );
+
     return await this.agentService.grantCredential({
       agentID: agent.id,
       type: communityPolicyRole.credential.type,
@@ -435,6 +485,13 @@ export class CommunityService {
     role: CommunityRole
   ): Promise<IAgent> {
     const communityPolicyRole = this.getCommunityPolicyForRole(community, role);
+    await this.validateCommunityPolicyLimits(
+      community,
+      communityPolicyRole,
+      role,
+      CommunityContributorsUpdateType.REMOVE
+    );
+
     return await this.agentService.revokeCredential({
       agentID: agent.id,
       type: communityPolicyRole.credential.type,
