@@ -129,31 +129,23 @@ export const getRelayStylePaginationResults = async <
 
   const startCursorItem = result?.[0];
   const startCursor = startCursorItem?.[cursorColumn];
+  const startCursorRowId = startCursorItem?.[SORTING_COLUMN];
 
   const endCursorItem = result.slice(-1)?.[0];
   const endCursor = endCursorItem?.[cursorColumn];
+  const endCursorRowId = endCursorItem?.[SORTING_COLUMN];
 
   const beforeQuery = originalQuery.clone();
   const afterQuery = originalQuery.clone();
 
   let countBefore = 0;
   let countAfter = 0;
-  // todo: can we simplify?
-  if (hasWhere) {
-    countBefore = await beforeQuery
-      .andWhere({ [cursorColumn]: LessThan(startCursor) })
-      .getCount();
-    countAfter = await afterQuery
-      .andWhere({ [cursorColumn]: MoreThan(endCursor) })
-      .getCount();
-  } else {
-    countBefore = await beforeQuery
-      .where({ [cursorColumn]: LessThan(startCursor) })
-      .getCount();
-    countAfter = await afterQuery
-      .where({ [cursorColumn]: MoreThan(endCursor) })
-      .getCount();
-  }
+  countBefore = await beforeQuery[hasWhere ? 'andWhere' : 'where']({
+    [SORTING_COLUMN]: LessThan(startCursorRowId),
+  }).getCount();
+  countAfter = await afterQuery[hasWhere ? 'andWhere' : 'where']({
+    [SORTING_COLUMN]: MoreThan(endCursorRowId),
+  }).getCount();
 
   logger.verbose(`Items before ${startCursor}: ${countBefore}`);
   logger.verbose(`Items after ${endCursor}: ${countAfter}`);
