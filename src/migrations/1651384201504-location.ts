@@ -85,11 +85,9 @@ export class location1651384201504 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`user\` ADD \`city\` varchar(255) NOT NULL,  \`country\` varchar(255) NOT NULL`
+      `ALTER TABLE \`user\` ADD \`city\` varchar(255) NOT NULL, ADD  \`country\` varchar(255) NOT NULL`
     );
 
-    // todo: populate the city, country fields to users
-    // Copy over the user city / country fields
     const userProfiles: any[] = await queryRunner.query(
       `SELECT id, profileId, city, country FROM user`
     );
@@ -106,27 +104,18 @@ export class location1651384201504 implements MigrationInterface {
         if (locations.length === 1) {
           const location = locations[0];
           await queryRunner.query(
-            `UPDATE user SET city = '${location.city}' WHERE (id = '${userProfile.id}')`
-          );
-          await queryRunner.query(
-            `UPDATE user SET country = '${location.country}' WHERE (id = '${userProfile.id}')`
+            `UPDATE user SET city = '${location.city}', country = '${location.country}' WHERE (id = '${userProfile.id}')`
           );
         }
       }
     }
 
     await queryRunner.query(
-      `ALTER TABLE \`context\` DROP FOREIGN KEY \`FK_88888ca8ac212b8357637794d6f\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`context\` DROP COLUMN \`locationId\``
+      `ALTER TABLE \`context\` DROP FOREIGN KEY \`FK_88888ca8ac212b8357637794d6f\`, DROP COLUMN \`locationId\``
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`profile\` DROP FOREIGN KEY \`FK_77777ca8ac212b8357637794d6f\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`profile\` DROP COLUMN \`locationId\``
+      `ALTER TABLE \`profile\` DROP FOREIGN KEY \`FK_77777ca8ac212b8357637794d6f\`, DROP COLUMN \`locationId\``
     );
 
     await queryRunner.query('DROP TABLE `location`');
