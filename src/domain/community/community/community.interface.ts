@@ -3,7 +3,6 @@ import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IGroupable } from '@domain/common/interfaces/groupable.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { ICredential } from '@domain/agent/credential/credential.interface';
 import { ICommunication } from '@domain/communication/communication';
 import { CommunityType } from '@common/enums/community.type';
 
@@ -23,8 +22,7 @@ export abstract class ICommunity extends IAuthorizable {
 
   parentCommunity?: ICommunity;
 
-  // The credential profile that is used for determining membership of this community
-  credential?: ICredential;
+  policy!: string;
 
   hubID!: string;
 

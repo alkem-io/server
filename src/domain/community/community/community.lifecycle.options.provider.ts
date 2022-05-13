@@ -13,6 +13,7 @@ import { CommunityService } from './community.service';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Injectable()
 export class CommunityLifecycleOptionsProvider {
@@ -69,17 +70,18 @@ export class CommunityLifecycleOptionsProvider {
           }
         );
         const userID = application.user?.id;
-        const communityID = application.community?.id;
-        if (!userID || !communityID)
+        const community = application.community;
+        if (!userID || !community)
           throw new EntityNotInitializedException(
             `Lifecycle not initialized on Application: ${application.id}`,
             LogContext.COMMUNITY
           );
 
-        await this.communityService.assignMember({
-          userID: userID,
-          communityID: communityID,
-        });
+        await this.communityService.assignUserToRole(
+          community,
+          userID,
+          CommunityRole.MEMBER
+        );
       },
     },
     guards: {

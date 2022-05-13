@@ -15,8 +15,8 @@ import { UserService } from '@domain/community/user/user.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
-import { AssignCommunityMemberInput } from './dto/community.dto.assign.member';
-import { RemoveCommunityMemberInput } from './dto/community.dto.remove.member';
+import { AssignCommunityMemberUserInput } from './dto/community.dto.assign.member.user';
+import { RemoveCommunityMemberUserInput } from './dto/community.dto.remove.member.user';
 import { ClientProxy } from '@nestjs/microservices';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
@@ -31,6 +31,12 @@ import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto
 import { AlkemioUserClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.alkemio.user';
 import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 import { CreateUserGroupInput } from '../user-group/dto';
+import { AssignCommunityMemberOrganizationInput } from './dto/community.dto.assign.member.organization';
+import { RemoveCommunityMemberOrganizationInput } from './dto/community.dto.remove.member.organization';
+import { AssignCommunityLeadOrganizationInput } from './dto/community.dto.assign.lead.organization';
+import { RemoveCommunityLeadOrganizationInput } from './dto/community.dto.remove.lead.organization';
+import { RemoveCommunityLeadUserInput } from './dto/community.dto.remove.lead.user';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -79,9 +85,9 @@ export class CommunityResolverMutations {
     description: 'Assigns a User as a member of the specified Community.',
   })
   @Profiling.api
-  async assignUserToCommunity(
+  async assignUserAsCommunityMember(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignCommunityMemberInput
+    @Args('membershipData') membershipData: AssignCommunityMemberUserInput
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
       membershipData.communityID
@@ -92,7 +98,11 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.GRANT,
       `assign user community: ${community.displayName}`
     );
-    await this.communityService.assignMember(membershipData);
+    await this.communityService.assignUserToRole(
+      community,
+      membershipData.userID,
+      CommunityRole.MEMBER
+    );
 
     // reset the user authorization policy so that their profile is visible to other community members
     const user = await this.userService.getUserOrFail(membershipData.userID);
@@ -103,12 +113,66 @@ export class CommunityResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICommunity, {
+    description:
+      'Assigns an Organization as a member of the specified Community.',
+  })
+  @Profiling.api
+  async assignOrganizationAsCommunityMember(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData')
+    membershipData: AssignCommunityMemberOrganizationInput
+  ): Promise<ICommunity> {
+    const community = await this.communityService.getCommunityOrFail(
+      membershipData.communityID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.GRANT,
+      `assign organization community member: ${community.displayName}`
+    );
+    return await this.communityService.assignOrganizationToRole(
+      community,
+      membershipData.organizationID,
+      CommunityRole.MEMBER
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICommunity, {
+    description:
+      'Assigns an Organization as a Lead of the specified Community.',
+  })
+  @Profiling.api
+  async assignOrganizationAsCommunityLead(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('leadershipData')
+    leadershipData: AssignCommunityLeadOrganizationInput
+  ): Promise<ICommunity> {
+    const community = await this.communityService.getCommunityOrFail(
+      leadershipData.communityID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.GRANT,
+      `assign organization community lead: ${community.displayName}`
+    );
+    return await this.communityService.assignOrganizationToRole(
+      community,
+      leadershipData.organizationID,
+      CommunityRole.LEAD
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICommunity, {
     description: 'Removes a User as a member of the specified Community.',
   })
   @Profiling.api
-  async removeUserFromCommunity(
+  async removeUserAsCommunityMember(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveCommunityMemberInput
+    @Args('membershipData') membershipData: RemoveCommunityMemberUserInput
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
       membershipData.communityID
@@ -120,12 +184,98 @@ export class CommunityResolverMutations {
       `remove user community: ${community.displayName}`
     );
 
-    await this.communityService.removeMember(membershipData);
+    await this.communityService.removeUserFromRole(
+      community,
+      membershipData.userID,
+      CommunityRole.MEMBER
+    );
     // reset the user authorization policy so that their profile is not visible
     // to other community members
     const user = await this.userService.getUserOrFail(membershipData.userID);
     await this.userAuthorizationService.applyAuthorizationPolicy(user);
     return community;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICommunity, {
+    description: 'Removes a User as a member of the specified Community.',
+  })
+  @Profiling.api
+  async removeUserAsCommunityLead(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('leadershipData') leadershipData: RemoveCommunityLeadUserInput
+  ): Promise<ICommunity> {
+    const community = await this.communityService.getCommunityOrFail(
+      leadershipData.communityID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.GRANT,
+      `remove user community: ${community.displayName}`
+    );
+
+    return await this.communityService.removeUserFromRole(
+      community,
+      leadershipData.userID,
+      CommunityRole.LEAD
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICommunity, {
+    description:
+      'Removes an Organization as a member of the specified Community.',
+  })
+  @Profiling.api
+  async removeOrganizationAsCommunityMember(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData')
+    membershipData: RemoveCommunityMemberOrganizationInput
+  ): Promise<ICommunity> {
+    const community = await this.communityService.getCommunityOrFail(
+      membershipData.communityID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.GRANT,
+      `remove community member organization: ${community.displayName}`
+    );
+
+    return await this.communityService.removeOrganizationFromRole(
+      community,
+      membershipData.organizationID,
+      CommunityRole.MEMBER
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICommunity, {
+    description:
+      'Removes an Organization as a Lead of the specified Community.',
+  })
+  @Profiling.api
+  async removeOrganizationAsCommunityLead(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('leadershipData')
+    leadershipData: RemoveCommunityLeadOrganizationInput
+  ): Promise<ICommunity> {
+    const community = await this.communityService.getCommunityOrFail(
+      leadershipData.communityID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.GRANT,
+      `remove community member organization: ${community.displayName}`
+    );
+
+    return await this.communityService.removeOrganizationFromRole(
+      community,
+      leadershipData.organizationID,
+      CommunityRole.LEAD
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -203,10 +353,11 @@ export class CommunityResolverMutations {
       );
     this.notificationsClient.emit(EventType.COMMUNITY_NEW_MEMBER, payload);
 
-    return await this.communityService.assignMember({
-      userID: agentInfo.userID,
-      communityID: joiningData.communityID,
-    });
+    return await this.communityService.assignUserToRole(
+      community,
+      agentInfo.userID,
+      CommunityRole.MEMBER
+    );
   }
 
   @UseGuards(GraphqlGuard)

@@ -57,12 +57,14 @@ export class ChallengeResolverMutations {
       challengeData,
       agentInfo
     );
-    const communityCredential =
-      await this.challengeService.getCommunityCredential(challenge.id);
+    const membershipCredentialDef =
+      await this.challengeService.getCommunityMembershipCredential(
+        challenge.id
+      );
     return await this.challengeAuthorizationService.applyAuthorizationPolicy(
       childChallenge,
       challenge.authorization,
-      communityCredential
+      membershipCredentialDef
     );
   }
 

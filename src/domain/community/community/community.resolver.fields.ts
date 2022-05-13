@@ -9,6 +9,8 @@ import { IUserGroup } from '@domain/community/user-group';
 import { IApplication } from '@domain/community/application';
 import { AuthorizationPrivilege } from '@common/enums';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
+import { IOrganization } from '../organization';
+import { CommunityRole } from '@common/enums/community.role';
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}
@@ -26,13 +28,58 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('members', () => [IUser], {
+  @ResolveField('memberUsers', () => [IUser], {
     nullable: true,
     description: 'All users that are contributing to this Community.',
   })
   @Profiling.api
-  async members(@Parent() community: Community) {
-    return await this.communityService.getMembers(community);
+  async memberUsers(@Parent() community: Community) {
+    return await this.communityService.getUsersWithRole(
+      community,
+      CommunityRole.MEMBER
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('memberOrganizations', () => [IOrganization], {
+    nullable: true,
+    description: 'All Organizations that are contributing to this Community.',
+  })
+  @Profiling.api
+  async memberOrganizations(@Parent() community: Community) {
+    return await this.communityService.getOrganizationsWithRole(
+      community,
+      CommunityRole.MEMBER
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('leadUsers', () => [IUser], {
+    nullable: true,
+    description: 'All users that are leads in this Community.',
+  })
+  @Profiling.api
+  async leadUsers(@Parent() community: Community) {
+    return await this.communityService.getUsersWithRole(
+      community,
+      CommunityRole.LEAD
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('leadOrganizations', () => [IOrganization], {
+    nullable: true,
+    description: 'All Organizations that are leads in this Community.',
+  })
+  @Profiling.api
+  async leadOrganizations(@Parent() community: Community) {
+    return await this.communityService.getOrganizationsWithRole(
+      community,
+      CommunityRole.LEAD
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

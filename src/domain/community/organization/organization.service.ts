@@ -338,6 +338,22 @@ export class OrganizationService {
     return organization;
   }
 
+  async getOrganizationAndAgent(
+    organizationID: string
+  ): Promise<{ organization: IOrganization; agent: IAgent }> {
+    const organization = await this.getOrganizationOrFail(organizationID, {
+      relations: ['agent'],
+    });
+
+    if (!organization.agent) {
+      throw new EntityNotInitializedException(
+        `Organization Agent not initialized: ${organizationID}`,
+        LogContext.AUTH
+      );
+    }
+    return { organization: organization, agent: organization.agent };
+  }
+
   async getOrganizations(
     limit?: number,
     shuffle = false
