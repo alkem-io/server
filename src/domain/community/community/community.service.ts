@@ -127,13 +127,7 @@ export class CommunityService {
   async removeCommunity(communityID: string): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const community = await this.getCommunityOrFail(communityID, {
-      relations: [
-        'applications',
-        'groups',
-        'communication',
-        'membershipCredential',
-        'leadershipCredential',
-      ],
+      relations: ['applications', 'groups', 'communication'],
     });
 
     // Remove all groups
