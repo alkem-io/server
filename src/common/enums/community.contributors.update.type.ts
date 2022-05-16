@@ -1,4 +1,4 @@
 export enum CommunityContributorsUpdateType {
-  ADD = 'add',
+  ASSIGN = 'assign',
   REMOVE = 'remove',
 }

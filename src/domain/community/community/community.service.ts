@@ -258,20 +258,6 @@ export class CommunityService {
     });
   }
 
-  async countUsersWithRole(
-    community: ICommunity,
-    role: CommunityRole
-  ): Promise<number> {
-    const membershipCredential = this.getCredentialDefinitionForRole(
-      community,
-      role
-    );
-    return await this.userService.countUsersWithCredentials({
-      type: membershipCredential.type,
-      resourceID: membershipCredential.resourceID,
-    });
-  }
-
   async getOrganizationsWithRole(
     community: ICommunity,
     role: CommunityRole
@@ -286,18 +272,31 @@ export class CommunityService {
     });
   }
 
-  async countOrganizationsWithRole(
+  async countContributorsPerRole(
     community: ICommunity,
-    role: CommunityRole
+    role: CommunityRole,
+    contributorType: CommunityContributorType
   ): Promise<number> {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
       role
     );
-    return await this.organizationService.countOrganizationsWithCredentials({
-      type: membershipCredential.type,
-      resourceID: membershipCredential.resourceID,
-    });
+
+    if (contributorType == CommunityContributorType.ORGANIZATION) {
+      return await this.organizationService.countOrganizationsWithCredentials({
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      });
+    }
+
+    if (contributorType == CommunityContributorType.USER) {
+      return await this.userService.countUsersWithCredentials({
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      });
+    }
+
+    return 0;
   }
 
   getCredentialDefinitionForRole(
@@ -325,8 +324,12 @@ export class CommunityService {
       );
     }
 
-    const rolePolicy = this.getCommunityPolicyForRole(community, role);
-    await this.grantCommunityRole(agent, rolePolicy.credential);
+    user.agent = await this.assignContributorToRole(
+      community,
+      agent,
+      role,
+      CommunityContributorType.USER
+    );
 
     if (role === CommunityRole.MEMBER) {
       // register the user for the community rooms
@@ -454,6 +457,68 @@ export class CommunityService {
     return community;
   }
 
+  private async validateUserCommunityPolicy(
+    community: ICommunity,
+    communityPolicyRole: CommunityPolicyRole,
+    role: CommunityRole,
+    action: CommunityContributorsUpdateType
+  ) {
+    const userMembersCount = await this.countContributorsPerRole(
+      community,
+      role,
+      CommunityContributorType.USER
+    );
+
+    if (action == CommunityContributorsUpdateType.ASSIGN) {
+      if (userMembersCount == communityPolicyRole.maxUser) {
+        throw new CommunityPolicyRoleLimitsException(
+          'Max limit of users reached, cannot assign new user.',
+          LogContext.COMMUNITY
+        );
+      }
+    }
+
+    if (action == CommunityContributorsUpdateType.REMOVE) {
+      if (userMembersCount == communityPolicyRole.minUser) {
+        throw new CommunityPolicyRoleLimitsException(
+          'Min limit of users reached, cannot remove user.',
+          LogContext.COMMUNITY
+        );
+      }
+    }
+  }
+
+  private async validateOrganizationCommunityPolicy(
+    community: ICommunity,
+    communityPolicyRole: CommunityPolicyRole,
+    role: CommunityRole,
+    action: CommunityContributorsUpdateType
+  ) {
+    const orgMemberCount = await this.countContributorsPerRole(
+      community,
+      role,
+      CommunityContributorType.ORGANIZATION
+    );
+
+    if (action == CommunityContributorsUpdateType.ASSIGN) {
+      if (orgMemberCount == communityPolicyRole.maxOrg) {
+        throw new CommunityPolicyRoleLimitsException(
+          'Max limit of organizations reached, cannot assign new organization.',
+          LogContext.COMMUNITY
+        );
+      }
+    }
+
+    if (action == CommunityContributorsUpdateType.REMOVE) {
+      if (orgMemberCount == communityPolicyRole.minOrg) {
+        throw new CommunityPolicyRoleLimitsException(
+          'Min limit of organizations reached, cannot remove organization.',
+          LogContext.COMMUNITY
+        );
+      }
+    }
+  }
+
   private async validateCommunityPolicyLimits(
     community: ICommunity,
     communityPolicyRole: CommunityPolicyRole,
@@ -461,52 +526,21 @@ export class CommunityService {
     action: CommunityContributorsUpdateType,
     contributorType: CommunityContributorType
   ) {
-    if (contributorType == CommunityContributorType.USER) {
-      const userMembersCount = await this.countUsersWithRole(community, role);
-
-      if (action == CommunityContributorsUpdateType.ADD) {
-        if (userMembersCount == communityPolicyRole.maxUser) {
-          throw new CommunityPolicyRoleLimitsException(
-            'Max limit of users reached, cannot add new user.',
-            LogContext.COMMUNITY
-          );
-        }
-      }
-
-      if (action == CommunityContributorsUpdateType.REMOVE) {
-        if (userMembersCount == communityPolicyRole.minUser) {
-          throw new CommunityPolicyRoleLimitsException(
-            'Min limit of users reached, cannot remove users.',
-            LogContext.COMMUNITY
-          );
-        }
-      }
-    }
-
-    if (contributorType == CommunityContributorType.ORGANIZATION) {
-      const orgMemberCount = await this.countOrganizationsWithRole(
+    if (contributorType == CommunityContributorType.USER)
+      this.validateUserCommunityPolicy(
         community,
-        role
+        communityPolicyRole,
+        role,
+        action
       );
 
-      if (action == CommunityContributorsUpdateType.ADD) {
-        if (orgMemberCount == communityPolicyRole.maxOrg) {
-          throw new CommunityPolicyRoleLimitsException(
-            'Max limit of organizations reached, cannot add new organization.',
-            LogContext.COMMUNITY
-          );
-        }
-      }
-
-      if (action == CommunityContributorsUpdateType.REMOVE) {
-        if (orgMemberCount == communityPolicyRole.minOrg) {
-          throw new CommunityPolicyRoleLimitsException(
-            'Min limit of organizations reached, cannot remove organization.',
-            LogContext.COMMUNITY
-          );
-        }
-      }
-    }
+    if (contributorType == CommunityContributorType.ORGANIZATION)
+      this.validateOrganizationCommunityPolicy(
+        community,
+        communityPolicyRole,
+        role,
+        action
+      );
   }
 
   private async assignContributorToRole(
@@ -520,7 +554,7 @@ export class CommunityService {
       community,
       communityPolicyRole,
       role,
-      CommunityContributorsUpdateType.ADD,
+      CommunityContributorsUpdateType.ASSIGN,
       contributorType
     );
 
