@@ -276,14 +276,14 @@ export class CommunityService {
       role
     );
 
-    if (contributorType == CommunityContributorType.ORGANIZATION) {
+    if (contributorType === CommunityContributorType.ORGANIZATION) {
       return await this.organizationService.countOrganizationsWithCredentials({
         type: membershipCredential.type,
         resourceID: membershipCredential.resourceID,
       });
     }
 
-    if (contributorType == CommunityContributorType.USER) {
+    if (contributorType === CommunityContributorType.USER) {
       return await this.userService.countUsersWithCredentials({
         type: membershipCredential.type,
         resourceID: membershipCredential.resourceID,
@@ -470,8 +470,8 @@ export class CommunityService {
       CommunityContributorType.USER
     );
 
-    if (action == CommunityContributorsUpdateType.ASSIGN) {
-      if (userMembersCount == communityPolicyRole.maxUser) {
+    if (action === CommunityContributorsUpdateType.ASSIGN) {
+      if (userMembersCount === communityPolicyRole.maxUser) {
         throw new CommunityPolicyRoleLimitsException(
           'Max limit of users reached, cannot assign new user.',
           LogContext.COMMUNITY
@@ -479,8 +479,8 @@ export class CommunityService {
       }
     }
 
-    if (action == CommunityContributorsUpdateType.REMOVE) {
-      if (userMembersCount == communityPolicyRole.minUser) {
+    if (action === CommunityContributorsUpdateType.REMOVE) {
+      if (userMembersCount === communityPolicyRole.minUser) {
         throw new CommunityPolicyRoleLimitsException(
           'Min limit of users reached, cannot remove user.',
           LogContext.COMMUNITY
@@ -501,8 +501,8 @@ export class CommunityService {
       CommunityContributorType.ORGANIZATION
     );
 
-    if (action == CommunityContributorsUpdateType.ASSIGN) {
-      if (orgMemberCount == communityPolicyRole.maxOrg) {
+    if (action === CommunityContributorsUpdateType.ASSIGN) {
+      if (orgMemberCount === communityPolicyRole.maxOrg) {
         throw new CommunityPolicyRoleLimitsException(
           'Max limit of organizations reached, cannot assign new organization.',
           LogContext.COMMUNITY
@@ -510,8 +510,8 @@ export class CommunityService {
       }
     }
 
-    if (action == CommunityContributorsUpdateType.REMOVE) {
-      if (orgMemberCount == communityPolicyRole.minOrg) {
+    if (action === CommunityContributorsUpdateType.REMOVE) {
+      if (orgMemberCount === communityPolicyRole.minOrg) {
         throw new CommunityPolicyRoleLimitsException(
           'Min limit of organizations reached, cannot remove organization.',
           LogContext.COMMUNITY
@@ -527,7 +527,7 @@ export class CommunityService {
     action: CommunityContributorsUpdateType,
     contributorType: CommunityContributorType
   ) {
-    if (contributorType == CommunityContributorType.USER)
+    if (contributorType === CommunityContributorType.USER)
       await this.validateUserCommunityPolicy(
         community,
         communityPolicyRole,
@@ -535,7 +535,7 @@ export class CommunityService {
         action
       );
 
-    if (contributorType == CommunityContributorType.ORGANIZATION)
+    if (contributorType === CommunityContributorType.ORGANIZATION)
       await this.validateOrganizationCommunityPolicy(
         community,
         communityPolicyRole,
