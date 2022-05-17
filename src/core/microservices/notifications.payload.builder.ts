@@ -15,6 +15,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { CreateNVPInput } from '@src/domain/common/nvp/nvp.dto.create';
+import { IAspect } from '@src/domain';
+import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 
 @Injectable()
 export class NotificationsPayloadBuilder {
@@ -55,6 +57,22 @@ export class NotificationsPayloadBuilder {
     await this.buildHubPayload(payload, community);
 
     return payload;
+  }
+
+  async buildAspectCreatedPayload(aspect: IAspect) {
+    return {
+      userID: aspect.createdBy,
+      displayName: aspect.displayName,
+    };
+  }
+
+  async buildCommentCreatedOnAspectPayload(
+    message: CommunicationMessageResult
+  ) {
+    return {
+      userID: message.sender,
+      message: message.message,
+    };
   }
 
   async buildCommunityNewMemberPayload(userID: string, community: ICommunity) {

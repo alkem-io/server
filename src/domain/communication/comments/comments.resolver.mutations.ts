@@ -13,9 +13,15 @@ import { MessageID } from '@domain/common/scalars';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_UPDATE_MESSAGE } from '@common/constants/providers';
+import {
+  NOTIFICATIONS_SERVICE,
+  SUBSCRIPTION_UPDATE_MESSAGE,
+} from '@common/constants/providers';
 import { CommentsMessageReceived } from './dto/comments.dto.event.message.received';
 import { CommentsAuthorizationService } from './comments.service.authorization';
+import { EventType } from '@common/enums/event.type';
+import { NotificationsPayloadBuilder } from '@core/microservices';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Resolver()
 export class CommentsResolverMutations {
@@ -24,7 +30,9 @@ export class CommentsResolverMutations {
     private commentsService: CommentsService,
     private commentsAuthorizationService: CommentsAuthorizationService,
     @Inject(SUBSCRIPTION_UPDATE_MESSAGE)
-    private readonly subscriptionUpdateMessage: PubSubEngine
+    private readonly subscriptionUpdateMessage: PubSubEngine,
+    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -63,6 +71,16 @@ export class CommentsResolverMutations {
     this.subscriptionUpdateMessage.publish(
       SubscriptionType.COMMUNICATION_COMMENTS_MESSAGE_RECEIVED,
       subscriptionPayload
+    );
+
+    const payload =
+      await this.notificationsPayloadBuilder.buildCommentCreatedOnAspectPayload(
+        commentSent
+      );
+
+    this.notificationsClient.emit<number>(
+      EventType.COMMENT_CREATED_ON_ASPECT,
+      payload
     );
 
     return commentSent;
