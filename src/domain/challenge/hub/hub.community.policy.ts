@@ -17,7 +17,7 @@ export const hubCommunityPolicy: CommunityPolicy = {
       type: AuthorizationCredential.HUB_HOST,
       resourceID: '',
     },
-    minOrg: 1,
+    minOrg: 0,
     maxOrg: 1,
     minUser: 0,
     maxUser: 2,
