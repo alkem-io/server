@@ -528,7 +528,7 @@ export class CommunityService {
     contributorType: CommunityContributorType
   ) {
     if (contributorType == CommunityContributorType.USER)
-      this.validateUserCommunityPolicy(
+      await this.validateUserCommunityPolicy(
         community,
         communityPolicyRole,
         role,
@@ -536,7 +536,7 @@ export class CommunityService {
       );
 
     if (contributorType == CommunityContributorType.ORGANIZATION)
-      this.validateOrganizationCommunityPolicy(
+      await this.validateOrganizationCommunityPolicy(
         community,
         communityPolicyRole,
         role,
