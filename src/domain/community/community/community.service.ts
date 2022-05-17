@@ -326,19 +326,26 @@ export class CommunityService {
     );
 
     if (role === CommunityRole.MEMBER) {
-      // register the user for the community rooms
-      const communication = await this.getCommunication(community.id);
-      this.communicationService
-        .addUserToCommunications(communication, user.communicationID)
-        .catch(error =>
-          this.logger.error?.(
-            `Unable to add user to community messaging (${community.displayName}): ${error}`,
-            LogContext.COMMUNICATION
-          )
-        );
+      this.addMemberToCommunication(user, community);
     }
 
     return community;
+  }
+
+  private async addMemberToCommunication(
+    user: IUser,
+    community: ICommunity
+  ): Promise<void> {
+    // register the user for the community rooms
+    const communication = await this.getCommunication(community.id);
+    this.communicationService
+      .addUserToCommunications(communication, user.communicationID)
+      .catch(error =>
+        this.logger.error?.(
+          `Unable to add user to community messaging (${community.displayName}): ${error}`,
+          LogContext.COMMUNICATION
+        )
+      );
   }
 
   private async isMemberInParentCommunity(
