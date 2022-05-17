@@ -37,6 +37,7 @@ import { AssignCommunityLeadOrganizationInput } from './dto/community.dto.assign
 import { RemoveCommunityLeadOrganizationInput } from './dto/community.dto.remove.lead.organization';
 import { RemoveCommunityLeadUserInput } from './dto/community.dto.remove.lead.user';
 import { CommunityRole } from '@common/enums/community.role';
+import { AssignCommunityLeadUserInput } from './dto/community.dto.assign.lead.user';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -106,6 +107,37 @@ export class CommunityResolverMutations {
 
     // reset the user authorization policy so that their profile is visible to other community members
     const user = await this.userService.getUserOrFail(membershipData.userID);
+    await this.userAuthorizationService.applyAuthorizationPolicy(user);
+
+    return community;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICommunity, {
+    description: 'Assigns a User as a lead of the specified Community.',
+  })
+  @Profiling.api
+  async assignUserAsCommunityLead(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('leadershipData') leadershipData: AssignCommunityLeadUserInput
+  ): Promise<ICommunity> {
+    const community = await this.communityService.getCommunityOrFail(
+      leadershipData.communityID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.GRANT,
+      `assign user community: ${community.displayName}`
+    );
+    await this.communityService.assignUserToRole(
+      community,
+      leadershipData.userID,
+      CommunityRole.LEAD
+    );
+
+    // reset the user authorization policy so that their profile is visible to other community members
+    const user = await this.userService.getUserOrFail(leadershipData.userID);
     await this.userAuthorizationService.applyAuthorizationPolicy(user);
 
     return community;
