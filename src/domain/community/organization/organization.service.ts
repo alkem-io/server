@@ -529,6 +529,25 @@ export class OrganizationService {
     return results;
   }
 
+  async countOrganizationsWithCredentials(
+    credentialCriteria: CredentialsSearchInput
+  ): Promise<number> {
+    const credResourceID = credentialCriteria.resourceID || '';
+    const organizationMatchesCount = await this.organizationRepository
+      .createQueryBuilder('organization')
+      .leftJoinAndSelect('organization.agent', 'agent')
+      .leftJoinAndSelect('agent.credentials', 'credential')
+      .where('credential.type = :type')
+      .andWhere('credential.resourceID = :resourceID')
+      .setParameters({
+        type: `${credentialCriteria.type}`,
+        resourceID: credResourceID,
+      })
+      .getCount();
+
+    return organizationMatchesCount;
+  }
+
   async assignMember(
     membershipData: AssignOrganizationMemberInput
   ): Promise<IOrganization> {
