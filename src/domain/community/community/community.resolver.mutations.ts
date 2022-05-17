@@ -119,10 +119,10 @@ export class CommunityResolverMutations {
   @Profiling.api
   async assignUserAsCommunityLead(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignCommunityLeadUserInput
+    @Args('membershipData') leadershipData: AssignCommunityLeadUserInput
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
-      membershipData.communityID
+      leadershipData.communityID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -132,12 +132,12 @@ export class CommunityResolverMutations {
     );
     await this.communityService.assignUserToRole(
       community,
-      membershipData.userID,
+      leadershipData.userID,
       CommunityRole.LEAD
     );
 
     // reset the user authorization policy so that their profile is visible to other community members
-    const user = await this.userService.getUserOrFail(membershipData.userID);
+    const user = await this.userService.getUserOrFail(leadershipData.userID);
     await this.userAuthorizationService.applyAuthorizationPolicy(user);
 
     return community;
