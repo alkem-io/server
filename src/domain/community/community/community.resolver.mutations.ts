@@ -119,7 +119,7 @@ export class CommunityResolverMutations {
   @Profiling.api
   async assignUserAsCommunityLead(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') leadershipData: AssignCommunityLeadUserInput
+    @Args('leadershipData') leadershipData: AssignCommunityLeadUserInput
   ): Promise<ICommunity> {
     const community = await this.communityService.getCommunityOrFail(
       leadershipData.communityID
