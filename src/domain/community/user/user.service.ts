@@ -638,6 +638,25 @@ export class UserService {
     return results;
   }
 
+  async countUsersWithCredentials(
+    credentialCriteria: CredentialsSearchInput
+  ): Promise<number> {
+    const credResourceID = credentialCriteria.resourceID || '';
+    const userMatchesCount = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.agent', 'agent')
+      .leftJoinAndSelect('agent.credentials', 'credential')
+      .where('credential.type = :type')
+      .andWhere('credential.resourceID = :resourceID')
+      .setParameters({
+        type: `${credentialCriteria.type}`,
+        resourceID: credResourceID,
+      })
+      .getCount();
+
+    return userMatchesCount;
+  }
+
   getAgentOrFail(user: IUser): IAgent {
     const agent = user.agent;
     if (!agent)

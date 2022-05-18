@@ -96,6 +96,10 @@ export class HubService {
     // set immediate community parent and  community policy
     if (hub.community) {
       hub.community.parentID = hub.id;
+      hub.community = this.communityService.updateCommunityPolicyResourceID(
+        hub.community,
+        hub.id
+      );
     }
     hub.preferenceSet = await this.preferenceSetService.createPreferenceSet(
       PreferenceDefinitionSet.HUB,
