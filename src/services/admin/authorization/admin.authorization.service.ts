@@ -6,7 +6,7 @@ import {
   LogContext,
   AuthorizationCredential,
   AuthorizationPrivilege,
-  AuthorizationCredentialGlobal,
+  AuthorizationRoleGlobal,
 } from '@common/enums';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
@@ -189,7 +189,7 @@ export class AdminAuthorizationService {
   }
 
   isGlobalAuthorizationCredential(credentialType: string): boolean {
-    const values = Object.values(AuthorizationCredentialGlobal);
+    const values = Object.values(AuthorizationRoleGlobal);
     const match = values.find(value => value.toString() === credentialType);
     if (match) return true;
     return false;

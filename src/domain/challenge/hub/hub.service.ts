@@ -8,7 +8,11 @@ import {
 } from '@common/exceptions';
 import { IAgent } from '@domain/agent/agent';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { CreateHubInput, DeleteHubInput } from '@domain/challenge/hub';
+import {
+  CreateHubInput,
+  DeleteHubInput,
+  hubCommunityPolicy,
+} from '@domain/challenge/hub';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { IProject } from '@domain/collaboration/project';
@@ -45,11 +49,11 @@ import { AgentInfo } from '@src/core';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { ICredential } from '@domain/agent/credential/credential.interface';
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceType } from '@common/enums/preference.type';
 import { AspectService } from '@domain/context/aspect/aspect.service';
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @Injectable()
 export class HubService {
@@ -85,17 +89,17 @@ export class HubService {
       hub,
       hubData,
       hub.id,
-      CommunityType.HUB
-    );
-    // set the credential type in use by the community
-    await this.baseChallengeService.setMembershipCredential(
-      hub,
-      AuthorizationCredential.HUB_MEMBER
+      CommunityType.HUB,
+      hubCommunityPolicy
     );
 
-    // set immediate community parent
+    // set immediate community parent and  community policy
     if (hub.community) {
       hub.community.parentID = hub.id;
+      hub.community = this.communityService.updateCommunityPolicyResourceID(
+        hub.community,
+        hub.id
+      );
     }
     hub.preferenceSet = await this.preferenceSetService.createPreferenceSet(
       PreferenceDefinitionSet.HUB,
@@ -455,8 +459,10 @@ export class HubService {
     );
   }
 
-  async getCommunityCredential(hub: IHub): Promise<ICredential> {
-    return await this.baseChallengeService.getCommunityCredential(
+  async getCommunityMembershipCredential(
+    hub: IHub
+  ): Promise<CredentialDefinition> {
+    return await this.baseChallengeService.getCommunityMembershipCredential(
       hub.id,
       this.hubRepository
     );

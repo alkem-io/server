@@ -11,6 +11,7 @@ import {
   IOpportunity,
   CreateOpportunityInput,
   UpdateOpportunityInput,
+  opportunityCommunityPolicy,
 } from '@domain/collaboration/opportunity';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProjectService } from '@domain/collaboration/project/project.service';
@@ -69,8 +70,11 @@ export class OpportunityService {
       opportunity,
       opportunityData,
       hubID,
-      CommunityType.OPPORTUNITY
+      CommunityType.OPPORTUNITY,
+      opportunityCommunityPolicy
     );
+
+    await this.opportunityRepository.save(opportunity);
 
     // Lifecycle, that has both a default and extended version
     let machineConfig: any = opportunityLifecycleConfigDefault;
@@ -81,21 +85,19 @@ export class OpportunityService {
       machineConfig = opportunityLifecycleConfigExtended;
     }
 
-    await this.opportunityRepository.save(opportunity);
     // set immediate community parent
     if (opportunity.community) {
       opportunity.community.parentID = opportunity.id;
+      opportunity.community =
+        this.communityService.updateCommunityPolicyResourceID(
+          opportunity.community,
+          opportunity.id
+        );
     }
 
     opportunity.lifecycle = await this.lifecycleService.createLifecycle(
       opportunity.id,
       machineConfig
-    );
-
-    // set the credential type in use by the community
-    await this.baseChallengeService.setMembershipCredential(
-      opportunity,
-      AuthorizationCredential.OPPORTUNITY_MEMBER
     );
 
     if (agentInfo) {

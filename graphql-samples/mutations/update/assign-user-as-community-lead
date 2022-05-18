@@ -1,0 +1,13 @@
+mutation assignUserAsCommunityLead($leadershipData: AssignCommunityLeadUserInput!) {
+  assignUserAsCommunityLead(leadershipData: $leadershipData) {
+    id,
+  }
+}
+
+Variables:
+{
+  "leadershipData": {
+    "userID": "uuid",
+    "communityID": "uuid"
+  }
+}

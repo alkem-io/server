@@ -1,0 +1,13 @@
+mutation assignOrganizationAsCommunityMember($membershipData: AssignCommunityMemberOrganizationInput!) {
+  assignOrganizationAsCommunityMember(membershipData: $membershipData) {
+    id,
+  }
+}
+
+Variables:
+{
+  "membershipData": {
+    "organizationID": "uuid",
+    "communityID": "uuid"
+  }
+}

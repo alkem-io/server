@@ -150,7 +150,9 @@ export class OrganizationService {
   async updateOrganization(
     organizationData: UpdateOrganizationInput
   ): Promise<IOrganization> {
-    const organization = await this.getOrganizationOrFail(organizationData.ID);
+    const organization = await this.getOrganizationOrFail(organizationData.ID, {
+      relations: ['profile'],
+    });
 
     await this.checkDisplayNameOrFail(
       organizationData.displayName,
@@ -336,6 +338,22 @@ export class OrganizationService {
     return organization;
   }
 
+  async getOrganizationAndAgent(
+    organizationID: string
+  ): Promise<{ organization: IOrganization; agent: IAgent }> {
+    const organization = await this.getOrganizationOrFail(organizationID, {
+      relations: ['agent'],
+    });
+
+    if (!organization.agent) {
+      throw new EntityNotInitializedException(
+        `Organization Agent not initialized: ${organizationID}`,
+        LogContext.AUTH
+      );
+    }
+    return { organization: organization, agent: organization.agent };
+  }
+
   async getOrganizations(
     limit?: number,
     shuffle = false
@@ -509,6 +527,25 @@ export class OrganizationService {
       results.push(loadedOrganization);
     }
     return results;
+  }
+
+  async countOrganizationsWithCredentials(
+    credentialCriteria: CredentialsSearchInput
+  ): Promise<number> {
+    const credResourceID = credentialCriteria.resourceID || '';
+    const organizationMatchesCount = await this.organizationRepository
+      .createQueryBuilder('organization')
+      .leftJoinAndSelect('organization.agent', 'agent')
+      .leftJoinAndSelect('agent.credentials', 'credential')
+      .where('credential.type = :type')
+      .andWhere('credential.resourceID = :resourceID')
+      .setParameters({
+        type: `${credentialCriteria.type}`,
+        resourceID: credResourceID,
+      })
+      .getCount();
+
+    return organizationMatchesCount;
   }
 
   async assignMember(

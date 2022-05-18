@@ -119,6 +119,9 @@ export class AspectService {
     if (aspectData.description) {
       aspect.description = aspectData.description;
     }
+    if (aspectData.type) {
+      aspect.type = aspectData.type;
+    }
 
     if (aspectData.tags) {
       if (!aspect.tagset) {

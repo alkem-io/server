@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsOptional, MaxLength } from 'class-validator';
+import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
 import { CreateTagsetInput } from '@domain/common/tagset';
 import { LONG_TEXT_LENGTH } from '@src/common/constants';
 import { CreateReferenceInput } from '@domain/common/reference';
@@ -14,7 +14,7 @@ export class CreateProfileInput {
 
   @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(LONG_TEXT_LENGTH)
+  @ValidateNested()
   location?: CreateLocationInput;
 
   @Field(() => [CreateTagsetInput], { nullable: true })

@@ -1,5 +1,4 @@
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { CredentialModule } from '@domain/agent/credential/credential.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { CommunityModule } from '@domain/community/community/community.module';
@@ -18,7 +17,6 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     AuthorizationModule,
     ContextModule,
     CommunityModule,
-    CredentialModule,
     LifecycleModule,
     TagsetModule,
     NamingModule,

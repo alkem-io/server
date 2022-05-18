@@ -14,6 +14,7 @@ import { CommunicationAdminOrphanedUsageResult } from './dto/admin.communication
 import { CommunicationAdminRoomResult } from './dto/admin.communication.dto.orphaned.room.result';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
 import { ValidationException } from '@common/exceptions';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Injectable()
 export class AdminCommunicationService {
@@ -34,7 +35,10 @@ export class AdminCommunicationService {
     const community = await this.communityService.getCommunityOrFail(
       communicationData.communityID
     );
-    const communityMembers = await this.communityService.getMembers(community);
+    const communityMembers = await this.communityService.getUsersWithRole(
+      community,
+      CommunityRole.MEMBER
+    );
     const communication = await this.communityService.getCommunication(
       community.id
     );
@@ -115,7 +119,10 @@ export class AdminCommunicationService {
     const communication = await this.communityService.getCommunication(
       community.id
     );
-    const communityMembers = await this.communityService.getMembers(community);
+    const communityMembers = await this.communityService.getUsersWithRole(
+      community,
+      CommunityRole.MEMBER
+    );
     for (const communityMember of communityMembers) {
       await this.communicationService.addUserToCommunications(
         communication,

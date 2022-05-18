@@ -12,26 +12,30 @@ import {
   EntityNotInitializedException,
   InvalidStateTransitionException,
   ValidationException,
+  CommunityPolicyRoleLimitsException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IUser } from '@domain/community/user';
 import { CreateUserGroupInput } from '@domain/community/user-group/dto';
-import {
-  Community,
-  ICommunity,
-  AssignCommunityMemberInput,
-  RemoveCommunityMemberInput,
-} from '@domain/community/community';
+import { Community, ICommunity } from '@domain/community/community';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { ICredential } from '@domain/agent/credential';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { ICommunication } from '@domain/communication/communication';
 import { LogContext } from '@common/enums/logging.context';
 import { CommunityType } from '@common/enums/community.type';
+import { CommunityPolicy } from './community.policy';
+import { OrganizationService } from '../organization/organization.service';
+import { IOrganization } from '../organization/organization.interface';
+import { IAgent } from '@domain/agent/agent/agent.interface';
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+import { CommunityRole } from '@common/enums/community.role';
+import { CommunityPolicyRole } from './community.policy.role';
+import { CommunityContributorsUpdateType } from '@common/enums/community.contributors.update.type';
+import { CommunityContributorType } from '@common/enums/community.contributor.type';
 
 @Injectable()
 export class CommunityService {
@@ -39,6 +43,7 @@ export class CommunityService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private userService: UserService,
+    private organizationService: OrganizationService,
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
     private communicationService: CommunicationService,
@@ -50,7 +55,8 @@ export class CommunityService {
   async createCommunity(
     name: string,
     hubID: string,
-    type: CommunityType
+    type: CommunityType,
+    policy: CommunityPolicy
   ): Promise<ICommunity> {
     const community: ICommunity = new Community(name, type);
     community.authorization = new AuthorizationPolicy();
@@ -62,6 +68,8 @@ export class CommunityService {
         community.displayName,
         hubID
       );
+
+    this.setCommunityPolicy(community, policy);
     return await this.communityRepository.save(community);
   }
 
@@ -134,10 +142,20 @@ export class CommunityService {
       }
     }
 
-    // Remove all issued membership credentials
-    const members = await this.getMembers(community);
-    for (const member of members) {
-      await this.removeMember({ userID: member.id, communityID: community.id });
+    // Remove all issued role credentials for contributors
+    for (const role of Object.values(CommunityRole)) {
+      const users = await this.getUsersWithRole(community, role);
+      for (const user of users) {
+        await this.removeUserFromRole(community, user.id, role);
+      }
+
+      const organizations = await this.getOrganizationsWithRole(
+        community,
+        role
+      );
+      for (const organization of organizations) {
+        await this.removeOrganizationFromRole(community, organization.id, role);
+      }
     }
 
     if (community.authorization)
@@ -176,6 +194,36 @@ export class CommunityService {
     return undefined;
   }
 
+  getCommunityPolicy(community: ICommunity): CommunityPolicy {
+    if (!community.policy) {
+      throw new EntityNotInitializedException(
+        `Unable to locate communication for community: ${community.displayName}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const policy = JSON.parse(community.policy);
+    return policy;
+  }
+
+  setCommunityPolicy(
+    community: ICommunity,
+    policy: CommunityPolicy
+  ): ICommunity {
+    community.policy = JSON.stringify(policy);
+    return community;
+  }
+
+  updateCommunityPolicyResourceID(
+    community: ICommunity,
+    resourceID: string
+  ): ICommunity {
+    const policy = this.getCommunityPolicy(community);
+    // Update the Community policy to have the right resource ID
+    policy.member.credential.resourceID = resourceID;
+    policy.lead.credential.resourceID = resourceID;
+    return this.setCommunityPolicy(community, policy);
+  }
+
   async setParentCommunity(
     community?: ICommunity,
     parentCommunity?: ICommunity
@@ -190,51 +238,104 @@ export class CommunityService {
     return community;
   }
 
-  async getMembers(community: ICommunity): Promise<IUser[]> {
-    const membershipCredential = this.getMembershipCredential(community);
+  async getUsersWithRole(
+    community: ICommunity,
+    role: CommunityRole
+  ): Promise<IUser[]> {
+    const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      role
+    );
     return await this.userService.usersWithCredentials({
       type: membershipCredential.type,
       resourceID: membershipCredential.resourceID,
     });
   }
 
-  async assignMember(
-    membershipData: AssignCommunityMemberInput
-  ): Promise<ICommunity> {
-    const community = await this.getCommunityOrFail(
-      membershipData.communityID,
-      {
-        relations: ['parentCommunity'],
-      }
+  async getOrganizationsWithRole(
+    community: ICommunity,
+    role: CommunityRole
+  ): Promise<IOrganization[]> {
+    const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      role
     );
-    const userID = membershipData.userID;
-
-    // If the parent community is set, then check if the user is also a member there
-    if (community.parentCommunity) {
-      const isParentMember = await this.isMember(
-        userID,
-        community.parentCommunity.id
-      );
-      if (!isParentMember)
-        throw new ValidationException(
-          `User (${userID}) is not a member of parent community: ${community.parentCommunity.displayName}`,
-          LogContext.CHALLENGES
-        );
-    }
-
-    // Assign a credential for community membership
-    const { user, agent } = await this.userService.getUserAndAgent(
-      membershipData.userID
-    );
-
-    const membershipCredential = this.getMembershipCredential(community);
-
-    user.agent = await this.agentService.grantCredential({
-      agentID: agent.id,
+    return await this.organizationService.organizationsWithCredentials({
       type: membershipCredential.type,
       resourceID: membershipCredential.resourceID,
     });
+  }
 
+  async countContributorsPerRole(
+    community: ICommunity,
+    role: CommunityRole,
+    contributorType: CommunityContributorType
+  ): Promise<number> {
+    const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      role
+    );
+
+    if (contributorType === CommunityContributorType.ORGANIZATION) {
+      return await this.organizationService.countOrganizationsWithCredentials({
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      });
+    }
+
+    if (contributorType === CommunityContributorType.USER) {
+      return await this.userService.countUsersWithCredentials({
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      });
+    }
+
+    return 0;
+  }
+
+  getCredentialDefinitionForRole(
+    community: ICommunity,
+    role: CommunityRole
+  ): CredentialDefinition {
+    const policyRole = this.getCommunityPolicyForRole(community, role);
+    return policyRole.credential;
+  }
+
+  async assignUserToRole(
+    community: ICommunity,
+    userID: string,
+    role: CommunityRole
+  ): Promise<ICommunity> {
+    const { user, agent } = await this.userService.getUserAndAgent(userID);
+    const hasMemberRoleInParent = await this.isMemberInParentCommunity(
+      agent,
+      community.id
+    );
+    if (!hasMemberRoleInParent) {
+      throw new ValidationException(
+        `Agent (${agent.id}) is not a member of parent community: ${community.displayName}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    user.agent = await this.assignContributorToRole(
+      community,
+      agent,
+      role,
+      CommunityContributorType.USER
+    );
+
+    if (role === CommunityRole.MEMBER) {
+      this.addMemberToCommunication(user, community);
+    }
+
+    return community;
+  }
+
+  private async addMemberToCommunication(
+    user: IUser,
+    community: ICommunity
+  ): Promise<void> {
     // register the user for the community rooms
     const communication = await this.getCommunication(community.id);
     this.communicationService
@@ -245,8 +346,36 @@ export class CommunityService {
           LogContext.COMMUNICATION
         )
       );
+  }
 
-    return community;
+  private async isMemberInParentCommunity(
+    agent: IAgent,
+    communityID: string
+  ): Promise<boolean> {
+    const community = await this.getCommunityOrFail(communityID, {
+      relations: ['parentCommunity'],
+    });
+
+    // If the parent community is set, then check if the user is also a member there
+    if (community.parentCommunity) {
+      const isParentMember = await this.isMember(
+        agent,
+        community.parentCommunity.id
+      );
+      return isParentMember;
+    }
+    return true;
+  }
+
+  private async grantCommunityRole(
+    agent: IAgent,
+    roleCredential: CredentialDefinition
+  ): Promise<IAgent> {
+    return await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: roleCredential.type,
+      resourceID: roleCredential.resourceID,
+    });
   }
 
   async getCommunication(communityID: string): Promise<ICommunication> {
@@ -264,49 +393,223 @@ export class CommunityService {
     return communication;
   }
 
-  getMembershipCredential(community: ICommunity): ICredential {
-    const credential = community.credential;
-    if (!credential) {
-      throw new EntityNotInitializedException(
-        `Unable to locate credential type for community: ${community.displayName}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return credential;
-  }
-
-  async removeMember(
-    membershipData: RemoveCommunityMemberInput
+  async assignOrganizationToRole(
+    community: ICommunity,
+    organizationID: string,
+    role: CommunityRole
   ): Promise<ICommunity> {
-    const { user, agent } = await this.userService.getUserAndAgent(
-      membershipData.userID
+    const { organization, agent } =
+      await this.organizationService.getOrganizationAndAgent(organizationID);
+
+    organization.agent = await this.assignContributorToRole(
+      community,
+      agent,
+      role,
+      CommunityContributorType.ORGANIZATION
     );
 
-    const community = await this.getCommunityOrFail(membershipData.communityID);
-    const membershipCredential = this.getMembershipCredential(community);
-    user.agent = await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: membershipCredential.type,
-      resourceID: membershipCredential.resourceID,
-    });
-
-    const communication = await this.getCommunication(community.id);
-    this.communicationService
-      .removeUserFromCommunications(communication, user)
-      .catch(error =>
-        this.logger.error?.(
-          `Unable to add remove user from community messaging (${community.displayName}): ${error}`,
-          LogContext.COMMUNICATION
-        )
-      );
-
-    return await this.getCommunityOrFail(membershipData.communityID);
+    return community;
   }
 
-  async isMember(userID: string, communityID: string): Promise<boolean> {
-    const agent = await this.userService.getAgent(userID);
+  async removeUserFromRole(
+    community: ICommunity,
+    userID: string,
+    role: CommunityRole
+  ): Promise<ICommunity> {
+    const { user, agent } = await this.userService.getUserAndAgent(userID);
+
+    user.agent = await this.removeContributorFromRole(
+      community,
+      agent,
+      role,
+      CommunityContributorType.USER
+    );
+
+    if (role === CommunityRole.MEMBER) {
+      const communication = await this.getCommunication(community.id);
+      this.communicationService
+        .removeUserFromCommunications(communication, user)
+        .catch(error =>
+          this.logger.error?.(
+            `Unable to add remove user from community messaging (${community.displayName}): ${error}`,
+            LogContext.COMMUNICATION
+          )
+        );
+    }
+
+    return community;
+  }
+
+  async removeOrganizationFromRole(
+    community: ICommunity,
+    organizationID: string,
+    role: CommunityRole
+  ): Promise<ICommunity> {
+    const { organization, agent } =
+      await this.organizationService.getOrganizationAndAgent(organizationID);
+
+    organization.agent = await this.removeContributorFromRole(
+      community,
+      agent,
+      role,
+      CommunityContributorType.ORGANIZATION
+    );
+
+    return community;
+  }
+
+  private async validateUserCommunityPolicy(
+    community: ICommunity,
+    communityPolicyRole: CommunityPolicyRole,
+    role: CommunityRole,
+    action: CommunityContributorsUpdateType
+  ) {
+    const userMembersCount = await this.countContributorsPerRole(
+      community,
+      role,
+      CommunityContributorType.USER
+    );
+
+    if (action === CommunityContributorsUpdateType.ASSIGN) {
+      if (userMembersCount === communityPolicyRole.maxUser) {
+        throw new CommunityPolicyRoleLimitsException(
+          'Max limit of users reached, cannot assign new user.',
+          LogContext.COMMUNITY
+        );
+      }
+    }
+
+    if (action === CommunityContributorsUpdateType.REMOVE) {
+      if (userMembersCount === communityPolicyRole.minUser) {
+        throw new CommunityPolicyRoleLimitsException(
+          'Min limit of users reached, cannot remove user.',
+          LogContext.COMMUNITY
+        );
+      }
+    }
+  }
+
+  private async validateOrganizationCommunityPolicy(
+    community: ICommunity,
+    communityPolicyRole: CommunityPolicyRole,
+    role: CommunityRole,
+    action: CommunityContributorsUpdateType
+  ) {
+    const orgMemberCount = await this.countContributorsPerRole(
+      community,
+      role,
+      CommunityContributorType.ORGANIZATION
+    );
+
+    if (action === CommunityContributorsUpdateType.ASSIGN) {
+      if (orgMemberCount === communityPolicyRole.maxOrg) {
+        throw new CommunityPolicyRoleLimitsException(
+          'Max limit of organizations reached, cannot assign new organization.',
+          LogContext.COMMUNITY
+        );
+      }
+    }
+
+    if (action === CommunityContributorsUpdateType.REMOVE) {
+      if (orgMemberCount === communityPolicyRole.minOrg) {
+        throw new CommunityPolicyRoleLimitsException(
+          'Min limit of organizations reached, cannot remove organization.',
+          LogContext.COMMUNITY
+        );
+      }
+    }
+  }
+
+  private async validateCommunityPolicyLimits(
+    community: ICommunity,
+    communityPolicyRole: CommunityPolicyRole,
+    role: CommunityRole,
+    action: CommunityContributorsUpdateType,
+    contributorType: CommunityContributorType
+  ) {
+    if (contributorType === CommunityContributorType.USER)
+      await this.validateUserCommunityPolicy(
+        community,
+        communityPolicyRole,
+        role,
+        action
+      );
+
+    if (contributorType === CommunityContributorType.ORGANIZATION)
+      await this.validateOrganizationCommunityPolicy(
+        community,
+        communityPolicyRole,
+        role,
+        action
+      );
+  }
+
+  private async assignContributorToRole(
+    community: ICommunity,
+    agent: IAgent,
+    role: CommunityRole,
+    contributorType: CommunityContributorType
+  ): Promise<IAgent> {
+    const communityPolicyRole = this.getCommunityPolicyForRole(community, role);
+    await this.validateCommunityPolicyLimits(
+      community,
+      communityPolicyRole,
+      role,
+      CommunityContributorsUpdateType.ASSIGN,
+      contributorType
+    );
+
+    return await this.agentService.grantCredential({
+      agentID: agent.id,
+      type: communityPolicyRole.credential.type,
+      resourceID: communityPolicyRole.credential.resourceID,
+    });
+  }
+
+  private async removeContributorFromRole(
+    community: ICommunity,
+    agent: IAgent,
+    role: CommunityRole,
+    contributorType: CommunityContributorType
+  ): Promise<IAgent> {
+    const communityPolicyRole = this.getCommunityPolicyForRole(community, role);
+    await this.validateCommunityPolicyLimits(
+      community,
+      communityPolicyRole,
+      role,
+      CommunityContributorsUpdateType.REMOVE,
+      contributorType
+    );
+
+    return await this.agentService.revokeCredential({
+      agentID: agent.id,
+      type: communityPolicyRole.credential.type,
+      resourceID: communityPolicyRole.credential.resourceID,
+    });
+  }
+
+  private getCommunityPolicyForRole(
+    community: ICommunity,
+    role: CommunityRole
+  ): CommunityPolicyRole {
+    const policy = this.getCommunityPolicy(community);
+    if (role === CommunityRole.MEMBER) {
+      return policy.member;
+    } else if (role === CommunityRole.LEAD) {
+      return policy.lead;
+    }
+    throw new EntityNotFoundException(
+      `Unable to find Community role of type: ${role}`,
+      LogContext.COMMUNITY
+    );
+  }
+
+  async isMember(agent: IAgent, communityID: string): Promise<boolean> {
     const community = await this.getCommunityOrFail(communityID);
-    const membershipCredential = this.getMembershipCredential(community);
+    const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      CommunityRole.MEMBER
+    );
 
     const validCredential = await this.agentService.hasValidCredential(
       agent.id,
@@ -328,7 +631,9 @@ export class CommunityService {
   async createApplication(
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
-    const user = await this.userService.getUserOrFail(applicationData.userID);
+    const { user, agent } = await this.userService.getUserAndAgent(
+      applicationData.userID
+    );
     const community = (await this.getCommunityOrFail(applicationData.parentID, {
       relations: ['applications', 'parentCommunity'],
     })) as Community;
@@ -353,10 +658,7 @@ export class CommunityService {
     }
 
     // Check if the user is already a member; if so do not allow an application
-    const isExistingMember = await this.isMember(
-      applicationData.userID,
-      community.id
-    );
+    const isExistingMember = await this.isMember(agent, community.id);
     if (isExistingMember)
       throw new InvalidStateTransitionException(
         `User ${applicationData.userID} is already a member of the Community: ${community.displayName}.`,
@@ -406,14 +708,32 @@ export class CommunityService {
   }
 
   async getMembersCount(community: ICommunity): Promise<number> {
-    const membershipCredential = this.getMembershipCredential(community);
+    const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      CommunityRole.MEMBER
+    );
 
     const credentialMatches =
       await this.agentService.countAgentsWithMatchingCredentials({
         type: membershipCredential.type,
         resourceID: membershipCredential.resourceID,
       });
-    // Need to reduce by one to take into account that the community itself also holds a credential as reference
-    return credentialMatches - 1;
+
+    return credentialMatches;
+  }
+
+  async getLeadsCount(community: ICommunity): Promise<number> {
+    const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      CommunityRole.LEAD
+    );
+
+    const credentialMatches =
+      await this.agentService.countAgentsWithMatchingCredentials({
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      });
+
+    return credentialMatches;
   }
 }

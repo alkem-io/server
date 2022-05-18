@@ -262,9 +262,11 @@ export class AuthorizationPolicyService {
 
     for (const globalRole of globalRoles) {
       let credType: AuthorizationCredential;
-      if (globalRole === AuthorizationRoleGlobal.ADMIN) {
+      if (globalRole === AuthorizationRoleGlobal.GLOBAL_ADMIN) {
         credType = AuthorizationCredential.GLOBAL_ADMIN;
-      } else if (globalRole === AuthorizationRoleGlobal.COMMUNITY_ADMIN) {
+      } else if (
+        globalRole === AuthorizationRoleGlobal.GLOBAL_COMMUNITY_ADMIN
+      ) {
         credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
       } else {
         throw new ForbiddenException(

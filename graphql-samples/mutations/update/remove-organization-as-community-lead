@@ -1,0 +1,13 @@
+mutation removeOrganizationAsCommunityLead($leadershipData: RemoveCommunityLeadOrganizationInput!) {
+  removeOrganizationAsCommunityLead(leadershipData: $leadershipData) {
+    id,
+  }
+}
+
+Variables:
+{
+  "leadershipData": {
+    "organizationID": "uuid",
+    "communityID": "uuid"
+  }
+}

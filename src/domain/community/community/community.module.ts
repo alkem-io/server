@@ -9,6 +9,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TrustRegistryAdapterModule } from '@services/platform/trust-registry/trust.registry.adapter/trust.registry.adapter.module';
+import { OrganizationModule } from '../organization/organization.module';
 import { Community } from './community.entity';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { CommunityResolverFields } from './community.resolver.fields';
@@ -23,6 +24,7 @@ import { CommunityAuthorizationService } from './community.service.authorization
     AgentModule,
     UserGroupModule,
     UserModule,
+    OrganizationModule,
     ApplicationModule,
     CommunicationModule,
     LifecycleModule,

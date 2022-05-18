@@ -70,9 +70,8 @@ export class HubAuthorizationService {
       );
 
     // propagate authorization rules for child entities
-    const hubCommunityCredential = await this.hubService.getCommunityCredential(
-      hub
-    );
+    const hubCommunityCredential =
+      await this.hubService.getCommunityMembershipCredential(hub);
     hub.challenges = await this.hubService.getChallenges(hub);
     for (const challenge of hub.challenges) {
       await this.challengeAuthorizationService.applyAuthorizationPolicy(
