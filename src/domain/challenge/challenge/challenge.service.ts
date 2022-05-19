@@ -173,12 +173,6 @@ export class ChallengeService {
       }
     }
 
-    if (challengeData.leadOrganizations) {
-      await this.setChallengeLeads(
-        challenge.id,
-        challengeData.leadOrganizations
-      );
-    }
     return challenge;
   }
 
