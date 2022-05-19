@@ -31,17 +31,21 @@ import { subscriptionUpdateMessageFactory } from './subscription.update.message.
 import { subscriptionDiscussionUpdatedFactory } from './subscription.discussion.updated.factory';
 import { subscriptionProfileVerifiedCredentialFactory } from './subscription.profile.verified.credential.factory';
 import { subscriptionContextAspectCreatedFactory } from '@core/microservices/subscription.context.aspect.created.factory';
+import { Aspect } from '@src/domain';
 
 @Global()
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([Hub]),
-    TypeOrmModule.forFeature([Challenge]),
-    TypeOrmModule.forFeature([Opportunity]),
-    TypeOrmModule.forFeature([Community]),
-    TypeOrmModule.forFeature([Discussion]),
-    TypeOrmModule.forFeature([Communication]),
+    TypeOrmModule.forFeature([
+      Hub,
+      Challenge,
+      Opportunity,
+      Community,
+      Discussion,
+      Communication,
+      Aspect,
+    ]),
   ],
   providers: [
     NotificationsPayloadBuilder,

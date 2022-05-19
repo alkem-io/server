@@ -24,7 +24,7 @@ export class userPreferencesAspect1651759916148 implements MigrationInterface {
       {
         definitionSet: 'user',
         group: 'Notification',
-        displayName: 'New comment on my aspect',
+        displayName: 'New aspect created',
         description:
           'Receive notification when an aspect is created in community i am a member of',
         valueType: 'boolean',

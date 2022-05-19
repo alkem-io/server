@@ -108,7 +108,9 @@ export class ContextResolverMutations {
     );
 
     const payload =
-      await this.notificationsPayloadBuilder.buildAspectCreatedPayload(aspect);
+      await this.notificationsPayloadBuilder.buildAspectCreatedPayload(
+        aspect.id
+      );
 
     this.notificationsClient.emit<number>(EventType.ASPECT_CREATED, payload);
 
