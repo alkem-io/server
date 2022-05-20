@@ -6,4 +6,6 @@ export enum EventType {
   COMMUNICATION_UPDATE_SENT = 'communicationUpdateSent',
   COMMUNICATION_DISCUSSION_CREATED = 'communicationDiscussionCreated',
   COMMUNITY_CONTEXT_REVIEW_SUBMITTED = 'communityContextReviewSubmitted',
+  ASPECT_CREATED = 'aspectCreated',
+  COMMENT_CREATED_ON_ASPECT = 'commentCreatedOnAspect',
 }

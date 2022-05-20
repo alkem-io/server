@@ -1,4 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { ClientProxy } from '@nestjs/microservices';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { IReference } from '@domain/common/reference';
 import { ContextService } from '@domain/context/context/context.service';
@@ -21,7 +22,12 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { ContextAspectCreated } from '@domain/context/context/dto/context.dto.event.aspect.created';
 import { Inject } from '@nestjs/common';
-import { SUBSCRIPTION_CONTEXT_ASPECT_CREATED } from '@src/common/constants/providers';
+import {
+  NOTIFICATIONS_SERVICE,
+  SUBSCRIPTION_CONTEXT_ASPECT_CREATED,
+} from '@src/common/constants/providers';
+import { NotificationsPayloadBuilder } from '@core/microservices';
+import { EventType } from '@common/enums/event.type';
 
 @Resolver()
 export class ContextResolverMutations {
@@ -33,7 +39,9 @@ export class ContextResolverMutations {
     private aspectAuthorizationService: AspectAuthorizationService,
     private contextService: ContextService,
     @Inject(SUBSCRIPTION_CONTEXT_ASPECT_CREATED)
-    private aspectCreatedSubscription: PubSubEngine
+    private aspectCreatedSubscription: PubSubEngine,
+    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -98,6 +106,13 @@ export class ContextResolverMutations {
       SubscriptionType.CONTEXT_ASPECT_CREATED,
       aspectCreatedEvent
     );
+
+    const payload =
+      await this.notificationsPayloadBuilder.buildAspectCreatedPayload(
+        aspect.id
+      );
+
+    this.notificationsClient.emit<number>(EventType.ASPECT_CREATED, payload);
 
     return aspect;
   }
