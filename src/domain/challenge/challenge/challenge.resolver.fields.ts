@@ -116,14 +116,6 @@ export class ChallengeResolverFields {
     return await this.challengeService.getActivity(challenge);
   }
 
-  @ResolveField('leadOrganizations', () => [IOrganization], {
-    description: 'The Organizations that are leading this Challenge.',
-  })
-  @Profiling.api
-  async leadOrganizations(@Parent() challenge: Challenge) {
-    return await this.challengeService.getLeadOrganizations(challenge.id);
-  }
-
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('preferences', () => [IPreference], {
     nullable: false,

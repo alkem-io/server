@@ -1,6 +1,7 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
+import { getConnection } from 'typeorm';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
@@ -13,9 +14,15 @@ import { MessageID } from '@domain/common/scalars';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_UPDATE_MESSAGE } from '@common/constants/providers';
+import {
+  NOTIFICATIONS_SERVICE,
+  SUBSCRIPTION_UPDATE_MESSAGE,
+} from '@common/constants/providers';
 import { CommentsMessageReceived } from './dto/comments.dto.event.message.received';
 import { CommentsAuthorizationService } from './comments.service.authorization';
+import { EventType } from '@common/enums/event.type';
+import { NotificationsPayloadBuilder } from '@core/microservices';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Resolver()
 export class CommentsResolverMutations {
@@ -24,7 +31,9 @@ export class CommentsResolverMutations {
     private commentsService: CommentsService,
     private commentsAuthorizationService: CommentsAuthorizationService,
     @Inject(SUBSCRIPTION_UPDATE_MESSAGE)
-    private readonly subscriptionUpdateMessage: PubSubEngine
+    private readonly subscriptionUpdateMessage: PubSubEngine,
+    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -64,6 +73,26 @@ export class CommentsResolverMutations {
       SubscriptionType.COMMUNICATION_COMMENTS_MESSAGE_RECEIVED,
       subscriptionPayload
     );
+
+    const [result]: { displayName: string; createdBy: string }[] =
+      await getConnection().query(
+        `SELECT displayName, createdBy from aspect WHERE commentsId = '${messageData.commentsID}'`
+      );
+
+    if (result) {
+      const payload =
+        await this.notificationsPayloadBuilder.buildCommentCreatedOnAspectPayload(
+          result.displayName,
+          result.createdBy,
+          messageData.commentsID,
+          commentSent
+        );
+
+      this.notificationsClient.emit<number>(
+        EventType.COMMENT_CREATED_ON_ASPECT,
+        payload
+      );
+    }
 
     return commentSent;
   }
