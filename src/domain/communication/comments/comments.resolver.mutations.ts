@@ -1,6 +1,7 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
+import { getConnection } from 'typeorm';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
@@ -73,15 +74,25 @@ export class CommentsResolverMutations {
       subscriptionPayload
     );
 
-    const payload =
-      await this.notificationsPayloadBuilder.buildCommentCreatedOnAspectPayload(
-        commentSent
+    const [result]: { displayName: string; createdBy: string }[] =
+      await getConnection().query(
+        `SELECT displayName, createdBy from aspect WHERE commentsId = '${messageData.commentsID}'`
       );
 
-    this.notificationsClient.emit<number>(
-      EventType.COMMENT_CREATED_ON_ASPECT,
-      payload
-    );
+    if (result) {
+      const payload =
+        await this.notificationsPayloadBuilder.buildCommentCreatedOnAspectPayload(
+          result.displayName,
+          result.createdBy,
+          messageData.commentsID,
+          commentSent
+        );
+
+      this.notificationsClient.emit<number>(
+        EventType.COMMENT_CREATED_ON_ASPECT,
+        payload
+      );
+    }
 
     return commentSent;
   }

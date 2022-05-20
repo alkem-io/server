@@ -17,7 +17,10 @@ import { getConnection, Repository } from 'typeorm';
 import { CreateNVPInput } from '@src/domain/common/nvp/nvp.dto.create';
 import { Aspect } from '@src/domain';
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
-import { AspectCreatedEventPayload } from './event-payload/aspect.created.event.payload';
+import {
+  AspectCreatedEventPayload,
+  AspectCommentCreatedEventPayload,
+} from './event-payloads';
 
 @Injectable()
 export class NotificationsPayloadBuilder {
@@ -113,12 +116,42 @@ export class NotificationsPayloadBuilder {
   }
 
   async buildCommentCreatedOnAspectPayload(
-    message: CommunicationMessageResult
+    aspectName: string,
+    aspectCreatedBy: string,
+    commentsId: string,
+    messageResult: CommunicationMessageResult
   ) {
-    return {
-      userID: message.sender,
-      message: message.message,
+    const community = await this.getCommunityFromComments(commentsId);
+
+    if (!community) {
+      throw new NotificationEventException(
+        `Could not acquire community from comments with id: ${commentsId}`,
+        LogContext.NOTIFICATIONS
+      );
+    }
+
+    const payload: AspectCommentCreatedEventPayload = {
+      aspect: {
+        displayName: aspectName,
+        createdBy: aspectCreatedBy,
+      },
+      comment: {
+        message: messageResult.message,
+        createdBy: messageResult.sender,
+      },
+      community: {
+        name: community.displayName,
+        type: community.type,
+      },
+      hub: {
+        nameID: (await this.getHubNameID(community.hubID)) ?? '',
+        id: community.hubID,
+      },
     };
+
+    await this.buildHubPayload(payload, community);
+
+    return payload;
   }
 
   async buildCommunityNewMemberPayload(userID: string, community: ICommunity) {
@@ -331,6 +364,32 @@ export class NotificationsPayloadBuilder {
         SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`opportunity\`
         LEFT JOIN \`aspect\` on \`aspect\`.\`contextId\` = \`opportunity\`.\`contextId\`
         WHERE \`opportunity\`.\`contextId\` = '${contextId}';
+      `
+    );
+
+    return await this.communityRepository.findOne({
+      id: result.communityId,
+    });
+  }
+
+  private async getCommunityFromComments(commentsId: string) {
+    const [result]: {
+      entityId: string;
+      communityId: string;
+      communityType: string;
+    }[] = await getConnection().query(
+      `
+      SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`aspect\`
+      RIGHT JOIN \`challenge\` on \`challenge\`.\`contextId\` = \`aspect\`.\`contextId\`
+      WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
+      
+      SELECT \`hub\`.\`id\` as \`entityId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`aspect\`
+      RIGHT JOIN \`hub\` on \`hub\`.\`contextId\` = \`aspect\`.\`contextId\`
+      WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
+      
+      SELECT \`opportunity\`.\`id\` as \`entityId\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`aspect\`
+      RIGHT JOIN \`opportunity\` on \`opportunity\`.\`contextId\` = \`aspect\`.\`contextId\`
+      WHERE \`aspect\`.\`commentsId\` = '${commentsId}';
       `
     );
 
