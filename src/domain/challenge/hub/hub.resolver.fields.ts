@@ -29,6 +29,7 @@ import { AgentInfo } from '@core/authentication';
 import { HubTemplate } from './dto/hub.dto.template.hub';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
+import { ITemplatesSet } from '@domain/template/templates-set';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -75,6 +76,16 @@ export class HubResolverFields {
   @Profiling.api
   async agent(@Parent() hub: Hub): Promise<IAgent> {
     return await this.hubService.getAgent(hub.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('templates', () => ITemplatesSet, {
+    nullable: false,
+    description: 'The templates in use by this Hub',
+  })
+  @UseGuards(GraphqlGuard)
+  async templatesSet(@Parent() hub: Hub): Promise<ITemplatesSet> {
+    return await this.hubService.getTemplatesSetOrFail(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
