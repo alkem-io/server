@@ -27,6 +27,12 @@ import { ContributorRoles } from './dto/roles.dto.result.contributor';
 import { RolesOrganizationInput } from './dto/roles.dto.input.organization';
 import { RolesResultHub } from './dto/roles.dto.result.hub';
 import { ICredential } from '@domain/agent/credential/credential.interface';
+import {
+  ROLE_ASSOCIATE,
+  ROLE_HOST,
+  ROLE_LEAD,
+  ROLE_MEMBER,
+} from '@common/constants';
 
 export type UserGroupResult = {
   userGroup: IUserGroup;
@@ -48,12 +54,6 @@ export class RolesService {
     private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  private ROLE_MEMBER = 'member';
-  private ROLE_ASSOCIATE = 'associate';
-  private ROLE_LEAD = 'lead';
-  private ROLE_HOST = 'host';
-
   async getUserRoles(
     membershipData: RolesUserInput
   ): Promise<ContributorRoles> {
@@ -96,35 +96,35 @@ export class RolesService {
           credential.resourceID,
           contributorID
         );
-        this.addRole(orgResult, this.ROLE_ASSOCIATE);
+        this.addRole(orgResult, ROLE_ASSOCIATE);
       } else if (credential.type === AuthorizationCredential.HUB_MEMBER) {
         const hubResult = await this.ensureHubRolesResult(
           hubsMap,
           credential.resourceID,
           contributorID
         );
-        this.addRole(hubResult, this.ROLE_MEMBER);
+        this.addRole(hubResult, ROLE_MEMBER);
       } else if (credential.type === AuthorizationCredential.HUB_HOST) {
         const hubResult = await this.ensureHubRolesResult(
           hubsMap,
           credential.resourceID,
           contributorID
         );
-        this.addRole(hubResult, this.ROLE_HOST);
+        this.addRole(hubResult, ROLE_HOST);
       } else if (credential.type === AuthorizationCredential.CHALLENGE_MEMBER) {
         const challengeResult = await this.ensureChallengeRolesResult(
           hubsMap,
           credential.resourceID,
           contributorID
         );
-        this.addRole(challengeResult, this.ROLE_MEMBER);
+        this.addRole(challengeResult, ROLE_MEMBER);
       } else if (credential.type === AuthorizationCredential.CHALLENGE_LEAD) {
         const challengeResult = await this.ensureChallengeRolesResult(
           hubsMap,
           credential.resourceID,
           contributorID
         );
-        this.addRole(challengeResult, this.ROLE_LEAD);
+        this.addRole(challengeResult, ROLE_LEAD);
       } else if (
         credential.type === AuthorizationCredential.OPPORTUNITY_MEMBER
       ) {
@@ -133,14 +133,14 @@ export class RolesService {
           credential.resourceID,
           contributorID
         );
-        this.addRole(opportunityResult, this.ROLE_MEMBER);
+        this.addRole(opportunityResult, ROLE_MEMBER);
       } else if (credential.type === AuthorizationCredential.OPPORTUNITY_LEAD) {
         const opportunityResult = await this.ensureOpportunityRolesResult(
           hubsMap,
           credential.resourceID,
           contributorID
         );
-        this.addRole(opportunityResult, this.ROLE_LEAD);
+        this.addRole(opportunityResult, ROLE_LEAD);
       } else if (
         credential.type === AuthorizationCredential.USER_GROUP_MEMBER
       ) {
