@@ -17,11 +17,11 @@ export class Actor extends AuthorizableEntity implements IActor {
   @Column('varchar', { length: 255, nullable: true })
   impact?: string;
 
-  @ManyToOne(
-    () => ActorGroup,
-    actorGroup => actorGroup.actors,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
-  )
+  @ManyToOne(() => ActorGroup, actorGroup => actorGroup.actors, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
   actorGroup?: ActorGroup;
 
   constructor(name: string) {

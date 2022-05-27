@@ -18,7 +18,6 @@ export class CommunicationCreateDiscussionInput {
     nullable: false,
     description: 'The title for the Discussion',
   })
-  @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   title!: string;
 
@@ -32,6 +31,7 @@ export class CommunicationCreateDiscussionInput {
     nullable: true,
     description: 'The description for the Discussion',
   })
+  @IsOptional()
   @MaxLength(MID_TEXT_LENGTH)
   description?: string;
 }

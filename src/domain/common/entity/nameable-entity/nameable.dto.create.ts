@@ -12,8 +12,8 @@ export class CreateNameableInput {
   @MinLength(3)
   nameID!: string;
 
-  @Field({ nullable: true, description: 'The display name for the entity.' })
+  @Field({ nullable: false, description: 'The display name for the entity.' })
   @MinLength(3)
   @MaxLength(SMALL_TEXT_LENGTH)
-  displayName?: string;
+  displayName!: string;
 }

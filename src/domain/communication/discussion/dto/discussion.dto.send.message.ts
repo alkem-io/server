@@ -2,7 +2,7 @@ import { MID_TEXT_LENGTH } from '@common/constants/entity.field.length.constants
 import { UUID } from '@domain/common/scalars';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { Field, InputType } from '@nestjs/graphql';
-import { IsOptional, MaxLength } from 'class-validator';
+import { MaxLength } from 'class-validator';
 @InputType()
 export class DiscussionSendMessageInput extends RoomSendMessageInput {
   @Field(() => UUID, {
@@ -15,7 +15,6 @@ export class DiscussionSendMessageInput extends RoomSendMessageInput {
     nullable: false,
     description: 'The message being sent',
   })
-  @IsOptional()
   @MaxLength(MID_TEXT_LENGTH)
   message!: string;
 }
