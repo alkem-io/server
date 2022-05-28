@@ -407,4 +407,16 @@ export class OpportunityService {
 
     return await this.userService.getUserWithAgent(removeData.userID);
   }
+
+  async getOpportunityForCommunity(
+    communityID: string
+  ): Promise<IOpportunity | undefined> {
+    return await this.opportunityRepository
+      .createQueryBuilder('opportunity')
+      .leftJoinAndSelect('opportunity.challenge', 'challenge')
+      .leftJoinAndSelect('opportunity.community', 'community')
+      .orWhere('community.id like :communityID')
+      .setParameters({ communityID: `%${communityID}%` })
+      .getOne();
+  }
 }
