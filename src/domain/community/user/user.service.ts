@@ -194,7 +194,7 @@ export class UserService {
     return result;
   }
 
-  createPreferenceDefaults(): Map<PreferenceType, string> {
+  private createPreferenceDefaults(): Map<PreferenceType, string> {
     const defaults: Map<PreferenceType, string> = new Map();
     defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_UPDATES, 'true');
     defaults.set(
@@ -224,7 +224,7 @@ export class UserService {
     return defaults;
   }
 
-  async getUserTemplate(): Promise<IUserTemplate | undefined> {
+  private async getUserTemplate(): Promise<IUserTemplate | undefined> {
     const template = await this.konfigService.getTemplate();
     const userTemplates = template.users;
     if (userTemplates && userTemplates.length > 0) {
@@ -288,7 +288,7 @@ export class UserService {
     };
   }
 
-  async validateUserProfileCreationRequest(
+  private async validateUserProfileCreationRequest(
     userData: CreateUserInput
   ): Promise<boolean> {
     await this.isNameIdAvailableOrFail(userData.nameID);
@@ -303,7 +303,7 @@ export class UserService {
     return true;
   }
 
-  async isNameIdAvailableOrFail(nameID: string) {
+  private async isNameIdAvailableOrFail(nameID: string) {
     const userCount = await this.userRepository.count({
       nameID: nameID,
     });
@@ -435,36 +435,7 @@ export class UserService {
     return user;
   }
 
-  async getUserByCommunicationIdOrFail(
-    communicationID: string,
-    options?: FindOneOptions<User>
-  ): Promise<IUser> {
-    let user: IUser | undefined = await this.cacheManager.get<IUser>(
-      this.getUserCommunicationIdCacheKey(communicationID)
-    );
-
-    if (!user) {
-      user = await this.userRepository.findOne(
-        {
-          communicationID: communicationID,
-        },
-        options
-      );
-
-      if (!user) {
-        throw new EntityNotFoundException(
-          `Unable to find user with given communicationID: ${communicationID}`,
-          LogContext.COMMUNITY
-        );
-      }
-
-      await this.setUserCache(user);
-    }
-
-    return user;
-  }
-
-  validateEmail(email: string): boolean {
+  private validateEmail(email: string): boolean {
     const regex = /\S+@\S+\.\S+/;
     return regex.test(email);
   }
@@ -657,7 +628,7 @@ export class UserService {
     return userMatchesCount;
   }
 
-  getAgentOrFail(user: IUser): IAgent {
+  private getAgentOrFail(user: IUser): IAgent {
     const agent = user.agent;
     if (!agent)
       throw new EntityNotInitializedException(
@@ -667,7 +638,7 @@ export class UserService {
     return agent;
   }
 
-  async hasMatchingCredential(
+  private async hasMatchingCredential(
     user: IUser,
     credentialCriteria: CredentialsSearchInput
   ) {
@@ -682,7 +653,9 @@ export class UserService {
     return await this.userRepository.count({ serviceProfile: false });
   }
 
-  async tryRegisterUserCommunication(user: IUser): Promise<string | undefined> {
+  private async tryRegisterUserCommunication(
+    user: IUser
+  ): Promise<string | undefined> {
     const communicationID = await this.communicationAdapter.tryRegisterNewUser(
       user.email
     );
