@@ -61,9 +61,35 @@ export class templatesSet1653580239006 implements MigrationInterface {
       );
 
       // Create the aspect templates
-      const existingAspectTemplates: any = hub.template;
-      if (existingAspectTemplates) {
-        // create the new aspect template objects
+      const existingTemplate: any = hub.template;
+      if (existingTemplate) {
+        const existingTemplateJson = JSON.parse(existingTemplate);
+        for (const aspectTemplate of existingTemplateJson.aspectTemplates) {
+          // todo: create the new aspect template objects from the existing data
+          const aspectTemplateID = randomUUID();
+          const tagsetID = randomUUID();
+          const tagsetAuthID = randomUUID();
+          const visualID = randomUUID();
+          const visualAuthID = randomUUID();
+          await queryRunner.query(
+            `INSERT INTO authorization_policy VALUES ('${tagsetAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
+          );
+          await queryRunner.query(
+            `INSERT INTO authorization_policy VALUES ('${visualAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
+          );
+          await queryRunner.query(
+            `INSERT INTO tagset (id, createdDate, updatedDate, version, name, tags, authorizationId)
+          VALUES ('${tagsetID}', NOW(), NOW(), 1, 'default', '', '${tagsetAuthID}')`
+          );
+          await queryRunner.query(
+            `INSERT INTO visual (id, createdDate, updatedDate, version, authorizationId, name, uri, minWidth, maxWidth, minHeight, maxHeight, aspectRatio, allowedTypes)
+          VALUES ('${visualID}', NOW(), NOW(), 1, '${visualAuthID}', '${templateVisual.name}', '', '${templateVisual.minWidth}', '${templateVisual.maxWidth}', '${templateVisual.minHeight}', '${templateVisual.maxHeight}', '${templateVisual.aspectRatio}', '${allowedTypes}')`
+          );
+          await queryRunner.query(
+            `INSERT INTO aspect_template (id, createdDate, updatedDate, version, title, description, templatesSetId, tagsetId, visualId, type, defaultDescription)
+          VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${aspectTemplate.type}', '${aspectTemplate.typeDescription}', '${templatesSetID}', '${tagsetID}', '${visualID}', '${aspectTemplate.type}', '${aspectTemplate.defaultDescription}')`
+          );
+        }
       } else {
         // create the default aspect templates
         for (const aspectTemplate of templatesSetDefaults.aspects) {
