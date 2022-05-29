@@ -45,8 +45,6 @@ export class templatesSet1653580239006 implements MigrationInterface {
     // Migrate the data
     const hubs: any[] = await queryRunner.query(`SELECT id, template from hub`);
     for (const hub of hubs) {
-      console.log(`Retrieved hub with id: ${hub.id}`);
-
       // Set authorization on templates_set + also link to hub
       const authID = randomUUID();
       const templatesSetID = randomUUID();
@@ -65,7 +63,7 @@ export class templatesSet1653580239006 implements MigrationInterface {
       if (existingTemplate) {
         const existingTemplateJson = JSON.parse(existingTemplate);
         for (const aspectTemplate of existingTemplateJson.aspectTemplates) {
-          // todo: create the new aspect template objects from the existing data
+          // create the new aspect template objects from the existing data
           const aspectTemplateID = randomUUID();
           const tagsetID = randomUUID();
           const tagsetAuthID = randomUUID();
