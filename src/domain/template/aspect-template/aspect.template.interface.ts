@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ITemplateBase } from '../template-base/template.base.interface';
 
-@ObjectType('AspectTemplate2')
+@ObjectType('AspectTemplate')
 export abstract class IAspectTemplate extends ITemplateBase {
   @Field(() => String, {
     nullable: false,
