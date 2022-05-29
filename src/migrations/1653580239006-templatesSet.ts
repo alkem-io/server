@@ -26,6 +26,22 @@ export class templatesSet1653580239006 implements MigrationInterface {
               \`type\` char(255) NOT NULL, \`defaultDescription\` text NOT NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
 
+    await queryRunner.query(
+      `ALTER TABLE \`templates_set\` ADD CONSTRAINT \`FK_66666901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_66666450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_77777901817dd09d5906537e088\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_88888901817dd09d5906537e088\` FOREIGN KEY (\`visualId\`) REFERENCES \`visual\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
     // Migrate the data
     const hubs: any[] = await queryRunner.query(`SELECT id, template from hub`);
     for (const hub of hubs) {
@@ -57,8 +73,10 @@ export class templatesSet1653580239006 implements MigrationInterface {
           const visualID = randomUUID();
           const visualAuthID = randomUUID();
           await queryRunner.query(
-            `INSERT INTO aspect_template (id, createdDate, updatedDate, version, title, description, templatesSetId, tagsetId, visualId, type, defaultDescription)
-            VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${aspectTemplate.title}', '${aspectTemplate.description}', '${templatesSetID}', '${tagsetID}', '${visualID}', '${aspectTemplate.type}', '${aspectTemplate.defaultDescription}')`
+            `INSERT INTO authorization_policy VALUES ('${tagsetAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
+          );
+          await queryRunner.query(
+            `INSERT INTO authorization_policy VALUES ('${visualAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
           );
           await queryRunner.query(
             `INSERT INTO tagset (id, createdDate, updatedDate, version, name, tags, authorizationId)
@@ -69,29 +87,11 @@ export class templatesSet1653580239006 implements MigrationInterface {
             VALUES ('${visualID}', NOW(), NOW(), 1, '${visualAuthID}', '${templateVisual.name}', '', '${templateVisual.minWidth}', '${templateVisual.maxWidth}', '${templateVisual.minHeight}', '${templateVisual.maxHeight}', '${templateVisual.aspectRatio}', '${allowedTypes}')`
           );
           await queryRunner.query(
-            `INSERT INTO authorization_policy VALUES ('${tagsetAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
-          );
-          await queryRunner.query(
-            `INSERT INTO authorization_policy VALUES ('${visualAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
+            `INSERT INTO aspect_template (id, createdDate, updatedDate, version, title, description, templatesSetId, tagsetId, visualId, type, defaultDescription)
+            VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${aspectTemplate.title}', '${aspectTemplate.description}', '${templatesSetID}', '${tagsetID}', '${visualID}', '${aspectTemplate.type}', '${aspectTemplate.defaultDescription}')`
           );
         }
       }
-
-      await queryRunner.query(
-        `ALTER TABLE \`templates_set\` ADD CONSTRAINT \`FK_66666901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-      );
-
-      await queryRunner.query(
-        `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_66666450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
-      );
-
-      await queryRunner.query(
-        `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_77777901817dd09d5906537e088\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-      );
-
-      await queryRunner.query(
-        `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_88888901817dd09d5906537e088\` FOREIGN KEY (\`visualId\`) REFERENCES \`visual\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-      );
     }
 
     await queryRunner.query(`ALTER TABLE \`hub\` DROP COLUMN \`template\``);
