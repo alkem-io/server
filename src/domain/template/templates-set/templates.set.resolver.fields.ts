@@ -12,7 +12,7 @@ export class TemplatesSetResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('aspectTemplates', () => [IAspectTemplate], {
-    nullable: true,
+    nullable: false,
     description: 'The AspectTemplates in this TemplatesSet.',
   })
   @Profiling.api
