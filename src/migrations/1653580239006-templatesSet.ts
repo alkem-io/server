@@ -13,10 +13,6 @@ export class templatesSet1653580239006 implements MigrationInterface {
                 UNIQUE INDEX \`REL_66666ccdda9ba57d8e3a634cd8\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
-      `ALTER TABLE \`templates_set\` ADD CONSTRAINT \`FK_66666901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-
-    await queryRunner.query(
       `ALTER TABLE \`hub\` ADD \`templatesSetId\` char(36) NULL`
     );
     await queryRunner.query(
@@ -28,18 +24,6 @@ export class templatesSet1653580239006 implements MigrationInterface {
              \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
               \`version\` int NOT NULL, \`title\` varchar(255) NOT NULL, \`description\` text NOT NULL, \`templatesSetId\` char(36) NULL, \`tagsetId\` char(36) NULL, \`visualId\` char(36) NULL,
               \`type\` char(255) NOT NULL, \`defaultDescription\` text NOT NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
-    );
-
-    await queryRunner.query(
-      `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_66666450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
-    );
-
-    await queryRunner.query(
-      `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_77777901817dd09d5906537e088\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-
-    await queryRunner.query(
-      `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_88888901817dd09d5906537e088\` FOREIGN KEY (\`visualId\`) REFERENCES \`visual\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     // Migrate the data
@@ -92,6 +76,22 @@ export class templatesSet1653580239006 implements MigrationInterface {
           );
         }
       }
+
+      await queryRunner.query(
+        `ALTER TABLE \`templates_set\` ADD CONSTRAINT \`FK_66666901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      );
+
+      await queryRunner.query(
+        `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_66666450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+      );
+
+      await queryRunner.query(
+        `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_77777901817dd09d5906537e088\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      );
+
+      await queryRunner.query(
+        `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_88888901817dd09d5906537e088\` FOREIGN KEY (\`visualId\`) REFERENCES \`visual\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      );
     }
 
     await queryRunner.query(`ALTER TABLE \`hub\` DROP COLUMN \`template\``);
@@ -105,8 +105,8 @@ const templateVisual = {
   name: 'bannerNarrow',
   minWidth: 384,
   maxWidth: 768,
-  minHeight: 32,
-  maxHeight: 128,
+  minHeight: 128,
+  maxHeight: 256,
   aspectRatio: 3,
 };
 
