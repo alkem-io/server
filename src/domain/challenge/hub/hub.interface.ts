@@ -7,7 +7,5 @@ import { ITemplatesSet } from '@domain/template/templates-set';
 export abstract class IHub extends IBaseChallenge {
   challenges?: IChallenge[];
 
-  template?: string;
-
   templatesSet?: ITemplatesSet;
 }

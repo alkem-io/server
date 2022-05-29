@@ -25,12 +25,23 @@ export class templatesSet1653580239006 implements MigrationInterface {
     await queryRunner.query(
       `CREATE TABLE \`aspect_template\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
              \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-              \`version\` int NOT NULL, \`title\` varchar(255) NOT NULL, \`templatesSetId\` char(36) NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+              \`version\` int NOT NULL, \`title\` varchar(255) NOT NULL, \`description\` text NOT NULL, \`templatesSetId\` char(36) NULL, \`tagsetId\` char(36) NULL, \`visualId\` char(36) NULL,
+              \`type\` char(255) NOT NULL, \`defaultDescription\` text NOT NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
 
     await queryRunner.query(
       `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_66666450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
+
+    await queryRunner.query(
+      `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_77777901817dd09d5906537e088\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_88888901817dd09d5906537e088\` FOREIGN KEY (\`visualId\`) REFERENCES \`visual\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
+    await queryRunner.query(`ALTER TABLE \`hub\` DROP COLUMN \`template\``);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}

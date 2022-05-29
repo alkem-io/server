@@ -1,4 +1,4 @@
-import { Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
 import { IAspectTemplate } from './aspect.template.interface';
 import { TemplateBase } from '../template-base/template.base.entity';
 import { TemplatesSet } from '../templates-set/templates.set.entity';
@@ -12,7 +12,15 @@ export class AspectTemplate extends TemplateBase implements IAspectTemplate {
   })
   templatesSet?: TemplatesSet;
 
-  constructor(title: string) {
-    super(title);
+  @Column('text')
+  defaultDescription: string;
+
+  @Column('text')
+  type: string;
+
+  constructor() {
+    super();
+    this.type = '';
+    this.defaultDescription = '';
   }
 }

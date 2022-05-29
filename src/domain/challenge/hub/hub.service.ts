@@ -44,7 +44,6 @@ import { UpdateHubInput } from './dto/hub.dto.update';
 import { CreateChallengeOnHubInput } from '../challenge/dto/challenge.dto.create.in.hub';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CommunityType } from '@common/enums/community.type';
-import { HubTemplate } from './dto/hub.dto.template.hub';
 import { AgentInfo } from '@src/core';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IPreference } from '@domain/common/preference/preference.interface';
@@ -173,16 +172,6 @@ export class HubService {
 
     if (hubData.hostID) {
       await this.setHubHost(hub.id, hubData.hostID);
-    }
-
-    if (hubData.template) {
-      const hubTemplate: HubTemplate = hubData.template;
-      for (const aspectTemplate of hubTemplate.aspectTemplates) {
-        if (!aspectTemplate.defaultDescription) {
-          aspectTemplate.defaultDescription = '';
-        }
-      }
-      hub.template = JSON.stringify(hubTemplate);
     }
 
     return await this.hubRepository.save(hub);
@@ -691,24 +680,6 @@ export class HubService {
     });
 
     return await this.userService.getUserWithAgent(removeData.userID);
-  }
-
-  async getHubTemplates(hub: IHub): Promise<HubTemplate> {
-    const templateStr = hub.template || '';
-    let template = new HubTemplate();
-    if (templateStr) {
-      try {
-        template = JSON.parse(templateStr);
-        return template;
-      } catch (error: any) {
-        this.logger.error(
-          `Unable to retrieve templates for Hub (${hub.nameID}): ${error}`,
-          LogContext.CHALLENGES
-        );
-      }
-    }
-
-    return template;
   }
 
   async getPreferences(hub: IHub): Promise<IPreference[]> {

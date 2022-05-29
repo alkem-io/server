@@ -14,7 +14,8 @@ import { IAspectTemplate } from '../aspect-template/aspect.template.interface';
 import { AspectTemplateService } from '../aspect-template/aspect.template.service';
 import { DeleteAspectTemplateInput } from './dto/aspect.template.dto.delete';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { CreateAspectTemplateInput } from './dto/aspect.template.dto.create';
+import { templatesSetDefaults } from './templates.set.defaults';
+import { CreateAspectTemplateInput } from '../aspect-template/dto/aspect.template.dto.create';
 
 @Injectable()
 export class TemplatesSetService {
@@ -27,11 +28,18 @@ export class TemplatesSetService {
   ) {}
 
   async createTemplatesSet(): Promise<ITemplatesSet> {
-    const preferenceSet: ITemplatesSet = TemplatesSet.create();
-    preferenceSet.authorization = new AuthorizationPolicy();
-    preferenceSet.aspectTemplates = [];
+    const templatesSet: ITemplatesSet = TemplatesSet.create();
+    templatesSet.authorization = new AuthorizationPolicy();
+    templatesSet.aspectTemplates = [];
+    for (const aspectTemplateDefault of templatesSetDefaults.aspects) {
+      const aspectTemplate =
+        await this.aspectTemplateService.createAspectTemplate(
+          aspectTemplateDefault
+        );
+      templatesSet.aspectTemplates.push(aspectTemplate);
+    }
 
-    return preferenceSet;
+    return await this.templatesSetRepository.save(templatesSet);
   }
 
   async getTemplatesSetOrFail(
@@ -51,9 +59,8 @@ export class TemplatesSetService {
   }
 
   async deleteTemplatesSet(templatesSetID: string): Promise<ITemplatesSet> {
-    // Note need to load it in with all contained entities so can remove fully
     const templatesSet = await this.getTemplatesSetOrFail(templatesSetID, {
-      relations: [],
+      relations: ['authorization', 'aspectTemplates'],
     });
 
     if (templatesSet.authorization)
@@ -88,7 +95,7 @@ export class TemplatesSetService {
   ): Promise<IAspectTemplate> {
     const aspectTemplate =
       await this.aspectTemplateService.createAspectTemplate(
-        aspectTemplateInput.title
+        aspectTemplateInput
       );
     templatesSet.aspectTemplates = await this.getAspectTemplates(templatesSet);
     templatesSet.aspectTemplates.push(aspectTemplate);

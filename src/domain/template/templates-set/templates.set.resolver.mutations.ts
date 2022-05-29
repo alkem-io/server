@@ -8,7 +8,7 @@ import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { CreateAspectTemplateInput } from './dto/aspect.template.dto.create';
+import { CreateAspectTemplateOnTemplatesSetInput } from './dto/aspect.template.dto.create.on.templates.set';
 import { DeleteAspectTemplateInput } from './dto/aspect.template.dto.delete';
 
 @Resolver()
@@ -25,7 +25,8 @@ export class TemplatesSetResolverMutations {
   })
   async createAspectTemplate(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('aspectTemplateInput') aspectTemplateInput: CreateAspectTemplateInput
+    @Args('aspectTemplateInput')
+    aspectTemplateInput: CreateAspectTemplateOnTemplatesSetInput
   ): Promise<IAspectTemplate> {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       aspectTemplateInput.templatesSetID,

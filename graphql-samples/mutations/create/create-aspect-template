@@ -1,6 +1,6 @@
-mutation createAspectTemplate($aspectTemplateInput: CreateAspectTemplateInput!) {
+mutation createAspectTemplate($aspectTemplateInput: CreateAspectTemplateOnTemplatesSetInput!) {
   createAspectTemplate(aspectTemplateInput: $aspectTemplateInput) {
-    title
+    title,
   }
 }
 
@@ -8,6 +8,10 @@ Variables:
 {
   "aspectTemplateInput": {
       "templatesSetID": "uuid",
-      "title": "wow"
+      "title": "wow",
+      "description": "wow this is great",
+      "type": "wow3",
+      "defaultDescription": "this is what users will see",
+      "tags": ["Tag 1", "Tag 2"]
   }
 }

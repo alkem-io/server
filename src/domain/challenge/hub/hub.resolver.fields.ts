@@ -26,7 +26,6 @@ import { IOpportunity } from '@domain/collaboration/opportunity';
 import { IAgent } from '@domain/agent/agent';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
-import { HubTemplate } from './dto/hub.dto.template.hub';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ITemplatesSet } from '@domain/template/templates-set';
@@ -288,14 +287,5 @@ export class HubResolverFields {
   @Profiling.api
   async host(@Parent() hub: Hub): Promise<IOrganization | undefined> {
     return await this.hubService.getHost(hub.id);
-  }
-
-  @ResolveField('template', () => HubTemplate, {
-    nullable: false,
-    description: 'The template for this Hub.',
-  })
-  @Profiling.api
-  async templates(@Parent() hub: IHub): Promise<HubTemplate> {
-    return this.hubService.getHubTemplates(hub);
   }
 }
