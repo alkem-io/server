@@ -54,10 +54,7 @@ export class templatesSet1653580239006 implements MigrationInterface {
         `INSERT INTO authorization_policy VALUES ('${authID}', NOW(), NOW(), 1, '', '', 0, '')`
       );
       await queryRunner.query(
-        `INSERT INTO templates_set VALUES ('${templatesSetID}', NOW(), NOW(), 1, '', '', 0, '')`
-      );
-      await queryRunner.query(
-        `UPDATE templates_set SET authorizationId = '${authID}' WHERE (id = '${templatesSetID}')`
+        `INSERT INTO templates_set (id, createdDate, updatedDate, version, authorizationId) VALUES ('${templatesSetID}', NOW(), NOW(), 1, '${authID}')`
       );
       await queryRunner.query(
         `UPDATE hub SET templatesSetId = '${templatesSetID}' WHERE (id = '${hub.id}')`
@@ -95,12 +92,6 @@ export class templatesSet1653580239006 implements MigrationInterface {
           );
         }
       }
-
-      // create preferenceSet
-      const prefSetId = randomUUID();
-      await queryRunner.query(
-        `INSERT INTO preference_set VALUES ('${prefSetId}', NOW(), NOW(), 1, '${authID}')`
-      );
     }
 
     await queryRunner.query(`ALTER TABLE \`hub\` DROP COLUMN \`template\``);
