@@ -20,12 +20,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { HubService } from '@domain/challenge/hub/hub.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
-import { IOpportunity } from '@domain/collaboration';
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { IHub } from '@domain/challenge/hub/hub.interface';
-import { CommunityType } from '@common/enums/community.type';
 import { ApplicationService } from '@domain/community/application/application.service';
-import { Organization } from '@domain/community';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { CommunityService } from '@domain/community/community/community.service';
 
@@ -93,9 +88,6 @@ describe('RolesService', () => {
       jest
         .spyOn(organizationService, 'getOrganizationOrFail')
         .mockResolvedValue(testData.organization as any);
-      // jest
-      //   .spyOn(challengeSerivce, 'getChallengeOrFail')
-      //   .mockResolvedValue(testData.challenge as IChallenge);
 
       jest
         .spyOn(opportunityService, 'getOpportunityOrFail')
@@ -119,11 +111,53 @@ describe('RolesService', () => {
         userID: testData.user.id,
       });
 
-      expect(res.applications).toBe(testData.rolesUser.applications); //shouldn't have any notifications sent
+      expect(res.applications).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            communityID: testData.rolesUser.applications[0].communityID,
+            hubID: testData.rolesUser.applications[0].hubID,
+          }),
+        ])
+      );
+
+      expect(res.organizations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            organizationID: testData.organization.id,
+          }),
+        ])
+      );
+
+      expect(res.hubs).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            hubID: testData.hub.id,
+          }),
+        ])
+      );
     });
   });
 
   describe('Organization Roles', () => {
-    // it('Should send application notification', async () => {
+    it('Should get organization roles', async () => {
+      //mock whatever needs to be mocked
+      // jest
+      //   .spyOn(userService, 'getUserWithAgent')
+      //   .mockResolvedValue(testData.user);
+
+      const res = await rolesService.getOrganizationRoles({
+        organizationID: testData.organization.id,
+      });
+
+      //expect some results
+      // expect(res.applications).toEqual(
+      //   expect.arrayContaining([
+      //     expect.objectContaining({
+      //       communityID: testData.rolesUser.applications[0].communityID,
+      //       hubID: testData.rolesUser.applications[0].hubID,
+      //     }),
+      //   ])
+      // );
+    });
   });
 });
