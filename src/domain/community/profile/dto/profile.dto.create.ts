@@ -20,11 +20,13 @@ export class CreateProfileInput {
   location?: CreateLocationInput;
 
   @Field(() => [CreateTagsetInput], { nullable: true })
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => CreateTagsetInput)
   tagsetsData?: CreateTagsetInput[];
 
   @Field(() => [CreateReferenceInput], { nullable: true })
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => CreateReferenceInput)
   referencesData?: CreateReferenceInput[];

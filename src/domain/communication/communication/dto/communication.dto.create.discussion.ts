@@ -3,7 +3,7 @@ import { DiscussionCategory } from '@common/enums/communication.discussion.categ
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
-import { IsOptional, MaxLength } from 'class-validator';
+import { MaxLength, IsOptional } from 'class-validator';
 
 @InputType()
 export class CommunicationCreateDiscussionInput {
