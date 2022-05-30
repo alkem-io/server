@@ -740,6 +740,6 @@ export class CommunityService {
   async isHubCommunity(community: ICommunity): Promise<boolean> {
     const parentCommunity = await this.getParentCommunity(community);
 
-    return parentCommunity !== undefined;
+    return parentCommunity === undefined;
   }
 }
