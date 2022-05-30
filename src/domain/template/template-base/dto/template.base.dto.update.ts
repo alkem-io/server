@@ -1,10 +1,22 @@
+import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/base.alkemio.dto.update';
 import { InputType, Field } from '@nestjs/graphql';
-import { SMALL_TEXT_LENGTH } from '@src/common/constants';
-import { MaxLength } from 'class-validator';
+import {
+  SMALL_TEXT_LENGTH,
+  VERY_LONG_TEXT_LENGTH,
+} from '@src/common/constants';
+import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
-export class UpdateTemplateBaseInput {
-  @Field({ nullable: false })
+export class UpdateTemplateBaseInput extends UpdateBaseAlkemioInput {
+  @Field({ nullable: true })
   @MaxLength(SMALL_TEXT_LENGTH)
-  title?: string;
+  title!: string;
+
+  @Field({ nullable: true })
+  @MaxLength(VERY_LONG_TEXT_LENGTH)
+  description!: string;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  tags?: string[];
 }

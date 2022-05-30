@@ -3,7 +3,7 @@ import { DeleteTemplateBaseInput } from '@domain/template/template-base/dto/temp
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class DeleteAspectTemplateInput extends DeleteTemplateBaseInput {
+export class DeleteAspectTemplateOnTemplateSetInput extends DeleteTemplateBaseInput {
   @Field(() => UUID, { nullable: false })
-  aspectTemplateID!: string;
+  templatesSetID!: string;
 }

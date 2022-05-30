@@ -12,10 +12,11 @@ import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from './templates.set.interface';
 import { IAspectTemplate } from '../aspect-template/aspect.template.interface';
 import { AspectTemplateService } from '../aspect-template/aspect.template.service';
-import { DeleteAspectTemplateInput } from './dto/aspect.template.dto.delete';
+import { DeleteAspectTemplateOnTemplateSetInput } from './dto/aspect.template.dto.delete.on.template.set';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { templatesSetDefaults } from './templates.set.defaults';
 import { CreateAspectTemplateInput } from '../aspect-template/dto/aspect.template.dto.create';
+import { UpdateAspectTemplateInput } from '../aspect-template/dto/aspect.template.dto.update';
 
 @Injectable()
 export class TemplatesSetService {
@@ -103,21 +104,50 @@ export class TemplatesSetService {
     return aspectTemplate;
   }
 
+  async updateAspectTemplate(
+    templatesSet: ITemplatesSet,
+    aspectTemplateInput: UpdateAspectTemplateInput
+  ): Promise<IAspectTemplate> {
+    const aspectTemplate = await this.getAspectTemplateInTemplatesSetOrFail(
+      templatesSet,
+      aspectTemplateInput.ID
+    );
+    return await this.aspectTemplateService.updateAspectTemplate(
+      aspectTemplate,
+      aspectTemplateInput
+    );
+  }
+
   async deleteAspectTemplate(
     templatesSet: ITemplatesSet,
-    deleteData: DeleteAspectTemplateInput
+    deleteData: DeleteAspectTemplateOnTemplateSetInput
+  ): Promise<IAspectTemplate> {
+    // check the specified aspect template is in this templates set
+    const aspectTemplate = await this.getAspectTemplateInTemplatesSetOrFail(
+      templatesSet,
+      deleteData.ID
+    );
+    const deletedAspectTemplate =
+      await this.aspectTemplateService.deleteAspectTemplate(aspectTemplate);
+    deletedAspectTemplate.id = deleteData.ID;
+    return deletedAspectTemplate;
+  }
+
+  private async getAspectTemplateInTemplatesSetOrFail(
+    templatesSet: ITemplatesSet,
+    aspectTemplateID: string
   ): Promise<IAspectTemplate> {
     // check the specified aspect template is in this templates set
     const aspectTemplates = await this.getAspectTemplates(templatesSet);
-    const aspectTemplateInSet = aspectTemplates.find(
-      aspectTemplate => aspectTemplate.id === deleteData.aspectTemplateID
+    const aspectTemplate = aspectTemplates.find(
+      aspectTemplate => aspectTemplate.id === aspectTemplateID
     );
-    if (!aspectTemplateInSet) {
+    if (!aspectTemplate) {
       throw new EntityNotFoundException(
-        `TemplatesSet (${templatesSet.id}) does not contain the specified aspectTempalte: ${deleteData.aspectTemplateID}`,
+        `TemplatesSet (${templatesSet.id}) does not contain the specified aspectTemplate: ${aspectTemplateID}`,
         LogContext.COMMUNITY
       );
     }
-    return this.aspectTemplateService.deleteAspectTemplate(aspectTemplateInSet);
+    return aspectTemplate;
   }
 }

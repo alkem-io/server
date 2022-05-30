@@ -8,6 +8,7 @@ import { AspectTemplate } from './aspect.template.entity';
 import { IAspectTemplate } from './aspect.template.interface';
 import { TemplateBaseService } from '../template-base/template.base.service';
 import { CreateAspectTemplateInput } from './dto/aspect.template.dto.create';
+import { UpdateAspectTemplateInput } from './dto/aspect.template.dto.update';
 
 @Injectable()
 export class AspectTemplateService {
@@ -44,6 +45,24 @@ export class AspectTemplateService {
         LogContext.COMMUNICATION
       );
     return aspectTemplate;
+  }
+
+  async updateAspectTemplate(
+    aspectTemplate: IAspectTemplate,
+    aspectTemplateData: UpdateAspectTemplateInput
+  ): Promise<IAspectTemplate> {
+    await this.templateBaseService.updateTemplateBase(
+      aspectTemplate,
+      aspectTemplateData
+    );
+    if (aspectTemplateData.defaultDescription) {
+      aspectTemplate.defaultDescription = aspectTemplateData.defaultDescription;
+    }
+    if (aspectTemplateData.type) {
+      aspectTemplate.type = aspectTemplateData.type;
+    }
+
+    return await this.aspectTemplateRepository.save(aspectTemplate);
   }
 
   async deleteAspectTemplate(

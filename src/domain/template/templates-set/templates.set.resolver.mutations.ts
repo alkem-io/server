@@ -9,7 +9,8 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CreateAspectTemplateOnTemplatesSetInput } from './dto/aspect.template.dto.create.on.templates.set';
-import { DeleteAspectTemplateInput } from './dto/aspect.template.dto.delete';
+import { DeleteAspectTemplateOnTemplateSetInput } from './dto/aspect.template.dto.delete.on.template.set';
+import { UpdateAspectTemplateOnTemplatesSetInput } from './dto/aspect.template.dto.update.on.templates.set';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
@@ -49,11 +50,39 @@ export class TemplatesSetResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAspectTemplate, {
     description:
+      'Updates the specified AspectTemplate on the specified TemplatesSet.',
+  })
+  async updateAspectTemplate(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('aspectTemplateInput')
+    aspectTemplateInput: UpdateAspectTemplateOnTemplatesSetInput
+  ): Promise<IAspectTemplate> {
+    const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
+      aspectTemplateInput.templatesSetID,
+      {
+        relations: ['aspectTemplates'],
+      }
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      templatesSet.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `templates set update aspect template: ${templatesSet.id}`
+    );
+    return await this.templatesSetService.updateAspectTemplate(
+      templatesSet,
+      aspectTemplateInput
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IAspectTemplate, {
+    description:
       'Deletes the specified AspectTemplate in the specified TemplatesSet.',
   })
   async deleteAspectTemplate(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteAspectTemplateInput
+    @Args('deleteData') deleteData: DeleteAspectTemplateOnTemplateSetInput
   ): Promise<IAspectTemplate> {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       deleteData.templatesSetID

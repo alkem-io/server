@@ -61,6 +61,7 @@ export class templatesSet1653580239006 implements MigrationInterface {
       // Create the aspect templates
       const existingTemplate: any = hub.template;
       if (existingTemplate) {
+        console.log('Found existing template, so migrating...');
         const existingTemplateJson = JSON.parse(existingTemplate);
         for (const aspectTemplate of existingTemplateJson.aspectTemplates) {
           // create the new aspect template objects from the existing data
@@ -125,6 +126,9 @@ export class templatesSet1653580239006 implements MigrationInterface {
     // Note: data is not migrated down, only the structure
     await queryRunner.query(
       'ALTER TABLE `hub` DROP FOREIGN KEY `IDX_66666355b4e9bd6b02c66507aa`'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `aspect_template` DROP FOREIGN KEY `FK_66666450cf75dc486700ca034c6`'
     );
     await queryRunner.query(
       `ALTER TABLE \`hub\` DROP COLUMN \`templatesSetId\``

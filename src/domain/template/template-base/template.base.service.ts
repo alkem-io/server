@@ -4,6 +4,7 @@ import { VisualService } from '@domain/common/visual/visual.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CreateTemplateBaseInput } from './dto/template.base.dto.create';
+import { UpdateTemplateBaseInput } from './dto/template.base.dto.update';
 import { ITemplateBase } from './template.base.interface';
 
 @Injectable()
@@ -30,6 +31,23 @@ export class TemplateBaseService {
 
     // todo: is this the right dimension?
     baseTemplate.visual = await this.visualService.createVisualBannerNarrow();
+
+    return baseTemplate;
+  }
+
+  async updateTemplateBase(
+    baseTemplate: ITemplateBase,
+    baseTemplateData: UpdateTemplateBaseInput
+  ): Promise<ITemplateBase> {
+    if (baseTemplateData.description) {
+      baseTemplate.description = baseTemplateData.description;
+    }
+    if (baseTemplateData.title) {
+      baseTemplate.title = baseTemplateData.title;
+    }
+    if (baseTemplateData.tags) {
+      baseTemplate.tagset.tags = baseTemplateData.tags;
+    }
 
     return baseTemplate;
   }
