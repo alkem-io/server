@@ -64,6 +64,9 @@ selfservice:
       after:
         default_browser_return_url: http://localhost:3000/identity/registration/success
 
+session:
+  lifespan: 48h
+
 log:
   level: debug
   format: text
