@@ -67,6 +67,11 @@ export class TemplatesSetService {
     if (templatesSet.authorization)
       await this.authorizationPolicyService.delete(templatesSet.authorization);
 
+    if (templatesSet.aspectTemplates) {
+      for (const aspectTemplate of templatesSet.aspectTemplates) {
+        await this.aspectTemplateService.deleteAspectTemplate(aspectTemplate);
+      }
+    }
     return await this.templatesSetRepository.remove(
       templatesSet as TemplatesSet
     );
