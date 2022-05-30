@@ -81,6 +81,8 @@ hashers:
     salt_length: 16
     key_length: 16
 
+# From Kratos 0.9.0 schemas are now versioned.
+# see Breaking Changes of https://github.com/ory/kratos/blob/master/CHANGELOG.md#090-alpha1-2022-03-21
 identity:
   default_schema_id: default
   schemas:
