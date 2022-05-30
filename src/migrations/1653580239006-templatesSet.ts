@@ -16,7 +16,7 @@ export class templatesSet1653580239006 implements MigrationInterface {
       `ALTER TABLE \`hub\` ADD \`templatesSetId\` char(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hub\` ADD UNIQUE INDEX \`IDX_66666355b4e9bd6b02c66507aa\` (\`templatesSetId\`)`
+      `ALTER TABLE \`hub\` ADD CONSTRAINT \`IDX_66666355b4e9bd6b02c66507aa\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     await queryRunner.query(
@@ -121,7 +121,21 @@ export class templatesSet1653580239006 implements MigrationInterface {
     await queryRunner.query(`ALTER TABLE \`hub\` DROP COLUMN \`template\``);
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // Note: data is not migrated down, only the structure
+    await queryRunner.query(
+      'ALTER TABLE `hub` DROP FOREIGN KEY `IDX_66666355b4e9bd6b02c66507aa`'
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`hub\` DROP COLUMN \`templatesSetId\``
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`hub\` ADD \`template\` text NOT NULL`
+    );
+    await queryRunner.query('DROP TABLE `templates_set`');
+    await queryRunner.query('DROP TABLE `aspect_template`');
+  }
 }
 
 const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
