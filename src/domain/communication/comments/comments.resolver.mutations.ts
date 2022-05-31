@@ -73,17 +73,17 @@ export class CommentsResolverMutations {
       SubscriptionType.COMMUNICATION_COMMENTS_MESSAGE_RECEIVED,
       subscriptionPayload
     );
-
-    const [result]: { displayName: string; createdBy: string }[] =
+    // check if this is a comment related to an aspect
+    const [aspect]: { displayName: string; createdBy: string }[] =
       await getConnection().query(
         `SELECT displayName, createdBy from aspect WHERE commentsId = '${messageData.commentsID}'`
       );
 
-    if (result) {
+    if (aspect) {
       const payload =
         await this.notificationsPayloadBuilder.buildCommentCreatedOnAspectPayload(
-          result.displayName,
-          result.createdBy,
+          aspect.displayName,
+          aspect.createdBy,
           messageData.commentsID,
           commentSent
         );
