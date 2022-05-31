@@ -9,13 +9,6 @@ import { MockUserService } from '@test/mocks/user.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { Test } from '@nestjs/testing';
 import { RolesService } from './roles.service';
-import * as hub from '@test/data/hub.json';
-import * as user from '@test/data/user.json';
-import * as agent from '@test/data/agent.json';
-import * as organization from '@test/data/organization.json';
-import * as opportunity from '@test/data/opportunity.json';
-import * as applications from '@test/data/applications.json';
-import * as userRoles from '@test/data/roles-user.json';
 import { UserService } from '@domain/community/user/user.service';
 import { HubService } from '@domain/challenge/hub/hub.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
@@ -23,16 +16,7 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import { ApplicationService } from '@domain/community/application/application.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { CommunityService } from '@domain/community/community/community.service';
-
-const testData = {
-  ...hub,
-  ...agent,
-  ...opportunity,
-  ...organization,
-  ...user,
-  ...applications,
-  ...userRoles,
-};
+import { testData } from '@test/utils';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -84,6 +68,10 @@ describe('RolesService', () => {
       jest
         .spyOn(hubService, 'getHubOrFail')
         .mockResolvedValue(testData.hub as any);
+
+      jest
+        .spyOn(challengeSerivce, 'getChallengeOrFail')
+        .mockResolvedValue(testData.challenge as any);
 
       jest
         .spyOn(organizationService, 'getOrganizationOrFail')
@@ -140,22 +128,40 @@ describe('RolesService', () => {
 
   describe('Organization Roles', () => {
     it('Should get organization roles', async () => {
-      //mock whatever needs to be mocked
-      // jest
-      //   .spyOn(userService, 'getUserWithAgent')
-      //   .mockResolvedValue(testData.user);
-      // const res = await rolesService.getOrganizationRoles({
-      //   organizationID: testData.organization.id,
-      // });
-      //expect some results
-      // expect(res.applications).toEqual(
-      //   expect.arrayContaining([
-      //     expect.objectContaining({
-      //       communityID: testData.rolesUser.applications[0].communityID,
-      //       hubID: testData.rolesUser.applications[0].hubID,
-      //     }),
-      //   ])
-      // );
+      jest
+        .spyOn(organizationService, 'getOrganizationAndAgent')
+        .mockResolvedValue({
+          organization: testData.organization as any,
+          agent: testData.agent,
+        });
+
+      jest
+        .spyOn(hubService, 'getHubOrFail')
+        .mockResolvedValue(testData.hub as any);
+
+      jest
+        .spyOn(challengeSerivce, 'getChallengeOrFail')
+        .mockResolvedValue(testData.challenge as any);
+
+      jest
+        .spyOn(organizationService, 'getOrganizationOrFail')
+        .mockResolvedValue(testData.organization as any);
+
+      jest
+        .spyOn(opportunityService, 'getOpportunityOrFail')
+        .mockResolvedValue(testData.opportunity as any);
+
+      const res = await rolesService.getOrganizationRoles({
+        organizationID: testData.organization.id,
+      });
+
+      expect(res.hubs).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            hubID: testData.hub.id,
+          }),
+        ])
+      );
     });
   });
 });
