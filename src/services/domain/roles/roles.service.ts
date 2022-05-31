@@ -123,6 +123,9 @@ export class RolesService {
         case AuthorizationCredential.CHALLENGE_LEAD:
           await this.addChallengeLeadRole(hubsMap, credential, contributorID);
           break;
+        case AuthorizationCredential.CHALLENGE_MEMBER:
+          await this.addChallengeMemberRole(hubsMap, credential, contributorID);
+          break;
         case AuthorizationCredential.OPPORTUNITY_MEMBER:
           await this.addOpportunityMemberRole(
             hubsMap,
@@ -211,6 +214,19 @@ export class RolesService {
       contributorID
     );
     this.addRole(challengeResult, ROLE_LEAD);
+  }
+
+  private async addChallengeMemberRole(
+    hubsMap: Map<string, RolesResultHub>,
+    credential: ICredential,
+    contributorID: string
+  ) {
+    const challengeResult = await this.ensureChallengeRolesResult(
+      hubsMap,
+      credential.resourceID,
+      contributorID
+    );
+    this.addRole(challengeResult, ROLE_MEMBER);
   }
 
   private async addHubHostRole(
@@ -357,7 +373,7 @@ export class RolesService {
       opportunity.id,
       opportunity.displayName
     );
-    hubResult.challenges.push(newOpportunityResult);
+    hubResult.opportunities.push(newOpportunityResult);
     return newOpportunityResult;
   }
 
