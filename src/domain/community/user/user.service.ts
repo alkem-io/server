@@ -99,12 +99,6 @@ export class UserService {
       userData.profileData
     );
     user.profile = await this.profileService.createProfile(profileData);
-    // Todo: remove later
-    this.locationService.updateLocationValues(user.profile.location, {
-      city: userData.city,
-      country: userData.country,
-    });
-
     user.agent = await this.agentService.createAgent({
       parentDisplayID: user.email,
     });

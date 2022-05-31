@@ -39,10 +39,10 @@ export class Context extends AuthorizableEntity implements IContext {
   @OneToOne(() => Location, {
     eager: false,
     cascade: true,
-    onDelete: 'CASCADE',
+    onDelete: 'SET NULL',
   })
   @JoinColumn()
-  location!: Location;
+  location?: Location;
 
   @OneToOne(() => EcosystemModel, {
     eager: false,
