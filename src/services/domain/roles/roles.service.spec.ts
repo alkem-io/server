@@ -16,7 +16,8 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import { ApplicationService } from '@domain/community/application/application.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { CommunityService } from '@domain/community/community/community.service';
-import { testData } from '@test/utils';
+import { asyncToThrow, testData } from '@test/utils';
+import { RelationshipNotFoundException } from '@common/exceptions';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -122,6 +123,49 @@ describe('RolesService', () => {
             hubID: testData.hub.id,
           }),
         ])
+      );
+    });
+
+    it('Should throw exception', async () => {
+      jest
+        .spyOn(userService, 'getUserWithAgent')
+        .mockResolvedValue(testData.user);
+
+      jest
+        .spyOn(hubService, 'getHubOrFail')
+        .mockResolvedValue(testData.hub as any);
+
+      jest
+        .spyOn(challengeSerivce, 'getChallengeOrFail')
+        .mockResolvedValue(testData.challenge as any);
+
+      jest
+        .spyOn(organizationService, 'getOrganizationOrFail')
+        .mockResolvedValue(testData.organization as any);
+
+      jest
+        .spyOn(opportunityService, 'getOpportunityOrFail')
+        .mockResolvedValue(testData.opportunity as any);
+
+      jest
+        .spyOn(applicationService, 'findApplicationsForUser')
+        .mockResolvedValue(testData.applications as any);
+
+      jest
+        .spyOn(applicationService, 'isFinalizedApplication')
+        .mockResolvedValue(false);
+
+      jest
+        .spyOn(applicationService, 'getApplicationState')
+        .mockResolvedValue('new');
+
+      jest.spyOn(communityService, 'isHubCommunity').mockResolvedValue(false);
+
+      await asyncToThrow(
+        rolesService.getUserRoles({
+          userID: testData.user.id,
+        }),
+        RelationshipNotFoundException
       );
     });
   });
