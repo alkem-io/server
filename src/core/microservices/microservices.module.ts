@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Global, Module } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
+  SUBSCRIPTION_ASPECT_COMMENT,
   NOTIFICATIONS_SERVICE,
   SUBSCRIPTION_DISCUSSION_MESSAGE,
   SUBSCRIPTION_UPDATE_MESSAGE,
@@ -37,6 +38,10 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
     provide: SUBSCRIPTION_UPDATE_MESSAGE,
     queueName: MessagingQueue.SUBSCRIPTION_UPDATE_MESSAGE,
+  },
+  {
+    provide: SUBSCRIPTION_ASPECT_COMMENT,
+    queueName: MessagingQueue.SUBSCRIPTION_ASPECT_COMMENT,
   },
   {
     provide: SUBSCRIPTION_CANVAS_CONTENT,
@@ -88,6 +93,7 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     SUBSCRIPTION_DISCUSSION_MESSAGE,
     SUBSCRIPTION_DISCUSSION_UPDATED,
     SUBSCRIPTION_UPDATE_MESSAGE,
+    SUBSCRIPTION_ASPECT_COMMENT,
     SUBSCRIPTION_CANVAS_CONTENT,
     SUBSCRIPTION_CONTEXT_ASPECT_CREATED,
     SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
