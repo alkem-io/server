@@ -144,11 +144,9 @@ describe('RolesService', () => {
       // jest
       //   .spyOn(userService, 'getUserWithAgent')
       //   .mockResolvedValue(testData.user);
-
-      const res = await rolesService.getOrganizationRoles({
-        organizationID: testData.organization.id,
-      });
-
+      // const res = await rolesService.getOrganizationRoles({
+      //   organizationID: testData.organization.id,
+      // });
       //expect some results
       // expect(res.applications).toEqual(
       //   expect.arrayContaining([
