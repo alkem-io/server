@@ -1,9 +1,7 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { Global, Module } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { subscriptionDiscussionMessageFactory } from './subscription.discussion.message.factory';
-import { notificationsServiceFactory } from './notifications.service.factory';
-import { walletManagerServiceFactory } from './wallet-manager.service.factory';
 import {
   NOTIFICATIONS_SERVICE,
   SUBSCRIPTION_DISCUSSION_MESSAGE,
@@ -14,24 +12,49 @@ import {
   SUBSCRIPTION_DISCUSSION_UPDATED,
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
 } from '@common/constants/providers';
-
-export type MicroserviceOptions = {
-  queueName: string;
-};
+import { MessagingQueue } from '@common/enums/messaging.queue';
+import { Aspect } from '@src/domain';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { Opportunity } from '@domain/collaboration';
 import { Communication } from '@domain/communication';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { Community } from '@domain/community/community';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationsPayloadBuilder } from './notifications.payload.builder';
-import { subscriptionCanvasContentFactory } from './subscription.canvas.content.factory';
-import { subscriptionUpdateMessageFactory } from './subscription.update.message.factory';
-import { subscriptionDiscussionUpdatedFactory } from './subscription.discussion.updated.factory';
-import { subscriptionProfileVerifiedCredentialFactory } from './subscription.profile.verified.credential.factory';
-import { subscriptionContextAspectCreatedFactory } from '@core/microservices/subscription.context.aspect.created.factory';
-import { Aspect } from '@src/domain';
+import { subscriptionFactoryProvider } from './subscription.factory.provider';
+import { notificationsServiceFactory } from './notifications.service.factory';
+import { walletManagerServiceFactory } from './wallet-manager.service.factory';
+
+const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
+  {
+    provide: SUBSCRIPTION_DISCUSSION_MESSAGE,
+    queueName: MessagingQueue.SUBSCRIPTION_DISCUSSION_MESSAGE,
+  },
+  {
+    provide: SUBSCRIPTION_DISCUSSION_UPDATED,
+    queueName: MessagingQueue.SUBSCRIPTION_DISCUSSION_UPDATED,
+  },
+  {
+    provide: SUBSCRIPTION_UPDATE_MESSAGE,
+    queueName: MessagingQueue.SUBSCRIPTION_UPDATE_MESSAGE,
+  },
+  {
+    provide: SUBSCRIPTION_CANVAS_CONTENT,
+    queueName: MessagingQueue.SUBSCRIPTION_CANVAS_CONTENT,
+  },
+  {
+    provide: SUBSCRIPTION_CONTEXT_ASPECT_CREATED,
+    queueName: MessagingQueue.SUBSCRIPTION_CONTEXT_ASPECT_CREATED,
+  },
+  {
+    provide: SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
+    queueName: MessagingQueue.SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
+  },
+];
+
+const subscriptionFactoryProviders = subscriptionConfig.map(
+  ({ provide, queueName }) => subscriptionFactoryProvider(provide, queueName)
+);
 
 @Global()
 @Module({
@@ -49,37 +72,7 @@ import { Aspect } from '@src/domain';
   ],
   providers: [
     NotificationsPayloadBuilder,
-
-    {
-      provide: SUBSCRIPTION_DISCUSSION_MESSAGE,
-      useFactory: subscriptionDiscussionMessageFactory,
-      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
-    },
-    {
-      provide: SUBSCRIPTION_DISCUSSION_UPDATED,
-      useFactory: subscriptionDiscussionUpdatedFactory,
-      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
-    },
-    {
-      provide: SUBSCRIPTION_UPDATE_MESSAGE,
-      useFactory: subscriptionUpdateMessageFactory,
-      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
-    },
-    {
-      provide: SUBSCRIPTION_CANVAS_CONTENT,
-      useFactory: subscriptionCanvasContentFactory,
-      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
-    },
-    {
-      provide: SUBSCRIPTION_CONTEXT_ASPECT_CREATED,
-      useFactory: subscriptionContextAspectCreatedFactory,
-      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
-    },
-    {
-      provide: SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
-      useFactory: subscriptionProfileVerifiedCredentialFactory,
-      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
-    },
+    ...subscriptionFactoryProviders,
     {
       provide: NOTIFICATIONS_SERVICE,
       useFactory: notificationsServiceFactory,
