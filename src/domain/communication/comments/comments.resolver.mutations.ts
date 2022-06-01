@@ -16,7 +16,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import {
   NOTIFICATIONS_SERVICE,
-  SUBSCRIPTION_UPDATE_MESSAGE,
+  SUBSCRIPTION_ASPECT_COMMENT,
 } from '@common/constants/providers';
 import { CommentsMessageReceived } from './dto/comments.dto.event.message.received';
 import { CommentsAuthorizationService } from './comments.service.authorization';
@@ -30,8 +30,8 @@ export class CommentsResolverMutations {
     private authorizationService: AuthorizationService,
     private commentsService: CommentsService,
     private commentsAuthorizationService: CommentsAuthorizationService,
-    @Inject(SUBSCRIPTION_UPDATE_MESSAGE)
-    private readonly subscriptionUpdateMessage: PubSubEngine,
+    @Inject(SUBSCRIPTION_ASPECT_COMMENT)
+    private readonly subscriptionAspectComments: PubSubEngine,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
@@ -69,7 +69,7 @@ export class CommentsResolverMutations {
       message: commentSent,
       commentsID: comments.id,
     };
-    this.subscriptionUpdateMessage.publish(
+    this.subscriptionAspectComments.publish(
       SubscriptionType.COMMUNICATION_COMMENTS_MESSAGE_RECEIVED,
       subscriptionPayload
     );
