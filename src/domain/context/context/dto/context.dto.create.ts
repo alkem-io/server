@@ -4,6 +4,7 @@ import { CreateReferenceInput } from '@domain/common/reference/reference.dto.cre
 import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CreateLocationInput } from '@domain/common/location/dto/location.dto.create';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class CreateContextInput {
@@ -36,10 +37,13 @@ export class CreateContextInput {
     nullable: true,
     description: 'Set of References for the new Context.',
   })
+  @ValidateNested({ each: true })
+  @Type(() => CreateReferenceInput)
   references?: CreateReferenceInput[];
 
-  @Field({ nullable: true })
+  @Field(() => CreateLocationInput, { nullable: true })
   @IsOptional()
   @ValidateNested()
+  @Type(() => CreateLocationInput)
   location?: CreateLocationInput;
 }

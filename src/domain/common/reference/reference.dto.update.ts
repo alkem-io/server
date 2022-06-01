@@ -10,6 +10,7 @@ import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
 @InputType()
 export class UpdateReferenceInput extends UpdateBaseAlkemioInput {
   @Field({ nullable: true })
+  @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   name?: string;
 

@@ -5,6 +5,7 @@ import { UpdateReferenceInput } from '@domain/common/reference';
 import { UpdateTagsetInput } from '@domain/common/tagset';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
 import { UpdateLocationInput } from '@domain/common/location/dto/location.dto.update';
+import { Type } from 'class-transformer';
 @InputType()
 export class UpdateProfileInput extends UpdateBaseAlkemioInput {
   @Field({ nullable: true })
@@ -13,13 +14,20 @@ export class UpdateProfileInput extends UpdateBaseAlkemioInput {
   description?: string;
 
   @Field(() => [UpdateReferenceInput], { nullable: true })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateReferenceInput)
   references?: UpdateReferenceInput[];
 
   @Field(() => [UpdateTagsetInput], { nullable: true })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => UpdateTagsetInput)
   tagsets?: UpdateTagsetInput[];
 
-  @Field({ nullable: true })
+  @Field(() => UpdateLocationInput, { nullable: true })
   @IsOptional()
   @ValidateNested()
+  @Type(() => UpdateLocationInput)
   location?: UpdateLocationInput;
 }
