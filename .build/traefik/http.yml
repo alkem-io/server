@@ -84,10 +84,10 @@ http:
           - /api/public
         forceSlash: false
 
-    strip-kratos-admin-prefix:
+    strip-kratos-prefix:
       stripPrefix:
         prefixes:
-          - /identity/ory/kratos/admin
+          - /identity/ory/kratos
         forceSlash: false
 
     strip-kratos-public-prefix:
@@ -153,7 +153,7 @@ http:
       rule: 'PathPrefix(`/identity/ory/kratos/admin`)'
       service: 'kratos-admin'
       middlewares:
-        - strip-kratos-admin-prefix
+        - strip-kratos-prefix
       entryPoints:
         - 'web'
 
