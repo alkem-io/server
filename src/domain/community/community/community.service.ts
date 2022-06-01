@@ -736,4 +736,10 @@ export class CommunityService {
 
     return credentialMatches;
   }
+
+  async isHubCommunity(community: ICommunity): Promise<boolean> {
+    const parentCommunity = await this.getParentCommunity(community);
+
+    return parentCommunity === undefined;
+  }
 }
