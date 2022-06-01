@@ -39,6 +39,7 @@ import {
   WebsocketContext,
 } from '@src/types';
 import { RegistrationModule } from '@services/domain/registration/registration.module';
+import { RolesModule } from '@services/domain/roles/roles.module';
 
 @Module({
   imports: [
@@ -150,6 +151,7 @@ import { RegistrationModule } from '@services/domain/registration/registration.m
     BootstrapModule,
     SearchModule,
     MembershipModule,
+    RolesModule,
     KonfigModule,
     IpfsModule,
     AdminCommunicationModule,

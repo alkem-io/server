@@ -654,4 +654,15 @@ export class ChallengeService {
 
     return defaults;
   }
+
+  async getChallengeForCommunity(
+    communityID: string
+  ): Promise<IChallenge | undefined> {
+    return await this.challengeRepository.findOne({
+      relations: ['community'],
+      where: {
+        community: { id: communityID },
+      },
+    });
+  }
 }
