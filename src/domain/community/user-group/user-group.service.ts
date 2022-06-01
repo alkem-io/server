@@ -153,15 +153,6 @@ export class UserGroupService {
     });
   }
 
-  async isMember(userID: string, groupID: string): Promise<boolean> {
-    const agent = await this.userService.getUserWithAgent(userID);
-
-    return await this.agentService.hasValidCredential(agent.id, {
-      type: AuthorizationCredential.USER_GROUP_MEMBER,
-      resourceID: groupID,
-    });
-  }
-
   async removeUser(
     membershipData: RemoveUserGroupMemberInput
   ): Promise<IUserGroup> {
@@ -180,7 +171,7 @@ export class UserGroupService {
     });
   }
 
-  hasGroupWithName(groupable: IGroupable, name: string): boolean {
+  private hasGroupWithName(groupable: IGroupable, name: string): boolean {
     // Double check groups array is initialised
     if (!groupable.groups) {
       throw new EntityNotInitializedException(
