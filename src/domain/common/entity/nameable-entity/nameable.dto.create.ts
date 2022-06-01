@@ -9,7 +9,6 @@ export class CreateNameableInput {
     nullable: false,
     description: 'A readable identifier, unique within the containing scope.',
   })
-  @MinLength(3)
   nameID!: string;
 
   @Field({ nullable: false, description: 'The display name for the entity.' })
