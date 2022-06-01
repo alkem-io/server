@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { Scalar, CustomScalar } from '@nestjs/graphql';
+import { isLowercase } from 'class-validator';
 import { Kind, ValueNode } from 'graphql';
 
 @Scalar('NameID')
@@ -12,7 +13,7 @@ export class NameID implements CustomScalar<string, string> {
     'A human readable identifier, 3 <= length <= 25. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.';
 
   parseValue(value: unknown): string {
-    return this.validate(value).toLowerCase();
+    return this.validate(value);
   }
 
   serialize(value: any): string {
@@ -29,18 +30,24 @@ export class NameID implements CustomScalar<string, string> {
   validate = (value: any) => {
     if (typeof value !== 'string') {
       throw new ValidationException(
-        `Value is not string: ${value}`,
+        `Value type is not string: ${value}`,
         LogContext.API
       );
     }
 
     if (!NameID.isValidFormat(value))
       throw new ValidationException(
-        `NameID value not valid: ${value}`,
+        `NameID value format is not valid: ${value}`,
         LogContext.API
       );
 
-    return value.toLowerCase();
+    if (!isLowercase(value)) {
+      throw new ValidationException(
+        `NameID is not lowercase: ${value}`,
+        LogContext.API
+      );
+    }
+    return value;
   };
 
   static isValidFormat = (value: any) => {
