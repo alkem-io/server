@@ -30,6 +30,7 @@ import {
   ROLE_MEMBER,
 } from '@common/constants';
 import { IApplication } from '@domain/community';
+import { isCommunity, isOrganization } from '@common/utils/groupable.util';
 
 export type UserGroupResult = {
   userGroup: IUserGroup;
@@ -89,12 +90,8 @@ export class RolesService {
       hubsMap
     );
 
-    for (const hubResult of hubsMap.values()) {
-      membership.hubs.push(hubResult);
-    }
-    for (const orgResult of orgsMap.values()) {
-      membership.organizations.push(orgResult);
-    }
+    membership.hubs.push(...hubsMap.values());
+    membership.organizations.push(...orgsMap.values());
 
     return membership;
   }
@@ -138,10 +135,10 @@ export class RolesService {
           break;
         case AuthorizationCredential.USER_GROUP_MEMBER:
           await this.addUserGroupMemberRole(
-            credential,
             hubsMap,
             contributorID,
-            orgsMap
+            orgsMap,
+            credential
           );
           break;
       }
@@ -149,32 +146,34 @@ export class RolesService {
   }
 
   private async addUserGroupMemberRole(
-    credential: ICredential,
     hubsMap: Map<string, RolesResultHub>,
     contributorID: string,
-    orgsMap: Map<string, RolesResultOrganization>
+    orgsMap: Map<string, RolesResultOrganization>,
+    credential: ICredential
   ) {
     const group = await this.userGroupService.getUserGroupOrFail(
       credential.resourceID
     );
     const parent = await this.userGroupService.getParent(group);
-    if ('hubID' in parent) {
+    if (isCommunity(parent)) {
       const hubResult = await this.ensureHubRolesResult(
         hubsMap,
-        (parent as ICommunity).hubID,
+        parent.hubID,
         contributorID
       );
       const groupResult = new RolesResult(group.name, group.id, group.name);
       hubResult.userGroups.push(groupResult);
-    } else {
+    } else if (isOrganization(parent)) {
       const orgResult = await this.ensureOrganizationRolesResult(
         orgsMap,
-        (parent as IOrganization).id,
+        parent.id,
         contributorID
       );
       const groupResult = new RolesResult(group.name, group.id, group.name);
       orgResult.userGroups.push(groupResult);
     }
+
+    // throw
   }
 
   private async addOpportunityLeadRole(
@@ -427,32 +426,31 @@ export class RolesService {
       community
     );
 
-    if (!isHubCommunity) {
-      // For Challenge or an Opportunity, need to dig deeper...
-      const challengeForCommunity =
-        await this.challengeService.getChallengeForCommunity(community.id);
+    if (isHubCommunity) return applicationResult;
 
-      if (challengeForCommunity) {
-        // the application is issued for a challenge
-        applicationResult.challengeID = challengeForCommunity.id;
-      } else {
-        const opportunityForCommunity =
-          await this.opportunityService.getOpportunityForCommunity(
-            community.id
-          );
+    // For Challenge or an Opportunity, need to dig deeper...
+    const challengeForCommunity =
+      await this.challengeService.getChallengeForCommunity(community.id);
 
-        if (!opportunityForCommunity || !opportunityForCommunity.challenge) {
-          throw new RelationshipNotFoundException(
-            `Unable to find Challenge or Opportunity with the community specified: ${community.id}`,
-            LogContext.COMMUNITY
-          );
-        }
-
-        // the application is issued for an an opportunity
-        applicationResult.opportunityID = opportunityForCommunity.id;
-        applicationResult.challengeID = opportunityForCommunity.challenge.id;
-      }
+    if (challengeForCommunity) {
+      // the application is issued for a challenge
+      applicationResult.challengeID = challengeForCommunity.id;
+      return applicationResult;
     }
+
+    const opportunityForCommunity =
+      await this.opportunityService.getOpportunityForCommunity(community.id);
+
+    if (!opportunityForCommunity || !opportunityForCommunity.challenge) {
+      throw new RelationshipNotFoundException(
+        `Unable to find Challenge or Opportunity with the community specified: ${community.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    // the application is issued for an an opportunity
+    applicationResult.opportunityID = opportunityForCommunity.id;
+    applicationResult.challengeID = opportunityForCommunity.challenge.id;
     return applicationResult;
   }
 }

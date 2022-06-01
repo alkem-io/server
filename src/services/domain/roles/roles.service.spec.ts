@@ -45,15 +45,14 @@ describe('RolesService', () => {
       ],
     }).compile();
 
-    rolesService = moduleRef.get<RolesService>(RolesService);
-    userService = moduleRef.get<UserService>(UserService);
-    opportunityService = moduleRef.get<OpportunityService>(OpportunityService);
-    challengeSerivce = moduleRef.get<ChallengeService>(ChallengeService);
-    hubService = moduleRef.get<HubService>(HubService);
-    applicationService = moduleRef.get<ApplicationService>(ApplicationService);
-    organizationService =
-      moduleRef.get<OrganizationService>(OrganizationService);
-    communityService = moduleRef.get<CommunityService>(CommunityService);
+    rolesService = moduleRef.get(RolesService);
+    userService = moduleRef.get(UserService);
+    opportunityService = moduleRef.get(OpportunityService);
+    challengeSerivce = moduleRef.get(ChallengeService);
+    hubService = moduleRef.get(HubService);
+    applicationService = moduleRef.get(ApplicationService);
+    organizationService = moduleRef.get(OrganizationService);
+    communityService = moduleRef.get(CommunityService);
   });
 
   it('should be defined', () => {
@@ -126,7 +125,7 @@ describe('RolesService', () => {
       );
     });
 
-    it('Should throw exception', async () => {
+    it('Should throw exception when community parent is not found', async () => {
       jest
         .spyOn(userService, 'getUserWithAgent')
         .mockResolvedValue(testData.user);
@@ -167,6 +166,48 @@ describe('RolesService', () => {
         }),
         RelationshipNotFoundException
       );
+    });
+
+    it('Should skip application that is finalized', async () => {
+      jest
+        .spyOn(userService, 'getUserWithAgent')
+        .mockResolvedValue(testData.user);
+
+      jest
+        .spyOn(hubService, 'getHubOrFail')
+        .mockResolvedValue(testData.hub as any);
+
+      jest
+        .spyOn(challengeSerivce, 'getChallengeOrFail')
+        .mockResolvedValue(testData.challenge as any);
+
+      jest
+        .spyOn(organizationService, 'getOrganizationOrFail')
+        .mockResolvedValue(testData.organization as any);
+
+      jest
+        .spyOn(opportunityService, 'getOpportunityOrFail')
+        .mockResolvedValue(testData.opportunity as any);
+
+      jest
+        .spyOn(applicationService, 'findApplicationsForUser')
+        .mockResolvedValue(testData.applications as any);
+
+      jest
+        .spyOn(applicationService, 'isFinalizedApplication')
+        .mockResolvedValue(true);
+
+      jest
+        .spyOn(applicationService, 'getApplicationState')
+        .mockResolvedValue('new');
+
+      jest.spyOn(communityService, 'isHubCommunity').mockResolvedValue(true);
+
+      const res = await rolesService.getUserRoles({
+        userID: testData.user.id,
+      });
+
+      expect(res.applications).toHaveLength(0);
     });
   });
 

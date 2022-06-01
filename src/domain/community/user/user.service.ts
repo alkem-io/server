@@ -51,6 +51,7 @@ import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { LocationService } from '@domain/common/location/location.service';
 import { CreateProfileInput } from '../profile/dto/profile.dto.create';
+import { validateEmail } from '@common/utils';
 
 @Injectable()
 export class UserService {
@@ -339,7 +340,7 @@ export class UserService {
   ): Promise<IUser> {
     let user: IUser | undefined;
 
-    if (this.validateEmail(userID)) {
+    if (validateEmail(userID)) {
       user = await this.userRepository.findOne(
         {
           email: userID,
@@ -400,7 +401,7 @@ export class UserService {
     email: string,
     options?: FindOneOptions<User>
   ): Promise<IUser | undefined> {
-    if (!this.validateEmail(email)) {
+    if (!validateEmail(email)) {
       throw new FormatNotSupportedException(
         `Incorrect format of the user email: ${email}`,
         LogContext.COMMUNITY
@@ -434,12 +435,6 @@ export class UserService {
 
     return user;
   }
-
-  private validateEmail(email: string): boolean {
-    const regex = /\S+@\S+\.\S+/;
-    return regex.test(email);
-  }
-
   async isRegisteredUser(email: string): Promise<boolean> {
     const user = await this.userRepository.findOne({ email: email });
     if (user) return true;

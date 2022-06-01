@@ -411,12 +411,11 @@ export class OpportunityService {
   async getOpportunityForCommunity(
     communityID: string
   ): Promise<IOpportunity | undefined> {
-    return await this.opportunityRepository
-      .createQueryBuilder('opportunity')
-      .leftJoinAndSelect('opportunity.challenge', 'challenge')
-      .leftJoinAndSelect('opportunity.community', 'community')
-      .orWhere('community.id like :communityID')
-      .setParameters({ communityID: `%${communityID}%` })
-      .getOne();
+    return await this.opportunityRepository.findOne({
+      relations: ['community', 'challenge'],
+      where: {
+        community: { id: communityID },
+      },
+    });
   }
 }

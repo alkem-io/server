@@ -658,11 +658,11 @@ export class ChallengeService {
   async getChallengeForCommunity(
     communityID: string
   ): Promise<IChallenge | undefined> {
-    return await this.challengeRepository
-      .createQueryBuilder('challenge')
-      .leftJoinAndSelect('challenge.community', 'community')
-      .orWhere('community.id like :communityID')
-      .setParameters({ communityID: `%${communityID}%` })
-      .getOne();
+    return await this.challengeRepository.findOne({
+      relations: ['community'],
+      where: {
+        community: { id: communityID },
+      },
+    });
   }
 }
