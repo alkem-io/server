@@ -2,6 +2,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Global, Module } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { randomUUID } from 'crypto';
 import {
   SUBSCRIPTION_ASPECT_COMMENT,
   NOTIFICATIONS_SERVICE,
@@ -57,8 +58,15 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   },
 ];
 
+const replicaUUID = randomUUID();
 const subscriptionFactoryProviders = subscriptionConfig.map(
-  ({ provide, queueName }) => subscriptionFactoryProvider(provide, queueName)
+  ({ provide, queueName }) =>
+    subscriptionFactoryProvider(
+      provide,
+      queueName,
+      'alkemio-graphql-subscriptions', // todo extract
+      replicaUUID
+    )
 );
 
 @Global()

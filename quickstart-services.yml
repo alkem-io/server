@@ -195,6 +195,8 @@ services:
     container_name: alkemio_dev_notifications
     hostname: notifications
     image: alkemio/notifications:v0.5.0
+    #deploy:
+    #  replicas: 3
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER

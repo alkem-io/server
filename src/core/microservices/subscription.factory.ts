@@ -1,15 +1,15 @@
-import { ConfigurationTypes, LogContext } from '@common/enums';
-import { LoggerService } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import amqp from 'amqplib';
 import { AMQPPubSub } from 'graphql-amqp-subscriptions';
 import { PubSubEngine } from 'graphql-subscriptions';
-import amqp from 'amqplib';
-import { MessagingQueue } from '@common/enums/messaging.queue';
+import { LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 
 export async function subscriptionFactory(
   logger: LoggerService,
   configService: ConfigService,
-  queueName: MessagingQueue
+  exchangeName: string,
+  queueName: string
 ): Promise<PubSubEngine | undefined> {
   const rabbitMqOptions = configService?.get(
     ConfigurationTypes.MICROSERVICES
@@ -25,7 +25,7 @@ export async function subscriptionFactory(
           connection: conn,
           exchange: {
             // RabbitMQ subscriptions exchange name
-            name: 'alkemio-graphql-subscriptions',
+            name: exchangeName,
             // RabbitMQ exchange type. There are 4 exchange types:
             // TOPIC - Topic exchanges route messages to one or many queues based on matching between a message routing key and the pattern that was used to bind a queue to an exchange.
             // The topic exchange type is often used to implement various publish/subscribe pattern variations. Topic exchanges are commonly used for the multicast routing of messages.
@@ -36,12 +36,12 @@ export async function subscriptionFactory(
             // FANOUT - A fanout exchange routes messages to all of the queues that are bound to it and the routing key is ignored.
             // If N queues are bound to a fanout exchange, when a new message is published to that exchange a copy of the message is delivered to all N queues.
             // Fanout exchanges are ideal for the broadcast routing of messages.
-            type: 'topic',
+            type: 'direct',
             options: {
               // the exchange will survive a broker restart
-              durable: true,
+              durable: false,
               // exchange is deleted when last queue is unbound from it
-              autoDelete: false,
+              autoDelete: true,
             },
           },
           queue: {
@@ -50,9 +50,9 @@ export async function subscriptionFactory(
               // used by only one connection and the queue will be deleted when that connection closes
               exclusive: false,
               // the queue will survive a broker restart
-              durable: true,
+              durable: false,
               // queue that has had at least one consumer is deleted when last consumer unsubscribes
-              autoDelete: false,
+              autoDelete: true,
             },
             // Unbind from the RabbitMQ queue when disposing the pubsub connection
             unbindOnDispose: false,
@@ -68,6 +68,13 @@ export async function subscriptionFactory(
         return undefined;
       }
     )
+    .then(x => {
+      logger.verbose?.(
+        `Created consumer on queue ${queueName}`,
+        LogContext.SUBSCRIPTIONS
+      );
+      return x;
+    })
     .catch(err => {
       logger?.error(
         `Could not connect to RabbitMQ: ${err}, logging in...`,
