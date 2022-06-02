@@ -1,10 +1,26 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { MID_TEXT_LENGTH, VERY_LONG_TEXT_LENGTH } from '@src/common/constants';
+import {
+  MID_TEXT_LENGTH,
+  SMALL_TEXT_LENGTH,
+  VERY_LONG_TEXT_LENGTH,
+} from '@src/common/constants';
 import { IsOptional, MaxLength } from 'class-validator';
-import { CreateNameableInput } from '@domain/common/entity/nameable-entity';
+import { NameID } from '@domain/common/scalars';
+import { MinLength } from 'class-validator';
 
 @InputType()
-export class CreateAspectInput extends CreateNameableInput {
+export class CreateAspectInput {
+  @Field(() => NameID, {
+    nullable: true,
+    description: 'A readable identifier, unique within the containing scope.',
+  })
+  nameID?: string;
+
+  @Field({ nullable: false, description: 'The display name for the entity.' })
+  @MinLength(3)
+  @MaxLength(SMALL_TEXT_LENGTH)
+  displayName!: string;
+
   @Field({ nullable: false })
   @MaxLength(MID_TEXT_LENGTH)
   type!: string;
