@@ -13,7 +13,8 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SUBSCRIPTION_ASPECT_COMMENT } from '@common/constants/providers';
 import { CommentsMessageReceived } from './dto/comments.dto.event.message.received';
-
+// todo split comment subscriptions per use case, not per this entity
+// https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/1971
 @Resolver()
 export class CommentsResolverSubscriptions {
   constructor(
