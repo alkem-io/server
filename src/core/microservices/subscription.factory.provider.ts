@@ -25,7 +25,8 @@ export const subscriptionFactoryProvider = (
     subscriptionFactory(
       logger,
       configService,
-      `${exchangeName}-${trackingID}`,
+      //`${exchangeName}-${trackingID}`,
+      exchangeName,
       `${queueName}-${trackingID}`
     ),
   inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
