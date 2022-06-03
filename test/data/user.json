@@ -1,0 +1,359 @@
+{
+  "user": {
+    "accountUpn": "admin@alkem.io",
+    "firstName": "admin",
+    "lastName": "alkemio",
+    "email": "admin@alkem.io",
+    "phone": "",
+    "gender": "",
+    "communicationID": "@admin=alkem.io:alkemio.matrix.host",
+    "serviceProfile": false,
+    "id": "b69f82a1-bc7d-486c-85f9-e7ac6e689f4e",
+    "displayName": "admin alkemio",
+    "nameID": "admin-alkemio",
+    "rowId": 1,
+    "agent": {
+      "parentDisplayID": "admin@alkem.io",
+      "did": "",
+      "password": "",
+      "id": "07c6ec54-524a-4d7f-9f58-a4c50f0c0496",
+      "authorization": {
+        "anonymousReadAccess": false,
+        "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"inheritable\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"inheritable\":true},{\"type\":\"user-self\",\"resourceID\":\"b69f82a1-bc7d-486c-85f9-e7ac6e689f4e\",\"grantedPrivileges\":[\"create\",\"read\",\"update\"],\"inheritable\":true}]",
+        "verifiedCredentialRules": "[]",
+        "privilegeRules": "",
+        "id": "1b82dab3-4581-4ff2-88e3-4997afe4f85e"
+      },
+      "credentials": [
+        {
+          "type": "opportunity-member",
+          "resourceID": "d3c76102-087b-4b40-8aa5-b5e6023784d0",
+          "id": "01a25f24-a86f-4dc1-9f72-28c796bef32d"
+        },
+        {
+          "type": "opportunity-admin",
+          "resourceID": "6adba2b9-a062-4269-a4da-8c924ded32d6",
+          "id": "07a29f0a-cc57-4cfd-b9b4-9cfd2667439b"
+        },
+        {
+          "type": "opportunity-member",
+          "resourceID": "ed5b344e-72d1-4256-a385-f3b6e4aaaabf",
+          "id": "07bcf0f4-6583-4412-a64d-e090bb516960"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "5a26d1f6-cf8d-462f-900b-76540faa89dd",
+          "id": "0e246faa-f082-462b-863a-d908f1504e11"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "3f7b1f4c-7548-4dc7-8ab6-ba4b694189e9",
+          "id": "13606bc8-4878-4e5b-bec9-69af8d8ad6ac"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "4fff915b-6a68-49b9-8da4-98a7af112e88",
+          "id": "164fc497-7786-482e-8ef1-d0837d986dd0"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "36281b0a-a1f9-42d4-9c28-eab4db155dee",
+          "id": "21b2e49a-1026-46c9-aebc-ec1bdaf53008"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "375b9f52-754e-4795-aabe-250fc602b663",
+          "id": "27f39e31-5501-412f-ad72-03abe039fbbd"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "31ad6631-2004-4b08-a6d7-07b9df2c49db",
+          "id": "2c6f5180-2587-48f4-ad18-bdb35877e41a"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "77ba53a0-c992-4e0f-acb2-24ff5200497b",
+          "id": "2e753488-09c4-4ac0-913c-c8c27ba41161"
+        },
+        {
+          "type": "organization-member",
+          "resourceID": "65755d1d-c0fb-4efa-b4f7-7ad3f2466adb",
+          "id": "3e233016-e10f-4d57-bcb6-db406f0f32a6"
+        },
+        {
+          "type": "opportunity-admin",
+          "resourceID": "6d4ccf6e-3872-4aa6-955c-77730924cfa9",
+          "id": "4062ce75-d912-447e-b107-527d4a4780e1"
+        },
+        {
+          "type": "opportunity-admin",
+          "resourceID": "d3c76102-087b-4b40-8aa5-b5e6023784d0",
+          "id": "424ee680-784a-4ebf-ba8e-9b6150fc3f44"
+        },
+        {
+          "type": "organization-admin",
+          "resourceID": "9b042a97-0c72-4b30-b4eb-e6f50fe071bc",
+          "id": "43cb5f10-a86d-44a9-8d08-7d67d1a06225"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "31ad6631-2004-4b08-a6d7-07b9df2c49db",
+          "id": "44d0f6f0-75c3-4b0c-a196-65f5e6067704"
+        },
+        {
+          "type": "organization-member",
+          "resourceID": "82a9d004-847e-453e-9e1b-f36f3f53a4c6",
+          "id": "494229ad-8716-4113-87fe-7b8d789550b3"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "77ba53a0-c992-4e0f-acb2-24ff5200497b",
+          "id": "4a42b87c-ee99-4bf1-b2a5-0b3acd91484b"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "81bf5664-9e8d-4bc2-b533-c5d8031940d1",
+          "id": "4a433195-b99d-439f-950e-b44cd01b30f4"
+        },
+        {
+          "type": "opportunity-member",
+          "resourceID": "6adba2b9-a062-4269-a4da-8c924ded32d6",
+          "id": "4ac7b882-cb98-44d9-9cfa-9cc55c981180"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "7fc7cae5-a301-4de0-bd5d-91ec16e40d68",
+          "id": "4e45ee90-e330-47fc-b16c-1fff2dd1395e"
+        },
+        {
+          "type": "organization-admin",
+          "resourceID": "82a9d004-847e-453e-9e1b-f36f3f53a4c6",
+          "id": "53f9c859-6cce-490c-b553-6162d55043db"
+        },
+        {
+          "type": "opportunity-member",
+          "resourceID": "fbaf88eb-97b3-48c8-bb6f-47229b571729",
+          "id": "61c286a0-e865-452e-80ba-dc32535e3936"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "f1b6cfbe-263b-46f4-8116-4abdefaf8a5d",
+          "id": "6749b42d-d099-48f6-b0e4-2d6de4b7d8f1"
+        },
+        {
+          "type": "user-self",
+          "resourceID": "b69f82a1-bc7d-486c-85f9-e7ac6e689f4e",
+          "id": "6887f9ea-eb70-4c87-b8b2-ff655683184f"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "528686d2-e400-4c66-a4e4-2fcfef833ab0",
+          "id": "697daa86-75a4-4b1a-b41b-bc682e50aadd"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "a698a38b-cc36-4540-b7c5-7a99ff6a707a",
+          "id": "7651d774-5b31-4d45-80cd-f33ed26c1c6d"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "f1b6cfbe-263b-46f4-8116-4abdefaf8a5d",
+          "id": "7b1eb85d-8d14-40f4-9e16-2907da31e0b0"
+        },
+        {
+          "type": "organization-member",
+          "resourceID": "03bb5b07-f134-4074-97b9-1dd7950c7fa4",
+          "id": "7c9d0f56-8403-4f70-88f6-df3bb03649c5"
+        },
+        {
+          "type": "organization-member",
+          "resourceID": "d965c8e6-d194-432d-9f0a-68e58cbe9fb5",
+          "id": "7d423bfa-406d-41e5-a188-2e0619bb3920"
+        },
+        {
+          "type": "organization-member",
+          "resourceID": "e8171dcf-118a-46a3-940d-3416a7dd9264",
+          "id": "7ece4943-4524-411a-ac5f-b2d77989cda5"
+        },
+        {
+          "type": "organization-admin",
+          "resourceID": "65755d1d-c0fb-4efa-b4f7-7ad3f2466adb",
+          "id": "8622c048-8f21-48fb-8cac-47931e3fd1d9"
+        },
+        {
+          "type": "opportunity-member",
+          "resourceID": "6d4ccf6e-3872-4aa6-955c-77730924cfa9",
+          "id": "8ec29816-598c-48fc-b895-bb93b921181f"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "2e1a41c6-5121-4901-a437-660d14dd3503",
+          "id": "8fb3148e-79cc-47b1-8872-2e0a8bd0232b"
+        },
+        {
+          "type": "organization-member",
+          "resourceID": "9b042a97-0c72-4b30-b4eb-e6f50fe071bc",
+          "id": "9b24ab82-f93c-4e40-b7dc-fb9820a47920"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "fe83432e-21f7-495f-a3f4-daf336b02a46",
+          "id": "9f9e5331-35e5-401a-a9fe-eb7f278e26ea"
+        },
+        {
+          "type": "opportunity-admin",
+          "resourceID": "ed5b344e-72d1-4256-a385-f3b6e4aaaabf",
+          "id": "a8b6914d-efa5-40de-ac6d-93d5956de5fd"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "375b9f52-754e-4795-aabe-250fc602b663",
+          "id": "abb53b81-13df-479c-816e-526d5ff28d5c"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "7fc7cae5-a301-4de0-bd5d-91ec16e40d68",
+          "id": "ad93449a-3d51-41f5-9dc5-5f4fdda94865"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "07c275f0-e881-43e1-be81-035f863c7c2d",
+          "id": "b62180d0-8c1a-44c0-ad2e-47660e196ec1"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "07c275f0-e881-43e1-be81-035f863c7c2d",
+          "id": "b6495496-771f-47bc-a27f-87d9099d40e0"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "a698a38b-cc36-4540-b7c5-7a99ff6a707a",
+          "id": "b75db451-2577-4ce4-8a2a-741d9bd061d8"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "3896cb16-3487-49be-b6d8-6b6ddd0e9229",
+          "id": "bb530e74-0a96-4a11-b61e-ce17919bda7b"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "81bf5664-9e8d-4bc2-b533-c5d8031940d1",
+          "id": "c08ef671-83e2-40bd-9bbd-072bbe859ceb"
+        },
+        {
+          "type": "opportunity-admin",
+          "resourceID": "fbaf88eb-97b3-48c8-bb6f-47229b571729",
+          "id": "c1bb6976-992d-4b5c-b3de-815fa677381c"
+        },
+        {
+          "type": "organization-admin",
+          "resourceID": "03bb5b07-f134-4074-97b9-1dd7950c7fa4",
+          "id": "c1c7386f-1bd5-4ea9-a781-8b02e49f94d6"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "528686d2-e400-4c66-a4e4-2fcfef833ab0",
+          "id": "c3820f97-3600-44e1-be43-bf167309a163"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "3896cb16-3487-49be-b6d8-6b6ddd0e9229",
+          "id": "c49d9276-9bd8-45da-b288-9eb8c282fdeb"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "5a26d1f6-cf8d-462f-900b-76540faa89dd",
+          "id": "c8e37e63-9ab0-4e12-be57-9946c5548283"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "36281b0a-a1f9-42d4-9c28-eab4db155dee",
+          "id": "d264f2e5-b56d-4d19-993c-d1779416a930"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "675b3abd-5def-48b4-8763-67e4f7907098",
+          "id": "d293df69-bf58-40be-8022-e96238ad0ff0"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "fe83432e-21f7-495f-a3f4-daf336b02a46",
+          "id": "d3bec3a3-70fd-4399-95a5-8b18557d3f4f"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "4fff915b-6a68-49b9-8da4-98a7af112e88",
+          "id": "d64e8db4-49a9-4a9b-ae69-bb1069595812"
+        },
+        {
+          "type": "global-admin",
+          "resourceID": "",
+          "id": "d87a2010-2352-43b5-8395-2df3134d6ef3",
+          "createdDate": {},
+          "updatedDate": {},
+          "version": 2
+        },
+        {
+          "type": "global-registered",
+          "resourceID": "",
+          "id": "da19911e-0521-425e-a953-0cd43537d69e"
+        },
+        {
+          "type": "organization-admin",
+          "resourceID": "d965c8e6-d194-432d-9f0a-68e58cbe9fb5",
+          "id": "e415d048-dcf9-4f14-b13b-3c574fd653e7"
+        },
+        {
+          "type": "hub-member",
+          "resourceID": "00655835-4d15-4546-801e-1ab80ac3078a",
+          "id": "ed9fcc5c-842c-49a4-b076-d498345361fc",
+          "createdDate": {},
+          "updatedDate": {},
+          "version": 2
+        },
+        {
+          "type": "organization-admin",
+          "resourceID": "e8171dcf-118a-46a3-940d-3416a7dd9264",
+          "id": "ee07558e-d2f7-4d81-86e8-8158fba49ef6"
+        },
+        {
+          "type": "challenge-admin",
+          "resourceID": "675b3abd-5def-48b4-8763-67e4f7907098",
+          "id": "f066f091-7f1d-4eb3-87b7-a3d7bbef9232"
+        },
+        {
+          "type": "hub-admin",
+          "resourceID": "00655835-4d15-4546-801e-1ab80ac3078a",
+          "id": "f163c694-66c5-4452-a2a2-d73c31a44ebc"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "3f7b1f4c-7548-4dc7-8ab6-ba4b694189e9",
+          "id": "f6ab59eb-191c-4a8a-9cee-b47c95f0cd14"
+        },
+        {
+          "type": "organization-admin",
+          "resourceID": "f1f63669-4a36-4eeb-af33-1403ffcf13b7",
+          "id": "f8f643f0-836d-43cd-9f53-a43bd5560fb0"
+        },
+        {
+          "type": "organization-member",
+          "resourceID": "f1f63669-4a36-4eeb-af33-1403ffcf13b7",
+          "id": "fbb39fee-e656-485d-af48-872d6685e8b1"
+        },
+        {
+          "type": "challenge-member",
+          "resourceID": "2e1a41c6-5121-4901-a437-660d14dd3503",
+          "id": "fce1a6c7-751f-40a5-b7cf-fbff0bf0ee6b"
+        }
+      ]
+    },
+    "authorization": {
+      "anonymousReadAccess": false,
+      "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"inheritable\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"inheritable\":true},{\"type\":\"user-self\",\"resourceID\":\"b69f82a1-bc7d-486c-85f9-e7ac6e689f4e\",\"grantedPrivileges\":[\"create\",\"read\",\"update\"],\"inheritable\":true}]",
+      "verifiedCredentialRules": "[]",
+      "privilegeRules": "",
+      "id": "afcbcd42-8eae-4696-9ce5-321108016fd7"
+    }
+  }
+}

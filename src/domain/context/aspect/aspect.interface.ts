@@ -1,12 +1,26 @@
-import { INameable } from '@domain/common/entity/nameable-entity';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { NameID } from '@domain/common/scalars';
 
 @ObjectType('Aspect')
-export abstract class IAspect extends INameable {
+export abstract class IAspect extends IAuthorizable {
+  @Field(() => String, {
+    nullable: false,
+    description: 'The display name.',
+  })
+  displayName!: string;
+
+  @Field(() => NameID, {
+    nullable: true,
+    description:
+      'A name identifier of the entity, unique within a given scope.',
+  })
+  nameID?: string;
+
   @Field(() => String, {
     description: 'The description of this aspect',
   })

@@ -11,7 +11,6 @@ import {
   EntityNotFoundException,
   NotSupportedException,
   EntityNotInitializedException,
-  ValidationException,
 } from '@common/exceptions';
 import { UserGroup, IUserGroup } from '@domain/community/user-group';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
@@ -44,7 +43,6 @@ export class UserGroupService {
     userGroupData: CreateUserGroupInput,
     hubID = ''
   ): Promise<IUserGroup> {
-    this.validateName(userGroupData.name);
     const group = UserGroup.create(userGroupData);
     group.hubID = hubID;
     group.authorization = new AuthorizationPolicy();
@@ -59,16 +57,6 @@ export class UserGroupService {
     );
     return savedUserGroup;
   }
-
-  validateName(name: string) {
-    if (name.trim().length < 2) {
-      throw new ValidationException(
-        `UserGroup name has a minimum length of 2: ${name}`,
-        LogContext.COMMUNITY
-      );
-    }
-  }
-
   async removeUserGroup(deleteData: DeleteUserGroupInput): Promise<IUserGroup> {
     const groupID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
@@ -102,7 +90,6 @@ export class UserGroupService {
 
     const newName = userGroupInput.name;
     if (newName && newName.length > 0 && newName !== group.name) {
-      this.validateName(newName);
       group.name = newName;
     }
 
@@ -166,15 +153,6 @@ export class UserGroupService {
     });
   }
 
-  async isMember(userID: string, groupID: string): Promise<boolean> {
-    const agent = await this.userService.getUserWithAgent(userID);
-
-    return await this.agentService.hasValidCredential(agent.id, {
-      type: AuthorizationCredential.USER_GROUP_MEMBER,
-      resourceID: groupID,
-    });
-  }
-
   async removeUser(
     membershipData: RemoveUserGroupMemberInput
   ): Promise<IUserGroup> {
@@ -193,7 +171,7 @@ export class UserGroupService {
     });
   }
 
-  hasGroupWithName(groupable: IGroupable, name: string): boolean {
+  private hasGroupWithName(groupable: IGroupable, name: string): boolean {
     // Double check groups array is initialised
     if (!groupable.groups) {
       throw new EntityNotInitializedException(

@@ -16,7 +16,7 @@ export class RevokeAuthorizationCredentialInput {
   type!: AuthorizationCredential;
 
   @Field({
-    nullable: true,
+    nullable: false,
     description: 'The resource to which access is being removed.',
   })
   resourceID!: string;
