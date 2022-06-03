@@ -50,14 +50,14 @@ export async function subscriptionFactory(
               // used by only one connection and the queue will be deleted when that connection closes
               exclusive: true,
               // the queue will survive a broker restart
-              durable: false,
+              durable: true,
               // queue that has had at least one consumer is deleted when last consumer unsubscribes
-              autoDelete: true,
+              autoDelete: false,
             },
             // Unbind from the RabbitMQ queue when disposing the pubsub connection
             unbindOnDispose: false,
             // Delete the RabbitMQ queue when disposing the pubsub connection
-            deleteOnDispose: false,
+            deleteOnDispose: true,
           },
         }),
       err => {
