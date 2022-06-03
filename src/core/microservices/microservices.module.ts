@@ -26,6 +26,7 @@ import { NotificationsPayloadBuilder } from './notifications.payload.builder';
 import { subscriptionFactoryProvider } from './subscription.factory.provider';
 import { notificationsServiceFactory } from './notifications.service.factory';
 import { walletManagerServiceFactory } from './wallet-manager.service.factory';
+import { RABBITMQ_EXCHANGE_NAME } from '@src/common';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -64,7 +65,7 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     subscriptionFactoryProvider(
       provide,
       queueName,
-      'alkemio-graphql-subscriptions', // todo extract
+      RABBITMQ_EXCHANGE_NAME,
       replicaUUID
     )
 );

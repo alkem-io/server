@@ -25,7 +25,6 @@ export const subscriptionFactoryProvider = (
     subscriptionFactory(
       logger,
       configService,
-      //`${exchangeName}-${trackingID}`,
       exchangeName,
       `${queueName}-${trackingID}`
     ),
