@@ -18,10 +18,12 @@ export class CreateActorInput {
   description?: string;
 
   @Field({ nullable: true })
+  @IsOptional()
   @MaxLength(MID_TEXT_LENGTH)
   value?: string;
 
   @Field({ nullable: true })
+  @IsOptional()
   @MaxLength(MID_TEXT_LENGTH)
   impact?: string;
 }

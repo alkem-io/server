@@ -4,6 +4,7 @@ import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateReferenceInput } from '@domain/common/reference/reference.dto.update';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { UpdateLocationInput } from '@domain/common/location/dto/location.dto.update';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class UpdateContextInput {
@@ -36,10 +37,13 @@ export class UpdateContextInput {
     nullable: true,
     description: 'Update the set of References for the Context.',
   })
+  @ValidateNested({ each: true })
+  @Type(() => UpdateLocationInput)
   references?: UpdateReferenceInput[];
 
-  @Field({ nullable: true })
+  @Field(() => UpdateLocationInput, { nullable: true })
   @IsOptional()
   @ValidateNested()
+  @Type(() => UpdateLocationInput)
   location?: UpdateLocationInput;
 }

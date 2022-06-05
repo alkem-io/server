@@ -1,0 +1,30 @@
+query {
+  rolesOrganization(rolesData: {organizationID: "eco1"}) {
+   	hubs {
+      nameID
+      id
+      roles
+      challenges {
+        nameID
+        id
+        roles
+      }
+      opportunities {
+        nameID
+        displayName
+        id
+        roles
+      }
+      userGroups {
+        nameID
+        id
+      }
+    }
+    organizations {
+      nameID
+      id
+      roles
+    }
+  }
+
+}

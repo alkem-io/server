@@ -11,16 +11,17 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { CommentsService } from './comments.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { SUBSCRIPTION_UPDATE_MESSAGE } from '@common/constants/providers';
+import { SUBSCRIPTION_ASPECT_COMMENT } from '@common/constants/providers';
 import { CommentsMessageReceived } from './dto/comments.dto.event.message.received';
-
+// todo split comment subscriptions per use case, not per this entity
+// https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/1971
 @Resolver()
 export class CommentsResolverSubscriptions {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(SUBSCRIPTION_UPDATE_MESSAGE)
-    private subscriptionUpdateMessage: PubSubEngine,
+    @Inject(SUBSCRIPTION_ASPECT_COMMENT)
+    private subscriptionAspectComment: PubSubEngine,
     private commentsService: CommentsService,
     private authorizationService: AuthorizationService
   ) {}
@@ -91,7 +92,7 @@ export class CommentsResolverSubscriptions {
       `subscription to comments on: ${comments.displayName}`
     );
 
-    return this.subscriptionUpdateMessage.asyncIterator(
+    return this.subscriptionAspectComment.asyncIterator(
       SubscriptionType.COMMUNICATION_COMMENTS_MESSAGE_RECEIVED
     );
   }

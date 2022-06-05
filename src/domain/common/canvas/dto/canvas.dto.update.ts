@@ -8,6 +8,7 @@ import { IsOptional, MaxLength } from 'class-validator';
 @InputType()
 export class UpdateCanvasInput {
   @Field({ nullable: true })
+  @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   name?: string;
 
