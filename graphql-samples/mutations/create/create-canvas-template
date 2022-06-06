@@ -1,0 +1,16 @@
+mutation createCanvasTemplate($canvasTemplateInput: CreateCanvasTemplateOnTemplatesSetInput!) {
+  createCanvasTemplate(canvasTemplateInput: $canvasTemplateInput) {
+    title,
+  }
+}
+
+Variables:
+{
+  "canvasTemplateInput": {
+      "templatesSetID": "uuid",
+      "title": "wow",
+      "description": "wow this is great",
+      "value": "wow3",
+      "tags": ["Tag 1", "Tag 2"]
+  }
+}

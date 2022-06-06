@@ -195,7 +195,7 @@ export class TemplatesSetService {
       await this.canvasTemplateService.createCanvasTemplate(
         canvasTemplateInput
       );
-    templatesSet.canvasTemplates = await this.getAspectTemplates(templatesSet);
+    templatesSet.canvasTemplates = await this.getCanvasTemplates(templatesSet);
     templatesSet.canvasTemplates.push(canvasTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return canvasTemplate;

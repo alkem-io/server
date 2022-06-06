@@ -56,6 +56,10 @@ import { UpdateAspectInput } from '@domain/context/aspect';
 import { UpdateCanvasDirectInput } from '@domain/common/canvas/dto/canvas.dto.update.direct';
 import { UpdateDiscussionInput } from '@domain/communication/discussion/dto/discussion.dto.update';
 import { UpdateEcosystemModelInput } from '@domain/context';
+import { CreateAspectTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/aspect.template.dto.create.on.templates.set';
+import { CreateCanvasTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/canvas.template.dto.create.on.templates.set';
+import { UpdateAspectTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/aspect.template.dto.update.on.templates.set';
+import { UpdateCanvasTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/canvas.template.dto.update.on.templates.set';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -75,7 +79,9 @@ export class BaseHandler extends AbstractHandler {
       CreateActorGroupInput,
       CreateActorInput,
       CreateAspectOnContextInput,
+      CreateAspectTemplateOnTemplatesSetInput,
       CreateCanvasOnContextInput,
+      CreateCanvasTemplateOnTemplatesSetInput,
       CreateChallengeOnHubInput,
       CreateChallengeOnChallengeInput,
       CreateOpportunityInput,
@@ -91,6 +97,7 @@ export class BaseHandler extends AbstractHandler {
       CreateTagsetOnProfileInput,
       UpdateActorInput,
       UpdateAspectInput,
+      UpdateAspectTemplateOnTemplatesSetInput,
       UpdateHubInput,
       UpdateOrganizationInput,
       UpdateOpportunityInput,
@@ -100,6 +107,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateProfileInput,
       UpdateProjectInput,
       UpdateCanvasDirectInput,
+      UpdateCanvasTemplateOnTemplatesSetInput,
       UpdateDiscussionInput,
       UpdateEcosystemModelInput,
       CommunityApplyInput,
