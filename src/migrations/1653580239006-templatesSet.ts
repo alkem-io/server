@@ -5,6 +5,7 @@ export class templatesSet1653580239006 implements MigrationInterface {
   name = 'templatesSet1653580239006';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Create templates_set
     await queryRunner.query(
       `CREATE TABLE \`templates_set\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
              \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
@@ -13,36 +14,52 @@ export class templatesSet1653580239006 implements MigrationInterface {
                 UNIQUE INDEX \`REL_66666ccdda9ba57d8e3a634cd8\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
+      `ALTER TABLE \`templates_set\` ADD CONSTRAINT \`FK_66666901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
+    // Link templates_set to hub
+    await queryRunner.query(
       `ALTER TABLE \`hub\` ADD \`templatesSetId\` char(36) NULL`
     );
     await queryRunner.query(
       `ALTER TABLE \`hub\` ADD CONSTRAINT \`IDX_66666355b4e9bd6b02c66507aa\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
+    // Create aspect_template
     await queryRunner.query(
       `CREATE TABLE \`aspect_template\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
              \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
               \`version\` int NOT NULL, \`title\` varchar(255) NOT NULL, \`description\` text NOT NULL, \`templatesSetId\` char(36) NULL, \`tagsetId\` char(36) NULL, \`visualId\` char(36) NULL,
               \`type\` char(255) NOT NULL, \`defaultDescription\` text NOT NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
-
-    await queryRunner.query(
-      `ALTER TABLE \`templates_set\` ADD CONSTRAINT \`FK_66666901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-
     await queryRunner.query(
       `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_66666450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
-
     await queryRunner.query(
       `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_77777901817dd09d5906537e088\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
-
     await queryRunner.query(
       `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_88888901817dd09d5906537e088\` FOREIGN KEY (\`visualId\`) REFERENCES \`visual\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
-    // Migrate the data
+    // Create canvas_template
+    await queryRunner.query(
+      `CREATE TABLE \`canvas_template\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+             \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+              \`version\` int NOT NULL, \`title\` varchar(255) NOT NULL, \`description\` text NOT NULL, \`templatesSetId\` char(36) NULL, \`tagsetId\` char(36) NULL, \`visualId\` char(36) NULL,
+              \`value\` LONGTEXT NOT NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_33666450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_33777901817dd09d5906537e088\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_33888901817dd09d5906537e088\` FOREIGN KEY (\`visualId\`) REFERENCES \`visual\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
+    // Migrate the existing Aspect Templates data or create default Aspect Templates
     const hubs: any[] = await queryRunner.query(`SELECT id, template from hub`);
     for (const hub of hubs) {
       // Set authorization on templates_set + also link to hub
@@ -131,6 +148,9 @@ export class templatesSet1653580239006 implements MigrationInterface {
       'ALTER TABLE `aspect_template` DROP FOREIGN KEY `FK_66666450cf75dc486700ca034c6`'
     );
     await queryRunner.query(
+      'ALTER TABLE `canvas_template` DROP FOREIGN KEY `FK_33666450cf75dc486700ca034c6`'
+    );
+    await queryRunner.query(
       `ALTER TABLE \`hub\` DROP COLUMN \`templatesSetId\``
     );
 
@@ -139,6 +159,7 @@ export class templatesSet1653580239006 implements MigrationInterface {
     );
     await queryRunner.query('DROP TABLE `templates_set`');
     await queryRunner.query('DROP TABLE `aspect_template`');
+    await queryRunner.query('DROP TABLE `canvas_template`');
   }
 }
 

@@ -17,6 +17,11 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { templatesSetDefaults } from './templates.set.defaults';
 import { CreateAspectTemplateInput } from '../aspect-template/dto/aspect.template.dto.create';
 import { UpdateAspectTemplateInput } from '../aspect-template/dto/aspect.template.dto.update';
+import { CanvasTemplateService } from '../canvas-template/canvas.template.service';
+import { ICanvasTemplate } from '../canvas-template/canvas.template.interface';
+import { CreateCanvasTemplateInput } from '../canvas-template/dto/canvas.template.dto.create';
+import { UpdateCanvasTemplateInput } from '../canvas-template/dto/canvas.template.dto.update';
+import { DeleteCanvasTemplateOnTemplateSetInput } from './dto/canvas.template.dto.delete.on.template.set';
 
 @Injectable()
 export class TemplatesSetService {
@@ -25,6 +30,7 @@ export class TemplatesSetService {
     @InjectRepository(TemplatesSet)
     private templatesSetRepository: Repository<TemplatesSet>,
     private aspectTemplateService: AspectTemplateService,
+    private canvasTemplateService: CanvasTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -39,6 +45,8 @@ export class TemplatesSetService {
         );
       templatesSet.aspectTemplates.push(aspectTemplate);
     }
+
+    templatesSet.canvasTemplates = [];
 
     return await this.templatesSetRepository.save(templatesSet);
   }
@@ -61,7 +69,7 @@ export class TemplatesSetService {
 
   async deleteTemplatesSet(templatesSetID: string): Promise<ITemplatesSet> {
     const templatesSet = await this.getTemplatesSetOrFail(templatesSetID, {
-      relations: ['authorization', 'aspectTemplates'],
+      relations: ['authorization', 'aspectTemplates', 'canvasTemplates'],
     });
 
     if (templatesSet.authorization)
@@ -70,6 +78,11 @@ export class TemplatesSetService {
     if (templatesSet.aspectTemplates) {
       for (const aspectTemplate of templatesSet.aspectTemplates) {
         await this.aspectTemplateService.deleteAspectTemplate(aspectTemplate);
+      }
+    }
+    if (templatesSet.canvasTemplates) {
+      for (const canvasTemplate of templatesSet.canvasTemplates) {
+        await this.canvasTemplateService.deleteCanvasTemplate(canvasTemplate);
       }
     }
     return await this.templatesSetRepository.remove(
@@ -154,5 +167,84 @@ export class TemplatesSetService {
       );
     }
     return aspectTemplate;
+  }
+
+  async getCanvasTemplates(
+    templatesSet: ITemplatesSet
+  ): Promise<ICanvasTemplate[]> {
+    const templatesSetPopulated = await this.getTemplatesSetOrFail(
+      templatesSet.id,
+      {
+        relations: ['canvasTemplates'],
+      }
+    );
+    if (!templatesSetPopulated.canvasTemplates) {
+      throw new EntityNotInitializedException(
+        `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return templatesSetPopulated.canvasTemplates;
+  }
+
+  async createCanvasTemplate(
+    templatesSet: ITemplatesSet,
+    canvasTemplateInput: CreateCanvasTemplateInput
+  ): Promise<ICanvasTemplate> {
+    const canvasTemplate =
+      await this.canvasTemplateService.createCanvasTemplate(
+        canvasTemplateInput
+      );
+    templatesSet.canvasTemplates = await this.getAspectTemplates(templatesSet);
+    templatesSet.canvasTemplates.push(canvasTemplate);
+    await this.templatesSetRepository.save(templatesSet);
+    return canvasTemplate;
+  }
+
+  async updateCanvasTemplate(
+    templatesSet: ITemplatesSet,
+    canvasTemplateInput: UpdateCanvasTemplateInput
+  ): Promise<ICanvasTemplate> {
+    const canvasTemplate = await this.getCanvasTemplateInTemplatesSetOrFail(
+      templatesSet,
+      canvasTemplateInput.ID
+    );
+    return await this.canvasTemplateService.updateCanvasTemplate(
+      canvasTemplate,
+      canvasTemplateInput
+    );
+  }
+
+  async deleteCanvasTemplate(
+    templatesSet: ITemplatesSet,
+    deleteData: DeleteCanvasTemplateOnTemplateSetInput
+  ): Promise<ICanvasTemplate> {
+    // check the specified aspect template is in this templates set
+    const canvasTemplate = await this.getCanvasTemplateInTemplatesSetOrFail(
+      templatesSet,
+      deleteData.ID
+    );
+    const deletedCanvasTemplate =
+      await this.canvasTemplateService.deleteCanvasTemplate(canvasTemplate);
+    deletedCanvasTemplate.id = deleteData.ID;
+    return deletedCanvasTemplate;
+  }
+
+  private async getCanvasTemplateInTemplatesSetOrFail(
+    templatesSet: ITemplatesSet,
+    canvasTemplateID: string
+  ): Promise<ICanvasTemplate> {
+    // check the specified aspect template is in this templates set
+    const canvasTemplates = await this.getCanvasTemplates(templatesSet);
+    const canvasTemplate = canvasTemplates.find(
+      aspectTemplate => aspectTemplate.id === canvasTemplateID
+    );
+    if (!canvasTemplate) {
+      throw new EntityNotFoundException(
+        `TemplatesSet (${templatesSet.id}) does not contain the specified Canvas Template: ${canvasTemplateID}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return canvasTemplate;
   }
 }

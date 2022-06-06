@@ -8,6 +8,7 @@ import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from '.';
 import { AspectTemplate } from '../aspect-template/aspect.template.entity';
 import { TemplateBaseAuthorizationService } from '../template-base/template.base.service.authorization';
+import { CanvasTemplate } from '../canvas-template/canvas.template.entity';
 
 @Injectable()
 export class TemplatesSetAuthorizationService {
@@ -18,6 +19,8 @@ export class TemplatesSetAuthorizationService {
     private templatesSetRepository: Repository<TemplatesSet>,
     @InjectRepository(AspectTemplate)
     private aspectTemplateRepository: Repository<AspectTemplate>,
+    @InjectRepository(CanvasTemplate)
+    private canvasTemplateRepository: Repository<CanvasTemplate>,
     private templateBaseAuthorizationService: TemplateBaseAuthorizationService
   ) {}
 
@@ -28,7 +31,7 @@ export class TemplatesSetAuthorizationService {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       templatesSetInput.id,
       {
-        relations: ['aspectTemplates'],
+        relations: ['aspectTemplates', 'canvasTemplates'],
       }
     );
 
@@ -44,6 +47,16 @@ export class TemplatesSetAuthorizationService {
         await this.templateBaseAuthorizationService.applyAuthorizationPolicy(
           aspectTemplate,
           this.aspectTemplateRepository,
+          parentAuthorization
+        );
+      }
+    }
+
+    if (templatesSet.canvasTemplates) {
+      for (const canvasTemplate of templatesSet.canvasTemplates) {
+        await this.templateBaseAuthorizationService.applyAuthorizationPolicy(
+          canvasTemplate,
+          this.canvasTemplateRepository,
           parentAuthorization
         );
       }
