@@ -2,6 +2,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Global, Module } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { randomUUID } from 'crypto';
 import {
   SUBSCRIPTION_ASPECT_COMMENT,
   NOTIFICATIONS_SERVICE,
@@ -25,6 +26,7 @@ import { NotificationsPayloadBuilder } from './notifications.payload.builder';
 import { subscriptionFactoryProvider } from './subscription.factory.provider';
 import { notificationsServiceFactory } from './notifications.service.factory';
 import { walletManagerServiceFactory } from './wallet-manager.service.factory';
+import { RABBITMQ_EXCHANGE_NAME } from '@src/common';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -57,8 +59,15 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   },
 ];
 
+const trackingUUID = randomUUID();
 const subscriptionFactoryProviders = subscriptionConfig.map(
-  ({ provide, queueName }) => subscriptionFactoryProvider(provide, queueName)
+  ({ provide, queueName }) =>
+    subscriptionFactoryProvider(
+      provide,
+      queueName,
+      RABBITMQ_EXCHANGE_NAME,
+      trackingUUID
+    )
 );
 
 @Global()
