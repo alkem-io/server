@@ -15,6 +15,7 @@ import {
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
+import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common';
 import { Aspect } from '@src/domain';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
@@ -26,7 +27,6 @@ import { NotificationsPayloadBuilder } from './notifications.payload.builder';
 import { subscriptionFactoryProvider } from './subscription.factory.provider';
 import { notificationsServiceFactory } from './notifications.service.factory';
 import { walletManagerServiceFactory } from './wallet-manager.service.factory';
-import { RABBITMQ_EXCHANGE_NAME } from '@src/common';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -65,7 +65,7 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     subscriptionFactoryProvider(
       provide,
       queueName,
-      RABBITMQ_EXCHANGE_NAME,
+      RABBITMQ_EXCHANGE_NAME_DIRECT,
       trackingUUID
     )
 );
