@@ -26,7 +26,7 @@ export const subscriptionFactoryProvider = (
       logger,
       configService,
       exchangeName,
-      `${queueName}-${trackingID}`
+      trackingID ? `${queueName}-${trackingID}` : queueName
     ),
   inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
 });

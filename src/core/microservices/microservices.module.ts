@@ -59,14 +59,14 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   },
 ];
 
-const replicaUUID = randomUUID();
+const trackingUUID = randomUUID();
 const subscriptionFactoryProviders = subscriptionConfig.map(
   ({ provide, queueName }) =>
     subscriptionFactoryProvider(
       provide,
       queueName,
       RABBITMQ_EXCHANGE_NAME,
-      replicaUUID
+      trackingUUID
     )
 );
 
