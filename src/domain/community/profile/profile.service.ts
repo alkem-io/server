@@ -39,8 +39,6 @@ export class ProfileService {
   ) {}
 
   async createProfile(profileData?: CreateProfileInput): Promise<IProfile> {
-    let data = profileData;
-    if (!data) data = {};
     const profile: IProfile = Profile.create({
       description: profileData?.description,
       tagsets: profileData?.tagsetsData,

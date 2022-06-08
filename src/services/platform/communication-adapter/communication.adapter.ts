@@ -1,8 +1,5 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import {
-  MatrixEntityNotFoundException,
-  ValidationException,
-} from '@common/exceptions';
+import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
@@ -66,12 +63,7 @@ export class CommunicationAdapter {
   ): Promise<CommunicationMessageResult> {
     // Todo: replace with proper data validation
     const message = sendMessageData.message;
-    if (message.length === 0) {
-      throw new ValidationException(
-        'Message length cannot be empty',
-        LogContext.COMMUNICATION
-      );
-    }
+
     const senderCommunicationID = sendMessageData.senderCommunicationsID;
     const matrixAgent = await this.acquireMatrixAgent(senderCommunicationID);
 
