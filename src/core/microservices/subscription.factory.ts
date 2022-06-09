@@ -39,25 +39,25 @@ export async function subscriptionFactory(
             type: 'direct',
             options: {
               // the exchange will survive a broker restart
-              durable: false,
+              durable: true,
               // exchange is deleted when last queue is unbound from it
-              autoDelete: true,
+              autoDelete: false,
             },
           },
           queue: {
             name: queueName,
             options: {
               // used by only one connection and the queue will be deleted when that connection closes
-              exclusive: false,
+              exclusive: true,
               // the queue will survive a broker restart
-              durable: false,
+              durable: true,
               // queue that has had at least one consumer is deleted when last consumer unsubscribes
-              autoDelete: true,
+              autoDelete: false,
             },
             // Unbind from the RabbitMQ queue when disposing the pubsub connection
             unbindOnDispose: false,
             // Delete the RabbitMQ queue when disposing the pubsub connection
-            deleteOnDispose: false,
+            deleteOnDispose: true,
           },
         }),
       err => {

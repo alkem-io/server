@@ -15,6 +15,7 @@ import {
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
+import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common';
 import { Aspect } from '@src/domain';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
@@ -58,14 +59,14 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   },
 ];
 
-const replicaUUID = randomUUID();
+const trackingUUID = randomUUID();
 const subscriptionFactoryProviders = subscriptionConfig.map(
   ({ provide, queueName }) =>
     subscriptionFactoryProvider(
       provide,
       queueName,
-      'alkemio-graphql-subscriptions', // todo extract
-      replicaUUID
+      RABBITMQ_EXCHANGE_NAME_DIRECT,
+      trackingUUID
     )
 );
 

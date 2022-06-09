@@ -641,7 +641,7 @@ export class ChallengeService {
     const defaults: Map<PreferenceType, string> = new Map();
     defaults.set(
       PreferenceType.MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS,
-      'false'
+      'true'
     );
     defaults.set(
       PreferenceType.MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS,
