@@ -2,15 +2,16 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { VisualModule } from '@domain/common/visual/visual.module';
+import { ReferenceModule } from '@domain/common/reference/reference.module';
+import { CommentsModule } from '@domain/communication/comments/comments.module';
+import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Aspect } from './aspect.entity';
 import { AspectResolverMutations } from './aspect.resolver.mutations';
 import { AspectService } from './aspect.service';
 import { AspectResolverFields } from './aspect.resolver.fields';
-import { VisualModule } from '@domain/common/visual/visual.module';
-import { ReferenceModule } from '@domain/common/reference/reference.module';
-import { CommentsModule } from '@domain/communication/comments/comments.module';
 import { AspectAuthorizationService } from './aspect.service.authorization';
-import { TagsetModule } from '@domain/common/tagset/tagset.module';
+import { AspectResolverSubscriptions } from './aspect.resolver.subscriptions';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { TagsetModule } from '@domain/common/tagset/tagset.module';
     AspectService,
     AspectAuthorizationService,
     AspectResolverFields,
+    AspectResolverSubscriptions,
   ],
   exports: [AspectService, AspectAuthorizationService],
 })
