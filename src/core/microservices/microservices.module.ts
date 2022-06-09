@@ -2,6 +2,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Global, Module } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { randomUUID } from 'crypto';
 import {
   SUBSCRIPTION_ASPECT_COMMENT,
   NOTIFICATIONS_SERVICE,
@@ -14,6 +15,7 @@ import {
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
+import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common';
 import { Aspect } from '@src/domain';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
@@ -57,8 +59,15 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   },
 ];
 
+const trackingUUID = randomUUID();
 const subscriptionFactoryProviders = subscriptionConfig.map(
-  ({ provide, queueName }) => subscriptionFactoryProvider(provide, queueName)
+  ({ provide, queueName }) =>
+    subscriptionFactoryProvider(
+      provide,
+      queueName,
+      RABBITMQ_EXCHANGE_NAME_DIRECT,
+      trackingUUID
+    )
 );
 
 @Global()
