@@ -10,28 +10,6 @@ export class uuidLength1654251830798 implements MigrationInterface {
     await alterColumnType(queryRunner, 'challenge', 'hubID', 'varchar(36)');
     await alterColumnType(queryRunner, 'challenge', 'nameID', 'varchar(36)');
 
-    // comments
-    await alterColumnType(
-      queryRunner,
-      'comments',
-      'communicationGroupID',
-      'varchar(36)'
-    );
-    await alterColumnType(
-      queryRunner,
-      'comments',
-      'communicationRoomID',
-      'varchar(36)'
-    );
-
-    // communication
-    await alterColumnType(
-      queryRunner,
-      'communication',
-      'communicationGroupID',
-      'varchar(36)'
-    );
-
     // community
     await alterColumnType(queryRunner, 'community', 'hubID', 'varchar(36)');
 
@@ -40,20 +18,6 @@ export class uuidLength1654251830798 implements MigrationInterface {
       queryRunner,
       'credential',
       'resourceID',
-      'varchar(36)'
-    );
-
-    // discussion
-    await alterColumnType(
-      queryRunner,
-      'discussion',
-      'communicationGroupID',
-      'varchar(36)'
-    );
-    await alterColumnType(
-      queryRunner,
-      'discussion',
-      'communicationRoomID',
       'varchar(36)'
     );
 
@@ -79,28 +43,8 @@ export class uuidLength1654251830798 implements MigrationInterface {
     await alterColumnType(queryRunner, 'project', 'hubID', 'varchar(36)');
     await alterColumnType(queryRunner, 'project', 'nameID', 'varchar(36)');
 
-    // updates
-    await alterColumnType(
-      queryRunner,
-      'updates',
-      'communicationGroupID',
-      'varchar(36)'
-    );
-    await alterColumnType(
-      queryRunner,
-      'updates',
-      'communicationRoomID',
-      'varchar(36)'
-    );
-
     // user
     await alterColumnType(queryRunner, 'user', 'nameID', 'varchar(36)');
-    await alterColumnType(
-      queryRunner,
-      'user',
-      'communicationID',
-      'varchar(36)'
-    );
 
     // user_group
     await alterColumnType(queryRunner, 'user_group', 'hubID', 'varchar(36)');
@@ -114,28 +58,6 @@ export class uuidLength1654251830798 implements MigrationInterface {
     await alterColumnType(queryRunner, 'challenge', 'hubID', 'varchar(255)');
     await alterColumnType(queryRunner, 'challenge', 'nameID', 'varchar(255)');
 
-    // comments
-    await alterColumnType(
-      queryRunner,
-      'comments',
-      'communicationGroupID',
-      'varchar(255)'
-    );
-    await alterColumnType(
-      queryRunner,
-      'comments',
-      'communicationRoomID',
-      'varchar(255)'
-    );
-
-    // communication
-    await alterColumnType(
-      queryRunner,
-      'communication',
-      'communicationGroupID',
-      'varchar(255)'
-    );
-
     // community
     await alterColumnType(queryRunner, 'community', 'hubID', 'varchar(255)');
 
@@ -144,20 +66,6 @@ export class uuidLength1654251830798 implements MigrationInterface {
       queryRunner,
       'credential',
       'resourceID',
-      'varchar(255)'
-    );
-
-    // discussion
-    await alterColumnType(
-      queryRunner,
-      'discussion',
-      'communicationGroupID',
-      'varchar(255)'
-    );
-    await alterColumnType(
-      queryRunner,
-      'discussion',
-      'communicationRoomID',
       'varchar(255)'
     );
 
@@ -188,28 +96,8 @@ export class uuidLength1654251830798 implements MigrationInterface {
     await alterColumnType(queryRunner, 'project', 'hubID', 'varchar(255)');
     await alterColumnType(queryRunner, 'project', 'nameID', 'varchar(255)');
 
-    // updates
-    await alterColumnType(
-      queryRunner,
-      'updates',
-      'communicationGroupID',
-      'varchar(255)'
-    );
-    await alterColumnType(
-      queryRunner,
-      'updates',
-      'communicationRoomID',
-      'varchar(255)'
-    );
-
     // user
     await alterColumnType(queryRunner, 'user', 'nameID', 'varchar(255)');
-    await alterColumnType(
-      queryRunner,
-      'user',
-      'communicationID',
-      'varchar(255)'
-    );
 
     // user_group
     await alterColumnType(queryRunner, 'user_group', 'hubID', 'varchar(255)');
