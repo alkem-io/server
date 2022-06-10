@@ -7,7 +7,6 @@ mutation deleteCanvasTemplate($deleteData: DeleteCanvasTemplateInput!) {
 Variables:
 {
   "deleteData": {
-      "templatesSetID": "uuid",
       "ID": "uuid"
   }
 }

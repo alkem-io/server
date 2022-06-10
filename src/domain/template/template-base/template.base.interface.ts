@@ -1,31 +1,13 @@
-import { ITagset } from '@domain/common';
-import { IBaseAlkemio } from '@domain/common/entity/base-entity/base.alkemio.interface';
-import { IVisual } from '@domain/common/visual/visual.interface';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { ITemplateInfo } from '../template-info/template.info.interface';
 
 @ObjectType('ITemplateBase')
-export abstract class ITemplateBase extends IBaseAlkemio {
-  @Field(() => String, {
-    nullable: true,
-    description: 'The title for this Template.',
+export abstract class ITemplateBase extends IAuthorizable {
+  @Field(() => ITemplateInfo, {
+    name: 'info',
+    nullable: false,
+    description: 'The meta information for this Template',
   })
-  title!: string;
-
-  @Field(() => String, {
-    nullable: true,
-    description: 'The description for this Template.',
-  })
-  description!: string;
-
-  @Field(() => ITagset, {
-    nullable: true,
-    description: 'The tags set on this Template.',
-  })
-  tagset!: ITagset;
-
-  @Field(() => IVisual, {
-    nullable: true,
-    description: 'The image associated with this Template`.',
-  })
-  visual?: IVisual;
+  templateInfo?: ITemplateInfo;
 }

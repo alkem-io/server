@@ -6,9 +6,8 @@ import { TemplatesSetService } from './templates.set.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from '.';
-import { AspectTemplate } from '../aspect-template/aspect.template.entity';
-import { TemplateBaseAuthorizationService } from '../template-base/template.base.service.authorization';
-import { CanvasTemplate } from '../canvas-template/canvas.template.entity';
+import { CanvasTemplateAuthorizationService } from '../canvas-template/canvas.template.service.authorization';
+import { AspectTemplateAuthorizationService } from '../aspect-template/aspect.template.service.authorization';
 
 @Injectable()
 export class TemplatesSetAuthorizationService {
@@ -17,11 +16,8 @@ export class TemplatesSetAuthorizationService {
     private templatesSetService: TemplatesSetService,
     @InjectRepository(TemplatesSet)
     private templatesSetRepository: Repository<TemplatesSet>,
-    @InjectRepository(AspectTemplate)
-    private aspectTemplateRepository: Repository<AspectTemplate>,
-    @InjectRepository(CanvasTemplate)
-    private canvasTemplateRepository: Repository<CanvasTemplate>,
-    private templateBaseAuthorizationService: TemplateBaseAuthorizationService
+    private aspectTemplateAuthorizationService: AspectTemplateAuthorizationService,
+    private canvasTemplateAuthorizationService: CanvasTemplateAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -44,9 +40,8 @@ export class TemplatesSetAuthorizationService {
 
     if (templatesSet.aspectTemplates) {
       for (const aspectTemplate of templatesSet.aspectTemplates) {
-        await this.templateBaseAuthorizationService.applyAuthorizationPolicy(
+        await this.aspectTemplateAuthorizationService.applyAuthorizationPolicy(
           aspectTemplate,
-          this.aspectTemplateRepository,
           parentAuthorization
         );
       }
@@ -54,9 +49,8 @@ export class TemplatesSetAuthorizationService {
 
     if (templatesSet.canvasTemplates) {
       for (const canvasTemplate of templatesSet.canvasTemplates) {
-        await this.templateBaseAuthorizationService.applyAuthorizationPolicy(
+        await this.canvasTemplateAuthorizationService.applyAuthorizationPolicy(
           canvasTemplate,
-          this.canvasTemplateRepository,
           parentAuthorization
         );
       }

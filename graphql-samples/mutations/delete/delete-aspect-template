@@ -7,7 +7,6 @@ mutation deleteAspectTemplate($deleteData: DeleteAspectTemplateInput!) {
 Variables:
 {
   "deleteData": {
-      "templatesSetID": "uuid",
       "ID": "uuid"
   }
 }

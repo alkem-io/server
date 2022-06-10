@@ -1,32 +1,21 @@
-import { Column, JoinColumn, OneToOne } from 'typeorm';
+import { JoinColumn, OneToOne } from 'typeorm';
 import { ITemplateBase } from './template.base.interface';
-import { BaseAlkemioEntity } from '@domain/common/entity/base-entity/base.alkemio.entity';
-import { Tagset } from '@domain/common/tagset/tagset.entity';
-import { Visual } from '@domain/common/visual/visual.entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
+import { TemplateInfo } from '../template-info/template.info.entity';
 
 export abstract class TemplateBase
-  extends BaseAlkemioEntity
+  extends AuthorizableEntity
   implements ITemplateBase
 {
   constructor() {
     super();
   }
 
-  @Column()
-  title!: string;
-
-  @Column()
-  description!: string;
-
-  @OneToOne(() => Tagset, { eager: true, cascade: true, onDelete: 'SET NULL' })
-  @JoinColumn()
-  tagset!: Tagset;
-
-  @OneToOne(() => Visual, {
+  @OneToOne(() => TemplateInfo, {
     eager: true,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  visual?: Visual;
+  templateInfo!: TemplateInfo;
 }

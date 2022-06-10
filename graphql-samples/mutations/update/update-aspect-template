@@ -1,4 +1,4 @@
-mutation updateAspectTemplate($aspectTemplateInput: UpdateAspectTemplateOnTemplatesSetInput!) {
+mutation updateAspectTemplate($aspectTemplateInput: UpdateAspectTemplateInput!) {
   updateAspectTemplate(aspectTemplateInput: $aspectTemplateInput) {
     title,
   }
@@ -8,11 +8,12 @@ Variables:
 {
   "aspectTemplateInput": {
       "ID": "uuid",
-      "templatesSetID": "uuid",
-      "title": "wow",
-      "description": "wow this is great",
+      "templateInfo": {
+        "title": "wow",
+        "description": "wow this is great",
+        "tags": ["Tag 1", "Tag 2"]
+      },
       "type": "wow3",
-      "defaultDescription": "this is what users will see",
-      "tags": ["Tag 1", "Tag 2"]
+      "defaultDescription": "this is what users will see"
   }
 }

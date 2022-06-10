@@ -25,12 +25,12 @@ export class CanvasTemplateService {
   ): Promise<ICanvasTemplate> {
     const canvasTemplate: ICanvasTemplate =
       CanvasTemplate.create(canvasTemplateData);
-    await this.templateBaseService.initialise(
+    const result = await this.templateBaseService.initialise(
       canvasTemplate,
       canvasTemplateData
     );
 
-    return await this.canvasTemplateRepository.save(canvasTemplate);
+    return await this.canvasTemplateRepository.save(result);
   }
 
   async getCanvasTemplateOrFail(

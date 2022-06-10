@@ -25,38 +25,54 @@ export class templatesSet1654842042827 implements MigrationInterface {
       `ALTER TABLE \`hub\` ADD CONSTRAINT \`IDX_66666355b4e9bd6b02c66507aa\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
+    // Create template_info
+    await queryRunner.query(
+      `CREATE TABLE \`template_info\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+             \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+              \`version\` int NOT NULL, \`title\` varchar(128) NOT NULL, \`description\` text NOT NULL, \`tagsetId\` char(36) NULL, \`visualId\` char(36) NULL,
+              PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`template_info\` ADD CONSTRAINT \`FK_77777901817dd09d5906537e088\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`template_info\` ADD CONSTRAINT \`FK_88888901817dd09d5906537e088\` FOREIGN KEY (\`visualId\`) REFERENCES \`visual\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
     // Create aspect_template
     await queryRunner.query(
       `CREATE TABLE \`aspect_template\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
              \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-              \`version\` int NOT NULL, \`title\` varchar(128) NOT NULL, \`description\` text NOT NULL, \`templatesSetId\` char(36) NULL, \`tagsetId\` char(36) NULL, \`visualId\` char(36) NULL,
-              \`type\` char(128) NOT NULL, \`defaultDescription\` text NOT NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+              \`version\` int NOT NULL, \`templatesSetId\` char(36) NULL, \`templateInfoId\` char(36) NULL,
+              \`authorizationId\` varchar(36) NULL, \`type\` char(128) NOT NULL, \`defaultDescription\` text NOT NULL,
+              UNIQUE INDEX \`REL_44447ccdda9ba57d8e3a634cd8\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_44446901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_66667901817dd09d5906537e088\` FOREIGN KEY (\`templateInfoId\`) REFERENCES \`template_info\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_66666450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_77777901817dd09d5906537e088\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_88888901817dd09d5906537e088\` FOREIGN KEY (\`visualId\`) REFERENCES \`visual\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     // Create canvas_template
     await queryRunner.query(
       `CREATE TABLE \`canvas_template\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
              \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-              \`version\` int NOT NULL, \`title\` varchar(128) NOT NULL, \`description\` text NOT NULL, \`templatesSetId\` char(36) NULL, \`tagsetId\` char(36) NULL, \`visualId\` char(36) NULL,
-              \`value\` LONGTEXT NOT NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+              \`version\` int NOT NULL, \`templatesSetId\` char(36) NULL, \`templateInfoId\` char(36) NULL,
+              \`authorizationId\` varchar(36) NULL, \`value\` LONGTEXT NOT NULL,
+              UNIQUE INDEX \`REL_88888ccdda9ba57d8e3a634cd8\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_77766450cf75dc486700ca034c6\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_44777901817dd09d5906537e088\` FOREIGN KEY (\`templateInfoId\`) REFERENCES \`template_info\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_33666450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_33777901817dd09d5906537e088\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_33888901817dd09d5906537e088\` FOREIGN KEY (\`visualId\`) REFERENCES \`visual\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     // Migrate the existing Aspect Templates data or create default Aspect Templates
@@ -83,6 +99,8 @@ export class templatesSet1654842042827 implements MigrationInterface {
         for (const aspectTemplate of existingTemplateJson.aspectTemplates) {
           // create the new aspect template objects from the existing data
           const aspectTemplateID = randomUUID();
+          const aspectTemplateAuthID = randomUUID();
+          const templateInfoID = randomUUID();
           const tagsetID = randomUUID();
           const tagsetAuthID = randomUUID();
           const visualID = randomUUID();
@@ -92,6 +110,9 @@ export class templatesSet1654842042827 implements MigrationInterface {
           );
           await queryRunner.query(
             `INSERT INTO authorization_policy VALUES ('${visualAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
+          );
+          await queryRunner.query(
+            `INSERT INTO authorization_policy VALUES ('${aspectTemplateAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
           );
           await queryRunner.query(
             `INSERT INTO tagset (id, createdDate, updatedDate, version, name, tags, authorizationId)
@@ -102,14 +123,20 @@ export class templatesSet1654842042827 implements MigrationInterface {
           VALUES ('${visualID}', NOW(), NOW(), 1, '${visualAuthID}', '${templateVisual.name}', '', '${templateVisual.minWidth}', '${templateVisual.maxWidth}', '${templateVisual.minHeight}', '${templateVisual.maxHeight}', '${templateVisual.aspectRatio}', '${allowedTypes}')`
           );
           await queryRunner.query(
-            `INSERT INTO aspect_template (id, createdDate, updatedDate, version, title, description, templatesSetId, tagsetId, visualId, type, defaultDescription)
-          VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${aspectTemplate.type}', '${aspectTemplate.typeDescription}', '${templatesSetID}', '${tagsetID}', '${visualID}', '${aspectTemplate.type}', '${aspectTemplate.defaultDescription}')`
+            `INSERT INTO template_info (id, createdDate, updatedDate, version, title, description, tagsetId, visualId)
+          VALUES ('${tagsetID}', NOW(), NOW(), 1, '${aspectTemplate.type}', '${aspectTemplate.typeDescription}', '${tagsetID}', '${visualID}')`
+          );
+          await queryRunner.query(
+            `INSERT INTO aspect_template (id, createdDate, updatedDate, version, templatesSetId, templateInfoId, type, defaultDescription)
+          VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${templatesSetID}', '${templateInfoID}', '${aspectTemplate.type}', '${aspectTemplate.defaultDescription}')`
           );
         }
       } else {
         // create the default aspect templates
         for (const aspectTemplate of templatesSetDefaults.aspects) {
           const aspectTemplateID = randomUUID();
+          const aspectTemplateAuthID = randomUUID();
+          const templateInfoID = randomUUID();
           const tagsetID = randomUUID();
           const tagsetAuthID = randomUUID();
           const visualID = randomUUID();
@@ -121,6 +148,9 @@ export class templatesSet1654842042827 implements MigrationInterface {
             `INSERT INTO authorization_policy VALUES ('${visualAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
           );
           await queryRunner.query(
+            `INSERT INTO authorization_policy VALUES ('${aspectTemplateAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
+          );
+          await queryRunner.query(
             `INSERT INTO tagset (id, createdDate, updatedDate, version, name, tags, authorizationId)
             VALUES ('${tagsetID}', NOW(), NOW(), 1, 'default', '', '${tagsetAuthID}')`
           );
@@ -129,8 +159,12 @@ export class templatesSet1654842042827 implements MigrationInterface {
             VALUES ('${visualID}', NOW(), NOW(), 1, '${visualAuthID}', '${templateVisual.name}', '', '${templateVisual.minWidth}', '${templateVisual.maxWidth}', '${templateVisual.minHeight}', '${templateVisual.maxHeight}', '${templateVisual.aspectRatio}', '${allowedTypes}')`
           );
           await queryRunner.query(
-            `INSERT INTO aspect_template (id, createdDate, updatedDate, version, title, description, templatesSetId, tagsetId, visualId, type, defaultDescription)
-            VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${aspectTemplate.title}', '${aspectTemplate.description}', '${templatesSetID}', '${tagsetID}', '${visualID}', '${aspectTemplate.type}', '${aspectTemplate.defaultDescription}')`
+            `INSERT INTO template_info (id, createdDate, updatedDate, version, title, description, tagsetId, visualId)
+          VALUES ('${tagsetID}', NOW(), NOW(), 1, '${aspectTemplate.title}', '${aspectTemplate.description}', '${tagsetID}', '${visualID}')`
+          );
+          await queryRunner.query(
+            `INSERT INTO aspect_template (id, createdDate, updatedDate, version, templatesSetId, templateInfoId, type, defaultDescription)
+          VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${templatesSetID}', '${templateInfoID}', '${aspectTemplate.type}', '${aspectTemplate.defaultDescription}')`
           );
         }
       }

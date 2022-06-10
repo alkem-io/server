@@ -12,16 +12,12 @@ import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from './templates.set.interface';
 import { IAspectTemplate } from '../aspect-template/aspect.template.interface';
 import { AspectTemplateService } from '../aspect-template/aspect.template.service';
-import { DeleteAspectTemplateOnTemplateSetInput } from './dto/aspect.template.dto.delete.on.template.set';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { templatesSetDefaults } from './templates.set.defaults';
 import { CreateAspectTemplateInput } from '../aspect-template/dto/aspect.template.dto.create';
-import { UpdateAspectTemplateInput } from '../aspect-template/dto/aspect.template.dto.update';
 import { CanvasTemplateService } from '../canvas-template/canvas.template.service';
 import { ICanvasTemplate } from '../canvas-template/canvas.template.interface';
 import { CreateCanvasTemplateInput } from '../canvas-template/dto/canvas.template.dto.create';
-import { UpdateCanvasTemplateInput } from '../canvas-template/dto/canvas.template.dto.update';
-import { DeleteCanvasTemplateOnTemplateSetInput } from './dto/canvas.template.dto.delete.on.template.set';
 
 @Injectable()
 export class TemplatesSetService {
@@ -122,53 +118,6 @@ export class TemplatesSetService {
     return aspectTemplate;
   }
 
-  async updateAspectTemplate(
-    templatesSet: ITemplatesSet,
-    aspectTemplateInput: UpdateAspectTemplateInput
-  ): Promise<IAspectTemplate> {
-    const aspectTemplate = await this.getAspectTemplateInTemplatesSetOrFail(
-      templatesSet,
-      aspectTemplateInput.ID
-    );
-    return await this.aspectTemplateService.updateAspectTemplate(
-      aspectTemplate,
-      aspectTemplateInput
-    );
-  }
-
-  async deleteAspectTemplate(
-    templatesSet: ITemplatesSet,
-    deleteData: DeleteAspectTemplateOnTemplateSetInput
-  ): Promise<IAspectTemplate> {
-    // check the specified aspect template is in this templates set
-    const aspectTemplate = await this.getAspectTemplateInTemplatesSetOrFail(
-      templatesSet,
-      deleteData.ID
-    );
-    const deletedAspectTemplate =
-      await this.aspectTemplateService.deleteAspectTemplate(aspectTemplate);
-    deletedAspectTemplate.id = deleteData.ID;
-    return deletedAspectTemplate;
-  }
-
-  private async getAspectTemplateInTemplatesSetOrFail(
-    templatesSet: ITemplatesSet,
-    aspectTemplateID: string
-  ): Promise<IAspectTemplate> {
-    // check the specified aspect template is in this templates set
-    const aspectTemplates = await this.getAspectTemplates(templatesSet);
-    const aspectTemplate = aspectTemplates.find(
-      aspectTemplate => aspectTemplate.id === aspectTemplateID
-    );
-    if (!aspectTemplate) {
-      throw new EntityNotFoundException(
-        `TemplatesSet (${templatesSet.id}) does not contain the specified aspectTemplate: ${aspectTemplateID}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return aspectTemplate;
-  }
-
   async getCanvasTemplates(
     templatesSet: ITemplatesSet
   ): Promise<ICanvasTemplate[]> {
@@ -198,53 +147,6 @@ export class TemplatesSetService {
     templatesSet.canvasTemplates = await this.getCanvasTemplates(templatesSet);
     templatesSet.canvasTemplates.push(canvasTemplate);
     await this.templatesSetRepository.save(templatesSet);
-    return canvasTemplate;
-  }
-
-  async updateCanvasTemplate(
-    templatesSet: ITemplatesSet,
-    canvasTemplateInput: UpdateCanvasTemplateInput
-  ): Promise<ICanvasTemplate> {
-    const canvasTemplate = await this.getCanvasTemplateInTemplatesSetOrFail(
-      templatesSet,
-      canvasTemplateInput.ID
-    );
-    return await this.canvasTemplateService.updateCanvasTemplate(
-      canvasTemplate,
-      canvasTemplateInput
-    );
-  }
-
-  async deleteCanvasTemplate(
-    templatesSet: ITemplatesSet,
-    deleteData: DeleteCanvasTemplateOnTemplateSetInput
-  ): Promise<ICanvasTemplate> {
-    // check the specified aspect template is in this templates set
-    const canvasTemplate = await this.getCanvasTemplateInTemplatesSetOrFail(
-      templatesSet,
-      deleteData.ID
-    );
-    const deletedCanvasTemplate =
-      await this.canvasTemplateService.deleteCanvasTemplate(canvasTemplate);
-    deletedCanvasTemplate.id = deleteData.ID;
-    return deletedCanvasTemplate;
-  }
-
-  private async getCanvasTemplateInTemplatesSetOrFail(
-    templatesSet: ITemplatesSet,
-    canvasTemplateID: string
-  ): Promise<ICanvasTemplate> {
-    // check the specified aspect template is in this templates set
-    const canvasTemplates = await this.getCanvasTemplates(templatesSet);
-    const canvasTemplate = canvasTemplates.find(
-      aspectTemplate => aspectTemplate.id === canvasTemplateID
-    );
-    if (!canvasTemplate) {
-      throw new EntityNotFoundException(
-        `TemplatesSet (${templatesSet.id}) does not contain the specified Canvas Template: ${canvasTemplateID}`,
-        LogContext.COMMUNITY
-      );
-    }
     return canvasTemplate;
   }
 }
