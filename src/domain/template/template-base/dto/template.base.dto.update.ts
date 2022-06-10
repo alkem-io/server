@@ -8,5 +8,5 @@ export class UpdateTemplateBaseInput extends UpdateBaseAlkemioInput {
     nullable: true,
     description: 'The meta information for this Template.',
   })
-  templateInfo!: UpdateTemplateInfoInput;
+  info!: UpdateTemplateInfoInput;
 }

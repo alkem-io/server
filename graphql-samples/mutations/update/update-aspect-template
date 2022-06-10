@@ -1,6 +1,8 @@
 mutation updateAspectTemplate($aspectTemplateInput: UpdateAspectTemplateInput!) {
   updateAspectTemplate(aspectTemplateInput: $aspectTemplateInput) {
-    title,
+    info {
+      title
+    }
   }
 }
 
@@ -8,7 +10,7 @@ Variables:
 {
   "aspectTemplateInput": {
       "ID": "uuid",
-      "templateInfo": {
+      "info": {
         "title": "wow",
         "description": "wow this is great",
         "tags": ["Tag 1", "Tag 2"]

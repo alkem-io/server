@@ -10,7 +10,7 @@ export class TemplatesSet extends AuthorizableEntity implements ITemplatesSet {
     () => AspectTemplate,
     aspectTemplate => aspectTemplate.templatesSet,
     {
-      eager: true,
+      eager: false,
       cascade: true,
     }
   )
@@ -20,7 +20,7 @@ export class TemplatesSet extends AuthorizableEntity implements ITemplatesSet {
     () => CanvasTemplate,
     canvasTemplate => canvasTemplate.templatesSet,
     {
-      eager: true,
+      eager: false,
       cascade: true,
     }
   )

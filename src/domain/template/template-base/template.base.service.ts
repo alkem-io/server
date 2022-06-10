@@ -24,9 +24,7 @@ export class TemplateBaseService {
     baseTemplate.authorization = new AuthorizationPolicy();
 
     baseTemplate.templateInfo =
-      await this.templateInfoService.createTemplateInfo(
-        baseTemplateData.templateInfo
-      );
+      await this.templateInfoService.createTemplateInfo(baseTemplateData.info);
 
     return baseTemplate;
   }
@@ -41,11 +39,11 @@ export class TemplateBaseService {
         LogContext.TEMPLATES
       );
     }
-    if (baseTemplateData.templateInfo) {
+    if (baseTemplateData.info) {
       baseTemplate.templateInfo =
         await this.templateInfoService.updateTemplateInfo(
           baseTemplate.templateInfo,
-          baseTemplateData.templateInfo
+          baseTemplateData.info
         );
     }
 

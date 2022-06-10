@@ -1,6 +1,8 @@
-mutation createCanvasTemplate($canvasTemplateInput: CreateCanvasTemplateInput!) {
+mutation createCanvasTemplate($canvasTemplateInput: CreateCanvasTemplateOnTemplatesSetInput!) {
   createCanvasTemplate(canvasTemplateInput: $canvasTemplateInput) {
-    title,
+    info {
+      title
+    }
   }
 }
 
@@ -8,7 +10,7 @@ Variables:
 {
   "canvasTemplateInput": {
       "templatesSetID": "uuid",
-      "templateInfo": {
+      "info": {
         "title": "wow",
         "description": "wow this is great",
         "tags": ["Tag 1", "Tag 2"]

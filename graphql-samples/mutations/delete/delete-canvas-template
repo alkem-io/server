@@ -1,6 +1,8 @@
 mutation deleteCanvasTemplate($deleteData: DeleteCanvasTemplateInput!) {
   deleteCanvasTemplate(deleteData: $deleteData) {
-    title
+    info {
+      title
+    }
   }
 }
 

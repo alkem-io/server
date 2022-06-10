@@ -1,6 +1,8 @@
 mutation deleteAspectTemplate($deleteData: DeleteAspectTemplateInput!) {
   deleteAspectTemplate(deleteData: $deleteData) {
-    title
+    info {
+      title
+    }
   }
 }
 

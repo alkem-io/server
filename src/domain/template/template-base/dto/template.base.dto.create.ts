@@ -7,5 +7,5 @@ export class CreateTemplateBaseInput {
     nullable: false,
     description: 'The meta information for this Template.',
   })
-  templateInfo!: CreateTemplateInfoInput;
+  info!: CreateTemplateInfoInput;
 }

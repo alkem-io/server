@@ -1,6 +1,8 @@
 mutation updateCanvasTemplate($canvasTemplateInput: UpdateCanvasTemplateInput!) {
   updateCanvasTemplate(canvasTemplateInput: $canvasTemplateInput) {
-    title,
+    info {
+      title
+    }
   }
 }
 
@@ -8,7 +10,7 @@ Variables:
 {
   "canvasTemplateInput": {
       "ID": "uuid",
-      "templateInfo": {
+      "info": {
         "title": "wow",
         "description": "wow this is great",
         "tags": ["Tag 1", "Tag 2"]

@@ -22,7 +22,7 @@ export class templatesSet1654842042827 implements MigrationInterface {
       `ALTER TABLE \`hub\` ADD \`templatesSetId\` char(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hub\` ADD CONSTRAINT \`IDX_66666355b4e9bd6b02c66507aa\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`hub\` ADD CONSTRAINT \`FK_33336901817dd09d5906537e088\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     // Create template_info
@@ -66,13 +66,13 @@ export class templatesSet1654842042827 implements MigrationInterface {
               UNIQUE INDEX \`REL_88888ccdda9ba57d8e3a634cd8\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
-      `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_77766450cf75dc486700ca034c6\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_45556901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_44777901817dd09d5906537e088\` FOREIGN KEY (\`templateInfoId\`) REFERENCES \`template_info\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_65557901817dd09d5906537e088\` FOREIGN KEY (\`templateInfoId\`) REFERENCES \`template_info\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_33666450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+      `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_65556450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
     // Migrate the existing Aspect Templates data or create default Aspect Templates
@@ -176,14 +176,25 @@ export class templatesSet1654842042827 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Note: data is not migrated down, only the structure
     await queryRunner.query(
-      'ALTER TABLE `hub` DROP FOREIGN KEY `IDX_66666355b4e9bd6b02c66507aa`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_33336901817dd09d5906537e088`'
     );
+    // FK: template info
+    await queryRunner.query(
+      'ALTER TABLE `aspect_template` DROP FOREIGN KEY `FK_66667901817dd09d5906537e088`'
+    );
+    // FK: templates set
     await queryRunner.query(
       'ALTER TABLE `aspect_template` DROP FOREIGN KEY `FK_66666450cf75dc486700ca034c6`'
     );
+    // FK: template info
     await queryRunner.query(
-      'ALTER TABLE `canvas_template` DROP FOREIGN KEY `FK_33666450cf75dc486700ca034c6`'
+      'ALTER TABLE `canvas_template` DROP FOREIGN KEY `FK_65557901817dd09d5906537e088`'
     );
+    // FK: templates set
+    await queryRunner.query(
+      'ALTER TABLE `canvas_template` DROP FOREIGN KEY `FK_65556450cf75dc486700ca034c6`'
+    );
+
     await queryRunner.query(
       `ALTER TABLE \`hub\` DROP COLUMN \`templatesSetId\``
     );
@@ -194,6 +205,7 @@ export class templatesSet1654842042827 implements MigrationInterface {
     await queryRunner.query('DROP TABLE `templates_set`');
     await queryRunner.query('DROP TABLE `aspect_template`');
     await queryRunner.query('DROP TABLE `canvas_template`');
+    await queryRunner.query('DROP TABLE `template_info`');
   }
 }
 
