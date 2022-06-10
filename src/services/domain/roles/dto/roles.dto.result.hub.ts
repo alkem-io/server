@@ -21,8 +21,8 @@ export class RolesResultHub extends RolesResult {
   })
   opportunities: RolesResult[] = [];
 
-  constructor(hub: IHub, contributorID: string) {
-    super(hub.nameID, `${contributorID}/${hub.id}`, hub.displayName);
+  constructor(hub: IHub, _contributorID: string) {
+    super(hub.nameID, hub.id, hub.displayName);
     this.hubID = hub.id;
     this.hub = hub;
   }
