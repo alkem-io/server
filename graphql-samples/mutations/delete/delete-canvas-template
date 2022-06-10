@@ -1,0 +1,13 @@
+mutation deleteCanvasTemplate($deleteData: DeleteCanvasTemplateInput!) {
+  deleteCanvasTemplate(deleteData: $deleteData) {
+    title
+  }
+}
+
+Variables:
+{
+  "deleteData": {
+      "templatesSetID": "uuid",
+      "ID": "uuid"
+  }
+}

@@ -8,6 +8,6 @@ Variables:
 {
   "deleteData": {
       "templatesSetID": "uuid",
-      "aspectTemplateID": "uuid"
+      "ID": "uuid"
   }
 }
