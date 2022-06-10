@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
-export class templatesSet1653580239006 implements MigrationInterface {
-  name = 'templatesSet1653580239006';
+export class templatesSet1654842042827 implements MigrationInterface {
+  name = 'templatesSet1654842042827';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create templates_set
@@ -29,8 +29,8 @@ export class templatesSet1653580239006 implements MigrationInterface {
     await queryRunner.query(
       `CREATE TABLE \`aspect_template\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
              \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-              \`version\` int NOT NULL, \`title\` varchar(255) NOT NULL, \`description\` text NOT NULL, \`templatesSetId\` char(36) NULL, \`tagsetId\` char(36) NULL, \`visualId\` char(36) NULL,
-              \`type\` char(255) NOT NULL, \`defaultDescription\` text NOT NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+              \`version\` int NOT NULL, \`title\` varchar(128) NOT NULL, \`description\` text NOT NULL, \`templatesSetId\` char(36) NULL, \`tagsetId\` char(36) NULL, \`visualId\` char(36) NULL,
+              \`type\` char(128) NOT NULL, \`defaultDescription\` text NOT NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
       `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_66666450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
@@ -46,7 +46,7 @@ export class templatesSet1653580239006 implements MigrationInterface {
     await queryRunner.query(
       `CREATE TABLE \`canvas_template\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
              \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-              \`version\` int NOT NULL, \`title\` varchar(255) NOT NULL, \`description\` text NOT NULL, \`templatesSetId\` char(36) NULL, \`tagsetId\` char(36) NULL, \`visualId\` char(36) NULL,
+              \`version\` int NOT NULL, \`title\` varchar(128) NOT NULL, \`description\` text NOT NULL, \`templatesSetId\` char(36) NULL, \`tagsetId\` char(36) NULL, \`visualId\` char(36) NULL,
               \`value\` LONGTEXT NOT NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(

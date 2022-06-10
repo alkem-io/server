@@ -1,6 +1,6 @@
 import {
-  MID_TEXT_LENGTH,
-  VERY_LONG_TEXT_LENGTH,
+  LONG_TEXT_LENGTH,
+  SMALL_TEXT_LENGTH,
 } from '@common/constants/entity.field.length.constants';
 import { UpdateTemplateBaseInput } from '@domain/template/template-base/dto/template.base.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
@@ -12,7 +12,7 @@ export class UpdateAspectTemplateInput extends UpdateTemplateBaseInput {
     nullable: true,
     description: 'The type of Aspects created from this Template.',
   })
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   type!: string;
 
   @Field({
@@ -20,6 +20,6 @@ export class UpdateAspectTemplateInput extends UpdateTemplateBaseInput {
     description:
       'The default description to be pre-filled when users create Aspects based on this template.',
   })
-  @MaxLength(VERY_LONG_TEXT_LENGTH)
+  @MaxLength(LONG_TEXT_LENGTH)
   defaultDescription!: string;
 }

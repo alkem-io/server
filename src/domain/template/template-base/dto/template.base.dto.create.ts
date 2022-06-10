@@ -1,8 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import {
-  SMALL_TEXT_LENGTH,
-  VERY_LONG_TEXT_LENGTH,
-} from '@src/common/constants';
+import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
@@ -12,7 +9,7 @@ export class CreateTemplateBaseInput {
   title!: string;
 
   @Field({ nullable: false })
-  @MaxLength(VERY_LONG_TEXT_LENGTH)
+  @MaxLength(LONG_TEXT_LENGTH)
   description!: string;
 
   @Field(() => [String], { nullable: true })
