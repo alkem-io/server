@@ -5,6 +5,7 @@ import { IVisual } from '@domain/common/visual/visual.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { NameID } from '@domain/common/scalars';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 
 @ObjectType('Aspect')
 export abstract class IAspect extends IAuthorizable {
@@ -21,7 +22,7 @@ export abstract class IAspect extends IAuthorizable {
   })
   nameID?: string;
 
-  @Field(() => String, {
+  @Field(() => Markdown, {
     description: 'The description of this aspect',
   })
   description!: string;

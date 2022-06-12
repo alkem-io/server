@@ -2,6 +2,7 @@ import {
   LONG_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
 } from '@common/constants/entity.field.length.constants';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { UpdateTemplateBaseInput } from '@domain/template/template-base/dto/template.base.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
@@ -15,7 +16,7 @@ export class UpdateAspectTemplateInput extends UpdateTemplateBaseInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   type!: string;
 
-  @Field({
+  @Field(() => Markdown, {
     nullable: true,
     description:
       'The default description to be pre-filled when users create Aspects based on this template.',

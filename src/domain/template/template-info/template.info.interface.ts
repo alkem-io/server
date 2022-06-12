@@ -2,6 +2,7 @@ import { ITagset } from '@domain/common';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity/base.alkemio.interface';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 
 @ObjectType('TemplateInfo')
 export abstract class ITemplateInfo extends IBaseAlkemio {
@@ -11,7 +12,7 @@ export abstract class ITemplateInfo extends IBaseAlkemio {
   })
   title!: string;
 
-  @Field(() => String, {
+  @Field(() => Markdown, {
     nullable: true,
     description: 'The description for this Template.',
   })

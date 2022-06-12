@@ -1,3 +1,4 @@
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ITemplateBase } from '../template-base/template.base.interface';
 
@@ -9,7 +10,7 @@ export abstract class IAspectTemplate extends ITemplateBase {
   })
   type!: string;
 
-  @Field(() => String, {
+  @Field(() => Markdown, {
     nullable: false,
     description:
       'The default description to show to users filling our a new instance.',
