@@ -20,6 +20,7 @@ import { SubscriptionType } from '@common/enums/subscription.type';
 import { CommunicationDiscussionMessageReceived } from './dto/discussion.dto.event.message.received';
 import { SUBSCRIPTION_DISCUSSION_MESSAGE } from '@common/constants/providers';
 import { CommunicationDiscussionUpdated } from '../communication/dto/communication.dto.event.discussion.updated';
+import { getRandomId } from '@src/common';
 
 @Resolver()
 export class DiscussionResolverMutations {
@@ -57,7 +58,7 @@ export class DiscussionResolverMutations {
       );
 
     // Send the subscription event
-    const eventID = `discussion-msg-${Math.floor(Math.random() * 100)}`;
+    const eventID = `discussion-msg-${getRandomId()}`;
     const subscriptionPayload: CommunicationDiscussionMessageReceived = {
       eventID: eventID,
       message: discussionMessage,
@@ -68,7 +69,7 @@ export class DiscussionResolverMutations {
       subscriptionPayload
     );
 
-    const eventID2 = `discussion-update-${Math.floor(Math.random() * 100)}`;
+    const eventID2 = `discussion-update-${getRandomId()}`;
     const subscriptionPayloadUpdate: CommunicationDiscussionUpdated = {
       eventID: eventID2,
       discussionID: discussion.id,
@@ -115,7 +116,7 @@ export class DiscussionResolverMutations {
     );
 
     // Send out events last
-    const eventID = `discussion-update-${Math.floor(Math.random() * 100)}`;
+    const eventID = `discussion-update-${getRandomId()}`;
     const subscriptionPayloadUpdate: CommunicationDiscussionUpdated = {
       eventID: eventID,
       discussionID: discussion.id,
