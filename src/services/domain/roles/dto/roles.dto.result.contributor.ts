@@ -2,7 +2,6 @@ import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ApplicationForRoleResult } from './roles.dto.result.application';
 import { RolesResultOrganization } from './roles.dto.result.organization';
-import { RolesResultCommunity } from './roles.dto.result.community';
 import { RolesResultHub } from './roles.dto.result.hub';
 
 @ObjectType()
@@ -29,9 +28,4 @@ export class ContributorRoles {
     description: 'Open applications for this contributor.',
   })
   applications: ApplicationForRoleResult[] = [];
-
-  @Field(() => [RolesResultCommunity], {
-    description: 'All the communitites the user is a part of.',
-  })
-  communities: RolesResultCommunity[] = [];
 }
