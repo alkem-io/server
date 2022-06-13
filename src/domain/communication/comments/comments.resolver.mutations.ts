@@ -119,7 +119,6 @@ export class CommentsResolverMutations {
     const subscriptionPayload: AspectCommentsMessageReceived = {
       eventID: eventID,
       message: commentSent,
-      commentsID: comments.id,
       aspectID: aspect.id,
     };
     // send the subscriptions event

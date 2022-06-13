@@ -12,13 +12,6 @@ export class AspectCommentsMessageReceived {
   })
   aspectID!: string;
 
-  @Field(() => String, {
-    nullable: false,
-    description:
-      'The identifier for the Comments on which the message was sent.',
-  })
-  commentsID!: string;
-
   @Field(() => CommunicationMessageResult, {
     nullable: false,
     description: 'The message that has been sent.',
