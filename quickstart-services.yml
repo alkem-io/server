@@ -54,7 +54,7 @@ services:
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
-    image: oryd/kratos:v0.9.0-alpha.3
+    image: oryd/kratos:v0.10.1
     depends_on:
       - mariadb
     environment:
@@ -70,7 +70,7 @@ services:
 
   kratos:
     container_name: alkemio_dev_kratos
-    image: oryd/kratos:v0.9.0-alpha.3
+    image: oryd/kratos:v0.10.1
     depends_on:
       - kratos-migrate
     ports:
