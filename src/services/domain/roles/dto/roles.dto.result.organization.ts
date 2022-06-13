@@ -9,7 +9,7 @@ export class RolesResultOrganization extends RolesResult {
   })
   organizationID: string;
 
-  constructor(organization: IOrganization, _contributorID: string) {
+  constructor(organization: IOrganization) {
     super(organization.nameID, organization.id, organization.displayName);
     this.organizationID = organization.id;
   }
