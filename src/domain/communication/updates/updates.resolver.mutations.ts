@@ -24,6 +24,7 @@ import {
 } from '@common/constants/providers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
+import { getRandomId } from '@src/common';
 
 @Resolver()
 export class UpdatesResolverMutations {
@@ -75,7 +76,7 @@ export class UpdatesResolverMutations {
     );
 
     // Send the subscriptions event
-    const eventID = `update-msg-${Math.floor(Math.random() * 100)}`;
+    const eventID = `update-msg-${getRandomId()}`;
     const subscriptionPayload: CommunicationUpdateMessageReceived = {
       eventID: eventID,
       message: updateSent,

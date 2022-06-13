@@ -89,28 +89,28 @@ import { RolesModule } from '@services/domain/roles/roles.module';
             {
               name: 'Me',
               endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/private/graphql`,
               query: print(meQuery),
             },
             {
               name: 'Hubs',
               endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/private/graphql`,
               query: print(hubsQuery),
             },
             {
               name: 'Configuration',
               endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/public/graphql`,
               query: print(configQuery),
             },
             {
               name: 'Server Metadata',
               endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/public/graphql`,
               query: print(serverMetadataQuery),
             },
