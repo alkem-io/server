@@ -194,6 +194,23 @@ export class AspectService {
     return aspectLoaded.references;
   }
 
+  public async getComments(aspectID: string) {
+    const { commentsId } = await this.aspectRepository
+      .createQueryBuilder('aspect')
+      .select('aspect.commentsId', 'commentsId')
+      .where({ id: aspectID })
+      .getRawOne();
+
+    if (!commentsId) {
+      throw new EntityNotFoundException(
+        `Comments not found on aspect: ${aspectID}`,
+        LogContext.CONTEXT
+      );
+    }
+
+    return this.commentsService.getCommentsOrFail(commentsId);
+  }
+
   getAspectsInContextCount(contextId: string) {
     return this.aspectRepository.count({
       where: { context: { id: contextId } },

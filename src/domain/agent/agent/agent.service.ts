@@ -47,6 +47,7 @@ import { VerifiedCredential } from '../verified-credential/dto/verified.credenti
 import { SsiSovrhdRegisterCallbackSession } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.session';
 import { AgentInteractionVerifiedCredentialRequestSovrhd } from './dto/agent.dto.interaction.verified.credential.request.sovrhd';
 import { SsiSovrhdRegisterCallbackCredential } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.credential';
+import { getRandomId } from '@src/common';
 
 @Injectable()
 export class AgentService {
@@ -422,7 +423,7 @@ export class AgentService {
       token
     );
 
-    const eventID = `credentials-${Math.floor(Math.random() * 100)}`;
+    const eventID = `credentials-${getRandomId()}`;
     const payload: ProfileCredentialVerified = {
       eventID,
       vc: 'something something vc',
@@ -505,7 +506,7 @@ export class AgentService {
       interactionInfo.credentialType
     );
 
-    const eventID = `credentials-${Math.floor(Math.random() * 100)}`;
+    const eventID = `credentials-${getRandomId()}`;
     const payload: ProfileCredentialVerified = {
       eventID,
       vc: 'something something vc',
