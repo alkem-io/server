@@ -90,28 +90,28 @@ import { RolesModule } from '@services/domain/roles/roles.module';
             {
               name: 'Me',
               endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/private/graphql`,
               query: print(meQuery),
             },
             {
               name: 'Hubs',
               endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/private/graphql`,
               query: print(hubsQuery),
             },
             {
               name: 'Configuration',
               endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/public/graphql`,
               query: print(configQuery),
             },
             {
               name: 'Server Metadata',
               endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/public/graphql`,
               query: print(serverMetadataQuery),
             },
@@ -123,9 +123,22 @@ import { RolesModule } from '@services/domain/roles/roles.module';
          * graphql-ws requires passing the request object through the context method
          * !!! this is graphql-ws ONLY
          */
-        context: (ctx: ConnectionContext) => ({
-          req: isWebsocketContext(ctx) ? ctx.extra.request : ctx.req,
-        }),
+        context: (ctx: ConnectionContext) => {
+          if (isWebsocketContext(ctx)) {
+            return {
+              req: {
+                ...ctx.extra.request,
+                headers: {
+                  ...ctx.extra.request.headers,
+                  ...ctx.connectionParams?.headers,
+                },
+                connectionParams: ctx.connectionParams,
+              },
+            };
+          }
+
+          return { req: ctx.req };
+        },
         subscriptions: {
           'subscriptions-transport-ws': {
             /***
