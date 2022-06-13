@@ -8,20 +8,21 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { LogContext } from '@common/enums/logging.context';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { CommentsService } from './comments.service';
+import { CommentsService } from '../../communication/comments/comments.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { SUBSCRIPTION_ASPECT_COMMENT } from '@common/constants/providers';
-import { CommentsMessageReceived } from './dto/comments.dto.event.message.received';
-// todo split comment subscriptions per use case, not per this entity
-// https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/1971
+import { SUBSCRIPTION_ASPECT_COMMENT } from '@constants/providers';
+import { AspectCommentsMessageReceived } from './dto/aspect.dto.event.message.received';
+import { AspectService } from '@domain/context/aspect/aspect.service';
+
 @Resolver()
-export class CommentsResolverSubscriptions {
+export class AspectResolverSubscriptions {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(SUBSCRIPTION_ASPECT_COMMENT)
     private subscriptionAspectComment: PubSubEngine,
+    private aspectService: AspectService,
     private commentsService: CommentsService,
     private authorizationService: AuthorizationService
   ) {}
@@ -29,38 +30,36 @@ export class CommentsResolverSubscriptions {
   // Note: the resolving method should not be doing any heavy lifting.
   // Relies on users being cached for performance.
   @UseGuards(GraphqlGuard)
-  @Subscription(() => CommentsMessageReceived, {
-    description:
-      'Receive new Update messages on Communities the currently authenticated User is a member of.',
+  @Subscription(() => AspectCommentsMessageReceived, {
+    description: 'Receive new comment on Aspect',
     async resolve(
-      this: CommentsResolverSubscriptions,
-      value: CommentsMessageReceived,
+      this: AspectResolverSubscriptions,
+      value: AspectCommentsMessageReceived,
       _: any,
       context: any
-    ): Promise<CommentsMessageReceived> {
+    ): Promise<AspectCommentsMessageReceived> {
       const agentInfo = context.req?.user;
-      const logMsgPrefix = `[User (${agentInfo.email}) Comments] - `;
+      const logMsgPrefix = `[User (${agentInfo.email}) Aspect comments] - `;
       this.logger.verbose?.(
-        `${logMsgPrefix} sending out event for Comments: ${value.commentsID} `,
+        `${logMsgPrefix} sending out new message event for Aspect: ${value.aspectID} `,
         LogContext.SUBSCRIPTIONS
       );
       return value;
     },
     async filter(
-      this: CommentsResolverSubscriptions,
-      payload: CommentsMessageReceived,
-      variables: { commentsID: string },
+      this: AspectResolverSubscriptions,
+      payload: AspectCommentsMessageReceived,
+      variables: { aspectID: string },
       context: { req: { user: AgentInfo } }
     ) {
       const agentInfo = context.req.user;
-      const logMsgPrefix = `[User (${agentInfo.email}) Comments] - `;
+      const logMsgPrefix = `[User (${agentInfo.email}) Aspect comments]`;
       this.logger.verbose?.(
         `${logMsgPrefix} Filtering event '${payload.eventID}'`,
         LogContext.SUBSCRIPTIONS
       );
 
-      const isSameCommentsInstance =
-        payload.commentsID === variables.commentsID;
+      const isSameCommentsInstance = payload.aspectID === variables.aspectID;
       this.logger.verbose?.(
         `${logMsgPrefix} Filter result is ${isSameCommentsInstance}`,
         LogContext.SUBSCRIPTIONS
@@ -68,32 +67,32 @@ export class CommentsResolverSubscriptions {
       return isSameCommentsInstance;
     },
   })
-  async communicationCommentsMessageReceived(
+  async aspectCommentsMessageReceived(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
-      name: 'commentsID',
+      name: 'aspectID',
       type: () => UUID,
-      description: 'The ID of the Comments to subscribe to.',
+      description: 'The ID of the Aspect to subscribe to.',
       nullable: false,
     })
-    commentsID: string
+    aspectID: string
   ) {
-    const logMsgPrefix = `[User (${agentInfo.email}) Comments] - `;
+    const logMsgPrefix = `[User (${agentInfo.email}) Aspect comments] - `;
     this.logger.verbose?.(
-      `${logMsgPrefix} Subscribing to the following comments: ${commentsID}`,
+      `${logMsgPrefix} Subscribing to the following comments of Aspect: ${aspectID}`,
       LogContext.SUBSCRIPTIONS
     );
     // check the user has the READ privilege
-    const comments = await this.commentsService.getCommentsOrFail(commentsID);
+    const comments = await this.aspectService.getComments(aspectID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       comments.authorization,
       AuthorizationPrivilege.READ,
-      `subscription to comments on: ${comments.displayName}`
+      `subscription to aspect comments on: ${comments.displayName}`
     );
 
     return this.subscriptionAspectComment.asyncIterator(
-      SubscriptionType.COMMUNICATION_COMMENTS_MESSAGE_RECEIVED
+      SubscriptionType.ASPECT_COMMENTS_MESSAGE_RECEIVED
     );
   }
 }

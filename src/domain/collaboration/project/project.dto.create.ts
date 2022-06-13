@@ -10,7 +10,7 @@ export class CreateProjectInput extends CreateNameableInput {
   @Field(() => UUID_NAMEID, { nullable: false })
   opportunityID!: string;
 
-  @Field({ nullable: false })
+  @Field({ nullable: true })
   @MaxLength(LONG_TEXT_LENGTH)
-  description!: string;
+  description?: string;
 }

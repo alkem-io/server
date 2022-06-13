@@ -82,12 +82,7 @@ export class RolesService {
     membership.id = contributorID;
     const hubsMap: Map<string, RolesResultHub> = new Map();
     const orgsMap: Map<string, RolesResultOrganization> = new Map();
-    await this.mapCredentialsToRoles(
-      credentials,
-      orgsMap,
-      contributorID,
-      hubsMap
-    );
+    await this.mapCredentialsToRoles(credentials, orgsMap, hubsMap);
 
     membership.hubs.push(...hubsMap.values());
     membership.organizations.push(...orgsMap.values());
@@ -98,47 +93,33 @@ export class RolesService {
   private async mapCredentialsToRoles(
     credentials: ICredential[],
     orgsMap: Map<string, RolesResultOrganization>,
-    contributorID: string,
     hubsMap: Map<string, RolesResultHub>
   ) {
     for (const credential of credentials) {
       switch (credential.type) {
         case AuthorizationCredential.ORGANIZATION_MEMBER:
-          await this.addOrganizationMemberRole(
-            orgsMap,
-            credential,
-            contributorID
-          );
+          await this.addOrganizationMemberRole(orgsMap, credential);
           break;
         case AuthorizationCredential.HUB_MEMBER:
-          await this.addHubMemberRole(hubsMap, credential, contributorID);
+          await this.addHubMemberRole(hubsMap, credential);
           break;
         case AuthorizationCredential.HUB_HOST:
-          await this.addHubHostRole(hubsMap, credential, contributorID);
+          await this.addHubHostRole(hubsMap, credential);
           break;
         case AuthorizationCredential.CHALLENGE_LEAD:
-          await this.addChallengeLeadRole(hubsMap, credential, contributorID);
+          await this.addChallengeLeadRole(hubsMap, credential);
           break;
         case AuthorizationCredential.CHALLENGE_MEMBER:
-          await this.addChallengeMemberRole(hubsMap, credential, contributorID);
+          await this.addChallengeMemberRole(hubsMap, credential);
           break;
         case AuthorizationCredential.OPPORTUNITY_MEMBER:
-          await this.addOpportunityMemberRole(
-            hubsMap,
-            credential,
-            contributorID
-          );
+          await this.addOpportunityMemberRole(hubsMap, credential);
           break;
         case AuthorizationCredential.OPPORTUNITY_LEAD:
-          await this.addOpportunityLeadRole(hubsMap, credential, contributorID);
+          await this.addOpportunityLeadRole(hubsMap, credential);
           break;
         case AuthorizationCredential.USER_GROUP_MEMBER:
-          await this.addUserGroupMemberRole(
-            hubsMap,
-            contributorID,
-            orgsMap,
-            credential
-          );
+          await this.addUserGroupMemberRole(hubsMap, orgsMap, credential);
           break;
       }
     }
@@ -146,7 +127,6 @@ export class RolesService {
 
   private async addUserGroupMemberRole(
     hubsMap: Map<string, RolesResultHub>,
-    contributorID: string,
     orgsMap: Map<string, RolesResultOrganization>,
     credential: ICredential
   ) {
@@ -155,18 +135,13 @@ export class RolesService {
     );
     const parent = await this.userGroupService.getParent(group);
     if (isCommunity(parent)) {
-      const hubResult = await this.ensureHubRolesResult(
-        hubsMap,
-        parent.hubID,
-        contributorID
-      );
+      const hubResult = await this.ensureHubRolesResult(hubsMap, parent.hubID);
       const groupResult = new RolesResult(group.name, group.id, group.name);
       hubResult.userGroups.push(groupResult);
     } else if (isOrganization(parent)) {
       const orgResult = await this.ensureOrganizationRolesResult(
         orgsMap,
-        parent.id,
-        contributorID
+        parent.id
       );
       const groupResult = new RolesResult(group.name, group.id, group.name);
       orgResult.userGroups.push(groupResult);
@@ -177,99 +152,84 @@ export class RolesService {
 
   private async addOpportunityLeadRole(
     hubsMap: Map<string, RolesResultHub>,
-    credential: ICredential,
-    contributorID: string
+    credential: ICredential
   ) {
     const opportunityResult = await this.ensureOpportunityRolesResult(
       hubsMap,
-      credential.resourceID,
-      contributorID
+      credential.resourceID
     );
     this.addRole(opportunityResult, ROLE_LEAD);
   }
 
   private async addOpportunityMemberRole(
     hubsMap: Map<string, RolesResultHub>,
-    credential: ICredential,
-    contributorID: string
+    credential: ICredential
   ) {
     const opportunityResult = await this.ensureOpportunityRolesResult(
       hubsMap,
-      credential.resourceID,
-      contributorID
+      credential.resourceID
     );
     this.addRole(opportunityResult, ROLE_MEMBER);
   }
 
   private async addChallengeLeadRole(
     hubsMap: Map<string, RolesResultHub>,
-    credential: ICredential,
-    contributorID: string
+    credential: ICredential
   ) {
     const challengeResult = await this.ensureChallengeRolesResult(
       hubsMap,
-      credential.resourceID,
-      contributorID
+      credential.resourceID
     );
     this.addRole(challengeResult, ROLE_LEAD);
   }
 
   private async addChallengeMemberRole(
     hubsMap: Map<string, RolesResultHub>,
-    credential: ICredential,
-    contributorID: string
+    credential: ICredential
   ) {
     const challengeResult = await this.ensureChallengeRolesResult(
       hubsMap,
-      credential.resourceID,
-      contributorID
+      credential.resourceID
     );
     this.addRole(challengeResult, ROLE_MEMBER);
   }
 
   private async addHubHostRole(
     hubsMap: Map<string, RolesResultHub>,
-    credential: ICredential,
-    contributorID: string
+    credential: ICredential
   ) {
     const hubResult = await this.ensureHubRolesResult(
       hubsMap,
-      credential.resourceID,
-      contributorID
+      credential.resourceID
     );
     this.addRole(hubResult, ROLE_HOST);
   }
 
   private async addHubMemberRole(
     hubsMap: Map<string, RolesResultHub>,
-    credential: ICredential,
-    contributorID: string
+    credential: ICredential
   ) {
     const hubResult = await this.ensureHubRolesResult(
       hubsMap,
-      credential.resourceID,
-      contributorID
+      credential.resourceID
     );
     this.addRole(hubResult, ROLE_MEMBER);
   }
 
   private async addOrganizationMemberRole(
     orgsMap: Map<string, RolesResultOrganization>,
-    credential: ICredential,
-    contributorID: string
+    credential: ICredential
   ) {
     const orgResult = await this.ensureOrganizationRolesResult(
       orgsMap,
-      credential.resourceID,
-      contributorID
+      credential.resourceID
     );
     this.addRole(orgResult, ROLE_ASSOCIATE);
   }
 
   private async ensureOrganizationRolesResult(
     orgsMap: Map<string, RolesResultOrganization>,
-    organizationID: string,
-    contributorID: string
+    organizationID: string
   ): Promise<RolesResultOrganization> {
     const existingOrgResult = orgsMap.get(organizationID);
     if (existingOrgResult) {
@@ -279,10 +239,7 @@ export class RolesService {
     const organization = await this.organizationService.getOrganizationOrFail(
       organizationID
     );
-    const newOrgResult = new RolesResultOrganization(
-      organization,
-      contributorID
-    );
+    const newOrgResult = new RolesResultOrganization(organization);
     orgsMap.set(organization.id, newOrgResult);
     return newOrgResult;
   }
@@ -299,8 +256,7 @@ export class RolesService {
 
   private async ensureHubRolesResult(
     hubsMap: Map<string, RolesResultHub>,
-    hubID: string,
-    contributorID: string
+    hubID: string
   ): Promise<RolesResultHub> {
     const existingHubResult = hubsMap.get(hubID);
     if (existingHubResult) {
@@ -310,25 +266,20 @@ export class RolesService {
     const hub = await this.hubService.getHubOrFail(hubID, {
       relations: ['community'],
     });
-    const newHubResult = new RolesResultHub(hub, contributorID);
+    const newHubResult = new RolesResultHub(hub);
     hubsMap.set(hub.id, newHubResult);
     return newHubResult;
   }
 
   private async ensureChallengeRolesResult(
     hubsMap: Map<string, RolesResultHub>,
-    challengeID: string,
-    contributorID: string
+    challengeID: string
   ): Promise<RolesResult> {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeID,
       { relations: ['community'] }
     );
-    const hubResult = await this.ensureHubRolesResult(
-      hubsMap,
-      challenge.hubID,
-      contributorID
-    );
+    const hubResult = await this.ensureHubRolesResult(hubsMap, challenge.hubID);
 
     const existingChallengeResult = hubResult.challenges.find(
       challengeResult => challengeResult.nameID === challenge.nameID
@@ -347,8 +298,7 @@ export class RolesService {
 
   private async ensureOpportunityRolesResult(
     hubsMap: Map<string, RolesResultHub>,
-    opportunityID: string,
-    contributorID: string
+    opportunityID: string
   ): Promise<RolesResult> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       opportunityID,
@@ -356,8 +306,7 @@ export class RolesService {
     );
     const hubResult = await this.ensureHubRolesResult(
       hubsMap,
-      opportunity.hubID,
-      contributorID
+      opportunity.hubID
     );
 
     const existingOpportunityResult = hubResult.opportunities.find(

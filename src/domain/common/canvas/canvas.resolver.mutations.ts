@@ -18,6 +18,7 @@ import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_CANVAS_CONTENT } from '@common/constants/providers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
+import { getRandomId } from '@src/common';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverMutations {
@@ -76,7 +77,7 @@ export class CanvasResolverMutations {
       agentInfo
     );
 
-    const eventID = `canvas-${Math.floor(Math.random() * 100)}`;
+    const eventID = `canvas-${getRandomId()}`;
     const subscriptionPayload: CanvasContentUpdated = {
       eventID: eventID,
       canvasID: updatedCanvas.id,
