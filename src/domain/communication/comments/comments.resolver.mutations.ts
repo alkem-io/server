@@ -24,6 +24,7 @@ import { CommentsAuthorizationService } from './comments.service.authorization';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { IComments } from '@domain/communication/comments/comments.interface';
+import { getRandomId } from '@src/common';
 
 @Resolver()
 export class CommentsResolverMutations {
@@ -115,7 +116,7 @@ export class CommentsResolverMutations {
     commentSent: CommunicationMessageResult
   ) {
     // build subscription payload
-    const eventID = `comment-msg-${Math.floor(Math.random() * 100)}`;
+    const eventID = `comment-msg-${getRandomId()}`;
     const subscriptionPayload: AspectCommentsMessageReceived = {
       eventID: eventID,
       message: commentSent,
