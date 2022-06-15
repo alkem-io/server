@@ -124,7 +124,7 @@ export class templatesSet1654842042827 implements MigrationInterface {
           );
           await queryRunner.query(
             `INSERT INTO template_info (id, createdDate, updatedDate, version, title, description, tagsetId, visualId)
-          VALUES ('${tagsetID}', NOW(), NOW(), 1, '${aspectTemplate.type}', '${aspectTemplate.typeDescription}', '${tagsetID}', '${visualID}')`
+          VALUES ('${templateInfoID}', NOW(), NOW(), 1, '${aspectTemplate.type}', '${aspectTemplate.typeDescription}', '${tagsetID}', '${visualID}')`
           );
           await queryRunner.query(
             `INSERT INTO aspect_template (id, createdDate, updatedDate, version, templatesSetId, templateInfoId, type, defaultDescription)
