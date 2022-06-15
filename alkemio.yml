@@ -20,13 +20,6 @@ hosting:
   #
   port: ${GRAPHQL_PORT}:4000
 
-  # The endpoint for all cluster requests.
-  # This is then used for routing the requests from the public-facing endpoint (e.g. https://dev.alkem.io/)
-  # to the alkemio-server service, orchestrated with the orchestration engine of your choice, e.g. kubernetes or docker-compose.
-  #
-  # TODO: the env var name is no longer acccurate
-  endpoint: ${GRAPHQL_ENDPOINT}:http://localhost:3000
-
   # The entry point for the cluster
   endpoint_cluster: ${ENDPOINT_CLUSTER}:http://localhost:3000
 

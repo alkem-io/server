@@ -1,6 +1,7 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
+import { ClientProxy } from '@nestjs/microservices';
 import { getConnection } from 'typeorm';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
@@ -18,11 +19,12 @@ import {
   NOTIFICATIONS_SERVICE,
   SUBSCRIPTION_ASPECT_COMMENT,
 } from '@common/constants/providers';
-import { CommentsMessageReceived } from './dto/comments.dto.event.message.received';
+import { AspectCommentsMessageReceived } from '../../context/aspect/dto/aspect.dto.event.message.received';
 import { CommentsAuthorizationService } from './comments.service.authorization';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
-import { ClientProxy } from '@nestjs/microservices';
+import { IComments } from '@domain/communication/comments/comments.interface';
+import { getRandomId } from '@src/common';
 
 @Resolver()
 export class CommentsResolverMutations {
@@ -62,36 +64,14 @@ export class CommentsResolverMutations {
       messageData
     );
 
-    // Send the subscriptions event
-    const eventID = `comment-msg-${Math.floor(Math.random() * 100)}`;
-    const subscriptionPayload: CommentsMessageReceived = {
-      eventID: eventID,
-      message: commentSent,
-      commentsID: comments.id,
-    };
-    this.subscriptionAspectComments.publish(
-      SubscriptionType.COMMUNICATION_COMMENTS_MESSAGE_RECEIVED,
-      subscriptionPayload
-    );
     // check if this is a comment related to an aspect
-    const [aspect]: { displayName: string; createdBy: string }[] =
+    const [aspect]: { id: string; displayName: string; createdBy: string }[] =
       await getConnection().query(
-        `SELECT displayName, createdBy from aspect WHERE commentsId = '${messageData.commentsID}'`
+        `SELECT id, displayName, createdBy FROM aspect WHERE commentsId = '${messageData.commentsID}'`
       );
 
     if (aspect) {
-      const payload =
-        await this.notificationsPayloadBuilder.buildCommentCreatedOnAspectPayload(
-          aspect.displayName,
-          aspect.createdBy,
-          messageData.commentsID,
-          commentSent
-        );
-
-      this.notificationsClient.emit<number>(
-        EventType.COMMENT_CREATED_ON_ASPECT,
-        payload
-      );
+      this.processAspectCommentEvents(aspect, comments, commentSent);
     }
 
     return commentSent;
@@ -127,6 +107,38 @@ export class CommentsResolverMutations {
       comments,
       agentInfo.communicationID,
       messageData
+    );
+  }
+
+  private async processAspectCommentEvents(
+    aspect: { id: string; displayName: string; createdBy: string },
+    comments: IComments,
+    commentSent: CommunicationMessageResult
+  ) {
+    // build subscription payload
+    const eventID = `comment-msg-${getRandomId()}`;
+    const subscriptionPayload: AspectCommentsMessageReceived = {
+      eventID: eventID,
+      message: commentSent,
+      aspectID: aspect.id,
+    };
+    // send the subscriptions event
+    this.subscriptionAspectComments.publish(
+      SubscriptionType.ASPECT_COMMENTS_MESSAGE_RECEIVED,
+      subscriptionPayload
+    );
+    // build notification payload
+    const payload =
+      await this.notificationsPayloadBuilder.buildCommentCreatedOnAspectPayload(
+        aspect.displayName,
+        aspect.createdBy,
+        comments.id,
+        commentSent
+      );
+    // send notification event
+    this.notificationsClient.emit<number>(
+      EventType.COMMENT_CREATED_ON_ASPECT,
+      payload
     );
   }
 }

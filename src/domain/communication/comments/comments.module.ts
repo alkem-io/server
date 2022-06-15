@@ -7,7 +7,6 @@ import { RoomModule } from '../room/room.module';
 import { Comments } from './comments.entity';
 import { CommentsResolverFields } from './comments.resolver.fields';
 import { CommentsResolverMutations } from './comments.resolver.mutations';
-import { CommentsResolverSubscriptions } from './comments.resolver.subscriptions';
 import { CommentsService } from './comments.service';
 import { CommentsAuthorizationService } from './comments.service.authorization';
 
@@ -24,7 +23,6 @@ import { CommentsAuthorizationService } from './comments.service.authorization';
     CommentsAuthorizationService,
     CommentsResolverFields,
     CommentsResolverMutations,
-    CommentsResolverSubscriptions,
   ],
   exports: [CommentsService, CommentsAuthorizationService],
 })

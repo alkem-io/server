@@ -25,7 +25,6 @@ import { AdminCommunicationModule } from '@services/admin/communication/admin.co
 import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
 import { WinstonConfigService } from '@src/config/winston.config';
-import { MembershipModule } from '@src/services/domain/membership/membership.module';
 import { MetadataModule } from '@src/services/domain/metadata/metadata.module';
 import { SearchModule } from '@src/services/domain/search/search.module';
 import { KonfigModule } from '@src/services/platform/configuration/config/config.module';
@@ -90,28 +89,28 @@ import { RolesModule } from '@services/domain/roles/roles.module';
             {
               name: 'Me',
               endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/private/graphql`,
               query: print(meQuery),
             },
             {
               name: 'Hubs',
               endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/private/graphql`,
               query: print(hubsQuery),
             },
             {
               name: 'Configuration',
               endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/public/graphql`,
               query: print(configQuery),
             },
             {
               name: 'Server Metadata',
               endpoint: `${
-                configService.get(ConfigurationTypes.HOSTING)?.endpoint
+                configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/public/graphql`,
               query: print(serverMetadataQuery),
             },
@@ -163,7 +162,6 @@ import { RolesModule } from '@services/domain/roles/roles.module';
     MetadataModule,
     BootstrapModule,
     SearchModule,
-    MembershipModule,
     RolesModule,
     KonfigModule,
     IpfsModule,
