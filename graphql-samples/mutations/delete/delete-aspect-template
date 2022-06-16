@@ -1,0 +1,14 @@
+mutation deleteAspectTemplate($deleteData: DeleteAspectTemplateInput!) {
+  deleteAspectTemplate(deleteData: $deleteData) {
+    info {
+      title
+    }
+  }
+}
+
+Variables:
+{
+  "deleteData": {
+      "ID": "uuid"
+  }
+}

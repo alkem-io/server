@@ -1,5 +1,6 @@
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.update';
 import { UpdateReferenceInput } from '@domain/common/reference/reference.dto.update';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { InputType, Field } from '@nestjs/graphql';
 import { VERY_LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
 import { Type } from 'class-transformer';
@@ -7,7 +8,7 @@ import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateAspectInput extends UpdateNameableInput {
-  @Field({ nullable: true })
+  @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(VERY_LONG_TEXT_LENGTH)
   description?: string;
