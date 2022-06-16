@@ -1,6 +1,6 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver, Args } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from './community.service';
@@ -11,9 +11,15 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { IOrganization } from '../organization';
 import { CommunityRole } from '@common/enums/community.role';
+import { PaginationArgs, PaginatedUsers } from '@core/pagination';
+import { UserService } from '../user/user.service';
+
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
-  constructor(private communityService: CommunityService) {}
+  constructor(
+    private communityService: CommunityService,
+    private userService: UserService
+  ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
@@ -56,6 +62,41 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
+  @ResolveField('availableMemberUsers', () => PaginatedUsers, {
+    nullable: true,
+    description: 'All available users that are potential Community members.',
+  })
+  @Profiling.api
+  async availableMemberUsers(
+    @Parent() community: Community,
+    @Args({ nullable: true }) pagination: PaginationArgs
+  ) {
+    const memberRoleCredentials =
+      this.communityService.getCredentialDefinitionForRole(
+        community,
+        CommunityRole.MEMBER
+      );
+
+    const parrentCommunityMemberCredentials = community.parentCommunity
+      ? this.communityService.getCredentialDefinitionForRole(
+          community?.parentCommunity,
+          CommunityRole.MEMBER
+        )
+      : undefined;
+
+    const communityMemberCredentials = {
+      member: memberRoleCredentials,
+      parrentCommunityMember: parrentCommunityMemberCredentials,
+    };
+
+    return this.userService.getPaginatedAvailableMemberUsers(
+      communityMemberCredentials,
+      pagination
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('leadUsers', () => [IUser], {
     nullable: true,
     description: 'All users that are leads in this Community.',
@@ -79,6 +120,41 @@ export class CommunityResolverFields {
     return await this.communityService.getOrganizationsWithRole(
       community,
       CommunityRole.LEAD
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('availableLeadUsers', () => PaginatedUsers, {
+    nullable: true,
+    description:
+      'All member users excluding the current lead users in this Community.',
+  })
+  @Profiling.api
+  async availableLeadUsers(
+    @Parent() community: Community,
+    @Args({ nullable: true }) pagination: PaginationArgs
+  ) {
+    const memberRoleCredentials =
+      this.communityService.getCredentialDefinitionForRole(
+        community,
+        CommunityRole.MEMBER
+      );
+
+    const leadRoleCredential =
+      this.communityService.getCredentialDefinitionForRole(
+        community,
+        CommunityRole.LEAD
+      );
+
+    const credentialCriteria = {
+      member: memberRoleCredentials,
+      lead: leadRoleCredential,
+    };
+
+    return this.userService.getPaginatedAvailableLeadUsers(
+      credentialCriteria,
+      pagination
     );
   }
 

@@ -49,9 +49,10 @@ import { PaginationArgs } from '@core/pagination';
 import { applyFiltering, UserFilterInput } from '@core/filtering';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
-import { LocationService } from '@domain/common/location/location.service';
 import { CreateProfileInput } from '../profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
+import { CommunityCredentials } from './dto/user.dto.community.credentials';
+import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
 
 @Injectable()
 export class UserService {
@@ -65,7 +66,6 @@ export class UserService {
     private namingService: NamingService,
     private agentService: AgentService,
     private preferenceSetService: PreferenceSetService,
-    private locationService: LocationService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -503,6 +503,88 @@ export class UserService {
     return getPaginationResults(qb, paginationArgs);
   }
 
+  async getPaginatedAvailableMemberUsers(
+    communityCredentials: CommunityMemberCredentials,
+    paginationArgs: PaginationArgs,
+    filter?: UserFilterInput
+  ): Promise<IPaginatedType<IUser>> {
+    const currentMemberUsers = await this.usersWithCredentials(
+      communityCredentials.member
+    );
+
+    if (communityCredentials.parrentCommunityMember) {
+      const qb = await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.agent', 'agent')
+        .leftJoinAndSelect('agent.credentials', 'credential')
+        .where('credential.type = :type')
+        .andWhere('credential.resourceID = :resourceID')
+        .setParameters({
+          type: communityCredentials.parrentCommunityMember.type,
+          resourceID: communityCredentials.parrentCommunityMember.resourceID,
+        });
+
+      if (currentMemberUsers.length > 0) {
+        qb.andWhere('NOT user.id IN (:memberUsers)').setParameters({
+          memberUsers: currentMemberUsers.map(user => user.id),
+        });
+      }
+
+      if (filter) {
+        applyFiltering(qb, filter);
+      }
+
+      return getPaginationResults(qb, paginationArgs);
+    }
+
+    const qb = await this.userRepository.createQueryBuilder().select();
+
+    if (currentMemberUsers.length > 0) {
+      qb.where('NOT id IN (:memberUsers)').setParameters({
+        memberUsers: currentMemberUsers.map(user => user.id),
+      });
+    }
+
+    if (filter) {
+      applyFiltering(qb, filter);
+    }
+
+    return getPaginationResults(qb, paginationArgs);
+  }
+
+  async getPaginatedAvailableLeadUsers(
+    communityCredentials: CommunityCredentials,
+    paginationArgs: PaginationArgs,
+    filter?: UserFilterInput
+  ): Promise<IPaginatedType<IUser>> {
+    const currentLeadUsers = await this.usersWithCredentials(
+      communityCredentials.lead
+    );
+
+    const qb = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.agent', 'agent')
+      .leftJoinAndSelect('agent.credentials', 'credential')
+      .where('credential.type = :type')
+      .andWhere('credential.resourceID = :resourceID')
+      .setParameters({
+        type: communityCredentials.member.type,
+        resourceID: communityCredentials.member.resourceID,
+      });
+
+    if (currentLeadUsers.length > 0) {
+      qb.andWhere('NOT user.id IN (:leadUsers)').setParameters({
+        leadUsers: currentLeadUsers.map(user => user.id),
+      });
+    }
+
+    if (filter) {
+      applyFiltering(qb, filter);
+    }
+
+    return getPaginationResults(qb, paginationArgs);
+  }
+
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
     const user = await this.getUserOrFail(userInput.ID);
 
@@ -592,8 +674,8 @@ export class UserService {
     // reload to go through the normal loading path
     const results: IUser[] = [];
     for (const user of userMatches) {
-      const loadedOrganization = await this.getUserOrFail(user.id);
-      results.push(loadedOrganization);
+      const loadedUser = await this.getUserOrFail(user.id);
+      results.push(loadedUser);
     }
     return results;
   }
