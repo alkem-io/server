@@ -230,6 +230,11 @@ tcp:
         servers:
           - address: 'mailslurper:1025'
 
+    redis:
+      loadBalancer:
+        servers:
+          - address: 'redis:6379'
+
   routers:
     mariadb:
       rule: 'HostSNI(`*`)'
@@ -248,3 +253,9 @@ tcp:
       service: 'mailslurper-smtp'
       entryPoints:
         - 'mailslurper-smtp'
+
+    redis:
+      rule: 'HostSNI(`*`)'
+      service: 'redis'
+      entryPoints:
+        - 'redis'
