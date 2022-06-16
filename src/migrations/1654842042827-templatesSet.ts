@@ -127,8 +127,8 @@ export class templatesSet1654842042827 implements MigrationInterface {
           VALUES ('${templateInfoID}', NOW(), NOW(), 1, '${aspectTemplate.type}', '${aspectTemplate.typeDescription}', '${tagsetID}', '${visualID}')`
           );
           await queryRunner.query(
-            `INSERT INTO aspect_template (id, createdDate, updatedDate, version, templatesSetId, templateInfoId, type, defaultDescription)
-          VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${templatesSetID}', '${templateInfoID}', '${aspectTemplate.type}', '${aspectTemplate.defaultDescription}')`
+            `INSERT INTO aspect_template (id, createdDate, updatedDate, version, authorizationId, templatesSetId, templateInfoId, type, defaultDescription)
+          VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${aspectTemplateAuthID}', '${templatesSetID}', '${templateInfoID}', '${aspectTemplate.type}', '${aspectTemplate.defaultDescription}')`
           );
         }
       } else {
@@ -163,8 +163,8 @@ export class templatesSet1654842042827 implements MigrationInterface {
           VALUES ('${templateInfoID}', NOW(), NOW(), 1, '${aspectTemplate.title}', '${aspectTemplate.description}', '${tagsetID}', '${visualID}')`
           );
           await queryRunner.query(
-            `INSERT INTO aspect_template (id, createdDate, updatedDate, version, templatesSetId, templateInfoId, type, defaultDescription)
-          VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${templatesSetID}', '${templateInfoID}', '${aspectTemplate.type}', '${aspectTemplate.defaultDescription}')`
+            `INSERT INTO aspect_template (id, createdDate, updatedDate, version, authorizationId, templatesSetId, templateInfoId, type, defaultDescription)
+          VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${templatesSetID}', '${aspectTemplateAuthID}', '${templateInfoID}', '${aspectTemplate.type}', '${aspectTemplate.defaultDescription}')`
           );
         }
       }
