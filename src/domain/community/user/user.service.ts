@@ -332,32 +332,7 @@ export class UserService {
     userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser> {
-    let user: IUser | undefined;
-
-    if (validateEmail(userID)) {
-      user = await this.userRepository.findOne(
-        {
-          email: userID,
-        },
-        options
-      );
-    } else if (userID.length === UUID_LENGTH) {
-      {
-        user = await this.userRepository.findOne(
-          {
-            id: userID,
-          },
-          options
-        );
-      }
-    } else {
-      user = await this.userRepository.findOne(
-        {
-          nameID: userID,
-        },
-        options
-      );
-    }
+    const user = await this.getUserByEmailIdUUID(userID, options);
 
     if (!user) {
       throw new EntityNotFoundException(
@@ -389,6 +364,46 @@ export class UserService {
     }
 
     return user;
+  }
+
+  private async getUserByEmailIdUUID(
+    userID: string,
+    options: FindOneOptions<User> | undefined
+  ): Promise<IUser | undefined> {
+    let user: IUser | undefined = undefined;
+
+    if (await this.isUserIdEmail(userID)) {
+      user = await this.userRepository.findOne(
+        {
+          email: userID,
+        },
+        options
+      );
+    } else if (userID.length === UUID_LENGTH) {
+      {
+        user = await this.userRepository.findOne(
+          {
+            id: userID,
+          },
+          options
+        );
+      }
+    }
+
+    if (!user)
+      user = await this.userRepository.findOne(
+        {
+          nameID: userID,
+        },
+        options
+      );
+
+    return user;
+  }
+
+  private async isUserIdEmail(userId: string): Promise<boolean> {
+    if (userId.includes('@')) return true;
+    return false;
   }
 
   async getUserByEmail(
@@ -503,7 +518,7 @@ export class UserService {
     return getPaginationResults(qb, paginationArgs);
   }
 
-  async getPaginatedAvailableMemberUsers(
+  public async getPaginatedAvailableMemberUsers(
     communityCredentials: CommunityMemberCredentials,
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
@@ -552,7 +567,7 @@ export class UserService {
     return getPaginationResults(qb, paginationArgs);
   }
 
-  async getPaginatedAvailableLeadUsers(
+  public async getPaginatedAvailableLeadUsers(
     communityCredentials: CommunityCredentials,
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
@@ -659,7 +674,7 @@ export class UserService {
     credentialCriteria: CredentialsSearchInput
   ): Promise<IUser[]> {
     const credResourceID = credentialCriteria.resourceID || '';
-    const userMatches = await this.userRepository
+    const users = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.agent', 'agent')
       .leftJoinAndSelect('agent.credentials', 'credential')
@@ -671,13 +686,7 @@ export class UserService {
       })
       .getMany();
 
-    // reload to go through the normal loading path
-    const results: IUser[] = [];
-    for (const user of userMatches) {
-      const loadedUser = await this.getUserOrFail(user.id);
-      results.push(loadedUser);
-    }
-    return results;
+    return users;
   }
 
   async countUsersWithCredentials(
