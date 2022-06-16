@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import * as winston from 'winston';
-import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
 import { ConfigService } from '@nestjs/config';
 import * as WinstonElasticsearch from 'winston-elasticsearch';
 import { ConfigurationTypes } from '@common/enums';
@@ -14,11 +13,13 @@ export class WinstonConfigService {
     const consoleEnabled: boolean = this.configService.get(
       ConfigurationTypes.MONITORING
     )?.logging?.console_logging_enabled;
+
     const transports: any[] = [
       new winston.transports.Console({
         format: winston.format.combine(
           winston.format.timestamp(),
-          nestWinstonModuleUtilities.format.nestLike()
+          winston.format.label({ label: '[alkemio-server]' }),
+          winston.format.logstash()
         ),
         level: this.configService
           .get(ConfigurationTypes.MONITORING)
