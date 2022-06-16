@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
+import { escapeString } from './utils/escape-string';
 
 export class templatesSet1654842042827 implements MigrationInterface {
   name = 'templatesSet1654842042827';
@@ -124,11 +125,17 @@ export class templatesSet1654842042827 implements MigrationInterface {
           );
           await queryRunner.query(
             `INSERT INTO template_info (id, createdDate, updatedDate, version, title, description, tagsetId, visualId)
-          VALUES ('${templateInfoID}', NOW(), NOW(), 1, '${aspectTemplate.type}', '${aspectTemplate.typeDescription}', '${tagsetID}', '${visualID}')`
+          VALUES ('${templateInfoID}', NOW(), NOW(), 1, '${
+              aspectTemplate.type
+            }', '${escapeString(
+              aspectTemplate.typeDescription
+            )}', '${tagsetID}', '${visualID}')`
           );
           await queryRunner.query(
             `INSERT INTO aspect_template (id, createdDate, updatedDate, version, authorizationId, templatesSetId, templateInfoId, type, defaultDescription)
-          VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${aspectTemplateAuthID}', '${templatesSetID}', '${templateInfoID}', '${aspectTemplate.type}', '${aspectTemplate.defaultDescription}')`
+          VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${aspectTemplateAuthID}', '${templatesSetID}', '${templateInfoID}', '${
+              aspectTemplate.type
+            }', '${escapeString(aspectTemplate.defaultDescription)}')`
           );
         }
       } else {
@@ -160,11 +167,17 @@ export class templatesSet1654842042827 implements MigrationInterface {
           );
           await queryRunner.query(
             `INSERT INTO template_info (id, createdDate, updatedDate, version, title, description, tagsetId, visualId)
-          VALUES ('${templateInfoID}', NOW(), NOW(), 1, '${aspectTemplate.title}', '${aspectTemplate.description}', '${tagsetID}', '${visualID}')`
+          VALUES ('${templateInfoID}', NOW(), NOW(), 1, '${
+              aspectTemplate.title
+            }', '${escapeString(
+              aspectTemplate.description
+            )}', '${tagsetID}', '${visualID}')`
           );
           await queryRunner.query(
             `INSERT INTO aspect_template (id, createdDate, updatedDate, version, authorizationId, templatesSetId, templateInfoId, type, defaultDescription)
-          VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${aspectTemplateAuthID}', '${templatesSetID}', '${templateInfoID}', '${aspectTemplate.type}', '${aspectTemplate.defaultDescription}')`
+          VALUES ('${aspectTemplateID}', NOW(), NOW(), 1, '${aspectTemplateAuthID}', '${templatesSetID}', '${templateInfoID}', '${
+              aspectTemplate.type
+            }', '${escapeString(aspectTemplate.defaultDescription)}')`
           );
         }
       }
