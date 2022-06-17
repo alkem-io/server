@@ -16,7 +16,7 @@ export const applyFiltering = <T>(
   }
 
   // build the filter with WHERE in brackets
-  query.where(
+  query.andWhere(
     new Brackets(qb =>
       filterKeys.forEach(x => addWhereClause(qb, x, filter[x]))
     )

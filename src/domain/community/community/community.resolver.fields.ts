@@ -13,6 +13,7 @@ import { IOrganization } from '../organization';
 import { CommunityRole } from '@common/enums/community.role';
 import { PaginationArgs, PaginatedUsers } from '@core/pagination';
 import { UserService } from '../user/user.service';
+import { UserFilterInput } from '@core/filtering';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -69,7 +70,8 @@ export class CommunityResolverFields {
   @Profiling.api
   async availableMemberUsers(
     @Parent() community: Community,
-    @Args({ nullable: true }) pagination: PaginationArgs
+    @Args({ nullable: true }) pagination: PaginationArgs,
+    @Args('filter', { nullable: true }) filter?: UserFilterInput
   ) {
     const memberRoleCredentials =
       this.communityService.getCredentialDefinitionForRole(
@@ -91,7 +93,8 @@ export class CommunityResolverFields {
 
     return this.userService.getPaginatedAvailableMemberUsers(
       communityMemberCredentials,
-      pagination
+      pagination,
+      filter
     );
   }
 
@@ -133,7 +136,8 @@ export class CommunityResolverFields {
   @Profiling.api
   async availableLeadUsers(
     @Parent() community: Community,
-    @Args({ nullable: true }) pagination: PaginationArgs
+    @Args({ nullable: true }) pagination: PaginationArgs,
+    @Args('filter', { nullable: true }) filter?: UserFilterInput
   ) {
     const memberRoleCredentials =
       this.communityService.getCredentialDefinitionForRole(
@@ -154,7 +158,8 @@ export class CommunityResolverFields {
 
     return this.userService.getPaginatedAvailableLeadUsers(
       credentialCriteria,
-      pagination
+      pagination,
+      filter
     );
   }
 
