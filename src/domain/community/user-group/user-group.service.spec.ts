@@ -2,11 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UserGroupService } from './user-group.service';
 import { UserGroup } from '.';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ModuleMocker, MockFunctionMetadata } from 'jest-mock';
 import { repositoryMockFactory } from '@test/utils/repository.mock.factory';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 
-const moduleMocker = new ModuleMocker(global);
 describe('UserGroupService', () => {
   let service: UserGroupService;
 
@@ -21,15 +20,7 @@ describe('UserGroupService', () => {
         MockWinstonProvider,
       ],
     })
-      .useMocker(token => {
-        if (typeof token === 'function') {
-          const mockMetadata = moduleMocker.getMetadata(
-            token
-          ) as MockFunctionMetadata<any, any>;
-          const Mock = moduleMocker.generateFromMetadata(mockMetadata);
-          return new Mock();
-        }
-      })
+      .useMocker(defaultMockerFactory)
       .compile();
 
     service = module.get<UserGroupService>(UserGroupService);

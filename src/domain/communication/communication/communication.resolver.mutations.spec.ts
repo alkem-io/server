@@ -1,18 +1,26 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppModule } from '@src/app.module';
 import { CommunicationResolverMutations } from './communication.resolver.mutations';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { MockNotificationsService } from '@test/mocks/notifications.service.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 
 describe('CommunicationResolver', () => {
   let resolver: CommunicationResolverMutations;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+      providers: [
+        CommunicationResolverMutations,
+        MockCacheManager,
+        MockWinstonProvider,
+        MockNotificationsService,
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
 
-    resolver = module.get<CommunicationResolverMutations>(
-      CommunicationResolverMutations
-    );
+    resolver = module.get(CommunicationResolverMutations);
   });
 
   it('should be defined', () => {
