@@ -15,14 +15,10 @@ export class Agent extends AuthorizableEntity implements IAgent {
   @Column('varchar', { length: 255, nullable: true })
   password!: string;
 
-  @OneToMany(
-    () => Credential,
-    credential => credential.agent,
-    {
-      eager: true,
-      cascade: true,
-    }
-  )
+  @OneToMany(() => Credential, credential => credential.agent, {
+    eager: true,
+    cascade: true,
+  })
   credentials?: Credential[];
 
   constructor() {
