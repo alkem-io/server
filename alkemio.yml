@@ -192,7 +192,8 @@ monitoring:
     # A flag enabling / disabling performance logging.
     profiling_enabled: ${LOGGING_PROFILING_ENABLED}:true
 
-    # The logging format will be in json
+    # The logging format will be in json - useful for parsing
+    # if disabled - will be in a human readable form
     json: ${LOGGING_FORMAT_JSON}:true
 
     # Logging of the incoming requests to the server
