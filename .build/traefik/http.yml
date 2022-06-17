@@ -220,6 +220,11 @@ tcp:
         servers:
           - address: 'mariadb:3306'
 
+    postgres:
+      loadBalancer:
+        servers:
+          - address: 'postgres:5432'
+
     rabbitmq-amqp:
       loadBalancer:
         servers:
@@ -241,6 +246,12 @@ tcp:
       service: 'mariadb'
       entryPoints:
         - 'mariadb'
+
+    postgres:
+      rule: 'HostSNI(`*`)'
+      service: 'postgres'
+      entryPoints:
+        - 'postgres'
 
     rabbitmq-amqp:
       rule: 'HostSNI(`*`)'

@@ -11,6 +11,8 @@ entryPoints:
     address: ':80'
   mariadb:
     address: ':3306'
+  postgres:
+    address: ':5432'
   synapse:
     address: ':8008'
   synapse-admin:
