@@ -1,4 +1,4 @@
-import { CacheModule, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserResolverQueries } from './user.resolver.queries';
 import { ProfileModule } from '@domain/community/profile/profile.module';
@@ -35,7 +35,6 @@ import { PreferenceModule } from '@domain/common/preference';
     PreferenceSetModule,
     KonfigModule,
     TypeOrmModule.forFeature([User]),
-    CacheModule.register({ max: 250, ttl: 300 }),
     ConfigModule,
   ],
   providers: [
