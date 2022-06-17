@@ -790,9 +790,14 @@ caches:
 # For more information on using Synapse with Postgres, see `docs/postgres.md`.
 #
 database:
-  name: sqlite3
+  name: psycopg2
   args:
-    database: /data/homeserver.db
+    user: synapse
+    password: synapse
+    database: synapse
+    host: postgres
+    cp_min: 5
+    cp_max: 10
 
 
 ## Logging ##
