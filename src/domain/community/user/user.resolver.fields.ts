@@ -13,13 +13,11 @@ import { CommunicationRoomResult } from '@domain/communication/room/dto/communic
 import { IProfile } from '../profile/profile.interface';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService
   ) {}
