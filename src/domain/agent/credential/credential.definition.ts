@@ -1,5 +1,5 @@
-// Class is used to pass around definitions of a credential rather than actual Credentials
-export class CredentialDefinition {
+import { ICredentialDefinition } from './credential.definition.interface';
+export class CredentialDefinition implements ICredentialDefinition {
   type!: string;
   resourceID!: string;
 }
