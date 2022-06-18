@@ -1,20 +1,16 @@
-import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { RolesResult } from './roles.dto.result';
 
 @ObjectType()
-export class RolesResultCommunity {
-  @Field(() => String, {
-    description: 'Display name of the community',
+export class RolesResultCommunity extends RolesResult {
+  @Field(() => [RolesResult], {
+    description:
+      'Details of the Groups in the Organizations the user is a member of',
   })
-  displayName: string;
+  userGroups: RolesResult[];
 
-  @Field(() => UUID, {
-    description: 'The ID of the community the user is a member of.',
-  })
-  id: string;
-
-  constructor(id: string, displayName: string) {
-    this.id = id;
-    this.displayName = displayName;
+  constructor(nameID: string, id: string, displayName: string) {
+    super(nameID, id, displayName);
+    this.userGroups = [];
   }
 }
