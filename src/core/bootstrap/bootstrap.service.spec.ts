@@ -1,10 +1,9 @@
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryMockFactory } from '@test/utils/repository.mock.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { BootstrapService } from './bootstrap.service';
 
 describe('BootstrapService', () => {
@@ -16,10 +15,7 @@ describe('BootstrapService', () => {
         BootstrapService,
         MockCacheManager,
         MockWinstonProvider,
-        {
-          provide: getRepositoryToken(Hub),
-          useFactory: repositoryMockFactory,
-        },
+        repositoryProviderMockFactory(Hub),
       ],
     })
       .useMocker(defaultMockerFactory)

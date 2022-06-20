@@ -1,10 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserGroupService } from './user-group.service';
 import { UserGroup } from '.';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { repositoryMockFactory } from '@test/utils/repository.mock.factory';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 
 describe('UserGroupService', () => {
   let service: UserGroupService;
@@ -13,10 +12,7 @@ describe('UserGroupService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserGroupService,
-        {
-          provide: getRepositoryToken(UserGroup),
-          useFactory: repositoryMockFactory,
-        },
+        repositoryProviderMockFactory(UserGroup),
         MockWinstonProvider,
       ],
     })
