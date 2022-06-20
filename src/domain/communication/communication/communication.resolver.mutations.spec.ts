@@ -5,7 +5,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { MockNotificationsService } from '@test/mocks/notifications.service.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { SUBSCRIPTION_DISCUSSION_UPDATED } from '@common/constants';
-import { pubSubEngineModuleMockFactory } from '@test/utils/pub.sub.engine.module.factory';
+import { pubSubEngineMockFactory } from '@test/utils/pub.sub.engine.mock.factory';
 
 describe('CommunicationResolver', () => {
   let resolver: CommunicationResolverMutations;
@@ -17,7 +17,7 @@ describe('CommunicationResolver', () => {
         MockCacheManager,
         MockWinstonProvider,
         MockNotificationsService,
-        pubSubEngineModuleMockFactory(SUBSCRIPTION_DISCUSSION_UPDATED),
+        pubSubEngineMockFactory(SUBSCRIPTION_DISCUSSION_UPDATED),
       ],
     })
       .useMocker(defaultMockerFactory)

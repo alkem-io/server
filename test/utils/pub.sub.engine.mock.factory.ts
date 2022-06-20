@@ -1,6 +1,6 @@
 import { InjectionToken } from '@nestjs/common';
 
-export const pubSubEngineModuleMockFactory = (token: InjectionToken) => {
+export const pubSubEngineMockFactory = (token: InjectionToken) => {
   return {
     provide: token,
     useValue: {

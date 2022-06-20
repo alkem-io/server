@@ -4,7 +4,7 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockNotificationsService } from '@test/mocks/notifications.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { pubSubEngineModuleMockFactory } from '@test/utils/pub.sub.engine.module.factory';
+import { pubSubEngineMockFactory } from '@test/utils/pub.sub.engine.mock.factory';
 import { ContextResolverMutations } from './context.resolver.mutations';
 
 describe('ContextResolver', () => {
@@ -17,7 +17,7 @@ describe('ContextResolver', () => {
         MockCacheManager,
         MockWinstonProvider,
         MockNotificationsService,
-        pubSubEngineModuleMockFactory(SUBSCRIPTION_CONTEXT_ASPECT_CREATED),
+        pubSubEngineMockFactory(SUBSCRIPTION_CONTEXT_ASPECT_CREATED),
       ],
     })
       .useMocker(defaultMockerFactory)
