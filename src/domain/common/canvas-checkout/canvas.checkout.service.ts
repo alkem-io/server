@@ -63,20 +63,21 @@ export class CanvasCheckoutService {
   async save(CanvasCheckout: ICanvasCheckout): Promise<ICanvasCheckout> {
     return await this.canvasCheckoutRepository.save(CanvasCheckout);
   }
+
   async getCanvasCheckoutOrFail(
-    CanvasCheckoutID: string,
+    canvasCheckoutID: string,
     options?: FindOneOptions<CanvasCheckout>
   ): Promise<ICanvasCheckout> {
-    const CanvasCheckout = await this.canvasCheckoutRepository.findOne(
-      { id: CanvasCheckoutID },
+    const canvasCheckout = await this.canvasCheckoutRepository.findOne(
+      { id: canvasCheckoutID },
       options
     );
-    if (!CanvasCheckout)
+    if (!canvasCheckout)
       throw new EntityNotFoundException(
-        `Unable to find CanvasCheckout with ID: ${CanvasCheckoutID}`,
+        `Unable to find CanvasCheckout with ID: ${canvasCheckoutID}`,
         LogContext.COMMUNITY
       );
-    return CanvasCheckout;
+    return canvasCheckout;
   }
 
   async isUpdateAllowedOrFail(
