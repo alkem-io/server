@@ -6,6 +6,20 @@ import * as WinstonElasticsearch from 'winston-elasticsearch';
 import { ConfigurationTypes } from '@common/enums';
 import { FileTransportOptions } from 'winston/lib/winston/transports';
 import * as logform from 'logform';
+
+const LOG_LABEL = 'alkemio-server';
+
+const consoleLoggingStandardFormat: logform.Format[] = [
+  winston.format.timestamp(),
+  nestWinstonModuleUtilities.format.nestLike(),
+];
+
+const consoleLoggingProdFormat: logform.Format[] = [
+  winston.format.timestamp(),
+  winston.format.label({ label: LOG_LABEL }),
+  winston.format.json({ deterministic: true }),
+];
+
 @Injectable()
 export class WinstonConfigService {
   constructor(private configService: ConfigService) {}
@@ -14,11 +28,14 @@ export class WinstonConfigService {
     const consoleEnabled: boolean = this.configService.get(
       ConfigurationTypes.MONITORING
     )?.logging?.console_logging_enabled;
+
     const transports: any[] = [
       new winston.transports.Console({
         format: winston.format.combine(
-          winston.format.timestamp(),
-          nestWinstonModuleUtilities.format.nestLike()
+          ...(this.configService.get(ConfigurationTypes.MONITORING)?.logging
+            ?.json
+            ? consoleLoggingProdFormat
+            : consoleLoggingStandardFormat)
         ),
         level: this.configService
           .get(ConfigurationTypes.MONITORING)
