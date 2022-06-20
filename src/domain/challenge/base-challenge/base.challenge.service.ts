@@ -26,9 +26,9 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { CommunityType } from '@common/enums/community.type';
-import { CommunityPolicy } from '@domain/community/community/community.policy';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 
 @Injectable()
 export class BaseChallengeService {
@@ -48,7 +48,7 @@ export class BaseChallengeService {
     baseChallengeData: CreateBaseChallengeInput,
     hubID: string,
     communityType: CommunityType,
-    communityPolicy: CommunityPolicy
+    communityPolicy: ICommunityPolicy
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
     await this.isNameAvailableOrFail(baseChallengeData.nameID, hubID);

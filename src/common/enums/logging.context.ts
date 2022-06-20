@@ -24,4 +24,5 @@ export enum LogContext {
   PLATFORM = 'platform',
   PAGINATION = 'pagination',
   ROLES = 'roles',
+  TEMPLATES = 'templates',
 }

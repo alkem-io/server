@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppModule } from '@src/app.module';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { AuthenticationService } from './authentication.service';
 
 describe('AuthService', () => {
@@ -7,10 +9,12 @@ describe('AuthService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+      providers: [AuthenticationService, MockCacheManager, MockWinstonProvider],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
 
-    service = module.get<AuthenticationService>(AuthenticationService);
+    service = module.get(AuthenticationService);
   });
 
   it('should be defined', () => {

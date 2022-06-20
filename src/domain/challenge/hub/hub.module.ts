@@ -25,6 +25,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { AspectModule } from '@domain/context/aspect/aspect.module';
+import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { AspectModule } from '@domain/context/aspect/aspect.module';
     NamingModule,
     PreferenceModule,
     PreferenceSetModule,
+    TemplatesSetModule,
     AspectModule,
     TypeOrmModule.forFeature([Hub]),
   ],

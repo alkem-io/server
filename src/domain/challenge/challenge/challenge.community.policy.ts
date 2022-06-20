@@ -1,7 +1,7 @@
 import { AuthorizationCredential } from '@common/enums';
-import { CommunityPolicy } from '@domain/community/community/community.policy';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 
-export const challengeCommunityPolicy: CommunityPolicy = {
+export const challengeCommunityPolicy: ICommunityPolicy = {
   member: {
     credential: {
       type: AuthorizationCredential.CHALLENGE_MEMBER,

@@ -27,15 +27,16 @@ import { CommunicationService } from '@domain/communication/communication/commun
 import { ICommunication } from '@domain/communication/communication';
 import { LogContext } from '@common/enums/logging.context';
 import { CommunityType } from '@common/enums/community.type';
-import { CommunityPolicy } from './community.policy';
 import { OrganizationService } from '../organization/organization.service';
 import { IOrganization } from '../organization/organization.interface';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
-import { CommunityPolicyRole } from './community.policy.role';
 import { CommunityContributorsUpdateType } from '@common/enums/community.contributors.update.type';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
+import { CommunityPolicy } from '../community-policy/community.policy';
+import { ICommunityPolicyRole } from '../community-policy/community.policy.role.interface';
+import { ICommunityPolicy } from '../community-policy/community.policy.interface';
 
 @Injectable()
 export class CommunityService {
@@ -194,7 +195,7 @@ export class CommunityService {
     return undefined;
   }
 
-  getCommunityPolicy(community: ICommunity): CommunityPolicy {
+  getCommunityPolicy(community: ICommunity): ICommunityPolicy {
     if (!community.policy) {
       throw new EntityNotInitializedException(
         `Unable to locate communication for community: ${community.displayName}`,
@@ -460,7 +461,7 @@ export class CommunityService {
 
   private async validateUserCommunityPolicy(
     community: ICommunity,
-    communityPolicyRole: CommunityPolicyRole,
+    communityPolicyRole: ICommunityPolicyRole,
     role: CommunityRole,
     action: CommunityContributorsUpdateType
   ) {
@@ -491,7 +492,7 @@ export class CommunityService {
 
   private async validateOrganizationCommunityPolicy(
     community: ICommunity,
-    communityPolicyRole: CommunityPolicyRole,
+    communityPolicyRole: ICommunityPolicyRole,
     role: CommunityRole,
     action: CommunityContributorsUpdateType
   ) {
@@ -522,7 +523,7 @@ export class CommunityService {
 
   private async validateCommunityPolicyLimits(
     community: ICommunity,
-    communityPolicyRole: CommunityPolicyRole,
+    communityPolicyRole: ICommunityPolicyRole,
     role: CommunityRole,
     action: CommunityContributorsUpdateType,
     contributorType: CommunityContributorType
@@ -591,7 +592,7 @@ export class CommunityService {
   private getCommunityPolicyForRole(
     community: ICommunity,
     role: CommunityRole
-  ): CommunityPolicyRole {
+  ): ICommunityPolicyRole {
     const policy = this.getCommunityPolicy(community);
     if (role === CommunityRole.MEMBER) {
       return policy.member;

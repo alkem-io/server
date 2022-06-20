@@ -317,6 +317,13 @@ storage:
     # Max file size of files that will be uploaded to IPFS (in bytes).
     max_file_size: 1048576
 
+  # Redis configuration
+  redis:
+    # Redis host
+    host: ${REDIS_HOST}:localhost
+    # Redis port
+    port: ${REDIS_PORT}:6379
+
 microservices:
   rabbitmq:
     # Connection in the form of 'amqp://[user]:[password]@[host]:[port]?heartbeat=30'
@@ -451,5 +458,3 @@ ssi:
       context:
         alkemioUser_userID: 'schema:uuid'
         alkemioUser_email: 'schema:email'
-
-
