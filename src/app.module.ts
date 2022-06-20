@@ -15,7 +15,7 @@ import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middlew
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { HubModule } from '@domain/challenge/hub/hub.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
-import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { CacheModule, MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
@@ -39,6 +39,7 @@ import {
 } from '@src/types';
 import { RegistrationModule } from '@services/domain/registration/registration.module';
 import { RolesModule } from '@services/domain/roles/roles.module';
+import * as redisStore from 'cache-manager-redis-store';
 
 @Module({
   imports: [
@@ -46,6 +47,16 @@ import { RolesModule } from '@services/domain/roles/roles.module';
       envFilePath: ['.env'],
       isGlobal: true,
       load: [configuration],
+    }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        store: redisStore,
+        host: configService.get(ConfigurationTypes.STORAGE)?.redis?.host,
+        port: configService.get(ConfigurationTypes.STORAGE)?.redis?.port,
+      }),
+      inject: [ConfigService],
     }),
     TypeOrmModule.forRootAsync({
       name: 'default',
@@ -80,7 +91,7 @@ import { RolesModule } from '@services/domain/roles/roles.module';
         cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
         uploads: false,
         autoSchemaFile: true,
-        introspection: true,
+        introspection: false,
         playground: {
           settings: {
             'request.credentials': 'include',

@@ -11,6 +11,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { IOrganization } from '../organization';
 import { CommunityRole } from '@common/enums/community.role';
+import { ICommunityPolicy } from '../community-policy/community.policy.interface';
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}
@@ -103,5 +104,16 @@ export class CommunityResolverFields {
   @Profiling.api
   async communication(@Parent() community: Community) {
     return await this.communityService.getCommunication(community.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('policy', () => ICommunityPolicy, {
+    nullable: true,
+    description: 'The policy that defines the roles for this Community.',
+  })
+  @Profiling.api
+  async policy(@Parent() community: Community): Promise<ICommunityPolicy> {
+    return this.communityService.getCommunityPolicy(community);
   }
 }
