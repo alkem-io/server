@@ -1,14 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppModule } from '@src/app.module';
 import { CommunicationService } from './communication.service';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { Communication } from './communication.entity';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 
 describe('CommunicationService', () => {
   let service: CommunicationService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+      providers: [
+        CommunicationService,
+        MockWinstonProvider,
+        repositoryProviderMockFactory(Communication),
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
 
     service = module.get<CommunicationService>(CommunicationService);
   });

@@ -1,4 +1,4 @@
-import { CacheModule, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CredentialModule } from '@domain/agent/credential/credential.module';
 import { AgentService } from './agent.service';
@@ -21,7 +21,6 @@ import { WalletManagerAdapterModule } from '@services/platform/wallet-manager-ad
     VerifiedCredentialModule,
     TrustRegistryAdapterModule,
     TypeOrmModule.forFeature([Agent]),
-    CacheModule.register(),
     TrustRegistryAdapterModule,
     SsiSovrhdAdapterModule,
     WalletManagerAdapterModule,
