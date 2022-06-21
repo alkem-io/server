@@ -192,6 +192,10 @@ monitoring:
     # A flag enabling / disabling performance logging.
     profiling_enabled: ${LOGGING_PROFILING_ENABLED}:true
 
+    # The logging format will be in json - useful for parsing
+    # if disabled - will be in a human readable form
+    json: ${LOGGING_FORMAT_JSON}:true
+
     # Logging of the incoming requests to the server
     requests:
       # Log the full request object. NOT Recommended, because the object is huge.
@@ -312,6 +316,13 @@ storage:
 
     # Max file size of files that will be uploaded to IPFS (in bytes).
     max_file_size: 1048576
+
+  # Redis configuration
+  redis:
+    # Redis host
+    host: ${REDIS_HOST}:localhost
+    # Redis port
+    port: ${REDIS_PORT}:6379
 
 microservices:
   rabbitmq:
@@ -447,5 +458,3 @@ ssi:
       context:
         alkemioUser_userID: 'schema:uuid'
         alkemioUser_email: 'schema:email'
-
-

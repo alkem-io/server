@@ -29,6 +29,7 @@ services:
       - 1025:1025
       - 5672:5672
       - 15672:15672
+      - 6379:6379
     networks:
       - alkemio_dev_net
     environment:
@@ -262,3 +263,15 @@ services:
     networks:
       - alkemio_dev_net
     command: sh -c "/wait && npm run start"
+
+  redis:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_redis
+    hostname: redis
+    image: redis:7.0.2
+    restart: always
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 6379

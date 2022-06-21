@@ -30,6 +30,7 @@ import {
 } from '@common/constants';
 import { IApplication } from '@domain/community';
 import { isCommunity, isOrganization } from '@common/utils/groupable.util';
+import { RolesResultCommunity } from './dto/roles.dto.result.community';
 
 export type UserGroupResult = {
   userGroup: IUserGroup;
@@ -287,7 +288,7 @@ export class RolesService {
     if (existingChallengeResult) return existingChallengeResult;
 
     // New challenge in this Hub
-    const newChallengeResult = new RolesResult(
+    const newChallengeResult = new RolesResultCommunity(
       challenge.nameID,
       challenge.id,
       challenge.displayName
@@ -315,7 +316,7 @@ export class RolesService {
     if (existingOpportunityResult) return existingOpportunityResult;
 
     // New opportunity in this Hub
-    const newOpportunityResult = new RolesResult(
+    const newOpportunityResult = new RolesResultCommunity(
       opportunity.nameID,
       opportunity.id,
       opportunity.displayName

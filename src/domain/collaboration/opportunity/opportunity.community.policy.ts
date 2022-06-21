@@ -1,7 +1,7 @@
 import { AuthorizationCredential } from '@common/enums';
-import { CommunityPolicy } from '@domain/community/community/community.policy';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 
-export const opportunityCommunityPolicy: CommunityPolicy = {
+export const opportunityCommunityPolicy: ICommunityPolicy = {
   member: {
     credential: {
       type: AuthorizationCredential.OPPORTUNITY_MEMBER,
