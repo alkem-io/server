@@ -91,7 +91,7 @@ import * as redisStore from 'cache-manager-redis-store';
         cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
         uploads: false,
         autoSchemaFile: true,
-        introspection: false,
+        introspection: true,
         playground: {
           settings: {
             'request.credentials': 'include',
