@@ -14,7 +14,7 @@ import { CommunityRole } from '@common/enums/community.role';
 import { PaginationArgs, PaginatedUsers } from '@core/pagination';
 import { UserService } from '../user/user.service';
 import { UserFilterInput } from '@core/filtering';
-
+import { ICommunityPolicy } from '../community-policy/community.policy.interface';
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
   constructor(
@@ -184,5 +184,16 @@ export class CommunityResolverFields {
   @Profiling.api
   async communication(@Parent() community: Community) {
     return await this.communityService.getCommunication(community.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('policy', () => ICommunityPolicy, {
+    nullable: true,
+    description: 'The policy that defines the roles for this Community.',
+  })
+  @Profiling.api
+  async policy(@Parent() community: Community): Promise<ICommunityPolicy> {
+    return this.communityService.getCommunityPolicy(community);
   }
 }

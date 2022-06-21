@@ -1,12 +1,12 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { CommunityPolicy } from '@domain/community/community/community.policy';
 import {
   hubCommunityPolicy,
   challengeCommunityPolicy,
 } from '@domain/challenge';
 import { opportunityCommunityPolicy } from '@domain/collaboration';
 import { AuthorizationCredential } from '@common/enums';
+import { CommunityPolicy } from './types/community.policy';
 
 export class community1651507471835 implements MigrationInterface {
   name = 'community1651507471835';

@@ -1,5 +1,9 @@
+import { Hub } from '@domain/challenge/hub/hub.entity';
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppModule } from '@src/app.module';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { BootstrapService } from './bootstrap.service';
 
 describe('BootstrapService', () => {
@@ -7,10 +11,17 @@ describe('BootstrapService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+      providers: [
+        BootstrapService,
+        MockCacheManager,
+        MockWinstonProvider,
+        repositoryProviderMockFactory(Hub),
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
 
-    service = module.get<BootstrapService>(BootstrapService);
+    service = module.get(BootstrapService);
   });
 
   it('should be defined', () => {

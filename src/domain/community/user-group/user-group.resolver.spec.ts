@@ -1,14 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppModule } from '@src/app.module';
 import { UserGroupResolverMutations } from './user-group.resolver.mutations';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 
-describe('UserGroupResolver', () => {
+describe('UserGroupResolverMutations', () => {
   let resolver: UserGroupResolverMutations;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+      providers: [UserGroupResolverMutations, MockWinstonProvider],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
 
     resolver = module.get<UserGroupResolverMutations>(
       UserGroupResolverMutations
