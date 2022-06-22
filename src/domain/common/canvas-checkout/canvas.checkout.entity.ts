@@ -2,7 +2,6 @@ import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import { ICanvasCheckout } from './canvas.checkout.interface';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { CanvasCheckoutStateEnum } from '@common/enums/canvas.checkout.status';
 
 @Entity()
 export class CanvasCheckout
@@ -16,12 +15,9 @@ export class CanvasCheckout
   @Column('varchar', { length: 36, nullable: false })
   lockedBy!: string;
 
-  @Column({ default: CanvasCheckoutStateEnum.AVAILABLE })
-  status!: string;
-
   @OneToOne(() => Lifecycle, {
     eager: true,
-    cascade: true,
+    cascade: false, // NOTE: this is non-standard: to deal with the lifecycle state machine updates while also updating the canvasCheckout entity
     onDelete: 'SET NULL',
   })
   @JoinColumn()
@@ -31,6 +27,5 @@ export class CanvasCheckout
     super();
     this.canvasID = '';
     this.lockedBy = '';
-    this.status = CanvasCheckoutStateEnum.AVAILABLE;
   }
 }

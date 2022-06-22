@@ -2,7 +2,7 @@ import { registerEnumType } from '@nestjs/graphql';
 
 export enum CanvasCheckoutStateEnum {
   AVAILABLE = 'available',
-  CHECKED_OUT = 'checked-out',
+  CHECKED_OUT = 'checkedOut',
 }
 
 registerEnumType(CanvasCheckoutStateEnum, {
