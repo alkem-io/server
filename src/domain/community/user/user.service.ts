@@ -51,6 +51,7 @@ import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { CreateProfileInput } from '../profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
+import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
 
 @Injectable()
 export class UserService {
@@ -677,5 +678,64 @@ export class UserService {
   ): string {
     const base = `${firstName}-${lastName}`;
     return this.namingService.createNameID(base, useRandomSuffix);
+  }
+
+  async findProfilesByBatch(userIds: string[]): Promise<(IProfile | Error)[]> {
+    const users = await this.userRepository.findByIds(userIds, {
+      relations: ['profile'],
+      select: ['id'],
+    });
+
+    const results = users.filter(user => userIds.includes(user.id));
+    const mappedResults = userIds.map(
+      id =>
+        results.find(result => result.id === id)?.profile ||
+        new Error(`Could not load user ${id}`)
+    );
+    return mappedResults;
+  }
+
+  public getAgentInfoMetadata(
+    email: string
+  ): Promise<AgentInfoMetadata> | never {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .leftJoin('user.agent', 'agent')
+      .leftJoin('agent.credentials', 'credentials')
+      .select([
+        'user.id as userID',
+        'user.communicationID as communicationID',
+        'agent.id as agentID',
+        'credentials.id as credentialID',
+        'credentials.resourceId as credentialResourceID',
+        'credentials.type as credentialType',
+      ])
+      .where('user.email = :email', { email: email })
+      .getRawMany<any>()
+      .then(agents => {
+        if (!agents) {
+          throw new EntityNotFoundException(
+            `Unable to load Agent for User: ${email}`,
+            LogContext.COMMUNITY
+          );
+        }
+
+        const agentInfo = new AgentInfoMetadata();
+        const credentials: ICredential[] = [];
+        for (const agent of agents) {
+          credentials.push({
+            id: agent.credentialID,
+            resourceID: agent.credentialResourceID,
+            type: agent.credentialType,
+          });
+        }
+
+        agentInfo.credentials = credentials;
+        agentInfo.agentID = agents[0].agentID;
+        agentInfo.userID = agents[0].userID;
+        agentInfo.communicationID = agents[0].communicationID;
+
+        return agentInfo;
+      });
   }
 }

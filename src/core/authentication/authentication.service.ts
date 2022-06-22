@@ -7,12 +7,14 @@ import { AgentInfo } from './agent-info';
 import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 import { NotSupportedException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
+import { AgentCacheService } from '@domain/agent/agent/agent.cache.service';
 @Injectable()
 export class AuthenticationService {
   constructor(
+    private agentCacheService: AgentCacheService,
     private configService: ConfigService,
-    private agentService: AgentService,
     private userService: UserService,
+    private agentService: AgentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -31,6 +33,12 @@ export class AuthenticationService {
         LogContext.AUTH
       );
     }
+
+    const cachedAgentInfo = await this.agentCacheService.getAgentInfoFromCache(
+      oryTraits.email
+    );
+    if (cachedAgentInfo) return cachedAgentInfo;
+
     const isEmailVerified =
       oryIdentity.verifiable_addresses.find(x => x.via === 'email')?.verified ??
       false;
@@ -40,8 +48,10 @@ export class AuthenticationService {
     agentInfo.firstName = oryTraits.name.first;
     agentInfo.lastName = oryTraits.name.last;
 
-    const userExists = await this.userService.isRegisteredUser(agentInfo.email);
-    if (!userExists) {
+    const agentInfoMetadata = await this.userService.getAgentInfoMetadata(
+      agentInfo.email
+    );
+    if (!agentInfoMetadata) {
       this.logger.verbose?.(
         `User: no profile: ${agentInfo.email}`,
         LogContext.AUTH
@@ -54,29 +64,31 @@ export class AuthenticationService {
       LogContext.AUTH
     );
 
-    // Retrieve the credentials for the user
-    const { user, agent } = await this.userService.getUserAndAgent(
-      agentInfo.email
-    );
-    agentInfo.agentID = agent.id;
-    if (!agent.credentials) {
+    if (!agentInfoMetadata.credentials) {
       this.logger.warn?.(
         `Authentication Info: Unable to retrieve credentials for registered user: ${agentInfo.email}`,
         LogContext.AUTH
       );
     } else {
-      agentInfo.credentials = agent.credentials;
+      agentInfo.credentials = agentInfoMetadata.credentials;
     }
-    agentInfo.userID = user.id;
-    agentInfo.communicationID = user.communicationID;
+    agentInfo.userID = agentInfoMetadata.userID;
+    agentInfo.communicationID = agentInfoMetadata.communicationID;
 
     // Store also retrieved verified credentials; todo: likely slow, need to evaluate other options
     const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
 
     if (ssiEnabled) {
-      agentInfo.verifiedCredentials =
-        await this.agentService.getVerifiedCredentials(agent);
+      const VCs = await this.agentService.getVerifiedCredentials({
+        id: agentInfoMetadata.agentID,
+        did: agentInfoMetadata.did,
+        password: agentInfoMetadata.password,
+      });
+
+      agentInfo.verifiedCredentials = VCs;
     }
+
+    this.agentCacheService.setAgentInfoCache(agentInfo);
 
     return agentInfo;
   }
