@@ -10,7 +10,6 @@ export class Canvas extends AuthorizableEntity implements ICanvas {
     super();
     this.name = name || '';
     this.value = value || '';
-    this.isTemplate = false;
   }
 
   @Column('text', { nullable: false })
@@ -18,9 +17,6 @@ export class Canvas extends AuthorizableEntity implements ICanvas {
 
   @Column('longtext', { nullable: false })
   value!: string;
-
-  @Column('boolean', { nullable: false })
-  isTemplate!: boolean;
 
   @ManyToOne(() => Context, context => context.canvases, {
     eager: false,
