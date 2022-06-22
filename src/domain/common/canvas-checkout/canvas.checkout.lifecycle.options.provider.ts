@@ -56,11 +56,25 @@ export class CanvasCheckoutLifecycleOptionsProvider {
     // Events that are triggered by XState are fire and forget. So they above event will potentially return
     // before all the actions that were triggered by the event have completed.
     // As in this case the events should all be quite fast a short wait is sufficient, but we need to fix this properly
-    await new Promise(resolve => setTimeout(resolve, 100));
+    const updatedCanvasCheckout =
+      await this.canvasCheckoutService.getCanvasCheckoutOrFail(
+        canvasCheckout.id
+      );
 
-    return await this.canvasCheckoutService.getCanvasCheckoutOrFail(
-      canvasCheckout.id
+    if (!updatedCanvasCheckout.lifecycle)
+      throw new EntityNotInitializedException(
+        `Canvas checkout Lifecycle not initialized on CanvasCheckout: ${updatedCanvasCheckout.id}`,
+        LogContext.CONTEXT
+      );
+
+    const status = await this.lifecycleService.getState(
+      updatedCanvasCheckout.lifecycle
     );
+    this.logger.verbose?.(
+      `Canvas checkout event completed; new state: ${status}`,
+      LogContext.CONTEXT
+    );
+    return updatedCanvasCheckout;
   }
 
   private logMessage(msg: string) {

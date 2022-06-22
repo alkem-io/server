@@ -110,9 +110,9 @@ export class CanvasCheckoutService {
       );
     }
     const state = this.lifecycleService.getState(lifecycle);
-    if (state === 'available') {
+    if (state === CanvasCheckoutStateEnum.AVAILABLE) {
       return CanvasCheckoutStateEnum.AVAILABLE;
-    } else if (state === 'checkedOut') {
+    } else if (state === CanvasCheckoutStateEnum.CHECKED_OUT) {
       return CanvasCheckoutStateEnum.CHECKED_OUT;
     } else {
       throw new InvalidStateTransitionException(
