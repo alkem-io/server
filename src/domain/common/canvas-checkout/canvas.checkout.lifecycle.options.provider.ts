@@ -10,7 +10,6 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CanvasCheckoutEventInput } from './dto/canvas.checkout.dto.event';
 import { ICanvasCheckout } from './canvas.checkout.interface';
 import { CanvasCheckoutService } from './canvas.checkout.service';
-import { CanvasCheckoutStateEnum } from '@common/enums/canvas.checkout.status';
 
 @Injectable()
 export class CanvasCheckoutLifecycleOptionsProvider {
@@ -25,6 +24,7 @@ export class CanvasCheckoutLifecycleOptionsProvider {
     canvasCheckoutEventData: CanvasCheckoutEventInput,
     agentInfo: AgentInfo
   ): Promise<ICanvasCheckout> {
+    const eventName = canvasCheckoutEventData.eventName;
     const canvasCheckout =
       await this.canvasCheckoutService.getCanvasCheckoutOrFail(
         canvasCheckoutEventData.canvasCheckoutID
@@ -36,16 +36,12 @@ export class CanvasCheckoutLifecycleOptionsProvider {
         LogContext.CONTEXT
       );
 
-    // Send the event, translated if needed
-    this.logger.verbose?.(
-      `Event ${canvasCheckoutEventData.eventName} triggered on canvasCheckout: ${canvasCheckout.id} using lifecycle ${canvasCheckout.lifecycle.id}`,
-      LogContext.CONTEXT
-    );
+    this.logCheckoutStatus(eventName, canvasCheckout, 'event triggered');
 
     await this.lifecycleService.event(
       {
         ID: canvasCheckout.lifecycle.id,
-        eventName: canvasCheckoutEventData.eventName,
+        eventName: eventName,
       },
       this.CanvasCheckoutLifecycleMachineOptions,
       agentInfo,
@@ -61,32 +57,13 @@ export class CanvasCheckoutLifecycleOptionsProvider {
         canvasCheckout.id
       );
 
-    if (!updatedCanvasCheckout.lifecycle)
-      throw new EntityNotInitializedException(
-        `Canvas checkout Lifecycle not initialized on CanvasCheckout: ${updatedCanvasCheckout.id}`,
-        LogContext.CONTEXT
-      );
-
-    const status = await this.lifecycleService.getState(
-      updatedCanvasCheckout.lifecycle
-    );
-    this.logger.verbose?.(
-      `Canvas checkout event completed; new state: ${status}`,
-      LogContext.CONTEXT
+    this.logCheckoutStatus(
+      eventName,
+      updatedCanvasCheckout,
+      'returning updated canvasCheckout'
     );
     return updatedCanvasCheckout;
   }
-
-  private logMessage(msg: string) {
-    const logActions = true;
-    if (logActions) {
-      this.logger.verbose?.(
-        `[Lifecycle] Context checkout provider - ${msg}`,
-        LogContext.LIFECYCLE
-      );
-    }
-  }
-
   private CanvasCheckoutLifecycleMachineOptions: Partial<
     MachineOptions<any, any>
   > = {
@@ -117,18 +94,19 @@ export class CanvasCheckoutLifecycleOptionsProvider {
               relations: ['lifecycle'],
             }
           );
-        const lifecycle = canvasCheckout.lifecycle;
-        if (!lifecycle) {
-          throw new EntityNotInitializedException(
-            `CanvasCheckout Lifecycle not initialized on Canvas: ${canvasCheckout.id}`,
-            LogContext.CONTEXT
-          );
-        }
+
         canvasCheckout.lockedBy = event.agentInfo.userID;
-        await this.canvasCheckoutService.save(canvasCheckout);
-        this.logger.verbose?.(
-          `[Action ${event.type}] Canvas check out completed; new state: ${CanvasCheckoutStateEnum.CHECKED_OUT}`,
-          LogContext.CONTEXT
+        const updatedCanvasCheckout = await this.canvasCheckoutService.save(
+          canvasCheckout
+        );
+        // Events that are triggered by XState are fire and forget. So they above event will potentially return
+        // before all the actions that were triggered by the event have completed.
+        // As in this case the events should all be quite fast a short wait is sufficient, but we need to fix this properly
+        //await new Promise(resolve => setTimeout(resolve, 1000));
+        this.logCheckoutStatus(
+          event.type,
+          updatedCanvasCheckout,
+          'checkout command completed'
         );
       },
       checkin: async (_, event: any) => {
@@ -139,18 +117,19 @@ export class CanvasCheckoutLifecycleOptionsProvider {
               relations: ['lifecycle'],
             }
           );
-        const lifecycle = canvasCheckout.lifecycle;
-        if (!lifecycle) {
-          throw new EntityNotInitializedException(
-            `CanvasCheckout Lifecycle not initialized on Canvas: ${canvasCheckout.id}`,
-            LogContext.CONTEXT
-          );
-        }
+
         canvasCheckout.lockedBy = '';
-        await this.canvasCheckoutService.save(canvasCheckout);
-        this.logger.verbose?.(
-          `[Action ${event.type}] Canvas checked in completed; new state: ${CanvasCheckoutStateEnum.AVAILABLE}`,
-          LogContext.CONTEXT
+        const updatedCanvasCheckout = await this.canvasCheckoutService.save(
+          canvasCheckout
+        );
+        // Events that are triggered by XState are fire and forget. So they above event will potentially return
+        // before all the actions that were triggered by the event have completed.
+        // As in this case the events should all be quite fast a short wait is sufficient, but we need to fix this properly
+        //await new Promise(resolve => setTimeout(resolve, 1000));
+        this.logCheckoutStatus(
+          event.type,
+          updatedCanvasCheckout,
+          'checkin command completed'
         );
       },
     },
@@ -186,4 +165,31 @@ export class CanvasCheckoutLifecycleOptionsProvider {
       },
     },
   };
+
+  private logCheckoutStatus(
+    eventName: string,
+    canvasCheckout: ICanvasCheckout,
+    msg: string
+  ) {
+    if (!canvasCheckout.lifecycle)
+      throw new EntityNotInitializedException(
+        `Canvas checkout Lifecycle not initialized on CanvasCheckout: ${canvasCheckout.id}`,
+        LogContext.CONTEXT
+      );
+    const status = this.lifecycleService.getState(canvasCheckout.lifecycle);
+    this.logger.verbose?.(
+      `[Action ${eventName}] - ${msg} - state: ${status} and checked out by: ${canvasCheckout.lockedBy}`,
+      LogContext.CONTEXT
+    );
+  }
+
+  private logMessage(msg: string) {
+    const logActions = true;
+    if (logActions) {
+      this.logger.verbose?.(
+        `[Lifecycle] Context checkout provider - ${msg}`,
+        LogContext.LIFECYCLE
+      );
+    }
+  }
 }
