@@ -1,5 +1,5 @@
 import { UseGuards } from '@nestjs/common';
-import { Args, Resolver } from '@nestjs/graphql';
+import { Args, Context, Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { Organization } from './organization.entity';
 import { OrganizationService } from './organization.service';
@@ -109,22 +109,11 @@ export class OrganizationResolverFields {
     description: 'The profile for this organization.',
   })
   @Profiling.api
-  async profile(@Parent() organization: Organization) {
-    const profile =
-      organization.profile ??
-      (
-        await this.organizationService.getOrganizationOrFail(organization.id, {
-          relations: ['profile'],
-        })
-      ).profile;
-    if (!profile) {
-      throw new EntityNotInitializedException(
-        `Profile not initialised on organization: ${organization.displayName}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return profile;
+  async profile(
+    @Parent() organization: Organization,
+    @Context() { loaders }: IGraphQLContext
+  ) {
+    return loaders.orgProfileLoader.load(organization.id);
   }
 
   @ResolveField('verification', () => IOrganizationVerification, {
