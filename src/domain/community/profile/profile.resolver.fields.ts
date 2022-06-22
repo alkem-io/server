@@ -23,7 +23,7 @@ export class ProfileResolverFields {
     @Parent() profile: IProfile,
     @Context() { loaders }: IGraphQLContext
   ): Promise<IVisual> {
-    return await loaders.avatarsLoader.load(profile.id);
+    return loaders.avatarsLoader.load(profile.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -36,7 +36,7 @@ export class ProfileResolverFields {
     @Parent() profile: IProfile,
     @Context() { loaders }: IGraphQLContext
   ): Promise<IReference[]> {
-    return await loaders.referencesLoader.load(profile.id);
+    return loaders.referencesLoader.load(profile.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -49,7 +49,7 @@ export class ProfileResolverFields {
     @Parent() profile: IProfile,
     @Context() { loaders }: IGraphQLContext
   ): Promise<ITagset[]> {
-    return await loaders.tagsetsLoader.load(profile.id);
+    return loaders.tagsetsLoader.load(profile.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -62,6 +62,6 @@ export class ProfileResolverFields {
     @Parent() profile: IProfile,
     @Context() { loaders }: IGraphQLContext
   ): Promise<ILocation> {
-    return await loaders.locationsLoader.load(profile.id);
+    return loaders.locationsLoader.load(profile.id);
   }
 }

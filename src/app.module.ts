@@ -167,7 +167,6 @@ import * as redisStore from 'cache-manager-redis-store';
             ) => {
               return {
                 req: { headers: websocket?.upgradeReq?.headers },
-                loaders: dataloaderService.createLoaders(),
               };
             },
           },

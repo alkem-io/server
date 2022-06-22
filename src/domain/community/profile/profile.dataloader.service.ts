@@ -7,6 +7,8 @@ import { ITagset } from '@domain/common/tagset';
 import { Profile } from '@domain/community/profile';
 import { IVisual } from '@domain/common/visual';
 import { ILocation } from '@domain/common/location';
+import { LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class ProfileDataloaderService {
@@ -24,12 +26,14 @@ export class ProfileDataloaderService {
     });
 
     const results = profiles.filter(profile => profileIds.includes(profile.id));
-    const mappedResults = profileIds.map(
+    return profileIds.map(
       id =>
         results.find(result => result.id === id)?.references ||
-        new Error(`Could not load profile ${id}`)
+        new EntityNotFoundException(
+          `Could not load profile ${id}`,
+          LogContext.COMMUNITY
+        )
     );
-    return mappedResults;
   }
 
   public async findAvatarsByBatch(
@@ -41,12 +45,14 @@ export class ProfileDataloaderService {
     });
 
     const results = profiles.filter(avatar => avatarIds.includes(avatar.id));
-    const mappedResults = avatarIds.map(
+    return avatarIds.map(
       id =>
         results.find(result => result.id === id)?.avatar ||
-        new Error(`Could not load profile ${id}`)
+        new EntityNotFoundException(
+          `Could not load profile ${id}`,
+          LogContext.COMMUNITY
+        )
     );
-    return mappedResults;
   }
 
   public async findLocationsByBatch(
@@ -60,12 +66,14 @@ export class ProfileDataloaderService {
     const results = profiles.filter(location =>
       locationIds.includes(location.id)
     );
-    const mappedResults = locationIds.map(
+    return locationIds.map(
       id =>
         results.find(result => result.id === id)?.location ||
-        new Error(`Could not load profile ${id}`)
+        new EntityNotFoundException(
+          `Could not load profile ${id}`,
+          LogContext.COMMUNITY
+        )
     );
-    return mappedResults;
   }
 
   public async findTagsetsByBatch(
@@ -77,11 +85,13 @@ export class ProfileDataloaderService {
     });
 
     const results = profiles.filter(profile => tagsetIds.includes(profile.id));
-    const mappedResults = tagsetIds.map(
+    return tagsetIds.map(
       id =>
         results.find(result => result.id === id)?.tagsets ||
-        new Error(`Could not load profile ${id}`)
+        new EntityNotFoundException(
+          `Could not load profile ${id}`,
+          LogContext.COMMUNITY
+        )
     );
-    return mappedResults;
   }
 }

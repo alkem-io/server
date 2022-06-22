@@ -1,3 +1,5 @@
+import { LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -20,11 +22,13 @@ export class UserDataloaderService {
     });
 
     const results = users.filter(user => userIds.includes(user.id));
-    const mappedResults = userIds.map(
+    return userIds.map(
       id =>
         results.find(result => result.id === id)?.profile ||
-        new Error(`Could not load user ${id}`)
+        new EntityNotFoundException(
+          `Could not load user ${id}`,
+          LogContext.COMMUNITY
+        )
     );
-    return mappedResults;
   }
 }

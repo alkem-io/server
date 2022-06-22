@@ -31,7 +31,7 @@ export class UserResolverFields {
     @Parent() user: User,
     @Context() { loaders }: IGraphQLContext
   ): Promise<IProfile> {
-    return await loaders.userProfileLoader.load(user.id);
+    return loaders.userProfileLoader.load(user.id);
   }
 
   @ResolveField('agent', () => IAgent, {
