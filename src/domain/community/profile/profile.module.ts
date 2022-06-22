@@ -11,6 +11,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { ProfileResolverFields } from './profile.resolver.fields';
 import { LocationModule } from '@domain/common/location';
+import { ProfileDataloaderService } from './profile.dataloader.service';
 
 @Module({
   imports: [
@@ -25,9 +26,15 @@ import { LocationModule } from '@domain/common/location';
   providers: [
     ProfileResolverMutations,
     ProfileService,
+    ProfileDataloaderService,
     ProfileAuthorizationService,
     ProfileResolverFields,
   ],
-  exports: [ProfileService, ProfileAuthorizationService, ProfileResolverFields],
+  exports: [
+    ProfileService,
+    ProfileDataloaderService,
+    ProfileAuthorizationService,
+    ProfileResolverFields,
+  ],
 })
 export class ProfileModule {}
