@@ -106,15 +106,14 @@ export class CanvasCheckoutLifecycleOptionsProvider {
         const lifecycle = canvasCheckout.lifecycle;
         if (!lifecycle) {
           throw new EntityNotInitializedException(
-            `Verification Lifecycle not initialized on Organization: ${canvasCheckout.id}`,
+            `CanvasCheckout Lifecycle not initialized on Canvas: ${canvasCheckout.id}`,
             LogContext.CONTEXT
           );
         }
-        canvasCheckout.status = CanvasCheckoutStateEnum.CHECKED_OUT;
         canvasCheckout.lockedBy = event.agentInfo.userID;
         await this.canvasCheckoutService.save(canvasCheckout);
         this.logger.verbose?.(
-          `[Action ${event.type}] Canvas check out completed; new state: ${canvasCheckout.status}`,
+          `[Action ${event.type}] Canvas check out completed; new state: ${CanvasCheckoutStateEnum.CHECKED_OUT}`,
           LogContext.CONTEXT
         );
       },
@@ -129,15 +128,14 @@ export class CanvasCheckoutLifecycleOptionsProvider {
         const lifecycle = canvasCheckout.lifecycle;
         if (!lifecycle) {
           throw new EntityNotInitializedException(
-            `Verification Lifecycle not initialized on Organization: ${canvasCheckout.status}`,
+            `CanvasCheckout Lifecycle not initialized on Canvas: ${canvasCheckout.id}`,
             LogContext.CONTEXT
           );
         }
-        canvasCheckout.status = CanvasCheckoutStateEnum.AVAILABLE;
         canvasCheckout.lockedBy = '';
         await this.canvasCheckoutService.save(canvasCheckout);
         this.logger.verbose?.(
-          `[Action ${event.type}] Canvas checked in completed; new state: ${canvasCheckout.status}`,
+          `[Action ${event.type}] Canvas checked in completed; new state: ${CanvasCheckoutStateEnum.AVAILABLE}`,
           LogContext.CONTEXT
         );
       },

@@ -5,7 +5,10 @@ import { ICanvasCheckout } from './canvas.checkout.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  InvalidStateTransitionException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CanvasCheckoutStateEnum } from '@common/enums/canvas.checkout.status';
@@ -27,7 +30,6 @@ export class CanvasCheckoutService {
     checkoutData: CreateCanvasCheckoutInput
   ): Promise<ICanvasCheckout> {
     const canvasCheckout: ICanvasCheckout = CanvasCheckout.create(checkoutData);
-    canvasCheckout.status = CanvasCheckoutStateEnum.AVAILABLE;
     canvasCheckout.authorization = new AuthorizationPolicy();
 
     // save the user to get the id assigned
@@ -64,28 +66,50 @@ export class CanvasCheckoutService {
     return await this.canvasCheckoutRepository.save(CanvasCheckout);
   }
   async getCanvasCheckoutOrFail(
-    CanvasCheckoutID: string,
+    canvasCheckoutID: string,
     options?: FindOneOptions<CanvasCheckout>
   ): Promise<ICanvasCheckout> {
-    const CanvasCheckout = await this.canvasCheckoutRepository.findOne(
-      { id: CanvasCheckoutID },
+    const canvasCheckout = await this.canvasCheckoutRepository.findOne(
+      { id: canvasCheckoutID },
       options
     );
-    if (!CanvasCheckout)
+    if (!canvasCheckout)
       throw new EntityNotFoundException(
-        `Unable to find CanvasCheckout with ID: ${CanvasCheckoutID}`,
+        `Unable to find CanvasCheckout with ID: ${canvasCheckoutID}`,
+        LogContext.CONTEXT
+      );
+    return canvasCheckout;
+  }
+
+  getCanvasStatus(canvasCheckout: ICanvasCheckout): CanvasCheckoutStateEnum {
+    const lifecycle = canvasCheckout.lifecycle;
+    if (!lifecycle) {
+      throw new EntityNotFoundException(
+        `Unable to find lifecycle CanvasCheckout with ID: ${canvasCheckout.id}`,
         LogContext.COMMUNITY
       );
-    return CanvasCheckout;
+    }
+    const state = this.lifecycleService.getState(lifecycle);
+    if (state === 'available') {
+      return CanvasCheckoutStateEnum.AVAILABLE;
+    } else if (state === 'checkedOut') {
+      return CanvasCheckoutStateEnum.CHECKED_OUT;
+    } else {
+      throw new InvalidStateTransitionException(
+        `Unable to find lifecycle CanvasCheckout with expected state: ${canvasCheckout.id}`,
+        LogContext.CONTEXT
+      );
+    }
   }
 
   async isUpdateAllowedOrFail(
     checkout: ICanvasCheckout,
     agentInfo: AgentInfo
   ): Promise<void> {
-    if (checkout.status !== CanvasCheckoutStateEnum.CHECKED_OUT) {
+    const status = this.getCanvasStatus(checkout);
+    if (status !== CanvasCheckoutStateEnum.CHECKED_OUT) {
       throw new EntityCheckoutStatusException(
-        `Unable to update entity that is not checkedout: ${checkout.status}`,
+        `Unable to update entity that is not checkedout: ${status}`,
         LogContext.CONTEXT
       );
     }

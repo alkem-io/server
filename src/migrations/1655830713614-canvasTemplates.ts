@@ -61,13 +61,32 @@ export class canvasTemplates1655830713614 implements MigrationInterface {
             hub.templatesSetId
           }', '${templateInfoID}', '${escapeString(canvas.value)}' )`
         );
+        // Finally delete the old canvas template entry
+        await queryRunner.query(`DELETE FROM canvas WHERE isTemplate='true'`);
       }
     }
-    //throw new Error(`testing`);
+    await queryRunner.query(
+      `ALTER TABLE \`canvas\` DROP COLUMN \`isTemplate\``
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`canvas_checkout\` DROP COLUMN \`status\``
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    //todo: drop content of canvas template table + related auth IDs
+    const canvasTemplates: any[] = await queryRunner.query(
+      `SELECT id from canvas_template`
+    );
+    for (const canvasTemplate of canvasTemplates) {
+      await queryRunner.query(
+        `DELETE FROM canvas_template WHERE id='${canvasTemplate.id}'`
+      );
+    }
+
+    await queryRunner.query(
+      `ALTER TABLE \`canvas\` ADD \`isTemplate\` tinyint NOT NUL`
+    );
   }
 
   public async getHubIDGivenContextId(

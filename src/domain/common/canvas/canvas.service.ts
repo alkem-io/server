@@ -12,8 +12,6 @@ import { UpdateCanvasInput } from './dto/canvas.dto.update';
 import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { AgentInfo } from '@core/authentication';
-import { CanvasCheckoutStateEnum } from '@common/enums/canvas.checkout.status';
-import { EntityCheckoutStatusException } from '@common/exceptions/entity.not.checkedout.exception';
 
 @Injectable()
 export class CanvasService {
@@ -87,15 +85,6 @@ export class CanvasService {
         agentInfo
       );
     }
-    // Only allow saving as a template if checked in
-    if (updateCanvasData.isTemplate && !canvas.isTemplate) {
-      if (checkout.status !== CanvasCheckoutStateEnum.AVAILABLE) {
-        throw new EntityCheckoutStatusException(
-          `Unable to convert Canvas to being a Template as it is not checkedin: ${checkout.status}`,
-          LogContext.CONTEXT
-        );
-      }
-    }
     const updatedCanvas = this.updateCanvasEntity(canvas, updateCanvasData);
     return await this.save(updatedCanvas);
   }
@@ -111,8 +100,6 @@ export class CanvasService {
       );
     if (updateCanvasData.name) canvas.name = updateCanvasData.name;
     if (updateCanvasData.value) canvas.value = updateCanvasData.value;
-    if (updateCanvasData.isTemplate !== undefined)
-      canvas.isTemplate = updateCanvasData.isTemplate;
     return canvas;
   }
 
