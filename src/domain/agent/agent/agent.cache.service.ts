@@ -1,17 +1,22 @@
-import { validateEmail } from '@common/utils';
+import { LogContext } from '@common/enums/logging.context';
 import { AgentInfo } from '@core/authentication';
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import {
+  CACHE_MANAGER,
+  Inject,
+  Injectable,
+  LoggerService,
+} from '@nestjs/common';
 import { Cache } from 'cache-manager';
-import { Repository } from 'typeorm';
-import { Agent, IAgent, ICredential } from '..';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { getConnection } from 'typeorm';
+import { IAgent, ICredential } from '..';
 @Injectable()
 export class AgentCacheService {
   constructor(
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
-    @InjectRepository(Agent)
-    private agentRepository: Repository<Agent>
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   public async getAgentInfoFromCache(
@@ -35,17 +40,20 @@ export class AgentCacheService {
   public async updateAgentInfoCache(
     agent: IAgent
   ): Promise<AgentInfo | undefined> {
-    if (!agent.parentDisplayID)
-      throw new Error('Agent parent not initialized correctly!');
+    const email = await this.getAgentEmail(agent.id);
 
-    if (!validateEmail(agent.parentDisplayID)) return undefined;
-    const { email } = await this.getAgentEmail(agent.id);
+    if (!email) return undefined;
 
-    const cachedAgentInfo = await this.getAgentInfoFromCache(
-      await this.getAgentEmail(email)
-    );
+    const cachedAgentInfo = await this.getAgentInfoFromCache(email);
 
-    if (!cachedAgentInfo) throw new Error('No entry found in cache!');
+    if (!cachedAgentInfo) {
+      this.logger.verbose?.(
+        `No user cache found for user ${email}. Skipping cache update!`,
+        LogContext.AGENT
+      );
+
+      return undefined;
+    }
 
     cachedAgentInfo.credentials = agent.credentials as ICredential[];
     return await this.cacheManager.set<AgentInfo>(
@@ -61,12 +69,16 @@ export class AgentCacheService {
     return `@agentInfo:email:${email}`;
   }
 
-  public getAgentEmail(agentId: string): Promise<any> {
-    return this.agentRepository
-      .createQueryBuilder('agent')
-      .leftJoin('user.agent', 'user')
-      .select(['user.email as email'])
-      .where('agent.id = :agentId', { agentId: agentId })
-      .getOne();
+  public async getAgentEmail(agentId: string): Promise<string | undefined> {
+    const users: { email: string }[] = await getConnection().query(
+      `SELECT \`u\`.\`email\` FROM \`agent\` as \`a\`
+      RIGHT JOIN \`user\` as \`u\`
+      ON \`u\`.\`agentId\` = \`a\`.\`id\`
+      WHERE \`a\`.\`id\` = '${agentId}'`
+    );
+
+    if (!users[0]) return undefined;
+
+    return users[0].email;
   }
 }
