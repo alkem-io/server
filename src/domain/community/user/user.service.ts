@@ -52,6 +52,8 @@ import { IPaginatedType } from '@core/pagination/paginated.type';
 import { CreateProfileInput } from '../profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
 import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
+import { CommunityCredentials } from './dto/user.dto.community.credentials';
+import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
 
 @Injectable()
 export class UserService {
@@ -331,32 +333,7 @@ export class UserService {
     userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser> {
-    let user: IUser | undefined;
-
-    if (validateEmail(userID)) {
-      user = await this.userRepository.findOne(
-        {
-          email: userID,
-        },
-        options
-      );
-    } else if (userID.length === UUID_LENGTH) {
-      {
-        user = await this.userRepository.findOne(
-          {
-            id: userID,
-          },
-          options
-        );
-      }
-    } else {
-      user = await this.userRepository.findOne(
-        {
-          nameID: userID,
-        },
-        options
-      );
-    }
+    const user = await this.getUserByEmailIdUUID(userID, options);
 
     if (!user) {
       throw new EntityNotFoundException(
@@ -388,6 +365,46 @@ export class UserService {
     }
 
     return user;
+  }
+
+  private async getUserByEmailIdUUID(
+    userID: string,
+    options: FindOneOptions<User> | undefined
+  ): Promise<IUser | undefined> {
+    let user: IUser | undefined = undefined;
+
+    if (await this.isUserIdEmail(userID)) {
+      user = await this.userRepository.findOne(
+        {
+          email: userID,
+        },
+        options
+      );
+    } else if (userID.length === UUID_LENGTH) {
+      {
+        user = await this.userRepository.findOne(
+          {
+            id: userID,
+          },
+          options
+        );
+      }
+    }
+
+    if (!user)
+      user = await this.userRepository.findOne(
+        {
+          nameID: userID,
+        },
+        options
+      );
+
+    return user;
+  }
+
+  private async isUserIdEmail(userId: string): Promise<boolean> {
+    if (userId.includes('@')) return true;
+    return false;
   }
 
   async getUserByEmail(
@@ -502,6 +519,88 @@ export class UserService {
     return getPaginationResults(qb, paginationArgs);
   }
 
+  public async getPaginatedAvailableMemberUsers(
+    communityCredentials: CommunityMemberCredentials,
+    paginationArgs: PaginationArgs,
+    filter?: UserFilterInput
+  ): Promise<IPaginatedType<IUser>> {
+    const currentMemberUsers = await this.usersWithCredentials(
+      communityCredentials.member
+    );
+
+    if (communityCredentials.parrentCommunityMember) {
+      const qb = await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.agent', 'agent')
+        .leftJoinAndSelect('agent.credentials', 'credential')
+        .where('credential.type = :type')
+        .andWhere('credential.resourceID = :resourceID')
+        .setParameters({
+          type: communityCredentials.parrentCommunityMember.type,
+          resourceID: communityCredentials.parrentCommunityMember.resourceID,
+        });
+
+      if (currentMemberUsers.length > 0) {
+        qb.andWhere('NOT user.id IN (:memberUsers)').setParameters({
+          memberUsers: currentMemberUsers.map(user => user.id),
+        });
+      }
+
+      if (filter) {
+        applyFiltering(qb, filter);
+      }
+
+      return getPaginationResults(qb, paginationArgs);
+    }
+
+    const qb = await this.userRepository.createQueryBuilder().select();
+
+    if (currentMemberUsers.length > 0) {
+      qb.where('NOT id IN (:memberUsers)').setParameters({
+        memberUsers: currentMemberUsers.map(user => user.id),
+      });
+    }
+
+    if (filter) {
+      applyFiltering(qb, filter);
+    }
+
+    return getPaginationResults(qb, paginationArgs);
+  }
+
+  public async getPaginatedAvailableLeadUsers(
+    communityCredentials: CommunityCredentials,
+    paginationArgs: PaginationArgs,
+    filter?: UserFilterInput
+  ): Promise<IPaginatedType<IUser>> {
+    const currentLeadUsers = await this.usersWithCredentials(
+      communityCredentials.lead
+    );
+
+    const qb = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.agent', 'agent')
+      .leftJoinAndSelect('agent.credentials', 'credential')
+      .where('credential.type = :type')
+      .andWhere('credential.resourceID = :resourceID')
+      .setParameters({
+        type: communityCredentials.member.type,
+        resourceID: communityCredentials.member.resourceID,
+      });
+
+    if (currentLeadUsers.length > 0) {
+      qb.andWhere('NOT user.id IN (:leadUsers)').setParameters({
+        leadUsers: currentLeadUsers.map(user => user.id),
+      });
+    }
+
+    if (filter) {
+      applyFiltering(qb, filter);
+    }
+
+    return getPaginationResults(qb, paginationArgs);
+  }
+
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
     const user = await this.getUserOrFail(userInput.ID);
 
@@ -576,7 +675,7 @@ export class UserService {
     credentialCriteria: CredentialsSearchInput
   ): Promise<IUser[]> {
     const credResourceID = credentialCriteria.resourceID || '';
-    const userMatches = await this.userRepository
+    const users = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.agent', 'agent')
       .leftJoinAndSelect('agent.credentials', 'credential')
@@ -588,13 +687,7 @@ export class UserService {
       })
       .getMany();
 
-    // reload to go through the normal loading path
-    const results: IUser[] = [];
-    for (const user of userMatches) {
-      const loadedOrganization = await this.getUserOrFail(user.id);
-      results.push(loadedOrganization);
-    }
-    return results;
+    return users;
   }
 
   async countUsersWithCredentials(

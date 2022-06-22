@@ -5,7 +5,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
 import { IUser, User } from '@domain/community/user';
 import { UseGuards } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from './user.service';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
@@ -27,8 +27,11 @@ export class UserResolverFields {
     description: 'The Profile for this User.',
   })
   @Profiling.api
-  async profile(@Parent() user: User): Promise<IProfile> {
-    return await this.userService.getProfile(user);
+  async profile(
+    @Parent() user: User,
+    @Context() { loaders }: IGraphQLContext
+  ): Promise<IProfile> {
+    return loaders.userProfileLoader.load(user.id);
   }
 
   @ResolveField('agent', () => IAgent, {

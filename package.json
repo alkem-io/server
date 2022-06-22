@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.30.0",
+  "version": "0.30.1",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -63,6 +63,7 @@
     "class-validator": "^0.13.1",
     "cross-env": "^7.0.3",
     "crypto-js": "^4.1.1",
+    "dataloader": "^2.1.0",
     "graphql": "^15.8.0",
     "graphql-amqp-subscriptions": "^1.2.0",
     "graphql-subscriptions": "^2.0.0",
