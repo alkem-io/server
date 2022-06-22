@@ -40,12 +40,16 @@ export class OryApiStrategy extends PassportStrategy(
 
     if (apiAccessEnabled && authorizationHeader) {
       const bearerToken = authorizationHeader.split(' ')[1];
-      const user = await kratos.toSession(bearerToken);
+      const { data: session } = await kratos.toSession(bearerToken);
 
-      this.logger.verbose?.(user.data.identity, LogContext.AUTH);
+      this.logger.verbose?.(session.identity, LogContext.AUTH);
 
-      if (user) {
-        oryIdentity = user.data.identity as OryDefaultIdentitySchema;
+      if (session) {
+        oryIdentity = session.identity as OryDefaultIdentitySchema;
+
+        if (this.authService.shouldExtendSession(session)) {
+          this.authService.extendSession(session);
+        }
       }
     }
     return await this.authService.createAgentInfo(oryIdentity);

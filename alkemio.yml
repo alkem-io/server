@@ -174,6 +174,10 @@ identity:
         # Ory Kratos URL for usage by the Alkemio server when inside a cluster.
         kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:3000/identity/ory/kratos/public
 
+        # session can't be extended until *earliest_possible_extend* **miliseconds** before it expires
+        # default is 24 hours
+        earliest_possible_extend: ${AUTH_EARLIEST_POSSIBLE_SESSION_EXTEND}:86400000
+
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
 monitoring:
