@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CanvasCheckoutService } from './canvas.checkout.service';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { CanvasCheckoutAuthorizationService } from './canvas.checkout.service.authorization';
+import { CanvasCheckoutResolverFields } from './canvas.checkout.resolver.fields';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CanvasCheckoutAuthorizationService } from './canvas.checkout.service.au
     CanvasCheckoutService,
     CanvasCheckoutAuthorizationService,
     CanvasCheckoutLifecycleOptionsProvider,
+    CanvasCheckoutResolverFields,
   ],
   exports: [
     CanvasCheckoutService,
