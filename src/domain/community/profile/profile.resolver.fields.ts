@@ -1,5 +1,5 @@
 import { Profiling } from '@common/decorators';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IProfile } from './profile.interface';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
@@ -19,8 +19,11 @@ export class ProfileResolverFields {
     description: 'The Visual avatar for this Profile.',
   })
   @Profiling.api
-  async avatar(@Parent() profile: IProfile): Promise<IVisual> {
-    return await this.profileService.getAvatar(profile);
+  async avatar(
+    @Parent() profile: IProfile,
+    @Context() { loaders }: IGraphQLContext
+  ): Promise<IVisual> {
+    return loaders.avatarsLoader.load(profile.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -29,8 +32,11 @@ export class ProfileResolverFields {
     description: 'A list of URLs to relevant information.',
   })
   @Profiling.api
-  async references(@Parent() profile: IProfile): Promise<IReference[]> {
-    return await this.profileService.getReferences(profile);
+  async references(
+    @Parent() profile: IProfile,
+    @Context() { loaders }: IGraphQLContext
+  ): Promise<IReference[]> {
+    return loaders.referencesLoader.load(profile.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -39,8 +45,11 @@ export class ProfileResolverFields {
     description: 'A list of named tagsets, each of which has a list of tags.',
   })
   @Profiling.api
-  async tagsets(@Parent() profile: IProfile): Promise<ITagset[]> {
-    return await this.profileService.getTagsets(profile);
+  async tagsets(
+    @Parent() profile: IProfile,
+    @Context() { loaders }: IGraphQLContext
+  ): Promise<ITagset[]> {
+    return loaders.tagsetsLoader.load(profile.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -49,7 +58,10 @@ export class ProfileResolverFields {
     description: 'The location for this Profile.',
   })
   @Profiling.api
-  async location(@Parent() profile: IProfile): Promise<ILocation> {
-    return await this.profileService.getLocation(profile);
+  async location(
+    @Parent() profile: IProfile,
+    @Context() { loaders }: IGraphQLContext
+  ): Promise<ILocation> {
+    return loaders.locationsLoader.load(profile.id);
   }
 }

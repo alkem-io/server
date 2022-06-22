@@ -19,6 +19,7 @@ import { KonfigModule } from '@services/platform/configuration/config/config.mod
 import { ConfigModule } from '@nestjs/config';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PreferenceModule } from '@domain/common/preference';
+import { UserDataloaderService } from './user.dataloader.service';
 
 @Module({
   imports: [
@@ -43,7 +44,8 @@ import { PreferenceModule } from '@domain/common/preference';
     UserResolverMutations,
     UserResolverQueries,
     UserResolverFields,
+    UserDataloaderService,
   ],
-  exports: [UserService, UserAuthorizationService],
+  exports: [UserService, UserDataloaderService, UserAuthorizationService],
 })
 export class UserModule {}
