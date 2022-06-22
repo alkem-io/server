@@ -152,7 +152,8 @@ export class AuthenticationService {
     );
     return true;
   }
-
+  // Refresh and Extend Sessions
+  // https://www.ory.sh/docs/guides/session-management/refresh-extend-sessions
   private async tryExtendSession(
     sessionToBeExtended: Session,
     bearerToken: string
