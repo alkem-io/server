@@ -89,9 +89,10 @@ export class CanvasService {
     }
     // Only allow saving as a template if checked in
     if (updateCanvasData.isTemplate && !canvas.isTemplate) {
-      if (checkout.status !== CanvasCheckoutStateEnum.AVAILABLE) {
+      const status = this.canvasCheckoutService.getCanvasStatus(checkout);
+      if (status !== CanvasCheckoutStateEnum.AVAILABLE) {
         throw new EntityCheckoutStatusException(
-          `Unable to convert Canvas to being a Template as it is not checkedin: ${checkout.status}`,
+          `Unable to convert Canvas to being a Template as it is not checkedin: ${status}`,
           LogContext.CONTEXT
         );
       }
