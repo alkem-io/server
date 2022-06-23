@@ -124,10 +124,6 @@ export class AuthenticationService {
     );
 
     await this.tryExtendSession(sessionToBeExtended, bearerToken);
-
-    this.logger?.verbose?.(
-      `Session ${sessionToBeExtended.id} extended for identity ${sessionToBeExtended.identity.id}`
-    );
   }
   // Refresh and Extend Sessions
   // https://www.ory.sh/docs/guides/session-management/refresh-extend-sessions
@@ -141,16 +137,19 @@ export class AuthenticationService {
       })
     );
 
-    kratos
-      .adminExtendSession(sessionToBeExtended.id, {
+    try {
+      await kratos.adminExtendSession(sessionToBeExtended.id, {
         headers: { authorization: `Bearer ${bearerToken}` },
-      })
-      .catch(e => {
-        const message = (e as Error)?.message ?? e;
-        throw new SessionExtendException(
-          `Session extend for session ${sessionToBeExtended.id} failed with: ${message}`
-        );
       });
+      this.logger?.verbose?.(
+        `Session ${sessionToBeExtended.id} extended for identity ${sessionToBeExtended.identity.id}`
+      );
+    } catch (e) {
+      const message = (e as Error)?.message ?? e;
+      throw new SessionExtendException(
+        `Session extend for session ${sessionToBeExtended.id} failed with: ${message}`
+      );
+    }
   }
 
   public shouldExtendSession(session: Session): boolean {
