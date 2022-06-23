@@ -194,7 +194,7 @@ monitoring:
 
     # The logging format will be in json - useful for parsing
     # if disabled - will be in a human readable form
-    json: ${LOGGING_FORMAT_JSON}:true
+    json: ${LOGGING_FORMAT_JSON}:false
 
     # Logging of the incoming requests to the server
     requests:
