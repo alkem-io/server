@@ -35,6 +35,11 @@ const ConfigServiceMock = {
       providers: {
         ory: {
           kratos_public_base_url_server: 'mockUrl',
+          kratos_admin_base_url_server: 'mockUrl',
+          admin_service_account: {
+            username: 'mock',
+            password: 'mock',
+          },
         },
       },
     },
