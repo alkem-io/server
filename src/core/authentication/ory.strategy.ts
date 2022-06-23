@@ -12,6 +12,7 @@ import { AuthenticationService } from './authentication.service';
 import { passportJwtSecret } from 'jwks-rsa';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
+import { KratosPayload } from './kratos.payload';
 
 @Injectable()
 export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
@@ -35,31 +36,38 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
     });
   }
 
-  async validate(payload: any) {
+  async validate(payload: KratosPayload) {
     this.logger.verbose?.('Ory Strategy: Kratos payload', LogContext.AUTH);
     this.logger.verbose?.(payload, LogContext.AUTH);
 
-    if (this.checkIfTokenHasExpired(payload.exp))
+    if (checkIfTokenHasExpired(payload.exp))
       throw new TokenException(
         'Access token has expired!',
         AlkemioErrorStatus.TOKEN_EXPIRED
       );
 
-    // Todo: not sure this is correct, but am hitting a case whereby session is null
     let oryIdentity: OryDefaultIdentitySchema | undefined = undefined;
-    if (payload.session) {
-      oryIdentity = payload.session.identity as OryDefaultIdentitySchema;
+    const session = payload.session;
+
+    if (session) {
+      oryIdentity = session.identity as OryDefaultIdentitySchema;
+
+      if (this.authService.shouldExtendSession(session)) {
+        this.authService.extendSession(session).catch(error => {
+          this.logger.error(
+            `Ory Kratos session failed to be extended: ${error}`,
+            LogContext.AUTH
+          );
+        });
+      }
     } else {
       this.logger.verbose?.('No Ory Kratos session', LogContext.AUTH);
     }
 
     return await this.authService.createAgentInfo(oryIdentity);
   }
-
-  private checkIfTokenHasExpired(exp: number): boolean {
-    if (Date.now() >= exp * 1000) {
-      return true;
-    }
-    return false;
-  }
 }
+
+const checkIfTokenHasExpired = (exp: number): boolean => {
+  return Date.now() >= exp * 1000;
+};

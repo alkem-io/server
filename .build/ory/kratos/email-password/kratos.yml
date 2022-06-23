@@ -66,6 +66,7 @@ selfservice:
 
 session:
   lifespan: 48h
+  earliest_possible_extend: 24h
 
 log:
   level: debug
