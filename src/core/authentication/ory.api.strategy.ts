@@ -4,7 +4,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Strategy } from 'passport-custom';
 import { AuthenticationService } from './authentication.service';
-import { Configuration, PublicApi } from '@ory/kratos-client';
+import { Configuration, V0alpha2Api } from '@ory/kratos-client';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 
@@ -29,7 +29,7 @@ export class OryApiStrategy extends PassportStrategy(
     const apiAccessEnabled = this.configService.get(ConfigurationTypes.IDENTITY)
       .authentication.api_access_enabled;
 
-    const kratos = new PublicApi(
+    const kratos = new V0alpha2Api(
       new Configuration({
         basePath: kratosPublicBaseUrl,
       })
@@ -46,10 +46,6 @@ export class OryApiStrategy extends PassportStrategy(
 
       if (session) {
         oryIdentity = session.identity as OryDefaultIdentitySchema;
-
-        if (this.authService.shouldExtendSession(session)) {
-          this.authService.extendSession(session);
-        }
       }
     }
     return await this.authService.createAgentInfo(oryIdentity);

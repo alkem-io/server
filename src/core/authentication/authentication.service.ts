@@ -1,8 +1,7 @@
-import { AxiosError } from 'axios';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { Session } from '@ory/kratos-client';
+import { Configuration, Session, V0alpha2Api } from '@ory/kratos-client';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
@@ -11,11 +10,12 @@ import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 import { NotSupportedException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { getBearerToken } from './get.bearer.token';
+import { SessionExtendException } from '@common/exceptions/auth';
 
 @Injectable()
 export class AuthenticationService {
-  private readonly kratosPublicUrl: string;
-  private readonly kratosPrivateUrl: string;
+  private readonly kratosPublicUrlServer: string;
+  private readonly kratosAdminUrlServer: string;
   private readonly adminPasswordIdentifier: string;
   private readonly adminPassword: string;
   private readonly extendAfter: number;
@@ -27,17 +27,28 @@ export class AuthenticationService {
     private httpService: HttpService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
-    this.kratosPublicUrl = this.configService.get(
+    this.kratosPublicUrlServer = this.configService.get(
       ConfigurationTypes.IDENTITY
     ).authentication.providers.ory.kratos_public_base_url_server;
-    this.extendAfter = Number(
-      this.configService.get(ConfigurationTypes.IDENTITY).authentication
-        .providers.ory.earliest_possible_extend
-    );
-    // todo: read from env
-    this.kratosPrivateUrl = '';
-    this.adminPasswordIdentifier = '';
-    this.adminPassword = '';
+    this.kratosAdminUrlServer = this.configService.get(
+      ConfigurationTypes.IDENTITY
+    ).authentication.providers.ory.kratos_admin_base_url_server;
+
+    this.adminPasswordIdentifier = this.configService.get(
+      ConfigurationTypes.IDENTITY
+    ).authentication.providers.ory.admin_service_account.username;
+    this.adminPassword = this.configService.get(
+      ConfigurationTypes.IDENTITY
+    ).authentication.providers.ory.admin_service_account.password;
+
+    this.extendAfter =
+      Number(
+        this.configService.get(ConfigurationTypes.IDENTITY).authentication
+          .providers.ory.earliest_possible_extend
+      ) *
+      60 *
+      60 *
+      1000;
   }
 
   async createAgentInfo(
@@ -105,78 +116,49 @@ export class AuthenticationService {
     return agentInfo;
   }
 
-  public async extendSession(sessionToBeExtended: Session): Promise<boolean> {
-    let bearerToken: string;
+  public async extendSession(sessionToBeExtended: Session): Promise<void> {
+    const bearerToken = await getBearerToken(
+      this.kratosPublicUrlServer,
+      this.adminPasswordIdentifier,
+      this.adminPassword
+    );
 
-    try {
-      bearerToken = await getBearerToken(
-        this.kratosPublicUrl,
-        this.adminPasswordIdentifier,
-        this.adminPassword
-      );
-    } catch (e) {
-      const message = (e as Error)?.message;
-      this.logger?.error(
-        `Error occurred while trying to verify ${this.adminPasswordIdentifier} for a session extend of session ${sessionToBeExtended.id} for identity ${sessionToBeExtended.identity.id}: ${message}`
-      );
-
-      return false;
-    }
-
-    let extendResult: string | true;
-
-    try {
-      extendResult = await this.tryExtendSession(
-        sessionToBeExtended,
-        bearerToken
-      );
-    } catch (e) {
-      const err = e as AxiosError;
-      this.logger?.error(
-        `Error occurred while trying to extend session ${sessionToBeExtended.id} for identity ${sessionToBeExtended.identity.id}: ${err?.message}`
-      );
-
-      return false;
-    }
-
-    if (typeof extendResult === 'string') {
-      this.logger?.error(
-        `Extension of session ${sessionToBeExtended.id} for identity ${sessionToBeExtended.identity.id} rejected with: ${extendResult}`
-      );
-
-      return false;
-    }
+    await this.tryExtendSession(sessionToBeExtended, bearerToken);
 
     this.logger?.verbose?.(
       `Session ${sessionToBeExtended.id} extended for identity ${sessionToBeExtended.identity.id}`
     );
-    return true;
   }
   // Refresh and Extend Sessions
   // https://www.ory.sh/docs/guides/session-management/refresh-extend-sessions
   private async tryExtendSession(
     sessionToBeExtended: Session,
     bearerToken: string
-  ): Promise<true | string> | never {
-    return this.httpService
-      .request<Session>({
-        method: 'PATCH',
-        url: this.getExtendApiUrl(sessionToBeExtended),
+  ): Promise<void | never> {
+    const kratos = new V0alpha2Api(
+      new Configuration({
+        basePath: this.kratosAdminUrlServer,
+      })
+    );
+
+    kratos
+      .adminExtendSession(sessionToBeExtended.id, {
         headers: { authorization: `Bearer ${bearerToken}` },
       })
-      .toPromise()
-      .then(
-        () => true,
-        (rejErr: unknown) => (rejErr as Error)?.message ?? rejErr
-      );
+      .catch(e => {
+        const message = (e as Error)?.message ?? e;
+        throw new SessionExtendException(
+          `Session extend for session ${sessionToBeExtended.id} failed with: ${message}`
+        );
+      });
   }
 
   public shouldExtendSession(session: Session): boolean {
+    if (!session.expires_at) {
+      return false;
+    }
+
     const expiry = new Date(session.expires_at);
     return Date.now() >= expiry.getTime() - this.extendAfter;
-  }
-
-  private getExtendApiUrl(session: Session) {
-    return `${this.kratosPrivateUrl}/sessions/${session.id}/extend`;
   }
 }
