@@ -53,7 +53,12 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
       oryIdentity = session.identity as OryDefaultIdentitySchema;
 
       if (this.authService.shouldExtendSession(session)) {
-        this.authService.extendSession(session);
+        this.authService.extendSession(session).catch(error => {
+          this.logger.error(
+            `Ory Kratos session failed to be extended: ${error}`,
+            LogContext.AUTH
+          );
+        });
       }
     } else {
       this.logger.verbose?.('No Ory Kratos session', LogContext.AUTH);
