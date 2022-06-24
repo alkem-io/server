@@ -68,11 +68,12 @@ export class AspectTemplateService {
   async deleteAspectTemplate(
     aspectTemplate: IAspectTemplate
   ): Promise<IAspectTemplate> {
+    const templateId: string = aspectTemplate.id;
     await this.templateBaseService.deleteEntities(aspectTemplate);
     const result = await this.aspectTemplateRepository.remove(
       aspectTemplate as AspectTemplate
     );
-    result.id = aspectTemplate.id;
+    result.id = templateId;
     return result;
   }
 
