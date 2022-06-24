@@ -1,4 +1,3 @@
-import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { Configuration, Session, V0alpha2Api } from '@ory/kratos-client';
@@ -26,8 +25,6 @@ export class AuthenticationService {
     private configService: ConfigService,
     private userService: UserService,
     private agentService: AgentService,
-    private userService: UserService,
-    private httpService: HttpService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     this.kratosPublicUrlServer = this.configService.get(
