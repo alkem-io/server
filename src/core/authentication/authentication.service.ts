@@ -105,6 +105,7 @@ export class AuthenticationService {
     } else {
       agentInfo.credentials = agentInfoMetadata.credentials;
     }
+    agentInfo.agentID = agentInfoMetadata.agentID;
     agentInfo.userID = agentInfoMetadata.userID;
     agentInfo.communicationID = agentInfoMetadata.communicationID;
 

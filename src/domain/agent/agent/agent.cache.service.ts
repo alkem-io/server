@@ -1,3 +1,4 @@
+import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { LogContext } from '@common/enums/logging.context';
 import { AgentInfo } from '@core/authentication';
 import {
@@ -6,33 +7,41 @@ import {
   Injectable,
   LoggerService,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { getConnection } from 'typeorm';
 import { IAgent, ICredential } from '..';
 @Injectable()
 export class AgentCacheService {
+  private readonly cache_ttl: number;
+
   constructor(
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
-  ) {}
+    private readonly logger: LoggerService,
+    private configService: ConfigService
+  ) {
+    this.cache_ttl = this.configService.get(
+      ConfigurationTypes.IDENTITY
+    ).authentication.cache_ttl;
+  }
 
   public async getAgentInfoFromCache(
     email: string
   ): Promise<AgentInfo | undefined> {
     return await this.cacheManager.get<AgentInfo>(
-      await this.getAgentInfoCacheKey(email)
+      this.getAgentInfoCacheKey(email)
     );
   }
 
   public async setAgentInfoCache(agentInfo: AgentInfo): Promise<AgentInfo> {
     return await this.cacheManager.set<AgentInfo>(
-      await this.getAgentInfoCacheKey(agentInfo.email),
+      this.getAgentInfoCacheKey(agentInfo.email),
       agentInfo,
       {
-        ttl: 1,
+        ttl: this.cache_ttl,
       }
     );
   }
@@ -57,15 +66,15 @@ export class AgentCacheService {
 
     cachedAgentInfo.credentials = agent.credentials as ICredential[];
     return await this.cacheManager.set<AgentInfo>(
-      await this.getAgentInfoCacheKey(email),
+      this.getAgentInfoCacheKey(email),
       cachedAgentInfo,
       {
-        ttl: 1,
+        ttl: this.cache_ttl,
       }
     );
   }
 
-  private async getAgentInfoCacheKey(email: string): Promise<string> {
+  private getAgentInfoCacheKey(email: string): string {
     return `@agentInfo:email:${email}`;
   }
 

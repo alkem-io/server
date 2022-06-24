@@ -11,7 +11,11 @@ import { FormatNotSupportedException } from '@common/exceptions/format.not.suppo
 import { AgentInfo } from '@core/authentication/agent-info';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
+import {
+  Credential,
+  CredentialsSearchInput,
+  ICredential,
+} from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
@@ -799,34 +803,34 @@ export class UserService {
         'user.id as userID',
         'user.communicationID as communicationID',
         'agent.id as agentID',
-        'credentials.id as credentialID',
-        'credentials.resourceId as credentialResourceID',
-        'credentials.type as credentialType',
+        'credentials.id as id',
+        'credentials.resourceId as resourceID',
+        'credentials.type as type',
       ])
       .where('user.email = :email', { email: email })
-      .getRawMany<any>()
-      .then(agents => {
-        if (!agents) {
+      .getRawMany<AgentInfoMetadata & Credential>()
+      .then(agentsWithCredentials => {
+        if (agentsWithCredentials.length === 0) {
           throw new EntityNotFoundException(
-            `Unable to load Agent for User: ${email}`,
+            `Unable to load User, Agent or Credentials for User: ${email}`,
             LogContext.COMMUNITY
           );
         }
 
         const agentInfo = new AgentInfoMetadata();
         const credentials: ICredential[] = [];
-        for (const agent of agents) {
+        for (const agent of agentsWithCredentials) {
           credentials.push({
-            id: agent.credentialID,
-            resourceID: agent.credentialResourceID,
-            type: agent.credentialType,
+            id: agent.id,
+            resourceID: agent.resourceID,
+            type: agent.type,
           });
         }
 
         agentInfo.credentials = credentials;
-        agentInfo.agentID = agents[0].agentID;
-        agentInfo.userID = agents[0].userID;
-        agentInfo.communicationID = agents[0].communicationID;
+        agentInfo.agentID = agentsWithCredentials[0].agentID;
+        agentInfo.userID = agentsWithCredentials[0].userID;
+        agentInfo.communicationID = agentsWithCredentials[0].communicationID;
 
         return agentInfo;
       });
