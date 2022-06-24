@@ -50,7 +50,7 @@
     "@nestjs/passport": "^8.0.0",
     "@nestjs/platform-express": "^8.0.5",
     "@nestjs/typeorm": "^8.0.1",
-    "@ory/kratos-client": "^0.6.3-alpha.1",
+    "@ory/kratos-client": "^0.10.1",
     "@types/crypto-js": "^4.0.1",
     "@types/express-session": "^1.17.3",
     "@types/matrix-js-sdk": "^11.0.1",
