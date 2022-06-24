@@ -80,10 +80,19 @@ export class AuthenticationService {
     agentInfo.emailVerified = isEmailVerified;
     agentInfo.firstName = oryTraits.name.first;
     agentInfo.lastName = oryTraits.name.last;
+    let agentInfoMetadata;
 
-    const agentInfoMetadata = await this.userService.getAgentInfoMetadata(
-      agentInfo.email
-    );
+    try {
+      agentInfoMetadata = await this.userService.getAgentInfoMetadata(
+        agentInfo.email
+      );
+    } catch (error) {
+      this.logger.verbose?.(
+        `User not registered: ${agentInfo.email}`,
+        LogContext.AUTH
+      );
+    }
+
     if (!agentInfoMetadata) {
       this.logger.verbose?.(
         `User: no profile: ${agentInfo.email}`,
