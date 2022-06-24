@@ -49,7 +49,7 @@ export class UserAuthorizationService {
 
     // Allow users to also delete entities within the profile
     user.profile.authorization =
-      await this.authorizationPolicyService.appendCredentialAuthorizationRule(
+      this.authorizationPolicyService.appendCredentialAuthorizationRule(
         user.profile.authorization,
         {
           type: AuthorizationCredential.USER_SELF_MANAGEMENT,

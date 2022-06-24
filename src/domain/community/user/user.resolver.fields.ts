@@ -13,6 +13,7 @@ import { CommunicationRoomResult } from '@domain/communication/room/dto/communic
 import { IProfile } from '../profile/profile.interface';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
+import { logger } from 'matrix-js-sdk/lib/logger';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -90,6 +91,9 @@ export class UserResolverFields {
     ) {
       return user.email;
     }
+    logger.warn(
+      `Not able to grant access to agent ${agentInfo} for user ${user}`
+    );
     return 'not accessible';
   }
 
