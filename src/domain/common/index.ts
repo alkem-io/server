@@ -5,3 +5,5 @@ export * from './lifecycle';
 export * from './entity/base-entity';
 export * from './interfaces';
 export * from './entity/nameable-entity';
+export * from './location';
+export * from './visual';

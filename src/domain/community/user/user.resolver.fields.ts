@@ -4,8 +4,8 @@ import { AgentInfo } from '@core/authentication';
 import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
 import { IUser, User } from '@domain/community/user';
-import { UseGuards } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { UseGuards, Inject, LoggerService } from '@nestjs/common';
+import { Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from './user.service';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
@@ -13,13 +13,16 @@ import { CommunicationRoomResult } from '@domain/communication/room/dto/communic
 import { IProfile } from '../profile/profile.interface';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
     private userService: UserService,
-    private preferenceSetService: PreferenceSetService
+    private preferenceSetService: PreferenceSetService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @ResolveField('profile', () => IProfile, {
@@ -27,8 +30,11 @@ export class UserResolverFields {
     description: 'The Profile for this User.',
   })
   @Profiling.api
-  async profile(@Parent() user: User): Promise<IProfile> {
-    return await this.userService.getProfile(user);
+  async profile(
+    @Parent() user: User,
+    @Context() { loaders }: IGraphQLContext
+  ): Promise<IProfile> {
+    return loaders.userProfileLoader.load(user.id);
   }
 
   @ResolveField('agent', () => IAgent, {
@@ -87,6 +93,10 @@ export class UserResolverFields {
     ) {
       return user.email;
     }
+    this.logger.warn(
+      `Not able to grant access to agent ${agentInfo} for user ${user}`,
+      LogContext.COMMUNITY
+    );
     return 'not accessible';
   }
 

@@ -17,7 +17,7 @@ export class CanvasCheckout
 
   @OneToOne(() => Lifecycle, {
     eager: true,
-    cascade: true,
+    cascade: false, // NOTE: this is non-standard: to deal with the lifecycle state machine updates while also updating the canvasCheckout entity
     onDelete: 'SET NULL',
   })
   @JoinColumn()

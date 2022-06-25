@@ -39,6 +39,8 @@ import {
 } from '@src/types';
 import { RegistrationModule } from '@services/domain/registration/registration.module';
 import { RolesModule } from '@services/domain/roles/roles.module';
+import { DataloaderService } from '@core/dataloader/dataloader.service';
+import { DataloaderModule } from '@core/dataloader/dataloader.module';
 import * as redisStore from 'cache-manager-redis-store';
 
 @Module({
@@ -85,9 +87,12 @@ import * as redisStore from 'cache-manager-redis-store';
     }),
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
+      imports: [ConfigModule, DataloaderModule],
+      inject: [ConfigService, DataloaderService],
+      useFactory: async (
+        configService: ConfigService,
+        dataloaderService: DataloaderService
+      ) => ({
         cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
         uploads: false,
         autoSchemaFile: true,
@@ -133,6 +138,7 @@ import * as redisStore from 'cache-manager-redis-store';
          * graphql-ws requires passing the request object through the context method
          * !!! this is graphql-ws ONLY
          */
+
         context: (ctx: ConnectionContext) => {
           if (isWebsocketContext(ctx)) {
             return {
@@ -147,7 +153,7 @@ import * as redisStore from 'cache-manager-redis-store';
             };
           }
 
-          return { req: ctx.req };
+          return { req: ctx.req, loaders: dataloaderService.createLoaders() };
         },
         subscriptions: {
           'subscriptions-transport-ws': {
@@ -159,7 +165,9 @@ import * as redisStore from 'cache-manager-redis-store';
               connectionParams: Record<string, any>,
               websocket: SubscriptionsTransportWsWebsocket // couldn't find a better type
             ) => {
-              return { req: { headers: websocket?.upgradeReq?.headers } };
+              return {
+                req: { headers: websocket?.upgradeReq?.headers },
+              };
             },
           },
           'graphql-ws': true,

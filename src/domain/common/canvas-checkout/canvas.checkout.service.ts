@@ -65,6 +65,7 @@ export class CanvasCheckoutService {
   async save(CanvasCheckout: ICanvasCheckout): Promise<ICanvasCheckout> {
     return await this.canvasCheckoutRepository.save(CanvasCheckout);
   }
+
   async getCanvasCheckoutOrFail(
     canvasCheckoutID: string,
     options?: FindOneOptions<CanvasCheckout>
@@ -76,30 +77,9 @@ export class CanvasCheckoutService {
     if (!canvasCheckout)
       throw new EntityNotFoundException(
         `Unable to find CanvasCheckout with ID: ${canvasCheckoutID}`,
-        LogContext.CONTEXT
-      );
-    return canvasCheckout;
-  }
-
-  getCanvasStatus(canvasCheckout: ICanvasCheckout): CanvasCheckoutStateEnum {
-    const lifecycle = canvasCheckout.lifecycle;
-    if (!lifecycle) {
-      throw new EntityNotFoundException(
-        `Unable to find lifecycle CanvasCheckout with ID: ${canvasCheckout.id}`,
         LogContext.COMMUNITY
       );
-    }
-    const state = this.lifecycleService.getState(lifecycle);
-    if (state === 'available') {
-      return CanvasCheckoutStateEnum.AVAILABLE;
-    } else if (state === 'checkedOut') {
-      return CanvasCheckoutStateEnum.CHECKED_OUT;
-    } else {
-      throw new InvalidStateTransitionException(
-        `Unable to find lifecycle CanvasCheckout with expected state: ${canvasCheckout.id}`,
-        LogContext.CONTEXT
-      );
-    }
+    return canvasCheckout;
   }
 
   async isUpdateAllowedOrFail(
@@ -116,6 +96,27 @@ export class CanvasCheckoutService {
     if (checkout.lockedBy !== agentInfo.userID) {
       throw new EntityCheckoutStatusException(
         `Entity is checked out by ${checkout.lockedBy}, which does not match the current user: ${agentInfo.userID}`,
+        LogContext.CONTEXT
+      );
+    }
+  }
+
+  getCanvasStatus(canvasCheckout: ICanvasCheckout): CanvasCheckoutStateEnum {
+    const lifecycle = canvasCheckout.lifecycle;
+    if (!lifecycle) {
+      throw new EntityNotFoundException(
+        `Unable to find lifecycle CanvasCheckout with ID: ${canvasCheckout.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const state = this.lifecycleService.getState(lifecycle);
+    if (state === CanvasCheckoutStateEnum.AVAILABLE) {
+      return CanvasCheckoutStateEnum.AVAILABLE;
+    } else if (state === CanvasCheckoutStateEnum.CHECKED_OUT) {
+      return CanvasCheckoutStateEnum.CHECKED_OUT;
+    } else {
+      throw new InvalidStateTransitionException(
+        `Unable to find lifecycle CanvasCheckout with expected state: ${canvasCheckout.id}`,
         LogContext.CONTEXT
       );
     }
