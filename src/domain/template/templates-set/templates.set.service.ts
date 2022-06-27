@@ -125,7 +125,6 @@ export class TemplatesSetService {
       await this.aspectTemplateService.createAspectTemplate(
         aspectTemplateInput
       );
-    templatesSet.aspectTemplates = await this.getAspectTemplates(templatesSet);
     templatesSet.aspectTemplates.push(aspectTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return aspectTemplate;
