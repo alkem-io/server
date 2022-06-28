@@ -79,7 +79,7 @@ export class HubResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('templates', () => ITemplatesSet, {
-    nullable: false,
+    nullable: true,
     description: 'The templates in use by this Hub',
   })
   @UseGuards(GraphqlGuard)
