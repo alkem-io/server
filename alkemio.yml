@@ -363,22 +363,31 @@ collaboration:
 ## Configuration of the legal / usability aspects of the platform
 platform:
   # Terms of usage that all users comply with
-  terms: ${PLATFORM_TERMS}:https://alkem.io/platform/terms
+  terms: ${PLATFORM_TERMS}:https://alkemio.foundation/legal/hub/#tc
 
   # Privacy policy for the platform
-  privacy: ${PLATFORM_PRIVACY}:https://alkem.io/platform/privacy
+  privacy: ${PLATFORM_PRIVACY}:https://alkemio.foundation/privacy/
 
   # Security policy for the platform
-  security: ${PLATFORM_SECURITY}:https://alkem.io/platform/security
+  security: ${PLATFORM_SECURITY}:https://alkemio.foundation/security/
 
   # Link for support requests
-  support: ${PLATFORM_SUPPORT}:https://alkem.io/platform/support
+  support: ${PLATFORM_SUPPORT}:https://alkemio.foundation/support/
 
   # Feedback form for the platform
-  feedback: ${PLATFORM_FEEDBACK}:https://alkem.io/platform/feedback
+  feedback: ${PLATFORM_FEEDBACK}:https://alkemio.foundation/feedback/
 
   # About the platform
-  about: ${PLATFORM_ABOUT}:https://alkem.io/platform/about
+  about: ${PLATFORM_ABOUT}:https://alkemio.foundation/about/
+
+  # Home page - Impact
+  impact: ${PLATFORM_IMPACT}:https://alkemio.foundation
+
+  # Home page - Foundation
+  foundation: ${PLATFORM_FOUNDATION}:https://alkemio.foundation/vision/
+
+  # Home page - Opensource
+  opensource: ${PLATFORM_OPENSOURCE}:https://github.com/alkem-io
 
 ssi:
   # Jolocom SDK is used for providing SSI capabilities on the platform.
