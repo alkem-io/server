@@ -21,12 +21,17 @@ export class KonfigService {
         providers: await this.getAuthenticationProvidersConfig(),
       },
       platform: {
-        security: this.configService.get(ConfigurationTypes.PLATFORM)?.security,
-        privacy: this.configService.get(ConfigurationTypes.PLATFORM)?.privacy,
-        about: this.configService.get(ConfigurationTypes.PLATFORM)?.about,
-        feedback: this.configService.get(ConfigurationTypes.PLATFORM)?.feedback,
-        support: this.configService.get(ConfigurationTypes.PLATFORM)?.support,
         terms: this.configService.get(ConfigurationTypes.PLATFORM)?.terms,
+        privacy: this.configService.get(ConfigurationTypes.PLATFORM)?.privacy,
+        security: this.configService.get(ConfigurationTypes.PLATFORM)?.security,
+        feedback: this.configService.get(ConfigurationTypes.PLATFORM)?.feedback,
+        about: this.configService.get(ConfigurationTypes.PLATFORM)?.about,
+        impact: this.configService.get(ConfigurationTypes.PLATFORM)?.impact,
+        foundation: this.configService.get(ConfigurationTypes.PLATFORM)
+          ?.foundation,
+        opensource: this.configService.get(ConfigurationTypes.PLATFORM)
+          ?.opensource,
+        support: this.configService.get(ConfigurationTypes.PLATFORM)?.support,
         featureFlags: [
           {
             name: 'ssi',

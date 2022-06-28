@@ -35,6 +35,26 @@ export abstract class IPlatformConfig {
 
   @Field(() => String, {
     nullable: false,
+    description: 'URL for the link Impact in the HomePage of the application',
+  })
+  impact!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description:
+      'URL for the link Foundation in the HomePage of the application',
+  })
+  foundation!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description:
+      'URL for the link Opensource in the HomePage of the application',
+  })
+  opensource!: string;
+
+  @Field(() => String, {
+    nullable: false,
     description: 'URL where users can get support for the platform',
   })
   support!: string;
