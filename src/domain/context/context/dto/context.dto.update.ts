@@ -1,6 +1,10 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
-import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
+import {
+  LONG_TEXT_LENGTH,
+  MID_TEXT_LENGTH,
+  VERY_LONG_TEXT_LENGTH,
+} from '@src/common/constants';
 import { UpdateReferenceInput } from '@domain/common/reference/reference.dto.update';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { UpdateLocationInput } from '@domain/common/location/dto/location.dto.update';
@@ -10,12 +14,12 @@ import { Type } from 'class-transformer';
 export class UpdateContextInput {
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
-  @MaxLength(LONG_TEXT_LENGTH)
+  @MaxLength(VERY_LONG_TEXT_LENGTH)
   background?: string;
 
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
-  @MaxLength(LONG_TEXT_LENGTH)
+  @MaxLength(VERY_LONG_TEXT_LENGTH)
   vision?: string;
 
   @Field({ nullable: true })

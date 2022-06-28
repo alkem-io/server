@@ -1,10 +1,11 @@
 import { UUID_LENGTH } from '@common/constants';
 import { LogContext, UserPreferenceType } from '@common/enums';
 import {
-  AuthenticationException,
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
+  UserAlreadyRegisteredException,
+  UserRegistrationInvalidEmail,
   ValidationException,
 } from '@common/exceptions';
 import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
@@ -232,11 +233,18 @@ export class UserService {
   async createUserFromAgentInfo(agentInfo: AgentInfo): Promise<IUser> {
     // Extra check that there is valid data + no user with the email
     const email = agentInfo.email;
-    if (!email || email.length === 0 || (await this.isRegisteredUser(email))) {
-      throw new AuthenticationException(
-        `Invalid attempt to create a new User profile for user: ${email}`
+    if (!email || email.length === 0) {
+      throw new UserRegistrationInvalidEmail(
+        `Invalid email provided: ${email}`
       );
     }
+
+    if (await this.isRegisteredUser(email)) {
+      throw new UserAlreadyRegisteredException(
+        `User with email: ${email} already registered`
+      );
+    }
+
     return await this.createUser({
       nameID: this.createUserNameID(agentInfo.firstName, agentInfo.lastName),
       email: email,
