@@ -18,12 +18,6 @@ export class RolesResult {
   })
   displayName: string;
 
-  @Field(() => [RolesResult], {
-    description:
-      'Details of the Groups in the Organizations the user is a member of',
-  })
-  userGroups: RolesResult[];
-
   @Field(() => [String], {
     description: 'The roles held by the contributor',
   })
@@ -33,7 +27,6 @@ export class RolesResult {
     this.displayName = displayName;
     this.nameID = nameID;
     this.id = id;
-    this.userGroups = [];
     this.roles = [];
   }
 }

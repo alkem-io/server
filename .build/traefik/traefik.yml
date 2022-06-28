@@ -11,6 +11,8 @@ entryPoints:
     address: ':80'
   mariadb:
     address: ':3306'
+  postgres:
+    address: ':5432'
   synapse:
     address: ':8008'
   synapse-admin:
@@ -27,6 +29,8 @@ entryPoints:
     address: ':5672'
   rabbitmq-management:
     address: ':15672'
+  redis:
+    address: ':6379'
 
 providers:
   file:

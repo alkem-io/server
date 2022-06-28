@@ -1,4 +1,4 @@
-import { CacheModule, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserResolverQueries } from './user.resolver.queries';
 import { ProfileModule } from '@domain/community/profile/profile.module';
@@ -19,7 +19,7 @@ import { KonfigModule } from '@services/platform/configuration/config/config.mod
 import { ConfigModule } from '@nestjs/config';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PreferenceModule } from '@domain/common/preference';
-import { LocationModule } from '@domain/common/location';
+import { UserDataloaderService } from './user.dataloader.service';
 
 @Module({
   imports: [
@@ -36,9 +36,7 @@ import { LocationModule } from '@domain/common/location';
     PreferenceSetModule,
     KonfigModule,
     TypeOrmModule.forFeature([User]),
-    CacheModule.register({ max: 250, ttl: 300 }),
     ConfigModule,
-    LocationModule,
   ],
   providers: [
     UserService,
@@ -46,7 +44,8 @@ import { LocationModule } from '@domain/common/location';
     UserResolverMutations,
     UserResolverQueries,
     UserResolverFields,
+    UserDataloaderService,
   ],
-  exports: [UserService, UserAuthorizationService],
+  exports: [UserService, UserDataloaderService, UserAuthorizationService],
 })
 export class UserModule {}

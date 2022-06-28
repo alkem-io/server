@@ -220,6 +220,11 @@ tcp:
         servers:
           - address: 'mariadb:3306'
 
+    postgres:
+      loadBalancer:
+        servers:
+          - address: 'postgres:5432'
+
     rabbitmq-amqp:
       loadBalancer:
         servers:
@@ -230,12 +235,23 @@ tcp:
         servers:
           - address: 'mailslurper:1025'
 
+    redis:
+      loadBalancer:
+        servers:
+          - address: 'redis:6379'
+
   routers:
     mariadb:
       rule: 'HostSNI(`*`)'
       service: 'mariadb'
       entryPoints:
         - 'mariadb'
+
+    postgres:
+      rule: 'HostSNI(`*`)'
+      service: 'postgres'
+      entryPoints:
+        - 'postgres'
 
     rabbitmq-amqp:
       rule: 'HostSNI(`*`)'
@@ -248,3 +264,9 @@ tcp:
       service: 'mailslurper-smtp'
       entryPoints:
         - 'mailslurper-smtp'
+
+    redis:
+      rule: 'HostSNI(`*`)'
+      service: 'redis'
+      entryPoints:
+        - 'redis'

@@ -18,6 +18,7 @@ import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/a
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { IPreferenceSet } from '@domain/common/preference-set';
+import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -25,6 +26,7 @@ export class HubAuthorizationService {
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
+    private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private preferenceSetService: PreferenceSetService,
     private hubService: HubService,
@@ -93,6 +95,13 @@ export class HubAuthorizationService {
     hub.preferenceSet =
       await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
         preferenceSet,
+        hub.authorization
+      );
+
+    hub.templatesSet = await this.hubService.getTemplatesSetOrFail(hub.id);
+    hub.templatesSet =
+      await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
+        hub.templatesSet,
         hub.authorization
       );
 

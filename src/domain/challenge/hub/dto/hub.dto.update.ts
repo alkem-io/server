@@ -1,9 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsOptional, ValidateNested } from 'class-validator';
+import { IsOptional } from 'class-validator';
 import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.update';
 import { UUID_NAMEID } from '@domain/common/scalars';
-import { UpdateHubTemplateInput } from './hub.dto.update.template';
-import { Type } from 'class-transformer';
 
 @InputType()
 export class UpdateHubInput extends UpdateBaseChallengeInput {
@@ -20,13 +18,4 @@ export class UpdateHubInput extends UpdateBaseChallengeInput {
     description: 'The ID or NameID of the Hub.',
   })
   ID!: string;
-
-  @Field(() => UpdateHubTemplateInput, {
-    nullable: true,
-    description: 'Update the template for this Hub.',
-  })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => UpdateHubTemplateInput)
-  template?: UpdateHubTemplateInput;
 }

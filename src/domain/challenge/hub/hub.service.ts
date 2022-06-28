@@ -44,7 +44,6 @@ import { UpdateHubInput } from './dto/hub.dto.update';
 import { CreateChallengeOnHubInput } from '../challenge/dto/challenge.dto.create.in.hub';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CommunityType } from '@common/enums/community.type';
-import { HubTemplate } from './dto/hub.dto.template.hub';
 import { AgentInfo } from '@src/core';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IPreference } from '@domain/common/preference/preference.interface';
@@ -54,6 +53,8 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { PreferenceType } from '@common/enums/preference.type';
 import { AspectService } from '@domain/context/aspect/aspect.service';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
+import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 
 @Injectable()
 export class HubService {
@@ -69,6 +70,7 @@ export class HubService {
     private communityService: CommunityService,
     private challengeService: ChallengeService,
     private preferenceSetService: PreferenceSetService,
+    private templatesSetService: TemplatesSetService,
     private aspectService: AspectService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
@@ -105,6 +107,8 @@ export class HubService {
       PreferenceDefinitionSet.HUB,
       this.createPreferenceDefaults()
     );
+
+    hub.templatesSet = await this.templatesSetService.createTemplatesSet();
 
     // Lifecycle
     const machineConfig: any = challengeLifecycleConfigDefault;
@@ -170,22 +174,12 @@ export class HubService {
       await this.setHubHost(hub.id, hubData.hostID);
     }
 
-    if (hubData.template) {
-      const hubTemplate: HubTemplate = hubData.template;
-      for (const aspectTemplate of hubTemplate.aspectTemplates) {
-        if (!aspectTemplate.defaultDescription) {
-          aspectTemplate.defaultDescription = '';
-        }
-      }
-      hub.template = JSON.stringify(hubTemplate);
-    }
-
     return await this.hubRepository.save(hub);
   }
 
   async deleteHub(deleteData: DeleteHubInput): Promise<IHub> {
     const hub = await this.getHubOrFail(deleteData.ID, {
-      relations: ['challenges', 'preferenceSet'],
+      relations: ['challenges', 'preferenceSet', 'templatesSet'],
     });
 
     // Do not remove an hub that has child challenges , require these to be individually first removed
@@ -214,6 +208,10 @@ export class HubService {
 
     if (hub.preferenceSet) {
       await this.preferenceSetService.deletePreferenceSet(hub.preferenceSet.id);
+    }
+
+    if (hub.templatesSet) {
+      await this.templatesSetService.deleteTemplatesSet(hub.templatesSet.id);
     }
 
     const result = await this.hubRepository.remove(hub as Hub);
@@ -324,6 +322,22 @@ export class HubService {
         LogContext.CHALLENGES
       );
     return hub;
+  }
+
+  async getTemplatesSetOrFail(hubId: string): Promise<ITemplatesSet> {
+    const hubWithTemplates = await this.getHubOrFail(hubId, {
+      relations: ['templatesSet'],
+    });
+    const templatesSet = hubWithTemplates.templatesSet;
+
+    if (!templatesSet) {
+      throw new EntityNotFoundException(
+        `Unable to find templatesSet for hub with nameID: ${hubWithTemplates.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return templatesSet;
   }
 
   async getPreferenceSetOrFail(hubId: string): Promise<IPreferenceSet> {
@@ -666,24 +680,6 @@ export class HubService {
     });
 
     return await this.userService.getUserWithAgent(removeData.userID);
-  }
-
-  async getHubTemplates(hub: IHub): Promise<HubTemplate> {
-    const templateStr = hub.template || '';
-    let template = new HubTemplate();
-    if (templateStr) {
-      try {
-        template = JSON.parse(templateStr);
-        return template;
-      } catch (error: any) {
-        this.logger.error(
-          `Unable to retrieve templates for Hub (${hub.nameID}): ${error}`,
-          LogContext.CHALLENGES
-        );
-      }
-    }
-
-    return template;
   }
 
   async getPreferences(hub: IHub): Promise<IPreference[]> {

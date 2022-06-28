@@ -76,7 +76,7 @@ export const getRelayStylePaginationResults = async <
 
   const { first, after, last, before } = paginationArgs;
 
-  query.orderBy({ [SORTING_COLUMN]: 'ASC' });
+  query.orderBy({ [`${query.alias}.${SORTING_COLUMN}`]: 'ASC' });
 
   const originalQuery = query.clone();
   const hasWhere =

@@ -7,6 +7,7 @@ import {
 import { IsOptional, MaxLength } from 'class-validator';
 import { NameID } from '@domain/common/scalars';
 import { MinLength } from 'class-validator';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 
 @InputType()
 export class CreateAspectInput {
@@ -25,7 +26,7 @@ export class CreateAspectInput {
   @MaxLength(MID_TEXT_LENGTH)
   type!: string;
 
-  @Field({ nullable: false })
+  @Field(() => Markdown, { nullable: false })
   @MaxLength(VERY_LONG_TEXT_LENGTH)
   description!: string;
 

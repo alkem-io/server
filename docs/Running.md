@@ -34,12 +34,6 @@ npm run start:services
 npm start
 ```
 
-**Note**: If a container (e.g. Synapse) writes to a directory that is mapped locally, you will need to have enough permissions to write there.
-E.g. on Linux you can grant permissions the following way:
-
-- Navigate to the directory, e.g. .build/synapse
-- Change the permissions with `chmod o+w .`
-
 3. Validate that the server is running by visiting the [graphql endpoint](http://localhost:3000/graphql).
 
 ## Notes

@@ -1,4 +1,4 @@
-import { CacheModule, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CredentialModule } from '@domain/agent/credential/credential.module';
 import { AgentService } from './agent.service';
@@ -12,6 +12,7 @@ import { VerifiedCredentialModule } from '../verified-credential/verified.creden
 import { AgentResolverSubscriptions } from '@domain/agent/agent/agent.resolver.subscriptions';
 import { SsiSovrhdAdapterModule } from '@services/platform/ssi-sovrhd/ssi.sovrhd.adapter.module';
 import { WalletManagerAdapterModule } from '@services/platform/wallet-manager-adapter/wallet.manager.adapter.module';
+import { AgentCacheService } from './agent.cache.service';
 
 @Module({
   imports: [
@@ -21,17 +22,17 @@ import { WalletManagerAdapterModule } from '@services/platform/wallet-manager-ad
     VerifiedCredentialModule,
     TrustRegistryAdapterModule,
     TypeOrmModule.forFeature([Agent]),
-    CacheModule.register(),
     TrustRegistryAdapterModule,
     SsiSovrhdAdapterModule,
     WalletManagerAdapterModule,
   ],
   providers: [
     AgentService,
+    AgentCacheService,
     AgentResolverMutations,
     AgentResolverFields,
     AgentResolverSubscriptions,
   ],
-  exports: [AgentService],
+  exports: [AgentService, AgentCacheService],
 })
 export class AgentModule {}

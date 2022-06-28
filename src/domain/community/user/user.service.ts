@@ -1,17 +1,22 @@
 import { UUID_LENGTH } from '@common/constants';
 import { LogContext, UserPreferenceType } from '@common/enums';
 import {
-  AuthenticationException,
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
+  UserAlreadyRegisteredException,
+  UserRegistrationInvalidEmail,
   ValidationException,
 } from '@common/exceptions';
 import { FormatNotSupportedException } from '@common/exceptions/format.not.supported.exception';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
+import {
+  Credential,
+  CredentialsSearchInput,
+  ICredential,
+} from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
@@ -49,9 +54,11 @@ import { PaginationArgs } from '@core/pagination';
 import { applyFiltering, UserFilterInput } from '@core/filtering';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
-import { LocationService } from '@domain/common/location/location.service';
 import { CreateProfileInput } from '../profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
+import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
+import { CommunityCredentials } from './dto/user.dto.community.credentials';
+import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
 
 @Injectable()
 export class UserService {
@@ -65,7 +72,6 @@ export class UserService {
     private namingService: NamingService,
     private agentService: AgentService,
     private preferenceSetService: PreferenceSetService,
-    private locationService: LocationService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -232,11 +238,18 @@ export class UserService {
   async createUserFromAgentInfo(agentInfo: AgentInfo): Promise<IUser> {
     // Extra check that there is valid data + no user with the email
     const email = agentInfo.email;
-    if (!email || email.length === 0 || (await this.isRegisteredUser(email))) {
-      throw new AuthenticationException(
-        `Invalid attempt to create a new User profile for user: ${email}`
+    if (!email || email.length === 0) {
+      throw new UserRegistrationInvalidEmail(
+        `Invalid email provided: ${email}`
       );
     }
+
+    if (await this.isRegisteredUser(email)) {
+      throw new UserAlreadyRegisteredException(
+        `User with email: ${email} already registered`
+      );
+    }
+
     return await this.createUser({
       nameID: this.createUserNameID(agentInfo.firstName, agentInfo.lastName),
       email: email,
@@ -332,32 +345,7 @@ export class UserService {
     userID: string,
     options?: FindOneOptions<User>
   ): Promise<IUser> {
-    let user: IUser | undefined;
-
-    if (validateEmail(userID)) {
-      user = await this.userRepository.findOne(
-        {
-          email: userID,
-        },
-        options
-      );
-    } else if (userID.length === UUID_LENGTH) {
-      {
-        user = await this.userRepository.findOne(
-          {
-            id: userID,
-          },
-          options
-        );
-      }
-    } else {
-      user = await this.userRepository.findOne(
-        {
-          nameID: userID,
-        },
-        options
-      );
-    }
+    const user = await this.getUserByEmailIdUUID(userID, options);
 
     if (!user) {
       throw new EntityNotFoundException(
@@ -389,6 +377,46 @@ export class UserService {
     }
 
     return user;
+  }
+
+  private async getUserByEmailIdUUID(
+    userID: string,
+    options: FindOneOptions<User> | undefined
+  ): Promise<IUser | undefined> {
+    let user: IUser | undefined = undefined;
+
+    if (await this.isUserIdEmail(userID)) {
+      user = await this.userRepository.findOne(
+        {
+          email: userID,
+        },
+        options
+      );
+    } else if (userID.length === UUID_LENGTH) {
+      {
+        user = await this.userRepository.findOne(
+          {
+            id: userID,
+          },
+          options
+        );
+      }
+    }
+
+    if (!user)
+      user = await this.userRepository.findOne(
+        {
+          nameID: userID,
+        },
+        options
+      );
+
+    return user;
+  }
+
+  private async isUserIdEmail(userId: string): Promise<boolean> {
+    if (userId.includes('@')) return true;
+    return false;
   }
 
   async getUserByEmail(
@@ -503,6 +531,88 @@ export class UserService {
     return getPaginationResults(qb, paginationArgs);
   }
 
+  public async getPaginatedAvailableMemberUsers(
+    communityCredentials: CommunityMemberCredentials,
+    paginationArgs: PaginationArgs,
+    filter?: UserFilterInput
+  ): Promise<IPaginatedType<IUser>> {
+    const currentMemberUsers = await this.usersWithCredentials(
+      communityCredentials.member
+    );
+
+    if (communityCredentials.parrentCommunityMember) {
+      const qb = await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.agent', 'agent')
+        .leftJoinAndSelect('agent.credentials', 'credential')
+        .where('credential.type = :type')
+        .andWhere('credential.resourceID = :resourceID')
+        .setParameters({
+          type: communityCredentials.parrentCommunityMember.type,
+          resourceID: communityCredentials.parrentCommunityMember.resourceID,
+        });
+
+      if (currentMemberUsers.length > 0) {
+        qb.andWhere('NOT user.id IN (:memberUsers)').setParameters({
+          memberUsers: currentMemberUsers.map(user => user.id),
+        });
+      }
+
+      if (filter) {
+        applyFiltering(qb, filter);
+      }
+
+      return getPaginationResults(qb, paginationArgs);
+    }
+
+    const qb = await this.userRepository.createQueryBuilder().select();
+
+    if (currentMemberUsers.length > 0) {
+      qb.where('NOT id IN (:memberUsers)').setParameters({
+        memberUsers: currentMemberUsers.map(user => user.id),
+      });
+    }
+
+    if (filter) {
+      applyFiltering(qb, filter);
+    }
+
+    return getPaginationResults(qb, paginationArgs);
+  }
+
+  public async getPaginatedAvailableLeadUsers(
+    communityCredentials: CommunityCredentials,
+    paginationArgs: PaginationArgs,
+    filter?: UserFilterInput
+  ): Promise<IPaginatedType<IUser>> {
+    const currentLeadUsers = await this.usersWithCredentials(
+      communityCredentials.lead
+    );
+
+    const qb = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.agent', 'agent')
+      .leftJoinAndSelect('agent.credentials', 'credential')
+      .where('credential.type = :type')
+      .andWhere('credential.resourceID = :resourceID')
+      .setParameters({
+        type: communityCredentials.member.type,
+        resourceID: communityCredentials.member.resourceID,
+      });
+
+    if (currentLeadUsers.length > 0) {
+      qb.andWhere('NOT user.id IN (:leadUsers)').setParameters({
+        leadUsers: currentLeadUsers.map(user => user.id),
+      });
+    }
+
+    if (filter) {
+      applyFiltering(qb, filter);
+    }
+
+    return getPaginationResults(qb, paginationArgs);
+  }
+
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
     const user = await this.getUserOrFail(userInput.ID);
 
@@ -577,7 +687,7 @@ export class UserService {
     credentialCriteria: CredentialsSearchInput
   ): Promise<IUser[]> {
     const credResourceID = credentialCriteria.resourceID || '';
-    const userMatches = await this.userRepository
+    const users = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.agent', 'agent')
       .leftJoinAndSelect('agent.credentials', 'credential')
@@ -589,13 +699,7 @@ export class UserService {
       })
       .getMany();
 
-    // reload to go through the normal loading path
-    const results: IUser[] = [];
-    for (const user of userMatches) {
-      const loadedOrganization = await this.getUserOrFail(user.id);
-      results.push(loadedOrganization);
-    }
-    return results;
+    return users;
   }
 
   async countUsersWithCredentials(
@@ -679,5 +783,64 @@ export class UserService {
   ): string {
     const base = `${firstName}-${lastName}`;
     return this.namingService.createNameID(base, useRandomSuffix);
+  }
+
+  async findProfilesByBatch(userIds: string[]): Promise<(IProfile | Error)[]> {
+    const users = await this.userRepository.findByIds(userIds, {
+      relations: ['profile'],
+      select: ['id'],
+    });
+
+    const results = users.filter(user => userIds.includes(user.id));
+    const mappedResults = userIds.map(
+      id =>
+        results.find(result => result.id === id)?.profile ||
+        new Error(`Could not load user ${id}`)
+    );
+    return mappedResults;
+  }
+
+  public getAgentInfoMetadata(
+    email: string
+  ): Promise<AgentInfoMetadata> | never {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .leftJoin('user.agent', 'agent')
+      .leftJoin('agent.credentials', 'credentials')
+      .select([
+        'user.id as userID',
+        'user.communicationID as communicationID',
+        'agent.id as agentID',
+        'credentials.id as id',
+        'credentials.resourceId as resourceID',
+        'credentials.type as type',
+      ])
+      .where('user.email = :email', { email: email })
+      .getRawMany<AgentInfoMetadata & Credential>()
+      .then(agentsWithCredentials => {
+        if (agentsWithCredentials.length === 0) {
+          throw new EntityNotFoundException(
+            `Unable to load User, Agent or Credentials for User: ${email}`,
+            LogContext.COMMUNITY
+          );
+        }
+
+        const agentInfo = new AgentInfoMetadata();
+        const credentials: ICredential[] = [];
+        for (const agent of agentsWithCredentials) {
+          credentials.push({
+            id: agent.id,
+            resourceID: agent.resourceID,
+            type: agent.type,
+          });
+        }
+
+        agentInfo.credentials = credentials;
+        agentInfo.agentID = agentsWithCredentials[0].agentID;
+        agentInfo.userID = agentsWithCredentials[0].userID;
+        agentInfo.communicationID = agentsWithCredentials[0].communicationID;
+
+        return agentInfo;
+      });
   }
 }

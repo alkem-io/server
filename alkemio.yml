@@ -103,6 +103,9 @@ identity:
     # A flag setting whether Authentication based on non-interactive login is enabled.
     api_access_enabled: ${AUTH_API_ENABLED}:true
 
+    # Time-to-live of the cache for user authentication info (credentials, verified credentials) in seconds. Defaults to 60.
+    cache_ttl: ${AUTH_CACHE_TTL}:60
+
     # A list of Identity Providers that can be used for authenticating the user.
     # The claims in the access token that are used in Alkemio are the user email and the token expiration time.
     providers:
@@ -173,6 +176,16 @@ identity:
 
         # Ory Kratos URL for usage by the Alkemio server when inside a cluster.
         kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:3000/identity/ory/kratos/public
+        kratos_admin_base_url_server: ${AUTH_ORY_KRATOS_ADMIN_BASE_URL_SERVER}:http://localhost:3000/identity/ory/kratos
+
+        # session can't be extended until *earliest_possible_extend* **hours** before it expires
+        # default is 24
+        earliest_possible_extend: ${AUTH_EARLIEST_POSSIBLE_SESSION_EXTEND}:24
+
+        # credentials used for kratos related work flows
+        admin_service_account:
+          username: ${KRATOS_ADMIN_USERNAME}:kratos@alkem.io
+          password: ${KRATOS_ADMIN_PASSWORD}:kr@t0$!!
 
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
@@ -191,6 +204,10 @@ monitoring:
 
     # A flag enabling / disabling performance logging.
     profiling_enabled: ${LOGGING_PROFILING_ENABLED}:true
+
+    # The logging format will be in json - useful for parsing
+    # if disabled - will be in a human readable form
+    json: ${LOGGING_FORMAT_JSON}:true
 
     # Logging of the incoming requests to the server
     requests:
@@ -313,6 +330,13 @@ storage:
     # Max file size of files that will be uploaded to IPFS (in bytes).
     max_file_size: 1048576
 
+  # Redis configuration
+  redis:
+    # Redis host
+    host: ${REDIS_HOST}:localhost
+    # Redis port
+    port: ${REDIS_PORT}:6379
+
 microservices:
   rabbitmq:
     # Connection in the form of 'amqp://[user]:[password]@[host]:[port]?heartbeat=30'
@@ -339,22 +363,31 @@ collaboration:
 ## Configuration of the legal / usability aspects of the platform
 platform:
   # Terms of usage that all users comply with
-  terms: ${PLATFORM_TERMS}:https://alkem.io/platform/terms
+  terms: ${PLATFORM_TERMS}:https://alkemio.foundation/legal/hub/#tc
 
   # Privacy policy for the platform
-  privacy: ${PLATFORM_PRIVACY}:https://alkem.io/platform/privacy
+  privacy: ${PLATFORM_PRIVACY}:https://alkemio.foundation/privacy/
 
   # Security policy for the platform
-  security: ${PLATFORM_SECURITY}:https://alkem.io/platform/security
+  security: ${PLATFORM_SECURITY}:https://alkemio.foundation/security/
 
   # Link for support requests
-  support: ${PLATFORM_SUPPORT}:https://alkem.io/platform/support
+  support: ${PLATFORM_SUPPORT}:https://alkemio.foundation/support/
 
   # Feedback form for the platform
-  feedback: ${PLATFORM_FEEDBACK}:https://alkem.io/platform/feedback
+  feedback: ${PLATFORM_FEEDBACK}:https://alkemio.foundation/feedback/
 
   # About the platform
-  about: ${PLATFORM_ABOUT}:https://alkem.io/platform/about
+  about: ${PLATFORM_ABOUT}:https://alkemio.foundation/about/
+
+  # Home page - Impact
+  impact: ${PLATFORM_IMPACT}:https://alkemio.foundation
+
+  # Home page - Foundation
+  foundation: ${PLATFORM_FOUNDATION}:https://alkemio.foundation/vision/
+
+  # Home page - Opensource
+  opensource: ${PLATFORM_OPENSOURCE}:https://github.com/alkem-io
 
 ssi:
   # Jolocom SDK is used for providing SSI capabilities on the platform.
@@ -447,5 +480,3 @@ ssi:
       context:
         alkemioUser_userID: 'schema:uuid'
         alkemioUser_email: 'schema:email'
-
-
