@@ -12,7 +12,11 @@ import { FormatNotSupportedException } from '@common/exceptions/format.not.suppo
 import { AgentInfo } from '@core/authentication/agent-info';
 import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { CredentialsSearchInput, ICredential } from '@domain/agent/credential';
+import {
+  Credential,
+  CredentialsSearchInput,
+  ICredential,
+} from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
@@ -52,6 +56,7 @@ import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { CreateProfileInput } from '../profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
+import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
 
@@ -778,5 +783,64 @@ export class UserService {
   ): string {
     const base = `${firstName}-${lastName}`;
     return this.namingService.createNameID(base, useRandomSuffix);
+  }
+
+  async findProfilesByBatch(userIds: string[]): Promise<(IProfile | Error)[]> {
+    const users = await this.userRepository.findByIds(userIds, {
+      relations: ['profile'],
+      select: ['id'],
+    });
+
+    const results = users.filter(user => userIds.includes(user.id));
+    const mappedResults = userIds.map(
+      id =>
+        results.find(result => result.id === id)?.profile ||
+        new Error(`Could not load user ${id}`)
+    );
+    return mappedResults;
+  }
+
+  public getAgentInfoMetadata(
+    email: string
+  ): Promise<AgentInfoMetadata> | never {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .leftJoin('user.agent', 'agent')
+      .leftJoin('agent.credentials', 'credentials')
+      .select([
+        'user.id as userID',
+        'user.communicationID as communicationID',
+        'agent.id as agentID',
+        'credentials.id as id',
+        'credentials.resourceId as resourceID',
+        'credentials.type as type',
+      ])
+      .where('user.email = :email', { email: email })
+      .getRawMany<AgentInfoMetadata & Credential>()
+      .then(agentsWithCredentials => {
+        if (agentsWithCredentials.length === 0) {
+          throw new EntityNotFoundException(
+            `Unable to load User, Agent or Credentials for User: ${email}`,
+            LogContext.COMMUNITY
+          );
+        }
+
+        const agentInfo = new AgentInfoMetadata();
+        const credentials: ICredential[] = [];
+        for (const agent of agentsWithCredentials) {
+          credentials.push({
+            id: agent.id,
+            resourceID: agent.resourceID,
+            type: agent.type,
+          });
+        }
+
+        agentInfo.credentials = credentials;
+        agentInfo.agentID = agentsWithCredentials[0].agentID;
+        agentInfo.userID = agentsWithCredentials[0].userID;
+        agentInfo.communicationID = agentsWithCredentials[0].communicationID;
+
+        return agentInfo;
+      });
   }
 }
