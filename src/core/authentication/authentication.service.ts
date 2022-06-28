@@ -131,7 +131,7 @@ export class AuthenticationService {
       agentInfo.verifiedCredentials = VCs;
     }
 
-    this.agentCacheService.setAgentInfoCache(agentInfo);
+    await this.agentCacheService.setAgentInfoCache(agentInfo);
 
     return agentInfo;
   }

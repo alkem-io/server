@@ -1,3 +1,4 @@
+// import { REDIS_LOCK_SERVICE } from '@common/constants';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { LogContext } from '@common/enums/logging.context';
 import { AgentInfo } from '@core/authentication';
@@ -10,6 +11,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+// import Redlock, { RedlockAbortSignal } from 'redlock';
 import { getConnection } from 'typeorm';
 import { IAgent, ICredential } from '..';
 @Injectable()
@@ -19,6 +21,8 @@ export class AgentCacheService {
   constructor(
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
+    // @Inject(REDIS_LOCK_SERVICE)
+    // private readonly redisLockService: Redlock,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private configService: ConfigService
@@ -37,14 +41,65 @@ export class AgentCacheService {
   }
 
   public async setAgentInfoCache(agentInfo: AgentInfo): Promise<AgentInfo> {
-    return await this.cacheManager.set<AgentInfo>(
-      this.getAgentInfoCacheKey(agentInfo.email),
-      agentInfo,
-      {
-        ttl: this.cache_ttl,
-      }
-    );
+    const cacheKey = this.getAgentInfoCacheKey(agentInfo.email);
+    return await this.cacheManager.set<AgentInfo>(cacheKey, agentInfo, {
+      ttl: this.cache_ttl,
+    });
   }
+
+  //toDo add redis distributed to lock to make the code thread-safe
+  //https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2021
+
+  // public async setAgentInfoCache(
+  //   agentInfo: AgentInfo
+  // ): Promise<AgentInfo | undefined> {
+  //   let updatedAgentInfo: AgentInfo = new AgentInfo();
+  //   const cacheKey = this.getAgentInfoCacheKey(agentInfo.email);
+
+  //   let lock;
+  //   try {
+  //     lock = await this.redisLockService.acquire([`lock:${cacheKey}`], 2000);
+  //   } catch (error) {
+  //     this.logger.verbose?.(
+  //       `Couldn't acquire redis lock: ${error}`,
+  //       LogContext.AUTH
+  //     );
+  //     return undefined;
+  //   }
+
+  //   try {
+  //     updatedAgentInfo = await this.cacheManager.set<AgentInfo>(
+  //       cacheKey,
+  //       agentInfo,
+  //       {
+  //         ttl: this.cache_ttl,
+  //       }
+  //     );
+  //   } catch (error) {
+  //     this.logger.error(`Couldn't update cache: ${error}`, LogContext.AUTH);
+  //     return undefined;
+  //   } finally {
+  //     await lock?.release();
+  //   }
+  // await this.redisLockService.using(
+  //   [cacheKey],
+  //   1000,
+  //   async (signal: RedlockAbortSignal) => {
+  //     if (signal.aborted) {
+  //       throw signal.error;
+  //     }
+
+  //     updatedAgentInfo = await this.cacheManager.set<AgentInfo>(
+  //       cacheKey,
+  //       agentInfo,
+  //       {
+  //         ttl: this.cache_ttl,
+  //       }
+  //     );
+  //   }
+  // );
+  //   return updatedAgentInfo;
+  // }
 
   public async updateAgentInfoCache(
     agent: IAgent
@@ -54,7 +109,7 @@ export class AgentCacheService {
     if (!email) return undefined;
 
     const cachedAgentInfo = await this.getAgentInfoFromCache(email);
-
+    await this.cacheManager.store;
     if (!cachedAgentInfo) {
       this.logger.verbose?.(
         `No user cache found for user ${email}. Skipping cache update!`,
@@ -65,13 +120,7 @@ export class AgentCacheService {
     }
 
     cachedAgentInfo.credentials = agent.credentials as ICredential[];
-    return await this.cacheManager.set<AgentInfo>(
-      this.getAgentInfoCacheKey(email),
-      cachedAgentInfo,
-      {
-        ttl: this.cache_ttl,
-      }
-    );
+    return await this.setAgentInfoCache(cachedAgentInfo);
   }
 
   private getAgentInfoCacheKey(email: string): string {
@@ -83,7 +132,8 @@ export class AgentCacheService {
       `SELECT \`u\`.\`email\` FROM \`agent\` as \`a\`
       RIGHT JOIN \`user\` as \`u\`
       ON \`u\`.\`agentId\` = \`a\`.\`id\`
-      WHERE \`a\`.\`id\` = '${agentId}'`
+      WHERE \`a\`.\`id\` = ?`,
+      [agentId]
     );
 
     if (!users[0]) return undefined;
