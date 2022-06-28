@@ -1,5 +1,4 @@
-import { Module } from '@nestjs/common';
-import { HttpModule } from '@nestjs/axios';
+import { CacheModule, Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { UserModule } from '@domain/community/user/user.module';
 import { AuthenticationService } from './authentication.service';
@@ -15,10 +14,10 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
       session: false,
       defaultStrategy: 'oathkeeper-jwt',
     }),
-    HttpModule,
     UserModule,
     AgentModule,
     CredentialModule,
+    CacheModule.register(),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

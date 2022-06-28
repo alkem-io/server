@@ -42,6 +42,7 @@ import { RolesModule } from '@services/domain/roles/roles.module';
 import { DataloaderService } from '@core/dataloader/dataloader.service';
 import { DataloaderModule } from '@core/dataloader/dataloader.module';
 import * as redisStore from 'cache-manager-redis-store';
+import { RedisLockModule } from '@core/caching/redis/redis.lock.module';
 
 @Module({
   imports: [
@@ -187,6 +188,7 @@ import * as redisStore from 'cache-manager-redis-store';
     AdminCommunicationModule,
     AgentModule,
     RegistrationModule,
+    RedisLockModule,
   ],
   controllers: [AppController],
   providers: [
