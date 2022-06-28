@@ -84,6 +84,8 @@
     "passport": "^0.4.1",
     "passport-custom": "^1.1.1",
     "passport-jwt": "^4.0.0",
+    "redis": "^3.1.2",
+    "redlock": "^5.0.0-beta.2",
     "reflect-metadata": "^0.1.13",
     "replace-special-characters": "^1.2.5",
     "rimraf": "^3.0.2",
