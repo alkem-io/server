@@ -6,6 +6,7 @@ import { HubModule } from '@domain/challenge/hub/hub.module';
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { CommunicationModule } from '@domain/communication/communication/communication.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     CommunityModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
+    CommunicationModule,
   ],
   providers: [ConversionService, ConversionResolverMutations],
   exports: [ConversionService, ConversionResolverMutations],

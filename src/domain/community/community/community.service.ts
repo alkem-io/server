@@ -181,6 +181,10 @@ export class CommunityService {
     return true;
   }
 
+  async save(community: ICommunity): Promise<ICommunity> {
+    return await this.communityRepository.save(community);
+  }
+
   async getParentCommunity(
     community: ICommunity
   ): Promise<ICommunity | undefined> {

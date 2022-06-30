@@ -13,13 +13,17 @@ import {
 } from '@common/exceptions';
 import { CommunityRole } from '@common/enums/community.role';
 import { CreateHubInput } from '@domain/challenge/hub/dto/hub.dto.create';
-import { CommunityType } from '@common/enums/community.type';
+import { IOrganization } from '@domain/community/organization/organization.interface';
+import { IUser } from '@domain/community/user/user.interface';
+import { ICommunity } from '@domain/community/community/community.interface';
+import { CommunicationService } from '@domain/communication/communication/communication.service';
 
 export class ConversionService {
   constructor(
     private hubService: HubService,
     private challengeService: ChallengeService,
     private communityService: CommunityService,
+    private communicationService: CommunicationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -83,82 +87,38 @@ export class ConversionService {
     );
 
     // Remove the contributors from old roles
-    for (const userMember of userMembers) {
-      await this.communityService.removeUserFromRole(
-        challengeCommunity,
-        userMember.id,
-        CommunityRole.MEMBER
-      );
-    }
-    for (const userLead of userLeads) {
-      await this.communityService.removeUserFromRole(
-        challengeCommunity,
-        userLead.id,
-        CommunityRole.LEAD
-      );
-    }
-    for (const orgMember of orgMembers) {
-      await this.communityService.removeOrganizationFromRole(
-        challengeCommunity,
-        orgMember.id,
-        CommunityRole.MEMBER
-      );
-    }
-    await this.communityService.removeOrganizationFromRole(
+    await this.removeContributors(
       challengeCommunity,
-      hostOrg.id,
-      CommunityRole.LEAD
+      userMembers,
+      userLeads,
+      orgMembers,
+      challengeCommunityLeadOrgs
+    );
+    // also remove the current user from the members of the hub
+    await this.communityService.removeUserFromRole(
+      hubCommunity,
+      agentInfo.userID,
+      CommunityRole.MEMBER
     );
 
-    // Swap the communities
-    const hubCommunityPolicy =
-      this.communityService.getCommunityPolicy(hubCommunity);
-    const challengeCommunityPolicy =
-      this.communityService.getCommunityPolicy(challengeCommunity);
-    challengeCommunity.type = CommunityType.HUB;
-    challengeCommunity.hubID = hub.id;
-    challengeCommunity.parentCommunity = undefined;
-
-    hub.community = challengeCommunity;
-    challenge.community = hubCommunity;
-    this.communityService.setCommunityPolicy(hub.community, hubCommunityPolicy);
-    this.communityService.setCommunityPolicy(
-      challenge.community,
-      challengeCommunityPolicy
+    // Swap the pieces to be re-used
+    const hubCommunication = await this.communityService.getCommunication(
+      hubCommunity.id
     );
-    // Save both + then re-assign the roles
-    await this.hubService.save(hub);
-    await this.challengeService.save(challenge);
+    const challengeCommunication = await this.communityService.getCommunication(
+      challengeCommunity.id
+    );
+    const tmpCommunication =
+      await this.communicationService.createCommunication('temp', hub.id);
+    challengeCommunity.communication = tmpCommunication;
+    await this.communityService.save(challengeCommunity);
+    hubCommunity.communication = challengeCommunication;
+    if (hubCommunication) {
+      await this.communicationService.removeCommunication(hubCommunication.id);
+    }
 
-    // Add the users into their new roles
-    const hubCommunityUpdated = hub.community;
-    if (!hubCommunityUpdated) {
-      throw new EntityNotInitializedException(
-        `Unable to locate updated Community on Hub: ${hub.nameID}`,
-        LogContext.CHALLENGES
-      );
-    }
-    for (const userMember of userMembers) {
-      await this.communityService.assignUserToRole(
-        hubCommunityUpdated,
-        userMember.id,
-        CommunityRole.MEMBER
-      );
-    }
-    for (const userLead of userLeads) {
-      await this.communityService.assignUserToRole(
-        hubCommunityUpdated,
-        userLead.id,
-        CommunityRole.LEAD
-      );
-    }
-    for (const orgMember of orgMembers) {
-      await this.communityService.assignOrganizationToRole(
-        hubCommunityUpdated,
-        orgMember.id,
-        CommunityRole.MEMBER
-      );
-    }
+    hub.community = hubCommunity;
+    challenge.community = challengeCommunity;
 
     // Swap the contexts
     const challengeContext = challenge.context;
@@ -166,9 +126,30 @@ export class ConversionService {
     hub.context = challengeContext;
     challenge.context = hubContext;
 
+    // Save both + then re-assign the roles
+    const updatedHub = await this.hubService.save(hub);
+    const updatedChallenge = await this.challengeService.save(challenge);
+
+    // Add the users into their new roles
+    const hubCommunityUpdated = updatedHub.community;
+    if (!hubCommunityUpdated) {
+      throw new EntityNotInitializedException(
+        `Unable to locate updated Community on Hub: ${updatedHub.nameID}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    // Assign users to roles in new hub
+    await this.assignContributors(
+      hubCommunityUpdated,
+      userMembers,
+      userLeads,
+      orgMembers
+    );
+
     // Finally delete the Challenge
     await this.challengeService.deleteChallenge({
-      ID: challenge.id,
+      ID: updatedChallenge.id,
     });
 
     // Notes: (a) remove old membership credentials + add new ones
@@ -178,5 +159,81 @@ export class ConversionService {
     // Update hubID field everywhere where that is passed down (community, context), unless we re-use the challengeID as the new hubID...
     // when deleting make sure not to delete re-used entities!!
     return hub;
+  }
+
+  private async removeContributors(
+    community: ICommunity,
+    userMembers: IUser[],
+    userLeads: IUser[],
+    orgMembers: IOrganization[],
+    orgLeads: IOrganization[]
+  ) {
+    for (const userMember of userMembers) {
+      await this.communityService.removeUserFromRole(
+        community,
+        userMember.id,
+        CommunityRole.MEMBER
+      );
+    }
+    for (const userLead of userLeads) {
+      await this.communityService.removeUserFromRole(
+        community,
+        userLead.id,
+        CommunityRole.LEAD
+      );
+    }
+    for (const orgMember of orgMembers) {
+      await this.communityService.removeOrganizationFromRole(
+        community,
+        orgMember.id,
+        CommunityRole.MEMBER
+      );
+    }
+    for (const orgLead of orgLeads) {
+      await this.communityService.removeOrganizationFromRole(
+        community,
+        orgLead.id,
+        CommunityRole.LEAD
+      );
+    }
+  }
+
+  private async assignContributors(
+    community: ICommunity,
+    userMembers: IUser[],
+    userLeads: IUser[],
+    orgMembers: IOrganization[],
+    orgLeads?: IOrganization[]
+  ) {
+    for (const userMember of userMembers) {
+      await this.communityService.assignUserToRole(
+        community,
+        userMember.id,
+        CommunityRole.MEMBER
+      );
+    }
+    for (const userLead of userLeads) {
+      await this.communityService.assignUserToRole(
+        community,
+        userLead.id,
+        CommunityRole.LEAD
+      );
+    }
+    for (const orgMember of orgMembers) {
+      await this.communityService.assignOrganizationToRole(
+        community,
+        orgMember.id,
+        CommunityRole.MEMBER
+      );
+    }
+    if (orgLeads) {
+      for (const orgLead of orgLeads) {
+        await this.communityService.assignOrganizationToRole(
+          community,
+          orgLead.id,
+          CommunityRole.LEAD
+        );
+      }
+    }
   }
 }
