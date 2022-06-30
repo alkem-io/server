@@ -67,15 +67,6 @@ export class ConversionService {
     };
     const hub = await this.hubService.createHub(createHubInput, agentInfo);
 
-    // Swap the communities...
-    const hubCommunity = hub.community;
-    if (!hubCommunity) {
-      throw new EntityNotInitializedException(
-        `Unable to locate Community on Hub: ${hub.nameID}`,
-        LogContext.CHALLENGES
-      );
-    }
-
     const userMembers = await this.communityService.getUsersWithRole(
       challengeCommunity,
       CommunityRole.MEMBER
@@ -98,13 +89,20 @@ export class ConversionService {
       challengeCommunityLeadOrgs
     );
     // also remove the current user from the members of the hub
+    const hubCommunity = hub.community;
+    if (!hubCommunity) {
+      throw new EntityNotInitializedException(
+        `Unable to locate Community on Hub: ${hub.nameID}`,
+        LogContext.CHALLENGES
+      );
+    }
     await this.communityService.removeUserFromRole(
       hubCommunity,
       agentInfo.userID,
       CommunityRole.MEMBER
     );
 
-    // Swap the pieces to be re-used
+    // Swap the communications
     await this.swapCommunication(hubCommunity, challengeCommunity);
     const hubCommunityUpdated = await this.hubService.getCommunity(hub);
 
@@ -155,14 +153,7 @@ export class ConversionService {
         relations: ['community', 'context'],
       }
     );
-    // check the community is in a fit state
-    const opportunityCommunity = opportunity.community;
-    if (!opportunityCommunity) {
-      throw new EntityNotInitializedException(
-        `Unable to locate Community on Opportunity: ${opportunity.nameID}`,
-        LogContext.CHALLENGES
-      );
-    }
+
     const challengeNameID = `${opportunity.nameID}c`;
     await this.hubService.validateChallengeNameIdOrFail(challengeNameID, hubID);
 
@@ -175,11 +166,10 @@ export class ConversionService {
       agentInfo
     );
 
-    // Swap the communities...
-    const challengeCommunity = challenge.community;
-    if (!challengeCommunity) {
+    const opportunityCommunity = opportunity.community;
+    if (!opportunityCommunity) {
       throw new EntityNotInitializedException(
-        `Unable to locate Community on Challenge: ${challenge.nameID}`,
+        `Unable to locate Community on Opportunity: ${opportunity.nameID}`,
         LogContext.CHALLENGES
       );
     }
@@ -209,14 +199,22 @@ export class ConversionService {
       orgMembers,
       orgLeads
     );
-    // also remove the current user from the members of the newly created Challenge
+    const challengeCommunity = challenge.community;
+    if (!challengeCommunity) {
+      throw new EntityNotInitializedException(
+        `Unable to locate Community on Challenge: ${challenge.nameID}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    // also remove the current user from the members of the newly created Challenge, otherwise will end up re-assigning
     await this.communityService.removeUserFromRole(
       challengeCommunity,
       agentInfo.userID,
       CommunityRole.MEMBER
     );
 
-    // Swap the pieces to be re-used
+    // Swap the communication
     await this.swapCommunication(challengeCommunity, opportunityCommunity);
     const challengeCommunityUpdated = await this.challengeService.getCommunity(
       challenge.id
