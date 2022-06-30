@@ -150,6 +150,10 @@ export class HubService {
       );
   }
 
+  async save(hub: IHub): Promise<IHub> {
+    return await this.hubRepository.save(hub);
+  }
+
   async update(hubData: UpdateHubInput): Promise<IHub> {
     const hub: IHub = await this.baseChallengeService.update(
       hubData,

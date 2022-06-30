@@ -1,0 +1,22 @@
+import { Module } from '@nestjs/common';
+import { ConversionService } from './conversion.service';
+import { ConversionResolverMutations } from './conversion.resolver.mutations';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { HubModule } from '@domain/challenge/hub/hub.module';
+import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
+import { CommunityModule } from '@domain/community/community/community.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+
+@Module({
+  imports: [
+    AuthorizationModule,
+    HubModule,
+    ChallengeModule,
+    CommunityModule,
+    AuthorizationModule,
+    AuthorizationPolicyModule,
+  ],
+  providers: [ConversionService, ConversionResolverMutations],
+  exports: [ConversionService, ConversionResolverMutations],
+})
+export class ConversionModule {}
