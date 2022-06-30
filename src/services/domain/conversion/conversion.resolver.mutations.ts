@@ -13,6 +13,12 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ConvertChallengeToHubInput } from './dto/convert.dto.challenge.to.hub.input';
 import { HubAuthorizationService } from '@domain/challenge/hub/hub.service.authorization';
+import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
+import { ConvertOpportunityToChallengeInput } from './dto/convert.dto.opportunity.to.challenge.input';
+import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { HubService } from '@domain/challenge/hub/hub.service';
+import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 
 @Resolver()
 export class ConversionResolverMutations {
@@ -23,19 +29,23 @@ export class ConversionResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private conversionService: ConversionService,
     private hubAuthorizationService: HubAuthorizationService,
+    private challengeAuthorizationService: ChallengeAuthorizationService,
+    private hubService: HubService,
+    private opportunityService: OpportunityService,
+    private challengeService: ChallengeService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.GLOBAL_ADMIN],
-        [AuthorizationPrivilege.CREATE_HUB]
+        [AuthorizationPrivilege.CREATE_HUB, AuthorizationPrivilege.CREATE]
       );
   }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IHub, {
-    description: 'Creates a new Hub by converting an existing Challenge. .',
+    description: 'Creates a new Hub by converting an existing Challenge.',
   })
   @Profiling.api
   async convertChallengeToHub(
@@ -54,5 +64,36 @@ export class ConversionResolverMutations {
     );
 
     return await this.hubAuthorizationService.applyAuthorizationPolicy(newHub);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IChallenge, {
+    description:
+      'Creates a new Challenge by converting an existing Opportunity.',
+  })
+  @Profiling.api
+  async convertOpportunityToChallenge(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('convertData')
+    convertOpportunityToChallengeData: ConvertOpportunityToChallengeInput
+  ): Promise<IChallenge> {
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      convertOpportunityToChallengeData.opportunityID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.authorizationGlobalAdminPolicy,
+      AuthorizationPrivilege.CREATE,
+      `convert opportunity to challenge: ${agentInfo.email}`
+    );
+    const newChallenge =
+      await this.conversionService.convertOpportunityToChallenge(
+        convertOpportunityToChallengeData.opportunityID,
+        opportunity.hubID,
+        agentInfo
+      );
+    const parentHub = await this.hubService.getHubOrFail(newChallenge.hubID);
+    await this.hubAuthorizationService.applyAuthorizationPolicy(parentHub);
+    return this.challengeService.getChallengeOrFail(newChallenge.id);
   }
 }

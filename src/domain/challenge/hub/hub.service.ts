@@ -500,22 +500,24 @@ export class HubService {
     );
   }
 
+  async validateChallengeNameIdOrFail(proposedNameID: string, hubID: string) {
+    const nameAvailable = await this.namingService.isNameIdAvailableInHub(
+      proposedNameID,
+      hubID
+    );
+    if (!nameAvailable)
+      throw new ValidationException(
+        `Unable to create Challenge: the provided nameID is already taken: ${proposedNameID}`,
+        LogContext.CHALLENGES
+      );
+  }
+
   async createChallengeInHub(
     challengeData: CreateChallengeOnHubInput,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
-    const hub = await this.getHubOrFail(challengeData.hubID, {
-      relations: ['challenges', 'community'],
-    });
-    const nameAvailable = await this.namingService.isNameIdAvailableInHub(
-      challengeData.nameID,
-      hub.id
-    );
-    if (!nameAvailable)
-      throw new ValidationException(
-        `Unable to create Challenge: the provided nameID is already taken: ${challengeData.nameID}`,
-        LogContext.CHALLENGES
-      );
+    const hub = await this.getHubOrFail(challengeData.hubID);
+    await this.validateChallengeNameIdOrFail(challengeData.nameID, hub.id);
 
     // Update the challenge data being passed in to state set the parent ID to the contained challenge
     const newChallenge = await this.challengeService.createChallenge(
@@ -523,21 +525,29 @@ export class HubService {
       hub.id,
       agentInfo
     );
+
+    await this.addChallengeToHub(hub.id, newChallenge);
+    return newChallenge;
+  }
+
+  async addChallengeToHub(hubID: string, challenge: IChallenge): Promise<IHub> {
+    const hub = await this.getHubOrFail(hubID, {
+      relations: ['challenges', 'community'],
+    });
     if (!hub.challenges)
       throw new ValidationException(
-        `Unable to create Challenge: challenges not initialized: ${challengeData.hubID}`,
+        `Unable to create Challenge: challenges not initialized: ${hubID}`,
         LogContext.CHALLENGES
       );
 
-    hub.challenges.push(newChallenge);
+    hub.challenges.push(challenge);
     // Finally set the community relationship
     await this.communityService.setParentCommunity(
-      newChallenge.community,
+      challenge.community,
       hub.community
     );
 
-    await this.hubRepository.save(hub);
-    return newChallenge;
+    return await this.hubRepository.save(hub);
   }
 
   async getChallenge(challengeID: string, hub: IHub): Promise<IChallenge> {

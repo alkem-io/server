@@ -17,11 +17,14 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { IUser } from '@domain/community/user/user.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
+import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 
 export class ConversionService {
   constructor(
     private hubService: HubService,
     private challengeService: ChallengeService,
+    private opportunityService: OpportunityService,
     private communityService: CommunityService,
     private communicationService: CommunicationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -102,23 +105,8 @@ export class ConversionService {
     );
 
     // Swap the pieces to be re-used
-    const hubCommunication = await this.communityService.getCommunication(
-      hubCommunity.id
-    );
-    const challengeCommunication = await this.communityService.getCommunication(
-      challengeCommunity.id
-    );
-    const tmpCommunication =
-      await this.communicationService.createCommunication('temp', hub.id);
-    challengeCommunity.communication = tmpCommunication;
-    await this.communityService.save(challengeCommunity);
-    hubCommunity.communication = challengeCommunication;
-    if (hubCommunication) {
-      await this.communicationService.removeCommunication(hubCommunication.id);
-    }
-
-    hub.community = hubCommunity;
-    challenge.community = challengeCommunity;
+    await this.swapCommunication(hubCommunity, challengeCommunity);
+    const hubCommunityUpdated = await this.hubService.getCommunity(hub);
 
     // Swap the contexts
     const challengeContext = challenge.context;
@@ -126,18 +114,9 @@ export class ConversionService {
     hub.context = challengeContext;
     challenge.context = hubContext;
 
-    // Save both + then re-assign the roles
-    const updatedHub = await this.hubService.save(hub);
+    // Save both + then delete the challenge (save is needed to ensure right context is deleted etc)
+    await this.hubService.save(hub);
     const updatedChallenge = await this.challengeService.save(challenge);
-
-    // Add the users into their new roles
-    const hubCommunityUpdated = updatedHub.community;
-    if (!hubCommunityUpdated) {
-      throw new EntityNotInitializedException(
-        `Unable to locate updated Community on Hub: ${updatedHub.nameID}`,
-        LogContext.CHALLENGES
-      );
-    }
 
     // Assign users to roles in new hub
     await this.assignContributors(
@@ -147,18 +126,154 @@ export class ConversionService {
       orgMembers
     );
 
+    // Now migrate all the child opportunities...
+    const opportunities = await this.challengeService.getOpportunities(
+      updatedChallenge.id
+    );
+    for (const opportunity of opportunities) {
+      await this.convertOpportunityToChallenge(
+        opportunity.id,
+        hub.id,
+        agentInfo
+      );
+    }
     // Finally delete the Challenge
     await this.challengeService.deleteChallenge({
       ID: updatedChallenge.id,
     });
-
-    // Notes: (a) remove old membership credentials + add new ones
-    // (b) update the community policy
-    // convert opportunities into challenges
-    // update community parent
-    // Update hubID field everywhere where that is passed down (community, context), unless we re-use the challengeID as the new hubID...
-    // when deleting make sure not to delete re-used entities!!
     return hub;
+  }
+
+  async convertOpportunityToChallenge(
+    opportunityID: string,
+    hubID: string,
+    agentInfo: AgentInfo
+  ): Promise<IChallenge> {
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      opportunityID,
+      {
+        relations: ['community', 'context'],
+      }
+    );
+    // check the community is in a fit state
+    const opportunityCommunity = opportunity.community;
+    if (!opportunityCommunity) {
+      throw new EntityNotInitializedException(
+        `Unable to locate Community on Opportunity: ${opportunity.nameID}`,
+        LogContext.CHALLENGES
+      );
+    }
+    const challengeNameID = `${opportunity.nameID}c`;
+    await this.hubService.validateChallengeNameIdOrFail(challengeNameID, hubID);
+
+    const challenge = await this.challengeService.createChallenge(
+      {
+        nameID: challengeNameID,
+        displayName: opportunity.displayName,
+      },
+      hubID,
+      agentInfo
+    );
+
+    // Swap the communities...
+    const challengeCommunity = challenge.community;
+    if (!challengeCommunity) {
+      throw new EntityNotInitializedException(
+        `Unable to locate Community on Challenge: ${challenge.nameID}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    const userMembers = await this.communityService.getUsersWithRole(
+      opportunityCommunity,
+      CommunityRole.MEMBER
+    );
+    const userLeads = await this.communityService.getUsersWithRole(
+      opportunityCommunity,
+      CommunityRole.LEAD
+    );
+    const orgMembers = await this.communityService.getOrganizationsWithRole(
+      opportunityCommunity,
+      CommunityRole.MEMBER
+    );
+    const orgLeads = await this.communityService.getOrganizationsWithRole(
+      opportunityCommunity,
+      CommunityRole.LEAD
+    );
+
+    // Remove the contributors from old roles
+    await this.removeContributors(
+      opportunityCommunity,
+      userMembers,
+      userLeads,
+      orgMembers,
+      orgLeads
+    );
+    // also remove the current user from the members of the newly created Challenge
+    await this.communityService.removeUserFromRole(
+      challengeCommunity,
+      agentInfo.userID,
+      CommunityRole.MEMBER
+    );
+
+    // Swap the pieces to be re-used
+    await this.swapCommunication(challengeCommunity, opportunityCommunity);
+    const challengeCommunityUpdated = await this.challengeService.getCommunity(
+      challenge.id
+    );
+
+    // Swap the contexts
+    const opportunityContext = opportunity.context;
+    const challengeContext = challenge.context;
+    challenge.context = opportunityContext;
+    opportunity.context = challengeContext;
+
+    // Save both + then re-assign the roles
+    await this.challengeService.save(challenge);
+    const updatedOpportunity = await this.opportunityService.save(opportunity);
+    await this.opportunityService.deleteOpportunity(updatedOpportunity.id);
+
+    // Assign users to roles in new challenge
+    await this.assignContributors(
+      challengeCommunityUpdated,
+      userMembers,
+      userLeads,
+      orgMembers,
+      orgLeads
+    );
+
+    // Add the new challenge to the hub
+    await this.hubService.addChallengeToHub(hubID, challenge);
+
+    return challenge;
+  }
+
+  private async swapCommunication(
+    parentCommunity: ICommunity,
+    childCommunity: ICommunity
+  ) {
+    const parentCommunication = await this.communityService.getCommunication(
+      parentCommunity.id
+    );
+    const childCommunication = await this.communityService.getCommunication(
+      childCommunity.id
+    );
+    const tmpCommunication =
+      await this.communicationService.createCommunication(
+        'temp',
+        parentCommunity.hubID
+      );
+    childCommunity.communication = tmpCommunication;
+    // Need to save with temp communication to avoid db validation error re duplicate usage
+    await this.communityService.save(childCommunity);
+    parentCommunity.communication = childCommunication;
+    await this.communityService.save(parentCommunity);
+    // And remove the old parent Communicaiton that is no longer used
+    if (parentCommunication) {
+      await this.communicationService.removeCommunication(
+        parentCommunication.id
+      );
+    }
   }
 
   private async removeContributors(
