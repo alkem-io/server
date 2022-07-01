@@ -5,6 +5,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -108,11 +109,22 @@ export class TemplatesSetService {
     templatesSet: ITemplatesSet,
     aspectTemplateInput: CreateAspectTemplateInput
   ): Promise<IAspectTemplate> {
+    const newTemplateType = aspectTemplateInput.type;
+    templatesSet.aspectTemplates = await this.getAspectTemplates(templatesSet);
+
+    const existingType = templatesSet.aspectTemplates.find(
+      template => template.type === newTemplateType
+    );
+    if (existingType) {
+      throw new ValidationException(
+        `AspectTemplate with the provided type already exists: ${newTemplateType}`,
+        LogContext.CONTEXT
+      );
+    }
     const aspectTemplate =
       await this.aspectTemplateService.createAspectTemplate(
         aspectTemplateInput
       );
-    templatesSet.aspectTemplates = await this.getAspectTemplates(templatesSet);
     templatesSet.aspectTemplates.push(aspectTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return aspectTemplate;
