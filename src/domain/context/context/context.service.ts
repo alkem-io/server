@@ -273,7 +273,8 @@ export class ContextService {
       );
 
     const canvas = await this.canvasService.createCanvas({
-      name: canvasData.name,
+      displayName: canvasData.displayName,
+      nameID: canvasData.nameID,
       value: canvasData.value,
     });
     context.canvases.push(canvas);

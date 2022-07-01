@@ -13,16 +13,10 @@ import { Reference } from '@domain/common/reference/reference.entity';
 import { Comments } from '@domain/communication/comments';
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { NameableEntity } from '@domain/common';
 
 @Entity()
-export class Aspect extends AuthorizableEntity implements IAspect {
-  @Column()
-  displayName!: string;
-
-  @Column({ nullable: true })
-  nameID?: string;
-
+export class Aspect extends NameableEntity implements IAspect {
   @Column('text')
   description: string;
 
