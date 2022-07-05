@@ -83,7 +83,7 @@ export class CommunityResolverFields {
       community
     );
 
-    const parrentCommunityMemberCredentials = parentCommunity
+    const parentCommunityMemberCredentials = parentCommunity
       ? this.communityService.getCredentialDefinitionForRole(
           parentCommunity,
           CommunityRole.MEMBER
@@ -92,7 +92,7 @@ export class CommunityResolverFields {
 
     const communityMemberCredentials = {
       member: memberRoleCredentials,
-      parrentCommunityMember: parrentCommunityMemberCredentials,
+      parentCommunityMember: parentCommunityMemberCredentials,
     };
 
     return this.userService.getPaginatedAvailableMemberUsers(
