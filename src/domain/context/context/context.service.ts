@@ -272,6 +272,23 @@ export class ContextService {
         LogContext.CONTEXT
       );
 
+    if (canvasData.nameID && canvasData.nameID.length > 0) {
+      const nameAvailable =
+        await this.namingService.isCanvasNameIdAvailableInContext(
+          canvasData.nameID,
+          context.id
+        );
+      if (!nameAvailable)
+        throw new ValidationException(
+          `Unable to create Canvas: the provided nameID is already taken: ${canvasData.nameID}`,
+          LogContext.CHALLENGES
+        );
+    } else {
+      canvasData.nameID = this.namingService.createNameID(
+        `${canvasData.displayName}`
+      );
+    }
+
     const canvas = await this.canvasService.createCanvas({
       displayName: canvasData.displayName,
       nameID: canvasData.nameID,
