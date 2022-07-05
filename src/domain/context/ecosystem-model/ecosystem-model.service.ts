@@ -65,7 +65,7 @@ export class EcosystemModelService {
   ): Promise<IEcosystemModel> {
     ecosystemModel.description = ecosystemModelInput.description;
     if (ecosystemModelInput.canvas) {
-      ecosystemModelInput.canvas = this.canvasService.updateCanvasEntity(
+      ecosystemModel.canvas = this.canvasService.updateCanvasEntity(
         ecosystemModel.canvas,
         ecosystemModelInput.canvas
       );
