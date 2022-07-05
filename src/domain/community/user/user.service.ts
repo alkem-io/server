@@ -540,10 +540,10 @@ export class UserService {
       communityCredentials.member
     );
 
+    const qb = this.userRepository.createQueryBuilder('user');
+
     if (communityCredentials.parrentCommunityMember) {
-      const qb = await this.userRepository
-        .createQueryBuilder('user')
-        .leftJoinAndSelect('user.agent', 'agent')
+      qb.leftJoinAndSelect('user.agent', 'agent')
         .leftJoinAndSelect('agent.credentials', 'credential')
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
@@ -551,24 +551,12 @@ export class UserService {
           type: communityCredentials.parrentCommunityMember.type,
           resourceID: communityCredentials.parrentCommunityMember.resourceID,
         });
-
-      if (currentMemberUsers.length > 0) {
-        qb.andWhere('NOT user.id IN (:memberUsers)').setParameters({
-          memberUsers: currentMemberUsers.map(user => user.id),
-        });
-      }
-
-      if (filter) {
-        applyFiltering(qb, filter);
-      }
-
-      return getPaginationResults(qb, paginationArgs);
+    } else {
+      qb.select();
     }
 
-    const qb = await this.userRepository.createQueryBuilder().select();
-
     if (currentMemberUsers.length > 0) {
-      qb.where('NOT id IN (:memberUsers)').setParameters({
+      qb.andWhere('NOT user.id IN (:memberUsers)').setParameters({
         memberUsers: currentMemberUsers.map(user => user.id),
       });
     }
@@ -577,7 +565,7 @@ export class UserService {
       applyFiltering(qb, filter);
     }
 
-    return getPaginationResults(qb, paginationArgs);
+    return await getPaginationResults(qb, paginationArgs);
   }
 
   public async getPaginatedAvailableLeadUsers(
