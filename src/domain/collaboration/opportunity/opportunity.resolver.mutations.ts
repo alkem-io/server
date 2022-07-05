@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { UseGuards, Inject } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import {} from '@domain/context/actor-group';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -22,6 +22,11 @@ import {
   OpportunityEventInput,
   UpdateOpportunityInput,
 } from './dto';
+import { OpportunityCollaborateInput } from './dto/opportunity.dto.collaborate';
+import { EventType } from '@common/enums/event.type';
+import { NotificationsPayloadBuilder } from '@core/microservices';
+import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Resolver()
 export class OpportunityResolverMutations {
@@ -31,7 +36,9 @@ export class OpportunityResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private opportunityService: OpportunityService,
-    private opportunityLifecycleOptionsProvider: OpportunityLifecycleOptionsProvider
+    private opportunityLifecycleOptionsProvider: OpportunityLifecycleOptionsProvider,
+    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -213,5 +220,41 @@ export class OpportunityResolverMutations {
       `remove user opportunity admin: ${opportunity.displayName}`
     );
     return await this.opportunityService.removeOpportunityAdmin(membershipData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOpportunity, {
+    description: 'Express interest to collaborate on an Opportunity.',
+  })
+  @Profiling.api
+  async sendCommunityCollaborationInterest(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('communityCollaborationData')
+    collaborationData: OpportunityCollaborateInput
+  ) {
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      collaborationData.opportunityID
+    );
+
+    // Do we need certain privilages for this action
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      opportunity.authorization,
+      AuthorizationPrivilege.READ,
+      `Express interest in opportunity: ${opportunity.nameID}`
+    );
+
+    const payload =
+      await this.notificationsPayloadBuilder.buildCommunityCollaborationInterestPayload(
+        agentInfo.userID,
+        opportunity
+      );
+
+    this.notificationsClient.emit(
+      EventType.COMMUNITY_COLLABORATION_INTEREST,
+      payload
+    );
+
+    // return updateRelation/createRelation;
   }
 }

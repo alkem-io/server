@@ -10,6 +10,7 @@ import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { IUpdates } from '@domain/communication/updates/updates.interface';
 import { Community, ICommunity } from '@domain/community/community';
+import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -168,6 +169,21 @@ export class NotificationsPayloadBuilder {
     };
 
     await this.buildHubPayload(payload, community);
+
+    return payload;
+  }
+
+  async buildCommunityCollaborationInterestPayload(
+    userID: string,
+    opportunity: IOpportunity
+  ) {
+    const payload = {
+      userID,
+      opportunity: {
+        name: opportunity.displayName,
+        communityName: opportunity.community?.displayName,
+      },
+    };
 
     return payload;
   }
@@ -356,11 +372,11 @@ export class NotificationsPayloadBuilder {
         SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`hub\`
         LEFT JOIN \`aspect\` on \`aspect\`.\`contextId\` = \`hub\`.\`contextId\`
         WHERE \`hub\`.\`contextId\` = '${contextId}' UNION
-        
+
         SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`challenge\`
         LEFT JOIN \`aspect\` on \`aspect\`.\`contextId\` = \`challenge\`.\`contextId\`
         WHERE \`challenge\`.\`contextId\` = '${contextId}'  UNION
-        
+
         SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`opportunity\`
         LEFT JOIN \`aspect\` on \`aspect\`.\`contextId\` = \`opportunity\`.\`contextId\`
         WHERE \`opportunity\`.\`contextId\` = '${contextId}';
@@ -382,11 +398,11 @@ export class NotificationsPayloadBuilder {
       SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`aspect\`
       RIGHT JOIN \`challenge\` on \`challenge\`.\`contextId\` = \`aspect\`.\`contextId\`
       WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
-      
+
       SELECT \`hub\`.\`id\` as \`entityId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`aspect\`
       RIGHT JOIN \`hub\` on \`hub\`.\`contextId\` = \`aspect\`.\`contextId\`
       WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
-      
+
       SELECT \`opportunity\`.\`id\` as \`entityId\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`aspect\`
       RIGHT JOIN \`opportunity\` on \`opportunity\`.\`contextId\` = \`aspect\`.\`contextId\`
       WHERE \`aspect\`.\`commentsId\` = '${commentsId}';
