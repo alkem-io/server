@@ -63,7 +63,7 @@ export class TemplatesSetService {
     if (!templatesSet)
       throw new EntityNotFoundException(
         `TemplatesSet with id(${templatesSetID}) not found!`,
-        LogContext.COMMUNITY
+        LogContext.TEMPLATES
       );
     return templatesSet;
   }
@@ -103,7 +103,7 @@ export class TemplatesSetService {
     if (!templatesSetPopulated.aspectTemplates) {
       throw new EntityNotInitializedException(
         `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
-        LogContext.COMMUNITY
+        LogContext.TEMPLATES
       );
     }
     return templatesSetPopulated.aspectTemplates;
@@ -146,7 +146,7 @@ export class TemplatesSetService {
     if (!templatesSetPopulated.canvasTemplates) {
       throw new EntityNotInitializedException(
         `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
-        LogContext.COMMUNITY
+        LogContext.TEMPLATES
       );
     }
     return templatesSetPopulated.canvasTemplates;
@@ -178,7 +178,7 @@ export class TemplatesSetService {
     if (!templatesSetPopulated.lifecycleTemplates) {
       throw new EntityNotInitializedException(
         `TemplatesSet not initialized with lifecycle templates: ${templatesSetPopulated.id}`,
-        LogContext.COMMUNITY
+        LogContext.TEMPLATES
       );
     }
     return templatesSetPopulated.lifecycleTemplates;

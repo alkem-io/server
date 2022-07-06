@@ -6,6 +6,7 @@ import { IAspectTemplate } from '../aspect-template/aspect.template.interface';
 import { TemplatesSetService } from './templates.set.service';
 import { ITemplatesSet } from './templates.set.interface';
 import { ICanvasTemplate } from '../canvas-template/canvas.template.interface';
+import { ILifecycleTemplate } from '../lifecycle-template/lifecycle.template.interface';
 
 @Resolver(() => ITemplatesSet)
 export class TemplatesSetResolverFields {
@@ -33,5 +34,17 @@ export class TemplatesSetResolverFields {
     @Parent() templatesSet: ITemplatesSet
   ): Promise<ICanvasTemplate[]> {
     return await this.templatesSetService.getCanvasTemplates(templatesSet);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('lifecycleTemplates', () => [ILifecycleTemplate], {
+    nullable: false,
+    description: 'The LifecycleTemplates in this TemplatesSet.',
+  })
+  @Profiling.api
+  async lifecycleTemplates(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<ILifecycleTemplate[]> {
+    return await this.templatesSetService.getLifecycleTemplates(templatesSet);
   }
 }
