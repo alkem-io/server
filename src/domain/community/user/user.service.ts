@@ -539,36 +539,27 @@ export class UserService {
     const currentMemberUsers = await this.usersWithCredentials(
       communityCredentials.member
     );
+    const qb = this.userRepository.createQueryBuilder('user').select();
 
-    if (communityCredentials.parrentCommunityMember) {
-      const qb = await this.userRepository
-        .createQueryBuilder('user')
-        .leftJoinAndSelect('user.agent', 'agent')
-        .leftJoinAndSelect('agent.credentials', 'credential')
+    if (communityCredentials.parentCommunityMember) {
+      qb.leftJoin('user.agent', 'agent')
+        .leftJoin('agent.credentials', 'credential')
+        .addSelect(['credential.type', 'credential.resourceID'])
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
         .setParameters({
-          type: communityCredentials.parrentCommunityMember.type,
-          resourceID: communityCredentials.parrentCommunityMember.resourceID,
+          type: communityCredentials.parentCommunityMember.type,
+          resourceID: communityCredentials.parentCommunityMember.resourceID,
         });
-
-      if (currentMemberUsers.length > 0) {
-        qb.andWhere('NOT user.id IN (:memberUsers)').setParameters({
-          memberUsers: currentMemberUsers.map(user => user.id),
-        });
-      }
-
-      if (filter) {
-        applyFiltering(qb, filter);
-      }
-
-      return getPaginationResults(qb, paginationArgs);
     }
 
-    const qb = await this.userRepository.createQueryBuilder().select();
-
     if (currentMemberUsers.length > 0) {
-      qb.where('NOT id IN (:memberUsers)').setParameters({
+      const hasWhere =
+        qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
+
+      qb[hasWhere ? 'andWhere' : 'where'](
+        'NOT user.id IN (:memberUsers)'
+      ).setParameters({
         memberUsers: currentMemberUsers.map(user => user.id),
       });
     }
@@ -588,11 +579,12 @@ export class UserService {
     const currentLeadUsers = await this.usersWithCredentials(
       communityCredentials.lead
     );
-
-    const qb = await this.userRepository
+    const qb = this.userRepository
       .createQueryBuilder('user')
-      .leftJoinAndSelect('user.agent', 'agent')
-      .leftJoinAndSelect('agent.credentials', 'credential')
+      .select()
+      .leftJoin('user.agent', 'agent')
+      .leftJoin('agent.credentials', 'credential')
+      .addSelect(['credential.type', 'credential.resourceID'])
       .where('credential.type = :type')
       .andWhere('credential.resourceID = :resourceID')
       .setParameters({

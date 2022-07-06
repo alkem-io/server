@@ -7,5 +7,5 @@ export class CommunityMemberCredentials {
   member!: CredentialDefinition;
 
   @Field({ nullable: true })
-  parrentCommunityMember?: CredentialDefinition;
+  parentCommunityMember?: CredentialDefinition;
 }

@@ -79,16 +79,20 @@ export class CommunityResolverFields {
         CommunityRole.MEMBER
       );
 
-    const parrentCommunityMemberCredentials = community.parentCommunity
+    const parentCommunity = await this.communityService.getParentCommunity(
+      community
+    );
+
+    const parentCommunityMemberCredentials = parentCommunity
       ? this.communityService.getCredentialDefinitionForRole(
-          community?.parentCommunity,
+          parentCommunity,
           CommunityRole.MEMBER
         )
       : undefined;
 
     const communityMemberCredentials = {
       member: memberRoleCredentials,
-      parrentCommunityMember: parrentCommunityMemberCredentials,
+      parentCommunityMember: parentCommunityMemberCredentials,
     };
 
     return this.userService.getPaginatedAvailableMemberUsers(
