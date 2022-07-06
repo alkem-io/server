@@ -2,8 +2,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { escapeString } from './utils/escape-string';
 
-export class canvasTemplates1655880457800 implements MigrationInterface {
-  name = 'canvasTemplates1655880457800';
+export class canvasTemplates1656674597777 implements MigrationInterface {
+  name = 'canvasTemplates1656674597777';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Migrate the existing Canvases that are marked as being Templates
