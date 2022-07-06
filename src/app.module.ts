@@ -43,6 +43,7 @@ import { DataloaderService } from '@core/dataloader/dataloader.service';
 import { DataloaderModule } from '@core/dataloader/dataloader.module';
 import * as redisStore from 'cache-manager-redis-store';
 import { RedisLockModule } from '@core/caching/redis/redis.lock.module';
+import { ConversionModule } from '@services/domain/conversion/conversion.module';
 
 @Module({
   imports: [
@@ -189,6 +190,7 @@ import { RedisLockModule } from '@core/caching/redis/redis.lock.module';
     AgentModule,
     RegistrationModule,
     RedisLockModule,
+    ConversionModule,
   ],
   controllers: [AppController],
   providers: [
