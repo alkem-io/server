@@ -1,0 +1,14 @@
+mutation deleteLifecycleTemplate($deleteData: DeleteLifecycleTemplateInput!) {
+  deleteLifecycleTemplate(deleteData: $deleteData) {
+    info {
+      title
+    }
+  }
+}
+
+Variables:
+{
+  "deleteData": {
+      "ID": "uuid"
+  }
+}
