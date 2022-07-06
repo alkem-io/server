@@ -19,6 +19,9 @@ import { CreateAspectTemplateInput } from '../aspect-template/dto/aspect.templat
 import { CanvasTemplateService } from '../canvas-template/canvas.template.service';
 import { ICanvasTemplate } from '../canvas-template/canvas.template.interface';
 import { CreateCanvasTemplateInput } from '../canvas-template/dto/canvas.template.dto.create';
+import { ILifecycleTemplate } from '../lifecycle-template/lifecycle.template.interface';
+import { CreateLifecycleTemplateInput } from '../lifecycle-template/dto/lifecycle.template.dto.create';
+import { LifecycleTemplateService } from '../lifecycle-template/lifecycle.template.service';
 
 @Injectable()
 export class TemplatesSetService {
@@ -28,6 +31,7 @@ export class TemplatesSetService {
     private templatesSetRepository: Repository<TemplatesSet>,
     private aspectTemplateService: AspectTemplateService,
     private canvasTemplateService: CanvasTemplateService,
+    private lifecycleTemplateService: LifecycleTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -160,5 +164,39 @@ export class TemplatesSetService {
     templatesSet.canvasTemplates.push(canvasTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return canvasTemplate;
+  }
+
+  async getLifecycleTemplates(
+    templatesSet: ITemplatesSet
+  ): Promise<ILifecycleTemplate[]> {
+    const templatesSetPopulated = await this.getTemplatesSetOrFail(
+      templatesSet.id,
+      {
+        relations: ['lifecycleTemplates'],
+      }
+    );
+    if (!templatesSetPopulated.lifecycleTemplates) {
+      throw new EntityNotInitializedException(
+        `TemplatesSet not initialized with lifecycle templates: ${templatesSetPopulated.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return templatesSetPopulated.lifecycleTemplates;
+  }
+
+  async createLifecycleTemplate(
+    templatesSet: ITemplatesSet,
+    lifecycleTemplateInput: CreateLifecycleTemplateInput
+  ): Promise<ILifecycleTemplate> {
+    const lifecycleTemplate =
+      await this.lifecycleTemplateService.createLifecycleTemplate(
+        lifecycleTemplateInput
+      );
+    templatesSet.lifecycleTemplates = await this.getLifecycleTemplates(
+      templatesSet
+    );
+    templatesSet.lifecycleTemplates.push(lifecycleTemplate);
+    await this.templatesSetRepository.save(templatesSet);
+    return lifecycleTemplate;
   }
 }
