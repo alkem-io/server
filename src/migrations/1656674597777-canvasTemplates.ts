@@ -8,7 +8,7 @@ export class canvasTemplates1656674597777 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Migrate the existing Canvases that are marked as being Templates
     const canvases: any[] = await queryRunner.query(
-      `SELECT id, contextId, value, name, isTemplate from canvas`
+      `SELECT id, contextId, value, displayName, isTemplate from canvas`
     );
     for (const canvas of canvases) {
       if (canvas.isTemplate) {
@@ -52,8 +52,10 @@ export class canvasTemplates1656674597777 implements MigrationInterface {
         await queryRunner.query(
           `INSERT INTO template_info (id, createdDate, updatedDate, version, title, description, tagsetId, visualId)
           VALUES ('${templateInfoID}', NOW(), NOW(), 1, '${
-            canvas.name
-          }', '${escapeString(canvas.name)}', '${tagsetID}', '${visualID}')`
+            canvas.displayName
+          }', '${escapeString(
+            canvas.displayName
+          )}', '${tagsetID}', '${visualID}')`
         );
         await queryRunner.query(
           `INSERT INTO canvas_template (id, createdDate, updatedDate, version, authorizationId, templatesSetId, templateInfoId, value )
