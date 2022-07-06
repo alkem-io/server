@@ -68,6 +68,24 @@ export class NamingService {
     return true;
   }
 
+  async isCanvasNameIdAvailableInContext(
+    nameID: string,
+    contextID: string
+  ): Promise<boolean> {
+    const query = this.aspectRepository
+      .createQueryBuilder('canvas')
+      .leftJoinAndSelect('canvas.context', 'context')
+      .where('context.id = :id')
+      .andWhere('canvas.nameID= :nameID')
+      .setParameters({ id: `${contextID}`, nameID: `${nameID}` });
+    const aspectWithNameID = await query.getOne();
+    if (aspectWithNameID) {
+      return false;
+    }
+
+    return true;
+  }
+
   isValidNameID(nameID: string): boolean {
     if (nameID.length > NameID.MAX_LENGTH) return false;
     return NameID.REGEX.test(nameID);
