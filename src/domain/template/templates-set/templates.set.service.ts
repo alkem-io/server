@@ -48,6 +48,7 @@ export class TemplatesSetService {
     }
 
     templatesSet.canvasTemplates = [];
+    templatesSet.lifecycleTemplates = [];
 
     return await this.templatesSetRepository.save(templatesSet);
   }
@@ -84,6 +85,13 @@ export class TemplatesSetService {
     if (templatesSet.canvasTemplates) {
       for (const canvasTemplate of templatesSet.canvasTemplates) {
         await this.canvasTemplateService.deleteCanvasTemplate(canvasTemplate);
+      }
+    }
+    if (templatesSet.lifecycleTemplates) {
+      for (const lifecycleTemplate of templatesSet.lifecycleTemplates) {
+        await this.lifecycleTemplateService.deleteLifecycleTemplate(
+          lifecycleTemplate
+        );
       }
     }
     return await this.templatesSetRepository.remove(
