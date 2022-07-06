@@ -2,18 +2,15 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { ICanvas } from './canvas.interface';
 import { Context } from '@domain/context/context/context.entity';
 import { CanvasCheckout } from '../canvas-checkout/canvas.checkout.entity';
-import { AuthorizableEntity } from '../entity/authorizable-entity';
+import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 
 @Entity()
-export class Canvas extends AuthorizableEntity implements ICanvas {
+export class Canvas extends NameableEntity implements ICanvas {
   constructor(name?: string, value?: string) {
     super();
-    this.name = name || '';
+    this.displayName = name || '';
     this.value = value || '';
   }
-
-  @Column('text', { nullable: false })
-  name!: string;
 
   @Column('longtext', { nullable: false })
   value!: string;

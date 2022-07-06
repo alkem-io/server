@@ -1,14 +1,9 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import JSON from 'graphql-type-json';
 import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
-import { IAuthorizable } from '../entity/authorizable-entity';
+import { INameable } from '../entity/nameable-entity';
 @ObjectType('Canvas')
-export abstract class ICanvas extends IAuthorizable {
-  @Field(() => String, {
-    description: 'The name of the Canvas.',
-  })
-  name!: string;
-
+export abstract class ICanvas extends INameable {
   @Field(() => JSON, {
     description: 'The JSON representation of the Canvas.',
   })

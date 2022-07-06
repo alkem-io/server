@@ -98,7 +98,8 @@ export class CanvasService {
         'No Canvas loaded',
         LogContext.CHALLENGES
       );
-    if (updateCanvasData.name) canvas.name = updateCanvasData.name;
+    if (updateCanvasData.displayName)
+      canvas.displayName = updateCanvasData.displayName;
     if (updateCanvasData.value) canvas.value = updateCanvasData.value;
     return canvas;
   }
