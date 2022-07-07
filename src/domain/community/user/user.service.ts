@@ -222,6 +222,15 @@ export class UserService {
       'true'
     );
 
+    defaults.set(
+      UserPreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_USER,
+      'true'
+    );
+    defaults.set(
+      UserPreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_ADMIN,
+      'true'
+    );
+
     return defaults;
   }
 

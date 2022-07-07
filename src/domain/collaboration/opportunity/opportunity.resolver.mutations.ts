@@ -22,7 +22,7 @@ import {
   OpportunityEventInput,
   UpdateOpportunityInput,
 } from './dto';
-import { OpportunityCollaborateInput } from './dto/opportunity.dto.collaborate';
+import { OpportunityCollaborationInput } from './dto/opportunity.dto.collaborate';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
@@ -229,14 +229,13 @@ export class OpportunityResolverMutations {
   @Profiling.api
   async sendCommunityCollaborationInterest(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('communityCollaborationData')
-    collaborationData: OpportunityCollaborateInput
+    @Args('collaborationData')
+    collaborationData: OpportunityCollaborationInput
   ) {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       collaborationData.opportunityID
     );
 
-    // Do we need certain privilages for this action
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       opportunity.authorization,
@@ -255,6 +254,6 @@ export class OpportunityResolverMutations {
       payload
     );
 
-    // return updateRelation/createRelation;
+    return opportunity;
   }
 }
