@@ -1,4 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { randomUUID } from 'crypto';
+import { escapeString } from './utils/escape-string';
+import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
+import { LifecycleType } from '@common/enums/lifecycle.type';
 
 export class lifecycleTemplate1657120080241 implements MigrationInterface {
   name = 'lifecycleTemplate1657120080241';
@@ -21,6 +25,56 @@ export class lifecycleTemplate1657120080241 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`lifecycle_template\` ADD CONSTRAINT \`FK_76546450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
+
+    // Add in defaults to all TemplatesSets
+    const templatesSets: any[] = await queryRunner.query(
+      `SELECT id, template from templates_set`
+    );
+    for (const templatesSet of templatesSets) {
+      // create the new lifecycle template objects from the existing data
+      for (const lifecycleDefault of defaultLifecycles) {
+        const lifecycleTemplateID = randomUUID();
+        const lifecycleTemplateAuthID = randomUUID();
+        const templateInfoID = randomUUID();
+        const tagsetID = randomUUID();
+        const tagsetAuthID = randomUUID();
+        const visualID = randomUUID();
+        const visualAuthID = randomUUID();
+        await queryRunner.query(
+          `INSERT INTO authorization_policy VALUES ('${tagsetAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
+        );
+        await queryRunner.query(
+          `INSERT INTO authorization_policy VALUES ('${visualAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
+        );
+        await queryRunner.query(
+          `INSERT INTO authorization_policy VALUES ('${lifecycleTemplateAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
+        );
+        await queryRunner.query(
+          `INSERT INTO tagset (id, createdDate, updatedDate, version, name, tags, authorizationId)
+   VALUES ('${tagsetID}', NOW(), NOW(), 1, 'default', '', '${tagsetAuthID}')`
+        );
+        await queryRunner.query(
+          `INSERT INTO visual (id, createdDate, updatedDate, version, authorizationId, name, uri, minWidth, maxWidth, minHeight, maxHeight, lifecycleRatio, allowedTypes)
+   VALUES ('${visualID}', NOW(), NOW(), 1, '${visualAuthID}', '${templateVisual.name}', '', '${templateVisual.minWidth}', '${templateVisual.maxWidth}', '${templateVisual.minHeight}', '${templateVisual.maxHeight}', '${templateVisual.aspectRatio}', '${allowedTypes}')`
+        );
+        await queryRunner.query(
+          `INSERT INTO template_info (id, createdDate, updatedDate, version, title, description, tagsetId, visualId)
+   VALUES ('${templateInfoID}', NOW(), NOW(), 1, '${
+            lifecycleDefault.title
+          }', '${escapeString(
+            lifecycleDefault.description
+          )}', '${tagsetID}', '${visualID}')`
+        );
+        await queryRunner.query(
+          `INSERT INTO lifecycle_template (id, createdDate, updatedDate, version, authorizationId, templatesSetId, templateInfoId, type, definition)
+   VALUES ('${lifecycleTemplateID}', NOW(), NOW(), 1, '${lifecycleTemplateAuthID}', '${
+            templatesSet.id
+          }', '${templateInfoID}', '${lifecycleDefault.type}', '${escapeString(
+            lifecycleDefault.definition
+          )}')`
+        );
+      }
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -35,3 +89,133 @@ export class lifecycleTemplate1657120080241 implements MigrationInterface {
     await queryRunner.query('DROP TABLE `lifecycle_template`');
   }
 }
+
+// NOTE: this has to be in this file; it should NOT have a dependency back to the domain model
+const challengeLifecycleConfigDefault: any = {
+  id: 'challenge-lifecycle-default',
+  context: {
+    parentID: '',
+  },
+  initial: 'new',
+  states: {
+    new: {
+      on: {
+        REFINE: {
+          target: 'beingRefined',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+        ABANDONED: {
+          target: 'abandoned',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+      },
+    },
+    beingRefined: {
+      on: {
+        ACTIVE: {
+          target: 'inProgress',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+        ABANDONED: {
+          target: 'abandoned',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+      },
+    },
+    inProgress: {
+      entry: ['sampleEvent'],
+      on: {
+        COMPLETED: {
+          target: 'complete',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+        ABANDONED: {
+          target: 'abandoned',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+      },
+    },
+    complete: {
+      on: {
+        ARCHIVE: 'archived',
+        ABANDONED: 'abandoned',
+      },
+    },
+    abandoned: {
+      on: {
+        REOPEN: 'inProgress',
+        ARCHIVE: 'archived',
+      },
+    },
+    archived: {
+      type: 'final',
+    },
+  },
+};
+
+const opportunityLifecycleConfigDefault: any = {
+  id: 'opportunity-lifecycle-default',
+  context: {
+    parentID: '',
+  },
+  initial: 'new',
+  states: {
+    new: {
+      on: {
+        REFINE: 'beingRefined',
+        ABANDONED: 'abandoned',
+      },
+    },
+    beingRefined: {
+      on: {
+        ACTIVE: 'inProgress',
+        ABANDONED: 'abandoned',
+      },
+    },
+    inProgress: {
+      entry: ['sampleEvent'],
+      on: {
+        COMPLETED: 'complete',
+        ABANDONED: 'abandoned',
+      },
+    },
+    complete: {
+      on: {
+        ARCHIVE: 'archived',
+        ABANDONED: 'archived',
+      },
+    },
+    abandoned: {
+      on: {
+        REOPEN: 'inProgress',
+        ARCHIVE: 'archived',
+      },
+    },
+    archived: {
+      type: 'final',
+    },
+  },
+};
+
+const defaultLifecycles: any = [
+  {
+    type: LifecycleType.CHALLENGE,
+    definition: challengeLifecycleConfigDefault,
+    title: 'Default Challenge lifecycle',
+  },
+  {
+    type: LifecycleType.OPPORTUNITY,
+    definition: opportunityLifecycleConfigDefault,
+    title: 'Default Opportunity lifecycle',
+  },
+];
+
+const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+const templateVisual = {
+  name: 'bannerNarrow',
+  minWidth: 384,
+  maxWidth: 768,
+  minHeight: 128,
+  maxHeight: 256,
+  aspectRatio: 3,
+};
