@@ -9,12 +9,14 @@ import { CanvasResolverMutations } from './canvas.resolver.mutations';
 import { CanvasService } from './canvas.service';
 import { CanvasAuthorizationService } from './canvas.service.authorization';
 import { CanvasResolverSubscriptions } from '@domain/common/canvas/canvas.resolver.subscriptions';
+import { VisualModule } from '@domain/common/visual/visual.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     CanvasCheckoutModule,
+    VisualModule,
     TypeOrmModule.forFeature([Canvas]),
   ],
   providers: [

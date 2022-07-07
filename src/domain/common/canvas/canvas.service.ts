@@ -14,6 +14,7 @@ import { AuthorizationPolicyService } from '../authorization-policy/authorizatio
 import { AgentInfo } from '@core/authentication';
 import { CanvasCheckoutStateEnum } from '@common/enums/canvas.checkout.status';
 import { EntityCheckoutStatusException } from '@common/exceptions/entity.not.checkedout.exception';
+import { VisualService } from '@domain/common/visual/visual.service';
 
 @Injectable()
 export class CanvasService {
@@ -21,7 +22,8 @@ export class CanvasService {
     @InjectRepository(Canvas)
     private canvasRepository: Repository<Canvas>,
     private canvasCheckoutService: CanvasCheckoutService,
-    private authorizationPolicyService: AuthorizationPolicyService
+    private authorizationPolicyService: AuthorizationPolicyService,
+    private visualService: VisualService
   ) {}
 
   async createCanvas(canvasData: CreateCanvasInput): Promise<ICanvas> {
@@ -34,6 +36,9 @@ export class CanvasService {
     canvas.checkout = await this.canvasCheckoutService.createCanvasCheckout({
       canvasID: savedCanvas.id,
     });
+
+    canvas.bannerCard = await this.visualService.createVisualBannerNarrow();
+
     return await this.save(canvas);
   }
 
