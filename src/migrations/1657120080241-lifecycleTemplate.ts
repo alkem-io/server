@@ -1,7 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { escapeString } from './utils/escape-string';
-import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
 import { LifecycleType } from '@common/enums/lifecycle.type';
 
 export class lifecycleTemplate1657120080241 implements MigrationInterface {
@@ -28,7 +27,7 @@ export class lifecycleTemplate1657120080241 implements MigrationInterface {
 
     // Add in defaults to all TemplatesSets
     const templatesSets: any[] = await queryRunner.query(
-      `SELECT id, template from templates_set`
+      `SELECT id from templates_set`
     );
     for (const templatesSet of templatesSets) {
       // create the new lifecycle template objects from the existing data
@@ -54,24 +53,19 @@ export class lifecycleTemplate1657120080241 implements MigrationInterface {
    VALUES ('${tagsetID}', NOW(), NOW(), 1, 'default', '', '${tagsetAuthID}')`
         );
         await queryRunner.query(
-          `INSERT INTO visual (id, createdDate, updatedDate, version, authorizationId, name, uri, minWidth, maxWidth, minHeight, maxHeight, lifecycleRatio, allowedTypes)
+          `INSERT INTO visual (id, createdDate, updatedDate, version, authorizationId, name, uri, minWidth, maxWidth, minHeight, maxHeight, aspectRatio, allowedTypes)
    VALUES ('${visualID}', NOW(), NOW(), 1, '${visualAuthID}', '${templateVisual.name}', '', '${templateVisual.minWidth}', '${templateVisual.maxWidth}', '${templateVisual.minHeight}', '${templateVisual.maxHeight}', '${templateVisual.aspectRatio}', '${allowedTypes}')`
         );
         await queryRunner.query(
           `INSERT INTO template_info (id, createdDate, updatedDate, version, title, description, tagsetId, visualId)
-   VALUES ('${templateInfoID}', NOW(), NOW(), 1, '${
-            lifecycleDefault.title
-          }', '${escapeString(
-            lifecycleDefault.description
-          )}', '${tagsetID}', '${visualID}')`
+   VALUES ('${templateInfoID}', NOW(), NOW(), 1, '${lifecycleDefault.title}', '${lifecycleDefault.description}', '${tagsetID}', '${visualID}')`
+        );
+        const escapedDefinition = escapeString(
+          JSON.stringify(lifecycleDefault.definition)
         );
         await queryRunner.query(
           `INSERT INTO lifecycle_template (id, createdDate, updatedDate, version, authorizationId, templatesSetId, templateInfoId, type, definition)
-   VALUES ('${lifecycleTemplateID}', NOW(), NOW(), 1, '${lifecycleTemplateAuthID}', '${
-            templatesSet.id
-          }', '${templateInfoID}', '${lifecycleDefault.type}', '${escapeString(
-            lifecycleDefault.definition
-          )}')`
+   VALUES ('${lifecycleTemplateID}', NOW(), NOW(), 1, '${lifecycleTemplateAuthID}', '${templatesSet.id}', '${templateInfoID}', '${lifecycleDefault.type}', '${escapedDefinition}')`
         );
       }
     }
@@ -202,11 +196,13 @@ const defaultLifecycles: any = [
     type: LifecycleType.CHALLENGE,
     definition: challengeLifecycleConfigDefault,
     title: 'Default Challenge lifecycle',
+    description: 'Default Challenge lifecycle',
   },
   {
     type: LifecycleType.OPPORTUNITY,
     definition: opportunityLifecycleConfigDefault,
     title: 'Default Opportunity lifecycle',
+    description: 'Default Challenge lifecycle',
   },
 ];
 
