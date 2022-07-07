@@ -47,8 +47,16 @@ export class TemplatesSetService {
       templatesSet.aspectTemplates.push(aspectTemplate);
     }
 
-    templatesSet.canvasTemplates = [];
     templatesSet.lifecycleTemplates = [];
+    for (const lifecycleTemplateDefault of templatesSetDefaults.lifecycles) {
+      const lifecycleTemplate =
+        await this.lifecycleTemplateService.createLifecycleTemplate(
+          lifecycleTemplateDefault
+        );
+      templatesSet.lifecycleTemplates.push(lifecycleTemplate);
+    }
+
+    templatesSet.canvasTemplates = [];
 
     return await this.templatesSetRepository.save(templatesSet);
   }

@@ -1,3 +1,111 @@
+import { LifecycleType } from '@common/enums/lifecycle.type';
+
+const challengeLifecycleConfigDefault: any = {
+  id: 'challenge-lifecycle-default',
+  context: {
+    parentID: '',
+  },
+  initial: 'new',
+  states: {
+    new: {
+      on: {
+        REFINE: {
+          target: 'beingRefined',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+        ABANDONED: {
+          target: 'abandoned',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+      },
+    },
+    beingRefined: {
+      on: {
+        ACTIVE: {
+          target: 'inProgress',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+        ABANDONED: {
+          target: 'abandoned',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+      },
+    },
+    inProgress: {
+      entry: ['sampleEvent'],
+      on: {
+        COMPLETED: {
+          target: 'complete',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+        ABANDONED: {
+          target: 'abandoned',
+          cond: 'challengeStateUpdateAuthorized',
+        },
+      },
+    },
+    complete: {
+      on: {
+        ARCHIVE: 'archived',
+        ABANDONED: 'abandoned',
+      },
+    },
+    abandoned: {
+      on: {
+        REOPEN: 'inProgress',
+        ARCHIVE: 'archived',
+      },
+    },
+    archived: {
+      type: 'final',
+    },
+  },
+};
+
+const opportunityLifecycleConfigDefault: any = {
+  id: 'opportunity-lifecycle-default',
+  context: {
+    parentID: '',
+  },
+  initial: 'new',
+  states: {
+    new: {
+      on: {
+        REFINE: 'beingRefined',
+        ABANDONED: 'abandoned',
+      },
+    },
+    beingRefined: {
+      on: {
+        ACTIVE: 'inProgress',
+        ABANDONED: 'abandoned',
+      },
+    },
+    inProgress: {
+      entry: ['sampleEvent'],
+      on: {
+        COMPLETED: 'complete',
+        ABANDONED: 'abandoned',
+      },
+    },
+    complete: {
+      on: {
+        ARCHIVE: 'archived',
+        ABANDONED: 'archived',
+      },
+    },
+    abandoned: {
+      on: {
+        REOPEN: 'inProgress',
+        ARCHIVE: 'archived',
+      },
+    },
+    archived: {
+      type: 'final',
+    },
+  },
+};
+
 export const templatesSetDefaults: any = {
   aspects: [
     {
@@ -50,6 +158,26 @@ export const templatesSetDefaults: any = {
       },
       type: 'other',
       defaultDescription: 'Please describe the aspect that you wish to share.',
+    },
+  ],
+  lifecycles: [
+    {
+      info: {
+        title: 'Default Challenge lifecycle',
+        description: 'Default Challenge lifecycle',
+        tags: [],
+      },
+      type: LifecycleType.CHALLENGE,
+      definition: JSON.stringify(challengeLifecycleConfigDefault),
+    },
+    {
+      info: {
+        title: 'Default Opportunity lifecycle',
+        description: 'Default Opportunity lifecycle',
+        tags: [],
+      },
+      type: LifecycleType.OPPORTUNITY,
+      definition: JSON.stringify(opportunityLifecycleConfigDefault),
     },
   ],
 };
