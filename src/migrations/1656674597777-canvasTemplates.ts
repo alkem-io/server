@@ -83,8 +83,12 @@ export class canvasTemplates1656674597777 implements MigrationInterface {
 
     // Remove the relationship between ecosystem model + canvas
     await queryRunner.query(
+      'ALTER TABLE `ecosystem_model` DROP FOREIGN KEY `FK_c9ed67519d26140f98265a542e7`'
+    );
+    await queryRunner.query(
       'DROP INDEX `IDX_c9ed67519d26140f98265a542e` ON `ecosystem_model`'
     );
+
     await queryRunner.query(
       `ALTER TABLE \`ecosystem_model\` DROP COLUMN \`canvasId\``
     );
@@ -106,6 +110,10 @@ export class canvasTemplates1656674597777 implements MigrationInterface {
 
     await queryRunner.query(
       `ALTER TABLE \`ecosystem_model\` ADD \`canvasId\` char(36) NULL`
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE `ecosystem_model` ADD CONSTRAINT `FK_c9ed67519d26140f98265a542e7` FOREIGN KEY (`canvasId`) REFERENCES `canvas`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
   }
 
