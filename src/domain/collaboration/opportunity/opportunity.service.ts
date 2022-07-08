@@ -111,6 +111,10 @@ export class OpportunityService {
     return await this.saveOpportunity(opportunity);
   }
 
+  async save(opportunity: IOpportunity): Promise<IOpportunity> {
+    return await this.opportunityRepository.save(opportunity);
+  }
+
   async getOpportunityInNameableScopeOrFail(
     opportunityID: string,
     nameableScopeID: string,

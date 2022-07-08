@@ -153,6 +153,10 @@ export class ChallengeService {
     return savedChallenge;
   }
 
+  async save(challenge: IChallenge): Promise<IChallenge> {
+    return await this.challengeRepository.save(challenge);
+  }
+
   async updateChallenge(
     challengeData: UpdateChallengeInput
   ): Promise<IChallenge> {

@@ -181,6 +181,10 @@ export class CommunityService {
     return true;
   }
 
+  async save(community: ICommunity): Promise<ICommunity> {
+    return await this.communityRepository.save(community);
+  }
+
   async getParentCommunity(
     community: ICommunity
   ): Promise<ICommunity | undefined> {
@@ -474,7 +478,7 @@ export class CommunityService {
     if (action === CommunityContributorsUpdateType.ASSIGN) {
       if (userMembersCount === communityPolicyRole.maxUser) {
         throw new CommunityPolicyRoleLimitsException(
-          'Max limit of users reached, cannot assign new user.',
+          `Max limit of users reached for role '${role}': ${communityPolicyRole.maxUser}, cannot assign new user.`,
           LogContext.COMMUNITY
         );
       }
@@ -483,7 +487,7 @@ export class CommunityService {
     if (action === CommunityContributorsUpdateType.REMOVE) {
       if (userMembersCount === communityPolicyRole.minUser) {
         throw new CommunityPolicyRoleLimitsException(
-          'Min limit of users reached, cannot remove user.',
+          `Min limit of users reached for role '${role}': ${communityPolicyRole.minUser}, cannot remove user.`,
           LogContext.COMMUNITY
         );
       }
@@ -505,7 +509,7 @@ export class CommunityService {
     if (action === CommunityContributorsUpdateType.ASSIGN) {
       if (orgMemberCount === communityPolicyRole.maxOrg) {
         throw new CommunityPolicyRoleLimitsException(
-          'Max limit of organizations reached, cannot assign new organization.',
+          `Max limit of organizations reached for role '${role}': ${communityPolicyRole.maxOrg}, cannot assign new organization.`,
           LogContext.COMMUNITY
         );
       }
@@ -514,7 +518,7 @@ export class CommunityService {
     if (action === CommunityContributorsUpdateType.REMOVE) {
       if (orgMemberCount === communityPolicyRole.minOrg) {
         throw new CommunityPolicyRoleLimitsException(
-          'Min limit of organizations reached, cannot remove organization.',
+          `Min limit of organizations reached for role '${role}': ${communityPolicyRole.minOrg}, cannot remove organization.`,
           LogContext.COMMUNITY
         );
       }

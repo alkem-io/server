@@ -1,0 +1,14 @@
+mutation ConvertOpportunityToChallenge($convertData: ConvertOpportunityToChallengeInput!) {
+  convertOpportunityToChallenge(convertData: $convertData) {
+    displayName,
+    id
+  }
+}
+
+query variables:
+{
+  "convertData":
+  {
+    "opportunityID": "uuid"
+  }
+}
