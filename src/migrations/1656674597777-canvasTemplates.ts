@@ -74,10 +74,6 @@ export class canvasTemplates1656674597777 implements MigrationInterface {
           }', '${templateInfoID}', '${escapeString(canvas.value)}' )`
         );
         // Finally delete the old canvas template entry
-        await queryRunner.query(
-          'ALTER TABLE `canvas` DROP FOREIGN KEY `IDX_c9ed67519d26140f98265a542e`'
-        );
-
         await queryRunner.query(`DELETE FROM canvas WHERE isTemplate='true'`);
       }
     }
@@ -85,6 +81,10 @@ export class canvasTemplates1656674597777 implements MigrationInterface {
       `ALTER TABLE \`canvas\` DROP COLUMN \`isTemplate\``
     );
 
+    // Remove the relationship between ecosystem model + canvas
+    await queryRunner.query(
+      'DROP INDEX `IDX_c9ed67519d26140f98265a542e` ON `ecosystem_model`'
+    );
     await queryRunner.query(
       `ALTER TABLE \`ecosystem_model\` DROP COLUMN \`canvasId\``
     );
