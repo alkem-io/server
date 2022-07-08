@@ -17,7 +17,7 @@ export class userPreferencesCommunityCollaboration1657188154024
       {
         definitionSet: 'user',
         group: 'Notification',
-        displayName: 'Community collaboration interest confirmation',
+        displayName: 'Opportunity collaboration interest confirmation',
         description:
           'User receives confirmation email when submits interest for collaboration on an opportunity.',
         valueType: 'boolean',
@@ -26,9 +26,9 @@ export class userPreferencesCommunityCollaboration1657188154024
       {
         definitionSet: 'user',
         group: 'NotificationCommunityAdmin',
-        displayName: '[Admin] New community collaboration interest',
+        displayName: '[Admin] New opportunity collaboration interest',
         description:
-          'Receive notification when a user submits collaboration interest for a community I am administrator of',
+          'Receive notification when a user submits collaboration interest for an opportunity community I am administrator of',
         valueType: 'boolean',
         type: UserPreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_ADMIN,
       },
