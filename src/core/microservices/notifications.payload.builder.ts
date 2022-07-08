@@ -21,6 +21,7 @@ import { CommunicationMessageResult } from '@domain/communication/message/commun
 import {
   AspectCreatedEventPayload,
   AspectCommentCreatedEventPayload,
+  CommunityCollaborationInterestEventPayload,
 } from './event-payloads';
 
 @Injectable()
@@ -173,10 +174,10 @@ export class NotificationsPayloadBuilder {
     return payload;
   }
 
-  async buildCommunityCollaborationInterestPayload(
+  buildCommunityCollaborationInterestPayload(
     userID: string,
     opportunity: IOpportunity
-  ) {
+  ): CommunityCollaborationInterestEventPayload {
     const payload = {
       userID,
       opportunity: {

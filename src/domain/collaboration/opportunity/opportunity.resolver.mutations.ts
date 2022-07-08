@@ -227,13 +227,17 @@ export class OpportunityResolverMutations {
     description: 'Express interest to collaborate on an Opportunity.',
   })
   @Profiling.api
-  async sendCommunityCollaborationInterest(
+  public async sendCommunityCollaborationInterest(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('collaborationData')
     collaborationData: OpportunityCollaborationInput
   ) {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
-      collaborationData.opportunityID
+      collaborationData.opportunityID,
+      {
+        select: ['id', 'nameID', 'displayName'],
+        relations: ['community'],
+      }
     );
 
     this.authorizationService.grantAccessOrFail(
@@ -244,7 +248,7 @@ export class OpportunityResolverMutations {
     );
 
     const payload =
-      await this.notificationsPayloadBuilder.buildCommunityCollaborationInterestPayload(
+      this.notificationsPayloadBuilder.buildCommunityCollaborationInterestPayload(
         agentInfo.userID,
         opportunity
       );
