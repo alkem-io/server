@@ -223,7 +223,7 @@ export class OpportunityResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IOpportunity, {
+  @Mutation(() => Boolean, {
     description: 'Express interest to collaborate on an Opportunity.',
   })
   @Profiling.api
@@ -254,6 +254,6 @@ export class OpportunityResolverMutations {
       payload
     );
 
-    return opportunity;
+    return true;
   }
 }
