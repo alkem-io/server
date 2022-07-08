@@ -6,6 +6,16 @@ export class canvasTemplates1656674597777 implements MigrationInterface {
   name = 'canvasTemplates1656674597777';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Remove the canvases that are for ecosystem models
+    const ecosystems: any[] = await queryRunner.query(
+      `SELECT id, canvasId from ecosystem_model`
+    );
+    for (const ecosystem of ecosystems) {
+      await queryRunner.query(
+        `DELETE FROM canvas WHERE (id = '${ecosystem.canvasId}')`
+      );
+    }
+
     // Migrate the existing Canvases that are marked as being Templates
     const canvases: any[] = await queryRunner.query(
       `SELECT id, contextId, value, displayName, isTemplate from canvas`
