@@ -70,6 +70,10 @@ export class canvasTemplates1656674597777 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`canvas\` DROP COLUMN \`isTemplate\``
     );
+
+    await queryRunner.query(
+      `ALTER TABLE \`ecosystem_model\` DROP COLUMN \`canvasId\``
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -83,7 +87,11 @@ export class canvasTemplates1656674597777 implements MigrationInterface {
     }
 
     await queryRunner.query(
-      `ALTER TABLE \`canvas\` ADD \`isTemplate\` tinyint NOT NUL`
+      `ALTER TABLE \`canvas\` ADD \`isTemplate\` tinyint NOT NULL`
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`ecosystem_model\` ADD \`canvasId\` char(36) NULL`
     );
   }
 

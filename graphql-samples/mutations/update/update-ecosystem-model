@@ -10,8 +10,5 @@ Variables:
   "ecosystemModelData": {
     "ID": "uuid",
     "description": "some description",
-    "canvas": {
-      "value": "http://someUri"
-    }
   }
 }
