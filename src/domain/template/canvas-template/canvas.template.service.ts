@@ -9,6 +9,7 @@ import { ICanvasTemplate } from './canvas.template.interface';
 import { TemplateBaseService } from '../template-base/template.base.service';
 import { CreateCanvasTemplateInput } from './dto/canvas.template.dto.create';
 import { UpdateCanvasTemplateInput } from './dto/canvas.template.dto.update';
+import { CanvasService } from '@domain/common/canvas/canvas.service';
 
 @Injectable()
 export class CanvasTemplateService {
@@ -17,7 +18,8 @@ export class CanvasTemplateService {
     private canvasTemplateRepository: Repository<CanvasTemplate>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private templateBaseService: TemplateBaseService
+    private templateBaseService: TemplateBaseService,
+    private canvasService: CanvasService
   ) {}
 
   async createCanvasTemplate(
@@ -25,10 +27,18 @@ export class CanvasTemplateService {
   ): Promise<ICanvasTemplate> {
     const canvasTemplate: ICanvasTemplate =
       CanvasTemplate.create(canvasTemplateData);
-    const result = await this.templateBaseService.initialise(
+    const result: ICanvasTemplate = await this.templateBaseService.initialise(
       canvasTemplate,
       canvasTemplateData
     );
+
+    // Allow specifying a Canvas to use as a base if no value is set
+    if (!canvasTemplateData.value && canvasTemplateData.canvasID) {
+      const canvas = await this.canvasService.getCanvasOrFail(
+        canvasTemplateData.canvasID
+      );
+      result.value = canvas.value;
+    }
 
     return await this.canvasTemplateRepository.save(result);
   }
