@@ -181,6 +181,7 @@ export class NotificationsPayloadBuilder {
     const payload = {
       userID,
       opportunity: {
+        id: opportunity.id,
         name: opportunity.displayName,
         communityName: opportunity.community?.displayName,
       },
