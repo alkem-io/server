@@ -21,7 +21,7 @@ export class canvasTemplates1656674597777 implements MigrationInterface {
     for (const canvas of canvases) {
       if (canvas.isTemplate) {
         await queryRunner.query(
-          `UPDATE 'canvas' SET 'displayName' = 'template_${canvas.displayName}' WHERE 'id' = '${canvas.displayName}'`
+          `UPDATE canvas SET displayName='template_${canvas.displayName}' WHERE id='${canvas.id}'`
         );
       }
     }
