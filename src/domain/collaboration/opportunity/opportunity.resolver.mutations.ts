@@ -22,7 +22,6 @@ import {
   OpportunityEventInput,
   UpdateOpportunityInput,
 } from './dto';
-import { OpportunityCollaborationInput } from './dto/opportunity.dto.collaborate';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
@@ -127,14 +126,14 @@ export class OpportunityResolverMutations {
         opportunity.authorization
       );
     // First check if the user has read access
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorization,
       AuthorizationPrivilege.READ,
       `create relation: ${opportunity.nameID}`
     );
     // Then check if the user can create
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorization,
       AuthorizationPrivilege.CREATE,
@@ -146,6 +145,15 @@ export class OpportunityResolverMutations {
         authorization.id
       );
     const relation = await this.opportunityService.createRelation(relationData);
+    const payload =
+      this.notificationsPayloadBuilder.buildCommunityCollaborationInterestPayload(
+        agentInfo.userID,
+        opportunity
+      );
+    this.notificationsClient.emit(
+      EventType.COMMUNITY_COLLABORATION_INTEREST,
+      payload
+    );
     return await this.relationAuthorizationService.applyAuthorizationPolicy(
       relation,
       oppAuthorization,
@@ -220,44 +228,5 @@ export class OpportunityResolverMutations {
       `remove user opportunity admin: ${opportunity.displayName}`
     );
     return await this.opportunityService.removeOpportunityAdmin(membershipData);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => Boolean, {
-    description: 'Express interest to collaborate on an Opportunity.',
-  })
-  @Profiling.api
-  public async sendCommunityCollaborationInterest(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('collaborationData')
-    collaborationData: OpportunityCollaborationInput
-  ) {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
-      collaborationData.opportunityID,
-      {
-        select: ['id', 'nameID', 'displayName'],
-        relations: ['community'],
-      }
-    );
-
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      opportunity.authorization,
-      AuthorizationPrivilege.READ,
-      `Express interest in opportunity: ${opportunity.nameID}`
-    );
-
-    const payload =
-      this.notificationsPayloadBuilder.buildCommunityCollaborationInterestPayload(
-        agentInfo.userID,
-        opportunity
-      );
-
-    this.notificationsClient.emit(
-      EventType.COMMUNITY_COLLABORATION_INTEREST,
-      payload
-    );
-
-    return true;
   }
 }
