@@ -99,7 +99,7 @@ export class ChallengeResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IChallenge, {
-    description: 'Updates the specified Challenge.',
+    description: 'Updates the Lifecycle on the specified Challenge.',
   })
   @Profiling.api
   async updateChallengeLifecycle(

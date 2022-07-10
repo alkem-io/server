@@ -39,6 +39,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core';
 import { AspectService } from '@domain/context/aspect/aspect.service';
+import { UpdateOpportunityLifecycleInput } from './dto/opportunity.dto.update.lifecycle';
 
 @Injectable()
 export class OpportunityService {
@@ -109,6 +110,28 @@ export class OpportunityService {
     }
 
     return await this.saveOpportunity(opportunity);
+  }
+
+  async updateOpportunityLifecycle(
+    opportunityData: UpdateOpportunityLifecycleInput
+  ): Promise<IOpportunity> {
+    const opportunity = await this.getOpportunityOrFail(
+      opportunityData.opportunityID
+    );
+
+    // Get the old Lifecycle
+    const oldLifecycle = await this.getLifecycle(opportunity.id);
+
+    const lifecycleDefinition =
+      this.lifecycleService.deserializeLifecycleDefinition(
+        opportunityData.lifecycleDefinition
+      );
+    opportunity.lifecycle = await this.lifecycleService.createLifecycle(
+      opportunity.id,
+      lifecycleDefinition
+    );
+    await this.lifecycleService.deleteLifecycle(oldLifecycle.id);
+    return await this.save(opportunity);
   }
 
   async save(opportunity: IOpportunity): Promise<IOpportunity> {
