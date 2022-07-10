@@ -56,6 +56,7 @@ import { AspectService } from '@domain/context/aspect/aspect.service';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
+import { UpdateChallengeLifecycleInput } from './dto/challenge.dto.update.lifecycle';
 
 @Injectable()
 export class ChallengeService {
@@ -176,8 +177,27 @@ export class ChallengeService {
         await this.challengeRepository.save(challenge);
       }
     }
-
     return challenge;
+  }
+
+  async updateChallengeLifecycle(
+    challengeData: UpdateChallengeLifecycleInput
+  ): Promise<IChallenge> {
+    const challenge = await this.getChallengeOrFail(challengeData.challengeID);
+
+    // Get the old Lifecycle
+    const oldLifecycle = await this.getLifecycle(challenge.id);
+
+    const lifecycleDefinition =
+      this.lifecycleService.deserializeLifecycleDefinition(
+        challengeData.lifecycleDefinition
+      );
+    challenge.lifecycle = await this.lifecycleService.createLifecycle(
+      challenge.id,
+      lifecycleDefinition
+    );
+    await this.lifecycleService.deleteLifecycle(oldLifecycle.id);
+    return await this.challengeRepository.save(challenge);
   }
 
   async deleteChallenge(deleteData: DeleteChallengeInput): Promise<IChallenge> {

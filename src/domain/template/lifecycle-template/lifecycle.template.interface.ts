@@ -1,7 +1,7 @@
 import { LifecycleType } from '@common/enums/lifecycle.type';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ITemplateBase } from '../template-base/template.base.interface';
-import JSON from 'graphql-type-json';
+import { LifecycleDefinitionScalar } from '@domain/common/scalars/scalar.lifecycle.definition';
 
 @ObjectType('LifecycleTemplate')
 export abstract class ILifecycleTemplate extends ITemplateBase {
@@ -11,7 +11,7 @@ export abstract class ILifecycleTemplate extends ITemplateBase {
   })
   type!: string;
 
-  @Field(() => JSON, {
+  @Field(() => LifecycleDefinitionScalar, {
     nullable: true,
     description: 'The XState definition for this LifecycleTemplate.',
   })

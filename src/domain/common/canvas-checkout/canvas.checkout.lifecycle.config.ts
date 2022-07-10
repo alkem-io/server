@@ -1,4 +1,6 @@
-export const CanvasCheckoutLifecycleConfig = {
+import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
+
+export const CanvasCheckoutLifecycleConfig: ILifecycleDefinition = {
   id: 'canvas-checkout',
   context: {
     parentID: '',

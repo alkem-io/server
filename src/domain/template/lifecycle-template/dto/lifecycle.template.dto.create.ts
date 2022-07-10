@@ -1,12 +1,12 @@
 import {
-  LIFECYCLE_VALUE_LENGTH,
+  LIFECYCLE_DEFINITION_LENGTH,
   SMALL_TEXT_LENGTH,
 } from '@common/constants/entity.field.length.constants';
 import { LifecycleType } from '@common/enums/lifecycle.type';
+import { LifecycleDefinitionScalar } from '@domain/common/scalars/scalar.lifecycle.definition';
 import { CreateTemplateBaseInput } from '@domain/template/template-base/dto';
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
-import JSON from 'graphql-type-json';
 
 @InputType()
 export class CreateLifecycleTemplateInput extends CreateTemplateBaseInput {
@@ -17,11 +17,11 @@ export class CreateLifecycleTemplateInput extends CreateTemplateBaseInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   type!: string;
 
-  @Field(() => JSON, {
+  @Field(() => LifecycleDefinitionScalar, {
     nullable: true,
     description: 'The XState definition for this LifecycleTemplate.',
   })
   @IsOptional()
-  @MaxLength(LIFECYCLE_VALUE_LENGTH)
+  @MaxLength(LIFECYCLE_DEFINITION_LENGTH)
   definition?: string;
 }

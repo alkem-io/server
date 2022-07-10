@@ -1,4 +1,6 @@
-export const opportunityLifecycleConfigExtended = {
+import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
+
+export const opportunityLifecycleConfigExtended: ILifecycleDefinition = {
   id: 'opportunity-lifecycle-extended',
   context: {
     parentID: '',

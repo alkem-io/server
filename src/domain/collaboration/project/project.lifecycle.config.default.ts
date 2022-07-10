@@ -1,4 +1,6 @@
-export const projectLifecycleConfigDefault = {
+import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
+
+export const projectLifecycleConfigDefault: ILifecycleDefinition = {
   id: 'project-lifecycle-default',
   context: {
     parentID: '',
