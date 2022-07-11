@@ -11,11 +11,6 @@ export abstract class ICanvas extends INameable {
   })
   value?: string;
 
-  @Field(() => Boolean, {
-    description: 'Is the Canvas a template?',
-  })
-  isTemplate!: boolean;
-
   @Field(() => IVisual, {
     description: 'The preview image for the Canvas.',
     nullable: true,

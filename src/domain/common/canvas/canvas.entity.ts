@@ -11,14 +11,10 @@ export class Canvas extends NameableEntity implements ICanvas {
     super();
     this.displayName = name || '';
     this.value = value || '';
-    this.isTemplate = false;
   }
 
   @Column('longtext', { nullable: false })
   value!: string;
-
-  @Column('boolean', { nullable: false })
-  isTemplate!: boolean;
 
   @ManyToOne(() => Context, context => context.canvases, {
     eager: false,

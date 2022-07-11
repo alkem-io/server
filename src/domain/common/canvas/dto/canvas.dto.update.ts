@@ -9,7 +9,4 @@ export class UpdateCanvasInput extends UpdateNameableInput {
   @IsOptional()
   @MaxLength(CANVAS_VALUE_LENGTH)
   value?: string;
-
-  @Field({ nullable: true })
-  isTemplate?: boolean;
 }
