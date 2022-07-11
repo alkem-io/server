@@ -20,10 +20,10 @@ export class Relation extends AuthorizableEntity implements IRelation {
   @Column('text', { nullable: true })
   description? = '';
 
-  @ManyToOne(
-    () => Opportunity,
-    opportunity => opportunity.relations,
-    { eager: false, cascade: false, onDelete: 'CASCADE' }
-  )
+  @ManyToOne(() => Opportunity, opportunity => opportunity.relations, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
   opportunity?: Opportunity;
 }
