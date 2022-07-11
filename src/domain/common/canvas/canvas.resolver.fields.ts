@@ -22,7 +22,7 @@ export class CanvasResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('preview', () => IVisual, {
-    nullable: false,
+    nullable: true,
     description: 'The preview image for this Canvas.',
   })
   @Profiling.api
