@@ -38,10 +38,10 @@ export class CanvasAuthorizationService {
         );
     }
 
-    if (canvas.bannerCard) {
-      canvas.bannerCard.authorization =
+    if (canvas.preview) {
+      canvas.preview.authorization =
         this.authorizationPolicyService.inheritParentAuthorization(
-          canvas.bannerCard.authorization,
+          canvas.preview.authorization,
           canvas.authorization
         );
     }

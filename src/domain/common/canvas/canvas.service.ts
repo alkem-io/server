@@ -41,7 +41,7 @@ export class CanvasService {
       canvasID: savedCanvas.id,
     });
 
-    canvas.bannerCard = await this.visualService.createVisualBannerNarrow();
+    canvas.preview = await this.visualService.createVisualBannerNarrow();
 
     return await this.save(canvas);
   }
@@ -158,16 +158,16 @@ export class CanvasService {
     return canvasWithCheckout.checkout;
   }
 
-  async getBannerCard(canvas: ICanvas): Promise<IVisual> {
-    const canvasWithBannerCard = await this.getCanvasOrFail(canvas.id, {
-      relations: ['bannerCard'],
+  async getPreview(canvas: ICanvas): Promise<IVisual> {
+    const canvasWithPreview = await this.getCanvasOrFail(canvas.id, {
+      relations: ['preview'],
     });
-    if (!canvasWithBannerCard.bannerCard) {
+    if (!canvasWithPreview.preview) {
       throw new EntityNotInitializedException(
         `Canvas not initialized: ${canvas.id}`,
         LogContext.CONTEXT
       );
     }
-    return canvasWithBannerCard.bannerCard;
+    return canvasWithPreview.preview;
   }
 }

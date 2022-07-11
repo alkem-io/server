@@ -20,7 +20,7 @@ export abstract class ICanvas extends INameable {
     description: 'The preview image for the Canvas.',
     nullable: true,
   })
-  bannerCard?: IVisual;
+  preview?: IVisual;
 
   checkout?: ICanvasCheckout;
 }

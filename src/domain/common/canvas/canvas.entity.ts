@@ -41,5 +41,5 @@ export class Canvas extends NameableEntity implements ICanvas {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  bannerCard?: Visual;
+  preview?: Visual;
 }

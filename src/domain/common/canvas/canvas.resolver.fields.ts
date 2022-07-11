@@ -21,12 +21,12 @@ export class CanvasResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('bannerCard', () => IVisual, {
+  @ResolveField('preview', () => IVisual, {
     nullable: false,
-    description: 'The BannerCard Visual for this Canvas.',
+    description: 'The preview image for this Canvas.',
   })
   @Profiling.api
-  async bannerCard(@Parent() canvas: ICanvas): Promise<IVisual> {
-    return await this.canvasService.getBannerCard(canvas);
+  async preview(@Parent() canvas: ICanvas): Promise<IVisual> {
+    return await this.canvasService.getPreview(canvas);
   }
 }
