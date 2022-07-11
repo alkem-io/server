@@ -37,6 +37,15 @@ export class CanvasAuthorizationService {
           canvas.authorization
         );
     }
+
+    if (canvas.bannerCard) {
+      canvas.bannerCard.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          canvas.bannerCard.authorization,
+          canvas.authorization
+        );
+    }
+
     return await this.canvasService.save(canvas);
   }
 
