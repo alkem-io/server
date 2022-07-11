@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Canvas } from './canvas.entity';
 import { ICanvas } from './canvas.interface';
@@ -15,6 +18,7 @@ import { AgentInfo } from '@core/authentication';
 import { CanvasCheckoutStateEnum } from '@common/enums/canvas.checkout.status';
 import { EntityCheckoutStatusException } from '@common/exceptions/entity.not.checkedout.exception';
 import { VisualService } from '@domain/common/visual/visual.service';
+import { IVisual } from '@src/domain';
 
 @Injectable()
 export class CanvasService {
@@ -152,5 +156,18 @@ export class CanvasService {
       );
 
     return canvasWithCheckout.checkout;
+  }
+
+  async getBannerCard(canvas: ICanvas): Promise<IVisual> {
+    const canvasWithBannerCard = await this.getCanvasOrFail(canvas.id, {
+      relations: ['bannerCard'],
+    });
+    if (!canvasWithBannerCard.bannerCard) {
+      throw new EntityNotInitializedException(
+        `Canvas not initialized: ${canvas.id}`,
+        LogContext.CONTEXT
+      );
+    }
+    return canvasWithBannerCard.bannerCard;
   }
 }
