@@ -41,7 +41,7 @@ export class EcosystemModelService {
     ecosystemModel.authorization = new AuthorizationPolicy();
     await this.createRestrictedActorGroups(ecosystemModel);
     ecosystemModel.actorGroups = [];
-    ecosystemModel.canvas = new Canvas();
+    // ecosystemModel.canvas = new Canvas();
     return await this.ecosystemModelRepository.save(ecosystemModel);
   }
 
