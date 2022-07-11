@@ -1,6 +1,7 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { ICanvas } from './canvas.interface';
 import { Context } from '@domain/context/context/context.entity';
+import { Visual } from '@domain/common/visual/visual.entity';
 import { CanvasCheckout } from '../canvas-checkout/canvas.checkout.entity';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 
@@ -29,4 +30,12 @@ export class Canvas extends NameableEntity implements ICanvas {
   })
   @JoinColumn()
   checkout?: CanvasCheckout;
+
+  @OneToOne(() => Visual, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  preview?: Visual;
 }

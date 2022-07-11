@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Canvas } from './canvas.entity';
 import { ICanvas } from './canvas.interface';
@@ -12,6 +15,8 @@ import { UpdateCanvasInput } from './dto/canvas.dto.update';
 import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { AgentInfo } from '@core/authentication';
+import { VisualService } from '@domain/common/visual/visual.service';
+import { IVisual } from '@src/domain';
 
 @Injectable()
 export class CanvasService {
@@ -19,7 +24,8 @@ export class CanvasService {
     @InjectRepository(Canvas)
     private canvasRepository: Repository<Canvas>,
     private canvasCheckoutService: CanvasCheckoutService,
-    private authorizationPolicyService: AuthorizationPolicyService
+    private authorizationPolicyService: AuthorizationPolicyService,
+    private visualService: VisualService
   ) {}
 
   async createCanvas(canvasData: CreateCanvasInput): Promise<ICanvas> {
@@ -32,6 +38,9 @@ export class CanvasService {
     canvas.checkout = await this.canvasCheckoutService.createCanvasCheckout({
       canvasID: savedCanvas.id,
     });
+
+    canvas.preview = await this.visualService.createVisualBannerNarrow();
+
     return await this.save(canvas);
   }
 
@@ -133,5 +142,18 @@ export class CanvasService {
       );
 
     return canvasWithCheckout.checkout;
+  }
+
+  async getPreview(canvas: ICanvas): Promise<IVisual> {
+    const canvasWithPreview = await this.getCanvasOrFail(canvas.id, {
+      relations: ['preview'],
+    });
+    if (!canvasWithPreview.preview) {
+      throw new EntityNotInitializedException(
+        `Canvas not initialized: ${canvas.id}`,
+        LogContext.CONTEXT
+      );
+    }
+    return canvasWithPreview.preview;
   }
 }
