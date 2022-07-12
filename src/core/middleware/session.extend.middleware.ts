@@ -42,11 +42,17 @@ export class SessionExtendMiddleware implements NestMiddleware {
         });
 
       if (!newSession) {
+        this.logger.warn?.(
+          'New session cookie not sent: new session not found'
+        );
         return next();
       }
 
       const orySessionId: string | undefined = req.cookies[ORY_KRATOS_COOKIE];
       if (!orySessionId) {
+        this.logger.warn?.(
+          'New session cookie not sent: new session id not found'
+        );
         return next();
       }
 
