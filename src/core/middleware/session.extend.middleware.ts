@@ -29,7 +29,16 @@ export class SessionExtendMiddleware implements NestMiddleware {
     }
 
     const [, token] = authorization.split(' ');
+
+    if (!token) {
+      return next();
+    }
+
     const { session } = jwt_decode<KratosPayload>(token);
+
+    if (!session) {
+      return next();
+    }
 
     if (this.authService.shouldExtendSession(session)) {
       const newSession = await this.authService
