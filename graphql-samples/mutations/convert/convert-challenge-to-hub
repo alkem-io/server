@@ -1,0 +1,14 @@
+mutation ConvertChallengeToHub($convertData: ConvertChallengeToHubInput!) {
+  convertChallengeToHub(convertData: $convertData) {
+    displayName,
+    id
+  }
+}
+
+query variables:
+{
+  "convertData":
+  {
+    "challengeID": "uuid"
+  }
+}

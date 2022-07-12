@@ -68,7 +68,7 @@ export class CanvasResolverMutations {
       agentInfo,
       canvas.authorization,
       AuthorizationPrivilege.UPDATE_CANVAS,
-      `update Canvas: ${canvas.name}`
+      `update Canvas: ${canvas.displayName}`
     );
 
     const updatedCanvas = await this.canvasService.updateCanvas(

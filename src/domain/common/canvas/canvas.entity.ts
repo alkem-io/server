@@ -1,26 +1,20 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { ICanvas } from './canvas.interface';
 import { Context } from '@domain/context/context/context.entity';
+import { Visual } from '@domain/common/visual/visual.entity';
 import { CanvasCheckout } from '../canvas-checkout/canvas.checkout.entity';
-import { AuthorizableEntity } from '../entity/authorizable-entity';
+import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 
 @Entity()
-export class Canvas extends AuthorizableEntity implements ICanvas {
+export class Canvas extends NameableEntity implements ICanvas {
   constructor(name?: string, value?: string) {
     super();
-    this.name = name || '';
+    this.displayName = name || '';
     this.value = value || '';
-    this.isTemplate = false;
   }
-
-  @Column('text', { nullable: false })
-  name!: string;
 
   @Column('longtext', { nullable: false })
   value!: string;
-
-  @Column('boolean', { nullable: false })
-  isTemplate!: boolean;
 
   @ManyToOne(() => Context, context => context.canvases, {
     eager: false,
@@ -36,4 +30,12 @@ export class Canvas extends AuthorizableEntity implements ICanvas {
   })
   @JoinColumn()
   checkout?: CanvasCheckout;
+
+  @OneToOne(() => Visual, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  preview?: Visual;
 }

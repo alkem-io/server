@@ -37,6 +37,15 @@ export class CanvasAuthorizationService {
           canvas.authorization
         );
     }
+
+    if (canvas.preview) {
+      canvas.preview.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          canvas.preview.authorization,
+          canvas.authorization
+        );
+    }
+
     return await this.canvasService.save(canvas);
   }
 

@@ -12,7 +12,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AgentInfo } from '@core/authentication';
 import { ActorGroupAuthorizationService } from '@domain/context/actor-group/actor-group.service.authorization';
 import { IEcosystemModel } from './ecosystem-model.interface';
-import { UpdateEcosystemModelInput } from './ecosystem-model.dto.update';
+import { UpdateEcosystemModelInput } from './dto/ecosystem-model.dto.update';
 @Resolver()
 export class EcosystemModelResolverMutations {
   constructor(
