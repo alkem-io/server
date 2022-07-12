@@ -6,7 +6,7 @@ import { ContextResolverSubscriptions } from './context.resolver.subscriptions';
 import { ContextService } from '@domain/context/context/context.service';
 import { Context } from '@domain/context/context';
 import { EcosystemModelModule } from '@domain/context/ecosystem-model/ecosystem-model.module';
-import { AspectModule } from '@domain/context/aspect/aspect.module';
+import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
 import { ContextResolverFields } from '@domain/context/context/context.resolver.fields';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ContextAuthorizationService } from './context.service.authorization';

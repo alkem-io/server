@@ -15,7 +15,7 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { AspectAuthorizationService } from '../aspect/aspect.service.authorization';
+import { AspectAuthorizationService } from '../../collaboration/aspect/aspect.service.authorization';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @Injectable()
@@ -61,14 +61,6 @@ export class ContextAuthorizationService {
         context.ecosystemModel
       );
 
-    context.aspects = await this.contextService.getAspects(context);
-    for (const aspect of context.aspects) {
-      await this.aspectAuthorizationService.applyAuthorizationPolicy(
-        aspect,
-        context.authorization
-      );
-    }
-
     context.visuals = await this.contextService.getVisuals(context);
     for (const visual of context.visuals) {
       visual.authorization =
@@ -76,14 +68,6 @@ export class ContextAuthorizationService {
           visual.authorization,
           context.authorization
         );
-    }
-
-    context.canvases = await this.contextService.getCanvases(context);
-    for (const canvas of context.canvases) {
-      await this.canvasAuthorizationService.applyAuthorizationPolicy(
-        canvas,
-        context.authorization
-      );
     }
 
     context.references = await this.contextService.getReferences(context);

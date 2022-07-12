@@ -4,7 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project';
-import { Aspect } from '@domain/context/aspect/aspect.entity';
+import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
 
 @Module({

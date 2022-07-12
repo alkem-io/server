@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AspectModule } from '@domain/context/aspect/aspect.module';
+import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
 import { Project } from './project.entity';
 import { ProjectResolverMutations } from './project.resolver.mutations';
 import { ProjectService } from './project.service';

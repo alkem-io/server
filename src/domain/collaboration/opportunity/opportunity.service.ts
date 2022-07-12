@@ -38,7 +38,7 @@ import { RemoveOpportunityAdminInput } from './dto/opportunity.dto.remove.admin'
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core';
-import { AspectService } from '@domain/context/aspect/aspect.service';
+import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 
 @Injectable()
 export class OpportunityService {

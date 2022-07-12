@@ -5,7 +5,7 @@ import {
   DeleteAspectInput,
   UpdateAspectInput,
   IAspect,
-} from '@domain/context/aspect';
+} from '@domain/collaboration/aspect';
 import { CurrentUser } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';

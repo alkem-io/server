@@ -13,7 +13,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SUBSCRIPTION_ASPECT_COMMENT } from '@constants/providers';
 import { AspectCommentsMessageReceived } from './dto/aspect.dto.event.message.received';
-import { AspectService } from '@domain/context/aspect/aspect.service';
+import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 
 @Resolver()
 export class AspectResolverSubscriptions {

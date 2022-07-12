@@ -7,7 +7,6 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { AspectService } from '@domain/context/aspect/aspect.service';
 import {
   UpdateProjectInput,
   CreateProjectInput,
@@ -25,7 +24,6 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 @Injectable()
 export class ProjectService {
   constructor(
-    private aspectService: AspectService,
     private namingService: NamingService,
     private lifecycleService: LifecycleService,
     @InjectRepository(Project)

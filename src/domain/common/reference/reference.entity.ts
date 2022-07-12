@@ -3,7 +3,7 @@ import { IReference } from './reference.interface';
 import { Context } from '@domain/context/context/context.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Aspect } from '@domain/context/aspect/aspect.entity';
+import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
 
 @Entity()
 export class Reference extends AuthorizableEntity implements IReference {

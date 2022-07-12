@@ -4,6 +4,7 @@ import { Context } from '@domain/context/context/context.entity';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { CanvasCheckout } from '../canvas-checkout/canvas.checkout.entity';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
+import { Callout } from '@domain/collaboration/callout';
 
 @Entity()
 export class Canvas extends NameableEntity implements ICanvas {
@@ -16,12 +17,12 @@ export class Canvas extends NameableEntity implements ICanvas {
   @Column('longtext', { nullable: false })
   value!: string;
 
-  @ManyToOne(() => Context, context => context.canvases, {
+  @ManyToOne(() => Callout, callout => callout.canvases, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  context?: Context;
+  callout?: Context;
 
   @OneToOne(() => CanvasCheckout, {
     eager: false,

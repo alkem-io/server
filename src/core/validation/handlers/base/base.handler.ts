@@ -39,7 +39,7 @@ import { CommunityApplyInput } from '@domain/community/community/dto/community.d
 import { CreateCanvasOnContextInput } from '@domain/context/context/dto/context.dto.create.canvas';
 import { CommunicationCreateDiscussionInput } from '@domain/communication/communication/dto/communication.dto.create.discussion';
 import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
-import { CreateReferenceOnAspectInput } from '@domain/context/aspect/dto/aspect.dto.create.reference';
+import { CreateReferenceOnAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.create.reference';
 import { CreateReferenceOnContextInput } from '@domain/context/context/dto/context.dto.create.reference';
 import { CreateReferenceOnProfileInput } from '@domain/community/profile/dto/profile.dto.create.reference';
 import {
@@ -52,7 +52,7 @@ import { OrganizationVerificationEventInput } from '@domain/community/organizati
 import { CommentsSendMessageInput } from '@domain/communication/comments/dto/comments.dto.send.message';
 import { DiscussionSendMessageInput } from '@domain/communication/discussion/dto/discussion.dto.send.message';
 import { UpdatesSendMessageInput } from '@domain/communication/updates/dto/updates.dto.send.message';
-import { UpdateAspectInput } from '@domain/context/aspect';
+import { UpdateAspectInput } from '@domain/collaboration/aspect';
 import { UpdateCanvasDirectInput } from '@domain/common/canvas/dto/canvas.dto.update.direct';
 import { UpdateDiscussionInput } from '@domain/communication/discussion/dto/discussion.dto.update';
 import { UpdateEcosystemModelInput } from '@domain/context';

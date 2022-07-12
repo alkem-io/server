@@ -1,5 +1,5 @@
 import { UUID } from '@domain/common/scalars';
-import { CreateAspectInput } from '@domain/context/aspect/dto/aspect.dto.create';
+import { CreateAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.create';
 import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()

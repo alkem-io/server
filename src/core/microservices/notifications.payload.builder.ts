@@ -79,18 +79,18 @@ export class NotificationsPayloadBuilder {
       );
     }
 
-    if (!aspect.context) {
+    if (!aspect.callout) {
       throw new NotificationEventException(
-        `Could not acquire context from aspect with id: ${aspectId}`,
+        `Could not acquire callout from aspect with id: ${aspectId}`,
         LogContext.NOTIFICATIONS
       );
     }
 
-    const community = await this.getCommunityFromContext(aspect.context.id);
+    const community = await this.getCommunityFromCallout(aspect.callout.id);
 
     if (!community) {
       throw new NotificationEventException(
-        `Could not acquire community from context with id: ${aspect.context.id}`,
+        `Could not acquire community from context with id: ${aspect.callout.id}`,
         LogContext.NOTIFICATIONS
       );
     }
@@ -364,7 +364,7 @@ export class NotificationsPayloadBuilder {
     return community;
   }
 
-  private async getCommunityFromContext(contextId: string) {
+  private async getCommunityFromCallout(calloutId: string) {
     const [result]: {
       entityId: string;
       communityId: string;
@@ -372,16 +372,19 @@ export class NotificationsPayloadBuilder {
     }[] = await getConnection().query(
       `
         SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`hub\`
-        LEFT JOIN \`aspect\` on \`aspect\`.\`contextId\` = \`hub\`.\`contextId\`
-        WHERE \`hub\`.\`contextId\` = '${contextId}' UNION
+        RIGHT JOIN \`callout\` on \`callout\`.\`collaborationId\` = \`hub\`.\`collaborationId\`
+        RIGHT JOIN \`aspect\` on \`aspect\`.\`calloutId\` = \`callout\`.\`id\`
+        WHERE \`aspect\`.\`calloutId\` = '${calloutId}' UNION
 
         SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`challenge\`
-        LEFT JOIN \`aspect\` on \`aspect\`.\`contextId\` = \`challenge\`.\`contextId\`
-        WHERE \`challenge\`.\`contextId\` = '${contextId}'  UNION
+        RIGHT JOIN \`callout\` on \`callout\`.\`collaborationId\` = \`challenge\`.\`collaborationId\`
+        RIGHT JOIN \`aspect\` on \`aspect\`.\`calloutId\` = \`callout\`.\`id\`
+        WHERE \`aspect\`.\`calloutId\` = '${calloutId}' UNION
 
         SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`opportunity\`
-        LEFT JOIN \`aspect\` on \`aspect\`.\`contextId\` = \`opportunity\`.\`contextId\`
-        WHERE \`opportunity\`.\`contextId\` = '${contextId}';
+        RIGHT JOIN \`callout\` on \`callout\`.\`collaborationId\` = \`opportunity\`.\`collaborationId\`
+        RIGHT JOIN \`aspect\` on \`aspect\`.\`calloutId\` = \`callout\`.\`id\`
+        WHERE \`aspect\`.\`calloutId\` = '${calloutId}' UNION
       `
     );
 
