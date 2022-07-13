@@ -9,13 +9,11 @@ import {
   IAuthorizationPolicy,
 } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { AspectAuthorizationService } from '../../collaboration/aspect/aspect.service.authorization';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @Injectable()
@@ -24,8 +22,6 @@ export class ContextAuthorizationService {
     private contextService: ContextService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private ecosysteModelAuthorizationService: EcosystemModelAuthorizationService,
-    private canvasAuthorizationService: CanvasAuthorizationService,
-    private aspectAuthorizationService: AspectAuthorizationService,
     @InjectRepository(Context)
     private contextRepository: Repository<Context>
   ) {}

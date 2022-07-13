@@ -10,17 +10,14 @@ import { LogContext } from '@common/enums';
 import { IReference } from '@domain/common/reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { IContext, Context, CreateContextInput } from '@domain/context/context';
-import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EcosystemModelService } from '@domain/context/ecosystem-model/ecosystem-model.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { CreateReferenceOnContextInput } from './dto/context.dto.create.reference';
 import { UpdateContextInput } from './dto/context.dto.update';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { IVisual } from '@domain/common/visual/visual.interface';
-import { NamingService } from '@services/domain/naming/naming.service';
 import { ILocation } from '@domain/common/location/location.interface';
 import { LocationService } from '@domain/common/location';
 
@@ -28,12 +25,9 @@ import { LocationService } from '@domain/common/location';
 export class ContextService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private aspectService: AspectService,
-    private canvasService: CanvasService,
     private ecosystemModelService: EcosystemModelService,
     private visualService: VisualService,
     private referenceService: ReferenceService,
-    private namingService: NamingService,
     private locationService: LocationService,
     @InjectRepository(Context)
     private contextRepository: Repository<Context>

@@ -1,5 +1,4 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { ClientProxy } from '@nestjs/microservices';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { IReference } from '@domain/common/reference';
 import { ContextService } from '@domain/context/context/context.service';
@@ -11,15 +10,6 @@ import { AgentInfo } from '@core/authentication';
 import { CreateReferenceOnContextInput } from '@domain/context/context/dto/context.dto.create.reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
-import { AspectAuthorizationService } from '../../collaboration/aspect/aspect.service.authorization';
-import { PubSubEngine } from 'graphql-subscriptions';
-import { Inject } from '@nestjs/common';
-import {
-  NOTIFICATIONS_SERVICE,
-  SUBSCRIPTION_CONTEXT_ASPECT_CREATED,
-} from '@src/common/constants/providers';
-import { NotificationsPayloadBuilder } from '@core/microservices';
 
 @Resolver()
 export class ContextResolverMutations {
@@ -27,13 +17,7 @@ export class ContextResolverMutations {
     private referenceService: ReferenceService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
-    private canvasAuthorizationService: CanvasAuthorizationService,
-    private aspectAuthorizationService: AspectAuthorizationService,
-    private contextService: ContextService,
-    @Inject(SUBSCRIPTION_CONTEXT_ASPECT_CREATED)
-    private aspectCreatedSubscription: PubSubEngine,
-    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
+    private contextService: ContextService
   ) {}
 
   @UseGuards(GraphqlGuard)
