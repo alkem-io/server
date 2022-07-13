@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
-const table = '`canvas`';
-const column = '`previewID`';
+const table = `canvas`;
+const column = `previewID`;
 
 export class canvasVisual1657204514370 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -22,7 +22,7 @@ export class canvasVisual1657204514370 implements MigrationInterface {
       VALUES ('${visualID}', NOW(), NOW(), 1, '${visualAuthID}', '${templateVisual.name}', '', '${templateVisual.minWidth}', '${templateVisual.maxWidth}', '${templateVisual.minHeight}', '${templateVisual.maxHeight}', '${templateVisual.aspectRatio}', '${allowedTypes}')`
       );
       await queryRunner.query(
-        `UPDATE ${table} SET visualID='${visualID}' WHERE id='${canvas.id}'`
+        `UPDATE ${table} SET ${column}='${visualID}' WHERE id='${canvas.id}'`
       );
     }
   }
