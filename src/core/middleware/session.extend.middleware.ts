@@ -25,18 +25,25 @@ export class SessionExtendMiddleware implements NestMiddleware {
     const authorization = req.headers['authorization'];
 
     if (!authorization) {
+      this.logger.verbose?.(
+        'Session extend middleware: authorization header not found'
+      );
       return next();
     }
 
     const [, token] = authorization.split(' ');
 
     if (!token) {
+      this.logger.verbose?.('Session extend middleware: token not found');
       return next();
     }
 
     const { session } = jwt_decode<KratosPayload>(token);
 
     if (!session) {
+      this.logger.verbose?.(
+        'Session extend middleware: Kratos session not found in token'
+      );
       return next();
     }
 
