@@ -38,7 +38,16 @@ export class SessionExtendMiddleware implements NestMiddleware {
       return next();
     }
 
-    const { session } = jwt_decode<KratosPayload>(token);
+    let jwt;
+
+    try {
+      jwt = jwt_decode<KratosPayload>(token);
+    } catch (error) {
+      this.logger.verbose?.('Bearer token is not an ID token!');
+      return next();
+    }
+
+    const session = jwt.session;
 
     if (!session) {
       this.logger.verbose?.(
