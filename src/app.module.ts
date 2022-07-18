@@ -44,6 +44,7 @@ import { DataloaderModule } from '@core/dataloader/dataloader.module';
 import * as redisStore from 'cache-manager-redis-store';
 import { RedisLockModule } from '@core/caching/redis/redis.lock.module';
 import { ConversionModule } from '@services/domain/conversion/conversion.module';
+import { SessionExtendMiddleware } from '@src/core/middleware';
 
 @Module({
   imports: [
@@ -207,7 +208,9 @@ import { ConversionModule } from '@services/domain/conversion/conversion.module'
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestLoggerMiddleware).forRoutes('/');
+    consumer
+      .apply(RequestLoggerMiddleware, SessionExtendMiddleware)
+      .forRoutes('/');
   }
 }
 

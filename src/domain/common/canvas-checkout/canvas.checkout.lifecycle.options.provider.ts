@@ -48,10 +48,9 @@ export class CanvasCheckoutLifecycleOptionsProvider {
       canvasCheckout.authorization
     );
 
-    // Todo: needed to address a race condition
+    // Todo: there is likely a race condition related to lifecycles + events they trigger.
     // Events that are triggered by XState are fire and forget. So they above event will potentially return
     // before all the actions that were triggered by the event have completed.
-    // As in this case the events should all be quite fast a short wait is sufficient, but we need to fix this properly
     const updatedCanvasCheckout =
       await this.canvasCheckoutService.getCanvasCheckoutOrFail(
         canvasCheckout.id
@@ -99,10 +98,6 @@ export class CanvasCheckoutLifecycleOptionsProvider {
         const updatedCanvasCheckout = await this.canvasCheckoutService.save(
           canvasCheckout
         );
-        // Events that are triggered by XState are fire and forget. So they above event will potentially return
-        // before all the actions that were triggered by the event have completed.
-        // As in this case the events should all be quite fast a short wait is sufficient, but we need to fix this properly
-        //await new Promise(resolve => setTimeout(resolve, 1000));
         this.logCheckoutStatus(
           event.type,
           updatedCanvasCheckout,
@@ -122,10 +117,7 @@ export class CanvasCheckoutLifecycleOptionsProvider {
         const updatedCanvasCheckout = await this.canvasCheckoutService.save(
           canvasCheckout
         );
-        // Events that are triggered by XState are fire and forget. So they above event will potentially return
-        // before all the actions that were triggered by the event have completed.
-        // As in this case the events should all be quite fast a short wait is sufficient, but we need to fix this properly
-        //await new Promise(resolve => setTimeout(resolve, 1000));
+
         this.logCheckoutStatus(
           event.type,
           updatedCanvasCheckout,

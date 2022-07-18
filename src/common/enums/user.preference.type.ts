@@ -16,6 +16,8 @@ export enum UserPreferenceType {
   NOTIFICATION_ASPECT_CREATED_ADMIN = 'NotificationAspectCreatedAdmin',
   NOTIFICATION_ASPECT_CREATED = 'NotificationAspectCreated',
   NOTIFICATION_ASPECT_COMMENT_CREATED = 'NotificationAspectCommentCreated',
+  NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_USER = 'NotificationCommunityCollaborationInterestUser',
+  NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_ADMIN = 'NotificationCommunityCollaborationInterestAdmin',
 }
 
 registerEnumType(UserPreferenceType, {

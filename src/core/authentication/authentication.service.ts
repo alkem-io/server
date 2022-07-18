@@ -136,31 +136,34 @@ export class AuthenticationService {
     return agentInfo;
   }
 
-  public async extendSession(sessionToBeExtended: Session): Promise<void> {
+  public async extendSession(sessionToBeExtended: Session): Promise<Session> {
     const bearerToken = await getBearerToken(
       this.kratosPublicUrlServer,
       this.adminPasswordIdentifier,
       this.adminPassword
     );
 
-    await this.tryExtendSession(sessionToBeExtended, bearerToken);
+    return this.tryExtendSession(sessionToBeExtended, bearerToken);
   }
   // Refresh and Extend Sessions
   // https://www.ory.sh/docs/guides/session-management/refresh-extend-sessions
   private async tryExtendSession(
     sessionToBeExtended: Session,
     bearerToken: string
-  ): Promise<void | never> {
+  ): Promise<Session | never> {
     const kratos = new V0alpha2Api(
       new Configuration({
         basePath: this.kratosAdminUrlServer,
       })
     );
 
+    let newSession: Session;
+
     try {
-      await kratos.adminExtendSession(sessionToBeExtended.id, {
+      const { data } = await kratos.adminExtendSession(sessionToBeExtended.id, {
         headers: { authorization: `Bearer ${bearerToken}` },
       });
+      newSession = data;
       this.logger?.verbose?.(
         `Session ${sessionToBeExtended.id} extended for identity ${sessionToBeExtended.identity.id}`
       );
@@ -170,6 +173,8 @@ export class AuthenticationService {
         `Session extend for session ${sessionToBeExtended.id} failed with: ${message}`
       );
     }
+
+    return newSession;
   }
 
   public shouldExtendSession(session: Session): boolean {

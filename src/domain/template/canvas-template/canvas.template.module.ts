@@ -1,5 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { CanvasModule } from '@domain/common/canvas/canvas.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TemplateBaseModule } from '../template-base/template.base.module';
@@ -15,6 +16,7 @@ import { CanvasTemplateAuthorizationService } from './canvas.template.service.au
     AuthorizationPolicyModule,
     TemplateBaseModule,
     TemplateInfoModule,
+    CanvasModule,
     TypeOrmModule.forFeature([CanvasTemplate]),
   ],
   providers: [
