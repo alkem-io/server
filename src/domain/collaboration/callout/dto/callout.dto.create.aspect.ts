@@ -3,7 +3,7 @@ import { CreateAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.c
 import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
-export class CreateAspectOnContextInput extends CreateAspectInput {
+export class CreateAspectOnCalloutInput extends CreateAspectInput {
   @Field(() => UUID, { nullable: false })
-  contextID!: string;
+  calloutID!: string;
 }

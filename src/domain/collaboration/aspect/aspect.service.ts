@@ -181,13 +181,13 @@ export class AspectService {
     return newReference;
   }
 
-  async getReferences(context: IAspect): Promise<IReference[]> {
-    const aspectLoaded = await this.getAspectOrFail(context.id, {
+  async getReferences(aspect: IAspect): Promise<IReference[]> {
+    const aspectLoaded = await this.getAspectOrFail(aspect.id, {
       relations: ['references'],
     });
     if (!aspectLoaded.references)
       throw new EntityNotFoundException(
-        `Context not initialised: ${context.id}`,
+        `Aspect not initialised: ${aspect.id}`,
         LogContext.CONTEXT
       );
 
@@ -211,9 +211,9 @@ export class AspectService {
     return this.commentsService.getCommentsOrFail(commentsId);
   }
 
-  getAspectsInContextCount(contextId: string) {
+  public async getAspectsInCalloutCount(calloutId: string) {
     return this.aspectRepository.count({
-      where: { context: { id: contextId } },
+      where: { callout: { id: calloutId } },
     });
   }
 }

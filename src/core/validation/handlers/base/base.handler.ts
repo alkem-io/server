@@ -27,7 +27,6 @@ import {
   OpportunityEventInput,
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
-import { CreateAspectOnContextInput } from '@domain/context/context/dto/context.dto.create.aspect';
 import {
   CreateUserGroupInput,
   UpdateUserGroupInput,
@@ -36,7 +35,10 @@ import { CreateChallengeOnHubInput } from '@domain/challenge/challenge/dto/chall
 import { CreateChallengeOnChallengeInput } from '@domain/challenge/challenge/dto/challenge.dto.create.in.challenge';
 import { CreateActorInput, UpdateActorInput } from '@domain/context/actor';
 import { CommunityApplyInput } from '@domain/community/community/dto/community.dto.apply';
-import { CreateCanvasOnContextInput } from '@domain/context/context/dto/context.dto.create.canvas';
+import {
+  CreateCanvasOnCalloutInput,
+  CreateAspectOnCalloutInput,
+} from '@domain/collaboration/callout';
 import { CommunicationCreateDiscussionInput } from '@domain/communication/communication/dto/communication.dto.create.discussion';
 import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 import { CreateReferenceOnAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.create.reference';
@@ -78,9 +80,9 @@ export class BaseHandler extends AbstractHandler {
       ProjectEventInput,
       CreateActorGroupInput,
       CreateActorInput,
-      CreateAspectOnContextInput,
+      CreateAspectOnCalloutInput,
       CreateAspectTemplateOnTemplatesSetInput,
-      CreateCanvasOnContextInput,
+      CreateCanvasOnCalloutInput,
       CreateCanvasTemplateOnTemplatesSetInput,
       CreateChallengeOnHubInput,
       CreateChallengeOnChallengeInput,

@@ -5,9 +5,9 @@ import { CANVAS_VALUE_LENGTH } from '@src/common/constants';
 import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
-export class CreateCanvasOnContextInput extends CreateCanvasInput {
+export class CreateCanvasOnCalloutInput extends CreateCanvasInput {
   @Field(() => UUID, { nullable: false })
-  contextID!: string;
+  calloutID!: string;
 
   @Field(() => String, { nullable: true })
   @IsOptional()

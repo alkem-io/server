@@ -2,9 +2,9 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class DeleteCanvasOnContextInput {
+export class DeleteCanvasOnCalloutInput {
   @Field(() => UUID, { nullable: false })
-  contextID!: string;
+  calloutID!: string;
 
   @Field(() => UUID, { nullable: false })
   canvasID!: string;

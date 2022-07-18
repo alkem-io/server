@@ -607,7 +607,7 @@ export class HubService {
 
     // Aspects
     const { id: contextId } = await this.getContext(hub);
-    const aspectsCount = await this.aspectService.getAspectsInContextCount(
+    const aspectsCount = await this.aspectService.getAspectsInCalloutCount(
       contextId
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());

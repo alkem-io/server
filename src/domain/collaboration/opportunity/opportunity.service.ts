@@ -338,7 +338,7 @@ export class OpportunityService {
     activity.push(relationsTopic);
 
     const { id: contextId } = await this.getContext(opportunity.id);
-    const aspectsCount = await this.aspectService.getAspectsInContextCount(
+    const aspectsCount = await this.aspectService.getAspectsInCalloutCount(
       contextId
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());

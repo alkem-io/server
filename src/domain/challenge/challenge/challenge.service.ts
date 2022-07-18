@@ -572,7 +572,7 @@ export class ChallengeService {
     activity.push(challengesTopic);
 
     const { id: contextId } = await this.getContext(challenge.id);
-    const aspectsCount = await this.aspectService.getAspectsInContextCount(
+    const aspectsCount = await this.aspectService.getAspectsInCalloutCount(
       contextId
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());

@@ -13,14 +13,10 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
-import { AspectService } from '@domain/collaboration/aspect/aspect.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 @Resolver()
 export class ProjectResolverMutations {
   constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
-    private aspectService: AspectService,
     private projectService: ProjectService,
     private projectLifecycleOptionsProvider: ProjectLifecycleOptionsProvider
   ) {}

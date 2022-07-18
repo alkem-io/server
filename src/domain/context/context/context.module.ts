@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { ContextResolverMutations } from './context.resolver.mutations';
-import { ContextResolverSubscriptions } from './context.resolver.subscriptions';
 import { ContextService } from '@domain/context/context/context.service';
 import { Context } from '@domain/context/context';
 import { EcosystemModelModule } from '@domain/context/ecosystem-model/ecosystem-model.module';
@@ -27,7 +26,6 @@ import { LocationModule } from '@domain/common/location';
   ],
   providers: [
     ContextResolverMutations,
-    ContextResolverSubscriptions,
     ContextResolverFields,
     ContextService,
     ContextAuthorizationService,
