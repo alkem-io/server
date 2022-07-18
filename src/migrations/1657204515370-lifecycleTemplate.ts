@@ -3,8 +3,8 @@ import { randomUUID } from 'crypto';
 import { escapeString } from './utils/escape-string';
 import { LifecycleType } from '@common/enums/lifecycle.type';
 
-export class lifecycleTemplate1657120080241 implements MigrationInterface {
-  name = 'lifecycleTemplate1657120080241';
+export class lifecycleTemplate1657204515370 implements MigrationInterface {
+  name = 'lifecycleTemplate1657204515370';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create lifecycle_template
