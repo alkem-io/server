@@ -6,6 +6,7 @@ import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { IComments } from '@domain/communication/comments/comments.interface';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 @ObjectType('Callout')
 export abstract class ICallout extends INameable {
@@ -23,6 +24,11 @@ export abstract class ICallout extends INameable {
     description: 'State of the callout.',
   })
   state!: CalloutState;
+
+  @Field(() => CalloutVisibility, {
+    description: 'State of the callout.',
+  })
+  visibility!: CalloutVisibility;
 
   @Field(() => [IAspect], {
     nullable: true,

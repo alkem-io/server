@@ -14,6 +14,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { Collaboration } from '../collaboration';
 import { Comments } from '@domain/communication/comments';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 @Entity()
 export class Callout extends NameableEntity implements ICallout {
@@ -25,6 +26,9 @@ export class Callout extends NameableEntity implements ICallout {
 
   @Column('text', { nullable: false, default: CalloutState.OPEN })
   state!: CalloutState;
+
+  @Column('text', { nullable: false, default: CalloutVisibility.DRAFT })
+  visibility!: CalloutVisibility;
 
   @OneToMany(() => Canvas, canvas => canvas.callout, {
     eager: false,
