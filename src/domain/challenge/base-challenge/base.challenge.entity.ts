@@ -7,11 +7,20 @@ import { Context } from '@domain/context/context/context.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { IBaseChallenge } from './base.challenge.interface';
 import { Agent } from '@domain/agent/agent/agent.entity';
+import { Collaboration } from '@domain/collaboration';
 
 export abstract class BaseChallenge
   extends NameableEntity
   implements IBaseChallenge
 {
+  @OneToOne(() => Collaboration, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  collaboration?: Collaboration;
+
   @OneToOne(() => Context, {
     eager: false,
     cascade: true,

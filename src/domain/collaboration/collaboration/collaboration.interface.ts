@@ -7,15 +7,9 @@ import { ICallout } from '../callout';
 export abstract class ICollaboration extends IAuthorizable {
   @Field(() => [ICallout], {
     nullable: true,
-    description: 'List of aspects',
+    description: 'List of callouts',
   })
-  aspectCallouts?: ICallout[];
-
-  @Field(() => [ICallout], {
-    nullable: true,
-    description: 'List of aspects',
-  })
-  canvasCallouts?: ICallout[];
+  callouts?: ICallout[];
 
   @Field(() => [IRelation], {
     nullable: true,

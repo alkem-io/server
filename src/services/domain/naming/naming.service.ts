@@ -86,6 +86,24 @@ export class NamingService {
     return true;
   }
 
+  async isCalloutNameIdAvailableInCollaboration(
+    nameID: string,
+    collaborationID: string
+  ): Promise<boolean> {
+    const query = this.aspectRepository
+      .createQueryBuilder('callout')
+      .leftJoinAndSelect('callout.collaboration', 'collaboration')
+      .where('collaboration.id = :id')
+      .andWhere('callout.nameID= :nameID')
+      .setParameters({ id: `${collaborationID}`, nameID: `${nameID}` });
+    const calloutsWithNameID = await query.getOne();
+    if (calloutsWithNameID) {
+      return false;
+    }
+
+    return true;
+  }
+
   isValidNameID(nameID: string): boolean {
     if (nameID.length > NameID.MAX_LENGTH) return false;
     return NameID.REGEX.test(nameID);

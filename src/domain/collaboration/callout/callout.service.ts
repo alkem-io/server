@@ -97,7 +97,7 @@ export class CalloutService {
     });
     if (!callout.aspects)
       throw new EntityNotInitializedException(
-        `Context (${calloutID}) not initialised`,
+        `Callout (${calloutID}) not initialised`,
         LogContext.CONTEXT
       );
 
@@ -190,7 +190,7 @@ export class CalloutService {
     });
     if (!calloutLoaded.canvases)
       throw new EntityNotFoundException(
-        `Context not initialised, no canvases: ${callout.id}`,
+        `Callout not initialised, no canvases: ${callout.id}`,
         LogContext.CONTEXT
       );
 
