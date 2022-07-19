@@ -9,7 +9,13 @@ export abstract class ICollaboration extends IAuthorizable {
     nullable: true,
     description: 'List of aspects',
   })
-  callouts?: ICallout[];
+  aspectCallouts?: ICallout[];
+
+  @Field(() => [ICallout], {
+    nullable: true,
+    description: 'List of aspects',
+  })
+  canvasCallouts?: ICallout[];
 
   @Field(() => [IRelation], {
     nullable: true,

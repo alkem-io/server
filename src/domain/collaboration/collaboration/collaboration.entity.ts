@@ -14,7 +14,14 @@ export class Collaboration
     cascade: false,
     onDelete: 'CASCADE',
   })
-  callouts?: Callout[];
+  aspectCallouts?: Callout[];
+
+  @ManyToOne(() => Callout, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
+  canvasCallouts?: Callout[];
 
   @ManyToOne(() => Relation, {
     eager: false,
