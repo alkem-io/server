@@ -5,6 +5,7 @@ import { INameable } from '@domain/common';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
+import { IComments } from '@domain/communication/comments/comments.interface';
 
 @ObjectType('Callout')
 export abstract class ICallout extends INameable {
@@ -34,4 +35,10 @@ export abstract class ICallout extends INameable {
     description: 'The canvases associated with this callout.',
   })
   canvases?: ICanvas[];
+
+  @Field(() => IComments, {
+    nullable: true,
+    description: 'The comment messages for this callout.',
+  })
+  comments?: IComments;
 }

@@ -1,4 +1,11 @@
-import { Entity, OneToMany, Column, ManyToOne } from 'typeorm';
+import {
+  Entity,
+  OneToMany,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  OneToOne,
+} from 'typeorm';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
@@ -6,6 +13,7 @@ import { ICallout } from './callout.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { Collaboration } from '../collaboration';
+import { Comments } from '@domain/communication/comments';
 
 @Entity()
 export class Callout extends NameableEntity implements ICallout {
@@ -29,6 +37,14 @@ export class Callout extends NameableEntity implements ICallout {
     cascade: true,
   })
   aspects?: Aspect[];
+
+  @OneToOne(() => Comments, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  comments?: Comments;
 
   @ManyToOne(() => Collaboration, collaboration => collaboration.callouts, {
     eager: false,
