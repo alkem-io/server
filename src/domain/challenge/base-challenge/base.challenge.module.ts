@@ -9,6 +9,7 @@ import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { BaseChallengeService } from './base.challenge.service';
 import { BaseChallengeAuthorizationService } from './base.challenge.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+// import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     LifecycleModule,
     TagsetModule,
     NamingModule,
+    // CollaborationModule,
   ],
   providers: [BaseChallengeService, BaseChallengeAuthorizationService],
   exports: [BaseChallengeService, BaseChallengeAuthorizationService],

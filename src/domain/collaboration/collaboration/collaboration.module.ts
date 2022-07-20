@@ -6,6 +6,8 @@ import { CalloutModule } from '../callout/callout.module';
 import { CollaborationService } from './collaboration.service';
 import { Collaboration } from './collaboration.entity';
 import { NamingModule } from '@services/domain/naming/naming.module';
+import { CollaborationResolverMutations } from './collaboration.resolver.mutations';
+import { CollaborationResolverFields } from './collaboration.resolver.fields';
 
 @Module({
   imports: [
@@ -15,7 +17,11 @@ import { NamingModule } from '@services/domain/naming/naming.module';
     NamingModule,
     TypeOrmModule.forFeature([Collaboration]),
   ],
-  providers: [CollaborationService],
+  providers: [
+    CollaborationService,
+    CollaborationResolverMutations,
+    CollaborationResolverFields,
+  ],
   exports: [CollaborationService],
 })
 export class CollaborationModule {}

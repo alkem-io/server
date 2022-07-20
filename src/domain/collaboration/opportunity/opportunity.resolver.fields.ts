@@ -2,7 +2,6 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { IOpportunity, Opportunity } from '@domain/collaboration/opportunity';
 import { OpportunityService } from './opportunity.service';
-import { IRelation } from '@domain/collaboration/relation';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { IContext } from '@domain/context/context';
 import { ICommunity } from '@domain/community/community';
@@ -14,17 +13,6 @@ import { GraphqlGuard } from '@core/authorization';
 @Resolver(() => IOpportunity)
 export class OpportunityResolverFields {
   constructor(private opportunityService: OpportunityService) {}
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('relations', () => [IRelation], {
-    nullable: true,
-    description: 'The set of Relations within the context of this Opportunity.',
-  })
-  @Profiling.api
-  async relations(@Parent() opportunity: Opportunity) {
-    return await this.opportunityService.getRelations(opportunity);
-  }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)

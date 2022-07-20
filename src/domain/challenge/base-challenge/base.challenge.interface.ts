@@ -6,6 +6,7 @@ import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { INameable } from '@domain/common/entity/nameable-entity';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { IPreferenceSet } from '@domain/common/preference-set';
+// import { ICollaboration } from '@domain/collaboration';
 
 @ObjectType('IBaseChallenge')
 export abstract class IBaseChallenge extends INameable {
@@ -14,9 +15,12 @@ export abstract class IBaseChallenge extends INameable {
     description: 'The set of tags for the challenge',
   })
   tagset?: ITagset;
-
   agent?: IAgent;
-
+  // @Field(() => ICollaboration, {
+  //   nullable: true,
+  //   description: 'Collaboration object for the base challenge',
+  // })
+  // collaboration?: ICollaboration;
   context?: IContext;
   community?: ICommunity;
   lifecycle?: ILifecycle;

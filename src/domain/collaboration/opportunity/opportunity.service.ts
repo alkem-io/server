@@ -16,7 +16,6 @@ import {
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
-import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
 import { IProject, CreateProjectInput } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
@@ -64,7 +63,6 @@ export class OpportunityService {
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
     opportunity.hubID = hubID;
     opportunity.projects = [];
-    opportunity.relations = [];
 
     await this.baseChallengeService.initialise(
       opportunity,
@@ -188,12 +186,6 @@ export class OpportunityService {
       );
     }
 
-    if (opportunity.relations) {
-      for (const relation of opportunity.relations) {
-        await this.relationService.deleteRelation({ ID: relation.id });
-      }
-    }
-
     // Note need to load it in with all contained entities so can remove fully
     const baseOpportunity = await this.getOpportunityOrFail(opportunityID, {
       relations: ['community', 'context', 'lifecycle', 'agent'],
@@ -255,26 +247,6 @@ export class OpportunityService {
     );
   }
 
-  // Loads the aspects into the Opportunity entity if not already present
-  async getRelations(opportunity: Opportunity): Promise<IRelation[]> {
-    if (opportunity.relations && opportunity.relations.length > 0) {
-      // opportunity already has relations loaded
-      return opportunity.relations;
-    }
-
-    const opportunityLoaded = await this.getOpportunityOrFail(opportunity.id, {
-      relations: ['relations'],
-    });
-
-    if (!opportunityLoaded.relations)
-      throw new EntityNotInitializedException(
-        `Opportunity not initialised: ${opportunity.id}`,
-        LogContext.COLLABORATION
-      );
-
-    return opportunityLoaded.relations;
-  }
-
   async createProject(projectData: CreateProjectInput): Promise<IProject> {
     const opportunityId = projectData.opportunityID;
 
@@ -299,23 +271,6 @@ export class OpportunityService {
     return project;
   }
 
-  async createRelation(relationData: CreateRelationInput): Promise<IRelation> {
-    const opportunityId = relationData.parentID;
-    const opportunity = await this.getOpportunityOrFail(opportunityId, {
-      relations: ['relations'],
-    });
-
-    if (!opportunity.relations)
-      throw new EntityNotInitializedException(
-        `Opportunity (${opportunityId}) not initialised`,
-        LogContext.COLLABORATION
-      );
-
-    const relation = await this.relationService.createRelation(relationData);
-    opportunity.relations.push(relation);
-    await this.opportunityRepository.save(opportunity);
-    return relation;
-  }
   async getActivity(opportunity: IOpportunity): Promise<INVP[]> {
     const activity: INVP[] = [];
     const community = await this.getCommunity(opportunity.id);

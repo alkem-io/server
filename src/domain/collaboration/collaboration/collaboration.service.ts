@@ -18,6 +18,9 @@ import { CalloutService } from '../callout/callout.service';
 import { CreateCalloutOnCollaborationInput } from './dto/collaboration.dto.create.callout';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
+import { IRelation } from '../relation/relation.interface';
+import { RelationService } from '../relation/relation.service';
+import { CreateRelationInput } from '../relation';
 
 @Injectable()
 export class CollaborationService {
@@ -25,12 +28,15 @@ export class CollaborationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private calloutService: CalloutService,
     private namingService: NamingService,
+    private relationService: RelationService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>
   ) {}
 
   async createCollaboration(): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
+    // opportunity.relations = [];
+    collaboration.callouts = [];
     collaboration.authorization = new AuthorizationPolicy();
     return collaboration;
   }
@@ -70,6 +76,12 @@ export class CollaborationService {
     if (collaboration.callouts) {
       for (const callout of collaboration.callouts) {
         await this.calloutService.removeCallout(callout.id);
+      }
+    }
+
+    if (collaboration.relations) {
+      for (const relation of collaboration.relations) {
+        await this.relationService.deleteRelation({ ID: relation.id });
       }
     }
 
@@ -155,5 +167,46 @@ export class CollaborationService {
       results.push(callout);
     }
     return results;
+  }
+
+  async createRelation(relationData: CreateRelationInput): Promise<IRelation> {
+    const collaborationId = relationData.parentID;
+    const collaboration = await this.getCollaborationOrFail(collaborationId, {
+      relations: ['relations'],
+    });
+
+    if (!collaboration.relations)
+      throw new EntityNotInitializedException(
+        `Collaboration (${collaborationId}) not initialised`,
+        LogContext.COLLABORATION
+      );
+
+    const relation = await this.relationService.createRelation(relationData);
+    collaboration.relations.push(relation);
+    await this.collaborationRepository.save(collaboration);
+    return relation;
+  }
+
+  // Loads the relations into the Collaboration entity if not already present
+  async getRelations(collaboration: Collaboration): Promise<IRelation[]> {
+    if (collaboration.relations && collaboration.relations.length > 0) {
+      // collaboration already has relations loaded
+      return collaboration.relations;
+    }
+
+    const collaborationLoaded = await this.getCollaborationOrFail(
+      collaboration.id,
+      {
+        relations: ['relations'],
+      }
+    );
+
+    if (!collaborationLoaded.relations)
+      throw new EntityNotInitializedException(
+        `Collaboration not initialised: ${collaboration.id}`,
+        LogContext.COLLABORATION
+      );
+
+    return collaborationLoaded.relations;
   }
 }

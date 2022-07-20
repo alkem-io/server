@@ -29,6 +29,7 @@ import { CommunityType } from '@common/enums/community.type';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+// import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 
 @Injectable()
 export class BaseChallengeService {
@@ -40,6 +41,7 @@ export class BaseChallengeService {
     private namingService: NamingService,
     private tagsetService: TagsetService,
     private lifecycleService: LifecycleService,
+    // private collaborationService: CollaborationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -67,6 +69,9 @@ export class BaseChallengeService {
         baseChallengeData.context
       );
     }
+
+    // baseChallenge.collaboration =
+    //   await this.collaborationService.createCollaboration();
 
     baseChallenge.tagset = await this.tagsetService.createTagset({
       name: RestrictedTagsetNames.DEFAULT,
