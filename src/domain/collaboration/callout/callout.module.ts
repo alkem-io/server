@@ -5,11 +5,12 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Callout } from './callout.entity';
 import { AspectModule } from '../aspect/aspect.module';
 import { CanvasModule } from '@domain/common/canvas/canvas.module';
-import { AspectService } from '../aspect/aspect.service';
-import { AspectAuthorizationService } from '../aspect/aspect.service.authorization';
-import { AspectResolverMutations } from '../aspect/aspect.resolver.mutations';
-import { AspectResolverFields } from '../aspect/aspect.resolver.fields';
-import { AspectResolverSubscriptions } from '../aspect/aspect.resolver.subscriptions';
+import { CalloutResolverMutations } from './callout.resolver.mutations';
+import { CalloutService } from './callout.service';
+import { CalloutAuthorizationService } from './callout.service.authorization';
+import { CalloutResolverFields } from './callout.resolver.fields';
+import { CalloutResolverSubscriptions } from './callout.resolver.subscriptions';
+import { NamingModule } from '@services/domain/naming/naming.module';
 
 @Module({
   imports: [
@@ -17,15 +18,16 @@ import { AspectResolverSubscriptions } from '../aspect/aspect.resolver.subscript
     AuthorizationModule,
     AspectModule,
     CanvasModule,
+    NamingModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [
-    AspectResolverMutations,
-    AspectService,
-    AspectAuthorizationService,
-    AspectResolverFields,
-    AspectResolverSubscriptions,
+    CalloutResolverMutations,
+    CalloutService,
+    CalloutAuthorizationService,
+    CalloutResolverFields,
+    CalloutResolverSubscriptions,
   ],
-  exports: [AspectService, AspectAuthorizationService],
+  exports: [CalloutService, CalloutAuthorizationService],
 })
 export class CalloutModule {}
