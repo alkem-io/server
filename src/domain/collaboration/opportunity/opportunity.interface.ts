@@ -1,6 +1,6 @@
-import { IProject } from '@domain/collaboration/project/project.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
+import { IProject } from '@domain/collaboration/project/project.interface';
 import { ISearchable } from '@domain/common/interfaces/searchable.interface';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 @ObjectType('Opportunity', {

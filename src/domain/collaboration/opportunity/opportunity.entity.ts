@@ -1,4 +1,3 @@
-// import { Relation } from '@domain/collaboration/relation/relation.entity';
 import { Project } from '@domain/collaboration/project/project.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
@@ -19,12 +18,6 @@ export class Opportunity extends BaseChallenge implements IOpportunity {
     cascade: true,
   })
   projects?: Project[];
-
-  // @OneToMany(() => Relation, relation => relation.opportunity, {
-  //   eager: false,
-  //   cascade: true,
-  // })
-  // relations?: Relation[];
 
   @Column()
   hubID!: string;

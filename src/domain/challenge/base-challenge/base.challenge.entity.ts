@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import { JoinColumn, OneToOne } from 'typeorm';
+import { Entity, JoinColumn, OneToOne } from 'typeorm';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { Context } from '@domain/context/context/context.entity';
-import { NameableEntity } from '@domain/common/entity/nameable-entity';
+import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { IBaseChallenge } from './base.challenge.interface';
 import { Agent } from '@domain/agent/agent/agent.entity';
-import { Collaboration } from '@domain/collaboration';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 
+@Entity()
 export abstract class BaseChallenge
   extends NameableEntity
   implements IBaseChallenge

@@ -1,7 +1,7 @@
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ObjectType, Field } from '@nestjs/graphql';
 import { ICanvas } from '@domain/common/canvas';
-import { INameable } from '@domain/common';
+import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';

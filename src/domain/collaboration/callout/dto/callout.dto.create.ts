@@ -1,5 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { CreateNameableInput } from '@domain/common';
+import { CreateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.create';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { IsOptional } from 'class-validator';
 import { CalloutType } from '@common/enums/callout.type';
