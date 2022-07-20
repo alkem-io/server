@@ -41,21 +41,21 @@ export class CalloutResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAspect, {
-    description: 'Create a new Aspect on the Context.',
+    description: 'Create a new Aspect on the Callout.',
   })
   @Profiling.api
   async createAspectOnCallout(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('aspectData') aspectData: CreateAspectOnCalloutInput
   ): Promise<IAspect> {
-    const context = await this.calloutService.getCalloutOrFail(
+    const callout = await this.calloutService.getCalloutOrFail(
       aspectData.calloutID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      context.authorization,
+      callout.authorization,
       AuthorizationPrivilege.CREATE_ASPECT,
-      `create aspect on context: ${context.id}`
+      `create aspect on callout: ${callout.id}`
     );
     let aspect = await this.calloutService.createAspect(
       aspectData,
@@ -63,11 +63,11 @@ export class CalloutResolverMutations {
     );
     aspect = await this.aspectAuthorizationService.applyAuthorizationPolicy(
       aspect,
-      context.authorization
+      callout.authorization
     );
     const aspectCreatedEvent: CalloutAspectCreated = {
       eventID: `context-aspect-created-${Math.round(Math.random() * 100)}`,
-      calloutID: context.id,
+      calloutID: callout.id,
       aspect,
     };
     await this.aspectCreatedSubscription.publish(
