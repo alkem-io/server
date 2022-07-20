@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import { Entity, JoinColumn, OneToOne } from 'typeorm';
+import { JoinColumn, OneToOne } from 'typeorm';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { Community } from '@domain/community/community/community.entity';
@@ -9,7 +9,6 @@ import { IBaseChallenge } from './base.challenge.interface';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 
-@Entity()
 export abstract class BaseChallenge
   extends NameableEntity
   implements IBaseChallenge
