@@ -11,6 +11,7 @@ import { useContainer } from 'class-validator';
 import { graphqlUploadExpress } from 'graphql-upload';
 import { ConfigurationTypes } from '@common/enums';
 import { json } from 'body-parser';
+import cookieParser from 'cookie-parser';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
@@ -35,6 +36,7 @@ const bootstrap = async () => {
   }
 
   app.use(faviconMiddleware);
+  app.use(cookieParser());
   app.use(
     helmet({
       contentSecurityPolicy: false,
