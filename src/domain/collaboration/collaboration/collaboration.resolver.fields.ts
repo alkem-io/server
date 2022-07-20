@@ -4,9 +4,9 @@ import { IRelation } from '@domain/collaboration/relation';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { Collaboration } from './collaboration.entity';
-import { ICollaboration } from './collaboration.interface';
-import { CollaborationService } from './collaboration.service';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 
 @Resolver(() => ICollaboration)
 export class CollaborationResolverFields {

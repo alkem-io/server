@@ -9,10 +9,10 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 // import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 // import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 // import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
-import { CollaborationService } from './collaboration.service';
-import { Collaboration } from './collaboration.entity';
-import { ICollaboration } from './collaboration.interface';
-import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 // import { AuthorizationCredential } from '@common/enums';
 
 @Injectable()

@@ -6,12 +6,12 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { RelationAuthorizationService } from '../relation/relation.service.authorization';
+import { RelationAuthorizationService } from '@domain/collaboration/relation/relation.service.authorization';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { ClientProxy } from '@nestjs/microservices';
-import { CollaborationService } from './collaboration.service';
-import { CreateRelationInput, IRelation } from '../relation';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
 
 @Resolver()
 export class CollaborationResolverMutations {

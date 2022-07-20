@@ -2,7 +2,7 @@ import { Entity, OneToMany } from 'typeorm';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Relation } from '@domain/collaboration/relation/relation.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { ICollaboration } from './collaboration.interface';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 
 @Entity()
 export class Collaboration

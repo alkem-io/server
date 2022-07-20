@@ -12,15 +12,15 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { ICallout } from '@domain/collaboration/callout';
 import { UpdateNameableInput } from '@domain/common';
 import { NamingService } from '@src/services/domain/naming/naming.service';
-import { Collaboration } from './collaboration.entity';
-import { ICollaboration } from './collaboration.interface';
-import { CalloutService } from '../callout/callout.service';
-import { CreateCalloutOnCollaborationInput } from './dto/collaboration.dto.create.callout';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
-import { IRelation } from '../relation/relation.interface';
-import { RelationService } from '../relation/relation.service';
-import { CreateRelationInput } from '../relation';
+import { IRelation } from '@domain/collaboration/relation/relation.interface';
+import { RelationService } from '@domain/collaboration/relation/relation.service';
+import { CreateRelationInput } from '@domain/collaboration/relation/relation.dto.create';
 
 @Injectable()
 export class CollaborationService {

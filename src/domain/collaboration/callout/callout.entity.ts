@@ -12,9 +12,9 @@ import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { ICallout } from './callout.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
-import { Collaboration } from '../collaboration';
 import { Comments } from '@domain/communication/comments';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 
 @Entity()
 export class Callout extends NameableEntity implements ICallout {

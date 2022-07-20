@@ -1,7 +1,7 @@
 import { ObjectType, Field } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { IRelation } from '../relation/relation.interface';
-import { ICallout } from '../callout';
+import { IRelation } from '@domain/collaboration/relation/relation.interface';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 
 @ObjectType('Collaboration')
 export abstract class ICollaboration extends IAuthorizable {
