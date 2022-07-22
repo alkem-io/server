@@ -89,7 +89,7 @@ export class HubResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('preferences', () => [IPreference], {
-    nullable: false,
+    nullable: true,
     description: 'The preferences for this Hub',
   })
   @UseGuards(GraphqlGuard)
@@ -152,7 +152,7 @@ export class HubResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('opportunities', () => [IOpportunity], {
-    nullable: false,
+    nullable: true,
     description: 'All opportunities within the hub',
   })
   @UseGuards(GraphqlGuard)
