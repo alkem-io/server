@@ -1,10 +1,11 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { IOpportunity, Opportunity } from '@domain/collaboration/opportunity';
+import { Opportunity } from './opportunity.entity';
+import { IOpportunity } from './opportunity.interface';
 import { OpportunityService } from './opportunity.service';
-import { ILifecycle } from '@domain/common/lifecycle';
-import { IContext } from '@domain/context/context';
-import { ICommunity } from '@domain/community/community';
+import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
+import { IContext } from '@domain/context/context/context.interface';
+import { ICommunity } from '@domain/community/community/community.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';

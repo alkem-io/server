@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
-import { NameableEntity } from '@domain/common/entity/nameable-entity';
+import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { ICallout } from './callout.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';

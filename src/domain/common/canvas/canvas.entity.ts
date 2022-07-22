@@ -3,7 +3,7 @@ import { ICanvas } from './canvas.interface';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { CanvasCheckout } from '../canvas-checkout/canvas.checkout.entity';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
-import { Callout } from '@domain/collaboration/callout';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 
 @Entity()
 export class Canvas extends NameableEntity implements ICanvas {
