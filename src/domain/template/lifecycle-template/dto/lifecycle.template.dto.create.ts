@@ -6,7 +6,7 @@ import { LifecycleType } from '@common/enums/lifecycle.type';
 import { LifecycleDefinitionScalar } from '@domain/common/scalars/scalar.lifecycle.definition';
 import { CreateTemplateBaseInput } from '@domain/template/template-base/dto';
 import { Field, InputType } from '@nestjs/graphql';
-import { IsOptional, MaxLength } from 'class-validator';
+import { MaxLength } from 'class-validator';
 
 @InputType()
 export class CreateLifecycleTemplateInput extends CreateTemplateBaseInput {
@@ -18,10 +18,9 @@ export class CreateLifecycleTemplateInput extends CreateTemplateBaseInput {
   type!: string;
 
   @Field(() => LifecycleDefinitionScalar, {
-    nullable: true,
+    nullable: false,
     description: 'The XState definition for this LifecycleTemplate.',
   })
-  @IsOptional()
   @MaxLength(LIFECYCLE_DEFINITION_LENGTH)
-  definition?: string;
+  definition!: string;
 }

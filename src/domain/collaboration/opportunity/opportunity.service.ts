@@ -116,21 +116,20 @@ export class OpportunityService {
     opportunityData: UpdateOpportunityLifecycleInput
   ): Promise<IOpportunity> {
     const opportunity = await this.getOpportunityOrFail(
-      opportunityData.opportunityID
+      opportunityData.opportunityID,
+      { relations: ['lifecycle'] }
     );
 
-    // Get the old Lifecycle
-    const oldLifecycle = await this.getLifecycle(opportunity.id);
-
-    const lifecycleDefinition =
-      this.lifecycleService.deserializeLifecycleDefinition(
-        opportunityData.lifecycleDefinition
+    if (!opportunity.lifecycle) {
+      throw new EntityNotInitializedException(
+        `Lifecycle of opportunity (${opportunity.id}) not initialized`,
+        LogContext.OPPORTUNITY
       );
-    opportunity.lifecycle = await this.lifecycleService.createLifecycle(
-      opportunity.id,
-      lifecycleDefinition
-    );
-    await this.lifecycleService.deleteLifecycle(oldLifecycle.id);
+    }
+
+    opportunity.lifecycle.machineDef = opportunityData.lifecycleDefinition;
+    opportunity.lifecycle.machineState = '';
+
     return await this.save(opportunity);
   }
 

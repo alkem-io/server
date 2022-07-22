@@ -1,5 +1,6 @@
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -183,20 +184,20 @@ export class ChallengeService {
   async updateChallengeLifecycle(
     challengeData: UpdateChallengeLifecycleInput
   ): Promise<IChallenge> {
-    const challenge = await this.getChallengeOrFail(challengeData.challengeID);
+    const challenge = await this.getChallengeOrFail(challengeData.challengeID, {
+      relations: ['lifecycle'],
+    });
 
-    // Get the old Lifecycle
-    const oldLifecycle = await this.getLifecycle(challenge.id);
-
-    const lifecycleDefinition =
-      this.lifecycleService.deserializeLifecycleDefinition(
-        challengeData.lifecycleDefinition
+    if (!challenge.lifecycle) {
+      throw new EntityNotInitializedException(
+        `Lifecycle of challenge (${challenge.id}) not initialized`,
+        LogContext.CHALLENGES
       );
-    challenge.lifecycle = await this.lifecycleService.createLifecycle(
-      challenge.id,
-      lifecycleDefinition
-    );
-    await this.lifecycleService.deleteLifecycle(oldLifecycle.id);
+    }
+
+    challenge.lifecycle.machineDef = challengeData.lifecycleDefinition;
+    challenge.lifecycle.machineState = '';
+
     return await this.challengeRepository.save(challenge);
   }
 
