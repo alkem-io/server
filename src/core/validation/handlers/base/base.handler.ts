@@ -26,7 +26,7 @@ import {
   CreateOpportunityInput,
   OpportunityEventInput,
   UpdateOpportunityInput,
-} from '@domain/collaboration/opportunity';
+} from '@domain/collaboration/opportunity/dto';
 import {
   CreateUserGroupInput,
   UpdateUserGroupInput,
@@ -35,10 +35,8 @@ import { CreateChallengeOnHubInput } from '@domain/challenge/challenge/dto/chall
 import { CreateChallengeOnChallengeInput } from '@domain/challenge/challenge/dto/challenge.dto.create.in.challenge';
 import { CreateActorInput, UpdateActorInput } from '@domain/context/actor';
 import { CommunityApplyInput } from '@domain/community/community/dto/community.dto.apply';
-import {
-  CreateCanvasOnCalloutInput,
-  CreateAspectOnCalloutInput,
-} from '@domain/collaboration/callout';
+import { CreateAspectOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.aspect';
+import { CreateCanvasOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.canvas';
 import { CommunicationCreateDiscussionInput } from '@domain/communication/communication/dto/communication.dto.create.discussion';
 import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 import { CreateReferenceOnAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.create.reference';
@@ -54,10 +52,10 @@ import { OrganizationVerificationEventInput } from '@domain/community/organizati
 import { CommentsSendMessageInput } from '@domain/communication/comments/dto/comments.dto.send.message';
 import { DiscussionSendMessageInput } from '@domain/communication/discussion/dto/discussion.dto.send.message';
 import { UpdatesSendMessageInput } from '@domain/communication/updates/dto/updates.dto.send.message';
-import { UpdateAspectInput } from '@domain/collaboration/aspect';
+import { UpdateAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.update';
 import { UpdateCanvasDirectInput } from '@domain/common/canvas/dto/canvas.dto.update.direct';
 import { UpdateDiscussionInput } from '@domain/communication/discussion/dto/discussion.dto.update';
-import { UpdateEcosystemModelInput } from '@domain/context';
+import { UpdateEcosystemModelInput } from '@domain/context/ecosystem-model/dto/ecosystem-model.dto.update';
 import { CreateAspectTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/aspect.template.dto.create.on.templates.set';
 import { CreateCanvasTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/canvas.template.dto.create.on.templates.set';
 import { UpdateAspectTemplateInput } from '@domain/template/aspect-template/dto/aspect.template.dto.update';

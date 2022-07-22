@@ -11,8 +11,8 @@ import { Visual } from '@domain/common/visual/visual.entity';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { Comments } from '@domain/communication/comments';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
-import { NameableEntity } from '@domain/common';
-import { Callout } from '@domain/collaboration/callout';
+import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 
 @Entity()
 export class Aspect extends NameableEntity implements IAspect {
