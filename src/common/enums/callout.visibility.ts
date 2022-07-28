@@ -1,8 +1,8 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum CalloutVisibility {
-  DRAFT = 'Draft',
-  PUBLISHED = 'Published',
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
 }
 
 registerEnumType(CalloutVisibility, {

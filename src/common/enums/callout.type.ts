@@ -1,9 +1,9 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum CalloutType {
-  CARD = 'Card',
-  CANVAS = 'Canvas',
-  DISCUSSION = 'Discussion',
+  CARD = 'card',
+  CANVAS = 'canvas',
+  DISCUSSION = 'discussion',
 }
 
 registerEnumType(CalloutType, {
