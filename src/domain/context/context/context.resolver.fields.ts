@@ -99,9 +99,25 @@ export class ContextResolverFields {
       description: 'The IDs of the canvases to return',
       nullable: true,
     })
-    ids: string[]
+    ids: string[],
+    @Args({
+      name: 'limit',
+      type: () => Float,
+      description:
+        'The number of Organizations to return; if omitted return all Organizations.',
+      nullable: true,
+    })
+    limit: number,
+    @Args({
+      name: 'shuffle',
+      type: () => Boolean,
+      description:
+        'If true and limit is specified then return the Organizations based on a random selection. Defaults to false.',
+      nullable: true,
+    })
+    shuffle: boolean
   ): Promise<ICanvas[]> {
-    return await this.contextService.getCanvases(context, ids);
+    return await this.contextService.getCanvases(context, ids, limit, shuffle);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
