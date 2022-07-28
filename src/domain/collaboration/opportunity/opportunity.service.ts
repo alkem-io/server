@@ -316,6 +316,7 @@ export class OpportunityService {
     await this.opportunityRepository.save(opportunity);
     return relation;
   }
+
   async getActivity(opportunity: IOpportunity): Promise<INVP[]> {
     const activity: INVP[] = [];
     const community = await this.getCommunity(opportunity.id);
@@ -341,9 +342,9 @@ export class OpportunityService {
     activity.push(relationsTopic);
 
     // Aspects
-    const { id: contextId } = await this.getContext(opportunity.id);
-    const aspectsCount = await this.aspectService.getAspectsInContextCount(
-      contextId
+    const aspectsCount = await this.baseChallengeService.getAspectsCount(
+      opportunity,
+      this.opportunityRepository
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${opportunity.id}`;

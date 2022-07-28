@@ -606,9 +606,9 @@ export class HubService {
     activity.push(membersTopic);
 
     // Aspects
-    const { id: contextId } = await this.getContext(hub);
-    const aspectsCount = await this.aspectService.getAspectsInContextCount(
-      contextId
+    const aspectsCount = await this.baseChallengeService.getAspectsCount(
+      hub,
+      this.hubRepository
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${hub.id}`;

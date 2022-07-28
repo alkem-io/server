@@ -30,6 +30,7 @@ import { CredentialDefinition } from '@domain/agent/credential/credential.defini
 import { CommunityRole } from '@common/enums/community.role';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CanvasService } from '@domain/common/canvas/canvas.service';
+import { AspectService } from '@domain/context/aspect/aspect.service';
 
 @Injectable()
 export class BaseChallengeService {
@@ -41,6 +42,7 @@ export class BaseChallengeService {
     private namingService: NamingService,
     private tagsetService: TagsetService,
     private lifecycleService: LifecycleService,
+    private aspectsService: AspectService,
     private canvasService: CanvasService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -293,6 +295,17 @@ export class BaseChallengeService {
   ): Promise<number> {
     const community = await this.getCommunity(baseChallenge.id, repository);
     return await this.communityService.getMembersCount(community);
+  }
+
+  async getAspectsCount(
+    baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>
+  ): Promise<number> {
+    const context = await this.getContext(baseChallenge.id, repository);
+    const canvasesCount = await this.aspectsService.getAspectsInContextCount(
+      context.id
+    );
+    return canvasesCount;
   }
 
   async getCanvasesCount(

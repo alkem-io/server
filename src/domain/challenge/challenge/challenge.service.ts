@@ -576,9 +576,9 @@ export class ChallengeService {
     activity.push(challengesTopic);
 
     // Aspects
-    const { id: contextId } = await this.getContext(challenge.id);
-    const aspectsCount = await this.aspectService.getAspectsInContextCount(
-      contextId
+    const aspectsCount = await this.baseChallengeService.getAspectsCount(
+      challenge,
+      this.challengeRepository
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${challenge.id}`;
