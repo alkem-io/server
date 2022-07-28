@@ -320,23 +320,27 @@ export class OpportunityService {
     const activity: INVP[] = [];
     const community = await this.getCommunity(opportunity.id);
 
+    // Members
     const membersCount = await this.communityService.getMembersCount(community);
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${opportunity.id}`;
     activity.push(membersTopic);
 
+    // Projects
     const projectsCount =
       await this.projectService.getProjectsInOpportunityCount(opportunity.id);
     const projectsTopic = new NVP('projects', projectsCount.toString());
     projectsTopic.id = `projects-${opportunity.id}`;
     activity.push(projectsTopic);
 
+    // Relations
     const relationsCount =
       await this.relationService.getRelationsInOpportunityCount(opportunity.id);
     const relationsTopic = new NVP('relations', relationsCount.toString());
     relationsTopic.id = `relations-${opportunity.id}`;
     activity.push(relationsTopic);
 
+    // Aspects
     const { id: contextId } = await this.getContext(opportunity.id);
     const aspectsCount = await this.aspectService.getAspectsInContextCount(
       contextId
@@ -344,6 +348,15 @@ export class OpportunityService {
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${opportunity.id}`;
     activity.push(aspectsTopic);
+
+    // Canvases
+    const canvasesCount = await this.baseChallengeService.getCanvasesCount(
+      opportunity,
+      this.opportunityRepository
+    );
+    const canvasesTopic = new NVP('canvases', canvasesCount.toString());
+    canvasesTopic.id = `canvases-${opportunity.id}`;
+    activity.push(canvasesTopic);
 
     return activity;
   }

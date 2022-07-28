@@ -614,6 +614,15 @@ export class HubService {
     aspectsTopic.id = `aspects-${hub.id}`;
     activity.push(aspectsTopic);
 
+    // Canvases
+    const canvasesCount = await this.baseChallengeService.getCanvasesCount(
+      hub,
+      this.hubRepository
+    );
+    const canvasesTopic = new NVP('canvases', canvasesCount.toString());
+    canvasesTopic.id = `canvases-${hub.id}`;
+    activity.push(canvasesTopic);
+
     return activity;
   }
 
