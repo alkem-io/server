@@ -140,7 +140,7 @@ export class CalloutService {
 
     // Not idea: get the communicationGroupID to use for the comments
     const communicationGroupID =
-      await this.namingService.getCommunicationGroupIdForContext(callout.id);
+      await this.namingService.getCommunicationGroupIdForCallout(callout.id);
 
     const aspect = await this.aspectService.createAspect(
       aspectData,

@@ -117,14 +117,14 @@ export class NamingService {
     return UUID.REGEX.test(uuid);
   }
 
-  async getCommunicationGroupIdForContext(contextID: string): Promise<string> {
+  async getCommunicationGroupIdForCallout(calloutID: string): Promise<string> {
     const hub = await this.hubRepository
       .createQueryBuilder('hub')
       .leftJoinAndSelect('hub.community', 'community')
-      .leftJoinAndSelect('hub.context', 'context')
+      .leftJoinAndSelect('hub.callout', 'callout')
       .leftJoinAndSelect('community.communication', 'communication')
-      .where('context.id = :id')
-      .setParameters({ id: `${contextID}` })
+      .where('callout.id = :id')
+      .setParameters({ id: `${calloutID}` })
       .getOne();
     if (hub) {
       const communicationGroupID =
@@ -135,10 +135,10 @@ export class NamingService {
     const challenge = await this.challengeRepository
       .createQueryBuilder('challenge')
       .leftJoinAndSelect('challenge.community', 'community')
-      .leftJoinAndSelect('challenge.context', 'context')
+      .leftJoinAndSelect('challenge.callout', 'callout')
       .leftJoinAndSelect('community.communication', 'communication')
-      .where('context.id = :id')
-      .setParameters({ id: `${contextID}` })
+      .where('callout.id = :id')
+      .setParameters({ id: `${calloutID}` })
       .getOne();
     if (challenge) {
       const communicationGroupID =
@@ -150,10 +150,10 @@ export class NamingService {
     const opportunity = await this.opportunityRepository
       .createQueryBuilder('opportunity')
       .leftJoinAndSelect('opportunity.community', 'community')
-      .leftJoinAndSelect('opportunity.context', 'context')
+      .leftJoinAndSelect('opportunity.callout', 'callout')
       .leftJoinAndSelect('community.communication', 'communication')
-      .where('context.id = :id')
-      .setParameters({ id: `${contextID}` })
+      .where('callout.id = :id')
+      .setParameters({ id: `${calloutID}` })
       .getOne();
     if (opportunity) {
       const communicationGroupID =
@@ -162,7 +162,7 @@ export class NamingService {
     }
 
     throw new RelationshipNotFoundException(
-      `Unable to find the communication ID for the provided context: ${contextID}`,
+      `Unable to find the communication ID for the provided callout: ${calloutID}`,
       LogContext.CONTEXT
     );
   }
