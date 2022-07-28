@@ -43,7 +43,9 @@ export class CalloutAuthorizationService {
     );
     callout.authorization = this.appendPrivilegeRules(callout.authorization);
 
-    callout.aspects = await this.calloutService.getAspects(callout);
+    callout.aspects = await this.calloutService.getAspectsListOnCallout(
+      callout
+    );
     for (const aspect of callout.aspects) {
       await this.aspectAuthorizationService.applyAuthorizationPolicy(
         aspect,
@@ -51,7 +53,9 @@ export class CalloutAuthorizationService {
       );
     }
 
-    callout.canvases = await this.calloutService.getCanvases(callout);
+    callout.canvases = await this.calloutService.getCanvasesListOnCallout(
+      callout
+    );
     for (const canvas of callout.canvases) {
       await this.canvasAuthorizationService.applyAuthorizationPolicy(
         canvas,

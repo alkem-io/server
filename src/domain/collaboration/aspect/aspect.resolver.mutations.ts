@@ -40,7 +40,7 @@ export class AspectResolverMutations {
       AuthorizationPrivilege.DELETE,
       `delete aspect: ${aspect.displayName}`
     );
-    return await this.aspectService.removeAspect(deleteData);
+    return await this.aspectService.deleteAspect(deleteData);
   }
 
   @UseGuards(GraphqlGuard)

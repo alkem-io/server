@@ -12,7 +12,8 @@ import {
   CreateAspectOnCalloutInput,
   CreateCanvasOnCalloutInput,
   DeleteCanvasOnCalloutInput,
-} from '@domain/collaboration/callout';
+  DeleteAspectOnCalloutInput,
+} from '@domain/collaboration/callout/dto';
 import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
 import { AspectAuthorizationService } from '@domain/collaboration/aspect/aspect.service.authorization';
 import { SubscriptionType } from '@common/enums/subscription.type';
@@ -25,11 +26,15 @@ import { ClientProxy } from '@nestjs/microservices';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { EventType } from '@common/enums/event.type';
+import { CanvasService } from '@domain/common/canvas/canvas.service';
+import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private canvasService: CanvasService,
+    private aspectService: AspectService,
     private calloutService: CalloutService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
@@ -57,7 +62,7 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.CREATE_ASPECT,
       `create aspect on callout: ${callout.id}`
     );
-    let aspect = await this.calloutService.createAspect(
+    let aspect = await this.calloutService.createAspectOnCallout(
       aspectData,
       agentInfo.userID
     );
@@ -66,7 +71,7 @@ export class CalloutResolverMutations {
       callout.authorization
     );
     const aspectCreatedEvent: CalloutAspectCreated = {
-      eventID: `context-aspect-created-${Math.round(Math.random() * 100)}`,
+      eventID: `callout-aspect-created-${Math.round(Math.random() * 100)}`,
       calloutID: callout.id,
       aspect,
     };
@@ -83,6 +88,27 @@ export class CalloutResolverMutations {
     this.notificationsClient.emit<number>(EventType.ASPECT_CREATED, payload);
 
     return aspect;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IAspect, {
+    description: 'Deletes the specified Aspect.',
+  })
+  async deleteAspectOnCallout(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData') deleteData: DeleteAspectOnCalloutInput
+  ): Promise<IAspect> {
+    const aspect = await this.calloutService.getApectOnCalloutOrFail(
+      deleteData.calloutID,
+      deleteData.aspectID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      aspect.authorization,
+      AuthorizationPrivilege.DELETE,
+      `delete aspect: ${aspect.id}`
+    );
+    return await this.aspectService.deleteAspect({ ID: deleteData.aspectID });
   }
 
   @UseGuards(GraphqlGuard)
@@ -103,7 +129,7 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.CREATE_CANVAS,
       `create canvas on callout: ${callout.id}`
     );
-    const canvas = await this.calloutService.createCanvas(canvasData);
+    const canvas = await this.calloutService.createCanvasOnAspect(canvasData);
     return await this.canvasAuthorizationService.applyAuthorizationPolicy(
       canvas,
       callout.authorization
@@ -128,6 +154,6 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.DELETE,
       `delete canvas: ${canvas.id}`
     );
-    return await this.calloutService.deleteCanvas(deleteData.canvasID);
+    return await this.canvasService.deleteCanvas(deleteData.canvasID);
   }
 }

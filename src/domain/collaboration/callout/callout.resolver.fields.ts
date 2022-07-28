@@ -46,7 +46,12 @@ export class CalloutResolverFields {
     })
     shuffle: boolean
   ) {
-    return await this.calloutService.getAspects(callout, ids, limit, shuffle);
+    return await this.calloutService.getAspectsListOnCallout(
+      callout,
+      ids,
+      limit,
+      shuffle
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -66,6 +71,6 @@ export class CalloutResolverFields {
     })
     ids: string[]
   ): Promise<ICanvas[]> {
-    return await this.calloutService.getCanvases(callout, ids);
+    return await this.calloutService.getCanvasesListOnCallout(callout, ids);
   }
 }

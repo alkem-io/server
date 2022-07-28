@@ -60,7 +60,7 @@ export class AspectService {
     return await this.aspectRepository.save(aspect);
   }
 
-  async removeAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
+  async deleteAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
     const aspectID = deleteData.ID;
     const aspect = await this.getAspectOrFail(aspectID, {
       relations: ['references'],

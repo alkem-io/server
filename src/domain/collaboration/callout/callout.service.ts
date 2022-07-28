@@ -18,7 +18,8 @@ import {
   CreateCanvasOnCalloutInput,
   UpdateCalloutInput,
 } from '@domain/collaboration/callout/dto/index';
-import { IAspect } from '@domain/collaboration/aspect';
+import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
+import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { limitAndShuffle } from '@common/utils';
@@ -78,7 +79,7 @@ export class CalloutService {
 
     if (callout.aspects) {
       for (const aspect of callout.aspects) {
-        await this.aspectService.removeAspect({ ID: aspect.id });
+        await this.aspectService.deleteAspect({ ID: aspect.id });
       }
     }
 
@@ -88,7 +89,7 @@ export class CalloutService {
     return await this.calloutRepository.remove(callout as Callout);
   }
 
-  async createAspect(
+  async createAspectOnCallout(
     aspectData: CreateAspectOnCalloutInput,
     userID: string
   ): Promise<IAspect> {
@@ -144,7 +145,9 @@ export class CalloutService {
     return aspect;
   }
 
-  async createCanvas(canvasData: CreateCanvasOnCalloutInput): Promise<ICanvas> {
+  async createCanvasOnAspect(
+    canvasData: CreateCanvasOnCalloutInput
+  ): Promise<ICanvas> {
     const calloutID = canvasData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: ['canvases'],
@@ -182,7 +185,7 @@ export class CalloutService {
     return canvas;
   }
 
-  async getCanvases(
+  async getCanvasesListOnCallout(
     callout: ICallout,
     canvasIDs?: string[]
   ): Promise<ICanvas[]> {
@@ -238,11 +241,7 @@ export class CalloutService {
     return canvas;
   }
 
-  async deleteCanvas(canvasID: string): Promise<ICanvas> {
-    return await this.canvasService.deleteCanvas(canvasID);
-  }
-
-  async getAspects(
+  async getAspectsListOnCallout(
     callout: ICallout,
     aspectIDs?: string[],
     limit?: number,
@@ -283,5 +282,30 @@ export class CalloutService {
     }
 
     return results;
+  }
+
+  async getApectOnCalloutOrFail(
+    calloutID: string,
+    aspectID: string
+  ): Promise<IAspect> {
+    const aspect = await this.aspectService.getAspectOrFail(aspectID, {
+      relations: ['callout'],
+    });
+    const callout = (aspect as Aspect).callout;
+    // check it is a canvas direction on a Callout
+    if (!callout) {
+      throw new NotSupportedException(
+        `Not able to delete a Canvas that is not contained by Callout: ${aspectID}`,
+        LogContext.CONTEXT
+      );
+    }
+    if (callout.id !== calloutID) {
+      throw new NotSupportedException(
+        `Canvas (${aspectID}) is not a child of supplied callout: ${calloutID}`,
+        LogContext.CONTEXT
+      );
+    }
+
+    return aspect;
   }
 }
