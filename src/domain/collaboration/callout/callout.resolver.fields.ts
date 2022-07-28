@@ -25,7 +25,7 @@ export class CalloutResolverFields {
     @Args({
       name: 'IDs',
       type: () => [UUID_NAMEID],
-      description: 'The IDs (either UUID or nameID) of the aspects to return',
+      description: 'The IDs (either UUID or nameID) of the Aspects to return',
       nullable: true,
     })
     ids: string[],
@@ -61,7 +61,7 @@ export class CalloutResolverFields {
     @Args({
       name: 'IDs',
       type: () => [UUID],
-      description: 'The IDs of the canvases to return',
+      description: 'The IDs of the Canvases to return',
       nullable: true,
     })
     ids: string[]
