@@ -21,6 +21,7 @@ import { CalloutState } from '@common/enums/callout.state';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
 import { CreateRelationInput } from '@domain/collaboration/relation/relation.dto.create';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 @Injectable()
 export class CollaborationService {
@@ -35,7 +36,7 @@ export class CollaborationService {
 
   async createCollaboration(): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
-    // opportunity.relations = [];
+    collaboration.relations = [];
     collaboration.callouts = [];
     collaboration.authorization = new AuthorizationPolicy();
     return collaboration;
@@ -128,6 +129,7 @@ export class CollaborationService {
       nameID: calloutData.nameID,
       type: CalloutType.CANVAS,
       state: CalloutState.OPEN,
+      visibility: CalloutVisibility.DRAFT,
     });
     collaboration.callouts.push(callout);
     await this.collaborationRepository.save(collaboration);

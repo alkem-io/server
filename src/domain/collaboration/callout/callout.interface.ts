@@ -11,40 +11,40 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 @ObjectType('Callout')
 export abstract class ICallout extends INameable {
   @Field(() => Markdown, {
-    description: 'The description of this aspect',
+    description: 'The description of this Callout',
   })
   description?: string;
 
   @Field(() => CalloutType, {
-    description: 'The callout type, e.g. Card, Canvas, Discussion',
+    description: 'The Callout type, e.g. Card, Canvas, Discussion',
   })
   type!: CalloutType;
 
   @Field(() => CalloutState, {
-    description: 'State of the callout.',
+    description: 'State of the Callout.',
   })
   state!: CalloutState;
 
   @Field(() => CalloutVisibility, {
-    description: 'State of the callout.',
+    description: 'Visibility of the Callout.',
   })
   visibility!: CalloutVisibility;
 
   @Field(() => [IAspect], {
     nullable: true,
-    description: 'The aspects associated with this callout.',
+    description: 'The Aspects associated with this Callout.',
   })
   aspects?: IAspect[];
 
   @Field(() => [ICanvas], {
     nullable: true,
-    description: 'The canvases associated with this callout.',
+    description: 'The Canvases associated with this Callout.',
   })
   canvases?: ICanvas[];
 
   @Field(() => IComments, {
     nullable: true,
-    description: 'The comment messages for this callout.',
+    description: 'The Comment Messages for this Callout.',
   })
   comments?: IComments;
 }

@@ -10,19 +10,20 @@ import {
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import {
-  Callout,
-  ICallout,
   CreateCalloutInput,
   CreateAspectOnCalloutInput,
   CreateCanvasOnCalloutInput,
-} from '@domain/collaboration/callout';
-import { UpdateNameableInput } from '@domain/common';
+  UpdateCalloutInput,
+} from '@domain/collaboration/callout/dto/index';
 import { IAspect } from '@domain/collaboration/aspect';
 import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { limitAndShuffle } from '@common/utils';
-import { Canvas, ICanvas } from '@domain/common/canvas';
+import { Canvas } from '@domain/common/canvas/canvas.entity';
+import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { NamingService } from '@src/services/domain/naming/naming.service';
 
 @Injectable()
@@ -58,8 +59,8 @@ export class CalloutService {
     return callout;
   }
 
-  async updateCallout(calloutInput: UpdateNameableInput): Promise<ICallout> {
-    const callout = await this.getCalloutOrFail(calloutInput.ID, {});
+  async updateCallout(calloutInput: UpdateCalloutInput): Promise<ICallout> {
+    const callout = await this.getCalloutOrFail(calloutInput.ID);
 
     return await this.calloutRepository.save(callout);
   }
