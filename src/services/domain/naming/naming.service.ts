@@ -7,6 +7,7 @@ import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entit
 import { Project } from '@domain/collaboration/project';
 import { NameID, UUID } from '@domain/common/scalars';
 import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
+import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
@@ -21,6 +22,8 @@ export class NamingService {
     private hubRepository: Repository<Hub>,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>,
+    @InjectRepository(Canvas)
+    private canvasRepository: Repository<Canvas>,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @InjectRepository(Project)
@@ -50,16 +53,16 @@ export class NamingService {
     return true;
   }
 
-  async isAspectNameIdAvailableInContext(
+  async isAspectNameIdAvailableInCallout(
     nameID: string,
-    contextID: string
+    calloutID: string
   ): Promise<boolean> {
     const query = this.aspectRepository
       .createQueryBuilder('aspect')
-      .leftJoinAndSelect('aspect.context', 'context')
-      .where('context.id = :id')
+      .leftJoinAndSelect('aspect.callout', 'callout')
+      .where('callout.id = :id')
       .andWhere('aspect.nameID= :nameID')
-      .setParameters({ id: `${contextID}`, nameID: `${nameID}` });
+      .setParameters({ id: `${calloutID}`, nameID: `${nameID}` });
     const aspectWithNameID = await query.getOne();
     if (aspectWithNameID) {
       return false;
@@ -68,18 +71,18 @@ export class NamingService {
     return true;
   }
 
-  async isCanvasNameIdAvailableInContext(
+  async isCanvasNameIdAvailableInCallout(
     nameID: string,
-    contextID: string
+    calloutID: string
   ): Promise<boolean> {
-    const query = this.aspectRepository
+    const query = this.canvasRepository
       .createQueryBuilder('canvas')
-      .leftJoinAndSelect('canvas.context', 'context')
-      .where('context.id = :id')
+      .leftJoinAndSelect('canvas.callout', 'callout')
+      .where('callout.id = :id')
       .andWhere('canvas.nameID= :nameID')
-      .setParameters({ id: `${contextID}`, nameID: `${nameID}` });
-    const aspectWithNameID = await query.getOne();
-    if (aspectWithNameID) {
+      .setParameters({ id: `${calloutID}`, nameID: `${nameID}` });
+    const canvasWithNameID = await query.getOne();
+    if (canvasWithNameID) {
       return false;
     }
 

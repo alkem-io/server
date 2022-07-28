@@ -89,23 +89,13 @@ export class CalloutService {
     return await this.calloutRepository.remove(callout as Callout);
   }
 
-  async createAspectOnCallout(
+  private async setDisplayNameOnAspectData(
     aspectData: CreateAspectOnCalloutInput,
-    userID: string
-  ): Promise<IAspect> {
-    const calloutID = aspectData.calloutID;
-    const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['aspects'],
-    });
-    if (!callout.aspects)
-      throw new EntityNotInitializedException(
-        `Callout (${calloutID}) not initialised`,
-        LogContext.CONTEXT
-      );
-
+    callout: ICallout
+  ) {
     if (aspectData.nameID && aspectData.nameID.length > 0) {
       const nameAvailable =
-        await this.namingService.isAspectNameIdAvailableInContext(
+        await this.namingService.isAspectNameIdAvailableInCallout(
           aspectData.nameID,
           callout.id
         );
@@ -120,7 +110,7 @@ export class CalloutService {
       );
     }
 
-    // Check that do not already have an aspect with the same title
+    // Check that there isn't an aspect with the same title
     const displayName = aspectData.displayName;
     const existingAspect = callout.aspects?.find(
       aspect => aspect.displayName === displayName
@@ -130,6 +120,23 @@ export class CalloutService {
         `Already have an aspect with the provided display name: ${displayName}`,
         LogContext.CONTEXT
       );
+  }
+
+  async createAspectOnCallout(
+    aspectData: CreateAspectOnCalloutInput,
+    userID: string
+  ): Promise<IAspect> {
+    const calloutID = aspectData.calloutID;
+    const callout = await this.getCalloutOrFail(calloutID, {
+      relations: ['aspects'],
+    });
+    if (!callout.aspects)
+      throw new EntityNotInitializedException(
+        `Callout (${calloutID}) not initialised`,
+        LogContext.CONTEXT
+      );
+
+    await this.setDisplayNameOnAspectData(aspectData, callout);
 
     // Not idea: get the communicationGroupID to use for the comments
     const communicationGroupID =
@@ -145,7 +152,7 @@ export class CalloutService {
     return aspect;
   }
 
-  async createCanvasOnAspect(
+  async createCanvasOnCallout(
     canvasData: CreateCanvasOnCalloutInput
   ): Promise<ICanvas> {
     const calloutID = canvasData.calloutID;
@@ -160,7 +167,7 @@ export class CalloutService {
 
     if (canvasData.nameID && canvasData.nameID.length > 0) {
       const nameAvailable =
-        await this.namingService.isCanvasNameIdAvailableInContext(
+        await this.namingService.isCanvasNameIdAvailableInCallout(
           canvasData.nameID,
           callout.id
         );

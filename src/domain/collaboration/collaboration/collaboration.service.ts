@@ -16,11 +16,11 @@ import { Collaboration } from '@domain/collaboration/collaboration/collaboration
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
+import { CreateRelationOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.relation';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
-import { CreateRelationInput } from '@domain/collaboration/relation/relation.dto.create';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 @Injectable()
@@ -62,8 +62,7 @@ export class CollaborationService {
     collaborationInput: UpdateNameableInput
   ): Promise<ICollaboration> {
     const collaboration = await this.getCollaborationOrFail(
-      collaborationInput.ID,
-      {}
+      collaborationInput.ID
     );
 
     return await this.collaborationRepository.save(collaboration);
@@ -136,7 +135,7 @@ export class CollaborationService {
     return callout;
   }
 
-  async getCallouts(
+  async getCalloutsOnCollaboration(
     collaboration: ICollaboration,
     calloutIDs?: string[]
   ): Promise<ICallout[]> {
@@ -171,7 +170,9 @@ export class CollaborationService {
     return results;
   }
 
-  async createRelation(relationData: CreateRelationInput): Promise<IRelation> {
+  async createRelationOnCollaboration(
+    relationData: CreateRelationOnCollaborationInput
+  ): Promise<IRelation> {
     const collaborationId = relationData.parentID;
     const collaboration = await this.getCollaborationOrFail(collaborationId, {
       relations: ['relations'],
@@ -190,9 +191,10 @@ export class CollaborationService {
   }
 
   // Loads the relations into the Collaboration entity if not already present
-  async getRelations(collaboration: Collaboration): Promise<IRelation[]> {
+  async getRelationsOnCollaboration(
+    collaboration: Collaboration
+  ): Promise<IRelation[]> {
     if (collaboration.relations && collaboration.relations.length > 0) {
-      // collaboration already has relations loaded
       return collaboration.relations;
     }
 

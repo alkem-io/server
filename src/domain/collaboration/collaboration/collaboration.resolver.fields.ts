@@ -7,6 +7,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { ICallout } from '../callout/callout.interface';
 
 @Resolver(() => ICollaboration)
 export class CollaborationResolverFields {
@@ -16,10 +17,25 @@ export class CollaborationResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('relations', () => [IRelation], {
     nullable: true,
-    description: 'The set of Relations within the context of this Opportunity.',
+    description: 'The list of Relations for this Collaboration object.',
   })
   @Profiling.api
   async relations(@Parent() collaboration: Collaboration) {
-    return await this.collaborationService.getRelations(collaboration);
+    return await this.collaborationService.getRelationsOnCollaboration(
+      collaboration
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('callouts', () => [ICallout], {
+    nullable: true,
+    description: 'The list of Callouts for this Collaboration object.',
+  })
+  @Profiling.api
+  async callouts(@Parent() collaboration: Collaboration) {
+    return await this.collaborationService.getCalloutsOnCollaboration(
+      collaboration
+    );
   }
 }

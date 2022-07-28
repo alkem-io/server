@@ -42,9 +42,8 @@ export class CollaborationAuthorizationService {
     //   communityCredential
     // );
 
-    collaboration.callouts = await this.collaborationService.getCallouts(
-      collaboration
-    );
+    collaboration.callouts =
+      await this.collaborationService.getCalloutsOnCollaboration(collaboration);
     for (const callout of collaboration.callouts) {
       callout.authorization =
         this.authorizationPolicyService.inheritParentAuthorization(
