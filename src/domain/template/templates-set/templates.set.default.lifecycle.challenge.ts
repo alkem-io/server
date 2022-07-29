@@ -1,7 +1,5 @@
-import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
-
-export const challengeLifecycleConfigDefault: ILifecycleDefinition = {
-  id: 'challenge-lifecycle-default-2',
+export const challengeLifecycleConfigDefault = {
+  id: 'challenge-lifecycle-default',
   context: {
     parentID: '',
   },

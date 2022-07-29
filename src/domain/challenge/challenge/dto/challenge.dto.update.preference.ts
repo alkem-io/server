@@ -1,10 +1,10 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { ChallengePreferenceType } from '@common/enums/challenge.preference.type';
 
 @InputType()
 export class UpdateChallengePreferenceInput {
-  @Field(() => UUID_NAMEID, {
+  @Field(() => UUID, {
     description: 'ID of the Challenge',
   })
   challengeID!: string;

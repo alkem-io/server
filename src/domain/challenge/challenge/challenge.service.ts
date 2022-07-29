@@ -1,5 +1,6 @@
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -56,6 +57,7 @@ import { AspectService } from '@domain/context/aspect/aspect.service';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
+import { UpdateChallengeLifecycleInput } from './dto/challenge.dto.update.lifecycle';
 
 @Injectable()
 export class ChallengeService {
@@ -176,8 +178,27 @@ export class ChallengeService {
         await this.challengeRepository.save(challenge);
       }
     }
-
     return challenge;
+  }
+
+  async updateChallengeLifecycle(
+    challengeData: UpdateChallengeLifecycleInput
+  ): Promise<IChallenge> {
+    const challenge = await this.getChallengeOrFail(challengeData.challengeID, {
+      relations: ['lifecycle'],
+    });
+
+    if (!challenge.lifecycle) {
+      throw new EntityNotInitializedException(
+        `Lifecycle of challenge (${challenge.id}) not initialized`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    challenge.lifecycle.machineDef = challengeData.lifecycleDefinition;
+    challenge.lifecycle.machineState = '';
+
+    return await this.challengeRepository.save(challenge);
   }
 
   async deleteChallenge(deleteData: DeleteChallengeInput): Promise<IChallenge> {

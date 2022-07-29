@@ -24,6 +24,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
 import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
+import { UpdateChallengeLifecycleInput } from './dto/challenge.dto.update.lifecycle';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -98,7 +99,28 @@ export class ChallengeResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IChallenge, {
-    description: 'Updates the specified Challenge.',
+    description: 'Updates the Lifecycle on the specified Challenge.',
+  })
+  @Profiling.api
+  async updateChallengeLifecycle(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('challengeData') challengeData: UpdateChallengeLifecycleInput
+  ): Promise<IChallenge> {
+    const challenge = await this.challengeService.getChallengeOrFail(
+      challengeData.challengeID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      challenge.authorization,
+      AuthorizationPrivilege.UPDATE_LIFECYCLE,
+      `challenge lifecycle update: ${challenge.nameID}`
+    );
+    return await this.challengeService.updateChallengeLifecycle(challengeData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IChallenge, {
+    description: 'Updates the Lifecycle on the specified Challenge.',
   })
   @Profiling.api
   async updateChallenge(

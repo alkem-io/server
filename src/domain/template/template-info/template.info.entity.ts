@@ -24,7 +24,7 @@ export abstract class TemplateInfo
   tagset!: Tagset;
 
   @OneToOne(() => Visual, {
-    eager: true,
+    eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })

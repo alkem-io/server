@@ -24,9 +24,5 @@ export abstract class ITemplateInfo extends IBaseAlkemio {
   })
   tagset!: ITagset;
 
-  @Field(() => IVisual, {
-    nullable: true,
-    description: 'The image associated with this Template`.',
-  })
   visual?: IVisual;
 }
