@@ -10,7 +10,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { SUBSCRIPTION_CONTEXT_ASPECT_CREATED } from '@common/constants/providers';
+import { SUBSCRIPTION_CALLOUT_ASPECT_CREATED } from '@common/constants/providers';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CalloutAspectCreated } from '@domain/collaboration/callout';
 
@@ -19,7 +19,7 @@ export class CalloutResolverSubscriptions {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(SUBSCRIPTION_CONTEXT_ASPECT_CREATED)
+    @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
     private subscriptionAspectCreated: PubSubEngine,
     private calloutService: CalloutService,
     private authorizationService: AuthorizationService

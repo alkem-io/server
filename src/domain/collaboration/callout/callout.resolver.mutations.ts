@@ -20,7 +20,7 @@ import { SubscriptionType } from '@common/enums/subscription.type';
 import { ICanvas } from '@domain/common/canvas';
 import {
   NOTIFICATIONS_SERVICE,
-  SUBSCRIPTION_CONTEXT_ASPECT_CREATED,
+  SUBSCRIPTION_CALLOUT_ASPECT_CREATED,
 } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
 import { PubSubEngine } from 'graphql-subscriptions';
@@ -38,7 +38,7 @@ export class CalloutResolverMutations {
     private calloutService: CalloutService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
-    @Inject(SUBSCRIPTION_CONTEXT_ASPECT_CREATED)
+    @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
     private aspectCreatedSubscription: PubSubEngine,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
