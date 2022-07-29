@@ -39,6 +39,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core';
 import { AspectService } from '@domain/context/aspect/aspect.service';
+import { UpdateOpportunityLifecycleInput } from './dto/opportunity.dto.update.lifecycle';
 
 @Injectable()
 export class OpportunityService {
@@ -109,6 +110,27 @@ export class OpportunityService {
     }
 
     return await this.saveOpportunity(opportunity);
+  }
+
+  async updateOpportunityLifecycle(
+    opportunityData: UpdateOpportunityLifecycleInput
+  ): Promise<IOpportunity> {
+    const opportunity = await this.getOpportunityOrFail(
+      opportunityData.opportunityID,
+      { relations: ['lifecycle'] }
+    );
+
+    if (!opportunity.lifecycle) {
+      throw new EntityNotInitializedException(
+        `Lifecycle of opportunity (${opportunity.id}) not initialized`,
+        LogContext.OPPORTUNITY
+      );
+    }
+
+    opportunity.lifecycle.machineDef = opportunityData.lifecycleDefinition;
+    opportunity.lifecycle.machineState = '';
+
+    return await this.save(opportunity);
   }
 
   async save(opportunity: IOpportunity): Promise<IOpportunity> {

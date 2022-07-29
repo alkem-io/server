@@ -1,4 +1,6 @@
-export const applicationLifecycleConfig = {
+import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
+
+export const applicationLifecycleConfig: ILifecycleDefinition = {
   id: 'user-application',
   context: {
     parentID: '',

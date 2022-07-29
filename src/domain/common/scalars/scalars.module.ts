@@ -6,6 +6,7 @@ import { UUID_NAMEID_EMAIL } from './scalar.uuid.nameid.email';
 import { DID } from './scalar.did';
 import { Markdown } from './scalar.markdown';
 import { MessageID } from './scalar.message';
+import { LifecycleDefinitionScalar } from './scalar.lifecycle.definition';
 
 @Module({
   imports: [],
@@ -17,6 +18,7 @@ import { MessageID } from './scalar.message';
     DID,
     Markdown,
     MessageID,
+    LifecycleDefinitionScalar,
   ],
   exports: [],
 })

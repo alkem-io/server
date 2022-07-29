@@ -281,7 +281,7 @@ export class BaseChallengeService {
 
     if (!challenge.lifecycle) {
       throw new RelationshipNotFoundException(
-        `Unable to load Lifeycle for challenge ${challengeId} `,
+        `Unable to load Lifecycle for challenge ${challengeId} `,
         LogContext.CHALLENGES
       );
     }

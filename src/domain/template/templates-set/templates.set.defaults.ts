@@ -1,3 +1,7 @@
+import { LifecycleType } from '@common/enums/lifecycle.type';
+import { challengeLifecycleConfigDefault } from './templates.set.default.lifecycle.challenge';
+import { opportunityLifecycleConfigDefault } from './templates.set.default.lifecycle.opportunity';
+
 export const templatesSetDefaults: any = {
   aspects: [
     {
@@ -50,6 +54,26 @@ export const templatesSetDefaults: any = {
       },
       type: 'other',
       defaultDescription: 'Please describe the aspect that you wish to share.',
+    },
+  ],
+  lifecycles: [
+    {
+      info: {
+        title: 'Default Challenge lifecycle',
+        description: 'Default Challenge lifecycle',
+        tags: [],
+      },
+      type: LifecycleType.CHALLENGE,
+      definition: JSON.stringify(challengeLifecycleConfigDefault),
+    },
+    {
+      info: {
+        title: 'Default Opportunity lifecycle',
+        description: 'Default Opportunity lifecycle',
+        tags: [],
+      },
+      type: LifecycleType.OPPORTUNITY,
+      definition: JSON.stringify(opportunityLifecycleConfigDefault),
     },
   ],
 };
