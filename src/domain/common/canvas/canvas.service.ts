@@ -156,4 +156,10 @@ export class CanvasService {
     }
     return canvasWithPreview.preview;
   }
+
+  async getCanvasesInContextCount(contexId: string): Promise<number> {
+    return await this.canvasRepository.count({
+      where: { context: contexId },
+    });
+  }
 }

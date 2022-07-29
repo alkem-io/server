@@ -301,7 +301,9 @@ export class ContextService {
 
   async getCanvases(
     context: IContext,
-    canvasIDs?: string[]
+    canvasIDs?: string[],
+    limit?: number,
+    shuffle?: boolean
   ): Promise<ICanvas[]> {
     const contextLoaded = await this.getContextOrFail(context.id, {
       relations: ['canvases'],
@@ -313,7 +315,12 @@ export class ContextService {
       );
 
     if (!canvasIDs) {
-      return contextLoaded.canvases;
+      const limitAndShuffled = limitAndShuffle(
+        contextLoaded.canvases,
+        limit,
+        shuffle
+      );
+      return limitAndShuffled;
     }
     const results: ICanvas[] = [];
     for (const canvasID of canvasIDs) {
