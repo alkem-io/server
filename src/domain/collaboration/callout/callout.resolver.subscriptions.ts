@@ -89,7 +89,7 @@ export class CalloutResolverSubscriptions {
     );
 
     return this.subscriptionAspectCreated.asyncIterator(
-      SubscriptionType.CONTEXT_ASPECT_CREATED
+      SubscriptionType.CALLOUT_ASPECT_CREATED
     );
   }
 }

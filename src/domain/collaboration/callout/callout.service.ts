@@ -152,19 +152,10 @@ export class CalloutService {
     return aspect;
   }
 
-  async createCanvasOnCallout(
-    canvasData: CreateCanvasOnCalloutInput
-  ): Promise<ICanvas> {
-    const calloutID = canvasData.calloutID;
-    const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['canvases'],
-    });
-    if (!callout.canvases)
-      throw new EntityNotInitializedException(
-        `Callout (${calloutID}) not initialised`,
-        LogContext.CONTEXT
-      );
-
+  private async setDisplayNameOnCanvasData(
+    canvasData: CreateCanvasOnCalloutInput,
+    callout: ICallout
+  ) {
     if (canvasData.nameID && canvasData.nameID.length > 0) {
       const nameAvailable =
         await this.namingService.isCanvasNameIdAvailableInCallout(
@@ -181,6 +172,22 @@ export class CalloutService {
         `${canvasData.displayName}`
       );
     }
+  }
+
+  async createCanvasOnCallout(
+    canvasData: CreateCanvasOnCalloutInput
+  ): Promise<ICanvas> {
+    const calloutID = canvasData.calloutID;
+    const callout = await this.getCalloutOrFail(calloutID, {
+      relations: ['canvases'],
+    });
+    if (!callout.canvases)
+      throw new EntityNotInitializedException(
+        `Callout (${calloutID}) not initialised`,
+        LogContext.CONTEXT
+      );
+
+    this.setDisplayNameOnCanvasData(canvasData, callout);
 
     const canvas = await this.canvasService.createCanvas({
       displayName: canvasData.displayName,

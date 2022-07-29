@@ -51,7 +51,7 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   },
   {
     provide: SUBSCRIPTION_CALLOUT_ASPECT_CREATED,
-    queueName: MessagingQueue.SUBSCRIPTION_CONTEXT_ASPECT_CREATED,
+    queueName: MessagingQueue.SUBSCRIPTION_CALLOUT_ASPECT_CREATED,
   },
   {
     provide: SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,

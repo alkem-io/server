@@ -7,5 +7,5 @@ export enum MessagingQueue {
   SUBSCRIPTION_ASPECT_COMMENT = 'alkemio-subscriptions-aspect-comment',
   SUBSCRIPTION_CANVAS_CONTENT = 'alkemio-subscriptions-canvas-content',
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL = 'alkemio-subscriptions-profile-verified-credential',
-  SUBSCRIPTION_CONTEXT_ASPECT_CREATED = 'alkemio-subscriptions-context-aspect-created',
+  SUBSCRIPTION_CALLOUT_ASPECT_CREATED = 'alkemio-subscriptions-callout-aspect-created',
 }

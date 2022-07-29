@@ -76,7 +76,7 @@ export class CalloutResolverMutations {
       aspect,
     };
     await this.aspectCreatedSubscription.publish(
-      SubscriptionType.CONTEXT_ASPECT_CREATED,
+      SubscriptionType.CALLOUT_ASPECT_CREATED,
       aspectCreatedEvent
     );
 
