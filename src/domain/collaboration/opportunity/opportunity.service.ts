@@ -98,7 +98,7 @@ export class OpportunityService {
     );
 
     if (agentInfo) {
-      await this.assingMember(agentInfo.userID, opportunity.id);
+      await this.assignMember(agentInfo.userID, opportunity.id);
       await this.assignOpportunityAdmin({
         userID: agentInfo.userID,
         opportunityID: opportunity.id,
@@ -352,7 +352,7 @@ export class OpportunityService {
     });
   }
 
-  async assingMember(userID: string, opportunityId: string) {
+  async assignMember(userID: string, opportunityId: string) {
     const agent = await this.userService.getAgent(userID);
     const opportunity = await this.getOpportunityOrFail(opportunityId);
 
