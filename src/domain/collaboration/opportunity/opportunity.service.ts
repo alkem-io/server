@@ -21,7 +21,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { ILifecycle } from '@domain/common/lifecycle';
-import { IContext } from '@domain/context/context/context.interface';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { opportunityLifecycleConfigDefault } from './opportunity.lifecycle.config.default';
 import { ChallengeLifecycleTemplate } from '@common/enums';
@@ -38,6 +37,9 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core';
 import { AspectService } from '@domain/collaboration/aspect/aspect.service';
+import { CollaborationService } from '../collaboration/collaboration.service';
+import { ICollaboration } from '../collaboration/collaboration.interface';
+import { IContext } from '@domain/context/context/context.interface';
 
 @Injectable()
 export class OpportunityService {
@@ -50,6 +52,7 @@ export class OpportunityService {
     private userService: UserService,
     private agentService: AgentService,
     private aspectService: AspectService,
+    private collaborationService: CollaborationService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -247,6 +250,13 @@ export class OpportunityService {
     );
   }
 
+  async getCollaboration(opportunityId: string): Promise<ICollaboration> {
+    return await this.baseChallengeService.getCollaboration(
+      opportunityId,
+      this.opportunityRepository
+    );
+  }
+
   async createProject(projectData: CreateProjectInput): Promise<IProject> {
     const opportunityId = projectData.opportunityID;
 
@@ -292,9 +302,14 @@ export class OpportunityService {
     relationsTopic.id = `relations-${opportunity.id}`;
     activity.push(relationsTopic);
 
-    const { id: contextId } = await this.getContext(opportunity.id);
+    const collaboration = await this.getCollaboration(opportunity.id);
+    const callouts = await this.collaborationService.getCalloutsOnCollaboration(
+      collaboration
+    );
+    // TODO: fix after full callouts added, all aspects are currently under one callout
+    const defaultCallout = callouts[0];
     const aspectsCount = await this.aspectService.getAspectsInCalloutCount(
-      contextId
+      defaultCallout.id
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${opportunity.id}`;

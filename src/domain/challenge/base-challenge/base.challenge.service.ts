@@ -30,6 +30,7 @@ import { CredentialDefinition } from '@domain/agent/credential/credential.defini
 import { CommunityRole } from '@common/enums/community.role';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 
 @Injectable()
 export class BaseChallengeService {
@@ -246,6 +247,26 @@ export class BaseChallengeService {
         LogContext.CONTEXT
       );
     return context;
+  }
+
+  async getCollaboration(
+    challengeId: string,
+    repository: Repository<BaseChallenge>
+  ): Promise<ICollaboration> {
+    const challengeWithCollaboration = await this.getBaseChallengeOrFail(
+      challengeId,
+      repository,
+      {
+        relations: ['collaboration'],
+      }
+    );
+    const collaboration = challengeWithCollaboration.context;
+    if (!collaboration)
+      throw new RelationshipNotFoundException(
+        `Unable to load collaboration for challenge ${challengeId} `,
+        LogContext.COLLABORATION
+      );
+    return collaboration;
   }
 
   async getAgent(

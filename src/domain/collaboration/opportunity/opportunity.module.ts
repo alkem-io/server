@@ -16,6 +16,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { UserModule } from '@domain/community/user/user.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
+import { CollaborationModule } from '../collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
     UserModule,
     AgentModule,
     AspectModule,
+    CollaborationModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],
   providers: [

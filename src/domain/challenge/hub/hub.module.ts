@@ -26,6 +26,7 @@ import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
+import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { TemplatesSetModule } from '@domain/template/templates-set/templates.set
     PreferenceSetModule,
     TemplatesSetModule,
     AspectModule,
+    CollaborationModule,
     TypeOrmModule.forFeature([Hub]),
   ],
   providers: [

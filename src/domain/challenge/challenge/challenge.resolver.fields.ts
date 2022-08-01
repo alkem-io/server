@@ -12,9 +12,9 @@ import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IAgent } from '@domain/agent/agent';
-import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IPreference } from '@domain/common/preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -41,6 +41,17 @@ export class ChallengeResolverFields {
   @Profiling.api
   async context(@Parent() challenge: Challenge) {
     return await this.challengeService.getContext(challenge.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('collaboration', () => ICollaboration, {
+    nullable: true,
+    description: 'The collaboration for the challenge.',
+  })
+  @Profiling.api
+  async collaboration(@Parent() challenge: Challenge) {
+    return await this.challengeService.getCollaboration(challenge.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

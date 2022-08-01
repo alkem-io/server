@@ -10,6 +10,7 @@ import { INVP } from '@domain/common/nvp/nvp.interface';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
+import { ICollaboration } from '../collaboration/collaboration.interface';
 
 @Resolver(() => IOpportunity)
 export class OpportunityResolverFields {
@@ -46,6 +47,17 @@ export class OpportunityResolverFields {
   @Profiling.api
   async context(@Parent() opportunity: Opportunity) {
     return await this.opportunityService.getContext(opportunity.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('collaboration', () => ICollaboration, {
+    nullable: true,
+    description: 'The collaboration for the Opportunity.',
+  })
+  @Profiling.api
+  async collaboration(@Parent() opportunity: Opportunity) {
+    return await this.opportunityService.getCollaboration(opportunity.id);
   }
 
   @ResolveField('activity', () => [INVP], {

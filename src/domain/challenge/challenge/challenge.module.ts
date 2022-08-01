@@ -22,6 +22,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
+import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
     PreferenceModule,
     PreferenceSetModule,
     AspectModule,
+    CollaborationModule,
     TypeOrmModule.forFeature([Challenge]),
   ],
   providers: [

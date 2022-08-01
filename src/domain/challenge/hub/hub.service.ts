@@ -55,6 +55,8 @@ import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 
 @Injectable()
 export class HubService {
@@ -72,6 +74,7 @@ export class HubService {
     private preferenceSetService: PreferenceSetService,
     private templatesSetService: TemplatesSetService,
     private aspectService: AspectService,
+    private collaborationService: CollaborationService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -493,6 +496,13 @@ export class HubService {
     );
   }
 
+  async getCollaboration(hubId: string): Promise<ICollaboration> {
+    return await this.baseChallengeService.getCollaboration(
+      hubId,
+      this.hubRepository
+    );
+  }
+
   async getLifecycle(hub: IHub): Promise<ILifecycle> {
     return await this.baseChallengeService.getLifecycle(
       hub.id,
@@ -606,9 +616,14 @@ export class HubService {
     activity.push(membersTopic);
 
     // Aspects
-    const { id: contextId } = await this.getContext(hub);
+    const collaboration = await this.getCollaboration(hub.id);
+    const callouts = await this.collaborationService.getCalloutsOnCollaboration(
+      collaboration
+    );
+    // TODO: fix after full callouts added, all aspects are currently under one callout
+    const defaultCallout = callouts[0];
     const aspectsCount = await this.aspectService.getAspectsInCalloutCount(
-      contextId
+      defaultCallout.id
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${hub.id}`;

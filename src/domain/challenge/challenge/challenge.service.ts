@@ -56,6 +56,8 @@ import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 
 @Injectable()
 export class ChallengeService {
@@ -70,6 +72,7 @@ export class ChallengeService {
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
     private aspectService: AspectService,
+    private collaborationService: CollaborationService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -377,6 +380,13 @@ export class ChallengeService {
     );
   }
 
+  async getCollaboration(challengeId: string): Promise<ICollaboration> {
+    return await this.baseChallengeService.getCollaboration(
+      challengeId,
+      this.challengeRepository
+    );
+  }
+
   async getAgent(challengeId: string): Promise<IAgent> {
     return await this.baseChallengeService.getAgent(
       challengeId,
@@ -571,9 +581,14 @@ export class ChallengeService {
     challengesTopic.id = `challenges-${challenge.id}`;
     activity.push(challengesTopic);
 
-    const { id: contextId } = await this.getContext(challenge.id);
+    const collaboration = await this.getCollaboration(challenge.id);
+    const callouts = await this.collaborationService.getCalloutsOnCollaboration(
+      collaboration
+    );
+    // TODO: fix after full callouts added, all aspects are currently under one callout
+    const defaultCallout = callouts[0];
     const aspectsCount = await this.aspectService.getAspectsInCalloutCount(
-      contextId
+      defaultCallout.id
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${challenge.id}`;
