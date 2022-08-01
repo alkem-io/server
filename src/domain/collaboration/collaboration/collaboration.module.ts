@@ -9,6 +9,7 @@ import { NamingModule } from '@services/domain/naming/naming.module';
 import { CollaborationResolverMutations } from '@domain/collaboration/collaboration/collaboration.resolver.mutations';
 import { CollaborationResolverFields } from '@domain/collaboration/collaboration/collaboration.resolver.fields';
 import { RelationModule } from '@domain/collaboration/relation/relation.module';
+import { CollaborationDataloaderService } from './collaboration.dataloader.service';
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { RelationModule } from '@domain/collaboration/relation/relation.module';
     CollaborationService,
     CollaborationResolverMutations,
     CollaborationResolverFields,
+    CollaborationDataloaderService,
   ],
-  exports: [CollaborationService],
+  exports: [CollaborationService, CollaborationDataloaderService],
 })
 export class CollaborationModule {}

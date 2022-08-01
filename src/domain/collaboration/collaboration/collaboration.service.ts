@@ -98,7 +98,7 @@ export class CollaborationService {
   ): Promise<ICallout> {
     const collaborationID = calloutData.collaborationID;
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
-      relations: ['canvasCallouts'],
+      relations: ['callouts'],
     });
     if (!collaboration.callouts)
       throw new EntityNotInitializedException(
@@ -136,38 +136,21 @@ export class CollaborationService {
   }
 
   async getCalloutsOnCollaboration(
-    collaboration: ICollaboration,
-    calloutIDs?: string[]
+    collaboration: ICollaboration
   ): Promise<ICallout[]> {
-    const collaborationLoaded = await this.getCollaborationOrFail(
+    const loadedCollaboration = await this.getCollaborationOrFail(
       collaboration.id,
       {
-        relations: ['canvasCallouts'],
+        relations: ['callouts'],
       }
     );
-    if (!collaborationLoaded.callouts)
+    if (!loadedCollaboration.callouts)
       throw new EntityNotFoundException(
-        `Collaboration not initialised, no canvas callouts: ${collaboration.id}`,
+        `Callouts not initialised on collaboration: ${collaboration.id}`,
         LogContext.CONTEXT
       );
 
-    if (!calloutIDs) {
-      return collaborationLoaded.callouts;
-    }
-    const results: ICallout[] = [];
-    for (const calloutID of calloutIDs) {
-      const callout = collaborationLoaded.callouts.find(
-        callout => callout.id === calloutID
-      );
-
-      if (!callout)
-        throw new EntityNotFoundException(
-          `Callout with requested ID (${calloutID}) not located within current Collaboration: : ${collaboration.id}`,
-          LogContext.CONTEXT
-        );
-      results.push(callout);
-    }
-    return results;
+    return loadedCollaboration.callouts;
   }
 
   async createRelationOnCollaboration(
@@ -192,25 +175,21 @@ export class CollaborationService {
 
   // Loads the relations into the Collaboration entity if not already present
   async getRelationsOnCollaboration(
-    collaboration: Collaboration
+    collaboration: ICollaboration
   ): Promise<IRelation[]> {
-    if (collaboration.relations && collaboration.relations.length > 0) {
-      return collaboration.relations;
-    }
-
-    const collaborationLoaded = await this.getCollaborationOrFail(
+    const loadedCollaboration = await this.getCollaborationOrFail(
       collaboration.id,
       {
         relations: ['relations'],
       }
     );
 
-    if (!collaborationLoaded.relations)
+    if (!loadedCollaboration.relations)
       throw new EntityNotInitializedException(
         `Collaboration not initialised: ${collaboration.id}`,
         LogContext.COLLABORATION
       );
 
-    return collaborationLoaded.relations;
+    return loadedCollaboration.relations;
   }
 }

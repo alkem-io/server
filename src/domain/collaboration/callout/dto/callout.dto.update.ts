@@ -18,15 +18,15 @@ export class UpdateCalloutInput extends UpdateNameableInput {
   @Field(() => CalloutType, {
     description: 'Callout type.',
   })
-  type!: CalloutType;
+  type?: CalloutType;
 
   @Field(() => CalloutState, {
     description: 'State of the callout.',
   })
-  state!: CalloutState;
+  state?: CalloutState;
 
   @Field(() => CalloutVisibility, {
     description: 'Visibility of the Callout.',
   })
-  visibility!: CalloutVisibility;
+  visibility?: CalloutVisibility;
 }

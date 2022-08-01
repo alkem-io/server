@@ -98,7 +98,7 @@ export class CalloutResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteAspectOnCalloutInput
   ): Promise<IAspect> {
-    const aspect = await this.calloutService.getApectOnCalloutOrFail(
+    const aspect = await this.calloutService.getApectFromCalloutOrFail(
       deleteData.calloutID,
       deleteData.aspectID
     );
@@ -144,7 +144,7 @@ export class CalloutResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteCanvasOnCalloutInput
   ): Promise<ICanvas> {
-    const canvas = await this.calloutService.getCanvasOnCalloutOrFail(
+    const canvas = await this.calloutService.getCanvasFromCalloutOrFail(
       deleteData.calloutID,
       deleteData.canvasID
     );

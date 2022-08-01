@@ -55,13 +55,25 @@ export class CalloutService {
     if (!callout)
       throw new EntityNotFoundException(
         `No Callout found with the given id: ${calloutID}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
     return callout;
   }
 
-  async updateCallout(calloutInput: UpdateCalloutInput): Promise<ICallout> {
-    const callout = await this.getCalloutOrFail(calloutInput.ID);
+  async updateCallout(
+    calloutUpdateData: UpdateCalloutInput
+  ): Promise<ICallout> {
+    const callout = await this.getCalloutOrFail(calloutUpdateData.ID);
+
+    if (calloutUpdateData.description)
+      callout.description = calloutUpdateData.description;
+
+    if (calloutUpdateData.type) callout.type = calloutUpdateData.type;
+
+    if (calloutUpdateData.state) callout.state = calloutUpdateData.state;
+
+    if (calloutUpdateData.visibility)
+      callout.visibility = calloutUpdateData.visibility;
 
     return await this.calloutRepository.save(callout);
   }
@@ -118,7 +130,7 @@ export class CalloutService {
     if (existingAspect)
       throw new ValidationException(
         `Already have an aspect with the provided display name: ${displayName}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
   }
 
@@ -133,7 +145,7 @@ export class CalloutService {
     if (!callout.aspects)
       throw new EntityNotInitializedException(
         `Callout (${calloutID}) not initialised`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
 
     await this.setDisplayNameOnAspectData(aspectData, callout);
@@ -184,7 +196,7 @@ export class CalloutService {
     if (!callout.canvases)
       throw new EntityNotInitializedException(
         `Callout (${calloutID}) not initialised`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
 
     this.setDisplayNameOnCanvasData(canvasData, callout);
@@ -199,9 +211,11 @@ export class CalloutService {
     return canvas;
   }
 
-  async getCanvasesListOnCallout(
+  async getCanvasesFromCallout(
     callout: ICallout,
-    canvasIDs?: string[]
+    canvasIDs?: string[],
+    limit?: number,
+    shuffle?: boolean
   ): Promise<ICanvas[]> {
     const calloutLoaded = await this.getCalloutOrFail(callout.id, {
       relations: ['canvases'],
@@ -209,11 +223,16 @@ export class CalloutService {
     if (!calloutLoaded.canvases)
       throw new EntityNotFoundException(
         `Callout not initialised, no canvases: ${callout.id}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
 
     if (!canvasIDs) {
-      return calloutLoaded.canvases;
+      const limitAndShuffled = limitAndShuffle(
+        calloutLoaded.canvases,
+        limit,
+        shuffle
+      );
+      return limitAndShuffled;
     }
     const results: ICanvas[] = [];
     for (const canvasID of canvasIDs) {
@@ -223,14 +242,14 @@ export class CalloutService {
       if (!canvas)
         throw new EntityNotFoundException(
           `Canvas with requested ID (${canvasID}) not located within current Callout: : ${callout.id}`,
-          LogContext.CONTEXT
+          LogContext.COLLABORATION
         );
       results.push(canvas);
     }
     return results;
   }
 
-  async getCanvasOnCalloutOrFail(
+  async getCanvasFromCalloutOrFail(
     calloutID: string,
     canvasID: string
   ): Promise<ICanvas> {
@@ -242,37 +261,37 @@ export class CalloutService {
     if (!callout) {
       throw new NotSupportedException(
         `Not able to delete a Canvas that is not contained by Callout: ${canvasID}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
     }
     if (callout.id !== calloutID) {
       throw new NotSupportedException(
         `Canvas (${canvasID}) is not a child of supplied callout: ${calloutID}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
     }
 
     return canvas;
   }
 
-  async getAspectsListOnCallout(
+  async getAspectsFromCallout(
     callout: ICallout,
     aspectIDs?: string[],
     limit?: number,
     shuffle?: boolean
   ): Promise<IAspect[]> {
-    const contextLoaded = await this.getCalloutOrFail(callout.id, {
+    const loadedCallout = await this.getCalloutOrFail(callout.id, {
       relations: ['aspects'],
     });
-    if (!contextLoaded.aspects) {
+    if (!loadedCallout.aspects) {
       throw new EntityNotFoundException(
         `Context not initialised: ${callout.id}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
     }
     if (!aspectIDs) {
       const limitAndShuffled = limitAndShuffle(
-        contextLoaded.aspects,
+        loadedCallout.aspects,
         limit,
         shuffle
       );
@@ -283,14 +302,14 @@ export class CalloutService {
     }
     const results: IAspect[] = [];
     for (const aspectID of aspectIDs) {
-      const aspect = contextLoaded.aspects.find(
+      const aspect = loadedCallout.aspects.find(
         aspect =>
           aspect.id === aspectID || aspect.nameID === aspectID.toLowerCase()
       );
       if (!aspect)
         throw new EntityNotFoundException(
           `Aspect with requested ID (${aspectID}) not located within current Context: : ${callout.id}`,
-          LogContext.CONTEXT
+          LogContext.COLLABORATION
         );
       results.push(aspect);
     }
@@ -298,7 +317,7 @@ export class CalloutService {
     return results;
   }
 
-  async getApectOnCalloutOrFail(
+  async getApectFromCalloutOrFail(
     calloutID: string,
     aspectID: string
   ): Promise<IAspect> {
@@ -310,13 +329,13 @@ export class CalloutService {
     if (!callout) {
       throw new NotSupportedException(
         `Not able to delete a Canvas that is not contained by Callout: ${aspectID}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
     }
     if (callout.id !== calloutID) {
       throw new NotSupportedException(
         `Canvas (${aspectID}) is not a child of supplied callout: ${calloutID}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
     }
 

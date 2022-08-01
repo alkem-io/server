@@ -45,8 +45,8 @@ export class CalloutResolverFields {
       nullable: true,
     })
     shuffle: boolean
-  ) {
-    return await this.calloutService.getAspectsListOnCallout(
+  ): Promise<IAspect[]> {
+    return await this.calloutService.getAspectsFromCallout(
       callout,
       ids,
       limit,
@@ -66,11 +66,32 @@ export class CalloutResolverFields {
     @Args({
       name: 'IDs',
       type: () => [UUID],
-      description: 'The IDs of the Canvases to return',
+      description: 'The IDs of the canvases to return',
       nullable: true,
     })
-    ids: string[]
+    ids: string[],
+    @Args({
+      name: 'limit',
+      type: () => Float,
+      description:
+        'The number of Organizations to return; if omitted return all Organizations.',
+      nullable: true,
+    })
+    limit: number,
+    @Args({
+      name: 'shuffle',
+      type: () => Boolean,
+      description:
+        'If true and limit is specified then return the Organizations based on a random selection. Defaults to false.',
+      nullable: true,
+    })
+    shuffle: boolean
   ): Promise<ICanvas[]> {
-    return await this.calloutService.getCanvasesListOnCallout(callout, ids);
+    return await this.calloutService.getCanvasesFromCallout(
+      callout,
+      ids,
+      limit,
+      shuffle
+    );
   }
 }

@@ -159,14 +159,14 @@ export class AspectService {
     if (!aspect.references)
       throw new EntityNotInitializedException(
         'References not defined',
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
     // check there is not already a reference with the same name
     for (const reference of aspect.references) {
       if (reference.name === referenceInput.name) {
         throw new ValidationException(
           `Reference with the provided name already exists: ${referenceInput.name}`,
-          LogContext.CONTEXT
+          LogContext.COLLABORATION
         );
       }
     }
@@ -188,7 +188,7 @@ export class AspectService {
     if (!aspectLoaded.references)
       throw new EntityNotFoundException(
         `Aspect not initialised: ${aspect.id}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
 
     return aspectLoaded.references;
@@ -204,7 +204,7 @@ export class AspectService {
     if (!commentsId) {
       throw new EntityNotFoundException(
         `Comments not found on aspect: ${aspectID}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
     }
 

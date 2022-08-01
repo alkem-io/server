@@ -52,6 +52,10 @@ export class CollaborationAuthorizationService {
         );
     }
 
+    collaboration.relations =
+      await this.collaborationService.getRelationsOnCollaboration(
+        collaboration
+      );
     if (collaboration.relations) {
       for (const relation of collaboration.relations) {
         relation.authorization =

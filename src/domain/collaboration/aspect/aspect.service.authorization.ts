@@ -81,7 +81,7 @@ export class AspectAuthorizationService {
     if (!authorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for Aspect: ${aspect.id}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];

@@ -1,4 +1,4 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { IRelation } from '@domain/collaboration/relation';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -20,10 +20,11 @@ export class CollaborationResolverFields {
     description: 'The list of Relations for this Collaboration object.',
   })
   @Profiling.api
-  async relations(@Parent() collaboration: Collaboration) {
-    return await this.collaborationService.getRelationsOnCollaboration(
-      collaboration
-    );
+  async relations(
+    @Parent() collaboration: Collaboration,
+    @Context() { loaders }: IGraphQLContext
+  ) {
+    return loaders.relationsLoader.load(collaboration.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -33,9 +34,10 @@ export class CollaborationResolverFields {
     description: 'The list of Callouts for this Collaboration object.',
   })
   @Profiling.api
-  async callouts(@Parent() collaboration: Collaboration) {
-    return await this.collaborationService.getCalloutsOnCollaboration(
-      collaboration
-    );
+  async callouts(
+    @Parent() collaboration: Collaboration,
+    @Context() { loaders }: IGraphQLContext
+  ) {
+    return loaders.calloutsLoader.load(collaboration.id);
   }
 }

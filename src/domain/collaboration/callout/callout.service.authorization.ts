@@ -43,9 +43,7 @@ export class CalloutAuthorizationService {
     );
     callout.authorization = this.appendPrivilegeRules(callout.authorization);
 
-    callout.aspects = await this.calloutService.getAspectsListOnCallout(
-      callout
-    );
+    callout.aspects = await this.calloutService.getAspectsFromCallout(callout);
     for (const aspect of callout.aspects) {
       await this.aspectAuthorizationService.applyAuthorizationPolicy(
         aspect,
@@ -53,7 +51,7 @@ export class CalloutAuthorizationService {
       );
     }
 
-    callout.canvases = await this.calloutService.getCanvasesListOnCallout(
+    callout.canvases = await this.calloutService.getCanvasesFromCallout(
       callout
     );
     for (const canvas of callout.canvases) {
@@ -74,7 +72,7 @@ export class CalloutAuthorizationService {
     if (!authorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for Callout: ${calloutID}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
