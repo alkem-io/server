@@ -3,6 +3,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { ITemplatesSet } from './templates.set.interface';
 import { AspectTemplate } from '../aspect-template/aspect.template.entity';
 import { CanvasTemplate } from '../canvas-template/canvas.template.entity';
+import { LifecycleTemplate } from '../lifecycle-template/lifecycle.template.entity';
 
 @Entity()
 export class TemplatesSet extends AuthorizableEntity implements ITemplatesSet {
@@ -25,4 +26,14 @@ export class TemplatesSet extends AuthorizableEntity implements ITemplatesSet {
     }
   )
   canvasTemplates?: CanvasTemplate[];
+
+  @OneToMany(
+    () => LifecycleTemplate,
+    lifecycleTemplate => lifecycleTemplate.templatesSet,
+    {
+      eager: false,
+      cascade: true,
+    }
+  )
+  lifecycleTemplates?: LifecycleTemplate[];
 }

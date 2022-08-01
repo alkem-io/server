@@ -20,6 +20,7 @@ import {
   OpportunityEventInput,
   UpdateOpportunityInput,
 } from './dto';
+import { UpdateOpportunityLifecycleInput } from './dto/opportunity.dto.update.lifecycle';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { ClientProxy } from '@nestjs/microservices';
 
@@ -53,6 +54,29 @@ export class OpportunityResolverMutations {
       `update opportunity: ${opportunity.nameID}`
     );
     return await this.opportunityService.updateOpportunity(opportunityData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IOpportunity, {
+    description: 'Updates the Lifecycle on the specified Opportunity.',
+  })
+  @Profiling.api
+  async updateOpportunityLifecycle(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('opportunityData') opportunityData: UpdateOpportunityLifecycleInput
+  ): Promise<IOpportunity> {
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      opportunityData.opportunityID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      opportunity.authorization,
+      AuthorizationPrivilege.UPDATE_LIFECYCLE,
+      `opportunity lifecycle update: ${opportunity.nameID}`
+    );
+    return await this.opportunityService.updateOpportunityLifecycle(
+      opportunityData
+    );
   }
 
   @UseGuards(GraphqlGuard)

@@ -31,6 +31,8 @@ import { CommunityRole } from '@common/enums/community.role';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { CanvasService } from '@domain/common/canvas/canvas.service';
+import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 
 @Injectable()
 export class BaseChallengeService {
@@ -43,6 +45,8 @@ export class BaseChallengeService {
     private tagsetService: TagsetService,
     private lifecycleService: LifecycleService,
     private collaborationService: CollaborationService,
+    private aspectsService: AspectService,
+    private canvasService: CanvasService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -168,7 +172,7 @@ export class BaseChallengeService {
     const challenge = await repository.findOne(conditions, options);
     if (!challenge)
       throw new EntityNotFoundException(
-        `Unable to find challenge with ID: ${baseChallengeID}`,
+        `Unable to find base challenge with ID: ${baseChallengeID}`,
         LogContext.CHALLENGES
       );
     return challenge;
@@ -303,7 +307,7 @@ export class BaseChallengeService {
 
     if (!challenge.lifecycle) {
       throw new RelationshipNotFoundException(
-        `Unable to load Lifeycle for challenge ${challengeId} `,
+        `Unable to load Lifecycle for challenge ${challengeId} `,
         LogContext.CHALLENGES
       );
     }
@@ -317,5 +321,43 @@ export class BaseChallengeService {
   ): Promise<number> {
     const community = await this.getCommunity(baseChallenge.id, repository);
     return await this.communityService.getMembersCount(community);
+  }
+
+  async getAspectsCount(
+    baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>
+  ): Promise<number> {
+    const collaboration = await this.getCollaboration(
+      baseChallenge.id,
+      repository
+    );
+    const callouts = await this.collaborationService.getCalloutsOnCollaboration(
+      collaboration
+    );
+    // TODO: fix after full callouts added, all aspects are currently under one callout
+    const defaultCallout = callouts[0];
+    const canvasesCount = await this.aspectsService.getAspectsInCalloutCount(
+      defaultCallout.id
+    );
+    return canvasesCount;
+  }
+
+  async getCanvasesCount(
+    baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>
+  ): Promise<number> {
+    const collaboration = await this.getCollaboration(
+      baseChallenge.id,
+      repository
+    );
+    const callouts = await this.collaborationService.getCalloutsOnCollaboration(
+      collaboration
+    );
+    // TODO: fix after full callouts added, all aspects are currently under one callout
+    const defaultCallout = callouts[0];
+    const canvasesCount = await this.canvasService.getCanvasesInCalloutCount(
+      defaultCallout.id
+    );
+    return canvasesCount;
   }
 }

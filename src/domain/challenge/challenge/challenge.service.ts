@@ -1,5 +1,6 @@
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -52,12 +53,10 @@ import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
-import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
-import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { UpdateChallengeLifecycleInput } from './dto/challenge.dto.update.lifecycle';
 
 @Injectable()
 export class ChallengeService {
@@ -71,8 +70,6 @@ export class ChallengeService {
     private organizationService: OrganizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
-    private aspectService: AspectService,
-    private collaborationService: CollaborationService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -179,8 +176,27 @@ export class ChallengeService {
         await this.challengeRepository.save(challenge);
       }
     }
-
     return challenge;
+  }
+
+  async updateChallengeLifecycle(
+    challengeData: UpdateChallengeLifecycleInput
+  ): Promise<IChallenge> {
+    const challenge = await this.getChallengeOrFail(challengeData.challengeID, {
+      relations: ['lifecycle'],
+    });
+
+    if (!challenge.lifecycle) {
+      throw new EntityNotInitializedException(
+        `Lifecycle of challenge (${challenge.id}) not initialized`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    challenge.lifecycle.machineDef = challengeData.lifecycleDefinition;
+    challenge.lifecycle.machineState = '';
+
+    return await this.challengeRepository.save(challenge);
   }
 
   async deleteChallenge(deleteData: DeleteChallengeInput): Promise<IChallenge> {
@@ -380,13 +396,6 @@ export class ChallengeService {
     );
   }
 
-  async getCollaboration(challengeId: string): Promise<ICollaboration> {
-    return await this.baseChallengeService.getCollaboration(
-      challengeId,
-      this.challengeRepository
-    );
-  }
-
   async getAgent(challengeId: string): Promise<IAgent> {
     return await this.baseChallengeService.getAgent(
       challengeId,
@@ -552,12 +561,14 @@ export class ChallengeService {
   async getActivity(challenge: IChallenge): Promise<INVP[]> {
     const activity: INVP[] = [];
 
+    // Members
     const community = await this.getCommunity(challenge.id);
     const membersCount = await this.communityService.getMembersCount(community);
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${challenge.id}`;
     activity.push(membersTopic);
 
+    // Opportunities
     const opportunitiesCount =
       await this.opportunityService.getOpportunitiesInChallengeCount(
         challenge.id
@@ -569,6 +580,7 @@ export class ChallengeService {
     opportunitiesTopic.id = `opportunities-${challenge.id}`;
     activity.push(opportunitiesTopic);
 
+    // Projects
     const projectsCount = await this.projectService.getProjectsInChallengeCount(
       challenge.id
     );
@@ -576,23 +588,29 @@ export class ChallengeService {
     projectsTopic.id = `projects-${challenge.id}`;
     activity.push(projectsTopic);
 
+    // Challenges
     const challengesCount = await this.getChildChallengesCount(challenge.id);
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     challengesTopic.id = `challenges-${challenge.id}`;
     activity.push(challengesTopic);
 
-    const collaboration = await this.getCollaboration(challenge.id);
-    const callouts = await this.collaborationService.getCalloutsOnCollaboration(
-      collaboration
-    );
-    // TODO: fix after full callouts added, all aspects are currently under one callout
-    const defaultCallout = callouts[0];
-    const aspectsCount = await this.aspectService.getAspectsInCalloutCount(
-      defaultCallout.id
+    // Aspects
+    const aspectsCount = await this.baseChallengeService.getAspectsCount(
+      challenge,
+      this.challengeRepository
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${challenge.id}`;
     activity.push(aspectsTopic);
+
+    // Canvases
+    const canvasesCount = await this.baseChallengeService.getCanvasesCount(
+      challenge,
+      this.challengeRepository
+    );
+    const canvasesTopic = new NVP('canvases', canvasesCount.toString());
+    canvasesTopic.id = `canvases-${challenge.id}`;
+    activity.push(canvasesTopic);
 
     return activity;
   }

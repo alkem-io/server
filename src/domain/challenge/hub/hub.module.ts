@@ -24,9 +24,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
-import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
-import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -49,8 +47,6 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
     PreferenceModule,
     PreferenceSetModule,
     TemplatesSetModule,
-    AspectModule,
-    CollaborationModule,
     TypeOrmModule.forFeature([Hub]),
   ],
   providers: [

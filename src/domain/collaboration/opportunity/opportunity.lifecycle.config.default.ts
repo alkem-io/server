@@ -1,4 +1,6 @@
-export const opportunityLifecycleConfigDefault = {
+import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
+
+export const opportunityLifecycleConfigDefault: ILifecycleDefinition = {
   id: 'opportunity-lifecycle-default',
   context: {
     parentID: '',

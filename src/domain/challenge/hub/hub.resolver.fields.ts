@@ -30,6 +30,9 @@ import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { InjectRepository } from '@nestjs/typeorm';
+import { BaseChallengeService } from '../base-challenge/base.challenge.service';
+import { Repository } from 'typeorm';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -38,7 +41,10 @@ export class HubResolverFields {
     private groupService: UserGroupService,
     private applicationService: ApplicationService,
     private preferenceSetService: PreferenceSetService,
-    private hubService: HubService
+    private hubService: HubService,
+    private baseChallengeService: BaseChallengeService,
+    @InjectRepository(Hub)
+    private hubRepository: Repository<Hub>
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -79,7 +85,10 @@ export class HubResolverFields {
   })
   @Profiling.api
   async collaboration(@Parent() hub: Hub) {
-    return await this.hubService.getCollaboration(hub.id);
+    return await this.baseChallengeService.getCollaboration(
+      hub.id,
+      this.hubRepository
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -105,7 +114,7 @@ export class HubResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('preferences', () => [IPreference], {
-    nullable: false,
+    nullable: true,
     description: 'The preferences for this Hub',
   })
   @UseGuards(GraphqlGuard)
@@ -168,7 +177,7 @@ export class HubResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('opportunities', () => [IOpportunity], {
-    nullable: false,
+    nullable: true,
     description: 'All opportunities within the hub',
   })
   @UseGuards(GraphqlGuard)

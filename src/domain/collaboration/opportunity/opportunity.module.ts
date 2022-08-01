@@ -15,8 +15,6 @@ import { OpportunityAuthorizationService } from './opportunity.service.authoriza
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
-import { CollaborationModule } from '../collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -29,8 +27,6 @@ import { CollaborationModule } from '../collaboration/collaboration.module';
     LifecycleModule,
     UserModule,
     AgentModule,
-    AspectModule,
-    CollaborationModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],
   providers: [

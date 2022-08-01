@@ -36,10 +36,8 @@ import { RemoveOpportunityAdminInput } from './dto/opportunity.dto.remove.admin'
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core';
-import { AspectService } from '@domain/collaboration/aspect/aspect.service';
-import { CollaborationService } from '../collaboration/collaboration.service';
-import { ICollaboration } from '../collaboration/collaboration.interface';
 import { IContext } from '@domain/context/context/context.interface';
+import { UpdateOpportunityLifecycleInput } from './dto/opportunity.dto.update.lifecycle';
 
 @Injectable()
 export class OpportunityService {
@@ -51,8 +49,6 @@ export class OpportunityService {
     private relationService: RelationService,
     private userService: UserService,
     private agentService: AgentService,
-    private aspectService: AspectService,
-    private collaborationService: CollaborationService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -110,6 +106,27 @@ export class OpportunityService {
     }
 
     return await this.saveOpportunity(opportunity);
+  }
+
+  async updateOpportunityLifecycle(
+    opportunityData: UpdateOpportunityLifecycleInput
+  ): Promise<IOpportunity> {
+    const opportunity = await this.getOpportunityOrFail(
+      opportunityData.opportunityID,
+      { relations: ['lifecycle'] }
+    );
+
+    if (!opportunity.lifecycle) {
+      throw new EntityNotInitializedException(
+        `Lifecycle of opportunity (${opportunity.id}) not initialized`,
+        LogContext.OPPORTUNITY
+      );
+    }
+
+    opportunity.lifecycle.machineDef = opportunityData.lifecycleDefinition;
+    opportunity.lifecycle.machineState = '';
+
+    return await this.save(opportunity);
   }
 
   async save(opportunity: IOpportunity): Promise<IOpportunity> {
@@ -250,13 +267,6 @@ export class OpportunityService {
     );
   }
 
-  async getCollaboration(opportunityId: string): Promise<ICollaboration> {
-    return await this.baseChallengeService.getCollaboration(
-      opportunityId,
-      this.opportunityRepository
-    );
-  }
-
   async createProject(projectData: CreateProjectInput): Promise<IProject> {
     const opportunityId = projectData.opportunityID;
 
@@ -285,35 +295,43 @@ export class OpportunityService {
     const activity: INVP[] = [];
     const community = await this.getCommunity(opportunity.id);
 
+    // Members
     const membersCount = await this.communityService.getMembersCount(community);
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${opportunity.id}`;
     activity.push(membersTopic);
 
+    // Projects
     const projectsCount =
       await this.projectService.getProjectsInOpportunityCount(opportunity.id);
     const projectsTopic = new NVP('projects', projectsCount.toString());
     projectsTopic.id = `projects-${opportunity.id}`;
     activity.push(projectsTopic);
 
+    // Relations
     const relationsCount =
       await this.relationService.getRelationsInOpportunityCount(opportunity.id);
     const relationsTopic = new NVP('relations', relationsCount.toString());
     relationsTopic.id = `relations-${opportunity.id}`;
     activity.push(relationsTopic);
 
-    const collaboration = await this.getCollaboration(opportunity.id);
-    const callouts = await this.collaborationService.getCalloutsOnCollaboration(
-      collaboration
-    );
-    // TODO: fix after full callouts added, all aspects are currently under one callout
-    const defaultCallout = callouts[0];
-    const aspectsCount = await this.aspectService.getAspectsInCalloutCount(
-      defaultCallout.id
+    // Aspects
+    const aspectsCount = await this.baseChallengeService.getAspectsCount(
+      opportunity,
+      this.opportunityRepository
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${opportunity.id}`;
     activity.push(aspectsTopic);
+
+    // Canvases
+    const canvasesCount = await this.baseChallengeService.getCanvasesCount(
+      opportunity,
+      this.opportunityRepository
+    );
+    const canvasesTopic = new NVP('canvases', canvasesCount.toString());
+    canvasesTopic.id = `canvases-${opportunity.id}`;
+    activity.push(canvasesTopic);
 
     return activity;
   }

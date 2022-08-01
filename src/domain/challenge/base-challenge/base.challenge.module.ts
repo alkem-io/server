@@ -10,6 +10,8 @@ import { BaseChallengeService } from './base.challenge.service';
 import { BaseChallengeAuthorizationService } from './base.challenge.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
+import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
+import { CanvasModule } from '@domain/common/canvas/canvas.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
     TagsetModule,
     NamingModule,
     CollaborationModule,
+    AspectModule,
+    CanvasModule,
   ],
   providers: [BaseChallengeService, BaseChallengeAuthorizationService],
   exports: [BaseChallengeService, BaseChallengeAuthorizationService],
