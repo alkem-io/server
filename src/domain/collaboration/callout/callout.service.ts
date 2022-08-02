@@ -38,13 +38,15 @@ export class CalloutService {
     private calloutRepository: Repository<Callout>
   ) {}
 
-  async createCallout(calloutData: CreateCalloutInput): Promise<ICallout> {
+  public async createCallout(
+    calloutData: CreateCalloutInput
+  ): Promise<ICallout> {
     const callout: ICallout = Callout.create(calloutData);
     callout.authorization = new AuthorizationPolicy();
     return callout;
   }
 
-  async getCalloutOrFail(
+  public async getCalloutOrFail(
     calloutID: string,
     options?: FindOneOptions<Callout>
   ): Promise<ICallout> {
@@ -60,7 +62,7 @@ export class CalloutService {
     return callout;
   }
 
-  async updateCallout(
+  public async updateCallout(
     calloutUpdateData: UpdateCalloutInput
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutUpdateData.ID);
@@ -78,7 +80,7 @@ export class CalloutService {
     return await this.calloutRepository.save(callout);
   }
 
-  async removeCallout(calloutID: string): Promise<ICallout> {
+  public async deleteCallout(calloutID: string): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: ['aspects', 'canvases'],
     });
@@ -134,7 +136,7 @@ export class CalloutService {
       );
   }
 
-  async createAspectOnCallout(
+  public async createAspectOnCallout(
     aspectData: CreateAspectOnCalloutInput,
     userID: string
   ): Promise<IAspect> {
@@ -186,7 +188,7 @@ export class CalloutService {
     }
   }
 
-  async createCanvasOnCallout(
+  public async createCanvasOnCallout(
     canvasData: CreateCanvasOnCalloutInput
   ): Promise<ICanvas> {
     const calloutID = canvasData.calloutID;
@@ -211,7 +213,7 @@ export class CalloutService {
     return canvas;
   }
 
-  async getCanvasesFromCallout(
+  public async getCanvasesFromCallout(
     callout: ICallout,
     canvasIDs?: string[],
     limit?: number,
@@ -249,7 +251,7 @@ export class CalloutService {
     return results;
   }
 
-  async getCanvasFromCalloutOrFail(
+  public async getCanvasFromCalloutOrFail(
     calloutID: string,
     canvasID: string
   ): Promise<ICanvas> {
@@ -274,7 +276,7 @@ export class CalloutService {
     return canvas;
   }
 
-  async getAspectsFromCallout(
+  public async getAspectsFromCallout(
     callout: ICallout,
     aspectIDs?: string[],
     limit?: number,
@@ -317,7 +319,7 @@ export class CalloutService {
     return results;
   }
 
-  async getApectFromCalloutOrFail(
+  public async getApectFromCalloutOrFail(
     calloutID: string,
     aspectID: string
   ): Promise<IAspect> {

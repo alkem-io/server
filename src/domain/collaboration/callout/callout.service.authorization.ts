@@ -25,7 +25,7 @@ export class CalloutAuthorizationService {
     private calloutRepository: Repository<Callout>
   ) {}
 
-  async applyAuthorizationPolicy(
+  public async applyAuthorizationPolicy(
     callout: ICallout,
     parentAuthorization: IAuthorizationPolicy | undefined,
     communityCredential: CredentialDefinition

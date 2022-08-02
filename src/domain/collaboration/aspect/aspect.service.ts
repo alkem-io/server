@@ -35,7 +35,7 @@ export class AspectService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createAspect(
+  public async createAspect(
     aspectInput: CreateAspectInput,
     userID: string,
     communicationGroupID: string
@@ -60,7 +60,7 @@ export class AspectService {
     return await this.aspectRepository.save(aspect);
   }
 
-  async deleteAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
+  public async deleteAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
     const aspectID = deleteData.ID;
     const aspect = await this.getAspectOrFail(aspectID, {
       relations: ['references'],
@@ -91,7 +91,7 @@ export class AspectService {
     return result;
   }
 
-  async getAspectOrFail(
+  public async getAspectOrFail(
     aspectID: string,
     options?: FindOneOptions<Aspect>
   ): Promise<IAspect> {
@@ -107,7 +107,7 @@ export class AspectService {
     return aspect;
   }
 
-  async updateAspect(aspectData: UpdateAspectInput): Promise<IAspect> {
+  public async updateAspect(aspectData: UpdateAspectInput): Promise<IAspect> {
     const aspect = await this.getAspectOrFail(aspectData.ID, {
       relations: ['references'],
     });
@@ -145,11 +145,11 @@ export class AspectService {
     return aspect;
   }
 
-  async saveAspect(aspect: IAspect): Promise<IAspect> {
+  public async saveAspect(aspect: IAspect): Promise<IAspect> {
     return await this.aspectRepository.save(aspect);
   }
 
-  async createReference(
+  public async createReference(
     referenceInput: CreateReferenceOnAspectInput
   ): Promise<IReference> {
     const aspect = await this.getAspectOrFail(referenceInput.aspectID, {
@@ -181,7 +181,7 @@ export class AspectService {
     return newReference;
   }
 
-  async getReferences(aspect: IAspect): Promise<IReference[]> {
+  public async getReferences(aspect: IAspect): Promise<IReference[]> {
     const aspectLoaded = await this.getAspectOrFail(aspect.id, {
       relations: ['references'],
     });

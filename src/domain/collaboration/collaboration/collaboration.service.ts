@@ -68,14 +68,16 @@ export class CollaborationService {
     return await this.collaborationRepository.save(collaboration);
   }
 
-  async removeCollaboration(collaborationID: string): Promise<ICollaboration> {
+  public async deleteCollaboration(
+    collaborationID: string
+  ): Promise<ICollaboration> {
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
       relations: ['callouts'],
     });
 
     if (collaboration.callouts) {
       for (const callout of collaboration.callouts) {
-        await this.calloutService.removeCallout(callout.id);
+        await this.calloutService.deleteCallout(callout.id);
       }
     }
 
@@ -93,7 +95,7 @@ export class CollaborationService {
     );
   }
 
-  async createCalloutOnCollaboration(
+  public async createCalloutOnCollaboration(
     calloutData: CreateCalloutOnCollaborationInput
   ): Promise<ICallout> {
     const collaborationID = calloutData.collaborationID;
@@ -135,7 +137,7 @@ export class CollaborationService {
     return callout;
   }
 
-  async getCalloutsOnCollaboration(
+  public async getCalloutsOnCollaboration(
     collaboration: ICollaboration
   ): Promise<ICallout[]> {
     const loadedCollaboration = await this.getCollaborationOrFail(
@@ -153,7 +155,7 @@ export class CollaborationService {
     return loadedCollaboration.callouts;
   }
 
-  async createRelationOnCollaboration(
+  public async createRelationOnCollaboration(
     relationData: CreateRelationOnCollaborationInput
   ): Promise<IRelation> {
     const collaborationId = relationData.collaborationID;
@@ -174,7 +176,7 @@ export class CollaborationService {
   }
 
   // Loads the relations into the Collaboration entity if not already present
-  async getRelationsOnCollaboration(
+  public async getRelationsOnCollaboration(
     collaboration: ICollaboration
   ): Promise<IRelation[]> {
     const loadedCollaboration = await this.getCollaborationOrFail(

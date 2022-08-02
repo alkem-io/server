@@ -21,7 +21,7 @@ export class BaseChallengeAuthorizationService {
     private communityService: CommunityService
   ) {}
 
-  async applyAuthorizationPolicy(
+  public async applyAuthorizationPolicy(
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<IBaseChallenge> {

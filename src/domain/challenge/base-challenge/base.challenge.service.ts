@@ -50,7 +50,7 @@ export class BaseChallengeService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async initialise(
+  public async initialise(
     baseChallenge: IBaseChallenge,
     baseChallengeData: CreateBaseChallengeInput,
     hubID: string,
@@ -88,7 +88,7 @@ export class BaseChallengeService {
     });
   }
 
-  async update(
+  public async update(
     baseChallengeData: UpdateBaseChallengeInput,
     repository: Repository<BaseChallenge>
   ): Promise<IBaseChallenge> {
@@ -131,13 +131,13 @@ export class BaseChallengeService {
     return await repository.save(baseChallenge);
   }
 
-  async deleteEntities(baseChallenge: IBaseChallenge) {
+  public async deleteEntities(baseChallenge: IBaseChallenge) {
     if (baseChallenge.context) {
       await this.contextService.removeContext(baseChallenge.context.id);
     }
 
     if (baseChallenge.collaboration) {
-      await this.collaborationService.removeCollaboration(
+      await this.collaborationService.deleteCollaboration(
         baseChallenge.collaboration.id
       );
     }
@@ -166,7 +166,7 @@ export class BaseChallengeService {
     }
   }
 
-  async getBaseChallengeOrFail(
+  public async getBaseChallengeOrFail(
     baseChallengeID: string,
     repository: Repository<BaseChallenge>,
     options?: FindOneOptions<BaseChallenge>
@@ -184,7 +184,7 @@ export class BaseChallengeService {
     return challenge;
   }
 
-  async isNameAvailableOrFail(nameID: string, nameableScopeID: string) {
+  public async isNameAvailableOrFail(nameID: string, nameableScopeID: string) {
     if (
       !(await this.namingService.isNameIdAvailableInHub(
         nameID,
@@ -197,7 +197,7 @@ export class BaseChallengeService {
       );
   }
 
-  async getCommunity(
+  public async getCommunity(
     baseChallengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<ICommunity> {
@@ -217,7 +217,7 @@ export class BaseChallengeService {
     return community;
   }
 
-  async getCommunityMembershipCredential(
+  public async getCommunityMembershipCredential(
     baseChallengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<CredentialDefinition> {
@@ -228,7 +228,7 @@ export class BaseChallengeService {
     );
   }
 
-  async getCommunityLeadershipCredential(
+  public async getCommunityLeadershipCredential(
     baseChallengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<CredentialDefinition> {
@@ -239,7 +239,7 @@ export class BaseChallengeService {
     );
   }
 
-  async getContext(
+  public async getContext(
     challengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<IContext> {
@@ -259,7 +259,7 @@ export class BaseChallengeService {
     return context;
   }
 
-  async getCollaboration(
+  public async getCollaboration(
     challengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<ICollaboration> {
@@ -279,7 +279,7 @@ export class BaseChallengeService {
     return collaboration;
   }
 
-  async getAgent(
+  public async getAgent(
     challengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<IAgent> {
@@ -299,7 +299,7 @@ export class BaseChallengeService {
     return agent;
   }
 
-  async getLifecycle(
+  public async getLifecycle(
     challengeId: string,
     repository: Repository<BaseChallenge>
   ): Promise<ILifecycle> {
@@ -321,7 +321,7 @@ export class BaseChallengeService {
     return challenge.lifecycle;
   }
 
-  async getMembersCount(
+  public async getMembersCount(
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
@@ -329,7 +329,7 @@ export class BaseChallengeService {
     return await this.communityService.getMembersCount(community);
   }
 
-  async getAspectsCount(
+  public async getAspectsCount(
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
@@ -348,7 +348,7 @@ export class BaseChallengeService {
     return canvasesCount;
   }
 
-  async getCanvasesCount(
+  public async getCanvasesCount(
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
