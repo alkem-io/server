@@ -10,6 +10,7 @@ import { CollaborationResolverMutations } from '@domain/collaboration/collaborat
 import { CollaborationResolverFields } from '@domain/collaboration/collaboration/collaboration.resolver.fields';
 import { RelationModule } from '@domain/collaboration/relation/relation.module';
 import { CollaborationDataloaderService } from './collaboration.dataloader.service';
+import { CollaborationAuthorizationService } from './collaboration.service.authorization';
 
 @Module({
   imports: [
@@ -22,10 +23,15 @@ import { CollaborationDataloaderService } from './collaboration.dataloader.servi
   ],
   providers: [
     CollaborationService,
+    CollaborationAuthorizationService,
     CollaborationResolverMutations,
     CollaborationResolverFields,
     CollaborationDataloaderService,
   ],
-  exports: [CollaborationService, CollaborationDataloaderService],
+  exports: [
+    CollaborationService,
+    CollaborationDataloaderService,
+    CollaborationAuthorizationService,
+  ],
 })
 export class CollaborationModule {}
