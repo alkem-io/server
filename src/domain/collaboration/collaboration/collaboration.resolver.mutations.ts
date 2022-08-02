@@ -67,6 +67,7 @@ export class CollaborationResolverMutations {
       await this.collaborationService.createRelationOnCollaboration(
         relationData
       );
+    // TODO: Fix interested in collaboration notification in separate task
     // const payload =
     //   this.notificationsPayloadBuilder.buildCommunityCollaborationInterestPayload(
     //     agentInfo.userID,
