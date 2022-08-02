@@ -136,6 +136,12 @@ export class BaseChallengeService {
       await this.contextService.removeContext(baseChallenge.context.id);
     }
 
+    if (baseChallenge.collaboration) {
+      await this.collaborationService.removeCollaboration(
+        baseChallenge.collaboration.id
+      );
+    }
+
     const community = baseChallenge.community;
     if (community) {
       await this.communityService.removeCommunity(community.id);
@@ -264,7 +270,7 @@ export class BaseChallengeService {
         relations: ['collaboration'],
       }
     );
-    const collaboration = challengeWithCollaboration.context;
+    const collaboration = challengeWithCollaboration.collaboration;
     if (!collaboration)
       throw new RelationshipNotFoundException(
         `Unable to load collaboration for challenge ${challengeId} `,
