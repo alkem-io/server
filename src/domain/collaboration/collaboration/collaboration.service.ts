@@ -156,7 +156,7 @@ export class CollaborationService {
   async createRelationOnCollaboration(
     relationData: CreateRelationOnCollaborationInput
   ): Promise<IRelation> {
-    const collaborationId = relationData.parentID;
+    const collaborationId = relationData.collaborationID;
     const collaboration = await this.getCollaborationOrFail(collaborationId, {
       relations: ['relations'],
     });
