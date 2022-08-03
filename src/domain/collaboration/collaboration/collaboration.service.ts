@@ -175,7 +175,6 @@ export class CollaborationService {
     return relation;
   }
 
-  // Loads the relations into the Collaboration entity if not already present
   public async getRelationsOnCollaboration(
     collaboration: ICollaboration
   ): Promise<IRelation[]> {

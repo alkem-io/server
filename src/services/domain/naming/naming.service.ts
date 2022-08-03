@@ -121,8 +121,9 @@ export class NamingService {
     const hub = await this.hubRepository
       .createQueryBuilder('hub')
       .leftJoinAndSelect('hub.community', 'community')
-      .leftJoinAndSelect('hub.callout', 'callout')
       .leftJoinAndSelect('community.communication', 'communication')
+      .leftJoinAndSelect('hub.collaboration', 'collaboration')
+      .innerJoinAndSelect('collaboration.callouts', 'callout')
       .where('callout.id = :id')
       .setParameters({ id: `${calloutID}` })
       .getOne();
@@ -137,6 +138,8 @@ export class NamingService {
       .leftJoinAndSelect('challenge.community', 'community')
       .leftJoinAndSelect('challenge.callout', 'callout')
       .leftJoinAndSelect('community.communication', 'communication')
+      .leftJoinAndSelect('challenge.collaboration', 'collaboration')
+      .innerJoinAndSelect('collaboration.callouts', 'callout')
       .where('callout.id = :id')
       .setParameters({ id: `${calloutID}` })
       .getOne();
@@ -152,6 +155,8 @@ export class NamingService {
       .leftJoinAndSelect('opportunity.community', 'community')
       .leftJoinAndSelect('opportunity.callout', 'callout')
       .leftJoinAndSelect('community.communication', 'communication')
+      .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
+      .innerJoinAndSelect('collaboration.callouts', 'callout')
       .where('callout.id = :id')
       .setParameters({ id: `${calloutID}` })
       .getOne();
