@@ -183,8 +183,11 @@ export class collaborationCalloutEntities1659522159191
     await queryRunner.query(
       'ALTER TABLE `canvas` ADD CONSTRAINT `FK_09b225228f9d675758232a43441` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
+    // await queryRunner.query(
+    //   'ALTER TABLE `aspect` ADD CONSTRAINT `FK_6c57bb50b3b6fb4943c807c83ce` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    // );
     await queryRunner.query(
-      'ALTER TABLE `aspect` ADD CONSTRAINT `FK_6c57bb50b3b6fb4943c807c83ce` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+      'CREATE UNIQUE INDEX `FK_6c57bb50b3b6fb4943c807c83ce` ON `aspect` (`contextId`)'
     );
   }
 }
