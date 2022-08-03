@@ -59,7 +59,7 @@ export class RelationAuthorizationService {
     if (!authorization)
       throw new EntityNotInitializedException(
         'Authorization definition not found',
-        LogContext.OPPORTUNITY
+        LogContext.COLLABORATION
       );
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
