@@ -70,7 +70,7 @@ export class NotificationsPayloadBuilder {
   async buildAspectCreatedPayload(aspectId: string) {
     const aspect = await this.aspectRepository.findOne(
       { id: aspectId },
-      { relations: ['context'] }
+      { relations: ['callout'] }
     );
     if (!aspect) {
       throw new NotificationEventException(
@@ -384,7 +384,7 @@ export class NotificationsPayloadBuilder {
         SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`opportunity\`
         RIGHT JOIN \`callout\` on \`callout\`.\`collaborationId\` = \`opportunity\`.\`collaborationId\`
         RIGHT JOIN \`aspect\` on \`aspect\`.\`calloutId\` = \`callout\`.\`id\`
-        WHERE \`aspect\`.\`calloutId\` = '${calloutId}' UNION
+        WHERE \`aspect\`.\`calloutId\` = '${calloutId}';
       `
     );
 
