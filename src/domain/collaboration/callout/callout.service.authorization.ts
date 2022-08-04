@@ -4,15 +4,13 @@ import { Repository } from 'typeorm';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CalloutService } from './callout.service';
 import { ICallout, Callout } from '@domain/collaboration/callout';
 import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
 import { AspectAuthorizationService } from '@domain/collaboration/aspect/aspect.service.authorization';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -28,7 +26,7 @@ export class CalloutAuthorizationService {
   public async applyAuthorizationPolicy(
     callout: ICallout,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityCredential: CredentialDefinition
+    userID: string
   ): Promise<ICallout> {
     callout.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -36,11 +34,24 @@ export class CalloutAuthorizationService {
         parentAuthorization
       );
 
-    callout.authorization = this.appendCredentialRules(
-      callout.authorization,
-      callout.id,
-      communityCredential
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    // Allow users to update their own created callout
+    const selfCreatedCallout = new AuthorizationPolicyRuleCredential(
+      [
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+      AuthorizationCredential.USER_SELF_MANAGEMENT,
+      userID
     );
+    newRules.push(selfCreatedCallout);
+
+    // callout.authorization = this.appendCredentialRules(
+    //   callout.authorization,
+    //   callout.id,
+    //   communityCredential
+    // );
     callout.authorization = this.appendPrivilegeRules(callout.authorization);
 
     callout.aspects = await this.calloutService.getAspectsFromCallout(callout);
@@ -64,49 +75,49 @@ export class CalloutAuthorizationService {
     return await this.calloutRepository.save(callout);
   }
 
-  private appendCredentialRules(
-    authorization: IAuthorizationPolicy | undefined,
-    calloutID: string,
-    membershipCredential: CredentialDefinition
-  ): IAuthorizationPolicy {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        `Authorization definition not found for Callout: ${calloutID}`,
-        LogContext.COLLABORATION
-      );
+  // private appendCredentialRules(
+  //   authorization: IAuthorizationPolicy | undefined,
+  //   calloutID: string,
+  //   membershipCredential: CredentialDefinition
+  // ): IAuthorizationPolicy {
+  //   if (!authorization)
+  //     throw new EntityNotInitializedException(
+  //       `Authorization definition not found for Callout: ${calloutID}`,
+  //       LogContext.COLLABORATION
+  //     );
 
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+  //   const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    const communityMemberNotInherited = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE_ASPECT,
-        AuthorizationPrivilege.CREATE_CANVAS,
-      ],
-      membershipCredential.type,
-      membershipCredential.resourceID
-    );
-    communityMemberNotInherited.inheritable = false;
-    newRules.push(communityMemberNotInherited);
+  //   const communityMemberNotInherited = new AuthorizationPolicyRuleCredential(
+  //     [
+  //       AuthorizationPrivilege.CREATE_ASPECT,
+  //       AuthorizationPrivilege.CREATE_CANVAS,
+  //     ],
+  //     membershipCredential.type,
+  //     membershipCredential.resourceID
+  //   );
+  //   communityMemberNotInherited.inheritable = false;
+  //   newRules.push(communityMemberNotInherited);
 
-    // separate rule as do want the update canvas / ability to create a comment to cascade
-    const communityMemberInherited = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.UPDATE_CANVAS,
-        AuthorizationPrivilege.CREATE_COMMENT,
-      ],
-      membershipCredential.type,
-      membershipCredential.resourceID
-    );
-    newRules.push(communityMemberInherited);
+  //   // separate rule as do want the update canvas / ability to create a comment to cascade
+  //   const communityMemberInherited = new AuthorizationPolicyRuleCredential(
+  //     [
+  //       AuthorizationPrivilege.UPDATE_CANVAS,
+  //       AuthorizationPrivilege.CREATE_COMMENT,
+  //     ],
+  //     membershipCredential.type,
+  //     membershipCredential.resourceID
+  //   );
+  //   newRules.push(communityMemberInherited);
 
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        authorization,
-        newRules
-      );
+  //   const updatedAuthorization =
+  //     this.authorizationPolicyService.appendCredentialAuthorizationRules(
+  //       authorization,
+  //       newRules
+  //     );
 
-    return updatedAuthorization;
-  }
+  //   return updatedAuthorization;
+  // }
 
   private appendPrivilegeRules(
     authorization: IAuthorizationPolicy

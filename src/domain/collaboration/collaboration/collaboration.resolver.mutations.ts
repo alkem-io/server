@@ -11,11 +11,14 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { CreateRelationOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.relation';
 import { CreateCalloutOnCollaborationInput } from './dto/collaboration.dto.create.callout';
+import { ICallout } from '../callout/callout.interface';
+import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
 
 @Resolver()
 export class CollaborationResolverMutations {
   constructor(
     private relationAuthorizationService: RelationAuthorizationService,
+    private calloutAuthorizationService: CalloutAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private collaborationService: CollaborationService
@@ -23,7 +26,7 @@ export class CollaborationResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IRelation, {
-    description: 'Create a new Relation on the Opportunity.',
+    description: 'Create a new Relation on the Collaboration.',
   })
   @Profiling.api
   async createRelationOnCollaboration(
@@ -44,14 +47,14 @@ export class CollaborationResolverMutations {
       agentInfo,
       authorization,
       AuthorizationPrivilege.READ,
-      `read relation: ${collaboration.id}`
+      `read relation on collaboration: ${collaboration.id}`
     );
     // Then check if the user can create
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorization,
       AuthorizationPrivilege.CREATE,
-      `create relation: ${collaboration.id}`
+      `create relation on collaboration: ${collaboration.id}`
     );
     // Load the authorization policy again to avoid the temporary extension above
     const collaboriationAuthorizationPolicy =
@@ -80,14 +83,14 @@ export class CollaborationResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IRelation, {
-    description: 'Create a new Relation on the Opportunity.',
+  @Mutation(() => ICallout, {
+    description: 'Create a new Callout on the Collaboration.',
   })
   @Profiling.api
   async createCalloutOnCollaboration(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('relationData') calloutData: CreateCalloutOnCollaborationInput
-  ): Promise<IRelation> {
+    @Args('calloutData') calloutData: CreateCalloutOnCollaborationInput
+  ): Promise<ICallout> {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(
         calloutData.collaborationID
@@ -112,16 +115,16 @@ export class CollaborationResolverMutations {
       `create callout: ${collaboration.id}`
     );
     // Load the authorization policy again to avoid the temporary extension above
-    const oppAuthorization =
+    const collaboriationAuthorizationPolicy =
       await this.authorizationPolicyService.getAuthorizationPolicyOrFail(
         authorization.id
       );
     const callout =
       await this.collaborationService.createCalloutOnCollaboration(calloutData);
 
-    return await this.relationAuthorizationService.applyAuthorizationPolicy(
+    return await this.calloutAuthorizationService.applyAuthorizationPolicy(
       callout,
-      oppAuthorization,
+      collaboriationAuthorizationPolicy,
       agentInfo.userID
     );
   }
