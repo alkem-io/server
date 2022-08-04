@@ -7,6 +7,7 @@ import { Project } from '@domain/collaboration/project';
 import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { Canvas } from '@domain/common/canvas/canvas.entity';
     TypeOrmModule.forFeature([Aspect]),
     TypeOrmModule.forFeature([Canvas]),
     TypeOrmModule.forFeature([Hub]),
+    TypeOrmModule.forFeature([Callout]),
   ],
   providers: [NamingService],
   exports: [NamingService],

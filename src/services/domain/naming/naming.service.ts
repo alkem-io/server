@@ -11,6 +11,7 @@ import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -28,6 +29,8 @@ export class NamingService {
     private opportunityRepository: Repository<Opportunity>,
     @InjectRepository(Project)
     private projectRepository: Repository<Project>,
+    @InjectRepository(Callout)
+    private calloutRepository: Repository<Callout>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -93,7 +96,7 @@ export class NamingService {
     nameID: string,
     collaborationID: string
   ): Promise<boolean> {
-    const query = this.aspectRepository
+    const query = this.calloutRepository
       .createQueryBuilder('callout')
       .leftJoinAndSelect('callout.collaboration', 'collaboration')
       .where('collaboration.id = :id')
