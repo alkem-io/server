@@ -17,11 +17,8 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
 import { CreateRelationOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.relation';
-import { CalloutType } from '@common/enums/callout.type';
-import { CalloutState } from '@common/enums/callout.state';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 @Injectable()
 export class CollaborationService {
@@ -128,9 +125,9 @@ export class CollaborationService {
     const callout = await this.calloutService.createCallout({
       displayName: calloutData.displayName,
       nameID: calloutData.nameID,
-      type: CalloutType.CANVAS,
-      state: CalloutState.OPEN,
-      visibility: CalloutVisibility.DRAFT,
+      type: calloutData.type,
+      state: calloutData.state,
+      visibility: calloutData.visibility,
     });
     collaboration.callouts.push(callout);
     await this.collaborationRepository.save(collaboration);
