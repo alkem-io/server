@@ -195,7 +195,7 @@ export class OpportunityService {
 
   async deleteOpportunity(opportunityID: string): Promise<IOpportunity> {
     const opportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: ['relations', 'projects'],
+      relations: ['projects'],
     });
     // disable deletion if projects are present
     const projects = opportunity.projects;

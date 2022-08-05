@@ -108,14 +108,7 @@ export class ContextService {
   async removeContext(contextID: string): Promise<IContext> {
     // Note need to load it in with all contained entities so can remove fully
     const context = await this.getContextOrFail(contextID, {
-      relations: [
-        'aspects',
-        'references',
-        'ecosystemModel',
-        'visuals',
-        'canvases',
-        'location',
-      ],
+      relations: ['references', 'ecosystemModel', 'visuals', 'location'],
     });
 
     if (context.references) {
