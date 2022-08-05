@@ -1,5 +1,106 @@
+import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { generateNameID } from './utils/generate-nameid';
 
+const migrateRelationsFromOpportunity = async (
+  queryRunner: QueryRunner,
+  opportunityId: string,
+  collaborationID: string
+) => {
+  // Add collaborationId to Relations on Opportunity
+  const relations = await queryRunner.query(
+    `SELECT id FROM \`relation\` WHERE relation.opportunityId = '${opportunityId}'`
+  );
+  for (const relation of relations) {
+    await queryRunner.query(
+      `UPDATE \`relation\` SET collaborationId = '${collaborationID}' WHERE id = '${relation.id}'`
+    );
+  }
+};
+
+const migrateAspectsAndCanvases = async (
+  queryRunner: QueryRunner,
+  entityName: string
+) => {
+  const entities = await queryRunner.query(
+    `SELECT id, contextId FROM \`${entityName}\``
+  );
+  for (const entity of entities) {
+    const collaborationID = randomUUID();
+    const authID = randomUUID();
+
+    // Create the Collaboration object
+    await queryRunner.query(
+      `INSERT INTO authorization_policy
+        VALUES ('${authID}', NOW(), NOW(), 1, '', '', 0, '')`
+    );
+    await queryRunner.query(
+      `INSERT INTO collaboration (id, version, authorizationId)
+        VALUES ('${collaborationID}', 1, '${authID}')`
+    );
+
+    // Add collaborationId to Entity
+    await queryRunner.query(
+      `UPDATE \`${entityName}\` SET collaborationId = '${collaborationID}' WHERE id = '${entity.id}'`
+    );
+
+    // If Entity is Opportunity, migrate relations
+    if (entityName == 'opportunity')
+      await migrateRelationsFromOpportunity(
+        queryRunner,
+        entity.id,
+        collaborationID
+      );
+
+    // Create Callout object for old Aspects and add refs: Callout -> Collaboration, Aspect -> Callout
+    const aspectsCalloutID = randomUUID();
+    const aspectCalloutAuthID = randomUUID();
+    await queryRunner.query(
+      `INSERT INTO authorization_policy
+        VALUES ('${aspectCalloutAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
+    );
+    const aspectCalloutNameID = generateNameID('Other cards', true, 20);
+    const aspectCalloutDescription =
+      'This callout contains all cards created before the callout feature was released.';
+    await queryRunner.query(
+      `INSERT INTO \`callout\` (id, version, displayName, nameID, description, type, state, visibility, authorizationId, collaborationId)
+        VALUES ('${aspectsCalloutID}', 1, 'Other cards', '${aspectCalloutNameID}', '${aspectCalloutDescription}', 'card', 'open', 'published', '${aspectCalloutAuthID}', '${collaborationID}')`
+    );
+
+    const aspects = await queryRunner.query(
+      `SELECT id FROM \`aspect\` WHERE contextId = '${entity.contextId}'`
+    );
+    for (const aspect of aspects) {
+      await queryRunner.query(
+        `UPDATE \`aspect\` SET calloutId = '${aspectsCalloutID}' WHERE id = '${aspect.id}'`
+      );
+    }
+
+    // Create Callout object for old Canvases and add refs: Callout -> Collaboration, Canvas -> Callout
+    const canvasesCalloutID = randomUUID();
+    const canvasesCalloutAuthID = randomUUID();
+    await queryRunner.query(
+      `INSERT INTO authorization_policy
+        VALUES ('${canvasesCalloutAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
+    );
+    const canvasCalloutNameID = generateNameID('Other canvases', true, 20);
+    const canvasCalloutDescription =
+      'This callout contains all canvas created before the callout feature was released.';
+    await queryRunner.query(
+      `INSERT INTO \`callout\` (id, version, displayName, nameID, description, type, state, visibility, authorizationId, collaborationId)
+        VALUES ('${canvasesCalloutID}', 1, 'Other canvases', '${canvasCalloutNameID}', '${canvasCalloutDescription}', 'canvas', 'open', 'published', '${canvasesCalloutAuthID}', '${collaborationID}')`
+    );
+
+    const canvases = await queryRunner.query(
+      `SELECT id FROM \`canvas\` WHERE contextId = '${entity.contextId}'`
+    );
+    for (const canvas of canvases) {
+      await queryRunner.query(
+        `UPDATE \`canvas\` SET calloutId = '${canvasesCalloutID}' WHERE id = '${canvas.id}'`
+      );
+    }
+  }
+};
 export class collaborationCalloutEntities1659522159191
   implements MigrationInterface
 {
@@ -10,7 +111,7 @@ export class collaborationCalloutEntities1659522159191
       `CREATE TABLE \`collaboration\` (\`id\` varchar(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`authorizationId\` varchar(36) NULL, UNIQUE INDEX \`REL_262ecf3f5d70b82a4833618425\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
-      `CREATE TABLE \`callout\` (\`id\` varchar(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`displayName\` varchar(255) NOT NULL, \`nameID\` varchar(255) NOT NULL, \`description\` text NOT NULL, \`type\` text NOT NULL, \`state\` text NOT NULL DEFAULT 'open', \`visibility\` text NOT NULL DEFAULT 'draft', \`authorizationId\` varchar(36) NULL, \`commentsId\` varchar(36) NULL, \`collaborationId\` varchar(36) NULL, UNIQUE INDEX \`REL_6289dee12effb51320051c6f1f\` (\`authorizationId\`), UNIQUE INDEX \`REL_62ed316cda7b75735b20307b47\` (\`commentsId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+      `CREATE TABLE \`callout\` (\`id\` varchar(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`displayName\` varchar(255) NOT NULL, \`nameID\` varchar(255) NOT NULL, \`description\` text NOT NULL, \`type\` text NOT NULL, \`state\` text NOT NULL DEFAULT 'open', \`visibility\` text NOT NULL DEFAULT 'draft', \`authorizationId\` varchar(36) NULL, \`discussionId\` varchar(36) NULL, \`collaborationId\` varchar(36) NULL, UNIQUE INDEX \`REL_6289dee12effb51320051c6f1f\` (\`authorizationId\`), UNIQUE INDEX \`REL_62ed316cda7b75735b20307b47\` (\`discussionId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
       `ALTER TABLE \`hub\` ADD \`collaborationId\` varchar(36) NULL`
@@ -30,17 +131,6 @@ export class collaborationCalloutEntities1659522159191
     await queryRunner.query(
       `ALTER TABLE \`challenge\` ADD UNIQUE INDEX \`IDX_d4551f18fed106ae2e20c70f7c\` (\`collaborationId\`)`
     );
-
-    // Redundant
-    // await queryRunner.query(
-    //   `CREATE UNIQUE INDEX \`REL_6325f4ef25c4e07e723a96ed37\` ON \`hub\` (\`collaborationId\`)`
-    // );
-    // await queryRunner.query(
-    //   `CREATE UNIQUE INDEX \`REL_fa617e79d6b2926edc7b4a3878\` ON \`opportunity\` (\`collaborationId\`)`
-    // );
-    // await queryRunner.query(
-    //   `CREATE UNIQUE INDEX \`REL_d4551f18fed106ae2e20c70f7c\` ON \`challenge\` (\`collaborationId\`)`
-    // );
 
     // Add calloutId to canvas
     await queryRunner.query(
@@ -63,7 +153,7 @@ export class collaborationCalloutEntities1659522159191
       `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_6289dee12effb51320051c6f1fc\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_62ed316cda7b75735b20307b47e\` FOREIGN KEY (\`commentsId\`) REFERENCES \`comments\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_62ed316cda7b75735b20307b47e\` FOREIGN KEY (\`discussionId\`) REFERENCES \`discussion\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_9b1c5ee044611ac78249194ec35\` FOREIGN KEY (\`collaborationId\`) REFERENCES \`collaboration\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
@@ -87,7 +177,9 @@ export class collaborationCalloutEntities1659522159191
       `ALTER TABLE \`challenge\` ADD CONSTRAINT \`FK_d4551f18fed106ae2e20c70f7cb\` FOREIGN KEY (\`collaborationId\`) REFERENCES \`collaboration\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
-    // const relations = await queryRunner.query(`SELECT relation.id, relation.opportunityId FROM \`relation\` LEFT JOIN \`opportunity\` on opportunity.id = relation.opportunityId`)
+    await migrateAspectsAndCanvases(queryRunner, 'hub');
+    await migrateAspectsAndCanvases(queryRunner, 'challenge');
+    await migrateAspectsAndCanvases(queryRunner, 'opportunity');
 
     // Drop contextId INDEX and column in canvas table
     await queryRunner.query(
@@ -162,15 +254,6 @@ export class collaborationCalloutEntities1659522159191
     await queryRunner.query(
       `ALTER TABLE \`canvas\` DROP FOREIGN KEY \`FK_fcabc1f3aa38aca70df4f66e938\``
     );
-    // await queryRunner.query(
-    //   `DROP INDEX \`REL_d4551f18fed106ae2e20c70f7c\` ON \`challenge\``
-    // );
-    // await queryRunner.query(
-    //   `DROP INDEX \`REL_fa617e79d6b2926edc7b4a3878\` ON \`opportunity\``
-    // );
-    // await queryRunner.query(
-    //   `DROP INDEX \`REL_6325f4ef25c4e07e723a96ed37\` ON \`hub\``
-    // );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` DROP INDEX \`IDX_d4551f18fed106ae2e20c70f7c\``
     );

@@ -12,9 +12,9 @@ import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.e
 import { ICallout } from './callout.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
-import { Comments } from '@domain/communication/comments';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { Discussion } from '@domain/communication/discussion/discussion.entity';
 
 @Entity()
 export class Callout extends NameableEntity implements ICallout {
@@ -42,13 +42,13 @@ export class Callout extends NameableEntity implements ICallout {
   })
   aspects?: Aspect[];
 
-  @OneToOne(() => Comments, {
+  @OneToOne(() => Discussion, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  comments?: Comments;
+  discussion?: Discussion;
 
   @ManyToOne(() => Collaboration, collaboration => collaboration.callouts, {
     eager: false,
