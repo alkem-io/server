@@ -122,13 +122,7 @@ export class CollaborationService {
       );
     }
 
-    const callout = await this.calloutService.createCallout({
-      displayName: calloutData.displayName,
-      nameID: calloutData.nameID,
-      type: calloutData.type,
-      state: calloutData.state,
-      visibility: calloutData.visibility,
-    });
+    const callout = await this.calloutService.createCallout(calloutData);
     collaboration.callouts.push(callout);
     await this.collaborationRepository.save(collaboration);
     return callout;

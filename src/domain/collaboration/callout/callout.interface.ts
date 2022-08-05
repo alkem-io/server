@@ -12,6 +12,7 @@ import { IDiscussion } from '@domain/communication/discussion/discussion.interfa
 export abstract class ICallout extends INameable {
   @Field(() => Markdown, {
     description: 'The description of this Callout',
+    nullable: true,
   })
   description?: string;
 
