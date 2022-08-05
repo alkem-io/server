@@ -196,9 +196,6 @@ export class collaborationCalloutEntities1659522159191
     );
 
     // Drop contextId FOREIGN KEY and column in aspect table
-    // await queryRunner.query(
-    //   'ALTER TABLE `aspect` DROP FOREIGN KEY `FK_6c57bb50b3b6fb4943c807c83ce`'
-    // );
     await queryRunner.query(`ALTER TABLE \`aspect\` DROP COLUMN \`contextId\``);
   }
 
@@ -206,23 +203,23 @@ export class collaborationCalloutEntities1659522159191
     await queryRunner.query(
       `ALTER TABLE \`aspect\` ADD \`contextId\` varchar(36) NULL DEFAULT 'NULL'`
     );
-    await queryRunner.query(
-      'ALTER TABLE `aspect` ADD CONSTRAINT `FK_6c57bb50b3b6fb4943c807c83ce` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
-    );
+    // await queryRunner.query(
+    //   'ALTER TABLE `aspect` ADD CONSTRAINT `FK_6c57bb50b3b6fb4943c807c83ce` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    // );
 
     await queryRunner.query(
       `ALTER TABLE \`relation\` ADD \`opportunityId\` varchar(36) NULL DEFAULT 'NULL'`
     );
-    await queryRunner.query(
-      `ALTER TABLE \`relation\` ADD CONSTRAINT \`FK_d6d967126caae9df4c763985f9b\` FOREIGN KEY (\`opportunityId\`) REFERENCES \`opportunity\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
-    );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`relation\` ADD CONSTRAINT \`FK_d6d967126caae9df4c763985f9b\` FOREIGN KEY (\`opportunityId\`) REFERENCES \`opportunity\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    // );
 
     await queryRunner.query(
       `ALTER TABLE \`canvas\` ADD \`contextId\` char(36) NULL DEFAULT 'NULL'`
     );
-    await queryRunner.query(
-      'ALTER TABLE `canvas` ADD CONSTRAINT `FK_09b225228f9d675758232a43441` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
-    );
+    // await queryRunner.query(
+    //   'ALTER TABLE `canvas` ADD CONSTRAINT `FK_09b225228f9d675758232a43441` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+    // );
 
     await queryRunner.query(
       `ALTER TABLE \`challenge\` DROP FOREIGN KEY \`FK_d4551f18fed106ae2e20c70f7cb\``
