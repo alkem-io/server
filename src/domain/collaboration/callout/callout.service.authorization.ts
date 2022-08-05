@@ -47,11 +47,6 @@ export class CalloutAuthorizationService {
     );
     newRules.push(selfCreatedCallout);
 
-    // callout.authorization = this.appendCredentialRules(
-    //   callout.authorization,
-    //   callout.id,
-    //   communityCredential
-    // );
     callout.authorization = this.appendPrivilegeRules(callout.authorization);
 
     callout.aspects = await this.calloutService.getAspectsFromCallout(callout);
@@ -74,50 +69,6 @@ export class CalloutAuthorizationService {
 
     return await this.calloutRepository.save(callout);
   }
-
-  // private appendCredentialRules(
-  //   authorization: IAuthorizationPolicy | undefined,
-  //   calloutID: string,
-  //   membershipCredential: CredentialDefinition
-  // ): IAuthorizationPolicy {
-  //   if (!authorization)
-  //     throw new EntityNotInitializedException(
-  //       `Authorization definition not found for Callout: ${calloutID}`,
-  //       LogContext.COLLABORATION
-  //     );
-
-  //   const newRules: AuthorizationPolicyRuleCredential[] = [];
-
-  //   const communityMemberNotInherited = new AuthorizationPolicyRuleCredential(
-  //     [
-  //       AuthorizationPrivilege.CREATE_ASPECT,
-  //       AuthorizationPrivilege.CREATE_CANVAS,
-  //     ],
-  //     membershipCredential.type,
-  //     membershipCredential.resourceID
-  //   );
-  //   communityMemberNotInherited.inheritable = false;
-  //   newRules.push(communityMemberNotInherited);
-
-  //   // separate rule as do want the update canvas / ability to create a comment to cascade
-  //   const communityMemberInherited = new AuthorizationPolicyRuleCredential(
-  //     [
-  //       AuthorizationPrivilege.UPDATE_CANVAS,
-  //       AuthorizationPrivilege.CREATE_COMMENT,
-  //     ],
-  //     membershipCredential.type,
-  //     membershipCredential.resourceID
-  //   );
-  //   newRules.push(communityMemberInherited);
-
-  //   const updatedAuthorization =
-  //     this.authorizationPolicyService.appendCredentialAuthorizationRules(
-  //       authorization,
-  //       newRules
-  //     );
-
-  //   return updatedAuthorization;
-  // }
 
   private appendPrivilegeRules(
     authorization: IAuthorizationPolicy
