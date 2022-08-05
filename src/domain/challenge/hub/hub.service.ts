@@ -54,6 +54,7 @@ import { PreferenceType } from '@common/enums/preference.type';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 
 @Injectable()
 export class HubService {
@@ -486,6 +487,13 @@ export class HubService {
 
   async getContext(hub: IHub): Promise<IContext> {
     return await this.baseChallengeService.getContext(
+      hub.id,
+      this.hubRepository
+    );
+  }
+
+  public async getCollaboration(hub: IHub): Promise<ICollaboration> {
+    return await this.baseChallengeService.getCollaboration(
       hub.id,
       this.hubRepository
     );

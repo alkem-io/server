@@ -30,9 +30,6 @@ import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { InjectRepository } from '@nestjs/typeorm';
-import { BaseChallengeService } from '../base-challenge/base.challenge.service';
-import { Repository } from 'typeorm';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -41,10 +38,7 @@ export class HubResolverFields {
     private groupService: UserGroupService,
     private applicationService: ApplicationService,
     private preferenceSetService: PreferenceSetService,
-    private hubService: HubService,
-    private baseChallengeService: BaseChallengeService,
-    @InjectRepository(Hub)
-    private hubRepository: Repository<Hub>
+    private hubService: HubService
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -85,10 +79,7 @@ export class HubResolverFields {
   })
   @Profiling.api
   async collaboration(@Parent() hub: Hub) {
-    return await this.baseChallengeService.getCollaboration(
-      hub.id,
-      this.hubRepository
-    );
+    return await this.hubService.getCollaboration(hub);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

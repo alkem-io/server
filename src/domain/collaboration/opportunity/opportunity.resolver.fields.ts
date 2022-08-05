@@ -11,18 +11,10 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { ICollaboration } from '../collaboration/collaboration.interface';
-import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 
 @Resolver(() => IOpportunity)
 export class OpportunityResolverFields {
-  constructor(
-    private opportunityService: OpportunityService,
-    private baseChallengeService: BaseChallengeService,
-    @InjectRepository(Opportunity)
-    private opportunityRepository: Repository<Opportunity>
-  ) {}
+  constructor(private opportunityService: OpportunityService) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
@@ -65,10 +57,7 @@ export class OpportunityResolverFields {
   })
   @Profiling.api
   async collaboration(@Parent() opportunity: Opportunity) {
-    return await this.baseChallengeService.getCollaboration(
-      opportunity.id,
-      this.opportunityRepository
-    );
+    return await this.opportunityService.getCollaboration(opportunity);
   }
 
   @ResolveField('activity', () => [INVP], {

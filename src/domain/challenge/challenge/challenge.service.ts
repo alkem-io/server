@@ -57,6 +57,7 @@ import { CredentialDefinition } from '@domain/agent/credential/credential.defini
 import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
 import { UpdateChallengeLifecycleInput } from './dto/challenge.dto.update.lifecycle';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 
 @Injectable()
 export class ChallengeService {
@@ -392,6 +393,13 @@ export class ChallengeService {
   async getContext(challengeId: string): Promise<IContext> {
     return await this.baseChallengeService.getContext(
       challengeId,
+      this.challengeRepository
+    );
+  }
+
+  public async getCollaboration(hub: IChallenge): Promise<ICollaboration> {
+    return await this.baseChallengeService.getCollaboration(
+      hub.id,
       this.challengeRepository
     );
   }

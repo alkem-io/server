@@ -38,6 +38,7 @@ import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core';
 import { IContext } from '@domain/context/context/context.interface';
 import { UpdateOpportunityLifecycleInput } from './dto/opportunity.dto.update.lifecycle';
+import { ICollaboration } from '../collaboration/collaboration.interface';
 
 @Injectable()
 export class OpportunityService {
@@ -263,6 +264,13 @@ export class OpportunityService {
   async getContext(opportunityId: string): Promise<IContext> {
     return await this.baseChallengeService.getContext(
       opportunityId,
+      this.opportunityRepository
+    );
+  }
+
+  public async getCollaboration(hub: IOpportunity): Promise<ICollaboration> {
+    return await this.baseChallengeService.getCollaboration(
+      hub.id,
       this.opportunityRepository
     );
   }

@@ -15,18 +15,12 @@ import { IAgent } from '@domain/agent/agent';
 import { IPreference } from '@domain/common/preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-import { BaseChallengeService } from '../base-challenge/base.challenge.service';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
   constructor(
     private challengeService: ChallengeService,
-    private preferenceSetService: PreferenceSetService,
-    private baseChallengeService: BaseChallengeService,
-    @InjectRepository(Challenge)
-    private challengeRepository: Repository<Challenge>
+    private preferenceSetService: PreferenceSetService
   ) {}
 
   @ResolveField('community', () => ICommunity, {
@@ -57,10 +51,7 @@ export class ChallengeResolverFields {
   })
   @Profiling.api
   async collaboration(@Parent() challenge: Challenge) {
-    return await this.baseChallengeService.getCollaboration(
-      challenge.id,
-      this.challengeRepository
-    );
+    return await this.challengeService.getCollaboration(challenge);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
