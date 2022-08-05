@@ -181,13 +181,13 @@ export class collaborationCalloutEntities1659522159191
     await migrateAspectsAndCanvases(queryRunner, 'challenge');
     await migrateAspectsAndCanvases(queryRunner, 'opportunity');
 
-    // Drop contextId INDEX and column in canvas table
+    // Drop contextId FOREIGN KEY and column in canvas table
     await queryRunner.query(
       'ALTER TABLE `canvas` DROP FOREIGN KEY `FK_09b225228f9d675758232a43441`'
     );
     await queryRunner.query(`ALTER TABLE \`canvas\` DROP COLUMN \`contextId\``);
 
-    // Drop opportunityId FK in relation table
+    // Drop opportunityId FOREIGN KEY in relation table
     await queryRunner.query(
       `ALTER TABLE \`relation\` DROP FOREIGN KEY \`FK_d6d967126caae9df4c763985f9b\``
     );
@@ -195,10 +195,10 @@ export class collaborationCalloutEntities1659522159191
       `ALTER TABLE \`relation\` DROP COLUMN \`opportunityId\``
     );
 
-    // Drop contextId INDEX and column in aspect table
-    await queryRunner.query(
-      'DROP INDEX `FK_6c57bb50b3b6fb4943c807c83ce` ON `aspect`'
-    );
+    // Drop contextId FOREIGN KEY and column in aspect table
+    // await queryRunner.query(
+    //   'ALTER TABLE `aspect` DROP FOREIGN KEY `FK_6c57bb50b3b6fb4943c807c83ce`'
+    // );
     await queryRunner.query(`ALTER TABLE \`aspect\` DROP COLUMN \`contextId\``);
   }
 
@@ -207,7 +207,7 @@ export class collaborationCalloutEntities1659522159191
       `ALTER TABLE \`aspect\` ADD \`contextId\` varchar(36) NULL DEFAULT 'NULL'`
     );
     await queryRunner.query(
-      'CREATE UNIQUE INDEX `FK_6c57bb50b3b6fb4943c807c83ce` ON `aspect` (`contextId`)'
+      'ALTER TABLE `aspect` ADD CONSTRAINT `FK_6c57bb50b3b6fb4943c807c83ce` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
 
     await queryRunner.query(
