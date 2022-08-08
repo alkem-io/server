@@ -139,7 +139,6 @@ export class NamingService {
     const challenge = await this.challengeRepository
       .createQueryBuilder('challenge')
       .leftJoinAndSelect('challenge.community', 'community')
-      .leftJoinAndSelect('challenge.callout', 'callout')
       .leftJoinAndSelect('community.communication', 'communication')
       .leftJoinAndSelect('challenge.collaboration', 'collaboration')
       .innerJoinAndSelect('collaboration.callouts', 'callout')
@@ -156,7 +155,6 @@ export class NamingService {
     const opportunity = await this.opportunityRepository
       .createQueryBuilder('opportunity')
       .leftJoinAndSelect('opportunity.community', 'community')
-      .leftJoinAndSelect('opportunity.callout', 'callout')
       .leftJoinAndSelect('community.communication', 'communication')
       .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
       .innerJoinAndSelect('collaboration.callouts', 'callout')
