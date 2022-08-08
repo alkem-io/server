@@ -268,9 +268,11 @@ export class OpportunityService {
     );
   }
 
-  public async getCollaboration(hub: IOpportunity): Promise<ICollaboration> {
+  public async getCollaboration(
+    opportunity: IOpportunity
+  ): Promise<ICollaboration> {
     return await this.baseChallengeService.getCollaboration(
-      hub.id,
+      opportunity.id,
       this.opportunityRepository
     );
   }

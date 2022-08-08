@@ -397,9 +397,11 @@ export class ChallengeService {
     );
   }
 
-  public async getCollaboration(hub: IChallenge): Promise<ICollaboration> {
+  public async getCollaboration(
+    challenge: IChallenge
+  ): Promise<ICollaboration> {
     return await this.baseChallengeService.getCollaboration(
-      hub.id,
+      challenge.id,
       this.challengeRepository
     );
   }
