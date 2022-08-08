@@ -1,10 +1,6 @@
 mutation createAspectOnCallout($data: CreateAspectOnCalloutInput!){
   createAspectOnCallout(aspectData:$data){
     id
-    nameID
-    description
-    displayName
-
   }
 }
 

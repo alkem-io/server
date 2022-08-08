@@ -1,9 +1,6 @@
 mutation createCanvasOnCallout($data: CreateCanvasOnCalloutInput!){
   createCanvasOnCallout(canvasData:$data){
     id
-    nameID
-    displayName
-
   }
 }
 

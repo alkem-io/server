@@ -1,11 +1,6 @@
 mutation createRelationOnCollaboration($data: CreateRelationOnCollaborationInput!){
   createRelationOnCollaboration(relationData: $data){
     id
-    description
-    actorName
-    actorRole
-    actorType
-    type
   }
 }
 
