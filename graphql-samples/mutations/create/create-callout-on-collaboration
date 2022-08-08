@@ -1,10 +1,6 @@
 mutation createCalloutOnCollaboration($data: CreateCalloutOnCollaborationInput!){
   createCalloutOnCollaboration(calloutData: $data){
-    displayName
-    type
-    state
-    visibility
-    nameID
+    id
   }
 }
 
