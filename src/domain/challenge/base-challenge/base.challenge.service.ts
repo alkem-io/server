@@ -340,12 +340,14 @@ export class BaseChallengeService {
     const callouts = await this.collaborationService.getCalloutsOnCollaboration(
       collaboration
     );
-    // TODO: fix after full callouts added, all aspects are currently under one callout
-    const defaultCallout = callouts[0];
-    const canvasesCount = await this.aspectsService.getAspectsInCalloutCount(
-      defaultCallout.id
-    );
-    return canvasesCount;
+
+    let aspectsCount = 0;
+    for (const callout of callouts) {
+      aspectsCount += await this.aspectsService.getAspectsInCalloutCount(
+        callout.id
+      );
+    }
+    return aspectsCount;
   }
 
   public async getCanvasesCount(
@@ -359,11 +361,12 @@ export class BaseChallengeService {
     const callouts = await this.collaborationService.getCalloutsOnCollaboration(
       collaboration
     );
-    // TODO: fix after full callouts added, all aspects are currently under one callout
-    const defaultCallout = callouts[0];
-    const canvasesCount = await this.canvasService.getCanvasesInCalloutCount(
-      defaultCallout.id
-    );
+    let canvasesCount = 0;
+    for (const callout of callouts) {
+      canvasesCount += await this.canvasService.getCanvasesInCalloutCount(
+        callout.id
+      );
+    }
     return canvasesCount;
   }
 }
