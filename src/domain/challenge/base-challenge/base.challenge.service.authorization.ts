@@ -60,8 +60,7 @@ export class BaseChallengeAuthorizationService {
     baseChallenge.context =
       await this.contextAuthorizationService.applyAuthorizationPolicy(
         context,
-        baseChallenge.authorization,
-        membershipCredential
+        baseChallenge.authorization
       );
 
     const collaboration = await this.baseChallengeService.getCollaboration(
