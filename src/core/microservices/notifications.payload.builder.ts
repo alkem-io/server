@@ -398,7 +398,7 @@ export class NotificationsPayloadBuilder {
     }[] = await getConnection().query(
       `
       SELECT \`hub\`.\`id\` as \`entityId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\`  FROM \`callout\`
-      RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      RIGHT JOIN \`hub\` on \`hub\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       RIGHT JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
 
@@ -408,7 +408,7 @@ export class NotificationsPayloadBuilder {
       WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
 
       SELECT \`opportunity\`.\`id\` as \`entityId\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\`  FROM \`callout\`
-      RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       RIGHT JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`commentsId\` = '${commentsId}';
       `
