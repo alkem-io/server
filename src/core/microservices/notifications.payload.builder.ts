@@ -391,19 +391,19 @@ export class NotificationsPayloadBuilder {
   }
 
   private async getCommunityFromComments(commentsId: string) {
-    const [result]: {
+    const queryResult: {
       entityId: string;
       communityId: string;
       communityType: string;
     }[] = await getConnection().query(
       `
-      SELECT \`hub\`.\`id\` as \`entityId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\`  FROM \`callout\`
-      RIGHT JOIN \`hub\` on \`hub\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`callout\`
+      RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       RIGHT JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
 
-      SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`callout\`
-      RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      SELECT \`hub\`.\`id\` as \`entityId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\`  FROM \`callout\`
+      RIGHT JOIN \`hub\` on \`hub\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       RIGHT JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
 
@@ -414,9 +414,15 @@ export class NotificationsPayloadBuilder {
       `
     );
 
-    return await this.communityRepository.findOne({
-      id: result.communityId,
-    });
+    for (const row of queryResult) {
+      if (row.communityId !== null) {
+        return await this.communityRepository.findOne({
+          id: row.communityId,
+        });
+      }
+    }
+
+    return undefined;
   }
 
   private async getCommunityFromDiscussion(
