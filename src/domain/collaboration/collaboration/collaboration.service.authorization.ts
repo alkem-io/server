@@ -95,7 +95,7 @@ export class CollaborationAuthorizationService {
       membershipCredential.type,
       membershipCredential.resourceID
     );
-    communityMemberNotInherited.inheritable = false;
+    // communityMemberNotInherited.inheritable = false;
     newRules.push(communityMemberNotInherited);
 
     // separate rule as do want the update canvas / ability to create a comment to cascade

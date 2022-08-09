@@ -11,8 +11,8 @@ import {
   CalloutAspectCreated,
   CreateAspectOnCalloutInput,
   CreateCanvasOnCalloutInput,
-  DeleteCanvasOnCalloutInput,
-  DeleteAspectOnCalloutInput,
+  DeleteCalloutInput,
+  UpdateCalloutInput,
 } from '@domain/collaboration/callout/dto';
 import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
 import { AspectAuthorizationService } from '@domain/collaboration/aspect/aspect.service.authorization';
@@ -26,15 +26,12 @@ import { ClientProxy } from '@nestjs/microservices';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { EventType } from '@common/enums/event.type';
-import { CanvasService } from '@domain/common/canvas/canvas.service';
-import { AspectService } from '@domain/collaboration/aspect/aspect.service';
+import { ICallout } from './callout.interface';
 
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private canvasService: CanvasService,
-    private aspectService: AspectService,
     private calloutService: CalloutService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
@@ -43,6 +40,44 @@ export class CalloutResolverMutations {
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICallout, {
+    description: 'Delete a Callout.',
+  })
+  @Profiling.api
+  async deleteCallout(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData') deleteData: DeleteCalloutInput
+  ): Promise<ICallout> {
+    const callout = await this.calloutService.getCalloutOrFail(deleteData.ID);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      callout.authorization,
+      AuthorizationPrivilege.DELETE,
+      `delete callout: ${callout.id}`
+    );
+    return await this.calloutService.deleteCallout(deleteData.ID);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICallout, {
+    description: 'Update a Callout.',
+  })
+  @Profiling.api
+  async updateCallout(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('calloutData') calloutData: UpdateCalloutInput
+  ): Promise<ICallout> {
+    const callout = await this.calloutService.getCalloutOrFail(calloutData.ID);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      callout.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update callout: ${callout.id}`
+    );
+    return await this.calloutService.updateCallout(calloutData);
+  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IAspect, {
@@ -91,27 +126,6 @@ export class CalloutResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IAspect, {
-    description: 'Deletes the specified Aspect.',
-  })
-  async deleteAspectOnCallout(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteAspectOnCalloutInput
-  ): Promise<IAspect> {
-    const aspect = await this.calloutService.getApectFromCalloutOrFail(
-      deleteData.calloutID,
-      deleteData.aspectID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      aspect.authorization,
-      AuthorizationPrivilege.DELETE,
-      `delete aspect: ${aspect.id}`
-    );
-    return await this.aspectService.deleteAspect({ ID: deleteData.aspectID });
-  }
-
-  @UseGuards(GraphqlGuard)
   @Mutation(() => ICanvas, {
     description: 'Create a new Canvas on the Callout.',
   })
@@ -134,26 +148,5 @@ export class CalloutResolverMutations {
       canvas,
       callout.authorization
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ICanvas, {
-    description: 'Deletes the specified Canvas.',
-  })
-  async deleteCanvasOnCallout(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteCanvasOnCalloutInput
-  ): Promise<ICanvas> {
-    const canvas = await this.calloutService.getCanvasFromCalloutOrFail(
-      deleteData.calloutID,
-      deleteData.canvasID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      canvas.authorization,
-      AuthorizationPrivilege.DELETE,
-      `delete canvas: ${canvas.id}`
-    );
-    return await this.canvasService.deleteCanvas(deleteData.canvasID);
   }
 }

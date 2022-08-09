@@ -11,8 +11,10 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { CreateRelationOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.relation';
 import { CreateCalloutOnCollaborationInput } from './dto/collaboration.dto.create.callout';
+import { DeleteCollaborationInput } from './dto/collaboration.dto.delete';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
+import { ICollaboration } from './collaboration.interface';
 
 @Resolver()
 export class CollaborationResolverMutations {
@@ -23,6 +25,26 @@ export class CollaborationResolverMutations {
     private authorizationService: AuthorizationService,
     private collaborationService: CollaborationService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICollaboration, {
+    description: 'Delete Collaboration.',
+  })
+  @Profiling.api
+  async deleteCollaboration(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData') deleteData: DeleteCollaborationInput
+  ): Promise<ICollaboration> {
+    const collaboration =
+      await this.collaborationService.getCollaborationOrFail(deleteData.ID);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      collaboration.authorization,
+      AuthorizationPrivilege.DELETE,
+      `delete collaboration: ${collaboration.id}`
+    );
+    return await this.collaborationService.deleteCollaboration(deleteData.ID);
+  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IRelation, {
@@ -105,14 +127,14 @@ export class CollaborationResolverMutations {
       agentInfo,
       authorization,
       AuthorizationPrivilege.READ,
-      `read callout: ${collaboration.id}`
+      `read callout on collaboration: ${collaboration.id}`
     );
     // Then check if the user can create
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorization,
-      AuthorizationPrivilege.CREATE,
-      `create callout: ${collaboration.id}`
+      AuthorizationPrivilege.CREATE_CALLOUT,
+      `create callout on collaboration: ${collaboration.id}`
     );
     // Load the authorization policy again to avoid the temporary extension above
     const collaboriationAuthorizationPolicy =

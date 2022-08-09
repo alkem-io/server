@@ -1,5 +1,5 @@
-mutation deleteCanvasOnContext($deleteData: DeleteCanvasOnContextInput!) {
-  deleteCanvasOnContext(deleteData: $deleteData) {
+mutation deleteCanvas($deleteData: DeleteCanvasInput!) {
+  deleteCanvas(deleteData: $deleteData) {
     id
   }
 }
@@ -7,7 +7,6 @@ mutation deleteCanvasOnContext($deleteData: DeleteCanvasOnContextInput!) {
 Variables:
 {
   "deleteData": {
-    "contextID": "uuid",
     "canvasID": "uuid"
   }
 }

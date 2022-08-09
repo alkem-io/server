@@ -10,7 +10,6 @@ import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.update';
 import { NamingService } from '@src/services/domain/naming/naming.service';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -53,16 +52,6 @@ export class CollaborationService {
         LogContext.CONTEXT
       );
     return collaboration;
-  }
-
-  async updateCollaboration(
-    collaborationInput: UpdateNameableInput
-  ): Promise<ICollaboration> {
-    const collaboration = await this.getCollaborationOrFail(
-      collaborationInput.ID
-    );
-
-    return await this.collaborationRepository.save(collaboration);
   }
 
   public async deleteCollaboration(
