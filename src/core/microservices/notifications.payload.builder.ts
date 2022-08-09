@@ -391,38 +391,32 @@ export class NotificationsPayloadBuilder {
   }
 
   private async getCommunityFromComments(commentsId: string) {
-    const queryResult: {
+    const [queryResult]: {
       entityId: string;
       communityId: string;
       communityType: string;
     }[] = await getConnection().query(
       `
-      SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`callout\`
+      SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`communityType\` FROM \`callout\`
       RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      RIGHT JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
+      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
 
-      SELECT \`hub\`.\`id\` as \`entityId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\`  FROM \`callout\`
+      SELECT \`hub\`.\`id\` as \`entityId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`communityType\`  FROM \`callout\`
       RIGHT JOIN \`hub\` on \`hub\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      RIGHT JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
+      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
 
-      SELECT \`opportunity\`.\`id\` as \`entityId\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\`  FROM \`callout\`
+      SELECT \`opportunity\`.\`id\` as \`entityId\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`communityType\`  FROM \`callout\`
       RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      RIGHT JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
+      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`commentsId\` = '${commentsId}';
       `
     );
 
-    for (const row of queryResult) {
-      if (row.communityId !== null) {
-        return await this.communityRepository.findOne({
-          id: row.communityId,
-        });
-      }
-    }
-
-    return undefined;
+    return await this.communityRepository.findOne({
+      id: queryResult.communityId,
+    });
   }
 
   private async getCommunityFromDiscussion(
