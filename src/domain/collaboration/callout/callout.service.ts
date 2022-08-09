@@ -103,7 +103,7 @@ export class CalloutService {
     return await this.calloutRepository.remove(callout as Callout);
   }
 
-  private async setDisplayNameOnAspectData(
+  private async setNameIdOnAspectData(
     aspectData: CreateAspectOnCalloutInput,
     callout: ICallout
   ) {
@@ -150,7 +150,7 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
 
-    await this.setDisplayNameOnAspectData(aspectData, callout);
+    await this.setNameIdOnAspectData(aspectData, callout);
 
     // Not idea: get the communicationGroupID to use for the comments
     const communicationGroupID =
@@ -166,7 +166,7 @@ export class CalloutService {
     return aspect;
   }
 
-  private async setDisplayNameOnCanvasData(
+  private async setNameIdOnCanvasData(
     canvasData: CreateCanvasOnCalloutInput,
     callout: ICallout
   ) {
@@ -201,7 +201,7 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
 
-    this.setDisplayNameOnCanvasData(canvasData, callout);
+    this.setNameIdOnCanvasData(canvasData, callout);
 
     const canvas = await this.canvasService.createCanvas({
       displayName: canvasData.displayName,
