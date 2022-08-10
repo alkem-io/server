@@ -48,11 +48,10 @@ export class CollaborationAuthorizationService {
     collaboration.callouts =
       await this.collaborationService.getCalloutsOnCollaboration(collaboration);
     for (const callout of collaboration.callouts) {
-      callout.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          callout.authorization,
-          collaboration.authorization
-        );
+      await this.calloutAuthorizationService.applyAuthorizationPolicy(
+        callout,
+        collaboration.authorization
+      );
     }
 
     collaboration.relations =

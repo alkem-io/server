@@ -146,8 +146,7 @@ export class CollaborationResolverMutations {
 
     return await this.calloutAuthorizationService.applyAuthorizationPolicy(
       callout,
-      collaboriationAuthorizationPolicy,
-      agentInfo.userID
+      collaboriationAuthorizationPolicy
     );
   }
 }
