@@ -6,13 +6,17 @@ import { ILocation, IReference, ITagset, IVisual } from '@domain/common';
 import { ProfileDataloaderService } from '@domain/community/profile/profile.dataloader.service';
 import { UserDataloaderService } from '@domain/community/user/user.dataloader.service';
 import { OrganizationDataloaderService } from '@domain/community/organization/organization.dataloader.service';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { CollaborationDataloaderService } from '@domain/collaboration/collaboration/collaboration.dataloader.service';
+import { IRelation } from '@domain/collaboration/relation/relation.interface';
 
 @Injectable()
 export class DataloaderService {
   constructor(
     private readonly userDataloaderService: UserDataloaderService,
     private readonly orgDataloaderService: OrganizationDataloaderService,
-    private readonly profileDataloaderService: ProfileDataloaderService
+    private readonly profileDataloaderService: ProfileDataloaderService,
+    private readonly collaborationDataloaderService: CollaborationDataloaderService
   ) {}
 
   createLoaders(): IDataloaders {
@@ -40,6 +44,19 @@ export class DataloaderService {
       async (keys: readonly string[]) =>
         this.profileDataloaderService.findLocationsByBatch(keys as string[])
     );
+    const calloutsLoader = new DataLoader<string, ICallout[]>(
+      async (keys: readonly string[]) =>
+        this.collaborationDataloaderService.findCalloutsByBatch(
+          keys as string[]
+        )
+    );
+    const relationsLoader = new DataLoader<string, IRelation[]>(
+      async (keys: readonly string[]) =>
+        this.collaborationDataloaderService.findRelationsByBatch(
+          keys as string[]
+        )
+    );
+
     return {
       userProfileLoader,
       orgProfileLoader,
@@ -47,6 +64,8 @@ export class DataloaderService {
       avatarsLoader,
       tagsetsLoader,
       locationsLoader,
+      calloutsLoader,
+      relationsLoader,
     };
   }
 }

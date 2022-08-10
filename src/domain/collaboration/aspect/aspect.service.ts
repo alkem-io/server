@@ -8,7 +8,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { Aspect, IAspect } from '@domain/context/aspect';
+import { Aspect, IAspect } from '@domain/collaboration/aspect';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DeleteAspectInput } from './dto/aspect.dto.delete';
@@ -35,7 +35,7 @@ export class AspectService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createAspect(
+  public async createAspect(
     aspectInput: CreateAspectInput,
     userID: string,
     communicationGroupID: string
@@ -60,7 +60,7 @@ export class AspectService {
     return await this.aspectRepository.save(aspect);
   }
 
-  async removeAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
+  public async deleteAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
     const aspectID = deleteData.ID;
     const aspect = await this.getAspectOrFail(aspectID, {
       relations: ['references'],
@@ -91,7 +91,7 @@ export class AspectService {
     return result;
   }
 
-  async getAspectOrFail(
+  public async getAspectOrFail(
     aspectID: string,
     options?: FindOneOptions<Aspect>
   ): Promise<IAspect> {
@@ -107,7 +107,7 @@ export class AspectService {
     return aspect;
   }
 
-  async updateAspect(aspectData: UpdateAspectInput): Promise<IAspect> {
+  public async updateAspect(aspectData: UpdateAspectInput): Promise<IAspect> {
     const aspect = await this.getAspectOrFail(aspectData.ID, {
       relations: ['references'],
     });
@@ -145,11 +145,11 @@ export class AspectService {
     return aspect;
   }
 
-  async saveAspect(aspect: IAspect): Promise<IAspect> {
+  public async saveAspect(aspect: IAspect): Promise<IAspect> {
     return await this.aspectRepository.save(aspect);
   }
 
-  async createReference(
+  public async createReference(
     referenceInput: CreateReferenceOnAspectInput
   ): Promise<IReference> {
     const aspect = await this.getAspectOrFail(referenceInput.aspectID, {
@@ -159,14 +159,14 @@ export class AspectService {
     if (!aspect.references)
       throw new EntityNotInitializedException(
         'References not defined',
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
     // check there is not already a reference with the same name
     for (const reference of aspect.references) {
       if (reference.name === referenceInput.name) {
         throw new ValidationException(
           `Reference with the provided name already exists: ${referenceInput.name}`,
-          LogContext.CONTEXT
+          LogContext.COLLABORATION
         );
       }
     }
@@ -181,14 +181,14 @@ export class AspectService {
     return newReference;
   }
 
-  async getReferences(context: IAspect): Promise<IReference[]> {
-    const aspectLoaded = await this.getAspectOrFail(context.id, {
+  public async getReferences(aspect: IAspect): Promise<IReference[]> {
+    const aspectLoaded = await this.getAspectOrFail(aspect.id, {
       relations: ['references'],
     });
     if (!aspectLoaded.references)
       throw new EntityNotFoundException(
-        `Context not initialised: ${context.id}`,
-        LogContext.CONTEXT
+        `Aspect not initialised: ${aspect.id}`,
+        LogContext.COLLABORATION
       );
 
     return aspectLoaded.references;
@@ -204,16 +204,16 @@ export class AspectService {
     if (!commentsId) {
       throw new EntityNotFoundException(
         `Comments not found on aspect: ${aspectID}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
     }
 
     return this.commentsService.getCommentsOrFail(commentsId);
   }
 
-  getAspectsInContextCount(contextId: string) {
+  public async getAspectsInCalloutCount(calloutId: string) {
     return this.aspectRepository.count({
-      where: { context: { id: contextId } },
+      where: { callout: { id: calloutId } },
     });
   }
 }

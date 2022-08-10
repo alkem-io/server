@@ -81,21 +81,21 @@ export class AspectAuthorizationService {
     if (!authorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for Aspect: ${aspect.id}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    const messageSender = new AuthorizationPolicyRuleCredential(
+    const manageCreatedAspectPolicy = new AuthorizationPolicyRuleCredential(
       [
-        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
       ],
       AuthorizationCredential.USER_SELF_MANAGEMENT,
       aspect.createdBy
     );
-    newRules.push(messageSender);
+    newRules.push(manageCreatedAspectPolicy);
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(

@@ -70,7 +70,7 @@ export class NotificationsPayloadBuilder {
   async buildAspectCreatedPayload(aspectId: string) {
     const aspect = await this.aspectRepository.findOne(
       { id: aspectId },
-      { relations: ['context'] }
+      { relations: ['callout'] }
     );
     if (!aspect) {
       throw new NotificationEventException(
@@ -79,18 +79,18 @@ export class NotificationsPayloadBuilder {
       );
     }
 
-    if (!aspect.context) {
+    if (!aspect.callout) {
       throw new NotificationEventException(
-        `Could not acquire context from aspect with id: ${aspectId}`,
+        `Could not acquire callout from aspect with id: ${aspectId}`,
         LogContext.NOTIFICATIONS
       );
     }
 
-    const community = await this.getCommunityFromContext(aspect.context.id);
+    const community = await this.getCommunityFromCallout(aspect.callout.id);
 
     if (!community) {
       throw new NotificationEventException(
-        `Could not acquire community from context with id: ${aspect.context.id}`,
+        `Could not acquire community from context with id: ${aspect.callout.id}`,
         LogContext.NOTIFICATIONS
       );
     }
@@ -364,24 +364,24 @@ export class NotificationsPayloadBuilder {
     return community;
   }
 
-  private async getCommunityFromContext(contextId: string) {
+  private async getCommunityFromCallout(calloutId: string) {
     const [result]: {
       entityId: string;
       communityId: string;
       communityType: string;
     }[] = await getConnection().query(
       `
-        SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`hub\`
-        LEFT JOIN \`aspect\` on \`aspect\`.\`contextId\` = \`hub\`.\`contextId\`
-        WHERE \`hub\`.\`contextId\` = '${contextId}' UNION
+        SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`callout\`
+        RIGHT JOIN \`hub\` on \`callout\`.\`collaborationId\` = \`hub\`.\`collaborationId\`
+        WHERE \`callout\`.\`id\` = '${calloutId}' UNION
 
-        SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`challenge\`
-        LEFT JOIN \`aspect\` on \`aspect\`.\`contextId\` = \`challenge\`.\`contextId\`
-        WHERE \`challenge\`.\`contextId\` = '${contextId}'  UNION
+        SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`callout\`
+        RIGHT JOIN \`challenge\` on \`callout\`.\`collaborationId\` = \`challenge\`.\`collaborationId\`
+        WHERE \`callout\`.\`id\` = '${calloutId}' UNION
 
-        SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`opportunity\`
-        LEFT JOIN \`aspect\` on \`aspect\`.\`contextId\` = \`opportunity\`.\`contextId\`
-        WHERE \`opportunity\`.\`contextId\` = '${contextId}';
+        SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`callout\`
+        RIGHT JOIN \`opportunity\` on \`callout\`.\`collaborationId\` = \`opportunity\`.\`collaborationId\`
+        WHERE \`callout\`.\`id\` = '${calloutId}';
       `
     );
 
@@ -391,28 +391,31 @@ export class NotificationsPayloadBuilder {
   }
 
   private async getCommunityFromComments(commentsId: string) {
-    const [result]: {
+    const [queryResult]: {
       entityId: string;
       communityId: string;
       communityType: string;
     }[] = await getConnection().query(
       `
-      SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`aspect\`
-      RIGHT JOIN \`challenge\` on \`challenge\`.\`contextId\` = \`aspect\`.\`contextId\`
+      SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`communityType\` FROM \`callout\`
+      RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
 
-      SELECT \`hub\`.\`id\` as \`entityId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`aspect\`
-      RIGHT JOIN \`hub\` on \`hub\`.\`contextId\` = \`aspect\`.\`contextId\`
+      SELECT \`hub\`.\`id\` as \`entityId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`communityType\`  FROM \`callout\`
+      RIGHT JOIN \`hub\` on \`hub\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
 
-      SELECT \`opportunity\`.\`id\` as \`entityId\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`aspect\`
-      RIGHT JOIN \`opportunity\` on \`opportunity\`.\`contextId\` = \`aspect\`.\`contextId\`
+      SELECT \`opportunity\`.\`id\` as \`entityId\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`communityType\`  FROM \`callout\`
+      RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`commentsId\` = '${commentsId}';
       `
     );
 
     return await this.communityRepository.findOne({
-      id: result.communityId,
+      id: queryResult.communityId,
     });
   }
 

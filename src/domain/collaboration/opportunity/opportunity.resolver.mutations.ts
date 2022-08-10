@@ -2,7 +2,6 @@ import { UseGuards, Inject } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import {} from '@domain/context/actor-group';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
 import { CreateProjectInput, IProject } from '@domain/collaboration/project';
 import { GraphqlGuard } from '@core/authorization';
 import { OpportunityService } from './opportunity.service';
@@ -12,7 +11,6 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AgentInfo } from '@core/authentication';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { RelationAuthorizationService } from '../relation/relation.service.authorization';
 import { IUser } from '@domain/community/user/user.interface';
 import { RemoveOpportunityAdminInput } from './dto/opportunity.dto.remove.admin';
 import { AssignOpportunityAdminInput } from './dto/opportunity.dto.assign.admin';
@@ -23,21 +21,17 @@ import {
   UpdateOpportunityInput,
 } from './dto';
 import { UpdateOpportunityLifecycleInput } from './dto/opportunity.dto.update.lifecycle';
-import { EventType } from '@common/enums/event.type';
-import { NotificationsPayloadBuilder } from '@core/microservices';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { ClientProxy } from '@nestjs/microservices';
 
 @Resolver()
 export class OpportunityResolverMutations {
   constructor(
-    private relationAuthorizationService: RelationAuthorizationService,
     private projectService: ProjectService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private opportunityService: OpportunityService,
     private opportunityLifecycleOptionsProvider: OpportunityLifecycleOptionsProvider,
-    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
@@ -130,59 +124,6 @@ export class OpportunityResolverMutations {
         opportunity.authorization
       );
     return await this.projectService.saveProject(project);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IRelation, {
-    description: 'Create a new Relation on the Opportunity.',
-  })
-  @Profiling.api
-  async createRelation(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('relationData') relationData: CreateRelationInput
-  ): Promise<IRelation> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
-      relationData.parentID
-    );
-    // Extend the authorization definition to use for creating the relation
-    const authorization =
-      this.relationAuthorizationService.localExtendAuthorizationPolicy(
-        opportunity.authorization
-      );
-    // First check if the user has read access
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorization,
-      AuthorizationPrivilege.READ,
-      `create relation: ${opportunity.nameID}`
-    );
-    // Then check if the user can create
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorization,
-      AuthorizationPrivilege.CREATE,
-      `create relation: ${opportunity.nameID}`
-    );
-    // Load the authorization policy again to avoid the temporary extension above
-    const oppAuthorization =
-      await this.authorizationPolicyService.getAuthorizationPolicyOrFail(
-        authorization.id
-      );
-    const relation = await this.opportunityService.createRelation(relationData);
-    const payload =
-      this.notificationsPayloadBuilder.buildCommunityCollaborationInterestPayload(
-        agentInfo.userID,
-        opportunity
-      );
-    this.notificationsClient.emit(
-      EventType.COMMUNITY_COLLABORATION_INTEREST,
-      payload
-    );
-    return await this.relationAuthorizationService.applyAuthorizationPolicy(
-      relation,
-      oppAuthorization,
-      agentInfo.userID
-    );
   }
 
   @UseGuards(GraphqlGuard)

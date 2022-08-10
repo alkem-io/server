@@ -1,4 +1,5 @@
 import { CommunityRole } from '@common/enums/community.role';
+import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
@@ -15,11 +16,12 @@ export class BaseChallengeAuthorizationService {
     private baseChallengeService: BaseChallengeService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private contextAuthorizationService: ContextAuthorizationService,
+    private collaborationAuthorizationService: CollaborationAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
     private communityService: CommunityService
   ) {}
 
-  async applyAuthorizationPolicy(
+  public async applyAuthorizationPolicy(
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<IBaseChallenge> {
@@ -58,6 +60,16 @@ export class BaseChallengeAuthorizationService {
     baseChallenge.context =
       await this.contextAuthorizationService.applyAuthorizationPolicy(
         context,
+        baseChallenge.authorization
+      );
+
+    const collaboration = await this.baseChallengeService.getCollaboration(
+      baseChallenge.id,
+      repository
+    );
+    baseChallenge.collaboration =
+      await this.collaborationAuthorizationService.applyAuthorizationPolicy(
+        collaboration,
         baseChallenge.authorization,
         membershipCredential
       );

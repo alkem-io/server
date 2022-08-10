@@ -1,0 +1,17 @@
+mutation createCalloutOnCollaboration($data: CreateCalloutOnCollaborationInput!){
+  createCalloutOnCollaboration(calloutData: $data){
+    id
+  }
+}
+
+Variables:
+{
+	"data": {
+    "collaborationID": "a20606c8-496b-4c2b-b576-25eae8068379",
+    "displayName": "test callout 4",
+    "nameID": "test-callout-4",
+    "state": "OPEN",
+    "type": "CARD",
+    "visibility": "DRAFT"
+  }
+}

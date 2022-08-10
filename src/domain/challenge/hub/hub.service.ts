@@ -51,10 +51,10 @@ import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceType } from '@common/enums/preference.type';
-import { AspectService } from '@domain/context/aspect/aspect.service';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 
 @Injectable()
 export class HubService {
@@ -71,7 +71,6 @@ export class HubService {
     private challengeService: ChallengeService,
     private preferenceSetService: PreferenceSetService,
     private templatesSetService: TemplatesSetService,
-    private aspectService: AspectService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -488,6 +487,13 @@ export class HubService {
 
   async getContext(hub: IHub): Promise<IContext> {
     return await this.baseChallengeService.getContext(
+      hub.id,
+      this.hubRepository
+    );
+  }
+
+  public async getCollaboration(hub: IHub): Promise<ICollaboration> {
+    return await this.baseChallengeService.getCollaboration(
       hub.id,
       this.hubRepository
     );

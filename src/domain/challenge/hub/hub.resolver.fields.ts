@@ -29,6 +29,7 @@ import { AgentInfo } from '@core/authentication';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ITemplatesSet } from '@domain/template/templates-set';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -40,11 +41,13 @@ export class HubResolverFields {
     private hubService: HubService
   ) {}
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description:
       'Get a Community within the Hub. Defaults to the Community for the Hub itself.',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async community(
     @Parent() hub: Hub,
@@ -57,13 +60,26 @@ export class HubResolverFields {
     return await this.hubService.getCommunityInNameableScope(ID, hub);
   }
 
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the hub.',
   })
+  @UseGuards(GraphqlGuard)
   @Profiling.api
   async context(@Parent() hub: Hub) {
     return await this.hubService.getContext(hub);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('collaboration', () => ICollaboration, {
+    nullable: true,
+    description: 'The collaboration for the Hub.',
+  })
+  @Profiling.api
+  async collaboration(@Parent() hub: Hub) {
+    return await this.hubService.getCollaboration(hub);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

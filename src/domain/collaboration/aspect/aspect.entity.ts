@@ -7,13 +7,12 @@ import {
   OneToOne,
 } from 'typeorm';
 import { IAspect } from './aspect.interface';
-import { Context } from '@domain/context/context/context.entity';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { Comments } from '@domain/communication/comments';
-import { IComments } from '@domain/communication/comments/comments.interface';
 import { Tagset } from '@domain/common/tagset/tagset.entity';
-import { NameableEntity } from '@domain/common';
+import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 
 @Entity()
 export class Aspect extends NameableEntity implements IAspect {
@@ -48,7 +47,7 @@ export class Aspect extends NameableEntity implements IAspect {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  comments?: IComments;
+  comments?: Comments;
 
   @OneToMany(() => Reference, reference => reference.aspect, {
     eager: false,
@@ -56,12 +55,12 @@ export class Aspect extends NameableEntity implements IAspect {
   })
   references?: Reference[];
 
-  @ManyToOne(() => Context, context => context.aspects, {
+  @ManyToOne(() => Callout, callout => callout.aspects, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  context?: Context;
+  callout?: Callout;
 
   @OneToOne(() => Tagset, { eager: true, cascade: true, onDelete: 'SET NULL' })
   @JoinColumn()

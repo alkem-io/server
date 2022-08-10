@@ -11,7 +11,7 @@ import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { IProject } from './project.interface';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
-import { NameableEntity } from '@domain/common/entity/nameable-entity';
+import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 
 @Entity()
 export class Project extends NameableEntity implements IProject {

@@ -5,7 +5,7 @@ import {
   DeleteAspectInput,
   UpdateAspectInput,
   IAspect,
-} from '@domain/context/aspect';
+} from '@domain/collaboration/aspect';
 import { CurrentUser } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -40,7 +40,7 @@ export class AspectResolverMutations {
       AuthorizationPrivilege.DELETE,
       `delete aspect: ${aspect.displayName}`
     );
-    return await this.aspectService.removeAspect(deleteData);
+    return await this.aspectService.deleteAspect(deleteData);
   }
 
   @UseGuards(GraphqlGuard)

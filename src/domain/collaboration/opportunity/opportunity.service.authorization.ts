@@ -51,15 +51,6 @@ export class OpportunityAuthorizationService {
           );
       }
     }
-    if (opportunity.relations) {
-      for (const relation of opportunity.relations) {
-        relation.authorization =
-          this.authorizationPolicyService.inheritParentAuthorization(
-            relation.authorization,
-            opportunity.authorization
-          );
-      }
-    }
 
     return await this.opportunityRepository.save(opportunity);
   }

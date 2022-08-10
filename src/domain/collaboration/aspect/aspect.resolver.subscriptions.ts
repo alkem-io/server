@@ -8,12 +8,11 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { LogContext } from '@common/enums/logging.context';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { CommentsService } from '../../communication/comments/comments.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SUBSCRIPTION_ASPECT_COMMENT } from '@constants/providers';
 import { AspectCommentsMessageReceived } from './dto/aspect.dto.event.message.received';
-import { AspectService } from '@domain/context/aspect/aspect.service';
+import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 
 @Resolver()
 export class AspectResolverSubscriptions {
@@ -23,7 +22,6 @@ export class AspectResolverSubscriptions {
     @Inject(SUBSCRIPTION_ASPECT_COMMENT)
     private subscriptionAspectComment: PubSubEngine,
     private aspectService: AspectService,
-    private commentsService: CommentsService,
     private authorizationService: AuthorizationService
   ) {}
 

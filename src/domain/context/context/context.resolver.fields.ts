@@ -1,17 +1,13 @@
 import { Context, IContext } from '@domain/context/context';
-import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ContextService } from './context.service';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
-import { IAspect } from '@domain/context/aspect';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { IReference } from '@domain/common/reference';
-import { ICanvas } from '@domain/common/canvas/canvas.interface';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { IVisual } from '@domain/common/visual/visual.interface';
-import { UUID_NAMEID } from '@domain/common/scalars';
 import { ILocation } from '@domain/common/location';
 
 @Resolver(() => IContext)
@@ -38,42 +34,6 @@ export class ContextResolverFields {
     return await this.contextService.getVisuals(context);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('aspects', () => [IAspect], {
-    nullable: true,
-    description: 'The Aspects for this Context.',
-  })
-  @Profiling.api
-  async aspects(
-    @Parent() context: Context,
-    @Args({
-      name: 'IDs',
-      type: () => [UUID_NAMEID],
-      description: 'The IDs (either UUID or nameID) of the aspects to return',
-      nullable: true,
-    })
-    ids: string[],
-    @Args({
-      name: 'limit',
-      type: () => Float,
-      description:
-        'The number of Aspects to return; if omitted returns all Aspects.',
-      nullable: true,
-    })
-    limit: number,
-    @Args({
-      name: 'shuffle',
-      type: () => Boolean,
-      description:
-        'If true and limit is specified then return the Aspects based on a random selection.',
-      nullable: true,
-    })
-    shuffle: boolean
-  ) {
-    return await this.contextService.getAspects(context, ids, limit, shuffle);
-  }
-
   @UseGuards(GraphqlGuard)
   @ResolveField('location', () => ILocation, {
     nullable: false,
@@ -82,42 +42,6 @@ export class ContextResolverFields {
   @Profiling.api
   async location(@Parent() context: IContext): Promise<ILocation> {
     return await this.contextService.getLocation(context);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('canvases', () => [ICanvas], {
-    nullable: true,
-    description: 'The Canvas entities for this Context.',
-  })
-  @Profiling.api
-  async canvases(
-    @Parent() context: Context,
-    @Args({
-      name: 'IDs',
-      type: () => [UUID],
-      description: 'The IDs of the canvases to return',
-      nullable: true,
-    })
-    ids: string[],
-    @Args({
-      name: 'limit',
-      type: () => Float,
-      description:
-        'The number of Organizations to return; if omitted return all Organizations.',
-      nullable: true,
-    })
-    limit: number,
-    @Args({
-      name: 'shuffle',
-      type: () => Boolean,
-      description:
-        'If true and limit is specified then return the Organizations based on a random selection. Defaults to false.',
-      nullable: true,
-    })
-    shuffle: boolean
-  ): Promise<ICanvas[]> {
-    return await this.contextService.getCanvases(context, ids, limit, shuffle);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

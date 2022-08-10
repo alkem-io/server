@@ -10,86 +10,86 @@ import { LogContext } from '@common/enums/logging.context';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { SUBSCRIPTION_CONTEXT_ASPECT_CREATED } from '@common/constants/providers';
-import { ContextService } from '@domain/context/context/context.service';
-import { ContextAspectCreated } from '@domain/context/context/dto/context.dto.event.aspect.created';
+import { SUBSCRIPTION_CALLOUT_ASPECT_CREATED } from '@common/constants/providers';
+import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { CalloutAspectCreated } from '@domain/collaboration/callout';
 
 @Resolver()
-export class ContextResolverSubscriptions {
+export class CalloutResolverSubscriptions {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(SUBSCRIPTION_CONTEXT_ASPECT_CREATED)
+    @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
     private subscriptionAspectCreated: PubSubEngine,
-    private contextService: ContextService,
+    private calloutService: CalloutService,
     private authorizationService: AuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Subscription(() => ContextAspectCreated, {
+  @Subscription(() => CalloutAspectCreated, {
     description:
       'Receive new Update messages on Communities the currently authenticated User is a member of.',
     async resolve(
-      this: ContextResolverSubscriptions,
-      value: ContextAspectCreated,
+      this: CalloutResolverSubscriptions,
+      value: CalloutAspectCreated,
       _: unknown,
       context: { req: { user: AgentInfo } }
-    ): Promise<ContextAspectCreated> {
+    ): Promise<CalloutAspectCreated> {
       const agentInfo = context.req.user;
-      const logMsgPrefix = `[User (${agentInfo.email}) Context Aspects] - `;
+      const logMsgPrefix = `[User (${agentInfo.email}) Callout Aspects] - `;
       this.logger.verbose?.(
-        `${logMsgPrefix} sending out event for Aspects on Context: ${value.contextID} `,
+        `${logMsgPrefix} sending out event for Aspects on Callout: ${value.calloutID} `,
         LogContext.SUBSCRIPTIONS
       );
       return value;
     },
     async filter(
-      this: ContextResolverSubscriptions,
-      payload: ContextAspectCreated,
-      variables: { contextID: string },
+      this: CalloutResolverSubscriptions,
+      payload: CalloutAspectCreated,
+      variables: { calloutID: string },
       context: { req: { user: AgentInfo } }
     ) {
       const agentInfo = context.req.user;
-      const logMsgPrefix = `[User (${agentInfo.email}) Context Aspects] - `;
+      const logMsgPrefix = `[User (${agentInfo.email}) Callout Aspects] - `;
       this.logger.verbose?.(
         `${logMsgPrefix} Filtering event '${payload.eventID}'`,
         LogContext.SUBSCRIPTIONS
       );
 
-      const isSameContext = payload.contextID === variables.contextID;
+      const isSameCallout = payload.calloutID === variables.calloutID;
       this.logger.verbose?.(
-        `${logMsgPrefix} Filter result is ${isSameContext}`,
+        `${logMsgPrefix} Filter result is ${isSameCallout}`,
         LogContext.SUBSCRIPTIONS
       );
-      return isSameContext;
+      return isSameCallout;
     },
   })
-  async contextAspectCreated(
+  async calloutAspectCreated(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
-      name: 'contextID',
+      name: 'calloutID',
       type: () => UUID,
-      description: 'The ID of the Context to subscribe to.',
+      description: 'The ID of the Callout to subscribe to.',
       nullable: false,
     })
-    contextID: string
+    calloutID: string
   ) {
-    const logMsgPrefix = `[User (${agentInfo.email}) Context Aspects] - `;
+    const logMsgPrefix = `[User (${agentInfo.email}) Callout Aspects] - `;
     this.logger.verbose?.(
-      `${logMsgPrefix} Subscribing to the following Context Aspects: ${contextID}`,
+      `${logMsgPrefix} Subscribing to the following Callout Aspects: ${calloutID}`,
       LogContext.SUBSCRIPTIONS
     );
     // check the user has the READ privilege
-    const context = await this.contextService.getContextOrFail(contextID);
+    const callout = await this.calloutService.getCalloutOrFail(calloutID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      context.authorization,
+      callout.authorization,
       AuthorizationPrivilege.READ,
-      `subscription to new Aspects on Context: ${context.id}`
+      `subscription to new Aspects on Callout: ${callout.id}`
     );
 
     return this.subscriptionAspectCreated.asyncIterator(
-      SubscriptionType.CONTEXT_ASPECT_CREATED
+      SubscriptionType.CALLOUT_ASPECT_CREATED
     );
   }
 }

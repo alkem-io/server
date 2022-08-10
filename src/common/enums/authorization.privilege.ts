@@ -17,6 +17,8 @@ export enum AuthorizationPrivilege {
   COMMUNITY_JOIN = 'community-join',
   COMMUNITY_APPLY = 'community-apply',
   COMMUNITY_CONTEXT_REVIEW = 'community-context-review',
+  CREATE_CALLOUT = 'create-callout',
+  CREATE_RELATION = 'create-relation',
 }
 
 registerEnumType(AuthorizationPrivilege, {

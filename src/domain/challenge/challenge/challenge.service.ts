@@ -53,11 +53,11 @@ import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
-import { AspectService } from '@domain/context/aspect/aspect.service';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
 import { UpdateChallengeLifecycleInput } from './dto/challenge.dto.update.lifecycle';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 
 @Injectable()
 export class ChallengeService {
@@ -71,7 +71,6 @@ export class ChallengeService {
     private organizationService: OrganizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
-    private aspectService: AspectService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -394,6 +393,15 @@ export class ChallengeService {
   async getContext(challengeId: string): Promise<IContext> {
     return await this.baseChallengeService.getContext(
       challengeId,
+      this.challengeRepository
+    );
+  }
+
+  public async getCollaboration(
+    challenge: IChallenge
+  ): Promise<ICollaboration> {
+    return await this.baseChallengeService.getCollaboration(
+      challenge.id,
       this.challengeRepository
     );
   }
