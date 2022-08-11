@@ -41,13 +41,11 @@ export class HubResolverFields {
     private hubService: HubService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description:
       'Get a Community within the Hub. Defaults to the Community for the Hub itself.',
   })
-  @UseGuards(GraphqlGuard)
   @Profiling.api
   async community(
     @Parent() hub: Hub,
@@ -60,12 +58,10 @@ export class HubResolverFields {
     return await this.hubService.getCommunityInNameableScope(ID, hub);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the hub.',
   })
-  @UseGuards(GraphqlGuard)
   @Profiling.api
   async context(@Parent() hub: Hub) {
     return await this.hubService.getContext(hub);
