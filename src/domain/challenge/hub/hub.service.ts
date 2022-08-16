@@ -27,7 +27,7 @@ import { IUserGroup } from '@domain/community/user-group';
 import { IContext } from '@domain/context/context';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { NamingService } from '@src/services/domain/naming/naming.service';
-import { challengeLifecycleConfigDefault } from '@domain/challenge/challenge/challenge.lifecycle.config.default';
+import { challengeLifecycleConfigDefault } from '@domain/template/templates-set/templates.set.default.lifecycle.challenge';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -110,6 +110,7 @@ export class HubService {
     hub.templatesSet = await this.templatesSetService.createTemplatesSet();
 
     // Lifecycle
+
     const machineConfig: any = challengeLifecycleConfigDefault;
     hub.lifecycle = await this.lifecycleService.createLifecycle(
       hub.id,
