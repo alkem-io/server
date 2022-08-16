@@ -1,0 +1,115 @@
+{
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "properties": {
+    "id": {
+      "title": "ID",
+      "type": "string"
+    },
+    "context": {
+      "type": "object"
+    },
+    "initial": {
+      "type": "string"
+    },
+    "states": {
+      "$ref": "#/definitions/statesObject"
+    }
+  },
+  "required": ["id", "states"],
+  "definitions": {
+    "actionObject": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "definition": "The action type"
+        }
+      },
+      "additionalProperties": true,
+      "required": ["type"]
+    },
+    "statesObject": {
+      "type": "object",
+      "patternProperties": {
+        "^.*$": {
+          "oneOf": [
+            { "$ref": "#/definitions/myStateObject" },
+            { "$ref": "#/definitions/finalStateNode" }
+          ]
+        }
+      }
+    },
+    "myStateObject": {
+      "type": "object",
+      "properties": {
+        "on": {
+          "type": "object",
+          "patternProperties": {
+            "^.*$": {
+              "oneOf": [
+                { "$ref": "#/definitions/transitionObject" },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "required": ["on"]
+    },
+    "transitionObject": {
+      "type": "object",
+      "properties": {
+        "actions": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/definitions/actionObject" },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "cond": {
+          "oneOf": [{ "type": "object" }, { "type": "string" }]
+        },
+        "eventType": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            { "type": "string" }
+          ]
+        }
+      }
+    },
+    "finalStateNode": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "pattern": "final"
+        }
+      },
+      "required": ["type"]
+    }
+  }
+}

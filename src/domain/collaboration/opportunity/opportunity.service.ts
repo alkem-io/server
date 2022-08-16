@@ -318,8 +318,9 @@ export class OpportunityService {
     activity.push(projectsTopic);
 
     // Relations
-    const relationsCount =
-      await this.relationService.getRelationsInOpportunityCount(opportunity.id);
+    const relationsCount = await this.getRelationsInOpportunityCount(
+      opportunity
+    );
     const relationsTopic = new NVP('relations', relationsCount.toString());
     relationsTopic.id = `relations-${opportunity.id}`;
     activity.push(relationsTopic);
@@ -345,6 +346,19 @@ export class OpportunityService {
     return activity;
   }
 
+  private async getRelationsInOpportunityCount(
+    opportunity: IOpportunity
+  ): Promise<number> {
+    if (!opportunity.collaboration)
+      throw new EntityNotInitializedException(
+        `Collaboration for opportunity ${opportunity.id} not initialized`,
+        LogContext.CHALLENGES
+      )!;
+
+    return await this.relationService.getRelationsInCollaborationCount(
+      opportunity.collaboration?.id
+    );
+  }
   async getOpportunitiesInHubCount(hubID: string): Promise<number> {
     return await this.opportunityRepository.count({
       where: { hubID: hubID },
