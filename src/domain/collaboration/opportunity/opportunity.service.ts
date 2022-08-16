@@ -320,7 +320,9 @@ export class OpportunityService {
 
     // Relations
     const relationsCount =
-      await this.relationService.getRelationsInOpportunityCount(opportunity.id);
+      await this.relationService.getRelationsInCollaborationCount(
+        opportunity.id
+      );
     const relationsTopic = new NVP('relations', relationsCount.toString());
     relationsTopic.id = `relations-${opportunity.id}`;
     activity.push(relationsTopic);

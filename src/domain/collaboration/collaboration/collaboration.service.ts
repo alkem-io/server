@@ -18,6 +18,8 @@ import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collabo
 import { CreateRelationOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.relation';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
+import { AspectService } from '../aspect/aspect.service';
+import { CanvasService } from '@domain/common/canvas/canvas.service';
 
 @Injectable()
 export class CollaborationService {
@@ -26,6 +28,8 @@ export class CollaborationService {
     private calloutService: CalloutService,
     private namingService: NamingService,
     private relationService: RelationService,
+    private aspectService: AspectService,
+    private canvasService: CanvasService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>
   ) {}
@@ -172,5 +176,41 @@ export class CollaborationService {
       );
 
     return loadedCollaboration.relations;
+  }
+
+  public async getAspectsCount(collaboration: ICollaboration): Promise<number> {
+    const callouts = await this.getCalloutsOnCollaboration(collaboration);
+
+    let aspectsCount = 0;
+    for (const callout of callouts) {
+      aspectsCount += await this.aspectService.getAspectsInCalloutCount(
+        callout.id
+      );
+    }
+    return aspectsCount;
+  }
+
+  public async getCanvasesCount(
+    collaboration: ICollaboration
+  ): Promise<number> {
+    const callouts = await this.getCalloutsOnCollaboration(collaboration);
+    let canvasesCount = 0;
+    for (const callout of callouts) {
+      canvasesCount += await this.canvasService.getCanvasesInCalloutCount(
+        callout.id
+      );
+    }
+    return canvasesCount;
+  }
+
+  public async getRelationsCount(
+    collaboration: ICollaboration
+  ): Promise<number> {
+    const aspectsCount =
+      await this.relationService.getRelationsInCollaborationCount(
+        collaboration.id
+      );
+
+    return aspectsCount;
   }
 }
