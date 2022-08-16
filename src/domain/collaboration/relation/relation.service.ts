@@ -87,11 +87,11 @@ export class RelationService {
     return await this.relationRepository.save(relation);
   }
 
-  async getRelationsInCollaborationCount(
-    collaborationID: string
+  public async getRelationsInCollaborationCount(
+    collaborationId: string
   ): Promise<number> {
     return await this.relationRepository.count({
-      where: { collaboration: collaborationID },
+      where: { collaboration: collaborationId },
     });
   }
 }

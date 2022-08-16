@@ -2,6 +2,8 @@ import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { Scalar, CustomScalar } from '@nestjs/graphql';
 import { Kind, ValueNode } from 'graphql';
+import { validateMachineDefinition } from '@core/validation/xstate/validateMachineDefinition';
+import { ErrorObject } from 'ajv';
 
 @Scalar('LifecycleDefinition')
 export class LifecycleDefinitionScalar implements CustomScalar<string, string> {
@@ -31,8 +33,41 @@ export class LifecycleDefinitionScalar implements CustomScalar<string, string> {
       );
     }
 
-    // todo: add validaiton here...
+    const errors = validateMachineDefinition(value);
+
+    if (errors) {
+      let message: string;
+      if (Array.isArray(errors)) {
+        const errorTuple = Object.entries(formatErrors(errors));
+        message = errorTuple
+          .map(([path, messages]) => `${path}: ${messages.join(', ')}`)
+          .join('; ');
+      } else {
+        message = errors.message;
+      }
+      throw new ValidationException(
+        `Value is not valid xstate definition: ${message}`,
+        LogContext.API
+      );
+    }
 
     return value;
   }
 }
+
+const formatErrors = (errors: ErrorObject[]) => {
+  const map = errors.map(formatError).reduce((acc, { path, message }) => {
+    const messages = acc.get(path) ?? [];
+    messages.push(message);
+    acc.set(path, messages);
+    return acc;
+  }, new Map<string, Array<string>>());
+  return Object.fromEntries(map);
+};
+
+const formatError = (error: ErrorObject) => {
+  return {
+    path: error.instancePath.substring(1).replace(/\//g, '.'),
+    message: error.message ?? '',
+  };
+};

@@ -15,7 +15,6 @@ import {
 } from '@domain/collaboration/opportunity';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-import { RelationService } from '@domain/collaboration/relation/relation.service';
 import { IProject, CreateProjectInput } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
@@ -47,7 +46,6 @@ export class OpportunityService {
     private projectService: ProjectService,
     private lifecycleService: LifecycleService,
     private communityService: CommunityService,
-    private relationService: RelationService,
     private userService: UserService,
     private agentService: AgentService,
     @InjectRepository(Opportunity)
@@ -319,10 +317,11 @@ export class OpportunityService {
     activity.push(projectsTopic);
 
     // Relations
-    const relationsCount =
-      await this.relationService.getRelationsInCollaborationCount(
-        opportunity.id
-      );
+    const relationsCount = await this.baseChallengeService.getRelationsCount(
+      opportunity,
+      this.opportunityRepository
+    );
+
     const relationsTopic = new NVP('relations', relationsCount.toString());
     relationsTopic.id = `relations-${opportunity.id}`;
     activity.push(relationsTopic);
