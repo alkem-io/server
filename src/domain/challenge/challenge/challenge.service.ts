@@ -18,11 +18,7 @@ import {
   IOpportunity,
 } from '@domain/collaboration/opportunity';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import {
-  AuthorizationCredential,
-  ChallengeLifecycleTemplate,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
@@ -31,8 +27,6 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
-import { challengeLifecycleConfigDefault } from './challenge.lifecycle.config.default';
-import { challengeLifecycleConfigExtended } from './challenge.lifecycle.config.extended';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { UUID_LENGTH } from '@common/constants';
@@ -58,6 +52,9 @@ import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
 import { UpdateChallengeLifecycleInput } from './dto/challenge.dto.update.lifecycle';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
+import { LifecycleType } from '@common/enums/lifecycle.type';
+import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 
 @Injectable()
 export class ChallengeService {
@@ -68,6 +65,7 @@ export class ChallengeService {
     private projectService: ProjectService,
     private baseChallengeService: BaseChallengeService,
     private lifecycleService: LifecycleService,
+    private lifecycleTemplateService: LifecycleTemplateService,
     private organizationService: OrganizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
@@ -113,14 +111,12 @@ export class ChallengeService {
         this.createPreferenceDefaults()
       );
 
-    // Lifecycle, that has both a default and extended version
-    let machineConfig: any = challengeLifecycleConfigDefault;
-    if (
-      challengeData.lifecycleTemplate &&
-      challengeData.lifecycleTemplate === ChallengeLifecycleTemplate.EXTENDED
-    ) {
-      machineConfig = challengeLifecycleConfigExtended;
-    }
+    const machineConfig: ILifecycleDefinition =
+      await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
+        challengeData.lifecycleID,
+        hubID,
+        LifecycleType.CHALLENGE
+      );
 
     challenge.lifecycle = await this.lifecycleService.createLifecycle(
       challenge.id,

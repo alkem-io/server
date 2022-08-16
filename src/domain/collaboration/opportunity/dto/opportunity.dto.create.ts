@@ -6,4 +6,7 @@ import { UUID } from '@domain/common/scalars';
 export class CreateOpportunityInput extends CreateBaseChallengeInput {
   @Field(() => UUID, { nullable: false })
   challengeID!: string;
+
+  @Field(() => UUID, { nullable: false })
+  lifecycleID!: string;
 }

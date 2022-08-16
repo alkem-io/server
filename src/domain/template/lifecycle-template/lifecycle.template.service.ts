@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, getConnection } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -9,6 +9,7 @@ import { ILifecycleTemplate } from './lifecycle.template.interface';
 import { TemplateBaseService } from '../template-base/template.base.service';
 import { CreateLifecycleTemplateInput } from './dto/lifecycle.template.dto.create';
 import { UpdateLifecycleTemplateInput } from './dto/lifecycle.template.dto.update';
+import { LifecycleType } from '@common/enums/lifecycle.type';
 
 @Injectable()
 export class LifecycleTemplateService {
@@ -82,5 +83,45 @@ export class LifecycleTemplateService {
     lifecycleTemplate: ILifecycleTemplate
   ): Promise<ILifecycleTemplate> {
     return await this.lifecycleTemplateRepository.save(lifecycleTemplate);
+  }
+
+  public async isLifecycleTemplateInHub(
+    lifecycleTemplateID: string,
+    hubID: string,
+    templateType: string
+  ) {
+    const [queryResult]: {
+      hubId: string;
+    }[] = await getConnection().query(
+      `
+      SELECT \'hub\'.\'id\' as \'hubId\' FROM \'hub\'
+      RIGHT JOIN \'lifecycle_template\' ON \'hub\'.\'templatesSetId\' = \'lifecycle_template\'.\'templatesSetId\'
+      WHERE \'lifecycle_template\'.\'id\' = '${lifecycleTemplateID}' AND \'lifecycle_template\'.\'type\' = '${templateType}'
+      `
+    );
+
+    if (queryResult && queryResult.hubId === hubID) return true;
+
+    return false;
+  }
+
+  public async getLifecycleDefinitionFromTemplate(
+    templateID: string,
+    hubID: string,
+    templateType: LifecycleType
+  ) {
+    const isLifecycleTemplateAvailable = await this.isLifecycleTemplateInHub(
+      templateID,
+      hubID,
+      templateType
+    );
+    if (!isLifecycleTemplateAvailable) {
+      throw new EntityNotFoundException(
+        `Unable to find ${templateType} Lifecycle Template with ID: ${templateID}, in parent Hub template set.`,
+        LogContext.LIFECYCLE
+      );
+    }
+    const lifecycleTemplate = await this.getLifecycleTemplateOrFail(templateID);
+    return JSON.parse(lifecycleTemplate.definition);
   }
 }

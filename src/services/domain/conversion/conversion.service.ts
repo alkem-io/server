@@ -161,6 +161,7 @@ export class ConversionService {
       {
         nameID: challengeNameID,
         displayName: opportunity.displayName,
+        lifecycleID: '',
       },
       hubID,
       agentInfo

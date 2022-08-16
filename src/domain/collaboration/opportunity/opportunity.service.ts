@@ -22,9 +22,6 @@ import { BaseChallengeService } from '@domain/challenge/base-challenge/base.chal
 import { ICommunity } from '@domain/community/community/community.interface';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { opportunityLifecycleConfigDefault } from './opportunity.lifecycle.config.default';
-import { ChallengeLifecycleTemplate } from '@common/enums';
-import { opportunityLifecycleConfigExtended } from './opportunity.lifecycle.config.extended';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { NVP } from '@domain/common/nvp';
@@ -39,6 +36,9 @@ import { AgentInfo } from '@src/core';
 import { IContext } from '@domain/context/context/context.interface';
 import { UpdateOpportunityLifecycleInput } from './dto/opportunity.dto.update.lifecycle';
 import { ICollaboration } from '../collaboration/collaboration.interface';
+import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
+import { LifecycleType } from '@common/enums/lifecycle.type';
+import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 
 @Injectable()
 export class OpportunityService {
@@ -46,6 +46,7 @@ export class OpportunityService {
     private baseChallengeService: BaseChallengeService,
     private projectService: ProjectService,
     private lifecycleService: LifecycleService,
+    private lifecycleTemplateService: LifecycleTemplateService,
     private communityService: CommunityService,
     private relationService: RelationService,
     private userService: UserService,
@@ -74,15 +75,6 @@ export class OpportunityService {
 
     await this.opportunityRepository.save(opportunity);
 
-    // Lifecycle, that has both a default and extended version
-    let machineConfig: any = opportunityLifecycleConfigDefault;
-    if (
-      opportunityData.lifecycleTemplate &&
-      opportunityData.lifecycleTemplate === ChallengeLifecycleTemplate.EXTENDED
-    ) {
-      machineConfig = opportunityLifecycleConfigExtended;
-    }
-
     // set immediate community parent
     if (opportunity.community) {
       opportunity.community.parentID = opportunity.id;
@@ -93,11 +85,6 @@ export class OpportunityService {
         );
     }
 
-    opportunity.lifecycle = await this.lifecycleService.createLifecycle(
-      opportunity.id,
-      machineConfig
-    );
-
     if (agentInfo) {
       await this.assignMember(agentInfo.userID, opportunity.id);
       await this.assignOpportunityAdmin({
@@ -105,6 +92,18 @@ export class OpportunityService {
         opportunityID: opportunity.id,
       });
     }
+
+    const machineConfig: ILifecycleDefinition =
+      await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
+        opportunityData.lifecycleID,
+        hubID,
+        LifecycleType.OPPORTUNITY
+      );
+
+    opportunity.lifecycle = await this.lifecycleService.createLifecycle(
+      opportunity.id,
+      machineConfig
+    );
 
     return await this.saveOpportunity(opportunity);
   }
@@ -157,7 +156,7 @@ export class OpportunityService {
     if (!opportunity) {
       throw new EntityNotFoundException(
         `Unable to find Opportunity with ID: ${opportunityID}`,
-        LogContext.CHALLENGES
+        LogContext.OPPORTUNITY
       );
     }
 
@@ -179,7 +178,7 @@ export class OpportunityService {
     if (!opportunity) {
       throw new EntityNotFoundException(
         `Unable to find Opportunity with ID: ${opportunityID}`,
-        LogContext.CHALLENGES
+        LogContext.OPPORTUNITY
       );
     }
 
@@ -203,7 +202,7 @@ export class OpportunityService {
     if (projects && projects.length > 0) {
       throw new ValidationException(
         `Unable to remove Opportunity (${opportunity.nameID}) as it contains ${projects.length} Projects`,
-        LogContext.CHALLENGES
+        LogContext.OPPORTUNITY
       );
     }
 
@@ -282,7 +281,7 @@ export class OpportunityService {
 
     this.logger.verbose?.(
       `Adding project to opportunity (${opportunityId})`,
-      LogContext.COLLABORATION
+      LogContext.OPPORTUNITY
     );
 
     const opportunity = await this.getOpportunityOrFail(opportunityId);
@@ -294,7 +293,7 @@ export class OpportunityService {
     if (!opportunity.projects)
       throw new EntityNotInitializedException(
         `Opportunity (${opportunityId}) not initialised`,
-        LogContext.COLLABORATION
+        LogContext.OPPORTUNITY
       );
     opportunity.projects.push(project);
     await this.opportunityRepository.save(opportunity);
