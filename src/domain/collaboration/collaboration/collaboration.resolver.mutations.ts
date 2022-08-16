@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
@@ -15,6 +15,10 @@ import { DeleteCollaborationInput } from './dto/collaboration.dto.delete';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
 import { ICollaboration } from './collaboration.interface';
+import { NotificationsPayloadBuilder } from '@core/microservices';
+import { EventType } from '@common/enums/event.type';
+import { ClientProxy } from '@nestjs/microservices';
+import { NOTIFICATIONS_SERVICE } from '@common/constants';
 
 @Resolver()
 export class CollaborationResolverMutations {
@@ -23,7 +27,9 @@ export class CollaborationResolverMutations {
     private calloutAuthorizationService: CalloutAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
-    private collaborationService: CollaborationService
+    private collaborationService: CollaborationService,
+    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
+    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -87,16 +93,15 @@ export class CollaborationResolverMutations {
       await this.collaborationService.createRelationOnCollaboration(
         relationData
       );
-    // TODO: Fix interested in collaboration notification in separate task
-    // const payload =
-    //   this.notificationsPayloadBuilder.buildCommunityCollaborationInterestPayload(
-    //     agentInfo.userID,
-    //     collaboration
-    //   );
-    // this.notificationsClient.emit(
-    //   EventType.COMMUNITY_COLLABORATION_INTEREST,
-    //   payload
-    // );
+    const payload =
+      await this.notificationsPayloadBuilder.buildCollaborationInterestPayload(
+        agentInfo.userID,
+        collaboration
+      );
+    this.notificationsClient.emit(
+      EventType.COMMUNITY_COLLABORATION_INTEREST,
+      payload
+    );
     return await this.relationAuthorizationService.applyAuthorizationPolicy(
       relation,
       collaboriationAuthorizationPolicy,

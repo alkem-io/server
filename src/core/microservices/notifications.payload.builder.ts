@@ -4,7 +4,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
-import { Opportunity } from '@domain/collaboration';
+import { ICollaboration, Opportunity } from '@domain/collaboration';
 import { Communication } from '@domain/communication';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
@@ -174,10 +174,31 @@ export class NotificationsPayloadBuilder {
     return payload;
   }
 
-  buildCommunityCollaborationInterestPayload(
+  async getOpportunityForCollaboration(
+    collaborationID: string
+  ): Promise<IOpportunity> {
+    const findOneOptions = {
+      where: [{ collaborationId: collaborationID }],
+    };
+    const opportunity = await this.opportunityRepository.findOne(
+      findOneOptions
+    );
+    if (!opportunity) {
+      throw new EntityNotFoundException(
+        `Unable to find Opportunity for Collaboration: ${collaborationID}`,
+        LogContext.NOTIFICATIONS
+      );
+    }
+    return opportunity;
+  }
+
+  async buildCollaborationInterestPayload(
     userID: string,
-    opportunity: IOpportunity
-  ): CommunityCollaborationInterestEventPayload {
+    collaboration: ICollaboration
+  ): Promise<CommunityCollaborationInterestEventPayload> {
+    const opportunity = await this.getOpportunityForCollaboration(
+      collaboration.id
+    );
     const payload = {
       userID,
       opportunity: {
