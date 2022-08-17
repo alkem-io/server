@@ -15,7 +15,6 @@ import {
 } from '@domain/collaboration/opportunity';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-import { RelationService } from '@domain/collaboration/relation/relation.service';
 import { IProject, CreateProjectInput } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
@@ -48,7 +47,6 @@ export class OpportunityService {
     private lifecycleService: LifecycleService,
     private lifecycleTemplateService: LifecycleTemplateService,
     private communityService: CommunityService,
-    private relationService: RelationService,
     private userService: UserService,
     private agentService: AgentService,
     @InjectRepository(Opportunity)
@@ -318,9 +316,11 @@ export class OpportunityService {
     activity.push(projectsTopic);
 
     // Relations
-    const relationsCount = await this.getRelationsInOpportunityCount(
-      opportunity
+    const relationsCount = await this.baseChallengeService.getRelationsCount(
+      opportunity,
+      this.opportunityRepository
     );
+
     const relationsTopic = new NVP('relations', relationsCount.toString());
     relationsTopic.id = `relations-${opportunity.id}`;
     activity.push(relationsTopic);
@@ -346,19 +346,6 @@ export class OpportunityService {
     return activity;
   }
 
-  private async getRelationsInOpportunityCount(
-    opportunity: IOpportunity
-  ): Promise<number> {
-    if (!opportunity.collaboration)
-      throw new EntityNotInitializedException(
-        `Collaboration for opportunity ${opportunity.id} not initialized`,
-        LogContext.CHALLENGES
-      )!;
-
-    return await this.relationService.getRelationsInCollaborationCount(
-      opportunity.collaboration?.id
-    );
-  }
   async getOpportunitiesInHubCount(hubID: string): Promise<number> {
     return await this.opportunityRepository.count({
       where: { hubID: hubID },
