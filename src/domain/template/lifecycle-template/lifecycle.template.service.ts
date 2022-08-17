@@ -78,7 +78,7 @@ export class LifecycleTemplateService {
       templatesSetId: string;
     }[] = await getConnection().query(
       `
-      SELECT COUNT(*) as lifecycleTemplatesCount, \`templates_set\`.\`id\ AS templatesSetId
+      SELECT COUNT(*) as lifecycleTemplatesCount, \`templates_set\`.\`id\` AS templatesSetId
       FROM \`templates_set\` JOIN \`lifecycle_template\`
       ON \`lifecycle_template\`.\`templatesSetId\` = \`templates_set\`.\`id\`
       WHERE \`lifecycle_template\`.\`type\`='${lifecycleTemplate.type}' AND \`templates_set\`.\`id\` =
