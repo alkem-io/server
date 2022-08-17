@@ -9,7 +9,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { MaxLength } from 'class-validator';
 
 @InputType()
-export class CreateLifecycleTemplateInput extends CreateTemplateBaseInput {
+export class CreateInnovationFlowTemplateInput extends CreateTemplateBaseInput {
   @Field(() => LifecycleType, {
     nullable: false,
     description: 'The type of the Lifecycles that this Template supports.',

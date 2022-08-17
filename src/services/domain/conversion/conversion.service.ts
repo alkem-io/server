@@ -165,14 +165,14 @@ export class ConversionService {
         {
           nameID: challengeNameID,
           displayName: opportunity.displayName,
-          lifecycleTemplateID: lifecycleTemplateID,
+          innovationFlowTemplateID: lifecycleTemplateID,
         },
         hubID,
         agentInfo
       );
     else {
       const defaultChallengeLifecycleTemplate =
-        await this.hubService.getDefaultLifecycleTemplate(
+        await this.hubService.getDefaultInnovationFlowTemplate(
           hubID,
           LifecycleType.CHALLENGE
         );
@@ -180,7 +180,7 @@ export class ConversionService {
         {
           nameID: challengeNameID,
           displayName: opportunity.displayName,
-          lifecycleTemplateID: defaultChallengeLifecycleTemplate.id,
+          innovationFlowTemplateID: defaultChallengeLifecycleTemplate.id,
         },
         hubID,
         agentInfo

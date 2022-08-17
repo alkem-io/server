@@ -3,7 +3,7 @@ import { UUID } from '@domain/common/scalars';
 import { LifecycleDefinitionScalar } from '@domain/common/scalars/scalar.lifecycle.definition';
 
 @InputType()
-export class UpdateOpportunityLifecycleInput {
+export class UpdateOpportunityInnovationFlowInput {
   @Field(() => UUID, {
     description: 'ID of the Opportunity',
   })
@@ -11,7 +11,7 @@ export class UpdateOpportunityLifecycleInput {
 
   @Field(() => LifecycleDefinitionScalar, {
     nullable: false,
-    description: 'The Lifecycle Definition to use for this Opportunity.',
+    description: 'The Innovation Flow Definition to use for this Opportunity.',
   })
-  lifecycleDefinition!: string;
+  innovationFlowDefinition!: string;
 }

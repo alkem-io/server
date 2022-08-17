@@ -10,7 +10,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LifecycleTemplate } from './lifecycle.template.entity';
 import { ILifecycleTemplate } from './lifecycle.template.interface';
 import { TemplateBaseService } from '../template-base/template.base.service';
-import { CreateLifecycleTemplateInput } from './dto/lifecycle.template.dto.create';
+import { CreateInnovationFlowTemplateInput } from './dto/lifecycle.template.dto.create';
 import { UpdateLifecycleTemplateInput } from './dto/lifecycle.template.dto.update';
 import { LifecycleType } from '@common/enums/lifecycle.type';
 
@@ -24,8 +24,8 @@ export class LifecycleTemplateService {
     private templateBaseService: TemplateBaseService
   ) {}
 
-  async createLifecycleTemplate(
-    lifecycleTemplateData: CreateLifecycleTemplateInput
+  async createInnovationFLowTemplate(
+    lifecycleTemplateData: CreateInnovationFlowTemplateInput
   ): Promise<ILifecycleTemplate> {
     const lifecycleTemplate: ILifecycleTemplate = LifecycleTemplate.create(
       lifecycleTemplateData

@@ -115,7 +115,7 @@ export class TemplatesSetResolverMutations {
       `templates set create lifecycle template: ${templatesSet.id}`
     );
     const lifecycleTemplate =
-      await this.templatesSetService.createLifecycleTemplate(
+      await this.templatesSetService.createInnovationFlowTemplate(
         templatesSet,
         lifecycleTemplateInput
       );
