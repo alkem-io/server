@@ -99,7 +99,7 @@ export class ChallengeResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IChallenge, {
-    description: 'Updates the Lifecycle on the specified Challenge.',
+    description: 'Updates the Innovation Flow on the specified Challenge.',
   })
   @Profiling.api
   async updateChallengeInnovationFlow(
@@ -113,7 +113,7 @@ export class ChallengeResolverMutations {
       agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.UPDATE_LIFECYCLE,
-      `challenge lifecycle update: ${challenge.nameID}`
+      `challenge innovation flow update: ${challenge.nameID}`
     );
     return await this.challengeService.updateChallengeInnovationFlow(
       challengeData
@@ -122,7 +122,7 @@ export class ChallengeResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IChallenge, {
-    description: 'Updates the Lifecycle on the specified Challenge.',
+    description: 'Updates the specified Challenge.',
   })
   @Profiling.api
   async updateChallenge(

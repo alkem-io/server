@@ -172,7 +172,7 @@ export class ConversionService {
       );
     else {
       const defaultChallengeLifecycleTemplate =
-        await this.hubService.getDefaultLifecycleTemplate(
+        await this.hubService.getDefaultInnovationFlowTemplate(
           hubID,
           LifecycleType.CHALLENGE
         );

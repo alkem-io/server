@@ -509,7 +509,7 @@ export class HubService {
     );
   }
 
-  async getDefaultLifecycleTemplate(
+  async getDefaultInnovationFlowTemplate(
     hubId: string,
     lifecycleType: LifecycleType
   ): Promise<ILifecycleTemplate> {
@@ -523,20 +523,22 @@ export class HubService {
         LogContext.CHALLENGES
       );
 
-    const allLifecycleTemplates =
-      await this.templatesSetService.getLifecycleTemplates(hub.templatesSet);
+    const allInnovationFlowTemplates =
+      await this.templatesSetService.getInnovationFlowTemplates(
+        hub.templatesSet
+      );
 
-    const selectableLifecycleTemplates = allLifecycleTemplates.filter(
+    const selectableInnovationFlowTemplates = allInnovationFlowTemplates.filter(
       x => x.type === lifecycleType
     );
 
-    if (selectableLifecycleTemplates.length === 0)
+    if (selectableInnovationFlowTemplates.length === 0)
       throw new ValidationException(
-        `Could not find default lifecycle template of type ${lifecycleType} in hub ${hubId}`,
+        `Could not find default innovation flow template of type ${lifecycleType} in hub ${hubId}`,
         LogContext.CHALLENGES
       );
 
-    return selectableLifecycleTemplates[0];
+    return selectableInnovationFlowTemplates[0];
   }
 
   async validateChallengeNameIdOrFail(proposedNameID: string, hubID: string) {

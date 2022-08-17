@@ -58,7 +58,7 @@ export class OpportunityResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IOpportunity, {
-    description: 'Updates the Lifecycle on the specified Opportunity.',
+    description: 'Updates the Innovation Flow on the specified Opportunity.',
   })
   @Profiling.api
   async updateOpportunityInnovationFlow(
@@ -73,7 +73,7 @@ export class OpportunityResolverMutations {
       agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.UPDATE_LIFECYCLE,
-      `opportunity lifecycle update: ${opportunity.nameID}`
+      `opportunity innovation flow update: ${opportunity.nameID}`
     );
     return await this.opportunityService.updateOpportunityInnovationFlow(
       opportunityData
