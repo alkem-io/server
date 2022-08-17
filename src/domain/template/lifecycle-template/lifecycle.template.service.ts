@@ -74,7 +74,7 @@ export class LifecycleTemplateService {
     lifecycleTemplate: ILifecycleTemplate
   ): Promise<ILifecycleTemplate> {
     const [queryResult]: {
-      lifecycleTemplatesCount: number;
+      lifecycleTemplatesCount: string;
       templatesSetId: string;
     }[] = await getConnection().query(
       `
@@ -87,9 +87,9 @@ export class LifecycleTemplateService {
       `
     );
 
-    if (queryResult.lifecycleTemplatesCount === 1) {
+    if (queryResult.lifecycleTemplatesCount === '1') {
       throw new ValidationException(
-        `Can't delete last lifecycle template: ${lifecycleTemplate.id} from templateSet: ${queryResult.templatesSetId}`,
+        `Can't delete last lifecycle template: ${lifecycleTemplate.id} from templateSet: ${queryResult.templatesSetId}. Last template of a templateSet can not be deleted!`,
         LogContext.LIFECYCLE
       );
     }
