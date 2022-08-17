@@ -1,7 +1,10 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, getConnection } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LifecycleTemplate } from './lifecycle.template.entity';
@@ -70,6 +73,26 @@ export class LifecycleTemplateService {
   async deleteLifecycleTemplate(
     lifecycleTemplate: ILifecycleTemplate
   ): Promise<ILifecycleTemplate> {
+    const [queryResult]: {
+      lifecycleTemplatesCount: number;
+      templatesSetId: string;
+    }[] = await getConnection().query(
+      `
+      SELECT COUNT(*) as lifecycleTemplatesCount, \`templates_set\`.\`id\ AS templatesSetId
+      FROM \`templates_set\` JOIN \`lifecycle_template\`
+      ON \`lifecycle_template\`.\`templatesSetId\` = \`templates_set\`.\`id\`
+      WHERE \`lifecycle_template\`.\`type\`='${lifecycleTemplate.type}' AND \`templates_set\`.\`id\` =
+      (SELECT \`lifecycle_template\`.\`templatesSetId\` FROM \`lifecycle_template\`
+      WHERE \`lifecycle_template\`.\`id\` = '${lifecycleTemplate.id}');
+      `
+    );
+
+    if (queryResult.lifecycleTemplatesCount === 1) {
+      throw new ValidationException(
+        `Can't delete last lifecycle template: ${lifecycleTemplate.id} from templateSet: ${queryResult.templatesSetId}`,
+        LogContext.LIFECYCLE
+      );
+    }
     const templateId: string = lifecycleTemplate.id;
     await this.templateBaseService.deleteEntities(lifecycleTemplate);
     const result = await this.lifecycleTemplateRepository.remove(
