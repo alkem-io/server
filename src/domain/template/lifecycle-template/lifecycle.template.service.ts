@@ -114,18 +114,18 @@ export class LifecycleTemplateService {
     templateType: string
   ) {
     const [queryResult]: {
-      hubId: string;
+      hubCount: string;
     }[] = await getConnection().query(
       `
-      SELECT \'hub\'.\'id\' as \'hubId\' FROM \'hub\'
-      RIGHT JOIN \'lifecycle_template\' ON \'hub\'.\'templatesSetId\' = \'lifecycle_template\'.\'templatesSetId\'
-      WHERE \'lifecycle_template\'.\'id\' = '${lifecycleTemplateID}' AND \'lifecycle_template\'.\'type\' = '${templateType}'
+      SELECT COUNT(*) as hubCount FROM \`hub\`
+      RIGHT JOIN \`lifecycle_template\` ON \`hub\`.\`templatesSetId\` = \`lifecycle_template\`.\`templatesSetId\`
+      WHERE \`lifecycle_template\`.\`id\` = '${lifecycleTemplateID}'
+      AND \`lifecycle_template\`.\`type\` = '${templateType}'
+      AND \`hub\`.\`id\` = '${hubID}'
       `
     );
 
-    if (queryResult && queryResult.hubId === hubID) return true;
-
-    return false;
+    return queryResult.hubCount === '1';
   }
 
   public async getLifecycleDefinitionFromTemplate(
