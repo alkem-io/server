@@ -31,8 +31,6 @@ import { CommunityRole } from '@common/enums/community.role';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { CanvasService } from '@domain/common/canvas/canvas.service';
-import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 
 @Injectable()
 export class BaseChallengeService {
@@ -45,8 +43,6 @@ export class BaseChallengeService {
     private tagsetService: TagsetService,
     private lifecycleService: LifecycleService,
     private collaborationService: CollaborationService,
-    private aspectsService: AspectService,
-    private canvasService: CanvasService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -337,17 +333,8 @@ export class BaseChallengeService {
       baseChallenge.id,
       repository
     );
-    const callouts = await this.collaborationService.getCalloutsOnCollaboration(
-      collaboration
-    );
 
-    let aspectsCount = 0;
-    for (const callout of callouts) {
-      aspectsCount += await this.aspectsService.getAspectsInCalloutCount(
-        callout.id
-      );
-    }
-    return aspectsCount;
+    return await this.collaborationService.getAspectsCount(collaboration);
   }
 
   public async getCanvasesCount(
@@ -358,15 +345,17 @@ export class BaseChallengeService {
       baseChallenge.id,
       repository
     );
-    const callouts = await this.collaborationService.getCalloutsOnCollaboration(
-      collaboration
+    return await this.collaborationService.getCanvasesCount(collaboration);
+  }
+
+  public async getRelationsCount(
+    baseChallenge: IBaseChallenge,
+    repository: Repository<BaseChallenge>
+  ): Promise<number> {
+    const collaboration = await this.getCollaboration(
+      baseChallenge.id,
+      repository
     );
-    let canvasesCount = 0;
-    for (const callout of callouts) {
-      canvasesCount += await this.canvasService.getCanvasesInCalloutCount(
-        callout.id
-      );
-    }
-    return canvasesCount;
+    return await this.collaborationService.getRelationsCount(collaboration);
   }
 }
