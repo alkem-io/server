@@ -1,0 +1,14 @@
+mutation updateOpportunityInnovationFlow($opportunityData: UpdateOpportunityInnovationFlowInput!) {
+  updateOpportunityInnovationFlow(opportunityData: $opportunityData) {
+    id
+  }
+}
+
+
+query variables:
+{
+  "opportunityData": {
+    "opportunityID": "uuid",
+    "innovationFlowTemplateID": "uuid"
+  }
+}

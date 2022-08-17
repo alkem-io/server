@@ -24,7 +24,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
 import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
-import { UpdateChallengeInnovationFlowInput } from './dto/challenge.dto.update.lifecycle';
+import { UpdateChallengeInnovationFlowInput } from './dto/challenge.dto.update.innovation.flow';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -112,7 +112,7 @@ export class ChallengeResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
-      AuthorizationPrivilege.UPDATE_LIFECYCLE,
+      AuthorizationPrivilege.UPDATE_INNOVATION_FLOW,
       `challenge innovation flow update: ${challenge.nameID}`
     );
     return await this.challengeService.updateChallengeInnovationFlow(

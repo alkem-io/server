@@ -20,7 +20,7 @@ import {
   OpportunityEventInput,
   UpdateOpportunityInput,
 } from './dto';
-import { UpdateOpportunityInnovationFlowInput } from './dto/opportunity.dto.update.lifecycle';
+import { UpdateOpportunityInnovationFlowInput } from './dto/opportunity.dto.update.innovation.flow';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { ClientProxy } from '@nestjs/microservices';
 
@@ -72,7 +72,7 @@ export class OpportunityResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       opportunity.authorization,
-      AuthorizationPrivilege.UPDATE_LIFECYCLE,
+      AuthorizationPrivilege.UPDATE_INNOVATION_FLOW,
       `opportunity innovation flow update: ${opportunity.nameID}`
     );
     return await this.opportunityService.updateOpportunityInnovationFlow(

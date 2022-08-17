@@ -145,6 +145,12 @@ export class LifecycleTemplateService {
       );
     }
     const lifecycleTemplate = await this.getLifecycleTemplateOrFail(templateID);
+    if (!lifecycleTemplate.definition) {
+      throw new EntityNotFoundException(
+        `Lifecycle Template with ID: ${templateID}: definition is not set`,
+        LogContext.LIFECYCLE
+      );
+    }
     return JSON.parse(lifecycleTemplate.definition);
   }
 }
