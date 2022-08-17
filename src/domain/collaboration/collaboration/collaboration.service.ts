@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, getConnection, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -179,28 +179,35 @@ export class CollaborationService {
   }
 
   public async getAspectsCount(collaboration: ICollaboration): Promise<number> {
-    const callouts = await this.getCalloutsOnCollaboration(collaboration);
+    const [result]: {
+      aspectsCount: number;
+    }[] = await getConnection().query(
+      `
+      SELECT COUNT(*) as aspectsCount
+      FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+      RIGHT JOIN \`aspect\` ON \`aspect\`.\`calloutId\` = \`callout\`.\`id\`
+      WHERE \`collaboration\`.\`id\` = '${collaboration.id}';
+      `
+    );
 
-    let aspectsCount = 0;
-    for (const callout of callouts) {
-      aspectsCount += await this.aspectService.getAspectsInCalloutCount(
-        callout.id
-      );
-    }
-    return aspectsCount;
+    return result.aspectsCount;
   }
 
   public async getCanvasesCount(
     collaboration: ICollaboration
   ): Promise<number> {
-    const callouts = await this.getCalloutsOnCollaboration(collaboration);
-    let canvasesCount = 0;
-    for (const callout of callouts) {
-      canvasesCount += await this.canvasService.getCanvasesInCalloutCount(
-        callout.id
-      );
-    }
-    return canvasesCount;
+    const [result]: {
+      canvasesCount: number;
+    }[] = await getConnection().query(
+      `
+      SELECT COUNT(*) as canvasesCount
+      FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+      RIGHT JOIN \`canvas\` ON \`canvas\`.\`calloutId\` = \`callout\`.\`id\`
+      WHERE \`collaboration\`.\`id\` = '${collaboration.id}';
+      `
+    );
+
+    return result.canvasesCount;
   }
 
   public async getRelationsCount(
