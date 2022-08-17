@@ -89,7 +89,7 @@ export class LifecycleTemplateService {
 
     if (queryResult.lifecycleTemplatesCount === '1') {
       throw new ValidationException(
-        `Can't delete last lifecycle template: ${lifecycleTemplate.id} from templateSet: ${queryResult.templatesSetId}. Last template of a templateSet can not be deleted!`,
+        `Can't delete last lifecycle template: ${lifecycleTemplate.id} of type ${lifecycleTemplate.type} from templateSet: ${queryResult.templatesSetId}!`,
         LogContext.LIFECYCLE
       );
     }
