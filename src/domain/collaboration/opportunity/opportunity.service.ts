@@ -33,7 +33,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core';
 import { IContext } from '@domain/context/context/context.interface';
-import { UpdateOpportunityLifecycleInput } from './dto/opportunity.dto.update.lifecycle';
+import { UpdateOpportunityInnovationFlowInput } from './dto/opportunity.dto.update.lifecycle';
 import { ICollaboration } from '../collaboration/collaboration.interface';
 import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
 import { LifecycleType } from '@common/enums/lifecycle.type';
@@ -93,7 +93,7 @@ export class OpportunityService {
 
     const machineConfig: ILifecycleDefinition =
       await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
-        opportunityData.lifecycleTemplateID,
+        opportunityData.innovationFlowTemplateID,
         hubID,
         LifecycleType.OPPORTUNITY
       );
@@ -106,8 +106,8 @@ export class OpportunityService {
     return await this.saveOpportunity(opportunity);
   }
 
-  async updateOpportunityLifecycle(
-    opportunityData: UpdateOpportunityLifecycleInput
+  async updateOpportunityInnovationFlow(
+    opportunityData: UpdateOpportunityInnovationFlowInput
   ): Promise<IOpportunity> {
     const opportunity = await this.getOpportunityOrFail(
       opportunityData.opportunityID,
@@ -121,7 +121,7 @@ export class OpportunityService {
       );
     }
 
-    opportunity.lifecycle.machineDef = opportunityData.lifecycleDefinition;
+    opportunity.lifecycle.machineDef = opportunityData.innovationFlowDefinition;
     opportunity.lifecycle.machineState = '';
 
     return await this.save(opportunity);
