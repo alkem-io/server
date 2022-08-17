@@ -13,5 +13,5 @@ export class CreateChallengeInput extends CreateBaseChallengeInput {
   leadOrganizations?: string[];
 
   @Field(() => UUID, { nullable: false })
-  lifecycleID!: string;
+  lifecycleTemplateID!: string;
 }

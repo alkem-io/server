@@ -8,5 +8,5 @@ export class CreateOpportunityInput extends CreateBaseChallengeInput {
   challengeID!: string;
 
   @Field(() => UUID, { nullable: false })
-  lifecycleID!: string;
+  lifecycleTemplateID!: string;
 }

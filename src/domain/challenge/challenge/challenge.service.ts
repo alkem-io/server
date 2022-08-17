@@ -113,7 +113,7 @@ export class ChallengeService {
 
     const machineConfig: ILifecycleDefinition =
       await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
-        challengeData.lifecycleID,
+        challengeData.lifecycleTemplateID,
         hubID,
         LifecycleType.CHALLENGE
       );

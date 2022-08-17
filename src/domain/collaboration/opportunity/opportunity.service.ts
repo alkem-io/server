@@ -95,7 +95,7 @@ export class OpportunityService {
 
     const machineConfig: ILifecycleDefinition =
       await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
-        opportunityData.lifecycleID,
+        opportunityData.lifecycleTemplateID,
         hubID,
         LifecycleType.OPPORTUNITY
       );
