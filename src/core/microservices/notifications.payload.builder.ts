@@ -177,12 +177,9 @@ export class NotificationsPayloadBuilder {
   async getOpportunityForCollaboration(
     collaborationID: string
   ): Promise<IOpportunity> {
-    const findOneOptions = {
-      where: [{ collaborationId: collaborationID }],
-    };
-    const opportunity = await this.opportunityRepository.findOne(
-      findOneOptions
-    );
+    const opportunity = await this.opportunityRepository.findOne({
+      where: { collaboration: collaborationID },
+    });
     if (!opportunity) {
       throw new EntityNotFoundException(
         `Unable to find Opportunity for Collaboration: ${collaborationID}`,
