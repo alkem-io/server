@@ -125,7 +125,7 @@ export class OpportunityService {
       await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
         opportunityData.innovationFlowTemplateID,
         opportunity.hubID,
-        LifecycleType.CHALLENGE
+        LifecycleType.OPPORTUNITY
       );
 
     opportunity.lifecycle.machineDef = JSON.stringify(machineConfig);
