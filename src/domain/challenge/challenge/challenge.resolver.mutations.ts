@@ -24,7 +24,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
 import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
-import { UpdateChallengeLifecycleInput } from './dto/challenge.dto.update.lifecycle';
+import { UpdateChallengeInnovationFlowInput } from './dto/challenge.dto.update.innovation.flow';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -99,12 +99,12 @@ export class ChallengeResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IChallenge, {
-    description: 'Updates the Lifecycle on the specified Challenge.',
+    description: 'Updates the Innovation Flow on the specified Challenge.',
   })
   @Profiling.api
-  async updateChallengeLifecycle(
+  async updateChallengeInnovationFlow(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('challengeData') challengeData: UpdateChallengeLifecycleInput
+    @Args('challengeData') challengeData: UpdateChallengeInnovationFlowInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeData.challengeID
@@ -112,15 +112,17 @@ export class ChallengeResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
-      AuthorizationPrivilege.UPDATE_LIFECYCLE,
-      `challenge lifecycle update: ${challenge.nameID}`
+      AuthorizationPrivilege.UPDATE_INNOVATION_FLOW,
+      `challenge innovation flow update: ${challenge.nameID}`
     );
-    return await this.challengeService.updateChallengeLifecycle(challengeData);
+    return await this.challengeService.updateChallengeInnovationFlow(
+      challengeData
+    );
   }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IChallenge, {
-    description: 'Updates the Lifecycle on the specified Challenge.',
+    description: 'Updates the specified Challenge.',
   })
   @Profiling.api
   async updateChallenge(
