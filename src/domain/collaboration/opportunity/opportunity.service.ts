@@ -33,7 +33,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core';
 import { IContext } from '@domain/context/context/context.interface';
-import { UpdateOpportunityInnovationFlowInput } from './dto/opportunity.dto.update.lifecycle';
+import { UpdateOpportunityInnovationFlowInput } from './dto/opportunity.dto.update.innovation.flow';
 import { ICollaboration } from '../collaboration/collaboration.interface';
 import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
 import { LifecycleType } from '@common/enums/lifecycle.type';
@@ -121,7 +121,14 @@ export class OpportunityService {
       );
     }
 
-    opportunity.lifecycle.machineDef = opportunityData.innovationFlowDefinition;
+    const machineConfig: ILifecycleDefinition =
+      await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
+        opportunityData.innovationFlowTemplateID,
+        opportunity.hubID,
+        LifecycleType.OPPORTUNITY
+      );
+
+    opportunity.lifecycle.machineDef = JSON.stringify(machineConfig);
     opportunity.lifecycle.machineState = '';
 
     return await this.save(opportunity);
