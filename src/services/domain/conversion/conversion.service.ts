@@ -19,6 +19,7 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { LifecycleType } from '@common/enums/lifecycle.type';
 
 export class ConversionService {
   constructor(
@@ -145,7 +146,8 @@ export class ConversionService {
   async convertOpportunityToChallenge(
     opportunityID: string,
     hubID: string,
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    lifecycleTemplateID?: string
   ): Promise<IChallenge> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       opportunityID,
@@ -156,16 +158,34 @@ export class ConversionService {
 
     const challengeNameID = `${opportunity.nameID}c`;
     await this.hubService.validateChallengeNameIdOrFail(challengeNameID, hubID);
+    let challenge: IChallenge;
 
-    const challenge = await this.challengeService.createChallenge(
-      {
-        nameID: challengeNameID,
-        displayName: opportunity.displayName,
-        lifecycleID: '',
-      },
-      hubID,
-      agentInfo
-    );
+    if (lifecycleTemplateID)
+      challenge = await this.challengeService.createChallenge(
+        {
+          nameID: challengeNameID,
+          displayName: opportunity.displayName,
+          innovationFlowTemplateID: lifecycleTemplateID,
+        },
+        hubID,
+        agentInfo
+      );
+    else {
+      const defaultChallengeLifecycleTemplate =
+        await this.hubService.getDefaultInnovationFlowTemplate(
+          hubID,
+          LifecycleType.CHALLENGE
+        );
+      challenge = await this.challengeService.createChallenge(
+        {
+          nameID: challengeNameID,
+          displayName: opportunity.displayName,
+          innovationFlowTemplateID: defaultChallengeLifecycleTemplate.id,
+        },
+        hubID,
+        agentInfo
+      );
+    }
 
     const opportunityCommunity = opportunity.community;
     if (!opportunityCommunity) {

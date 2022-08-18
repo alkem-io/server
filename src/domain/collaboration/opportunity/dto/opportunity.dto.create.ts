@@ -7,6 +7,9 @@ export class CreateOpportunityInput extends CreateBaseChallengeInput {
   @Field(() => UUID, { nullable: false })
   challengeID!: string;
 
-  @Field(() => UUID, { nullable: false })
-  lifecycleID!: string;
+  @Field(() => UUID, {
+    nullable: false,
+    description: 'The Innovation Flow template to use for the Opportunity.',
+  })
+  innovationFlowTemplateID!: string;
 }

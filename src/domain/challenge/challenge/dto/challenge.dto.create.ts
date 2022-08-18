@@ -12,6 +12,9 @@ export class CreateChallengeInput extends CreateBaseChallengeInput {
   @IsOptional()
   leadOrganizations?: string[];
 
-  @Field(() => UUID, { nullable: false })
-  lifecycleID!: string;
+  @Field(() => UUID, {
+    nullable: false,
+    description: 'The Innovation Flow template to use for the Challenge.',
+  })
+  innovationFlowTemplateID!: string;
 }

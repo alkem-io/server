@@ -55,6 +55,8 @@ import { CredentialDefinition } from '@domain/agent/credential/credential.defini
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { ILifecycleTemplate } from '@domain/template/lifecycle-template/lifecycle.template.interface';
+import { LifecycleType } from '@common/enums/lifecycle.type';
 
 @Injectable()
 export class HubService {
@@ -505,6 +507,38 @@ export class HubService {
       hub.id,
       this.hubRepository
     );
+  }
+
+  async getDefaultInnovationFlowTemplate(
+    hubId: string,
+    lifecycleType: LifecycleType
+  ): Promise<ILifecycleTemplate> {
+    const hub = await this.getHubOrFail(hubId, {
+      relations: ['templateSet'],
+    });
+
+    if (!hub.templatesSet)
+      throw new EntityNotInitializedException(
+        `Templates set for hub: ${hubId} not initialized`,
+        LogContext.CHALLENGES
+      );
+
+    const allInnovationFlowTemplates =
+      await this.templatesSetService.getInnovationFlowTemplates(
+        hub.templatesSet
+      );
+
+    const selectableInnovationFlowTemplates = allInnovationFlowTemplates.filter(
+      x => x.type === lifecycleType
+    );
+
+    if (selectableInnovationFlowTemplates.length === 0)
+      throw new ValidationException(
+        `Could not find default innovation flow template of type ${lifecycleType} in hub ${hubId}`,
+        LogContext.CHALLENGES
+      );
+
+    return selectableInnovationFlowTemplates[0];
   }
 
   async validateChallengeNameIdOrFail(proposedNameID: string, hubID: string) {

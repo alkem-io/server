@@ -13,7 +13,7 @@ export enum AuthorizationPrivilege {
   CREATE_ORGANIZATION = 'create-organization',
   READ_USERS = 'read-users',
   UPDATE_CANVAS = 'update-canvas',
-  UPDATE_LIFECYCLE = 'update-lifecycle',
+  UPDATE_INNOVATION_FLOW = 'update-lifecycle',
   COMMUNITY_JOIN = 'community-join',
   COMMUNITY_APPLY = 'community-apply',
   COMMUNITY_CONTEXT_REVIEW = 'community-context-review',

@@ -50,7 +50,7 @@ import { PreferenceType } from '@common/enums/preference.type';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
-import { UpdateChallengeLifecycleInput } from './dto/challenge.dto.update.lifecycle';
+import { UpdateChallengeInnovationFlowInput } from './dto/challenge.dto.update.innovation.flow';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
 import { LifecycleType } from '@common/enums/lifecycle.type';
@@ -113,7 +113,7 @@ export class ChallengeService {
 
     const machineConfig: ILifecycleDefinition =
       await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
-        challengeData.lifecycleID,
+        challengeData.innovationFlowTemplateID,
         hubID,
         LifecycleType.CHALLENGE
       );
@@ -176,8 +176,8 @@ export class ChallengeService {
     return challenge;
   }
 
-  async updateChallengeLifecycle(
-    challengeData: UpdateChallengeLifecycleInput
+  async updateChallengeInnovationFlow(
+    challengeData: UpdateChallengeInnovationFlowInput
   ): Promise<IChallenge> {
     const challenge = await this.getChallengeOrFail(challengeData.challengeID, {
       relations: ['lifecycle'],
@@ -190,7 +190,14 @@ export class ChallengeService {
       );
     }
 
-    challenge.lifecycle.machineDef = challengeData.lifecycleDefinition;
+    const machineConfig: ILifecycleDefinition =
+      await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
+        challengeData.innovationFlowTemplateID,
+        challenge.hubID,
+        LifecycleType.CHALLENGE
+      );
+
+    challenge.lifecycle.machineDef = JSON.stringify(machineConfig);
     challenge.lifecycle.machineState = '';
 
     return await this.challengeRepository.save(challenge);
