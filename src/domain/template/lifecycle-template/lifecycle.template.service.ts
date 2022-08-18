@@ -60,9 +60,6 @@ export class LifecycleTemplateService {
       lifecycleTemplate,
       lifecycleTemplateData
     );
-    if (lifecycleTemplateData.type) {
-      lifecycleTemplate.type = lifecycleTemplateData.type;
-    }
     if (lifecycleTemplateData.definition) {
       lifecycleTemplate.definition = lifecycleTemplateData.definition;
     }
