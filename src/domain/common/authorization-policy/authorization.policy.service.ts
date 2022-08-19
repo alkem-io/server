@@ -312,7 +312,6 @@ export class AuthorizationPolicyService {
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.UPDATE_LIFECYCLE,
         AuthorizationPrivilege.DELETE,
       ],
       AuthorizationCredential.GLOBAL_ADMIN

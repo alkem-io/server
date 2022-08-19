@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, getConnection, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -18,6 +18,7 @@ import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collabo
 import { CreateRelationOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.relation';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @Injectable()
 export class CollaborationService {
@@ -172,5 +173,56 @@ export class CollaborationService {
       );
 
     return loadedCollaboration.relations;
+  }
+
+  public async getAspectsCount(collaboration: ICollaboration): Promise<number> {
+    const [result]: {
+      aspectsCount: number;
+    }[] = await getConnection().query(
+      `
+      SELECT COUNT(*) as aspectsCount
+      FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+      RIGHT JOIN \`aspect\` ON \`aspect\`.\`calloutId\` = \`callout\`.\`id\`
+      WHERE \`collaboration\`.\`id\` = '${collaboration.id}';
+      `
+    );
+
+    return result.aspectsCount;
+  }
+
+  public async getCanvasesCount(
+    collaboration: ICollaboration
+  ): Promise<number> {
+    const [result]: {
+      canvasesCount: number;
+    }[] = await getConnection().query(
+      `
+      SELECT COUNT(*) as canvasesCount
+      FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+      RIGHT JOIN \`canvas\` ON \`canvas\`.\`calloutId\` = \`callout\`.\`id\`
+      WHERE \`collaboration\`.\`id\` = '${collaboration.id}';
+      `
+    );
+
+    return result.canvasesCount;
+  }
+
+  public async getRelationsCount(
+    collaboration: ICollaboration
+  ): Promise<number> {
+    const aspectsCount =
+      await this.relationService.getRelationsInCollaborationCount(
+        collaboration.id
+      );
+
+    return aspectsCount;
+  }
+
+  public async getMembershipCredential(
+    collaborationID: string
+  ): Promise<CredentialDefinition> {
+    return await this.namingService.getMembershipCredentialForCollaboration(
+      collaborationID
+    );
   }
 }

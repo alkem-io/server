@@ -12,8 +12,8 @@ export abstract class ILifecycleTemplate extends ITemplateBase {
   type!: string;
 
   @Field(() => LifecycleDefinitionScalar, {
-    nullable: true,
+    nullable: false,
     description: 'The XState definition for this LifecycleTemplate.',
   })
-  definition?: string;
+  definition!: string;
 }

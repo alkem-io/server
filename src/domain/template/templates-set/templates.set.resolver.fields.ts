@@ -82,7 +82,7 @@ export class TemplatesSetResolverFields {
   async lifecycleTemplates(
     @Parent() templatesSet: ITemplatesSet
   ): Promise<ILifecycleTemplate[]> {
-    return await this.templatesSetService.getLifecycleTemplates(templatesSet);
+    return await this.templatesSetService.getInnovationFlowTemplates(templatesSet);
   }
 
   @UseGuards(GraphqlGuard)

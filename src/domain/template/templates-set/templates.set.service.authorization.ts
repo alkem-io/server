@@ -8,6 +8,7 @@ import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from '.';
 import { CanvasTemplateAuthorizationService } from '../canvas-template/canvas.template.service.authorization';
 import { AspectTemplateAuthorizationService } from '../aspect-template/aspect.template.service.authorization';
+import { LifecycleTemplateAuthorizationService } from '../lifecycle-template/lifecycle.template.service.authorization';
 
 @Injectable()
 export class TemplatesSetAuthorizationService {
@@ -17,7 +18,8 @@ export class TemplatesSetAuthorizationService {
     @InjectRepository(TemplatesSet)
     private templatesSetRepository: Repository<TemplatesSet>,
     private aspectTemplateAuthorizationService: AspectTemplateAuthorizationService,
-    private canvasTemplateAuthorizationService: CanvasTemplateAuthorizationService
+    private canvasTemplateAuthorizationService: CanvasTemplateAuthorizationService,
+    private lifecycleTemplateAuthorizationService: LifecycleTemplateAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -27,7 +29,7 @@ export class TemplatesSetAuthorizationService {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       templatesSetInput.id,
       {
-        relations: ['aspectTemplates', 'canvasTemplates'],
+        relations: ['aspectTemplates', 'canvasTemplates', 'lifecycleTemplates'],
       }
     );
 
@@ -51,6 +53,15 @@ export class TemplatesSetAuthorizationService {
       for (const canvasTemplate of templatesSet.canvasTemplates) {
         await this.canvasTemplateAuthorizationService.applyAuthorizationPolicy(
           canvasTemplate,
+          parentAuthorization
+        );
+      }
+    }
+
+    if (templatesSet.lifecycleTemplates) {
+      for (const lifecycleTemplate of templatesSet.lifecycleTemplates) {
+        await this.lifecycleTemplateAuthorizationService.applyAuthorizationPolicy(
+          lifecycleTemplate,
           parentAuthorization
         );
       }

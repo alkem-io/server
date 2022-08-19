@@ -20,7 +20,7 @@ import { CanvasTemplateService } from '../canvas-template/canvas.template.servic
 import { ICanvasTemplate } from '../canvas-template/canvas.template.interface';
 import { CreateCanvasTemplateInput } from '../canvas-template/dto/canvas.template.dto.create';
 import { ILifecycleTemplate } from '../lifecycle-template/lifecycle.template.interface';
-import { CreateLifecycleTemplateInput } from '../lifecycle-template/dto/lifecycle.template.dto.create';
+import { CreateInnovationFlowTemplateInput } from '../lifecycle-template/dto/lifecycle.template.dto.create';
 import { LifecycleTemplateService } from '../lifecycle-template/lifecycle.template.service';
 
 @Injectable()
@@ -50,7 +50,7 @@ export class TemplatesSetService {
     templatesSet.lifecycleTemplates = [];
     for (const lifecycleTemplateDefault of templatesSetDefaults.lifecycles) {
       const lifecycleTemplate =
-        await this.lifecycleTemplateService.createLifecycleTemplate(
+        await this.lifecycleTemplateService.createInnovationFLowTemplate(
           lifecycleTemplateDefault
         );
       templatesSet.lifecycleTemplates.push(lifecycleTemplate);
@@ -194,7 +194,7 @@ export class TemplatesSetService {
     return canvasTemplate;
   }
 
-  async getLifecycleTemplates(
+  async getInnovationFlowTemplates(
     templatesSet: ITemplatesSet
   ): Promise<ILifecycleTemplate[]> {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
@@ -205,26 +205,26 @@ export class TemplatesSetService {
     );
     if (!templatesSetPopulated.lifecycleTemplates) {
       throw new EntityNotInitializedException(
-        `TemplatesSet not initialized with lifecycle templates: ${templatesSetPopulated.id}`,
+        `TemplatesSet not initialized with innovation flow templates: ${templatesSetPopulated.id}`,
         LogContext.TEMPLATES
       );
     }
     return templatesSetPopulated.lifecycleTemplates;
   }
 
-  async createLifecycleTemplate(
+  async createInnovationFlowTemplate(
     templatesSet: ITemplatesSet,
-    lifecycleTemplateInput: CreateLifecycleTemplateInput
+    innovationFlowTemplateInput: CreateInnovationFlowTemplateInput
   ): Promise<ILifecycleTemplate> {
-    const lifecycleTemplate =
-      await this.lifecycleTemplateService.createLifecycleTemplate(
-        lifecycleTemplateInput
+    const innovationFlowTemplate =
+      await this.lifecycleTemplateService.createInnovationFLowTemplate(
+        innovationFlowTemplateInput
       );
-    templatesSet.lifecycleTemplates = await this.getLifecycleTemplates(
+    templatesSet.lifecycleTemplates = await this.getInnovationFlowTemplates(
       templatesSet
     );
-    templatesSet.lifecycleTemplates.push(lifecycleTemplate);
+    templatesSet.lifecycleTemplates.push(innovationFlowTemplate);
     await this.templatesSetRepository.save(templatesSet);
-    return lifecycleTemplate;
+    return innovationFlowTemplate;
   }
 }

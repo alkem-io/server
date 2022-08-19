@@ -50,7 +50,8 @@ export class CollaborationAuthorizationService {
     for (const callout of collaboration.callouts) {
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         callout,
-        collaboration.authorization
+        collaboration.authorization,
+        communityCredential
       );
     }
 
@@ -88,25 +89,12 @@ export class CollaborationAuthorizationService {
       [
         AuthorizationPrivilege.CREATE_CALLOUT,
         AuthorizationPrivilege.CREATE_RELATION,
-        AuthorizationPrivilege.CREATE_ASPECT,
-        AuthorizationPrivilege.CREATE_CANVAS,
       ],
       membershipCredential.type,
       membershipCredential.resourceID
     );
-    // communityMemberNotInherited.inheritable = false;
+    communityMemberNotInherited.inheritable = false;
     newRules.push(communityMemberNotInherited);
-
-    // separate rule as do want the update canvas / ability to create a comment to cascade
-    const communityMemberInherited = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.UPDATE_CANVAS,
-        AuthorizationPrivilege.CREATE_COMMENT,
-      ],
-      membershipCredential.type,
-      membershipCredential.resourceID
-    );
-    newRules.push(communityMemberInherited);
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(

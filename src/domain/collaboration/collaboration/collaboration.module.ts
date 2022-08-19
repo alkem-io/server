@@ -11,6 +11,8 @@ import { CollaborationResolverFields } from '@domain/collaboration/collaboration
 import { RelationModule } from '@domain/collaboration/relation/relation.module';
 import { CollaborationDataloaderService } from './collaboration.dataloader.service';
 import { CollaborationAuthorizationService } from './collaboration.service.authorization';
+import { CanvasModule } from '@domain/common/canvas/canvas.module';
+import { AspectModule } from '../aspect/aspect.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { CollaborationAuthorizationService } from './collaboration.service.autho
     CalloutModule,
     NamingModule,
     RelationModule,
+    CanvasModule,
+    AspectModule,
     TypeOrmModule.forFeature([Collaboration]),
   ],
   providers: [

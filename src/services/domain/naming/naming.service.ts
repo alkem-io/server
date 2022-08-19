@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { getConnection, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
@@ -12,6 +12,10 @@ import { Hub } from '@domain/challenge/hub/hub.entity';
 import { LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Community } from '@domain/community/community';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { EntityNotInitializedException } from '@common/exceptions';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -31,6 +35,8 @@ export class NamingService {
     private projectRepository: Repository<Project>,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>,
+    @InjectRepository(Community)
+    private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -191,5 +197,43 @@ export class NamingService {
       .replace(nameIDExcludedCharacters, '')
       .toLowerCase()
       .slice(0, 25);
+  }
+
+  async getMembershipCredentialForCollaboration(
+    collaborationID: string
+  ): Promise<ICredentialDefinition> {
+    const [result]: {
+      entityId: string;
+      communityId: string;
+      communityType: string;
+    }[] = await getConnection().query(
+      `
+        SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`collaboration\`
+        RIGHT JOIN \`hub\` on \`collaboration\`.\`id\` = \`hub\`.\`collaborationId\`
+        WHERE \`collaboration\`.\`id\` = '${collaborationID}' UNION
+
+        SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`collaboration\`
+        RIGHT JOIN \`challenge\` on \`collaboration\`.\`id\` = \`challenge\`.\`collaborationId\`
+        WHERE \`collaboration\`.\`id\` = '${collaborationID}' UNION
+
+        SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`collaboration\`
+        RIGHT JOIN \`opportunity\` on \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
+        WHERE \`collaboration\`.\`id\` = '${collaborationID}';
+      `
+    );
+
+    const community = await this.communityRepository.findOne({
+      id: result.communityId,
+    });
+
+    if (!community)
+      throw new EntityNotInitializedException(
+        `Community for collaboration ${collaborationID} not initialized!`,
+        LogContext.COMMUNITY
+      );
+
+    const communityPolicy: ICommunityPolicy = JSON.parse(community.policy);
+
+    return communityPolicy.member.credential;
   }
 }
