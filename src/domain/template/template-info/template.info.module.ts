@@ -22,10 +22,6 @@ import { TemplateInfoAuthorizationService } from './template.info.service.author
     TemplateInfoAuthorizationService,
     TemplateInfoResolverFields,
   ],
-  exports: [
-    TemplateInfoService,
-    TemplateInfoAuthorizationService,
-    TemplateInfoResolverFields,
-  ],
+  exports: [TemplateInfoService, TemplateInfoAuthorizationService],
 })
 export class TemplateInfoModule {}
