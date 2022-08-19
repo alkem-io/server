@@ -18,6 +18,16 @@ export class TemplateInfoAuthorizationService {
     templateInfo: ITemplateInfo,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<ITemplateInfo> {
+    //hack because relationship because of auth service and domain service should not exist
+    //and due to typeorm limitation eager loading of visual was removed
+    const templateInfoWithVisual = await this.templateInfoRepository.findOne(
+      { id: templateInfo.id },
+      {
+        relations: ['visual'],
+      }
+    );
+    templateInfo.visual = templateInfoWithVisual?.visual;
+
     if (templateInfo.visual) {
       templateInfo.visual.authorization =
         this.authorizationPolicyService.inheritParentAuthorization(
