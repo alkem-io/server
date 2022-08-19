@@ -98,6 +98,13 @@ export class OpportunityAuthorizationService {
     );
     rules.push(opportunityMember);
 
+    const updateInnovationFlowRule = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
+      AuthorizationCredential.GLOBAL_ADMIN
+    );
+    updateInnovationFlowRule.inheritable = false;
+    rules.push(updateInnovationFlowRule);
+
     return rules;
   }
 }

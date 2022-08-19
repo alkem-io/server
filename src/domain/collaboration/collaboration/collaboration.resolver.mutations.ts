@@ -149,9 +149,13 @@ export class CollaborationResolverMutations {
     const callout =
       await this.collaborationService.createCalloutOnCollaboration(calloutData);
 
+    const membershipCredential =
+      await this.collaborationService.getMembershipCredential(collaboration.id);
+
     return await this.calloutAuthorizationService.applyAuthorizationPolicy(
       callout,
-      collaboriationAuthorizationPolicy
+      collaboriationAuthorizationPolicy,
+      membershipCredential
     );
   }
 }

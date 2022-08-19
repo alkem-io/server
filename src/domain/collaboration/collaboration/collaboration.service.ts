@@ -18,8 +18,7 @@ import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collabo
 import { CreateRelationOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.relation';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
-import { AspectService } from '../aspect/aspect.service';
-import { CanvasService } from '@domain/common/canvas/canvas.service';
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 
 @Injectable()
 export class CollaborationService {
@@ -28,8 +27,6 @@ export class CollaborationService {
     private calloutService: CalloutService,
     private namingService: NamingService,
     private relationService: RelationService,
-    private aspectService: AspectService,
-    private canvasService: CanvasService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>
   ) {}
@@ -219,5 +216,13 @@ export class CollaborationService {
       );
 
     return aspectsCount;
+  }
+
+  public async getMembershipCredential(
+    collaborationID: string
+  ): Promise<CredentialDefinition> {
+    return await this.namingService.getMembershipCredentialForCollaboration(
+      collaborationID
+    );
   }
 }
