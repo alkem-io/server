@@ -125,6 +125,18 @@ export class TemplatesSetService {
     return templatesSetPopulated.aspectTemplates;
   }
 
+  public getAspectTemplate(templateId: string): Promise<IAspectTemplate> {
+    return this.aspectTemplateService.getAspectTemplateOrFail(templateId);
+  }
+
+  public getCanvasTemplate(templateId: string): Promise<ICanvasTemplate> {
+    return this.canvasTemplateService.getCanvasTemplateOrFail(templateId);
+  }
+
+  public getLifecycleTemplate(templateId: string): Promise<ILifecycleTemplate> {
+    return this.lifecycleTemplateService.getLifecycleTemplateOrFail(templateId);
+  }
+
   async createAspectTemplate(
     templatesSet: ITemplatesSet,
     aspectTemplateInput: CreateAspectTemplateInput
