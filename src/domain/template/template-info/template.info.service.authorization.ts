@@ -5,36 +5,30 @@ import { ITemplateInfo } from './template.info.interface';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TemplateInfo } from './template.info.entity';
 import { Repository } from 'typeorm';
+import { TemplateInfoService } from './template.info.service';
 
 @Injectable()
 export class TemplateInfoAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(TemplateInfo)
-    private templateInfoRepository: Repository<TemplateInfo>
+    private templateInfoRepository: Repository<TemplateInfo>,
+    private templateInfoService: TemplateInfoService
   ) {}
 
   async applyAuthorizationPolicy(
     templateInfo: ITemplateInfo,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<ITemplateInfo> {
-    //hack because relationship because of auth service and domain service should not exist
-    //and due to typeorm limitation eager loading of visual was removed
-    const templateInfoWithVisual = await this.templateInfoRepository.findOne(
-      { id: templateInfo.id },
-      {
-        relations: ['visual'],
-      }
+    templateInfo.visual = await this.templateInfoService.getVisual(
+      templateInfo
     );
-    templateInfo.visual = templateInfoWithVisual?.visual;
 
-    if (templateInfo.visual) {
-      templateInfo.visual.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          templateInfo.visual.authorization,
-          parentAuthorization
-        );
-    }
+    templateInfo.visual.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        templateInfo.visual.authorization,
+        parentAuthorization
+      );
 
     if (templateInfo.tagset) {
       templateInfo.tagset.authorization =
