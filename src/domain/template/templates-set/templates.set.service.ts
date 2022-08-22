@@ -79,7 +79,12 @@ export class TemplatesSetService {
 
   async deleteTemplatesSet(templatesSetID: string): Promise<ITemplatesSet> {
     const templatesSet = await this.getTemplatesSetOrFail(templatesSetID, {
-      relations: ['authorization', 'aspectTemplates', 'canvasTemplates'],
+      relations: [
+        'authorization',
+        'aspectTemplates',
+        'canvasTemplates',
+        'lifecycleTemplates',
+      ],
     });
 
     if (templatesSet.authorization)
@@ -123,6 +128,18 @@ export class TemplatesSetService {
       );
     }
     return templatesSetPopulated.aspectTemplates;
+  }
+
+  public getAspectTemplate(templateId: string): Promise<IAspectTemplate> {
+    return this.aspectTemplateService.getAspectTemplateOrFail(templateId);
+  }
+
+  public getCanvasTemplate(templateId: string): Promise<ICanvasTemplate> {
+    return this.canvasTemplateService.getCanvasTemplateOrFail(templateId);
+  }
+
+  public getLifecycleTemplate(templateId: string): Promise<ILifecycleTemplate> {
+    return this.lifecycleTemplateService.getLifecycleTemplateOrFail(templateId);
   }
 
   async createAspectTemplate(
