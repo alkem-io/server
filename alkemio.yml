@@ -354,6 +354,9 @@ platform:
   # Home page - Opensource
   opensource: ${PLATFORM_OPENSOURCE}:https://github.com/alkem-io
 
+  # Home page - Opensource
+  releases: ${PLATFORM_RELEASES}:https://github.com/alkem-io/client-web/releases
+
 ssi:
   # Jolocom SDK is used for providing SSI capabilities on the platform.
   # Note: NOT FOR PRODUCTION USAGE, experimental functionality,
