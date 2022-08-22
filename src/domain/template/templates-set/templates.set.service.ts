@@ -79,7 +79,12 @@ export class TemplatesSetService {
 
   async deleteTemplatesSet(templatesSetID: string): Promise<ITemplatesSet> {
     const templatesSet = await this.getTemplatesSetOrFail(templatesSetID, {
-      relations: ['authorization', 'aspectTemplates', 'canvasTemplates'],
+      relations: [
+        'authorization',
+        'aspectTemplates',
+        'canvasTemplates',
+        'lifecycleTemplates',
+      ],
     });
 
     if (templatesSet.authorization)
