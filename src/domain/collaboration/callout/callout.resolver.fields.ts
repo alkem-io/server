@@ -74,7 +74,7 @@ export class CalloutResolverFields {
       name: 'limit',
       type: () => Float,
       description:
-        'The number of Organizations to return; if omitted return all Organizations.',
+        'The number of Canvases to return; if omitted return all Canvases.',
       nullable: true,
     })
     limit: number,
@@ -82,7 +82,7 @@ export class CalloutResolverFields {
       name: 'shuffle',
       type: () => Boolean,
       description:
-        'If true and limit is specified then return the Organizations based on a random selection. Defaults to false.',
+        'If true and limit is specified then return the Canvases based on a random selection. Defaults to false.',
       nullable: true,
     })
     shuffle: boolean
