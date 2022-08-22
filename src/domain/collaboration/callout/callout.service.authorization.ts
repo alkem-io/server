@@ -81,7 +81,6 @@ export class CalloutAuthorizationService {
       [
         AuthorizationPrivilege.CREATE_ASPECT,
         AuthorizationPrivilege.CREATE_CANVAS,
-        AuthorizationPrivilege.CREATE_COMMENT,
       ],
       membershipCredential.type,
       membershipCredential.resourceID
@@ -90,7 +89,10 @@ export class CalloutAuthorizationService {
     newRules.push(communityMemberNotInherited);
 
     const communityMemberInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.UPDATE_CANVAS],
+      [
+        AuthorizationPrivilege.UPDATE_CANVAS,
+        AuthorizationPrivilege.CREATE_COMMENT,
+      ],
       membershipCredential.type,
       membershipCredential.resourceID
     );
