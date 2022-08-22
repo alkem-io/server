@@ -13,6 +13,7 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
+import { AuthorizationCredential } from '@common/enums';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -37,8 +38,7 @@ export class CollaborationAuthorizationService {
 
     collaboration.authorization = this.appendCredentialRules(
       collaboration.authorization,
-      collaboration.id,
-      communityCredential
+      collaboration.id
     );
 
     collaboration.authorization = this.appendPrivilegeRules(
@@ -74,8 +74,7 @@ export class CollaborationAuthorizationService {
 
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    collaborationID: string,
-    membershipCredential: CredentialDefinition
+    collaborationID: string
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -86,12 +85,8 @@ export class CollaborationAuthorizationService {
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
     const communityMemberNotInherited = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE_CALLOUT,
-        AuthorizationPrivilege.CREATE_RELATION,
-      ],
-      membershipCredential.type,
-      membershipCredential.resourceID
+      [AuthorizationPrivilege.CREATE_RELATION],
+      AuthorizationCredential.USER_SELF_MANAGEMENT
     );
     communityMemberNotInherited.inheritable = false;
     newRules.push(communityMemberNotInherited);
