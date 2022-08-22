@@ -7,13 +7,13 @@ import { Markdown } from '@domain/common/scalars/scalar.markdown';
 @ObjectType('TemplateInfo')
 export abstract class ITemplateInfo extends IBaseAlkemio {
   @Field(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'The title for this Template.',
   })
   title!: string;
 
   @Field(() => Markdown, {
-    nullable: true,
+    nullable: false,
     description: 'The description for this Template.',
   })
   description!: string;

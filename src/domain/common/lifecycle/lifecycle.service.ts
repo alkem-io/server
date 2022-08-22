@@ -28,7 +28,9 @@ export class LifecycleService {
     machineConfig: ILifecycleDefinition
   ): Promise<ILifecycle> {
     // Ensure parent is set
-    machineConfig.context.parentID = parentID;
+    if (machineConfig.context) {
+      machineConfig.context.parentID = parentID;
+    }
     const machineConfigStr = this.serializeLifecycleDefinition(machineConfig);
     const lifecycle = new Lifecycle(machineConfigStr);
 
@@ -84,7 +86,10 @@ export class LifecycleService {
     );
 
     const machineService = interpretedLifecycle.start(restoredState);
-    const parentID = machineDef.context.parentID;
+    let parentID = '';
+    if (machineDef.context && machine.context.parentID) {
+      parentID = machineDef.context.parentID;
+    }
 
     machineService.send({
       type: eventName,
@@ -193,7 +198,10 @@ export class LifecycleService {
     const machineDefJson = this.deserializeLifecycleDefinition(
       lifecycle.machineDef
     );
-    return machineDefJson.context.parentID;
+    if (machineDefJson.context && machineDefJson.context.parentID) {
+      return machineDefJson.context.parentID;
+    }
+    return '';
   }
 
   async save(lifecycle: Lifecycle): Promise<Lifecycle> {

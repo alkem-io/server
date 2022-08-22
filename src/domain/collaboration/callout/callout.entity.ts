@@ -18,8 +18,8 @@ import { Discussion } from '@domain/communication/discussion/discussion.entity';
 
 @Entity()
 export class Callout extends NameableEntity implements ICallout {
-  @Column('text')
-  description?: string;
+  @Column('text', { nullable: false })
+  description!: string;
 
   @Column('text', { nullable: false })
   type!: CalloutType;

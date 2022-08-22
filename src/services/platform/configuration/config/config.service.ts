@@ -28,8 +28,11 @@ export class KonfigService {
         feedback: this.configService.get(ConfigurationTypes.PLATFORM)?.feedback,
         about: this.configService.get(ConfigurationTypes.PLATFORM)?.about,
         impact: this.configService.get(ConfigurationTypes.PLATFORM)?.impact,
-        foundation: this.configService.get(ConfigurationTypes.PLATFORM)?.foundation,
-        opensource: this.configService.get(ConfigurationTypes.PLATFORM)?.opensource,
+        foundation: this.configService.get(ConfigurationTypes.PLATFORM)
+          ?.foundation,
+        opensource: this.configService.get(ConfigurationTypes.PLATFORM)
+          ?.opensource,
+        releases: this.configService.get(ConfigurationTypes.PLATFORM)?.releases,
         featureFlags: [
           {
             name: 'ssi',
