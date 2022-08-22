@@ -59,6 +59,12 @@ export class OpportunityService {
     hubID: string,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
+    // Validate incoming data
+    await this.lifecycleTemplateService.validateLifecycleDefinitionOrFail(
+      opportunityData.innovationFlowTemplateID,
+      hubID,
+      LifecycleType.OPPORTUNITY
+    );
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
     opportunity.hubID = hubID;
     opportunity.projects = [];
