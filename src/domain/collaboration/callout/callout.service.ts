@@ -310,7 +310,7 @@ export class CalloutService {
       );
       if (!aspect)
         throw new EntityNotFoundException(
-          `Aspect with requested ID (${aspectID}) not located within current Context: : ${callout.id}`,
+          `Aspect with requested ID (${aspectID}) not located within current Callout: ${callout.id}`,
           LogContext.COLLABORATION
         );
       results.push(aspect);
