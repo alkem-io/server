@@ -13,6 +13,7 @@ import { TemplateBaseService } from '../template-base/template.base.service';
 import { CreateInnovationFlowTemplateInput } from './dto/lifecycle.template.dto.create';
 import { UpdateLifecycleTemplateInput } from './dto/lifecycle.template.dto.update';
 import { LifecycleType } from '@common/enums/lifecycle.type';
+import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 
 @Injectable()
 export class LifecycleTemplateService {
@@ -105,7 +106,45 @@ export class LifecycleTemplateService {
     return await this.lifecycleTemplateRepository.save(lifecycleTemplate);
   }
 
-  public async isLifecycleTemplateInHub(
+  public async getLifecycleDefinitionFromTemplate(
+    templateID: string,
+    hubID: string,
+    templateType: LifecycleType
+  ): Promise<ILifecycleDefinition> {
+    await this.validateLifecycleDefinitionOrFail(
+      templateID,
+      hubID,
+      templateType
+    );
+    const lifecycleTemplate = await this.getLifecycleTemplateOrFail(templateID);
+    if (!lifecycleTemplate.definition) {
+      throw new EntityNotFoundException(
+        `Lifecycle Template with ID: ${templateID}: definition is not set`,
+        LogContext.LIFECYCLE
+      );
+    }
+    return JSON.parse(lifecycleTemplate.definition);
+  }
+
+  async validateLifecycleDefinitionOrFail(
+    templateID: string,
+    hubID: string,
+    templateType: LifecycleType
+  ): Promise<void> {
+    const isLifecycleTemplateAvailable = await this.isLifecycleTemplateInHub(
+      templateID,
+      hubID,
+      templateType
+    );
+    if (!isLifecycleTemplateAvailable) {
+      throw new EntityNotFoundException(
+        `Unable to find ${templateType} Lifecycle Template with ID: ${templateID}, in parent Hub template set.`,
+        LogContext.LIFECYCLE
+      );
+    }
+  }
+
+  private async isLifecycleTemplateInHub(
     lifecycleTemplateID: string,
     hubID: string,
     templateType: string
@@ -123,31 +162,5 @@ export class LifecycleTemplateService {
     );
 
     return queryResult.hubCount === '1';
-  }
-
-  public async getLifecycleDefinitionFromTemplate(
-    templateID: string,
-    hubID: string,
-    templateType: LifecycleType
-  ) {
-    const isLifecycleTemplateAvailable = await this.isLifecycleTemplateInHub(
-      templateID,
-      hubID,
-      templateType
-    );
-    if (!isLifecycleTemplateAvailable) {
-      throw new EntityNotFoundException(
-        `Unable to find ${templateType} Lifecycle Template with ID: ${templateID}, in parent Hub template set.`,
-        LogContext.LIFECYCLE
-      );
-    }
-    const lifecycleTemplate = await this.getLifecycleTemplateOrFail(templateID);
-    if (!lifecycleTemplate.definition) {
-      throw new EntityNotFoundException(
-        `Lifecycle Template with ID: ${templateID}: definition is not set`,
-        LogContext.LIFECYCLE
-      );
-    }
-    return JSON.parse(lifecycleTemplate.definition);
   }
 }

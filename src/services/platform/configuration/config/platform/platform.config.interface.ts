@@ -59,6 +59,12 @@ export abstract class IPlatformConfig {
   })
   support!: string;
 
+  @Field(() => String, {
+    nullable: false,
+    description: 'URL where users can get information about previouse releases',
+  })
+  releases!: string;
+
   @Field(() => [FeatureFlag], {
     nullable: false,
     description: 'The feature flags for the platform',
