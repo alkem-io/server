@@ -20,6 +20,7 @@ import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 
 @Injectable()
 export class CollaborationService {
@@ -117,6 +118,47 @@ export class CollaborationService {
     collaboration.callouts.push(callout);
     await this.collaborationRepository.save(collaboration);
     return callout;
+  }
+
+  public async getCalloutsFromCollaboration(
+    collaboration: ICollaboration,
+    calloutIDs?: string[],
+    limit?: number,
+    shuffle?: boolean
+  ): Promise<ICallout[]> {
+    const collaborationLoaded = await this.getCollaborationOrFail(
+      collaboration.id,
+      {
+        relations: ['callouts'],
+      }
+    );
+    if (!collaborationLoaded.callouts)
+      throw new EntityNotFoundException(
+        `Callout not initialised, no canvases: ${collaboration.id}`,
+        LogContext.COLLABORATION
+      );
+
+    if (!calloutIDs) {
+      const limitAndShuffled = limitAndShuffle(
+        collaborationLoaded.callouts,
+        limit,
+        shuffle
+      );
+      return limitAndShuffled;
+    }
+    const results: ICallout[] = [];
+    for (const calloutID of calloutIDs) {
+      const callout = collaborationLoaded.callouts.find(
+        callout => callout.id === calloutID
+      );
+      if (!callout)
+        throw new EntityNotFoundException(
+          `Callout with requested ID (${calloutID}) not located within current Collaboration: : ${collaboration.id}`,
+          LogContext.COLLABORATION
+        );
+      results.push(callout);
+    }
+    return results;
   }
 
   public async getCalloutsOnCollaboration(
