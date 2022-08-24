@@ -120,6 +120,17 @@ export class CollaborationService {
       );
     }
 
+    const displayNameAvailable =
+      await this.namingService.isCalloutDisplayNameAvailableInCollaboration(
+        calloutData.displayName,
+        collaboration.id
+      );
+    if (!displayNameAvailable)
+      throw new ValidationException(
+        `Unable to create Callout: the provided displayName is already taken: ${calloutData.displayName}`,
+        LogContext.CHALLENGES
+      );
+
     const callout = await this.calloutService.createCallout(calloutData);
     collaboration.callouts.push(callout);
     await this.collaborationRepository.save(collaboration);
