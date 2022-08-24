@@ -21,6 +21,7 @@ import { RelationService } from '@domain/collaboration/relation/relation.service
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
+import { collaborationDefaults } from './collaboration.defaults';
 
 @Injectable()
 export class CollaborationService {
@@ -35,9 +36,14 @@ export class CollaborationService {
 
   async createCollaboration(): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
+    collaboration.authorization = new AuthorizationPolicy();
     collaboration.relations = [];
     collaboration.callouts = [];
-    collaboration.authorization = new AuthorizationPolicy();
+
+    for (const calloutDefault of collaborationDefaults.callouts) {
+      const callout = await this.calloutService.createCallout(calloutDefault);
+      collaboration.callouts.push(callout);
+    }
     return collaboration;
   }
 
