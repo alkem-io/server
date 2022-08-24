@@ -28,18 +28,6 @@ hosting:
   #
   path_api_public_rest: ${PATH_API_PUBLIC_REST}:/api/public/rest
 
-  # The path from the end point for all public api rest requests.
-  # It is combined with the `endpoint` above to provide the full path for incoming requests targeting the public Rest api.
-  #
-  path_api_public_graphql: ${PATH_API_PUBLIC_GRAPHQL}:/api/public/graphql
-
-  # The type of environment is used in multiple places to determine whether dev tooling is enabled.
-  # The tyoe of environment can also be used for monitoring / logging / analysis in an ELK cluster / ElasticCloud instance.
-  # For production deployments it should be set to Prod.
-  #
-  # Options: Dev, Prod
-  environment: ${ENVIRONMENT}:Dev
-
   # Support for subscriptions enabled or not. These require WebSocket connectioins
   subscriptions:
     enabled: ${SUBSCRIPTIONS_ENABLED}:false
@@ -230,29 +218,6 @@ monitoring:
       # The context to actually log
       context: ${LOGGING_CONTEXT_ID}:subscriptions
 
-  # Elastic logging configuration
-  elastic:
-    # A flag setting whether Winston Elastic transport will be enabled.
-    # If the flag is set to true logs of the appropriate level (see below) will be outputted to Elastic
-    # given a correct Elastic Cloud endpoints are provided.
-    enabled: ${LOGGING_ELK_ENABLED}:false
-
-    # Logging level for outputs to elastic.
-    # Valid values are log|error|warn|debug|verbose.
-    logging_level: ${LOGGING_LEVEL_ELK}:Error
-
-    # Elastic Cloud configuration
-    cloud:
-      # Elastic Cloud ID. Typically it will look like (e.g., this is not a valid value):
-      # elastic-observability-deployment-dev:d2VzdGV1cm9wZS5henVyZS5lbGFzdGljLWNsb3VkLVfBcTo5MjQzJGMyZjJiYTM4ZmM0ZTQyZjY5N2Q5MDU2YjIxYzkyNzY3JDRjMDAxNjYzZTQzMDQzNThhNTkwMzY2MWI2ZDU5MTVl
-      id: ${ELASTIC_CLOUD_ID}
-
-      # Elastic Cloud username. Defaults to 'elastic'.
-      username: ${ELASTIC_CLOUD_USERNAME}
-
-      # Elastic Cloud password.
-      password: ${ELASTIC_CLOUD_PASSWORD}
-
   # Sentry (client) logging configuration
   sentry:
     # A flag setting whether Sentry monitoring will be used on the client.
@@ -388,6 +353,9 @@ platform:
 
   # Home page - Opensource
   opensource: ${PLATFORM_OPENSOURCE}:https://github.com/alkem-io
+
+  # Home page - Opensource
+  releases: ${PLATFORM_RELEASES}:https://www.alkemio.foundation/releases
 
 ssi:
   # Jolocom SDK is used for providing SSI capabilities on the platform.

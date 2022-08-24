@@ -21,15 +21,15 @@ export class RelationAuthorizationService {
     private relationRepository: Repository<Relation>
   ) {}
 
-  async applyAuthorizationPolicy(
+  public async applyAuthorizationPolicy(
     relation: IRelation,
-    opportunityAuthorization: IAuthorizationPolicy | undefined,
+    collaborationAuthorizationPolicy: IAuthorizationPolicy | undefined,
     userID: string
   ): Promise<IRelation> {
     relation.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         relation.authorization,
-        opportunityAuthorization
+        collaborationAuthorizationPolicy
       );
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
@@ -53,13 +53,13 @@ export class RelationAuthorizationService {
     return await this.relationRepository.save(relation);
   }
 
-  localExtendAuthorizationPolicy(
+  public localExtendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
         'Authorization definition not found',
-        LogContext.OPPORTUNITY
+        LogContext.COLLABORATION
       );
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 

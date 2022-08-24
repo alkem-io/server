@@ -1,30 +1,20 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { IOpportunity, Opportunity } from '@domain/collaboration/opportunity';
+import { Opportunity } from './opportunity.entity';
+import { IOpportunity } from './opportunity.interface';
 import { OpportunityService } from './opportunity.service';
-import { IRelation } from '@domain/collaboration/relation';
-import { ILifecycle } from '@domain/common/lifecycle';
-import { IContext } from '@domain/context/context';
-import { ICommunity } from '@domain/community/community';
+import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
+import { IContext } from '@domain/context/context/context.interface';
+import { ICommunity } from '@domain/community/community/community.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
+import { ICollaboration } from '../collaboration/collaboration.interface';
 
 @Resolver(() => IOpportunity)
 export class OpportunityResolverFields {
   constructor(private opportunityService: OpportunityService) {}
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('relations', () => [IRelation], {
-    nullable: true,
-    description: 'The set of Relations within the context of this Opportunity.',
-  })
-  @Profiling.api
-  async relations(@Parent() opportunity: Opportunity) {
-    return await this.opportunityService.getRelations(opportunity);
-  }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
@@ -57,6 +47,17 @@ export class OpportunityResolverFields {
   @Profiling.api
   async context(@Parent() opportunity: Opportunity) {
     return await this.opportunityService.getContext(opportunity.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('collaboration', () => ICollaboration, {
+    nullable: true,
+    description: 'The collaboration for the Opportunity.',
+  })
+  @Profiling.api
+  async collaboration(@Parent() opportunity: Opportunity) {
+    return await this.opportunityService.getCollaboration(opportunity);
   }
 
   @ResolveField('activity', () => [INVP], {

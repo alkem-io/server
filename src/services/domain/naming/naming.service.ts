@@ -1,15 +1,21 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { getConnection, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project';
 import { NameID, UUID } from '@domain/common/scalars';
-import { Aspect } from '@domain/context/aspect/aspect.entity';
+import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
+import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Community } from '@domain/community/community';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { EntityNotInitializedException } from '@common/exceptions';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -21,10 +27,16 @@ export class NamingService {
     private hubRepository: Repository<Hub>,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>,
+    @InjectRepository(Canvas)
+    private canvasRepository: Repository<Canvas>,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @InjectRepository(Project)
     private projectRepository: Repository<Project>,
+    @InjectRepository(Callout)
+    private calloutRepository: Repository<Callout>,
+    @InjectRepository(Community)
+    private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -50,16 +62,16 @@ export class NamingService {
     return true;
   }
 
-  async isAspectNameIdAvailableInContext(
+  async isAspectNameIdAvailableInCallout(
     nameID: string,
-    contextID: string
+    calloutID: string
   ): Promise<boolean> {
     const query = this.aspectRepository
       .createQueryBuilder('aspect')
-      .leftJoinAndSelect('aspect.context', 'context')
-      .where('context.id = :id')
+      .leftJoinAndSelect('aspect.callout', 'callout')
+      .where('callout.id = :id')
       .andWhere('aspect.nameID= :nameID')
-      .setParameters({ id: `${contextID}`, nameID: `${nameID}` });
+      .setParameters({ id: `${calloutID}`, nameID: `${nameID}` });
     const aspectWithNameID = await query.getOne();
     if (aspectWithNameID) {
       return false;
@@ -68,18 +80,36 @@ export class NamingService {
     return true;
   }
 
-  async isCanvasNameIdAvailableInContext(
+  async isCanvasNameIdAvailableInCallout(
     nameID: string,
-    contextID: string
+    calloutID: string
   ): Promise<boolean> {
-    const query = this.aspectRepository
+    const query = this.canvasRepository
       .createQueryBuilder('canvas')
-      .leftJoinAndSelect('canvas.context', 'context')
-      .where('context.id = :id')
+      .leftJoinAndSelect('canvas.callout', 'callout')
+      .where('callout.id = :id')
       .andWhere('canvas.nameID= :nameID')
-      .setParameters({ id: `${contextID}`, nameID: `${nameID}` });
-    const aspectWithNameID = await query.getOne();
-    if (aspectWithNameID) {
+      .setParameters({ id: `${calloutID}`, nameID: `${nameID}` });
+    const canvasWithNameID = await query.getOne();
+    if (canvasWithNameID) {
+      return false;
+    }
+
+    return true;
+  }
+
+  async isCalloutNameIdAvailableInCollaboration(
+    nameID: string,
+    collaborationID: string
+  ): Promise<boolean> {
+    const query = this.calloutRepository
+      .createQueryBuilder('callout')
+      .leftJoinAndSelect('callout.collaboration', 'collaboration')
+      .where('collaboration.id = :id')
+      .andWhere('callout.nameID= :nameID')
+      .setParameters({ id: `${collaborationID}`, nameID: `${nameID}` });
+    const calloutsWithNameID = await query.getOne();
+    if (calloutsWithNameID) {
       return false;
     }
 
@@ -96,14 +126,15 @@ export class NamingService {
     return UUID.REGEX.test(uuid);
   }
 
-  async getCommunicationGroupIdForContext(contextID: string): Promise<string> {
+  async getCommunicationGroupIdForCallout(calloutID: string): Promise<string> {
     const hub = await this.hubRepository
       .createQueryBuilder('hub')
       .leftJoinAndSelect('hub.community', 'community')
-      .leftJoinAndSelect('hub.context', 'context')
       .leftJoinAndSelect('community.communication', 'communication')
-      .where('context.id = :id')
-      .setParameters({ id: `${contextID}` })
+      .leftJoinAndSelect('hub.collaboration', 'collaboration')
+      .innerJoinAndSelect('collaboration.callouts', 'callout')
+      .where('callout.id = :id')
+      .setParameters({ id: `${calloutID}` })
       .getOne();
     if (hub) {
       const communicationGroupID =
@@ -114,10 +145,11 @@ export class NamingService {
     const challenge = await this.challengeRepository
       .createQueryBuilder('challenge')
       .leftJoinAndSelect('challenge.community', 'community')
-      .leftJoinAndSelect('challenge.context', 'context')
       .leftJoinAndSelect('community.communication', 'communication')
-      .where('context.id = :id')
-      .setParameters({ id: `${contextID}` })
+      .leftJoinAndSelect('challenge.collaboration', 'collaboration')
+      .innerJoinAndSelect('collaboration.callouts', 'callout')
+      .where('callout.id = :id')
+      .setParameters({ id: `${calloutID}` })
       .getOne();
     if (challenge) {
       const communicationGroupID =
@@ -129,10 +161,11 @@ export class NamingService {
     const opportunity = await this.opportunityRepository
       .createQueryBuilder('opportunity')
       .leftJoinAndSelect('opportunity.community', 'community')
-      .leftJoinAndSelect('opportunity.context', 'context')
       .leftJoinAndSelect('community.communication', 'communication')
-      .where('context.id = :id')
-      .setParameters({ id: `${contextID}` })
+      .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
+      .innerJoinAndSelect('collaboration.callouts', 'callout')
+      .where('callout.id = :id')
+      .setParameters({ id: `${calloutID}` })
       .getOne();
     if (opportunity) {
       const communicationGroupID =
@@ -141,7 +174,7 @@ export class NamingService {
     }
 
     throw new RelationshipNotFoundException(
-      `Unable to find the communication ID for the provided context: ${contextID}`,
+      `Unable to find the communication ID for the provided callout: ${calloutID}`,
       LogContext.CONTEXT
     );
   }
@@ -164,5 +197,43 @@ export class NamingService {
       .replace(nameIDExcludedCharacters, '')
       .toLowerCase()
       .slice(0, 25);
+  }
+
+  async getMembershipCredentialForCollaboration(
+    collaborationID: string
+  ): Promise<ICredentialDefinition> {
+    const [result]: {
+      entityId: string;
+      communityId: string;
+      communityType: string;
+    }[] = await getConnection().query(
+      `
+        SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`collaboration\`
+        RIGHT JOIN \`hub\` on \`collaboration\`.\`id\` = \`hub\`.\`collaborationId\`
+        WHERE \`collaboration\`.\`id\` = '${collaborationID}' UNION
+
+        SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`collaboration\`
+        RIGHT JOIN \`challenge\` on \`collaboration\`.\`id\` = \`challenge\`.\`collaborationId\`
+        WHERE \`collaboration\`.\`id\` = '${collaborationID}' UNION
+
+        SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`collaboration\`
+        RIGHT JOIN \`opportunity\` on \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
+        WHERE \`collaboration\`.\`id\` = '${collaborationID}';
+      `
+    );
+
+    const community = await this.communityRepository.findOne({
+      id: result.communityId,
+    });
+
+    if (!community)
+      throw new EntityNotInitializedException(
+        `Community for collaboration ${collaborationID} not initialized!`,
+        LogContext.COMMUNITY
+      );
+
+    const communityPolicy: ICommunityPolicy = JSON.parse(community.policy);
+
+    return communityPolicy.member.credential;
   }
 }

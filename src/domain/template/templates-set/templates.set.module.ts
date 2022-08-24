@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AspectTemplateModule } from '../aspect-template/aspect.template.module';
 import { CanvasTemplateModule } from '../canvas-template/canvas.template.module';
+import { LifecycleTemplateModule } from '../lifecycle-template/lifecycle.template.module';
 import { TemplateBaseModule } from '../template-base/template.base.module';
 import { TemplatesSet } from './templates.set.entity';
 import { TemplatesSetResolverFields } from './templates.set.resolver.fields';
@@ -17,6 +18,7 @@ import { TemplatesSetAuthorizationService } from './templates.set.service.author
     AuthorizationModule,
     AspectTemplateModule,
     CanvasTemplateModule,
+    LifecycleTemplateModule,
     TemplateBaseModule,
     TypeOrmModule.forFeature([TemplatesSet]),
   ],

@@ -27,7 +27,7 @@ import { IUserGroup } from '@domain/community/user-group';
 import { IContext } from '@domain/context/context';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { NamingService } from '@src/services/domain/naming/naming.service';
-import { challengeLifecycleConfigDefault } from '@domain/challenge/challenge/challenge.lifecycle.config.default';
+import { challengeLifecycleConfigDefault } from '@domain/template/templates-set/templates.set.default.lifecycle.challenge';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -51,10 +51,12 @@ import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceType } from '@common/enums/preference.type';
-import { AspectService } from '@domain/context/aspect/aspect.service';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { ILifecycleTemplate } from '@domain/template/lifecycle-template/lifecycle.template.interface';
+import { LifecycleType } from '@common/enums/lifecycle.type';
 
 @Injectable()
 export class HubService {
@@ -71,7 +73,6 @@ export class HubService {
     private challengeService: ChallengeService,
     private preferenceSetService: PreferenceSetService,
     private templatesSetService: TemplatesSetService,
-    private aspectService: AspectService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -111,6 +112,7 @@ export class HubService {
     hub.templatesSet = await this.templatesSetService.createTemplatesSet();
 
     // Lifecycle
+
     const machineConfig: any = challengeLifecycleConfigDefault;
     hub.lifecycle = await this.lifecycleService.createLifecycle(
       hub.id,
@@ -493,11 +495,50 @@ export class HubService {
     );
   }
 
+  public async getCollaboration(hub: IHub): Promise<ICollaboration> {
+    return await this.baseChallengeService.getCollaboration(
+      hub.id,
+      this.hubRepository
+    );
+  }
+
   async getLifecycle(hub: IHub): Promise<ILifecycle> {
     return await this.baseChallengeService.getLifecycle(
       hub.id,
       this.hubRepository
     );
+  }
+
+  async getDefaultInnovationFlowTemplate(
+    hubId: string,
+    lifecycleType: LifecycleType
+  ): Promise<ILifecycleTemplate> {
+    const hub = await this.getHubOrFail(hubId, {
+      relations: ['templateSet'],
+    });
+
+    if (!hub.templatesSet)
+      throw new EntityNotInitializedException(
+        `Templates set for hub: ${hubId} not initialized`,
+        LogContext.CHALLENGES
+      );
+
+    const allInnovationFlowTemplates =
+      await this.templatesSetService.getInnovationFlowTemplates(
+        hub.templatesSet
+      );
+
+    const selectableInnovationFlowTemplates = allInnovationFlowTemplates.filter(
+      x => x.type === lifecycleType
+    );
+
+    if (selectableInnovationFlowTemplates.length === 0)
+      throw new ValidationException(
+        `Could not find default innovation flow template of type ${lifecycleType} in hub ${hubId}`,
+        LogContext.CHALLENGES
+      );
+
+    return selectableInnovationFlowTemplates[0];
   }
 
   async validateChallengeNameIdOrFail(proposedNameID: string, hubID: string) {
@@ -606,13 +647,22 @@ export class HubService {
     activity.push(membersTopic);
 
     // Aspects
-    const { id: contextId } = await this.getContext(hub);
-    const aspectsCount = await this.aspectService.getAspectsInContextCount(
-      contextId
+    const aspectsCount = await this.baseChallengeService.getAspectsCount(
+      hub,
+      this.hubRepository
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${hub.id}`;
     activity.push(aspectsTopic);
+
+    // Canvases
+    const canvasesCount = await this.baseChallengeService.getCanvasesCount(
+      hub,
+      this.hubRepository
+    );
+    const canvasesTopic = new NVP('canvases', canvasesCount.toString());
+    canvasesTopic.id = `canvases-${hub.id}`;
+    activity.push(canvasesTopic);
 
     return activity;
   }

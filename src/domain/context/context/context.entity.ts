@@ -3,8 +3,6 @@ import { IContext } from '@domain/context/context/context.interface';
 import { EcosystemModel } from '@domain/context/ecosystem-model/ecosystem-model.entity';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Aspect } from '@domain/context/aspect/aspect.entity';
-import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { Location } from '@domain/common/location/location.entity';
 @Entity()
@@ -23,12 +21,6 @@ export class Context extends AuthorizableEntity implements IContext {
 
   @Column('text', { nullable: true })
   who?: string = '';
-
-  @OneToMany(() => Canvas, canvas => canvas.context, {
-    eager: false,
-    cascade: true,
-  })
-  canvases?: Canvas[];
 
   @OneToMany(() => Reference, reference => reference.context, {
     eager: false,
@@ -57,12 +49,6 @@ export class Context extends AuthorizableEntity implements IContext {
     cascade: true,
   })
   visuals?: Visual[];
-
-  @OneToMany(() => Aspect, aspect => aspect.context, {
-    eager: false,
-    cascade: true,
-  })
-  aspects?: Aspect[];
 
   constructor() {
     super();

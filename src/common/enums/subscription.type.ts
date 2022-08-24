@@ -5,5 +5,5 @@ export enum SubscriptionType {
   ASPECT_COMMENTS_MESSAGE_RECEIVED = 'communicationCommentsMessageReceived',
   CANVAS_CONTENT_UPDATED = 'canvasContentUpdated',
   PROFILE_VERIFIED_CREDENTIAL = 'profileVerifiedCredential',
-  CONTEXT_ASPECT_CREATED = 'contextAspectCreated',
+  CALLOUT_ASPECT_CREATED = 'calloutAspectCreated',
 }

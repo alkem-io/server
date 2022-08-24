@@ -4,11 +4,15 @@ import { VisualService } from '@domain/common/visual/visual.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TemplateInfo } from './template.info.entity';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateTemplateInfoInput } from './dto/template.info.dto.create';
 import { ITemplateInfo } from './template.info.interface';
 import { UpdateTemplateInfoInput } from './dto/template.base.dto.update';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { LogContext } from '@common/enums/logging.context';
+import { IVisual } from '@domain/common/visual/visual.interface';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 
 @Injectable()
 export class TemplateInfoService {
@@ -36,6 +40,22 @@ export class TemplateInfoService {
     templateInfo.visual = await this.visualService.createVisualBannerNarrow();
 
     return await this.templateInfoRepository.save(templateInfo);
+  }
+
+  async getTemplateInfoOrFail(
+    templateInfoID: string,
+    options?: FindOneOptions<TemplateInfo>
+  ): Promise<ITemplateInfo> {
+    const templateInfo = await this.templateInfoRepository.findOne(
+      { id: templateInfoID },
+      options
+    );
+    if (!templateInfo)
+      throw new EntityNotFoundException(
+        `TemplateInfo with id(${templateInfoID}) not found!`,
+        LogContext.COMMUNITY
+      );
+    return templateInfo;
   }
 
   async updateTemplateInfo(
@@ -72,5 +92,21 @@ export class TemplateInfoService {
     );
     result.id = templateInfo.id;
     return result;
+  }
+
+  async getVisual(templateInfo: ITemplateInfo): Promise<IVisual> {
+    const templateInfoPopulated = await this.getTemplateInfoOrFail(
+      templateInfo.id,
+      {
+        relations: ['visual'],
+      }
+    );
+    if (!templateInfoPopulated.visual) {
+      throw new EntityNotInitializedException(
+        `TemplateInfo not initialized: ${templateInfoPopulated.id}`,
+        LogContext.TEMPLATES
+      );
+    }
+    return templateInfoPopulated.visual;
   }
 }

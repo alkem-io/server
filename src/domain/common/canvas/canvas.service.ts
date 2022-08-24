@@ -156,4 +156,10 @@ export class CanvasService {
     }
     return canvasWithPreview.preview;
   }
+
+  async getCanvasesInCalloutCount(calloutId: string): Promise<number> {
+    return await this.canvasRepository.count({
+      where: { callout: calloutId },
+    });
+  }
 }

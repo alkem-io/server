@@ -19,6 +19,9 @@ import { CreateAspectTemplateInput } from '../aspect-template/dto/aspect.templat
 import { CanvasTemplateService } from '../canvas-template/canvas.template.service';
 import { ICanvasTemplate } from '../canvas-template/canvas.template.interface';
 import { CreateCanvasTemplateInput } from '../canvas-template/dto/canvas.template.dto.create';
+import { ILifecycleTemplate } from '../lifecycle-template/lifecycle.template.interface';
+import { CreateInnovationFlowTemplateInput } from '../lifecycle-template/dto/lifecycle.template.dto.create';
+import { LifecycleTemplateService } from '../lifecycle-template/lifecycle.template.service';
 
 @Injectable()
 export class TemplatesSetService {
@@ -28,6 +31,7 @@ export class TemplatesSetService {
     private templatesSetRepository: Repository<TemplatesSet>,
     private aspectTemplateService: AspectTemplateService,
     private canvasTemplateService: CanvasTemplateService,
+    private lifecycleTemplateService: LifecycleTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -41,6 +45,15 @@ export class TemplatesSetService {
           aspectTemplateDefault
         );
       templatesSet.aspectTemplates.push(aspectTemplate);
+    }
+
+    templatesSet.lifecycleTemplates = [];
+    for (const lifecycleTemplateDefault of templatesSetDefaults.lifecycles) {
+      const lifecycleTemplate =
+        await this.lifecycleTemplateService.createInnovationFLowTemplate(
+          lifecycleTemplateDefault
+        );
+      templatesSet.lifecycleTemplates.push(lifecycleTemplate);
     }
 
     templatesSet.canvasTemplates = [];
@@ -59,14 +72,19 @@ export class TemplatesSetService {
     if (!templatesSet)
       throw new EntityNotFoundException(
         `TemplatesSet with id(${templatesSetID}) not found!`,
-        LogContext.COMMUNITY
+        LogContext.TEMPLATES
       );
     return templatesSet;
   }
 
   async deleteTemplatesSet(templatesSetID: string): Promise<ITemplatesSet> {
     const templatesSet = await this.getTemplatesSetOrFail(templatesSetID, {
-      relations: ['authorization', 'aspectTemplates', 'canvasTemplates'],
+      relations: [
+        'authorization',
+        'aspectTemplates',
+        'canvasTemplates',
+        'lifecycleTemplates',
+      ],
     });
 
     if (templatesSet.authorization)
@@ -80,6 +98,14 @@ export class TemplatesSetService {
     if (templatesSet.canvasTemplates) {
       for (const canvasTemplate of templatesSet.canvasTemplates) {
         await this.canvasTemplateService.deleteCanvasTemplate(canvasTemplate);
+      }
+    }
+    if (templatesSet.lifecycleTemplates) {
+      for (const lifecycleTemplate of templatesSet.lifecycleTemplates) {
+        await this.lifecycleTemplateService.deleteLifecycleTemplate(
+          lifecycleTemplate,
+          true
+        );
       }
     }
     return await this.templatesSetRepository.remove(
@@ -99,10 +125,22 @@ export class TemplatesSetService {
     if (!templatesSetPopulated.aspectTemplates) {
       throw new EntityNotInitializedException(
         `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
-        LogContext.COMMUNITY
+        LogContext.TEMPLATES
       );
     }
     return templatesSetPopulated.aspectTemplates;
+  }
+
+  public getAspectTemplate(templateId: string): Promise<IAspectTemplate> {
+    return this.aspectTemplateService.getAspectTemplateOrFail(templateId);
+  }
+
+  public getCanvasTemplate(templateId: string): Promise<ICanvasTemplate> {
+    return this.canvasTemplateService.getCanvasTemplateOrFail(templateId);
+  }
+
+  public getLifecycleTemplate(templateId: string): Promise<ILifecycleTemplate> {
+    return this.lifecycleTemplateService.getLifecycleTemplateOrFail(templateId);
   }
 
   async createAspectTemplate(
@@ -142,7 +180,7 @@ export class TemplatesSetService {
     if (!templatesSetPopulated.canvasTemplates) {
       throw new EntityNotInitializedException(
         `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
-        LogContext.COMMUNITY
+        LogContext.TEMPLATES
       );
     }
     return templatesSetPopulated.canvasTemplates;
@@ -160,5 +198,39 @@ export class TemplatesSetService {
     templatesSet.canvasTemplates.push(canvasTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return canvasTemplate;
+  }
+
+  async getInnovationFlowTemplates(
+    templatesSet: ITemplatesSet
+  ): Promise<ILifecycleTemplate[]> {
+    const templatesSetPopulated = await this.getTemplatesSetOrFail(
+      templatesSet.id,
+      {
+        relations: ['lifecycleTemplates'],
+      }
+    );
+    if (!templatesSetPopulated.lifecycleTemplates) {
+      throw new EntityNotInitializedException(
+        `TemplatesSet not initialized with innovation flow templates: ${templatesSetPopulated.id}`,
+        LogContext.TEMPLATES
+      );
+    }
+    return templatesSetPopulated.lifecycleTemplates;
+  }
+
+  async createInnovationFlowTemplate(
+    templatesSet: ITemplatesSet,
+    innovationFlowTemplateInput: CreateInnovationFlowTemplateInput
+  ): Promise<ILifecycleTemplate> {
+    const innovationFlowTemplate =
+      await this.lifecycleTemplateService.createInnovationFLowTemplate(
+        innovationFlowTemplateInput
+      );
+    templatesSet.lifecycleTemplates = await this.getInnovationFlowTemplates(
+      templatesSet
+    );
+    templatesSet.lifecycleTemplates.push(innovationFlowTemplate);
+    await this.templatesSetRepository.save(templatesSet);
+    return innovationFlowTemplate;
   }
 }

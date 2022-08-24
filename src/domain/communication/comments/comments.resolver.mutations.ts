@@ -19,7 +19,7 @@ import {
   NOTIFICATIONS_SERVICE,
   SUBSCRIPTION_ASPECT_COMMENT,
 } from '@common/constants/providers';
-import { AspectCommentsMessageReceived } from '../../context/aspect/dto/aspect.dto.event.message.received';
+import { AspectCommentsMessageReceived } from '../../collaboration/aspect/dto/aspect.dto.event.message.received';
 import { CommentsAuthorizationService } from './comments.service.authorization';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';

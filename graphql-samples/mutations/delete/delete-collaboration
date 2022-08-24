@@ -1,0 +1,12 @@
+mutation deleteCollaboration($deleteData: DeleteCollaborationInput!) {
+  deleteCollaboration(deleteData: $deleteData) {
+    id
+  }
+}
+
+Variables:
+{
+  "deleteData": {
+    "ID": "uuid"
+  }
+}

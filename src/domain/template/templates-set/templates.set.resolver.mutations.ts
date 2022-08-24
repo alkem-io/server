@@ -13,6 +13,9 @@ import { ICanvasTemplate } from '../canvas-template/canvas.template.interface';
 import { CreateCanvasTemplateOnTemplatesSetInput } from './dto/canvas.template.dto.create.on.templates.set';
 import { AspectTemplateAuthorizationService } from '../aspect-template/aspect.template.service.authorization';
 import { CanvasTemplateAuthorizationService } from '../canvas-template/canvas.template.service.authorization';
+import { CreateLifecycleTemplateOnTemplatesSetInput } from './dto/lifecycle.template.dto.create.on.templates.set';
+import { ILifecycleTemplate } from '../lifecycle-template/lifecycle.template.interface';
+import { LifecycleTemplateAuthorizationService } from '../lifecycle-template/lifecycle.template.service.authorization';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
@@ -21,6 +24,7 @@ export class TemplatesSetResolverMutations {
     private templatesSetService: TemplatesSetService,
     private aspectTemplateAuthorizationService: AspectTemplateAuthorizationService,
     private canvasTemplateAuthorizationService: CanvasTemplateAuthorizationService,
+    private lifecycleTemplateAuthorizationService: LifecycleTemplateAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -86,5 +90,39 @@ export class TemplatesSetResolverMutations {
       templatesSet.authorization
     );
     return canvasTemplate;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ILifecycleTemplate, {
+    description:
+      'Creates a new LifecycleTemplate on the specified TemplatesSet.',
+  })
+  async createLifecycleTemplate(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('lifecycleTemplateInput')
+    lifecycleTemplateInput: CreateLifecycleTemplateOnTemplatesSetInput
+  ): Promise<ILifecycleTemplate> {
+    const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
+      lifecycleTemplateInput.templatesSetID,
+      {
+        relations: ['lifecycleTemplates'],
+      }
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      templatesSet.authorization,
+      AuthorizationPrivilege.CREATE,
+      `templates set create lifecycle template: ${templatesSet.id}`
+    );
+    const lifecycleTemplate =
+      await this.templatesSetService.createInnovationFlowTemplate(
+        templatesSet,
+        lifecycleTemplateInput
+      );
+    await this.lifecycleTemplateAuthorizationService.applyAuthorizationPolicy(
+      lifecycleTemplate,
+      templatesSet.authorization
+    );
+    return lifecycleTemplate;
   }
 }

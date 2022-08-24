@@ -15,18 +15,12 @@ import {
 } from '@domain/collaboration/opportunity';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-import { RelationService } from '@domain/collaboration/relation/relation.service';
-import { CreateRelationInput, IRelation } from '@domain/collaboration/relation';
 import { IProject, CreateProjectInput } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { ILifecycle } from '@domain/common/lifecycle';
-import { IContext } from '@domain/context/context/context.interface';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { opportunityLifecycleConfigDefault } from './opportunity.lifecycle.config.default';
-import { ChallengeLifecycleTemplate } from '@common/enums';
-import { opportunityLifecycleConfigExtended } from './opportunity.lifecycle.config.extended';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { NVP } from '@domain/common/nvp';
@@ -38,7 +32,12 @@ import { RemoveOpportunityAdminInput } from './dto/opportunity.dto.remove.admin'
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core';
-import { AspectService } from '@domain/context/aspect/aspect.service';
+import { IContext } from '@domain/context/context/context.interface';
+import { UpdateOpportunityInnovationFlowInput } from './dto/opportunity.dto.update.innovation.flow';
+import { ICollaboration } from '../collaboration/collaboration.interface';
+import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
+import { LifecycleType } from '@common/enums/lifecycle.type';
+import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 
 @Injectable()
 export class OpportunityService {
@@ -46,11 +45,10 @@ export class OpportunityService {
     private baseChallengeService: BaseChallengeService,
     private projectService: ProjectService,
     private lifecycleService: LifecycleService,
+    private lifecycleTemplateService: LifecycleTemplateService,
     private communityService: CommunityService,
-    private relationService: RelationService,
     private userService: UserService,
     private agentService: AgentService,
-    private aspectService: AspectService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -61,10 +59,15 @@ export class OpportunityService {
     hubID: string,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
+    // Validate incoming data
+    await this.lifecycleTemplateService.validateLifecycleDefinitionOrFail(
+      opportunityData.innovationFlowTemplateID,
+      hubID,
+      LifecycleType.OPPORTUNITY
+    );
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
     opportunity.hubID = hubID;
     opportunity.projects = [];
-    opportunity.relations = [];
 
     await this.baseChallengeService.initialise(
       opportunity,
@@ -76,15 +79,6 @@ export class OpportunityService {
 
     await this.opportunityRepository.save(opportunity);
 
-    // Lifecycle, that has both a default and extended version
-    let machineConfig: any = opportunityLifecycleConfigDefault;
-    if (
-      opportunityData.lifecycleTemplate &&
-      opportunityData.lifecycleTemplate === ChallengeLifecycleTemplate.EXTENDED
-    ) {
-      machineConfig = opportunityLifecycleConfigExtended;
-    }
-
     // set immediate community parent
     if (opportunity.community) {
       opportunity.community.parentID = opportunity.id;
@@ -95,20 +89,55 @@ export class OpportunityService {
         );
     }
 
-    opportunity.lifecycle = await this.lifecycleService.createLifecycle(
-      opportunity.id,
-      machineConfig
-    );
-
     if (agentInfo) {
-      await this.assingMember(agentInfo.userID, opportunity.id);
+      await this.assignMember(agentInfo.userID, opportunity.id);
       await this.assignOpportunityAdmin({
         userID: agentInfo.userID,
         opportunityID: opportunity.id,
       });
     }
 
+    const machineConfig: ILifecycleDefinition =
+      await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
+        opportunityData.innovationFlowTemplateID,
+        hubID,
+        LifecycleType.OPPORTUNITY
+      );
+
+    opportunity.lifecycle = await this.lifecycleService.createLifecycle(
+      opportunity.id,
+      machineConfig
+    );
+
     return await this.saveOpportunity(opportunity);
+  }
+
+  async updateOpportunityInnovationFlow(
+    opportunityData: UpdateOpportunityInnovationFlowInput
+  ): Promise<IOpportunity> {
+    const opportunity = await this.getOpportunityOrFail(
+      opportunityData.opportunityID,
+      { relations: ['lifecycle'] }
+    );
+
+    if (!opportunity.lifecycle) {
+      throw new EntityNotInitializedException(
+        `Lifecycle of opportunity (${opportunity.id}) not initialized`,
+        LogContext.OPPORTUNITY
+      );
+    }
+
+    const machineConfig: ILifecycleDefinition =
+      await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
+        opportunityData.innovationFlowTemplateID,
+        opportunity.hubID,
+        LifecycleType.OPPORTUNITY
+      );
+
+    opportunity.lifecycle.machineDef = JSON.stringify(machineConfig);
+    opportunity.lifecycle.machineState = '';
+
+    return await this.save(opportunity);
   }
 
   async save(opportunity: IOpportunity): Promise<IOpportunity> {
@@ -138,7 +167,7 @@ export class OpportunityService {
     if (!opportunity) {
       throw new EntityNotFoundException(
         `Unable to find Opportunity with ID: ${opportunityID}`,
-        LogContext.CHALLENGES
+        LogContext.OPPORTUNITY
       );
     }
 
@@ -160,7 +189,7 @@ export class OpportunityService {
     if (!opportunity) {
       throw new EntityNotFoundException(
         `Unable to find Opportunity with ID: ${opportunityID}`,
-        LogContext.CHALLENGES
+        LogContext.OPPORTUNITY
       );
     }
 
@@ -177,21 +206,15 @@ export class OpportunityService {
 
   async deleteOpportunity(opportunityID: string): Promise<IOpportunity> {
     const opportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: ['relations', 'projects'],
+      relations: ['projects'],
     });
     // disable deletion if projects are present
     const projects = opportunity.projects;
     if (projects && projects.length > 0) {
       throw new ValidationException(
         `Unable to remove Opportunity (${opportunity.nameID}) as it contains ${projects.length} Projects`,
-        LogContext.CHALLENGES
+        LogContext.OPPORTUNITY
       );
-    }
-
-    if (opportunity.relations) {
-      for (const relation of opportunity.relations) {
-        await this.relationService.deleteRelation({ ID: relation.id });
-      }
     }
 
     // Note need to load it in with all contained entities so can remove fully
@@ -255,24 +278,13 @@ export class OpportunityService {
     );
   }
 
-  // Loads the aspects into the Opportunity entity if not already present
-  async getRelations(opportunity: Opportunity): Promise<IRelation[]> {
-    if (opportunity.relations && opportunity.relations.length > 0) {
-      // opportunity already has relations loaded
-      return opportunity.relations;
-    }
-
-    const opportunityLoaded = await this.getOpportunityOrFail(opportunity.id, {
-      relations: ['relations'],
-    });
-
-    if (!opportunityLoaded.relations)
-      throw new EntityNotInitializedException(
-        `Opportunity not initialised: ${opportunity.id}`,
-        LogContext.COLLABORATION
-      );
-
-    return opportunityLoaded.relations;
+  public async getCollaboration(
+    opportunity: IOpportunity
+  ): Promise<ICollaboration> {
+    return await this.baseChallengeService.getCollaboration(
+      opportunity.id,
+      this.opportunityRepository
+    );
   }
 
   async createProject(projectData: CreateProjectInput): Promise<IProject> {
@@ -280,7 +292,7 @@ export class OpportunityService {
 
     this.logger.verbose?.(
       `Adding project to opportunity (${opportunityId})`,
-      LogContext.COLLABORATION
+      LogContext.OPPORTUNITY
     );
 
     const opportunity = await this.getOpportunityOrFail(opportunityId);
@@ -292,58 +304,57 @@ export class OpportunityService {
     if (!opportunity.projects)
       throw new EntityNotInitializedException(
         `Opportunity (${opportunityId}) not initialised`,
-        LogContext.COLLABORATION
+        LogContext.OPPORTUNITY
       );
     opportunity.projects.push(project);
     await this.opportunityRepository.save(opportunity);
     return project;
   }
 
-  async createRelation(relationData: CreateRelationInput): Promise<IRelation> {
-    const opportunityId = relationData.parentID;
-    const opportunity = await this.getOpportunityOrFail(opportunityId, {
-      relations: ['relations'],
-    });
-
-    if (!opportunity.relations)
-      throw new EntityNotInitializedException(
-        `Opportunity (${opportunityId}) not initialised`,
-        LogContext.COLLABORATION
-      );
-
-    const relation = await this.relationService.createRelation(relationData);
-    opportunity.relations.push(relation);
-    await this.opportunityRepository.save(opportunity);
-    return relation;
-  }
   async getActivity(opportunity: IOpportunity): Promise<INVP[]> {
     const activity: INVP[] = [];
     const community = await this.getCommunity(opportunity.id);
 
+    // Members
     const membersCount = await this.communityService.getMembersCount(community);
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${opportunity.id}`;
     activity.push(membersTopic);
 
+    // Projects
     const projectsCount =
       await this.projectService.getProjectsInOpportunityCount(opportunity.id);
     const projectsTopic = new NVP('projects', projectsCount.toString());
     projectsTopic.id = `projects-${opportunity.id}`;
     activity.push(projectsTopic);
 
-    const relationsCount =
-      await this.relationService.getRelationsInOpportunityCount(opportunity.id);
+    // Relations
+    const relationsCount = await this.baseChallengeService.getRelationsCount(
+      opportunity,
+      this.opportunityRepository
+    );
+
     const relationsTopic = new NVP('relations', relationsCount.toString());
     relationsTopic.id = `relations-${opportunity.id}`;
     activity.push(relationsTopic);
 
-    const { id: contextId } = await this.getContext(opportunity.id);
-    const aspectsCount = await this.aspectService.getAspectsInContextCount(
-      contextId
+    // Aspects
+    const aspectsCount = await this.baseChallengeService.getAspectsCount(
+      opportunity,
+      this.opportunityRepository
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${opportunity.id}`;
     activity.push(aspectsTopic);
+
+    // Canvases
+    const canvasesCount = await this.baseChallengeService.getCanvasesCount(
+      opportunity,
+      this.opportunityRepository
+    );
+    const canvasesTopic = new NVP('canvases', canvasesCount.toString());
+    canvasesTopic.id = `canvases-${opportunity.id}`;
+    activity.push(canvasesTopic);
 
     return activity;
   }
@@ -364,7 +375,7 @@ export class OpportunityService {
     });
   }
 
-  async assingMember(userID: string, opportunityId: string) {
+  async assignMember(userID: string, opportunityId: string) {
     const agent = await this.userService.getAgent(userID);
     const opportunity = await this.getOpportunityOrFail(opportunityId);
 

@@ -241,6 +241,13 @@ export class ChallengeAuthorizationService {
       newRules.push(hubMemberCanJoin);
     }
 
+    const updateInnovationFlowRule = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
+      AuthorizationCredential.GLOBAL_ADMIN
+    );
+    updateInnovationFlowRule.inheritable = false;
+    newRules.push(updateInnovationFlowRule);
+
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules

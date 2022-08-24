@@ -29,6 +29,7 @@ import { AgentInfo } from '@core/authentication';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ITemplatesSet } from '@domain/template/templates-set';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -67,6 +68,17 @@ export class HubResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('collaboration', () => ICollaboration, {
+    nullable: true,
+    description: 'The collaboration for the Hub.',
+  })
+  @Profiling.api
+  async collaboration(@Parent() hub: Hub) {
+    return await this.hubService.getCollaboration(hub);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('agent', () => IAgent, {
     nullable: true,
     description: 'The Agent representing this Hub.',
@@ -89,7 +101,7 @@ export class HubResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('preferences', () => [IPreference], {
-    nullable: false,
+    nullable: true,
     description: 'The preferences for this Hub',
   })
   @UseGuards(GraphqlGuard)
@@ -152,7 +164,7 @@ export class HubResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('opportunities', () => [IOpportunity], {
-    nullable: false,
+    nullable: true,
     description: 'All opportunities within the hub',
   })
   @UseGuards(GraphqlGuard)

@@ -1,4 +1,6 @@
-export const organizationVerificationLifecycleConfig = {
+import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
+
+export const organizationVerificationLifecycleConfig: ILifecycleDefinition = {
   id: 'organization-verification',
   context: {
     parentID: '',

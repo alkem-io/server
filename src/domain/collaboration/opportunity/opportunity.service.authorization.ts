@@ -51,15 +51,6 @@ export class OpportunityAuthorizationService {
           );
       }
     }
-    if (opportunity.relations) {
-      for (const relation of opportunity.relations) {
-        relation.authorization =
-          this.authorizationPolicyService.inheritParentAuthorization(
-            relation.authorization,
-            opportunity.authorization
-          );
-      }
-    }
 
     return await this.opportunityRepository.save(opportunity);
   }
@@ -106,6 +97,13 @@ export class OpportunityAuthorizationService {
       opportunityID
     );
     rules.push(opportunityMember);
+
+    const updateInnovationFlowRule = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
+      AuthorizationCredential.GLOBAL_ADMIN
+    );
+    updateInnovationFlowRule.inheritable = false;
+    rules.push(updateInnovationFlowRule);
 
     return rules;
   }

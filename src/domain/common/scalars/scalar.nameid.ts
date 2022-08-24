@@ -52,7 +52,7 @@ export class NameID implements CustomScalar<string, string> {
 
   static isValidFormat = (value: any) => {
     if (value.length < NameID.MIN_LENGTH) return false;
-    if (value.lenght > NameID.MAX_LENGTH) return false;
+    if (value.length > NameID.MAX_LENGTH) return false;
     return NameID.REGEX.test(value);
   };
 }

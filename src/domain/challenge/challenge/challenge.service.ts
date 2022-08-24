@@ -1,5 +1,6 @@
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -17,11 +18,7 @@ import {
   IOpportunity,
 } from '@domain/collaboration/opportunity';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import {
-  AuthorizationCredential,
-  ChallengeLifecycleTemplate,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
@@ -30,8 +27,6 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
-import { challengeLifecycleConfigDefault } from './challenge.lifecycle.config.default';
-import { challengeLifecycleConfigExtended } from './challenge.lifecycle.config.extended';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { UUID_LENGTH } from '@common/constants';
@@ -52,10 +47,14 @@ import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
-import { AspectService } from '@domain/context/aspect/aspect.service';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
+import { UpdateChallengeInnovationFlowInput } from './dto/challenge.dto.update.innovation.flow';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
+import { LifecycleType } from '@common/enums/lifecycle.type';
+import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 
 @Injectable()
 export class ChallengeService {
@@ -66,10 +65,10 @@ export class ChallengeService {
     private projectService: ProjectService,
     private baseChallengeService: BaseChallengeService,
     private lifecycleService: LifecycleService,
+    private lifecycleTemplateService: LifecycleTemplateService,
     private organizationService: OrganizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
-    private aspectService: AspectService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -80,6 +79,11 @@ export class ChallengeService {
     hubID: string,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
+    await this.lifecycleTemplateService.validateLifecycleDefinitionOrFail(
+      challengeData.innovationFlowTemplateID,
+      hubID,
+      LifecycleType.CHALLENGE
+    );
     const challenge: IChallenge = Challenge.create(challengeData);
     challenge.hubID = hubID;
     challenge.childChallenges = [];
@@ -112,14 +116,12 @@ export class ChallengeService {
         this.createPreferenceDefaults()
       );
 
-    // Lifecycle, that has both a default and extended version
-    let machineConfig: any = challengeLifecycleConfigDefault;
-    if (
-      challengeData.lifecycleTemplate &&
-      challengeData.lifecycleTemplate === ChallengeLifecycleTemplate.EXTENDED
-    ) {
-      machineConfig = challengeLifecycleConfigExtended;
-    }
+    const machineConfig: ILifecycleDefinition =
+      await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
+        challengeData.innovationFlowTemplateID,
+        hubID,
+        LifecycleType.CHALLENGE
+      );
 
     challenge.lifecycle = await this.lifecycleService.createLifecycle(
       challenge.id,
@@ -176,8 +178,34 @@ export class ChallengeService {
         await this.challengeRepository.save(challenge);
       }
     }
-
     return challenge;
+  }
+
+  async updateChallengeInnovationFlow(
+    challengeData: UpdateChallengeInnovationFlowInput
+  ): Promise<IChallenge> {
+    const challenge = await this.getChallengeOrFail(challengeData.challengeID, {
+      relations: ['lifecycle'],
+    });
+
+    if (!challenge.lifecycle) {
+      throw new EntityNotInitializedException(
+        `Lifecycle of challenge (${challenge.id}) not initialized`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    const machineConfig: ILifecycleDefinition =
+      await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
+        challengeData.innovationFlowTemplateID,
+        challenge.hubID,
+        LifecycleType.CHALLENGE
+      );
+
+    challenge.lifecycle.machineDef = JSON.stringify(machineConfig);
+    challenge.lifecycle.machineState = '';
+
+    return await this.challengeRepository.save(challenge);
   }
 
   async deleteChallenge(deleteData: DeleteChallengeInput): Promise<IChallenge> {
@@ -377,6 +405,15 @@ export class ChallengeService {
     );
   }
 
+  public async getCollaboration(
+    challenge: IChallenge
+  ): Promise<ICollaboration> {
+    return await this.baseChallengeService.getCollaboration(
+      challenge.id,
+      this.challengeRepository
+    );
+  }
+
   async getAgent(challengeId: string): Promise<IAgent> {
     return await this.baseChallengeService.getAgent(
       challengeId,
@@ -542,12 +579,14 @@ export class ChallengeService {
   async getActivity(challenge: IChallenge): Promise<INVP[]> {
     const activity: INVP[] = [];
 
+    // Members
     const community = await this.getCommunity(challenge.id);
     const membersCount = await this.communityService.getMembersCount(community);
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${challenge.id}`;
     activity.push(membersTopic);
 
+    // Opportunities
     const opportunitiesCount =
       await this.opportunityService.getOpportunitiesInChallengeCount(
         challenge.id
@@ -559,6 +598,7 @@ export class ChallengeService {
     opportunitiesTopic.id = `opportunities-${challenge.id}`;
     activity.push(opportunitiesTopic);
 
+    // Projects
     const projectsCount = await this.projectService.getProjectsInChallengeCount(
       challenge.id
     );
@@ -566,18 +606,29 @@ export class ChallengeService {
     projectsTopic.id = `projects-${challenge.id}`;
     activity.push(projectsTopic);
 
+    // Challenges
     const challengesCount = await this.getChildChallengesCount(challenge.id);
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     challengesTopic.id = `challenges-${challenge.id}`;
     activity.push(challengesTopic);
 
-    const { id: contextId } = await this.getContext(challenge.id);
-    const aspectsCount = await this.aspectService.getAspectsInContextCount(
-      contextId
+    // Aspects
+    const aspectsCount = await this.baseChallengeService.getAspectsCount(
+      challenge,
+      this.challengeRepository
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${challenge.id}`;
     activity.push(aspectsTopic);
+
+    // Canvases
+    const canvasesCount = await this.baseChallengeService.getCanvasesCount(
+      challenge,
+      this.challengeRepository
+    );
+    const canvasesTopic = new NVP('canvases', canvasesCount.toString());
+    canvasesTopic.id = `canvases-${challenge.id}`;
+    activity.push(canvasesTopic);
 
     return activity;
   }

@@ -19,6 +19,7 @@ import { SUBSCRIPTION_CANVAS_CONTENT } from '@common/constants/providers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
 import { getRandomId } from '@src/common';
+import { DeleteCanvasInput } from './dto/canvas.dto.delete';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverMutations {
@@ -93,5 +94,24 @@ export class CanvasResolverMutations {
     );
 
     return updatedCanvas;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICanvas, {
+    description: 'Updates the specified Canvas.',
+  })
+  async deleteCanvas(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('canvasData') canvasData: DeleteCanvasInput
+  ): Promise<ICanvas> {
+    const canvas = await this.canvasService.getCanvasOrFail(canvasData.ID);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      canvas.authorization,
+      AuthorizationPrivilege.DELETE,
+      `delete Canvas: ${canvas.displayName}`
+    );
+
+    return await this.canvasService.deleteCanvas(canvas.id);
   }
 }

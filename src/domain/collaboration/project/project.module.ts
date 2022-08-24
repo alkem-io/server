@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AspectModule } from '@domain/context/aspect/aspect.module';
 import { Project } from './project.entity';
 import { ProjectResolverMutations } from './project.resolver.mutations';
 import { ProjectService } from './project.service';
@@ -15,7 +14,6 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    AspectModule,
     NamingModule,
     LifecycleModule,
     TypeOrmModule.forFeature([Project]),

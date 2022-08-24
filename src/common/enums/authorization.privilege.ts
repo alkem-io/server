@@ -13,9 +13,12 @@ export enum AuthorizationPrivilege {
   CREATE_ORGANIZATION = 'create-organization',
   READ_USERS = 'read-users',
   UPDATE_CANVAS = 'update-canvas',
+  UPDATE_INNOVATION_FLOW = 'update-lifecycle',
   COMMUNITY_JOIN = 'community-join',
   COMMUNITY_APPLY = 'community-apply',
   COMMUNITY_CONTEXT_REVIEW = 'community-context-review',
+  CREATE_CALLOUT = 'create-callout',
+  CREATE_RELATION = 'create-relation',
 }
 
 registerEnumType(AuthorizationPrivilege, {

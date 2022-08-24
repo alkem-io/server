@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
-import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 
 @Entity()
 export class Relation extends AuthorizableEntity implements IRelation {
@@ -20,10 +20,10 @@ export class Relation extends AuthorizableEntity implements IRelation {
   @Column('text', { nullable: true })
   description? = '';
 
-  @ManyToOne(() => Opportunity, opportunity => opportunity.relations, {
+  @ManyToOne(() => Collaboration, collaboration => collaboration.relations, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  opportunity?: Opportunity;
+  collaboration?: Collaboration;
 }

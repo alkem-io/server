@@ -42,7 +42,7 @@ export class UpdateContextInput {
     description: 'Update the set of References for the Context.',
   })
   @ValidateNested({ each: true })
-  @Type(() => UpdateLocationInput)
+  @Type(() => UpdateReferenceInput)
   references?: UpdateReferenceInput[];
 
   @Field(() => UpdateLocationInput, { nullable: true })
