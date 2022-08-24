@@ -33,10 +33,7 @@
       "type": "object",
       "patternProperties": {
         "^.*$": {
-          "oneOf": [
-            { "$ref": "#/definitions/myStateObject" },
-            { "$ref": "#/definitions/finalStateNode" }
-          ]
+          "oneOf": [{ "$ref": "#/definitions/myStateObject" }]
         }
       }
     },
@@ -61,6 +58,10 @@
               ]
             }
           }
+        },
+        "type": {
+          "type": "string",
+          "pattern": "final"
         }
       },
       "required": []
@@ -100,16 +101,6 @@
           ]
         }
       }
-    },
-    "finalStateNode": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "type": "string",
-          "pattern": "final"
-        }
-      },
-      "required": ["type"]
     }
   }
 }
