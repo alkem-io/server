@@ -63,7 +63,7 @@
           }
         }
       },
-      "required": ["on"]
+      "required": []
     },
     "transitionObject": {
       "type": "object",

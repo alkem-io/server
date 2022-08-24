@@ -19,6 +19,7 @@ import { CreateRelationOnCollaborationInput } from '@domain/collaboration/collab
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 
 @Injectable()
@@ -225,7 +226,7 @@ export class CollaborationService {
       SELECT COUNT(*) as aspectsCount
       FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
       RIGHT JOIN \`aspect\` ON \`aspect\`.\`calloutId\` = \`callout\`.\`id\`
-      WHERE \`collaboration\`.\`id\` = '${collaboration.id}';
+      WHERE \`collaboration\`.\`id\` = '${collaboration.id}' AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}';
       `
     );
 
@@ -242,7 +243,7 @@ export class CollaborationService {
       SELECT COUNT(*) as canvasesCount
       FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
       RIGHT JOIN \`canvas\` ON \`canvas\`.\`calloutId\` = \`callout\`.\`id\`
-      WHERE \`collaboration\`.\`id\` = '${collaboration.id}';
+      WHERE \`collaboration\`.\`id\` = '${collaboration.id}'  AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}';
       `
     );
 

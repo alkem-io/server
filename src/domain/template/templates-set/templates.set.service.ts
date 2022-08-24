@@ -103,7 +103,8 @@ export class TemplatesSetService {
     if (templatesSet.lifecycleTemplates) {
       for (const lifecycleTemplate of templatesSet.lifecycleTemplates) {
         await this.lifecycleTemplateService.deleteLifecycleTemplate(
-          lifecycleTemplate
+          lifecycleTemplate,
+          true
         );
       }
     }
