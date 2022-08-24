@@ -69,7 +69,8 @@ export class LifecycleTemplateService {
   }
 
   async deleteLifecycleTemplate(
-    lifecycleTemplate: ILifecycleTemplate
+    lifecycleTemplate: ILifecycleTemplate,
+    forceDelete = false
   ): Promise<ILifecycleTemplate> {
     const [queryResult]: {
       lifecycleTemplatesCount: string;
@@ -85,9 +86,9 @@ export class LifecycleTemplateService {
       `
     );
 
-    if (queryResult.lifecycleTemplatesCount === '1') {
+    if (!forceDelete && queryResult.lifecycleTemplatesCount === '1') {
       throw new ValidationException(
-        `Can't delete last lifecycle template: ${lifecycleTemplate.id} of type ${lifecycleTemplate.type} from templateSet: ${queryResult.templatesSetId}!`,
+        `Cannot delete last lifecycle template: ${lifecycleTemplate.id} of type ${lifecycleTemplate.type} from templateSet: ${queryResult.templatesSetId}!`,
         LogContext.LIFECYCLE
       );
     }
