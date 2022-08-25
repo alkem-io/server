@@ -116,6 +116,27 @@ export class NamingService {
     return true;
   }
 
+  async isCalloutDisplayNameAvailableInCollaboration(
+    displayName: string,
+    collaborationID: string
+  ): Promise<boolean> {
+    const query = this.calloutRepository
+      .createQueryBuilder('callout')
+      .leftJoinAndSelect('callout.collaboration', 'collaboration')
+      .where('collaboration.id = :id')
+      .andWhere('callout.displayName = :displayName')
+      .setParameters({
+        id: `${collaborationID}`,
+        displayName: `${displayName}`,
+      });
+    const calloutsWithDisplayName = await query.getOne();
+    if (calloutsWithDisplayName) {
+      return false;
+    }
+
+    return true;
+  }
+
   isValidNameID(nameID: string): boolean {
     if (nameID.length > NameID.MAX_LENGTH) return false;
     return NameID.REGEX.test(nameID);
