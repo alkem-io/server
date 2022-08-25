@@ -88,6 +88,7 @@ export class AspectAuthorizationService {
 
     const manageCreatedAspectPolicy = new AuthorizationPolicyRuleCredential(
       [
+        AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
