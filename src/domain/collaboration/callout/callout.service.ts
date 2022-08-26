@@ -77,6 +77,9 @@ export class CalloutService {
     if (calloutUpdateData.visibility)
       callout.visibility = calloutUpdateData.visibility;
 
+    if (calloutUpdateData.displayName)
+      callout.displayName = calloutUpdateData.displayName;
+
     return await this.calloutRepository.save(callout);
   }
 
@@ -100,7 +103,10 @@ export class CalloutService {
     if (callout.authorization)
       await this.authorizationPolicyService.delete(callout.authorization);
 
-    return await this.calloutRepository.remove(callout as Callout);
+    const result = await this.calloutRepository.remove(callout as Callout);
+    result.id = calloutID;
+
+    return result;
   }
 
   private async setNameIdOnAspectData(
