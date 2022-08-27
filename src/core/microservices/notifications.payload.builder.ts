@@ -4,25 +4,27 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
-import { ICollaboration, Opportunity } from '@domain/collaboration';
-import { Communication } from '@domain/communication';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { Communication } from '@domain/communication/communication/communication.entity';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { IUpdates } from '@domain/communication/updates/updates.interface';
 import { Community, ICommunity } from '@domain/community/community';
+import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { getConnection, Repository } from 'typeorm';
 import { CreateNVPInput } from '@src/domain/common/nvp/nvp.dto.create';
-import { Aspect } from '@src/domain';
+import { Aspect } from '@src/domain/collaboration/aspect/aspect.entity';
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import {
   AspectCreatedEventPayload,
   AspectCommentCreatedEventPayload,
   CommunityCollaborationInterestEventPayload,
 } from './event-payloads';
+import { IRelation } from '@domain/collaboration/relation/relation.interface';
 
 @Injectable()
 export class NotificationsPayloadBuilder {
@@ -191,7 +193,8 @@ export class NotificationsPayloadBuilder {
 
   async buildCollaborationInterestPayload(
     userID: string,
-    collaboration: ICollaboration
+    collaboration: ICollaboration,
+    relation: IRelation
   ): Promise<CommunityCollaborationInterestEventPayload> {
     const opportunity = await this.getOpportunityForCollaboration(
       collaboration.id
@@ -202,6 +205,10 @@ export class NotificationsPayloadBuilder {
         id: opportunity.id,
         name: opportunity.displayName,
         communityName: opportunity.community?.displayName,
+      },
+      relation: {
+        role: relation.actorRole,
+        description: relation.description,
       },
     };
 
