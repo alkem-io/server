@@ -96,7 +96,8 @@ export class CollaborationResolverMutations {
     const payload =
       await this.notificationsPayloadBuilder.buildCollaborationInterestPayload(
         agentInfo.userID,
-        collaboration
+        collaboration,
+        relation
       );
     this.notificationsClient.emit(
       EventType.COMMUNITY_COLLABORATION_INTEREST,
