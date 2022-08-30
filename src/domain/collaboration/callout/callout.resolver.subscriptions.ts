@@ -7,12 +7,12 @@ import { Args, Resolver, Subscription } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { LogContext } from '@common/enums/logging.context';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SUBSCRIPTION_CALLOUT_ASPECT_CREATED } from '@common/constants/providers';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CalloutAspectCreated } from '@domain/collaboration/callout';
+import { UUID } from '@domain/common/scalars';
 
 @Resolver()
 export class CalloutResolverSubscriptions {

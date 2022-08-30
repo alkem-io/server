@@ -26,6 +26,7 @@ import { limitAndShuffle } from '@common/utils';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { NamingService } from '@src/services/domain/naming/naming.service';
+import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 
 @Injectable()
 export class CalloutService {
@@ -50,10 +51,20 @@ export class CalloutService {
     calloutID: string,
     options?: FindOneOptions<Callout>
   ): Promise<ICallout> {
-    const callout = await this.calloutRepository.findOne(
-      { id: calloutID },
-      options
-    );
+    let callout: ICallout | undefined;
+    if (calloutID.length === UUID_LENGTH) {
+      callout = await this.calloutRepository.findOne(
+        { id: calloutID },
+        options
+      );
+    }
+    if (!callout) {
+      // look up based on nameID
+      callout = await this.calloutRepository.findOne(
+        { nameID: calloutID },
+        options
+      );
+    }
     if (!callout)
       throw new EntityNotFoundException(
         `No Callout found with the given id: ${calloutID}`,
@@ -76,6 +87,9 @@ export class CalloutService {
 
     if (calloutUpdateData.visibility)
       callout.visibility = calloutUpdateData.visibility;
+
+    if (calloutUpdateData.displayName)
+      callout.displayName = calloutUpdateData.displayName;
 
     return await this.calloutRepository.save(callout);
   }
@@ -100,7 +114,10 @@ export class CalloutService {
     if (callout.authorization)
       await this.authorizationPolicyService.delete(callout.authorization);
 
-    return await this.calloutRepository.remove(callout as Callout);
+    const result = await this.calloutRepository.remove(callout as Callout);
+    result.id = calloutID;
+
+    return result;
   }
 
   private async setNameIdOnAspectData(
