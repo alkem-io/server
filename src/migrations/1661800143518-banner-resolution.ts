@@ -13,12 +13,12 @@ export class bannerResolution1661800143518 implements MigrationInterface {
         if (visual.name === 'banner') {
           await queryRunner.query(
             `UPDATE \`alkemio\`.\`visual\` SET \`minWidth\` = '${newBanner.minWidth}', \`maxWidth\` = '${newBanner.maxWidth}',
-                  \`minHeight\` = '${newBanner.minHeight}', \`maxHeight\` = '${newBanner.maxHeight}' WHERE \`id\`= '${visual.id}'`
+                  \`minHeight\` = '${newBanner.minHeight}', \`maxHeight\` = '${newBanner.maxHeight}', \`aspectRatio\` = '${newBanner.aspectRatio}' WHERE \`id\`= '${visual.id}'`
           );
         } else if (visual.name === 'bannerNarrow') {
           await queryRunner.query(
             `UPDATE \`alkemio\`.\`visual\` SET \`minWidth\` = '${newBannerNarrow.minWidth}', \`maxWidth\` = '${newBannerNarrow.maxWidth}',
-                  \`minHeight\` = '${newBannerNarrow.minHeight}', \`maxHeight\` = '${newBannerNarrow.maxHeight}'  WHERE \`id\` = '${visual.id}'`
+                  \`minHeight\` = '${newBannerNarrow.minHeight}', \`maxHeight\` = '${newBannerNarrow.maxHeight}', \`aspectRatio\` = '${newBannerNarrow.aspectRatio}'   WHERE \`id\` = '${visual.id}'`
           );
         }
       }
@@ -35,12 +35,12 @@ export class bannerResolution1661800143518 implements MigrationInterface {
         if (visual.name === 'banner') {
           await queryRunner.query(
             `UPDATE \`alkemio\`.\`visual\` SET \`minWidth\` = '${oldBanner.minWidth}', \`maxWidth\` = '${oldBanner.maxWidth}',
-                  \`minHeight\` = '${oldBanner.minHeight}', \`maxHeight\` = '${oldBanner.maxHeight}'  WHERE (id = '${visual.id}')`
+                  \`minHeight\` = '${oldBanner.minHeight}', \`maxHeight\` = '${oldBanner.maxHeight}', \`aspectRatio\` = '${oldBanner.aspectRatio}'  WHERE (id = '${visual.id}')`
           );
         } else if (visual.name === 'bannerNarrow') {
           await queryRunner.query(
             `UPDATE \`alkemio\`.\`visual\` SET \`minWidth\` = '${oldBannerNarrow.minWidth}', \`maxWidth\` = '${oldBannerNarrow.maxWidth}',
-                  \`minHeight\` = '${oldBannerNarrow.minHeight}', \`maxHeight\` = '${oldBannerNarrow.maxHeight}'  WHERE (id = '${visual.id}')`
+                  \`minHeight\` = '${oldBannerNarrow.minHeight}', \`maxHeight\` = '${oldBannerNarrow.maxHeight}', \`aspectRatio\` = '${oldBannerNarrow.aspectRatio}'   WHERE (id = '${visual.id}')`
           );
         }
       }
