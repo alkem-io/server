@@ -9,4 +9,5 @@ export enum EventType {
   COMMUNITY_CONTEXT_REVIEW_SUBMITTED = 'communityContextReviewSubmitted',
   ASPECT_CREATED = 'aspectCreated',
   COMMENT_CREATED_ON_ASPECT = 'commentCreatedOnAspect',
+  CALLOUT_PUBLISHED = 'calloutPublished',
 }

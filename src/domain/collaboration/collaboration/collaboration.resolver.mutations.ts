@@ -1,5 +1,5 @@
 import { Inject, UseGuards } from '@nestjs/common';
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -19,6 +19,7 @@ import { NotificationsPayloadBuilder } from '@core/microservices';
 import { EventType } from '@common/enums/event.type';
 import { ClientProxy } from '@nestjs/microservices';
 import { NOTIFICATIONS_SERVICE } from '@common/constants';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 @Resolver()
 export class CollaborationResolverMutations {
@@ -153,10 +154,25 @@ export class CollaborationResolverMutations {
     const membershipCredential =
       await this.collaborationService.getMembershipCredential(collaboration.id);
 
-    return await this.calloutAuthorizationService.applyAuthorizationPolicy(
-      callout,
-      collaboriationAuthorizationPolicy,
-      membershipCredential
-    );
+    const calloutAuthorized =
+      await this.calloutAuthorizationService.applyAuthorizationPolicy(
+        callout,
+        collaboriationAuthorizationPolicy,
+        membershipCredential
+      );
+
+    if (calloutAuthorized.visibility === CalloutVisibility.PUBLISHED) {
+      const payload =
+        await this.notificationsPayloadBuilder.buildCalloutPublishedPayload(
+          calloutAuthorized
+        );
+
+      this.notificationsClient.emit<number>(
+        EventType.CALLOUT_PUBLISHED,
+        payload
+      );
+    }
+
+    return calloutAuthorized;
   }
 }

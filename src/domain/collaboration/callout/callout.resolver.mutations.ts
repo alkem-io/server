@@ -27,6 +27,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { EventType } from '@common/enums/event.type';
 import { ICallout } from './callout.interface';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -76,7 +77,21 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
-    return await this.calloutService.updateCallout(calloutData);
+    const result = await this.calloutService.updateCallout(calloutData);
+
+    if (result.visibility === CalloutVisibility.PUBLISHED) {
+      const payload =
+        await this.notificationsPayloadBuilder.buildCalloutPublishedPayload(
+          result
+        );
+
+      this.notificationsClient.emit<number>(
+        EventType.CALLOUT_PUBLISHED,
+        payload
+      );
+    }
+
+    return result;
   }
 
   @UseGuards(GraphqlGuard)
