@@ -22,6 +22,7 @@ import { CredentialDefinition } from '@domain/agent/credential/credential.defini
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { collaborationDefaults } from './collaboration.defaults';
+import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 
 @Injectable()
 export class CollaborationService {
@@ -164,10 +165,18 @@ export class CollaborationService {
       return limitAndShuffled;
     }
     const results: ICallout[] = [];
+
     for (const calloutID of calloutIDs) {
-      const callout = collaborationLoaded.callouts.find(
-        callout => callout.id === calloutID
-      );
+      let callout;
+      if (calloutID.length === UUID_LENGTH)
+        callout = collaborationLoaded.callouts.find(
+          callout => callout.id === calloutID
+        );
+      else
+        callout = collaborationLoaded.callouts.find(
+          callout => callout.nameID === calloutID
+        );
+
       if (!callout)
         throw new EntityNotFoundException(
           `Callout with requested ID (${calloutID}) not located within current Collaboration: : ${collaboration.id}`,
