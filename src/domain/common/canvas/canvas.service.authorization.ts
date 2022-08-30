@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AuthorizationCredential } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -9,6 +9,7 @@ import { ICanvas } from './canvas.interface';
 import { CanvasCheckoutAuthorizationService } from '../canvas-checkout/canvas.checkout.service.authorization';
 import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 
 @Injectable()
 export class CanvasAuthorizationService {
@@ -28,6 +29,7 @@ export class CanvasAuthorizationService {
         parentAuthorization
       );
 
+    canvas.authorization = this.appendCredentialRules(canvas);
     canvas.authorization = this.appendPrivilegeRules(canvas.authorization);
 
     if (canvas.checkout) {
@@ -47,6 +49,37 @@ export class CanvasAuthorizationService {
     }
 
     return await this.canvasService.save(canvas);
+  }
+
+  private appendCredentialRules(canvas: ICanvas): IAuthorizationPolicy {
+    const authorization = canvas.authorization;
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for Canvas: ${canvas.id}`,
+        LogContext.COLLABORATION
+      );
+
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
+
+    const manageCreatedAspectPolicy = new AuthorizationPolicyRuleCredential(
+      [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+      AuthorizationCredential.USER_SELF_MANAGEMENT,
+      canvas.createdBy
+    );
+    newRules.push(manageCreatedAspectPolicy);
+
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
+        authorization,
+        newRules
+      );
+
+    return updatedAuthorization;
   }
 
   private extendAuthorizationPolicyForCheckoutOwner(

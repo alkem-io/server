@@ -206,7 +206,8 @@ export class CalloutService {
   }
 
   public async createCanvasOnCallout(
-    canvasData: CreateCanvasOnCalloutInput
+    canvasData: CreateCanvasOnCalloutInput,
+    userID: string
   ): Promise<ICanvas> {
     const calloutID = canvasData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
@@ -220,11 +221,14 @@ export class CalloutService {
 
     this.setNameIdOnCanvasData(canvasData, callout);
 
-    const canvas = await this.canvasService.createCanvas({
-      displayName: canvasData.displayName,
-      nameID: canvasData.nameID,
-      value: canvasData.value,
-    });
+    const canvas = await this.canvasService.createCanvas(
+      {
+        displayName: canvasData.displayName,
+        nameID: canvasData.nameID,
+        value: canvasData.value,
+      },
+      userID
+    );
     callout.canvases.push(canvas);
     await this.calloutRepository.save(callout);
     return canvas;
