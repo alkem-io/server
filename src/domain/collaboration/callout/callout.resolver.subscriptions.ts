@@ -12,7 +12,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SUBSCRIPTION_CALLOUT_ASPECT_CREATED } from '@common/constants/providers';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CalloutAspectCreated } from '@domain/collaboration/callout';
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 
 @Resolver()
 export class CalloutResolverSubscriptions {
@@ -68,8 +68,8 @@ export class CalloutResolverSubscriptions {
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
       name: 'calloutID',
-      type: () => UUID_NAMEID,
-      description: 'The ID or NameID of the Callout to subscribe to.',
+      type: () => UUID,
+      description: 'The ID of the Callout to subscribe to.',
       nullable: false,
     })
     calloutID: string
