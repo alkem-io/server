@@ -1,4 +1,5 @@
-export type CalloutCreatedEventPayload = {
+export type CalloutPublishedEventPayload = {
+  userID: string;
   callout: {
     id: string;
     displayName: string;

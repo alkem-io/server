@@ -82,6 +82,7 @@ export class CalloutResolverMutations {
     if (result.visibility === CalloutVisibility.PUBLISHED) {
       const payload =
         await this.notificationsPayloadBuilder.buildCalloutPublishedPayload(
+          agentInfo.userID,
           result
         );
 

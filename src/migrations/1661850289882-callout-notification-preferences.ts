@@ -35,7 +35,6 @@ export class calloutNotificationPreferences1661850289882
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await removePreferences(queryRunner, [
-      PreferenceType.NOTIFICATION_CALLOUT_CREATED_ADMIN,
       PreferenceType.NOTIFICATION_CALLOUT_CREATED,
     ]);
   }
