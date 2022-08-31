@@ -23,10 +23,10 @@ import {
   AspectCreatedEventPayload,
   AspectCommentCreatedEventPayload,
   CommunityCollaborationInterestEventPayload,
+  CalloutPublishedEventPayload,
 } from './event-payloads';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { ICallout } from '@domain/collaboration/callout';
-import { CalloutCreatedEventPayload } from '@core/microservices/event-payloads/callout.created.event.payload';
 
 @Injectable()
 export class NotificationsPayloadBuilder {
@@ -122,8 +122,9 @@ export class NotificationsPayloadBuilder {
   }
 
   public async buildCalloutPublishedPayload(
+    userId: string,
     callout: ICallout
-  ): Promise<CalloutCreatedEventPayload> {
+  ): Promise<CalloutPublishedEventPayload> {
     const community = await this.getCommunityFromCallout(callout.id);
 
     if (!community) {
@@ -133,7 +134,8 @@ export class NotificationsPayloadBuilder {
       );
     }
 
-    const payload: CalloutCreatedEventPayload = {
+    const payload: CalloutPublishedEventPayload = {
+      userID: userId,
       callout: {
         id: callout.id,
         displayName: callout.displayName,

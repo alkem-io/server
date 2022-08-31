@@ -164,6 +164,7 @@ export class CollaborationResolverMutations {
     if (calloutAuthorized.visibility === CalloutVisibility.PUBLISHED) {
       const payload =
         await this.notificationsPayloadBuilder.buildCalloutPublishedPayload(
+          agentInfo.userID,
           calloutAuthorized
         );
 
