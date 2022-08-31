@@ -15,7 +15,7 @@ import { Collaboration } from '@domain/collaboration/collaboration/collaboration
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICallout } from '../callout/callout.interface';
-import { UUID } from '@domain/common/scalars';
+import { UUID_NAMEID } from '@domain/common/scalars';
 
 @Resolver(() => ICollaboration)
 export class CollaborationResolverFields {
@@ -46,7 +46,7 @@ export class CollaborationResolverFields {
     @Parent() collaboration: Collaboration,
     @Args({
       name: 'IDs',
-      type: () => [UUID],
+      type: () => [UUID_NAMEID],
       description: 'The IDs of the callouts to return',
       nullable: true,
     })

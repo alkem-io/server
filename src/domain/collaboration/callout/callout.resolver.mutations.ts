@@ -159,7 +159,10 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.CREATE_CANVAS,
       `create canvas on callout: ${callout.id}`
     );
-    const canvas = await this.calloutService.createCanvasOnCallout(canvasData);
+    const canvas = await this.calloutService.createCanvasOnCallout(
+      canvasData,
+      agentInfo.userID
+    );
     return await this.canvasAuthorizationService.applyAuthorizationPolicy(
       canvas,
       callout.authorization

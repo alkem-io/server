@@ -28,9 +28,13 @@ export class CanvasService {
     private visualService: VisualService
   ) {}
 
-  async createCanvas(canvasData: CreateCanvasInput): Promise<ICanvas> {
+  async createCanvas(
+    canvasData: CreateCanvasInput,
+    userID: string
+  ): Promise<ICanvas> {
     const canvas: ICanvas = Canvas.create(canvasData);
     canvas.authorization = new AuthorizationPolicy();
+    canvas.createdBy = userID;
 
     // get the id assigned
     const savedCanvas = await this.save(canvas);
