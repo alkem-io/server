@@ -17,7 +17,7 @@ export abstract class ICanvas extends INameable {
   })
   preview?: IVisual;
 
-  // Expose the date at which the aspect was created from parent entity
+  // Expose the date at which the Canvas was created from parent entity
   @Field(() => Date)
   createdDate!: Date;
 

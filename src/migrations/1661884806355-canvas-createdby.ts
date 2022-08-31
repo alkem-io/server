@@ -10,6 +10,6 @@ export class canvasCreatedby1661884806355 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE \`aspect\` DROP COLUMN \`createdBy\``);
+    await queryRunner.query(`ALTER TABLE \`canvas\` DROP COLUMN \`createdBy\``);
   }
 }

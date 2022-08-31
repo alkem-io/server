@@ -61,7 +61,7 @@ export class CanvasAuthorizationService {
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
-    const manageCreatedAspectPolicy = new AuthorizationPolicyRuleCredential(
+    const manageCanvasCreatedByPolicy = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
@@ -71,7 +71,7 @@ export class CanvasAuthorizationService {
       AuthorizationCredential.USER_SELF_MANAGEMENT,
       canvas.createdBy
     );
-    newRules.push(manageCreatedAspectPolicy);
+    newRules.push(manageCanvasCreatedByPolicy);
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
