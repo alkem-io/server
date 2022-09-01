@@ -23,8 +23,10 @@ import {
   AspectCreatedEventPayload,
   AspectCommentCreatedEventPayload,
   CommunityCollaborationInterestEventPayload,
+  CalloutPublishedEventPayload,
 } from './event-payloads';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 
 @Injectable()
 export class NotificationsPayloadBuilder {
@@ -92,7 +94,7 @@ export class NotificationsPayloadBuilder {
 
     if (!community) {
       throw new NotificationEventException(
-        `Could not acquire community from context with id: ${aspect.callout.id}`,
+        `Could not acquire community from Callout with id: ${aspect.callout.id}`,
         LogContext.NOTIFICATIONS
       );
     }
@@ -103,6 +105,42 @@ export class NotificationsPayloadBuilder {
         createdBy: aspect.createdBy,
         displayName: aspect.displayName,
         type: aspect.type,
+      },
+      community: {
+        name: community.displayName,
+        type: community.type,
+      },
+      hub: {
+        nameID: (await this.getHubNameID(community.hubID)) ?? '',
+        id: community.hubID,
+      },
+    };
+
+    await this.buildHubPayload(payload, community);
+
+    return payload;
+  }
+
+  public async buildCalloutPublishedPayload(
+    userId: string,
+    callout: ICallout
+  ): Promise<CalloutPublishedEventPayload> {
+    const community = await this.getCommunityFromCallout(callout.id);
+
+    if (!community) {
+      throw new NotificationEventException(
+        `Could not acquire community from Callout with id: ${callout.id}`,
+        LogContext.NOTIFICATIONS
+      );
+    }
+
+    const payload: CalloutPublishedEventPayload = {
+      userID: userId,
+      callout: {
+        id: callout.id,
+        displayName: callout.displayName,
+        description: callout.description,
+        type: callout.type,
       },
       community: {
         name: community.displayName,
