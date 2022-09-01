@@ -1,0 +1,17 @@
+mutation PostCommentOnAspectOrDiscussionCallout($messageData: CommentsSendMessageInput!) {
+  sendComment(messageData: $messageData) {
+    id
+    message
+    sender
+    timestamp
+    __typename
+  }
+}
+
+query variables:
+{
+  "messageData": {
+    "commentsID": "uuid",
+    "message": "test"
+  }
+}

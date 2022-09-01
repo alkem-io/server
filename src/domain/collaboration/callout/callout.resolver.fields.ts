@@ -6,6 +6,7 @@ import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { Callout, ICallout } from '@domain/collaboration/callout';
 import { IAspect } from '@domain/collaboration/aspect';
+import { IComments } from '@domain/communication/comments/comments.interface';
 import { UUID_NAMEID, UUID } from '@domain/common/scalars';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 
@@ -93,5 +94,16 @@ export class CalloutResolverFields {
       limit,
       shuffle
     );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('comments', () => IComments, {
+    nullable: true,
+    description: 'The comments for this Callout.',
+  })
+  @Profiling.api
+  async comments(@Parent() callout: ICallout): Promise<IComments | undefined> {
+    return await this.calloutService.getComments(callout.id);
   }
 }
