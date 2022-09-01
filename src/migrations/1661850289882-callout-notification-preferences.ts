@@ -17,11 +17,11 @@ export class calloutNotificationPreferences1661850289882
       {
         definitionSet: 'user',
         group: 'Notification',
-        displayName: 'New callout created',
+        displayName: 'New Callout published',
         description:
-          'Receive a notification when a callout is created in a community I am a member of',
+          'Receive a notification when a Callout is published in a community I am a member of',
         valueType: 'boolean',
-        type: UserPreferenceType.NOTIFICATION_CALLOUT_CREATED,
+        type: UserPreferenceType.NOTIFICATION_CALLOUT_PUBLISHED,
       },
     ];
     const defIds = await addPreferenceDefinitions(queryRunner, definitions);
@@ -35,7 +35,7 @@ export class calloutNotificationPreferences1661850289882
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await removePreferences(queryRunner, [
-      PreferenceType.NOTIFICATION_CALLOUT_CREATED,
+      PreferenceType.NOTIFICATION_CALLOUT_PUBLISHED,
     ]);
   }
 }

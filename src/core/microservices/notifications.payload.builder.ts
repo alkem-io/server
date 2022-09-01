@@ -26,7 +26,7 @@ import {
   CalloutPublishedEventPayload,
 } from './event-payloads';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
-import { ICallout } from '@domain/collaboration/callout';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 
 @Injectable()
 export class NotificationsPayloadBuilder {
@@ -139,6 +139,7 @@ export class NotificationsPayloadBuilder {
       callout: {
         id: callout.id,
         displayName: callout.displayName,
+        description: callout.description,
         type: callout.type,
       },
       community: {

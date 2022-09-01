@@ -3,6 +3,7 @@ export type CalloutPublishedEventPayload = {
   callout: {
     id: string;
     displayName: string;
+    description: string;
     type: string;
   };
   community: {
