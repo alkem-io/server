@@ -176,7 +176,7 @@ export class CalloutService {
 
     await this.setNameIdOnAspectData(aspectData, callout);
 
-    // Get the communicationGroupID to use for the callout comments
+    // Get the communicationGroupID to use for the aspect comments
     const communicationGroupID =
       await this.namingService.getCommunicationGroupIdForCallout(callout.id);
 
@@ -372,7 +372,7 @@ export class CalloutService {
     return aspect;
   }
 
-  public async getCommentssFromCallout(callout: ICallout): Promise<IComments> {
+  public async getCommentsFromCallout(callout: ICallout): Promise<IComments> {
     const loadedCallout = await this.getCalloutOrFail(callout.id, {
       relations: ['comments'],
     });
