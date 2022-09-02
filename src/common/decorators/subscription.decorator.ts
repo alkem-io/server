@@ -7,7 +7,7 @@ import {
 import { GraphQLResolveInfo } from 'graphql';
 import { AgentInfo } from '@src/core';
 
-export interface ResolveContext {
+export interface SubscriptionResolveContext {
   req: {
     authInfo: unknown;
     headers: IncomingHttpHeaders;
@@ -40,7 +40,7 @@ export interface TypedSubscriptionOptions<TPayload, TVariables, TContext>
 export function TypedSubscription<
   TPayload = unknown, // can this be provided directly as typeFunc? like () => TPayload, but as value
   TVariables = unknown,
-  TContext = ResolveContext
+  TContext = SubscriptionResolveContext
 >(
   typeFunc: ReturnTypeFunc,
   options?: TypedSubscriptionOptions<TPayload, TVariables, TContext>
