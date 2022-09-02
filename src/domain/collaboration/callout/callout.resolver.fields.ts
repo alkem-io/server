@@ -104,6 +104,6 @@ export class CalloutResolverFields {
   })
   @Profiling.api
   async comments(@Parent() callout: ICallout): Promise<IComments | undefined> {
-    return await this.calloutService.getCommentssFromCallout(callout);
+    return await this.calloutService.getCommentsFromCallout(callout);
   }
 }
