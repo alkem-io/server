@@ -372,16 +372,12 @@ export class CalloutService {
     return aspect;
   }
 
-  public async getCommentsFromCallout(callout: ICallout): Promise<IComments> {
+  public async getCommentsFromCallout(
+    callout: ICallout
+  ): Promise<IComments | undefined> {
     const loadedCallout = await this.getCalloutOrFail(callout.id, {
       relations: ['comments'],
     });
-    if (!loadedCallout.comments) {
-      throw new EntityNotFoundException(
-        `Context not initialised: ${callout.id}`,
-        LogContext.COLLABORATION
-      );
-    }
     return loadedCallout?.comments;
   }
 }
