@@ -28,10 +28,13 @@ import { NotificationsPayloadBuilder } from '@core/microservices';
 import { EventType } from '@common/enums/event.type';
 import { ICallout } from './callout.interface';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
+import { ActivityInputAspectCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.created';
 
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
+    private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
     private calloutService: CalloutService,
     private canvasAuthorizationService: CanvasAuthorizationService,
@@ -137,6 +140,13 @@ export class CalloutResolverMutations {
       );
 
     this.notificationsClient.emit<number>(EventType.ASPECT_CREATED, payload);
+
+    const activityLogInput: ActivityInputAspectCreated = {
+      triggeredBy: agentInfo.userID,
+      resourceID: callout.id,
+      description: `[${aspectData.type}] New Card created with title: ${aspect.displayName}`,
+    };
+    await this.activityAdapter.aspectCreated(activityLogInput);
 
     return aspect;
   }
