@@ -136,8 +136,6 @@ export class CollaborationService {
       );
 
     const callout = await this.calloutService.createCallout(calloutData);
-    collaboration.callouts.push(callout);
-    await this.collaborationRepository.save(collaboration);
 
     // If creating a discussionCallout, get the communicationGroupID to use for the callout comments
     if (calloutData.type === CalloutType.COMMENTS) {
@@ -148,8 +146,10 @@ export class CollaborationService {
         communicationGroupID,
         `callout-comments-${callout.displayName}`
       );
-      await this.collaborationRepository.save(collaboration);
     }
+
+    collaboration.callouts.push(callout);
+    await this.collaborationRepository.save(collaboration);
 
     return callout;
   }

@@ -47,7 +47,7 @@ export class CalloutService {
   ): Promise<ICallout> {
     const callout: ICallout = Callout.create(calloutData);
     callout.authorization = new AuthorizationPolicy();
-    return callout;
+    return await this.calloutRepository.save(callout);
   }
 
   public async getCalloutOrFail(
@@ -373,11 +373,11 @@ export class CalloutService {
   }
 
   public async getCommentsFromCallout(
-    callout: ICallout
+    calloutID: string
   ): Promise<IComments | undefined> {
-    const loadedCallout = await this.getCalloutOrFail(callout.id, {
+    const loadedCallout = await this.getCalloutOrFail(calloutID, {
       relations: ['comments'],
     });
-    return loadedCallout?.comments;
+    return loadedCallout.comments;
   }
 }
