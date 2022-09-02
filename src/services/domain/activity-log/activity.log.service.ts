@@ -13,16 +13,22 @@ export class ActivityLogService {
   ) {}
 
   async activityLog(
-    activityLogData: ActivityLogInput,
+    queryData: ActivityLogInput,
     agentInfo: AgentInfo
   ): Promise<IActivity[]> {
     this.logger.verbose?.(
       `Querying activityLog by user ${
         agentInfo.userID
-      } + terms: ${JSON.stringify(activityLogData)}`,
+      } + terms: ${JSON.stringify(queryData)}`,
       LogContext.ACTIVITY
     );
-    const activityEntries = await this.activityService.getAllActivity();
-    return activityEntries;
+
+    if (queryData && queryData.collaborationID) {
+      return await this.activityService.getAllActivityForCollaboration(
+        queryData.collaborationID
+      );
+    } else {
+      return await this.activityService.getAllActivity();
+    }
   }
 }

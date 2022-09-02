@@ -1,0 +1,15 @@
+query actvityByCollaboration($queryData: ActivityLogInput!){
+  activityLog(queryData: $queryData) {
+    collaborationID
+    triggeredBy
+    resourceID
+    description
+  }
+}
+
+{
+  "queryData":
+  {
+    "collaborationID": "uuid"
+  }
+}

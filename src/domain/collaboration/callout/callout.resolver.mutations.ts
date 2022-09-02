@@ -30,6 +30,7 @@ import { ICallout } from './callout.interface';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
 import { ActivityInputAspectCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.created';
+import { ActivityInputCalloutPublished } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.published';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -93,6 +94,13 @@ export class CalloutResolverMutations {
         EventType.CALLOUT_PUBLISHED,
         payload
       );
+
+      const activityLogInput: ActivityInputCalloutPublished = {
+        triggeredBy: agentInfo.userID,
+        resourceID: callout.id,
+        description: callout.description,
+      };
+      await this.activityAdapter.calloutPublished(activityLogInput);
     }
 
     return result;
@@ -143,7 +151,7 @@ export class CalloutResolverMutations {
 
     const activityLogInput: ActivityInputAspectCreated = {
       triggeredBy: agentInfo.userID,
-      resourceID: callout.id,
+      resourceID: aspect.id,
       description: `[${aspectData.type}] New Card created with title: ${aspect.displayName}`,
     };
     await this.activityAdapter.aspectCreated(activityLogInput);

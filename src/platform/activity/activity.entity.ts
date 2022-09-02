@@ -12,6 +12,9 @@ export class Activity extends BaseAlkemioEntity implements IActivity {
   @Column('varchar', { length: 36, nullable: true })
   resourceID!: string;
 
+  @Column('varchar', { length: 36, nullable: true })
+  collaborationID!: string;
+
   @Column()
   description?: string;
 

@@ -48,4 +48,15 @@ export class ActivityService {
 
     return activity;
   }
+
+  async getAllActivityForCollaboration(
+    collaborationID: string
+  ): Promise<IActivity[]> {
+    const activity: IActivity[] = await this.activityRepository.find({
+      collaborationID: collaborationID,
+    });
+    if (activity.length === 0) return [];
+
+    return activity;
+  }
 }

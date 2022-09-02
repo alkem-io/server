@@ -4,6 +4,7 @@ export class CreateActivityInput {
   triggeredBy!: string;
 
   resourceID!: string;
+  collaborationID!: string;
 
   description!: string;
 
