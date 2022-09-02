@@ -7,7 +7,6 @@ import { Args, Resolver } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { LogContext } from '@common/enums/logging.context';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SUBSCRIPTION_ASPECT_COMMENT } from '@constants/providers';
@@ -67,21 +66,15 @@ export class AspectResolverSubscriptions {
   )
   async aspectCommentsMessageReceived(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args({
-      name: 'aspectID',
-      type: () => UUID,
-      description: 'The ID of the Aspect to subscribe to.',
-      nullable: false,
-    })
-    aspectID: string
+    @Args({ nullable: false }) args: AspectMessageReceivedArgs
   ) {
     const logMsgPrefix = `[User (${agentInfo.email}) Aspect comments] - `;
     this.logger.verbose?.(
-      `${logMsgPrefix} Subscribing to the following comments of Aspect: ${aspectID}`,
+      `${logMsgPrefix} Subscribing to the following comments of Aspect: ${args.aspectID}`,
       LogContext.SUBSCRIPTIONS
     );
     // check the user has the READ privilege
-    const comments = await this.aspectService.getComments(aspectID);
+    const comments = await this.aspectService.getComments(args.aspectID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       comments.authorization,

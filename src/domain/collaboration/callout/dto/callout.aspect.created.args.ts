@@ -2,10 +2,10 @@ import { ArgsType, Field } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
 
 @ArgsType()
-export class AspectMessageReceivedArgs {
+export class CalloutAspectCreatedArgs {
   @Field(() => UUID, {
-    description: 'The Aspect to receive messages from.',
+    description: 'The Callouts to receive the Aspect from.',
     nullable: false,
   })
-  aspectID!: string;
+  calloutID!: string;
 }

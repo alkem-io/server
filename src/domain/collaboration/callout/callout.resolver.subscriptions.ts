@@ -3,7 +3,7 @@ import { SubscriptionType } from '@common/enums/subscription.type';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
-import { Args, Resolver, Subscription } from '@nestjs/graphql';
+import { Args, Resolver } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { LogContext } from '@common/enums/logging.context';
@@ -19,6 +19,7 @@ import { UUID } from '@domain/common/scalars';
 import { TypedSubscription } from '@common/decorators/subscription.decorator';
 import { CalloutMessageReceivedArgs } from './dto/callout.message.received.args';
 import { CalloutMessageReceived } from './dto/callout.dto.event.message.received';
+import { CalloutAspectCreatedArgs } from './dto/callout.aspect.created.args';
 
 @Resolver()
 export class CalloutResolverSubscriptions {
@@ -34,44 +35,37 @@ export class CalloutResolverSubscriptions {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Subscription(() => CalloutAspectCreated, {
-    description:
-      'Receive new Update messages on Communities the currently authenticated User is a member of.',
-    async resolve(
-      this: CalloutResolverSubscriptions,
-      value: CalloutAspectCreated,
-      _: unknown,
-      context: { req: { user: AgentInfo } }
-    ): Promise<CalloutAspectCreated> {
-      const agentInfo = context.req.user;
-      const logMsgPrefix = `[User (${agentInfo.email}) Callout Aspects] - `;
-      this.logger.verbose?.(
-        `${logMsgPrefix} sending out event for Aspects on Callout: ${value.calloutID} `,
-        LogContext.SUBSCRIPTIONS
-      );
-      return value;
-    },
-    async filter(
-      this: CalloutResolverSubscriptions,
-      payload: CalloutAspectCreated,
-      variables: { calloutID: string },
-      context: { req: { user: AgentInfo } }
-    ) {
-      const agentInfo = context.req.user;
-      const logMsgPrefix = `[User (${agentInfo.email}) Callout Aspects] - `;
-      this.logger.verbose?.(
-        `${logMsgPrefix} Filtering event '${payload.eventID}'`,
-        LogContext.SUBSCRIPTIONS
-      );
+  @TypedSubscription<CalloutAspectCreated, CalloutAspectCreatedArgs>(
+    () => CalloutAspectCreated,
+    {
+      description:
+        'Receive new Update messages on Communities the currently authenticated User is a member of.',
+      resolve(this: CalloutResolverSubscriptions, payload, args, context) {
+        const agentInfo = context.req.user;
+        const logMsgPrefix = `[User (${agentInfo.email}) Callout Aspects] - `;
+        this.logger.verbose?.(
+          `${logMsgPrefix} sending out event for Aspects on Callout: ${payload.calloutID} `,
+          LogContext.SUBSCRIPTIONS
+        );
+        return payload;
+      },
+      filter(this: CalloutResolverSubscriptions, payload, variables, context) {
+        const agentInfo = context.req.user;
+        const logMsgPrefix = `[User (${agentInfo.email}) Callout Aspects] - `;
+        this.logger.verbose?.(
+          `${logMsgPrefix} Filtering event '${payload.eventID}'`,
+          LogContext.SUBSCRIPTIONS
+        );
 
-      const isSameCallout = payload.calloutID === variables.calloutID;
-      this.logger.verbose?.(
-        `${logMsgPrefix} Filter result is ${isSameCallout}`,
-        LogContext.SUBSCRIPTIONS
-      );
-      return isSameCallout;
-    },
-  })
+        const isSameCallout = payload.calloutID === variables.calloutID;
+        this.logger.verbose?.(
+          `${logMsgPrefix} Filter result is ${isSameCallout}`,
+          LogContext.SUBSCRIPTIONS
+        );
+        return isSameCallout;
+      },
+    }
+  )
   async calloutAspectCreated(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
@@ -106,16 +100,18 @@ export class CalloutResolverSubscriptions {
     () => CalloutMessageReceived,
     {
       description: 'Receive comments on Callouts',
-      filter: (payload, variables) => {
+      filter(this: CalloutResolverSubscriptions) {
         return true; // todo
       },
-      resolve: (payload, args, context, info) => {
+      resolve(this: CalloutResolverSubscriptions, payload) {
         return payload; // todo
       },
     }
   )
   async calloutMessageReceived(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @CurrentUser() agentInfo: AgentInfo,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Args({ nullable: false }) args: CalloutMessageReceivedArgs
   ) {
     // todo
