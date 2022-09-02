@@ -28,6 +28,7 @@ import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { NamingService } from '@src/services/domain/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CommentsService } from '@domain/communication/comments/comments.service';
+import { IComments } from '@domain/communication/comments/comments.interface';
 
 @Injectable()
 export class CalloutService {
@@ -175,7 +176,7 @@ export class CalloutService {
 
     await this.setNameIdOnAspectData(aspectData, callout);
 
-    // Get the communicationGroupID to use for the aspect comments
+    // Get the communicationGroupID to use for the callout comments
     const communicationGroupID =
       await this.namingService.getCommunicationGroupIdForCallout(callout.id);
 
@@ -371,15 +372,16 @@ export class CalloutService {
     return aspect;
   }
 
-  public async getComments(calloutId: string) {
-    const { commentsId } = await this.calloutRepository
-      .createQueryBuilder('callout')
-      .select('callout.commentsId', 'commentsId')
-      .where({ id: calloutId })
-      .getRawOne();
-
-    if (commentsId) {
-      return this.commentsService.getCommentsOrFail(commentsId);
+  public async getCommentssFromCallout(callout: ICallout): Promise<IComments> {
+    const loadedCallout = await this.getCalloutOrFail(callout.id, {
+      relations: ['comments'],
+    });
+    if (!loadedCallout.comments) {
+      throw new EntityNotFoundException(
+        `Context not initialised: ${callout.id}`,
+        LogContext.COLLABORATION
+      );
     }
+    return loadedCallout?.comments;
   }
 }

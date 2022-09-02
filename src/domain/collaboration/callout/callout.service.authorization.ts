@@ -63,8 +63,6 @@ export class CalloutAuthorizationService {
       );
     }
 
-    // TODO: REMOVE ME - Copied from aspects.service.authorization.ts:38, not sure what this code does tbh
-
     // Inherit for comments before extending so that the creating user does not
     // have rights to delete comments
     if (callout.comments) {

@@ -18,13 +18,13 @@ export class calloutsComments1661960517210 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout\` DROP CONSTRAINT \`FK_62ed316cda7b75735b20307b47e\``
-    // );
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` DROP CONSTRAINT \`FK_62ed316cda7b75735b20307b47e\``
+    );
 
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout\` RENAME COLUMN commentsId TO discussionId;`
-    // );
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` RENAME COLUMN commentsId TO discussionId;`
+    );
 
     await queryRunner.query(`UPDATE \`callout\` SET discussionId = NULL;`);
 
