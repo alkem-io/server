@@ -34,7 +34,7 @@ export interface TypedSubscriptionOptions<TPayload, TVariables, TContext>
     args: TVariables,
     context: TContext,
     info: GraphQLResolveInfo
-  ) => TPayload | Promise<TPayload>;
+  ) => TPayload | Promise<TPayload>; // todo: change to provide other return type than payload
 }
 
 export function TypedSubscription<
