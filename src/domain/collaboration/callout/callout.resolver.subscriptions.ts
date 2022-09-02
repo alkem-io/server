@@ -9,10 +9,16 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { SUBSCRIPTION_CALLOUT_ASPECT_CREATED } from '@common/constants/providers';
+import {
+  SUBSCRIPTION_CALLOUT_ASPECT_CREATED,
+  SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,
+} from '@common/constants/providers';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CalloutAspectCreated } from '@domain/collaboration/callout';
 import { UUID } from '@domain/common/scalars';
+import { TypedSubscription } from '@common/decorators/subscription.decorator';
+import { CalloutMessageReceivedArgs } from './dto/callout.message.received.args';
+import { CalloutMessageReceived } from './dto/callout.dto.event.message.received';
 
 @Resolver()
 export class CalloutResolverSubscriptions {
@@ -21,6 +27,8 @@ export class CalloutResolverSubscriptions {
     private readonly logger: LoggerService,
     @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
     private subscriptionAspectCreated: PubSubEngine,
+    @Inject(SUBSCRIPTION_CALLOUT_MESSAGE_CREATED)
+    private calloutMessageCreatedSubscription: PubSubEngine,
     private calloutService: CalloutService,
     private authorizationService: AuthorizationService
   ) {}
@@ -90,6 +98,29 @@ export class CalloutResolverSubscriptions {
 
     return this.subscriptionAspectCreated.asyncIterator(
       SubscriptionType.CALLOUT_ASPECT_CREATED
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @TypedSubscription<CalloutMessageReceived, CalloutMessageReceivedArgs>(
+    () => CalloutMessageReceived,
+    {
+      description: 'Receive comments on Callouts',
+      filter: (payload, variables) => {
+        return true; // todo
+      },
+      resolve: (payload, args, context, info) => {
+        return payload; // todo
+      },
+    }
+  )
+  async calloutMessageReceived(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args({ nullable: false }) args: CalloutMessageReceivedArgs
+  ) {
+    // todo
+    return this.calloutMessageCreatedSubscription.asyncIterator(
+      SubscriptionType.CALLOUT_MESSAGE_CREATED
     );
   }
 }

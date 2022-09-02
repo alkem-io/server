@@ -21,6 +21,7 @@ import { ICanvas } from '@domain/common/canvas';
 import {
   NOTIFICATIONS_SERVICE,
   SUBSCRIPTION_CALLOUT_ASPECT_CREATED,
+  SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,
 } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
 import { PubSubEngine } from 'graphql-subscriptions';
@@ -28,6 +29,8 @@ import { NotificationsPayloadBuilder } from '@core/microservices';
 import { EventType } from '@common/enums/event.type';
 import { ICallout } from './callout.interface';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
+import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.args.message.created';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -38,6 +41,8 @@ export class CalloutResolverMutations {
     private aspectAuthorizationService: AspectAuthorizationService,
     @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
     private aspectCreatedSubscription: PubSubEngine,
+    @Inject(SUBSCRIPTION_CALLOUT_MESSAGE_CREATED)
+    private calloutMessageCreatedSubscription: PubSubEngine,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
@@ -59,6 +64,25 @@ export class CalloutResolverMutations {
       `delete callout: ${callout.id}`
     );
     return await this.calloutService.deleteCallout(deleteData.ID);
+  }
+
+  // todo remove later
+  @Mutation(() => CommunicationMessageResult)
+  async sendMessageOnCallout(
+    @Args('data') data: SendMessageOnCalloutInput
+  ): Promise<CommunicationMessageResult> {
+    // todo
+    this.calloutMessageCreatedSubscription.publish(
+      SubscriptionType.CALLOUT_MESSAGE_CREATED,
+      { eventID: 'eventid', calloutID: 'calloutid', message: data.message }
+    );
+    // todo
+    return {
+      id: 'messageid',
+      sender: 'sendid',
+      message: data.message,
+      timestamp: new Date().getTime(),
+    };
   }
 
   @UseGuards(GraphqlGuard)
