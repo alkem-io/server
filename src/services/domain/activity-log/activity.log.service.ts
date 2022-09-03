@@ -1,6 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ActivityLogInput } from './dto/activity.log.dto.input';
+import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
 import { LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { IActivity } from '@src/platform/activity/activity.interface';

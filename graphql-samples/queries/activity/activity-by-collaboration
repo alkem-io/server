@@ -1,9 +1,10 @@
-query actvityByCollaboration($queryData: ActivityLogInput!){
-  activityLog(queryData: $queryData) {
+query activityLogOnCollaboration($queryData: ActivityLogInput!){
+  activityLogOnCollaboration(queryData: $queryData) {
     collaborationID
     triggeredBy
     resourceID
     description
+    type
   }
 }
 

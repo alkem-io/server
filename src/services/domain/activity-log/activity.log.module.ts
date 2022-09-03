@@ -4,9 +4,15 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { ActivityModule } from '@src/platform/activity/activity.module';
 import { ActivityLogResolverQueries } from './activity.log.resolver.queries';
 import { ActivityLogService } from './activity.log.service';
+import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 
 @Module({
-  imports: [AuthorizationModule, AuthorizationPolicyModule, ActivityModule],
+  imports: [
+    AuthorizationModule,
+    AuthorizationPolicyModule,
+    ActivityModule,
+    CollaborationModule,
+  ],
   providers: [ActivityLogService, ActivityLogResolverQueries],
   exports: [],
 })

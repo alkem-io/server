@@ -31,6 +31,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
 import { ActivityInputAspectCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.created';
 import { ActivityInputCalloutPublished } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.published';
+import { ActivityInputCanvasCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.canvas.created';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -181,6 +182,12 @@ export class CalloutResolverMutations {
       canvasData,
       agentInfo.userID
     );
+    const activityLogInput: ActivityInputCanvasCreated = {
+      triggeredBy: agentInfo.userID,
+      resourceID: canvas.id,
+      description: `[Canvas] New Canvas created with title: ${canvas.displayName}`,
+    };
+    await this.activityAdapter.canvasCreated(activityLogInput);
     return await this.canvasAuthorizationService.applyAuthorizationPolicy(
       canvas,
       callout.authorization
