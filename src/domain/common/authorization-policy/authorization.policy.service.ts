@@ -268,6 +268,8 @@ export class AuthorizationPolicyService {
         globalRole === AuthorizationRoleGlobal.GLOBAL_COMMUNITY_ADMIN
       ) {
         credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
+      } else if (globalRole === AuthorizationRoleGlobal.GLOBAL_ADMIN_HUBS) {
+        credType = AuthorizationCredential.GLOBAL_ADMIN_HUBS;
       } else {
         throw new ForbiddenException(
           `Authorization: invalid global role encountered: ${globalRole}`,
@@ -289,7 +291,7 @@ export class AuthorizationPolicyService {
   private createPlatformAuthorizationPolicy(): IAuthorizationPolicy {
     const platformAuthorization = new AuthorizationPolicy();
 
-    const credentialRules = this.createCredentialRules();
+    const credentialRules = this.createPlatformCredentialRules();
 
     const platformAuthCredRules = this.appendCredentialAuthorizationRules(
       platformAuthorization,
@@ -303,11 +305,12 @@ export class AuthorizationPolicyService {
     );
   }
 
-  private createCredentialRules(): AuthorizationPolicyRuleCredential[] {
+  private createPlatformCredentialRules(): AuthorizationPolicyRuleCredential[] {
     const credentialRules: AuthorizationPolicyRuleCredential[] = [];
 
     const globalAdmin = new AuthorizationPolicyRuleCredential(
       [
+        AuthorizationPrivilege.AUTHORIZATION_RESET,
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.READ,
@@ -317,6 +320,27 @@ export class AuthorizationPolicyService {
       AuthorizationCredential.GLOBAL_ADMIN
     );
     credentialRules.push(globalAdmin);
+
+    const globalHubsAdmin = new AuthorizationPolicyRuleCredential(
+      [
+        AuthorizationPrivilege.AUTHORIZATION_RESET,
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+      AuthorizationCredential.GLOBAL_ADMIN_HUBS
+    );
+    credentialRules.push(globalHubsAdmin);
+
+    // Only allow global admins to manage global privileges
+    const globalAdminNotInherited = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
+      AuthorizationCredential.GLOBAL_ADMIN
+    );
+    globalAdminNotInherited.inheritable = false;
+    credentialRules.push(globalAdminNotInherited);
 
     // Allow all registered users to query non-protected user information
     const userNotInherited = new AuthorizationPolicyRuleCredential(

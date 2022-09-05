@@ -187,7 +187,7 @@ export class UserResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       user.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization definition on user: ${authorizationResetData.userID}`
     );
     return await this.userAuthorizationService.applyAuthorizationPolicy(user);

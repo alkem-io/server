@@ -235,7 +235,7 @@ export class HubResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       hub.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization definition: ${agentInfo.email}`
     );
     return await this.hubAuthorizationService.applyAuthorizationPolicy(hub);

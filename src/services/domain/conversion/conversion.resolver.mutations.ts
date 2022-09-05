@@ -15,7 +15,6 @@ import { ConvertChallengeToHubInput } from './dto/convert.dto.challenge.to.hub.i
 import { HubAuthorizationService } from '@domain/challenge/hub/hub.service.authorization';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ConvertOpportunityToChallengeInput } from './dto/convert.dto.opportunity.to.challenge.input';
-import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { HubService } from '@domain/challenge/hub/hub.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
@@ -29,7 +28,6 @@ export class ConversionResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private conversionService: ConversionService,
     private hubAuthorizationService: HubAuthorizationService,
-    private challengeAuthorizationService: ChallengeAuthorizationService,
     private hubService: HubService,
     private opportunityService: OpportunityService,
     private challengeService: ChallengeService,
@@ -38,7 +36,10 @@ export class ConversionResolverMutations {
   ) {
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.GLOBAL_ADMIN],
+        [
+          AuthorizationRoleGlobal.GLOBAL_ADMIN,
+          AuthorizationRoleGlobal.GLOBAL_ADMIN_HUBS,
+        ],
         [AuthorizationPrivilege.CREATE_HUB, AuthorizationPrivilege.CREATE]
       );
   }
