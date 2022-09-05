@@ -139,7 +139,7 @@ export class CollaborationService {
     collaboration.callouts.push(callout);
     await this.collaborationRepository.save(collaboration);
 
-    // If creating a discussionCallout, get the communicationGroupID to use for the callout comments
+    // If creating a comments Callout, get the communicationGroupID to use for the callout comments
     if (calloutData.type === CalloutType.COMMENTS) {
       const communicationGroupID =
         await this.namingService.getCommunicationGroupIdForCallout(callout.id);

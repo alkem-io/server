@@ -1,4 +1,4 @@
-mutation PostCommentOnAspectOrDiscussionCallout($messageData: CommentsSendMessageInput!) {
+mutation sendComment($messageData: CommentsSendMessageInput!) {
   sendComment(messageData: $messageData) {
     id
     message
