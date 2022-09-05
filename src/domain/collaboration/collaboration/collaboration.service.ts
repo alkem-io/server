@@ -148,8 +148,8 @@ export class CollaborationService {
         communicationGroupID,
         `callout-comments-${callout.displayName}`
       );
+      await this.collaborationRepository.save(collaboration);
     }
-    await this.collaborationRepository.save(collaboration);
 
     return callout;
   }
