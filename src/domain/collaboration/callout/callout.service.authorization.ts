@@ -12,6 +12,7 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -20,6 +21,7 @@ export class CalloutAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
+    private commentsAuthorizationService: CommentsAuthorizationService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -59,6 +61,16 @@ export class CalloutAuthorizationService {
         canvas,
         callout.authorization
       );
+    }
+
+    // Inherit for comments before extending so that the creating user does not
+    // have rights to delete comments
+    if (callout.comments) {
+      callout.comments =
+        await this.commentsAuthorizationService.applyAuthorizationPolicy(
+          callout.comments,
+          callout.authorization
+        );
     }
 
     return await this.calloutRepository.save(callout);

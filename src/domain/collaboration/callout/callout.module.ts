@@ -11,6 +11,7 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
 import { CalloutResolverFields } from './callout.resolver.fields';
 import { CalloutResolverSubscriptions } from './callout.resolver.subscriptions';
 import { NamingModule } from '@services/domain/naming/naming.module';
+import { CommentsModule } from '@domain/communication/comments/comments.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { NamingModule } from '@services/domain/naming/naming.module';
     AuthorizationModule,
     AspectModule,
     CanvasModule,
+    CommentsModule,
     NamingModule,
     TypeOrmModule.forFeature([Callout]),
   ],
