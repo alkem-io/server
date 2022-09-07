@@ -46,7 +46,7 @@ export class ContextService {
     context.visuals.push(await this.visualService.createVisualBanner());
     context.visuals.push(await this.visualService.createVisualBannerNarrow());
     context.visuals.push(await this.visualService.createVisualAvatar());
-    return context;
+    return await this.contextRepository.save(context);
   }
 
   async getContextOrFail(

@@ -27,6 +27,8 @@ import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { NamingService } from '@src/services/domain/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
+import { CommentsService } from '@domain/communication/comments/comments.service';
+import { IComments } from '@domain/communication/comments/comments.interface';
 
 @Injectable()
 export class CalloutService {
@@ -35,6 +37,7 @@ export class CalloutService {
     private aspectService: AspectService,
     private canvasService: CanvasService,
     private namingService: NamingService,
+    private commentsService: CommentsService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -44,7 +47,7 @@ export class CalloutService {
   ): Promise<ICallout> {
     const callout: ICallout = Callout.create(calloutData);
     callout.authorization = new AuthorizationPolicy();
-    return callout;
+    return await this.calloutRepository.save(callout);
   }
 
   public async getCalloutOrFail(
@@ -96,7 +99,7 @@ export class CalloutService {
 
   public async deleteCallout(calloutID: string): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['aspects', 'canvases'],
+      relations: ['aspects', 'canvases', 'comments'],
     });
 
     if (callout.canvases) {
@@ -109,6 +112,10 @@ export class CalloutService {
       for (const aspect of callout.aspects) {
         await this.aspectService.deleteAspect({ ID: aspect.id });
       }
+    }
+
+    if (callout.comments) {
+      await this.commentsService.deleteComments(callout.comments);
     }
 
     if (callout.authorization)
@@ -169,7 +176,7 @@ export class CalloutService {
 
     await this.setNameIdOnAspectData(aspectData, callout);
 
-    // Not idea: get the communicationGroupID to use for the comments
+    // Get the communicationGroupID to use for the aspect comments
     const communicationGroupID =
       await this.namingService.getCommunicationGroupIdForCallout(callout.id);
 
@@ -363,5 +370,14 @@ export class CalloutService {
     }
 
     return aspect;
+  }
+
+  public async getCommentsFromCallout(
+    calloutID: string
+  ): Promise<IComments | undefined> {
+    const loadedCallout = await this.getCalloutOrFail(calloutID, {
+      relations: ['comments'],
+    });
+    return loadedCallout.comments;
   }
 }
