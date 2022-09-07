@@ -310,7 +310,6 @@ export class AuthorizationPolicyService {
 
     const globalAdmin = new AuthorizationPolicyRuleCredential(
       [
-        AuthorizationPrivilege.AUTHORIZATION_RESET,
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.READ,
@@ -323,7 +322,6 @@ export class AuthorizationPolicyService {
 
     const globalHubsAdmin = new AuthorizationPolicyRuleCredential(
       [
-        AuthorizationPrivilege.AUTHORIZATION_RESET,
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.READ,
