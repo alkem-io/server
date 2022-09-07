@@ -332,13 +332,33 @@ export class AuthorizationPolicyService {
     );
     credentialRules.push(globalHubsAdmin);
 
-    // Only allow global admins to manage global privileges
+    // Allow global admins to manage global privileges, access Platform mgmt
     const globalAdminNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
+      [
+        AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+      ],
       AuthorizationCredential.GLOBAL_ADMIN
     );
     globalAdminNotInherited.inheritable = false;
     credentialRules.push(globalAdminNotInherited);
+
+    // Allow global admin Hubs to access Platform mgmt
+    const globalAdminHubsNotInherited = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.PLATFORM_ADMIN],
+      AuthorizationCredential.GLOBAL_ADMIN_HUBS
+    );
+    globalAdminHubsNotInherited.inheritable = false;
+    credentialRules.push(globalAdminHubsNotInherited);
+
+    // Allow global admin Communities to access Platform mgmt
+    const globalAdminCommunitiesNotInherited =
+      new AuthorizationPolicyRuleCredential(
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
+      );
+    globalAdminCommunitiesNotInherited.inheritable = false;
+    credentialRules.push(globalAdminCommunitiesNotInherited);
 
     // Allow all registered users to query non-protected user information
     const userNotInherited = new AuthorizationPolicyRuleCredential(
@@ -350,7 +370,10 @@ export class AuthorizationPolicyService {
 
     // Allow hub admins to create new organizations
     const hubAdminsNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.CREATE_ORGANIZATION],
+      [
+        AuthorizationPrivilege.CREATE_ORGANIZATION,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+      ],
       AuthorizationCredential.HUB_ADMIN
     );
     hubAdminsNotInherited.inheritable = false;
@@ -358,7 +381,10 @@ export class AuthorizationPolicyService {
 
     // Allow challenge admins to create new organizations
     const challengeAdminsNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.CREATE_ORGANIZATION],
+      [
+        AuthorizationPrivilege.CREATE_ORGANIZATION,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+      ],
       AuthorizationCredential.CHALLENGE_ADMIN
     );
     challengeAdminsNotInherited.inheritable = false;
