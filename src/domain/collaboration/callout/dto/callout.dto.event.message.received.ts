@@ -12,6 +12,12 @@ export class CalloutMessageReceived {
   })
   calloutID!: string;
 
+  @Field(() => String, {
+    nullable: false,
+    description: 'The identifier for the Comments.',
+  })
+  commentsID!: string;
+
   @Field(() => CommunicationMessageResult, {
     nullable: false,
     description: 'The message that has been sent.',
