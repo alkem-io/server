@@ -1,19 +1,5 @@
-import { IncomingHttpHeaders } from 'http';
-import {
-  ReturnTypeFunc,
-  Subscription,
-  SubscriptionOptions,
-} from '@nestjs/graphql';
+import { SubscriptionOptions } from '@nestjs/graphql';
 import { GraphQLResolveInfo } from 'graphql';
-import { AgentInfo } from '@src/core';
-
-export interface SubscriptionResolveContext {
-  req: {
-    authInfo: unknown;
-    headers: IncomingHttpHeaders;
-    user: AgentInfo;
-  };
-}
 
 export interface TypedSubscriptionOptions<TPayload, TVariables, TContext>
   extends SubscriptionOptions {
@@ -35,15 +21,4 @@ export interface TypedSubscriptionOptions<TPayload, TVariables, TContext>
     context: TContext,
     info: GraphQLResolveInfo
   ) => TPayload | Promise<TPayload>; // todo: change to provide other return type than payload
-}
-
-export function TypedSubscription<
-  TPayload = unknown, // can this be provided directly as typeFunc? like () => TPayload, but as value
-  TVariables = unknown,
-  TContext = SubscriptionResolveContext
->(
-  typeFunc: ReturnTypeFunc,
-  options?: TypedSubscriptionOptions<TPayload, TVariables, TContext>
-): MethodDecorator {
-  return Subscription(typeFunc, options);
 }
