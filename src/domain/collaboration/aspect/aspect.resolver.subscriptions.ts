@@ -14,6 +14,7 @@ import { AspectCommentsMessageReceived } from './dto/aspect.dto.event.message.re
 import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { TypedSubscription } from '@src/common/decorators';
 import { AspectMessageReceivedArgs } from './dto/aspect.message.received.args';
+import { AspectMessageReceivedPayload } from './dto/aspect.message.received.payload';
 
 @Resolver()
 export class AspectResolverSubscriptions {
@@ -26,10 +27,8 @@ export class AspectResolverSubscriptions {
     private authorizationService: AuthorizationService
   ) {}
 
-  // Note: the resolving method should not be doing any heavy lifting.
-  // Relies on users being cached for performance.
   @UseGuards(GraphqlGuard)
-  @TypedSubscription<AspectCommentsMessageReceived, AspectMessageReceivedArgs>(
+  @TypedSubscription<AspectMessageReceivedPayload, AspectMessageReceivedArgs>(
     () => AspectCommentsMessageReceived,
     {
       description: 'Receive new comment on Aspect',
