@@ -37,8 +37,8 @@ import {
 } from '@src/common';
 import { CommentsService } from '@domain/communication/comments/comments.service';
 import { SendMessageOnCalloutInput } from './dto/callout.args.message.created';
-import { CalloutMessageReceived } from './dto/callout.dto.event.message.received';
 import { CalloutType } from '@common/enums/callout.type';
+import { CalloutMessageReceivedPayload } from './dto/callout.message.received.payload';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -117,7 +117,7 @@ export class CalloutResolverMutations {
       { message: data.message }
     );
     // build subscription payload
-    const subscriptionPayload: CalloutMessageReceived = {
+    const subscriptionPayload: CalloutMessageReceivedPayload = {
       eventID: `callout-comment-msg-${getRandomId()}`,
       calloutID: data.calloutID,
       commentsID: comments.id,

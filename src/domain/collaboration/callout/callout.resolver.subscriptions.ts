@@ -25,6 +25,7 @@ import {
   UnableToSubscribeException,
   ValidationException,
 } from '@src/common/exceptions';
+import { CalloutMessageReceivedPayload } from './dto/callout.message.received.payload';
 
 @Resolver()
 export class CalloutResolverSubscriptions {
@@ -101,7 +102,7 @@ export class CalloutResolverSubscriptions {
   }
 
   @UseGuards(GraphqlGuard)
-  @TypedSubscription<CalloutMessageReceived, CalloutMessageReceivedArgs>(
+  @TypedSubscription<CalloutMessageReceivedPayload, CalloutMessageReceivedArgs>(
     () => CalloutMessageReceived,
     {
       description: 'Receive comments on Callouts',

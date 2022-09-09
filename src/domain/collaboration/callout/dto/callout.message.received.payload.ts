@@ -3,7 +3,8 @@ import {
   CommunicationMessagePayload,
 } from '@src/common';
 
-export interface AspectMessageReceivedPayload extends BaseSubscriptionPayload {
-  aspectID: string;
+export interface CalloutMessageReceivedPayload extends BaseSubscriptionPayload {
+  calloutID: string;
+  commentsID: string;
   message: CommunicationMessagePayload;
 }
