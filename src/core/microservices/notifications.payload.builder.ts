@@ -11,7 +11,6 @@ import { IDiscussion } from '@domain/communication/discussion/discussion.interfa
 import { IUpdates } from '@domain/communication/updates/updates.interface';
 import { Community, ICommunity } from '@domain/community/community';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
-import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -27,6 +26,7 @@ import {
 } from './event-payloads';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { HubPayload } from './event-payloads/hub.payload';
 
 @Injectable()
 export class NotificationsPayloadBuilder {
@@ -53,6 +53,7 @@ export class NotificationsPayloadBuilder {
     applicantID: string,
     community: ICommunity
   ) {
+    const hubPayload = await this.buildHubPayload(community);
     const payload: any = {
       applicationCreatorID,
       applicantID,
@@ -60,13 +61,8 @@ export class NotificationsPayloadBuilder {
         name: community.displayName,
         type: community.type,
       },
-      hub: {
-        nameID: await this.getHubNameID(community.hubID),
-        id: community.hubID,
-      },
+      hub: hubPayload,
     };
-
-    await this.buildHubPayload(payload, community);
 
     return payload;
   }
@@ -99,6 +95,7 @@ export class NotificationsPayloadBuilder {
       );
     }
 
+    const hubPayload = await this.buildHubPayload(community);
     const payload: AspectCreatedEventPayload = {
       aspect: {
         id: aspectId,
@@ -110,13 +107,8 @@ export class NotificationsPayloadBuilder {
         name: community.displayName,
         type: community.type,
       },
-      hub: {
-        nameID: (await this.getHubNameID(community.hubID)) ?? '',
-        id: community.hubID,
-      },
+      hub: hubPayload,
     };
-
-    await this.buildHubPayload(payload, community);
 
     return payload;
   }
@@ -134,6 +126,7 @@ export class NotificationsPayloadBuilder {
       );
     }
 
+    const hubPayload = await this.buildHubPayload(community);
     const payload: CalloutPublishedEventPayload = {
       userID: userId,
       callout: {
@@ -146,13 +139,8 @@ export class NotificationsPayloadBuilder {
         name: community.displayName,
         type: community.type,
       },
-      hub: {
-        nameID: (await this.getHubNameID(community.hubID)) ?? '',
-        id: community.hubID,
-      },
+      hub: hubPayload,
     };
-
-    await this.buildHubPayload(payload, community);
 
     return payload;
   }
@@ -172,6 +160,7 @@ export class NotificationsPayloadBuilder {
       );
     }
 
+    const hubPayload = await this.buildHubPayload(community);
     const payload: AspectCommentCreatedEventPayload = {
       aspect: {
         displayName: aspectName,
@@ -185,48 +174,53 @@ export class NotificationsPayloadBuilder {
         name: community.displayName,
         type: community.type,
       },
-      hub: {
-        nameID: (await this.getHubNameID(community.hubID)) ?? '',
-        id: community.hubID,
-      },
+      hub: hubPayload,
     };
-
-    await this.buildHubPayload(payload, community);
 
     return payload;
   }
 
   async buildCommunityNewMemberPayload(userID: string, community: ICommunity) {
+    const hubPayload = await this.buildHubPayload(community);
     const payload = {
       userID,
       community: {
         name: community.displayName,
         type: community.type,
       },
-      hub: {
-        nameID: await this.getHubNameID(community.hubID),
-        id: community.hubID,
-      },
+      hub: hubPayload,
     };
-
-    await this.buildHubPayload(payload, community);
 
     return payload;
   }
 
-  async getOpportunityForCollaboration(
+  async getCommunityFromCollaboration(
     collaborationID: string
-  ): Promise<IOpportunity> {
-    const opportunity = await this.opportunityRepository.findOne({
-      where: { collaboration: collaborationID },
+  ): Promise<ICommunity> {
+    const [result]: {
+      communityId: string;
+    }[] = await getConnection().query(
+      `
+        SELECT communityId from \`hub\`
+        WHERE \`hub\`.\`collaborationId\` = '${collaborationID}' UNION
+        SELECT communityId from \`challenge\`
+        WHERE \`challenge\`.\`collaborationId\` = '${collaborationID}' UNION
+        SELECT communityId from \`opportunity\`
+        WHERE \`opportunity\`.\`collaborationId\` = '${collaborationID}';
+      `
+    );
+
+    const communityId = result.communityId;
+    const community = await this.communityRepository.findOne({
+      where: { id: communityId },
     });
-    if (!opportunity) {
+    if (!community) {
       throw new EntityNotFoundException(
-        `Unable to find Opportunity for Collaboration: ${collaborationID}`,
+        `Unable to find Community for Collaboration: ${collaborationID}`,
         LogContext.NOTIFICATIONS
       );
     }
-    return opportunity;
+    return community;
   }
 
   async buildCollaborationInterestPayload(
@@ -234,20 +228,22 @@ export class NotificationsPayloadBuilder {
     collaboration: ICollaboration,
     relation: IRelation
   ): Promise<CommunityCollaborationInterestEventPayload> {
-    const opportunity = await this.getOpportunityForCollaboration(
+    const community = await this.getCommunityFromCollaboration(
       collaboration.id
     );
-    const payload = {
+    const hubPayload = await this.buildHubPayload(community);
+    const payload: CommunityCollaborationInterestEventPayload = {
       userID,
-      opportunity: {
-        id: opportunity.id,
-        name: opportunity.displayName,
-        communityName: opportunity.community?.displayName,
+      community: {
+        id: community.id,
+        name: community.displayName,
+        type: community.type,
       },
       relation: {
-        role: relation.actorRole,
-        description: relation.description,
+        role: relation.actorRole || '',
+        description: relation.description || '',
       },
+      hub: hubPayload,
     };
 
     return payload;
@@ -264,6 +260,7 @@ export class NotificationsPayloadBuilder {
         LogContext.COMMUNICATION
       );
 
+    const hubPayload = await this.buildHubPayload(community);
     const payload: any = {
       update: {
         id: updates.id,
@@ -273,13 +270,8 @@ export class NotificationsPayloadBuilder {
         name: community.displayName,
         type: community.type,
       },
-      hub: {
-        nameID: await this.getHubNameID(community.hubID),
-        id: community.hubID,
-      },
+      hub: hubPayload,
     };
-
-    await this.buildHubPayload(payload, community);
 
     return payload;
   }
@@ -321,6 +313,7 @@ export class NotificationsPayloadBuilder {
         `Could not acquire community from discussion with id: ${discussion.id}`,
         LogContext.COMMUNICATION
       );
+    const hubPayload = await this.buildHubPayload(community);
     const payload: any = {
       discussion: {
         id: discussion.id,
@@ -332,22 +325,21 @@ export class NotificationsPayloadBuilder {
         name: community.displayName,
         type: community.type,
       },
-      hub: {
-        nameID: await this.getHubNameID(community.hubID),
-        id: community.hubID,
-      },
+      hub: hubPayload,
     };
-
-    await this.buildHubPayload(payload, community);
 
     return payload;
   }
-  private async buildHubPayload(payload: any, community: ICommunity) {
+
+  private async buildHubPayload(community: ICommunity): Promise<HubPayload> {
+    let challengeNameID = '';
+    let challengeID = '';
+    let opportunityID = '';
+    let opportunityNameID = '';
     if (community.type === CommunityType.CHALLENGE) {
-      payload.hub.challenge = {
-        nameID: await this.getChallengeNameID(community.parentID),
-        id: community.parentID,
-      };
+      challengeNameID =
+        (await this.getChallengeNameID(community.parentID)) || '';
+      challengeID = community.parentID;
     } else if (community.type === CommunityType.OPPORTUNITY) {
       const communityWithParent = await this.getCommunityWithParent(
         community.id
@@ -361,16 +353,26 @@ export class NotificationsPayloadBuilder {
           LogContext.CHALLENGES
         );
       }
-
-      payload.hub.challenge = {
-        nameID: await this.getChallengeNameID(parentCommunity.parentID),
-        id: parentCommunity.parentID,
-        opportunity: {
-          nameID: await this.getOpportunityNameID(community.parentID),
-          id: community.parentID,
-        },
-      };
+      challengeNameID =
+        (await this.getChallengeNameID(parentCommunity.parentID)) || '';
+      challengeID = parentCommunity.parentID;
+      opportunityID = community.parentID;
+      opportunityNameID =
+        (await this.getOpportunityNameID(community.parentID)) || '';
     }
+    const result: HubPayload = {
+      id: community.hubID,
+      nameID: (await this.getHubNameID(community.hubID)) || '',
+      challenge: {
+        id: challengeID,
+        nameID: challengeNameID,
+        opportunity: {
+          id: opportunityID,
+          nameID: opportunityNameID,
+        },
+      },
+    };
+    return result;
   }
 
   private async getHubNameID(hubID: string): Promise<string | undefined> {

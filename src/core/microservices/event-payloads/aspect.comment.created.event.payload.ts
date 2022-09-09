@@ -1,3 +1,5 @@
+import { HubPayload } from './hub.payload';
+
 export type AspectCommentCreatedEventPayload = {
   aspect: {
     displayName: string;
@@ -11,16 +13,5 @@ export type AspectCommentCreatedEventPayload = {
     name: string;
     type: string;
   };
-  hub: {
-    nameID: string;
-    id: string;
-    challenge?: {
-      nameID: string;
-      id: string;
-      opportunity?: {
-        nameID: string;
-        id: string;
-      };
-    };
-  };
+  hub: HubPayload;
 };
