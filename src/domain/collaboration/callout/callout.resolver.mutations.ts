@@ -8,7 +8,7 @@ import { AgentInfo } from '@core/authentication';
 import { CalloutService } from './callout.service';
 import { IAspect } from '@domain/collaboration/aspect';
 import {
-  CalloutAspectCreated,
+  CalloutAspectCreatedPayload,
   CreateAspectOnCalloutInput,
   CreateCanvasOnCalloutInput,
   DeleteCalloutInput,
@@ -192,7 +192,7 @@ export class CalloutResolverMutations {
       aspect,
       callout.authorization
     );
-    const aspectCreatedEvent: CalloutAspectCreated = {
+    const aspectCreatedEvent: CalloutAspectCreatedPayload = {
       eventID: `callout-aspect-created-${Math.round(Math.random() * 100)}`,
       calloutID: callout.id,
       aspect,

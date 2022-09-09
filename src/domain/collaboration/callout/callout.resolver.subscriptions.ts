@@ -14,12 +14,12 @@ import {
   SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,
 } from '@common/constants/providers';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
-import { CalloutAspectCreated } from '@domain/collaboration/callout';
 import { UUID } from '@domain/common/scalars';
 import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
 import { CalloutMessageReceivedArgs } from './dto/callout.message.received.args';
 import { CalloutMessageReceived } from './dto/callout.dto.event.message.received';
 import { CalloutAspectCreatedArgs } from './dto/callout.aspect.created.args';
+import { CalloutAspectCreated, CalloutAspectCreatedPayload } from './dto';
 import {
   EntityNotInitializedException,
   UnableToSubscribeException,
@@ -40,7 +40,7 @@ export class CalloutResolverSubscriptions {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @TypedSubscription<CalloutAspectCreated, CalloutAspectCreatedArgs>(
+  @TypedSubscription<CalloutAspectCreatedPayload, CalloutAspectCreatedArgs>(
     () => CalloutAspectCreated,
     {
       description:
