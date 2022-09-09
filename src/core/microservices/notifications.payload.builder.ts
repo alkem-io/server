@@ -332,14 +332,15 @@ export class NotificationsPayloadBuilder {
   }
 
   private async buildHubPayload(community: ICommunity): Promise<HubPayload> {
-    let challengeNameID = '';
-    let challengeID = '';
-    let opportunityID = '';
-    let opportunityNameID = '';
+    const result: HubPayload = {
+      id: community.hubID,
+      nameID: await this.getHubNameIdOrFail(community.hubID),
+    };
     if (community.type === CommunityType.CHALLENGE) {
-      challengeNameID =
-        (await this.getChallengeNameID(community.parentID)) || '';
-      challengeID = community.parentID;
+      result.challenge = {
+        id: community.parentID,
+        nameID: await this.getChallengeNameIdOrFail(community.parentID),
+      };
     } else if (community.type === CommunityType.OPPORTUNITY) {
       const communityWithParent = await this.getCommunityWithParent(
         community.id
@@ -353,59 +354,67 @@ export class NotificationsPayloadBuilder {
           LogContext.CHALLENGES
         );
       }
-      challengeNameID =
-        (await this.getChallengeNameID(parentCommunity.parentID)) || '';
-      challengeID = parentCommunity.parentID;
-      opportunityID = community.parentID;
-      opportunityNameID =
-        (await this.getOpportunityNameID(community.parentID)) || '';
-    }
-    const result: HubPayload = {
-      id: community.hubID,
-      nameID: (await this.getHubNameID(community.hubID)) || '',
-      challenge: {
-        id: challengeID,
-        nameID: challengeNameID,
+      result.challenge = {
+        nameID: await this.getChallengeNameIdOrFail(parentCommunity.parentID),
+        id: parentCommunity.parentID,
         opportunity: {
-          id: opportunityID,
-          nameID: opportunityNameID,
+          id: community.parentID,
+          nameID: await this.getOpportunityNameIdOrFail(community.parentID),
         },
-      },
-    };
+      };
+    }
+
     return result;
   }
 
-  private async getHubNameID(hubID: string): Promise<string | undefined> {
+  private async getHubNameIdOrFail(hubID: string): Promise<string> {
     const hub = await this.hubRepository
       .createQueryBuilder('hub')
       .where('hub.id = :id')
       .setParameters({ id: `${hubID}` })
       .getOne();
 
-    return hub?.nameID;
+    if (!hub) {
+      throw new EntityNotFoundException(
+        `Unable to find Hub with id: ${hubID}`,
+        LogContext.CHALLENGES
+      );
+    }
+    return hub.nameID;
   }
 
-  private async getChallengeNameID(
-    challengeID: string
-  ): Promise<string | undefined> {
+  private async getChallengeNameIdOrFail(challengeID: string): Promise<string> {
     const challenge = await this.challengeRepository
       .createQueryBuilder('challenge')
       .where('challenge.id = :id')
       .setParameters({ id: `${challengeID}` })
       .getOne();
-    return challenge?.nameID;
+    if (!challenge) {
+      throw new EntityNotFoundException(
+        `Unable to find Challenge with id: ${challengeID}`,
+        LogContext.CHALLENGES
+      );
+    }
+    return challenge.nameID;
   }
 
-  private async getOpportunityNameID(
+  private async getOpportunityNameIdOrFail(
     opportunityID: string
-  ): Promise<string | undefined> {
+  ): Promise<string> {
     const opportunity = await this.opportunityRepository
       .createQueryBuilder('opportunity')
       .where('opportunity.id = :id')
       .setParameters({ id: `${opportunityID}` })
       .getOne();
 
-    return opportunity?.nameID;
+    if (!opportunity) {
+      throw new EntityNotFoundException(
+        `Unable to find Opportunity with id: ${opportunityID}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return opportunity.nameID;
   }
 
   private async getCommunity(communityID: string) {
