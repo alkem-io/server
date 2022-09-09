@@ -15,6 +15,7 @@ export * from './matrix.login.exception';
 export * from './matrix.registration.exception';
 export * from './matrix.entity.not.found.exception';
 export * from './community.policy.role.limits.exception';
+export * from './subscription';
 
 export * from './pagination';
 export * from './user';

@@ -7,5 +7,5 @@ export class CalloutMessageReceivedArgs {
     description: 'The Callouts to receive messages from.',
     nullable: false,
   })
-  calloutIDs!: string;
+  calloutIDs!: string[];
 }

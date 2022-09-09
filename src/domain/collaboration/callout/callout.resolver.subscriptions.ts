@@ -20,6 +20,11 @@ import { TypedSubscription } from '@common/decorators/typed.subscription/typed.s
 import { CalloutMessageReceivedArgs } from './dto/callout.message.received.args';
 import { CalloutMessageReceived } from './dto/callout.dto.event.message.received';
 import { CalloutAspectCreatedArgs } from './dto/callout.aspect.created.args';
+import {
+  EntityNotInitializedException,
+  UnableToSubscribeException,
+  ValidationException,
+} from '@src/common/exceptions';
 
 @Resolver()
 export class CalloutResolverSubscriptions {
@@ -100,23 +105,96 @@ export class CalloutResolverSubscriptions {
     () => CalloutMessageReceived,
     {
       description: 'Receive comments on Callouts',
-      filter(this: CalloutResolverSubscriptions) {
-        return true; // todo
+      resolve(this: CalloutResolverSubscriptions, payload, _, context) {
+        const { email } = context.req?.user;
+        this.logger.verbose?.(
+          `[CalloutMessageReceived] - [${email}] - sending out event for Callout: ${payload.calloutID} `,
+          LogContext.SUBSCRIPTIONS
+        );
+        return payload;
       },
-      resolve(this: CalloutResolverSubscriptions, payload) {
-        return payload; // todo
+      filter(this: CalloutResolverSubscriptions, payload, variables, context) {
+        const { email } = context.req.user;
+
+        const calloutInSubscriptionList = variables.calloutIDs.includes(
+          payload.calloutID
+        );
+
+        this.logger.verbose?.(
+          `[calloutMessageReceived] - [${email}] - [${payload.calloutID}] - [${calloutInSubscriptionList}]`
+        );
+
+        return calloutInSubscriptionList;
       },
     }
   )
   async calloutMessageReceived(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @CurrentUser() agentInfo: AgentInfo,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Args({ nullable: false }) args: CalloutMessageReceivedArgs
   ) {
-    // todo
+    if (!args.calloutIDs.length) {
+      throw new ValidationException(
+        'Empty calloutIDs array provided',
+        LogContext.SUBSCRIPTIONS
+      );
+    }
+
+    const readAccessPromises: Promise<void>[] = [];
+
+    args.calloutIDs.forEach(async id =>
+      readAccessPromises.push(this.hasCommentsReadAccess(agentInfo, id))
+    );
+
+    const settled = await Promise.allSettled(readAccessPromises);
+
+    const rejected = settled
+      .filter(x => x.status === 'rejected')
+      .map<PromiseRejectedResult>(x => x as PromiseRejectedResult);
+
+    rejected.forEach(x => {
+      this.logger.error(
+        `Unable to subscribe to messages for Callout with reason: (${x.reason})`,
+        LogContext.SUBSCRIPTIONS
+      );
+    });
+
+    if (rejected.length) {
+      throw new UnableToSubscribeException(
+        'Unable to subscribe to calloutIDs list',
+        LogContext.SUBSCRIPTIONS
+      );
+    }
+
+    this.logger.verbose?.(
+      `User (${agentInfo.email}) subscribed to messages for Callouts (${args.calloutIDs})`,
+      LogContext.SUBSCRIPTIONS
+    );
+
     return this.calloutMessageCreatedSubscription.asyncIterator(
       SubscriptionType.CALLOUT_MESSAGE_CREATED
     );
   }
+
+  private hasCommentsReadAccess = async (
+    agentInfo: AgentInfo,
+    calloutId: string
+  ) => {
+    const comments = await this.calloutService.getCommentsFromCallout(
+      calloutId
+    );
+
+    if (!comments) {
+      throw new EntityNotInitializedException(
+        `Comments not initialized on Callout (${calloutId})`,
+        LogContext.SUBSCRIPTIONS
+      );
+    }
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      comments.authorization,
+      AuthorizationPrivilege.READ,
+      `subscription to Comments (${comments.id}) from Callout (${calloutId})`
+    );
+  };
 }
