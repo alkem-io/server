@@ -17,10 +17,10 @@ import { MessageID } from '@domain/common/scalars/scalar.message';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { CommunicationDiscussionMessageReceived } from './dto/discussion.dto.event.message.received';
 import { SUBSCRIPTION_DISCUSSION_MESSAGE } from '@common/constants/providers';
 import { CommunicationDiscussionUpdated } from '../communication/dto/communication.dto.event.discussion.updated';
 import { getRandomId } from '@src/common';
+import { DiscussionMessageReceivedPayload } from './dto/discussion.message.received.payload';
 
 @Resolver()
 export class DiscussionResolverMutations {
@@ -59,7 +59,7 @@ export class DiscussionResolverMutations {
 
     // Send the subscription event
     const eventID = `discussion-msg-${getRandomId()}`;
-    const subscriptionPayload: CommunicationDiscussionMessageReceived = {
+    const subscriptionPayload: DiscussionMessageReceivedPayload = {
       eventID: eventID,
       message: discussionMessage,
       discussionID: discussion.id,

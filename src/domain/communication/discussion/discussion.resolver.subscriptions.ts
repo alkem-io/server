@@ -14,6 +14,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SUBSCRIPTION_DISCUSSION_MESSAGE } from '@common/constants/providers';
 import { TypedSubscription } from '@src/common';
 import { DiscussionMessageReceivedArgs } from './dto/discussion.message.received.args';
+import { DiscussionMessageReceivedPayload } from './dto/discussion.message.received.payload';
 
 @Resolver()
 export class DiscussionResolverSubscriptions {
@@ -28,7 +29,7 @@ export class DiscussionResolverSubscriptions {
 
   @UseGuards(GraphqlGuard)
   @TypedSubscription<
-    CommunicationDiscussionMessageReceived,
+    DiscussionMessageReceivedPayload,
     DiscussionMessageReceivedArgs
   >(() => CommunicationDiscussionMessageReceived, {
     description: 'Receive new Discussion messages',
