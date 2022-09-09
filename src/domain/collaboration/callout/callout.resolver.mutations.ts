@@ -1,6 +1,6 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -28,6 +28,14 @@ import { NotificationsPayloadBuilder } from '@core/microservices';
 import { EventType } from '@common/enums/event.type';
 import { ICallout } from './callout.interface';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
+import {
+  EntityNotInitializedException,
+  NotSupportedException,
+} from '@src/common';
+import { CommentsService } from '@domain/communication/comments/comments.service';
+import { SendMessageOnCalloutInput } from './dto/callout.args.message.created';
+import { CalloutType } from '@common/enums/callout.type';
 import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
 import { ActivityInputAspectCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.created';
 import { ActivityInputCalloutPublished } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.published';
@@ -39,6 +47,7 @@ export class CalloutResolverMutations {
     private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
     private calloutService: CalloutService,
+    private commentsService: CommentsService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
     @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
@@ -64,6 +73,49 @@ export class CalloutResolverMutations {
       `delete callout: ${callout.id}`
     );
     return await this.calloutService.deleteCallout(deleteData.ID);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => CommunicationMessageResult, {
+    description: 'Send a message on a Comments Callout',
+  })
+  @Profiling.api
+  async sendMessageOnCallout(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('data') data: SendMessageOnCalloutInput
+  ): Promise<CommunicationMessageResult> {
+    const callout = await this.calloutService.getCalloutOrFail(data.calloutID);
+
+    if (callout.type !== CalloutType.COMMENTS) {
+      throw new NotSupportedException(
+        'Messages only supported on Comments Callout',
+        LogContext.COLLABORATION
+      );
+    }
+
+    const comments = await this.calloutService.getCommentsFromCallout(
+      data.calloutID
+    );
+
+    if (!comments) {
+      throw new EntityNotInitializedException(
+        `Comments not initialized on Callout with ID ${data.calloutID}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      comments.authorization,
+      AuthorizationPrivilege.CREATE_COMMENT,
+      `comments send message: ${comments.displayName}`
+    );
+
+    return this.commentsService.sendCommentsMessage(
+      comments,
+      agentInfo.communicationID,
+      { message: data.message }
+    );
   }
 
   @UseGuards(GraphqlGuard)

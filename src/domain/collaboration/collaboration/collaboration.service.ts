@@ -23,6 +23,8 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { collaborationDefaults } from './collaboration.defaults';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
+import { CalloutType } from '@common/enums/callout.type';
+import { CommentsService } from '@domain/communication/comments/comments.service';
 
 @Injectable()
 export class CollaborationService {
@@ -31,6 +33,7 @@ export class CollaborationService {
     private calloutService: CalloutService,
     private namingService: NamingService,
     private relationService: RelationService,
+    private commentsService: CommentsService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>
   ) {}
@@ -135,6 +138,19 @@ export class CollaborationService {
     const callout = await this.calloutService.createCallout(calloutData);
     collaboration.callouts.push(callout);
     await this.collaborationRepository.save(collaboration);
+
+    // If creating a comments Callout, get the communicationGroupID to use for the callout comments
+    if (calloutData.type === CalloutType.COMMENTS) {
+      const communicationGroupID =
+        await this.namingService.getCommunicationGroupIdForCallout(callout.id);
+
+      callout.comments = await this.commentsService.createComments(
+        communicationGroupID,
+        `callout-comments-${callout.displayName}`
+      );
+      await this.collaborationRepository.save(collaboration);
+    }
+
     return callout;
   }
 

@@ -11,6 +11,7 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
 import { CalloutResolverFields } from './callout.resolver.fields';
 import { CalloutResolverSubscriptions } from './callout.resolver.subscriptions';
 import { NamingModule } from '@services/domain/naming/naming.module';
+import { CommentsModule } from '@domain/communication/comments/comments.module';
 import { ActivityAdapterModule } from '@services/platform/activity-adapter/activity.adapter.module';
 
 @Module({
@@ -20,6 +21,7 @@ import { ActivityAdapterModule } from '@services/platform/activity-adapter/activ
     AuthorizationModule,
     AspectModule,
     CanvasModule,
+    CommentsModule,
     NamingModule,
     TypeOrmModule.forFeature([Callout]),
   ],

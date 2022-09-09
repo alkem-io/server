@@ -13,6 +13,7 @@ import { CollaborationDataloaderService } from './collaboration.dataloader.servi
 import { CollaborationAuthorizationService } from './collaboration.service.authorization';
 import { CanvasModule } from '@domain/common/canvas/canvas.module';
 import { AspectModule } from '../aspect/aspect.module';
+import { CommentsModule } from '@domain/communication/comments/comments.module';
 import { ActivityAdapterModule } from '@services/platform/activity-adapter/activity.adapter.module';
 
 @Module({
@@ -21,6 +22,7 @@ import { ActivityAdapterModule } from '@services/platform/activity-adapter/activ
     AuthorizationPolicyModule,
     AuthorizationModule,
     CalloutModule,
+    CommentsModule,
     NamingModule,
     RelationModule,
     CanvasModule,
