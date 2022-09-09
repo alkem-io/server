@@ -1,8 +1,8 @@
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('CalloutCommentsMessageReceived')
-export class CalloutCommentsMessageReceived {
+@ObjectType('CalloutMessageReceived')
+export class CalloutMessageReceived {
   // To identify the event
   eventID!: string;
 
