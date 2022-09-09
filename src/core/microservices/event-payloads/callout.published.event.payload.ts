@@ -1,3 +1,5 @@
+import { HubPayload } from './hub.payload';
+
 export type CalloutPublishedEventPayload = {
   userID: string;
   callout: {
@@ -10,16 +12,5 @@ export type CalloutPublishedEventPayload = {
     name: string;
     type: string;
   };
-  hub: {
-    nameID: string;
-    id: string;
-    challenge?: {
-      nameID: string;
-      id: string;
-      opportunity?: {
-        nameID: string;
-        id: string;
-      };
-    };
-  };
+  hub: HubPayload;
 };
