@@ -379,7 +379,7 @@ export class AuthorizationPolicyService {
     hubAdminsNotInherited.inheritable = false;
     credentialRules.push(hubAdminsNotInherited);
 
-    // Allow challenge admins to create new organizations
+    // Allow challenge admins to create new organizations + access platform admin
     const challengeAdminsNotInherited = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.CREATE_ORGANIZATION,
@@ -389,6 +389,15 @@ export class AuthorizationPolicyService {
     );
     challengeAdminsNotInherited.inheritable = false;
     credentialRules.push(challengeAdminsNotInherited);
+
+    // Allow Organization admins to access platform admin
+    const organizationAdminsNotInherited =
+      new AuthorizationPolicyRuleCredential(
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        AuthorizationCredential.ORGANIZATION_ADMIN
+      );
+    organizationAdminsNotInherited.inheritable = false;
+    credentialRules.push(organizationAdminsNotInherited);
 
     return credentialRules;
   }
