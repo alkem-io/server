@@ -18,14 +18,14 @@ import {
   NOTIFICATIONS_SERVICE,
   SUBSCRIPTION_ASPECT_COMMENT,
 } from '@common/constants/providers';
-import { AspectCommentsMessageReceived } from '../../collaboration/aspect/dto/aspect.dto.event.message.received';
 import { CommentsAuthorizationService } from './comments.service.authorization';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
-import { IComments } from '@domain/communication/comments/comments.interface';
+import { IComments } from './comments.interface';
 import { getRandomId } from '@src/common';
 import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
 import { ActivityInputAspectComment } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.comment';
+import { AspectMessageReceivedPayload } from '@domain/collaboration/aspect/dto/aspect.message.received.payload';
 
 @Resolver()
 export class CommentsResolverMutations {
@@ -40,6 +40,7 @@ export class CommentsResolverMutations {
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
+  // todo should be removed to serve per entity e.g. send aspect comment
   @UseGuards(GraphqlGuard)
   @Mutation(() => CommunicationMessageResult, {
     description:
@@ -121,7 +122,7 @@ export class CommentsResolverMutations {
   ) {
     // build subscription payload
     const eventID = `comment-msg-${getRandomId()}`;
-    const subscriptionPayload: AspectCommentsMessageReceived = {
+    const subscriptionPayload: AspectMessageReceivedPayload = {
       eventID: eventID,
       message: commentSent,
       aspectID: aspect.id,

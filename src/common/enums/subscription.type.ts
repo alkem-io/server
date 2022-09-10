@@ -6,4 +6,5 @@ export enum SubscriptionType {
   CANVAS_CONTENT_UPDATED = 'canvasContentUpdated',
   PROFILE_VERIFIED_CREDENTIAL = 'profileVerifiedCredential',
   CALLOUT_ASPECT_CREATED = 'calloutAspectCreated',
+  CALLOUT_MESSAGE_CREATED = 'calloutMessageCreated',
 }

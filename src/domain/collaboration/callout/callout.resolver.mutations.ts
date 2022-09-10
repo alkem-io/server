@@ -8,7 +8,7 @@ import { AgentInfo } from '@core/authentication';
 import { CalloutService } from './callout.service';
 import { IAspect } from '@domain/collaboration/aspect';
 import {
-  CalloutAspectCreated,
+  CalloutAspectCreatedPayload,
   CreateAspectOnCalloutInput,
   CreateCanvasOnCalloutInput,
   DeleteCalloutInput,
@@ -21,6 +21,7 @@ import { ICanvas } from '@domain/common/canvas';
 import {
   NOTIFICATIONS_SERVICE,
   SUBSCRIPTION_CALLOUT_ASPECT_CREATED,
+  SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,
 } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
 import { PubSubEngine } from 'graphql-subscriptions';
@@ -31,15 +32,18 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import {
   EntityNotInitializedException,
+  getRandomId,
   NotSupportedException,
 } from '@src/common';
 import { CommentsService } from '@domain/communication/comments/comments.service';
 import { SendMessageOnCalloutInput } from './dto/callout.args.message.created';
 import { CalloutType } from '@common/enums/callout.type';
+
 import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
 import { ActivityInputAspectCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.created';
 import { ActivityInputCalloutPublished } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.published';
 import { ActivityInputCanvasCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.canvas.created';
+import { CalloutMessageReceivedPayload } from './dto/callout.message.received.payload';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -52,6 +56,8 @@ export class CalloutResolverMutations {
     private aspectAuthorizationService: AspectAuthorizationService,
     @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
     private aspectCreatedSubscription: PubSubEngine,
+    @Inject(SUBSCRIPTION_CALLOUT_MESSAGE_CREATED)
+    private calloutMessageCreatedSubscription: PubSubEngine,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
@@ -111,11 +117,25 @@ export class CalloutResolverMutations {
       `comments send message: ${comments.displayName}`
     );
 
-    return this.commentsService.sendCommentsMessage(
+    const commentSent = await this.commentsService.sendCommentsMessage(
       comments,
       agentInfo.communicationID,
       { message: data.message }
     );
+    // build subscription payload
+    const subscriptionPayload: CalloutMessageReceivedPayload = {
+      eventID: `callout-comment-msg-${getRandomId()}`,
+      calloutID: data.calloutID,
+      commentsID: comments.id,
+      message: commentSent,
+    };
+    // send the subscriptions event
+    this.calloutMessageCreatedSubscription.publish(
+      SubscriptionType.CALLOUT_MESSAGE_CREATED,
+      subscriptionPayload
+    );
+
+    return commentSent;
   }
 
   @UseGuards(GraphqlGuard)
@@ -185,7 +205,7 @@ export class CalloutResolverMutations {
       aspect,
       callout.authorization
     );
-    const aspectCreatedEvent: CalloutAspectCreated = {
+    const aspectCreatedEvent: CalloutAspectCreatedPayload = {
       eventID: `callout-aspect-created-${Math.round(Math.random() * 100)}`,
       calloutID: callout.id,
       aspect,
