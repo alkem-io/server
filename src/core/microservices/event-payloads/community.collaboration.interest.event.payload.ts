@@ -1,8 +1,15 @@
+import { HubPayload } from './hub.payload';
+
 export type CommunityCollaborationInterestEventPayload = {
   userID: string;
-  opportunity: {
+  relation: {
+    role: string;
+    description: string;
+  };
+  community: {
     id: string;
     name: string;
-    communityName: string | undefined;
+    type: string;
   };
+  hub: HubPayload;
 };
