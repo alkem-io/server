@@ -56,4 +56,7 @@ export class Callout extends NameableEntity implements ICallout {
     onDelete: 'CASCADE',
   })
   collaboration?: Collaboration;
+
+  @Column('int')
+  sortOrder!: number;
 }

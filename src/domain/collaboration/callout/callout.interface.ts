@@ -47,4 +47,10 @@ export abstract class ICallout extends INameable {
     description: 'The Comments object for this Callout.',
   })
   comments?: IComments;
+
+  @Field(() => Number, {
+    nullable: false,
+    description: 'The sorting order for this Callout.',
+  })
+  sortOrder!: number;
 }
