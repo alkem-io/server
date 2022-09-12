@@ -94,6 +94,9 @@ export class CalloutService {
     if (calloutUpdateData.displayName)
       callout.displayName = calloutUpdateData.displayName;
 
+    if (calloutUpdateData.sortOrder)
+      callout.sortOrder = calloutUpdateData.sortOrder;
+
     return await this.calloutRepository.save(callout);
   }
 
