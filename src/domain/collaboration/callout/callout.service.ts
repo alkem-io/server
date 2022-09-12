@@ -29,6 +29,7 @@ import { NamingService } from '@src/services/domain/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CommentsService } from '@domain/communication/comments/comments.service';
 import { IComments } from '@domain/communication/comments/comments.interface';
+import { CalloutType } from '@common/enums/callout.type';
 
 @Injectable()
 export class CalloutService {
@@ -43,11 +44,22 @@ export class CalloutService {
   ) {}
 
   public async createCallout(
-    calloutData: CreateCalloutInput
+    calloutData: CreateCalloutInput,
+    communicationGroupID: string
   ): Promise<ICallout> {
     const callout: ICallout = Callout.create(calloutData);
     callout.authorization = new AuthorizationPolicy();
-    return await this.calloutRepository.save(callout);
+    const savedCallout: ICallout = await this.calloutRepository.save(callout);
+
+    // If creating a comments Callout, get the communicationGroupID to use for the callout comments
+    if (calloutData.type === CalloutType.COMMENTS) {
+      savedCallout.comments = await this.commentsService.createComments(
+        communicationGroupID,
+        `callout-comments-${savedCallout.displayName}`
+      );
+      return await this.save(savedCallout);
+    }
+    return savedCallout;
   }
 
   public async getCalloutOrFail(
@@ -74,6 +86,10 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
     return callout;
+  }
+
+  async save(callout: ICallout): Promise<ICallout> {
+    return await this.calloutRepository.save(callout);
   }
 
   public async updateCallout(

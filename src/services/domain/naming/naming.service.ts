@@ -147,6 +147,51 @@ export class NamingService {
     return UUID.REGEX.test(uuid);
   }
 
+  async getCommunicationGroupIdFromCollaborationId(
+    collaborationID: string
+  ): Promise<string> {
+    const communityID = await this.getCommunityIdFromCollaborationId(
+      collaborationID
+    );
+    return await this.getCommunicationGroupIdFromCommunityId(communityID);
+  }
+
+  async getCommunityIdFromCollaborationId(collaborationID: string) {
+    const [result]: {
+      communityId: string;
+    }[] = await getConnection().query(
+      `
+        SELECT communityId from \`hub\`
+        WHERE \`hub\`.\`collaborationId\` = '${collaborationID}' UNION
+
+        SELECT communityId from \`challenge\`
+        WHERE \`challenge\`.\`collaborationId\` = '${collaborationID}' UNION
+
+        SELECT communityId from \`opportunity\`
+        WHERE \`opportunity\`.\`collaborationId\` = '${collaborationID}';
+      `
+    );
+    return result.communityId;
+  }
+
+  async getCommunicationGroupIdFromCommunityId(
+    communicationID: string
+  ): Promise<string> {
+    const community = await this.communityRepository
+      .createQueryBuilder('community')
+      .leftJoinAndSelect('community.communication', 'communication')
+      .where('community.id = :id')
+      .setParameters({ id: `${communicationID}` })
+      .getOne();
+    if (!community || !community.communication) {
+      throw new EntityNotInitializedException(
+        `Unable to identify Community for collaboration ${communicationID}!`,
+        LogContext.COMMUNITY
+      );
+    }
+    return community.communication.communicationGroupID;
+  }
+
   async getCommunicationGroupIdForCallout(calloutID: string): Promise<string> {
     const hub = await this.hubRepository
       .createQueryBuilder('hub')
@@ -221,7 +266,7 @@ export class NamingService {
   }
 
   async getMembershipCredentialForCollaboration(
-    collaborationID: string
+    communicationID: string
   ): Promise<ICredentialDefinition> {
     const [result]: {
       entityId: string;
@@ -231,15 +276,15 @@ export class NamingService {
       `
         SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`collaboration\`
         RIGHT JOIN \`hub\` on \`collaboration\`.\`id\` = \`hub\`.\`collaborationId\`
-        WHERE \`collaboration\`.\`id\` = '${collaborationID}' UNION
+        WHERE \`collaboration\`.\`id\` = '${communicationID}' UNION
 
         SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`collaboration\`
         RIGHT JOIN \`challenge\` on \`collaboration\`.\`id\` = \`challenge\`.\`collaborationId\`
-        WHERE \`collaboration\`.\`id\` = '${collaborationID}' UNION
+        WHERE \`collaboration\`.\`id\` = '${communicationID}' UNION
 
         SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`collaboration\`
         RIGHT JOIN \`opportunity\` on \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
-        WHERE \`collaboration\`.\`id\` = '${collaborationID}';
+        WHERE \`collaboration\`.\`id\` = '${communicationID}';
       `
     );
 
@@ -249,7 +294,7 @@ export class NamingService {
 
     if (!community)
       throw new EntityNotInitializedException(
-        `Community for collaboration ${collaborationID} not initialized!`,
+        `Community for collaboration ${communicationID} not initialized!`,
         LogContext.COMMUNITY
       );
 

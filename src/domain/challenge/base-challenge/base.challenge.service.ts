@@ -70,9 +70,14 @@ export class BaseChallengeService {
         baseChallengeData.context
       );
     }
+    const communicationGroupID =
+      baseChallenge.community?.communication?.communicationGroupID || '';
 
     baseChallenge.collaboration =
-      await this.collaborationService.createCollaboration();
+      await this.collaborationService.createCollaboration(
+        communityType,
+        communicationGroupID
+      );
 
     baseChallenge.tagset = await this.tagsetService.createTagset({
       name: RestrictedTagsetNames.DEFAULT,

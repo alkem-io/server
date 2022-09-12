@@ -23,8 +23,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { collaborationDefaults } from './collaboration.defaults';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
-import { CalloutType } from '@common/enums/callout.type';
-import { CommentsService } from '@domain/communication/comments/comments.service';
+import { CommunityType } from '@common/enums/community.type';
 
 @Injectable()
 export class CollaborationService {
@@ -33,22 +32,41 @@ export class CollaborationService {
     private calloutService: CalloutService,
     private namingService: NamingService,
     private relationService: RelationService,
-    private commentsService: CommentsService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>
   ) {}
 
-  async createCollaboration(): Promise<ICollaboration> {
+  async createCollaboration(
+    communityType: CommunityType,
+    communicationGroupID: string
+  ): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
     collaboration.authorization = new AuthorizationPolicy();
     collaboration.relations = [];
     collaboration.callouts = [];
 
+    const savedCollaboration = await this.save(collaboration);
+
     for (const calloutDefault of collaborationDefaults.callouts) {
-      const callout = await this.calloutService.createCallout(calloutDefault);
-      collaboration.callouts.push(callout);
+      const communityTypeForDefault = calloutDefault.communityType;
+      // If communityType is not specified then create the callout; otherwose only create
+      //  when it matches the given communityType
+      if (
+        !communityTypeForDefault ||
+        communityTypeForDefault === communityType
+      ) {
+        const callout = await this.calloutService.createCallout(
+          calloutDefault,
+          communicationGroupID
+        );
+        savedCollaboration.callouts?.push(callout);
+      }
     }
     return collaboration;
+  }
+
+  async save(collaboration: ICollaboration): Promise<ICollaboration> {
+    return await this.collaborationRepository.save(collaboration);
   }
 
   async getCollaborationOrFail(
@@ -135,21 +153,16 @@ export class CollaborationService {
         LogContext.CHALLENGES
       );
 
-    const callout = await this.calloutService.createCallout(calloutData);
+    const communicationGroupID =
+      await this.namingService.getCommunicationGroupIdFromCollaborationId(
+        collaboration.id
+      );
+    const callout = await this.calloutService.createCallout(
+      calloutData,
+      communicationGroupID
+    );
     collaboration.callouts.push(callout);
     await this.collaborationRepository.save(collaboration);
-
-    // If creating a comments Callout, get the communicationGroupID to use for the callout comments
-    if (calloutData.type === CalloutType.COMMENTS) {
-      const communicationGroupID =
-        await this.namingService.getCommunicationGroupIdForCallout(callout.id);
-
-      callout.comments = await this.commentsService.createComments(
-        communicationGroupID,
-        `callout-comments-${callout.displayName}`
-      );
-      await this.collaborationRepository.save(collaboration);
-    }
 
     return callout;
   }
