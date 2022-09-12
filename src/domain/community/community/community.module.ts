@@ -8,6 +8,7 @@ import { UserGroupModule } from '@domain/community/user-group/user-group.module'
 import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ActivityAdapterModule } from '@services/platform/activity-adapter/activity.adapter.module';
 import { TrustRegistryAdapterModule } from '@services/platform/trust-registry/trust.registry.adapter/trust.registry.adapter.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { Community } from './community.entity';
@@ -19,6 +20,7 @@ import { CommunityAuthorizationService } from './community.service.authorization
 
 @Module({
   imports: [
+    ActivityAdapterModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     AgentModule,

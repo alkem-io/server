@@ -18,8 +18,10 @@ import { ICollaboration } from './collaboration.interface';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { EventType } from '@common/enums/event.type';
 import { ClientProxy } from '@nestjs/microservices';
-import { NOTIFICATIONS_SERVICE } from '@common/constants';
+import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
+import { ActivityInputCalloutPublished } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.published';
 
 @Resolver()
 export class CollaborationResolverMutations {
@@ -30,6 +32,7 @@ export class CollaborationResolverMutations {
     private authorizationService: AuthorizationService,
     private collaborationService: CollaborationService,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
+    private activityAdapter: ActivityAdapter,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
@@ -172,6 +175,12 @@ export class CollaborationResolverMutations {
         EventType.CALLOUT_PUBLISHED,
         payload
       );
+
+      const activityLogInput: ActivityInputCalloutPublished = {
+        triggeredBy: agentInfo.userID,
+        callout: callout,
+      };
+      await this.activityAdapter.calloutPublished(activityLogInput);
     }
 
     return calloutAuthorized;

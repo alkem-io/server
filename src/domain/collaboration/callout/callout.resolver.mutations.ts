@@ -38,11 +38,17 @@ import {
 import { CommentsService } from '@domain/communication/comments/comments.service';
 import { SendMessageOnCalloutInput } from './dto/callout.args.message.created';
 import { CalloutType } from '@common/enums/callout.type';
+
+import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
+import { ActivityInputAspectCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.created';
+import { ActivityInputCalloutPublished } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.published';
+import { ActivityInputCanvasCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.canvas.created';
 import { CalloutMessageReceivedPayload } from './dto/callout.message.received.payload';
 
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
+    private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
     private calloutService: CalloutService,
     private commentsService: CommentsService,
@@ -161,6 +167,12 @@ export class CalloutResolverMutations {
         EventType.CALLOUT_PUBLISHED,
         payload
       );
+
+      const activityLogInput: ActivityInputCalloutPublished = {
+        triggeredBy: agentInfo.userID,
+        callout: callout,
+      };
+      await this.activityAdapter.calloutPublished(activityLogInput);
     }
 
     return result;
@@ -209,6 +221,12 @@ export class CalloutResolverMutations {
 
     this.notificationsClient.emit<number>(EventType.ASPECT_CREATED, payload);
 
+    const activityLogInput: ActivityInputAspectCreated = {
+      triggeredBy: agentInfo.userID,
+      aspect: aspect,
+    };
+    await this.activityAdapter.aspectCreated(activityLogInput);
+
     return aspect;
   }
 
@@ -234,6 +252,11 @@ export class CalloutResolverMutations {
       canvasData,
       agentInfo.userID
     );
+    const activityLogInput: ActivityInputCanvasCreated = {
+      triggeredBy: agentInfo.userID,
+      canvas: canvas,
+    };
+    await this.activityAdapter.canvasCreated(activityLogInput);
     return await this.canvasAuthorizationService.applyAuthorizationPolicy(
       canvas,
       callout.authorization
