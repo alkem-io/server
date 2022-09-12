@@ -2,7 +2,6 @@ import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { ClientProxy } from '@nestjs/microservices';
-import { getConnection } from 'typeorm';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
@@ -24,11 +23,14 @@ import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { IComments } from './comments.interface';
 import { getRandomId } from '@src/common';
+import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
+import { ActivityInputAspectComment } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.comment';
 import { AspectMessageReceivedPayload } from '@domain/collaboration/aspect/dto/aspect.message.received.payload';
 
 @Resolver()
 export class CommentsResolverMutations {
   constructor(
+    private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
     private commentsService: CommentsService,
     private commentsAuthorizationService: CommentsAuthorizationService,
@@ -64,15 +66,16 @@ export class CommentsResolverMutations {
       agentInfo.communicationID,
       messageData
     );
-
-    // check if this is a comment related to an aspect
-    const [aspect]: { id: string; displayName: string; createdBy: string }[] =
-      await getConnection().query(
-        `SELECT id, displayName, createdBy FROM aspect WHERE commentsId = '${messageData.commentsID}'`
-      );
-
+    const aspect = await this.activityAdapter.getAspectForComments(
+      messageData.commentsID
+    );
     if (aspect) {
       this.processAspectCommentEvents(aspect, comments, commentSent);
+      const activityLogInput: ActivityInputAspectComment = {
+        triggeredBy: agentInfo.userID,
+        aspect: aspect,
+      };
+      await this.activityAdapter.aspectComment(activityLogInput);
     }
 
     return commentSent;
