@@ -266,7 +266,7 @@ export class NamingService {
   }
 
   async getMembershipCredentialForCollaboration(
-    communicationID: string
+    collaborationID: string
   ): Promise<ICredentialDefinition> {
     const [result]: {
       entityId: string;
@@ -276,15 +276,15 @@ export class NamingService {
       `
         SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`collaboration\`
         RIGHT JOIN \`hub\` on \`collaboration\`.\`id\` = \`hub\`.\`collaborationId\`
-        WHERE \`collaboration\`.\`id\` = '${communicationID}' UNION
+        WHERE \`collaboration\`.\`id\` = '${collaborationID}' UNION
 
         SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`collaboration\`
         RIGHT JOIN \`challenge\` on \`collaboration\`.\`id\` = \`challenge\`.\`collaborationId\`
-        WHERE \`collaboration\`.\`id\` = '${communicationID}' UNION
+        WHERE \`collaboration\`.\`id\` = '${collaborationID}' UNION
 
         SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`collaboration\`
         RIGHT JOIN \`opportunity\` on \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
-        WHERE \`collaboration\`.\`id\` = '${communicationID}';
+        WHERE \`collaboration\`.\`id\` = '${collaborationID}';
       `
     );
 
@@ -294,7 +294,7 @@ export class NamingService {
 
     if (!community)
       throw new EntityNotInitializedException(
-        `Community for collaboration ${communicationID} not initialized!`,
+        `Community for collaboration ${collaborationID} not initialized!`,
         LogContext.COMMUNITY
       );
 
