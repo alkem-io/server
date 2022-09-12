@@ -10,7 +10,7 @@ export class calloutOrder1662878852718 implements MigrationInterface {
     const callouts: any[] = await queryRunner.query(`SELECT id from callout`);
     for (const callout of callouts) {
       await queryRunner.query(
-        `UPDATE \`callout\` SET \`sortOrder\` = '1' WHERE \`id\`= '${callout.id}'`
+        `UPDATE \`callout\` SET \`sortOrder\` = '10' WHERE \`id\`= '${callout.id}'`
       );
     }
   }
