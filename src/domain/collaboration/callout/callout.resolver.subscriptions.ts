@@ -26,6 +26,7 @@ import {
   ValidationException,
 } from '@src/common/exceptions';
 import { CalloutMessageReceivedPayload } from './dto/callout.message.received.payload';
+import { CalloutType } from '@common/enums/callout.type';
 
 @Resolver()
 export class CalloutResolverSubscriptions {
@@ -87,8 +88,14 @@ export class CalloutResolverSubscriptions {
       `${logMsgPrefix} Subscribing to the following Callout Aspects: ${calloutID}`,
       LogContext.SUBSCRIPTIONS
     );
-    // check the user has the READ privilege
+    // Validate
     const callout = await this.calloutService.getCalloutOrFail(calloutID);
+    if (callout.type !== CalloutType.CARD) {
+      throw new UnableToSubscribeException(
+        `Unable to subscribe: Callout not of type Card: ${calloutID}`,
+        LogContext.SUBSCRIPTIONS
+      );
+    }
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
@@ -140,28 +147,29 @@ export class CalloutResolverSubscriptions {
       );
     }
 
-    const readAccessPromises: Promise<void>[] = [];
+    const validationPromises: Promise<void>[] = [];
 
     args.calloutIDs.forEach(async id =>
-      readAccessPromises.push(this.hasCommentsReadAccess(agentInfo, id))
+      validationPromises.push(this.validateSubscription(agentInfo, id))
     );
 
-    const settled = await Promise.allSettled(readAccessPromises);
+    const settled = await Promise.allSettled(validationPromises);
 
     const rejected = settled
       .filter(x => x.status === 'rejected')
       .map<PromiseRejectedResult>(x => x as PromiseRejectedResult);
 
-    rejected.forEach(x => {
-      this.logger.error(
-        `Unable to subscribe to messages for Callout with reason: (${x.reason})`,
-        LogContext.SUBSCRIPTIONS
-      );
-    });
-
     if (rejected.length) {
+      const errors: string[] = [];
+      rejected.forEach(x => {
+        this.logger.error(
+          `Unable to subscribe to messages for Callout with reason: (${x.reason})`,
+          LogContext.SUBSCRIPTIONS
+        );
+        errors.push(x.reason);
+      });
       throw new UnableToSubscribeException(
-        'Unable to subscribe to calloutIDs list',
+        `Unable to subscribe to calloutIDs list: ${errors}`,
         LogContext.SUBSCRIPTIONS
       );
     }
@@ -176,15 +184,22 @@ export class CalloutResolverSubscriptions {
     );
   }
 
-  private hasCommentsReadAccess = async (
+  private validateSubscription = async (
     agentInfo: AgentInfo,
     calloutId: string
   ) => {
-    const comments = await this.calloutService.getCommentsFromCallout(
-      calloutId
-    );
+    const callout = await this.calloutService.getCalloutOrFail(calloutId, {
+      relations: ['comments'],
+    });
 
-    if (!comments) {
+    if (callout.type !== CalloutType.COMMENTS) {
+      throw new UnableToSubscribeException(
+        `Callout not of type Comments (${calloutId})`,
+        LogContext.SUBSCRIPTIONS
+      );
+    }
+
+    if (!callout.comments) {
       throw new EntityNotInitializedException(
         `Comments not initialized on Callout (${calloutId})`,
         LogContext.SUBSCRIPTIONS
@@ -193,9 +208,9 @@ export class CalloutResolverSubscriptions {
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      comments.authorization,
+      callout.authorization,
       AuthorizationPrivilege.READ,
-      `subscription to Comments (${comments.id}) from Callout (${calloutId})`
+      `subscription to Comments (${callout.id}) from Callout (${calloutId})`
     );
   };
 }
