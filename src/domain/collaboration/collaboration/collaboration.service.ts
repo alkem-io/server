@@ -173,12 +173,19 @@ export class CollaborationService {
       );
 
     if (!calloutIDs) {
-      const limitAndShuffled = limitAndShuffle(
-        collaborationLoaded.callouts,
-        limit,
-        shuffle
+      if (shuffle) {
+        return limitAndShuffle(collaborationLoaded.callouts, limit, shuffle);
+      }
+      let results = collaborationLoaded.callouts;
+      if (limit) {
+        results = limitAndShuffle(collaborationLoaded.callouts, limit, false);
+      }
+
+      // Sort according to order
+      const sortedCallouts = results.sort((a, b) =>
+        a.sortOrder > b.sortOrder ? 1 : -1
       );
-      return limitAndShuffled;
+      return sortedCallouts;
     }
     const results: ICallout[] = [];
 
