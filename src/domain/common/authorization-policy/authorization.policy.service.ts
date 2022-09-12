@@ -262,18 +262,23 @@ export class AuthorizationPolicyService {
 
     for (const globalRole of globalRoles) {
       let credType: AuthorizationCredential;
-      if (globalRole === AuthorizationRoleGlobal.GLOBAL_ADMIN) {
-        credType = AuthorizationCredential.GLOBAL_ADMIN;
-      } else if (
-        globalRole === AuthorizationRoleGlobal.GLOBAL_COMMUNITY_ADMIN
-      ) {
-        credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
-      } else {
-        throw new ForbiddenException(
-          `Authorization: invalid global role encountered: ${globalRole}`,
-          LogContext.AUTH
-        );
+      switch (globalRole) {
+        case AuthorizationRoleGlobal.GLOBAL_ADMIN:
+          credType = AuthorizationCredential.GLOBAL_ADMIN;
+          break;
+        case AuthorizationRoleGlobal.GLOBAL_COMMUNITY_ADMIN:
+          credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
+          break;
+        case AuthorizationRoleGlobal.GLOBAL_ADMIN_HUBS:
+          credType = AuthorizationCredential.GLOBAL_ADMIN_HUBS;
+          break;
+        default:
+          throw new ForbiddenException(
+            `Authorization: invalid global role encountered: ${globalRole}`,
+            LogContext.AUTH
+          );
       }
+
       const roleCred = new AuthorizationPolicyRuleCredential(
         privileges,
         credType
@@ -289,7 +294,7 @@ export class AuthorizationPolicyService {
   private createPlatformAuthorizationPolicy(): IAuthorizationPolicy {
     const platformAuthorization = new AuthorizationPolicy();
 
-    const credentialRules = this.createCredentialRules();
+    const credentialRules = this.createPlatformCredentialRules();
 
     const platformAuthCredRules = this.appendCredentialAuthorizationRules(
       platformAuthorization,
@@ -303,7 +308,7 @@ export class AuthorizationPolicyService {
     );
   }
 
-  private createCredentialRules(): AuthorizationPolicyRuleCredential[] {
+  private createPlatformCredentialRules(): AuthorizationPolicyRuleCredential[] {
     const credentialRules: AuthorizationPolicyRuleCredential[] = [];
 
     const globalAdmin = new AuthorizationPolicyRuleCredential(
@@ -318,6 +323,46 @@ export class AuthorizationPolicyService {
     );
     credentialRules.push(globalAdmin);
 
+    const globalHubsAdmin = new AuthorizationPolicyRuleCredential(
+      [
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+      AuthorizationCredential.GLOBAL_ADMIN_HUBS
+    );
+    credentialRules.push(globalHubsAdmin);
+
+    // Allow global admins to manage global privileges, access Platform mgmt
+    const globalAdminNotInherited = new AuthorizationPolicyRuleCredential(
+      [
+        AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+      ],
+      AuthorizationCredential.GLOBAL_ADMIN
+    );
+    globalAdminNotInherited.inheritable = false;
+    credentialRules.push(globalAdminNotInherited);
+
+    // Allow global admin Hubs to access Platform mgmt
+    const globalAdminHubsNotInherited = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.PLATFORM_ADMIN],
+      AuthorizationCredential.GLOBAL_ADMIN_HUBS
+    );
+    globalAdminHubsNotInherited.inheritable = false;
+    credentialRules.push(globalAdminHubsNotInherited);
+
+    // Allow global admin Communities to access Platform mgmt
+    const globalAdminCommunitiesNotInherited =
+      new AuthorizationPolicyRuleCredential(
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
+      );
+    globalAdminCommunitiesNotInherited.inheritable = false;
+    credentialRules.push(globalAdminCommunitiesNotInherited);
+
     // Allow all registered users to query non-protected user information
     const userNotInherited = new AuthorizationPolicyRuleCredential(
       [AuthorizationPrivilege.READ_USERS],
@@ -328,19 +373,34 @@ export class AuthorizationPolicyService {
 
     // Allow hub admins to create new organizations
     const hubAdminsNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.CREATE_ORGANIZATION],
+      [
+        AuthorizationPrivilege.CREATE_ORGANIZATION,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+      ],
       AuthorizationCredential.HUB_ADMIN
     );
     hubAdminsNotInherited.inheritable = false;
     credentialRules.push(hubAdminsNotInherited);
 
-    // Allow challenge admins to create new organizations
+    // Allow challenge admins to create new organizations + access platform admin
     const challengeAdminsNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.CREATE_ORGANIZATION],
+      [
+        AuthorizationPrivilege.CREATE_ORGANIZATION,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+      ],
       AuthorizationCredential.CHALLENGE_ADMIN
     );
     challengeAdminsNotInherited.inheritable = false;
     credentialRules.push(challengeAdminsNotInherited);
+
+    // Allow Organization admins to access platform admin
+    const organizationAdminsNotInherited =
+      new AuthorizationPolicyRuleCredential(
+        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        AuthorizationCredential.ORGANIZATION_ADMIN
+      );
+    organizationAdminsNotInherited.inheritable = false;
+    credentialRules.push(organizationAdminsNotInherited);
 
     return credentialRules;
   }
