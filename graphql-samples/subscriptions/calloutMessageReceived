@@ -1,0 +1,11 @@
+subscription {
+  calloutMessageReceived(calloutIDs: ["uuid"]) {
+    calloutID
+    commentsID
+    message {
+      id,
+      message,
+      sender
+    }
+  }
+}
