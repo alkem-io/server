@@ -262,20 +262,23 @@ export class AuthorizationPolicyService {
 
     for (const globalRole of globalRoles) {
       let credType: AuthorizationCredential;
-      if (globalRole === AuthorizationRoleGlobal.GLOBAL_ADMIN) {
-        credType = AuthorizationCredential.GLOBAL_ADMIN;
-      } else if (
-        globalRole === AuthorizationRoleGlobal.GLOBAL_COMMUNITY_ADMIN
-      ) {
-        credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
-      } else if (globalRole === AuthorizationRoleGlobal.GLOBAL_ADMIN_HUBS) {
-        credType = AuthorizationCredential.GLOBAL_ADMIN_HUBS;
-      } else {
-        throw new ForbiddenException(
-          `Authorization: invalid global role encountered: ${globalRole}`,
-          LogContext.AUTH
-        );
+      switch (globalRole) {
+        case AuthorizationRoleGlobal.GLOBAL_ADMIN:
+          credType = AuthorizationCredential.GLOBAL_ADMIN;
+          break;
+        case AuthorizationRoleGlobal.GLOBAL_COMMUNITY_ADMIN:
+          credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
+          break;
+        case AuthorizationRoleGlobal.GLOBAL_ADMIN_HUBS:
+          credType = AuthorizationCredential.GLOBAL_ADMIN_HUBS;
+          break;
+        default:
+          throw new ForbiddenException(
+            `Authorization: invalid global role encountered: ${globalRole}`,
+            LogContext.AUTH
+          );
       }
+
       const roleCred = new AuthorizationPolicyRuleCredential(
         privileges,
         credType
