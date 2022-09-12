@@ -268,28 +268,12 @@ export class NamingService {
   async getMembershipCredentialForCollaboration(
     collaborationID: string
   ): Promise<ICredentialDefinition> {
-    const [result]: {
-      entityId: string;
-      communityId: string;
-      communityType: string;
-    }[] = await getConnection().query(
-      `
-        SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`collaboration\`
-        RIGHT JOIN \`hub\` on \`collaboration\`.\`id\` = \`hub\`.\`collaborationId\`
-        WHERE \`collaboration\`.\`id\` = '${collaborationID}' UNION
-
-        SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`collaboration\`
-        RIGHT JOIN \`challenge\` on \`collaboration\`.\`id\` = \`challenge\`.\`collaborationId\`
-        WHERE \`collaboration\`.\`id\` = '${collaborationID}' UNION
-
-        SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`collaboration\`
-        RIGHT JOIN \`opportunity\` on \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
-        WHERE \`collaboration\`.\`id\` = '${collaborationID}';
-      `
+    const communityID = await this.getCommunityIdFromCollaborationId(
+      collaborationID
     );
 
     const community = await this.communityRepository.findOne({
-      id: result.communityId,
+      id: communityID,
     });
 
     if (!community)
