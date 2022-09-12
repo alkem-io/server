@@ -14,9 +14,11 @@ import { CollaborationAuthorizationService } from './collaboration.service.autho
 import { CanvasModule } from '@domain/common/canvas/canvas.module';
 import { AspectModule } from '../aspect/aspect.module';
 import { CommentsModule } from '@domain/communication/comments/comments.module';
+import { ActivityAdapterModule } from '@services/platform/activity-adapter/activity.adapter.module';
 
 @Module({
   imports: [
+    ActivityAdapterModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     CalloutModule,

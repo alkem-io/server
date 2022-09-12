@@ -45,6 +45,7 @@ import * as redisStore from 'cache-manager-redis-store';
 import { RedisLockModule } from '@core/caching/redis/redis.lock.module';
 import { ConversionModule } from '@services/domain/conversion/conversion.module';
 import { SessionExtendMiddleware } from '@src/core/middleware';
+import { ActivityLogModule } from '@services/domain/activity-log/activity.log.module';
 
 @Module({
   imports: [
@@ -184,6 +185,7 @@ import { SessionExtendMiddleware } from '@src/core/middleware';
     MetadataModule,
     BootstrapModule,
     SearchModule,
+    ActivityLogModule,
     RolesModule,
     KonfigModule,
     IpfsModule,
