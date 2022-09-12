@@ -113,8 +113,8 @@ export class CommunityResolverMutations {
     await this.userAuthorizationService.applyAuthorizationPolicy(user);
     const activityLogInput: ActivityInputMemberJoined = {
       triggeredBy: agentInfo.userID,
-      resourceID: community.id,
-      description: `[${community.displayName}] New member: ${user.displayName}`,
+      community: community,
+      user: user,
     };
     await this.activityAdapter.memberJoined(activityLogInput);
 

@@ -73,8 +73,7 @@ export class CommentsResolverMutations {
       this.processAspectCommentEvents(aspect, comments, commentSent);
       const activityLogInput: ActivityInputAspectComment = {
         triggeredBy: agentInfo.userID,
-        resourceID: aspect.id,
-        description: `[Card] New comment added on card: ${aspect.displayName}`,
+        aspect: aspect,
       };
       await this.activityAdapter.aspectComment(activityLogInput);
     }

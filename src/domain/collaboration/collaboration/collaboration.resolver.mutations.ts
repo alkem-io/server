@@ -178,8 +178,7 @@ export class CollaborationResolverMutations {
 
       const activityLogInput: ActivityInputCalloutPublished = {
         triggeredBy: agentInfo.userID,
-        resourceID: callout.id,
-        description: `[Published] '${calloutData.type}' Callout published with name: ${callout.displayName}`,
+        callout: callout,
       };
       await this.activityAdapter.calloutPublished(activityLogInput);
     }

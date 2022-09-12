@@ -1,3 +1,6 @@
+import { IAspect } from '@domain/collaboration';
 import { ActivityInputBase } from './activity.dto.input.base';
 
-export class ActivityInputAspectCreated extends ActivityInputBase {}
+export class ActivityInputAspectCreated extends ActivityInputBase {
+  aspect!: IAspect;
+}

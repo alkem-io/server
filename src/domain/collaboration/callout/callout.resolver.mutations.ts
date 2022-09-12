@@ -170,8 +170,7 @@ export class CalloutResolverMutations {
 
       const activityLogInput: ActivityInputCalloutPublished = {
         triggeredBy: agentInfo.userID,
-        resourceID: callout.id,
-        description: callout.description,
+        callout: callout,
       };
       await this.activityAdapter.calloutPublished(activityLogInput);
     }
@@ -224,8 +223,7 @@ export class CalloutResolverMutations {
 
     const activityLogInput: ActivityInputAspectCreated = {
       triggeredBy: agentInfo.userID,
-      resourceID: aspect.id,
-      description: `[${aspectData.type}] New Card created with title: ${aspect.displayName}`,
+      aspect: aspect,
     };
     await this.activityAdapter.aspectCreated(activityLogInput);
 
@@ -256,8 +254,7 @@ export class CalloutResolverMutations {
     );
     const activityLogInput: ActivityInputCanvasCreated = {
       triggeredBy: agentInfo.userID,
-      resourceID: canvas.id,
-      description: `[Canvas] New Canvas created with title: ${canvas.displayName}`,
+      canvas: canvas,
     };
     await this.activityAdapter.canvasCreated(activityLogInput);
     return await this.canvasAuthorizationService.applyAuthorizationPolicy(

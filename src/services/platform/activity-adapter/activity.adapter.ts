@@ -40,14 +40,14 @@ export class ActivityAdapter {
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.ACTIVITY
     );
-    const collaborationID = await this.getCollaborationIdForCallout(
-      eventData.resourceID
-    );
+    const callout = eventData.callout;
+    const collaborationID = await this.getCollaborationIdForCallout(callout.id);
+    const description = `[Published] Callout published with name: ${callout.displayName}`;
     await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
-      resourceID: eventData.resourceID,
-      description: eventData.description,
+      resourceID: callout.id,
+      description: description,
       type: ActivityEventType.CALLOUT_PUBLISHED,
     });
     return true;
@@ -58,14 +58,15 @@ export class ActivityAdapter {
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.ACTIVITY
     );
-    const collaborationID = await this.getCollaborationIdForAspect(
-      eventData.resourceID
-    );
+
+    const aspect = eventData.aspect;
+    const description = `[${aspect.type}] New Card created with title: ${aspect.displayName}`;
+    const collaborationID = await this.getCollaborationIdForAspect(aspect.id);
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
-      resourceID: eventData.resourceID,
-      description: eventData.description,
+      resourceID: aspect.id,
+      description: description,
       type: ActivityEventType.CARD_CREATED,
     });
     return true;
@@ -77,13 +78,15 @@ export class ActivityAdapter {
       LogContext.ACTIVITY
     );
 
-    const aspectID = eventData.resourceID;
+    const description = `[Card] New comment added on card: ${eventData.aspect.displayName}`;
+
+    const aspectID = eventData.aspect.id;
     const collaborationID = await this.getCollaborationIdForAspect(aspectID);
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: aspectID,
-      description: eventData.description,
+      description: description,
       type: ActivityEventType.CARD_COMMENT,
     });
     return true;
@@ -94,14 +97,15 @@ export class ActivityAdapter {
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.ACTIVITY
     );
-    const collaborationID = await this.getCollaborationIdForCanvas(
-      eventData.resourceID
-    );
+    const canvas = eventData.canvas;
+    const collaborationID = await this.getCollaborationIdForCanvas(canvas.id);
+
+    const description = `[Canvas] New Canvas created with title: ${canvas.displayName}`;
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
-      resourceID: eventData.resourceID,
-      description: eventData.description,
+      resourceID: canvas.id,
+      description: description,
       type: ActivityEventType.CANVAS_CREATED,
     });
     return true;
@@ -112,14 +116,16 @@ export class ActivityAdapter {
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.ACTIVITY
     );
+    const community = eventData.community;
     const collaborationID = await this.getCollaborationIdFromCommunity(
-      eventData.resourceID
+      eventData.user.id
     );
+    const description = `[${community.displayName}] New member: ${eventData.user.displayName}`;
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
-      resourceID: eventData.resourceID,
-      description: eventData.description,
+      resourceID: community.id,
+      description: description,
       type: ActivityEventType.MEMBER_JOINED,
     });
     return true;
