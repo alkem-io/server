@@ -63,8 +63,9 @@ export class CalloutAuthorizationService {
       );
     }
 
-    // Inherit for comments before extending so that the creating user does not
-    // have rights to delete comments
+    callout.comments = await this.calloutService.getCommentsFromCallout(
+      callout.id
+    );
     if (callout.comments) {
       callout.comments =
         await this.commentsAuthorizationService.applyAuthorizationPolicy(
