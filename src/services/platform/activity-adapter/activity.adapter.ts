@@ -11,11 +11,8 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { ActivityInputAspectCreated } from './dto/activity.dto.input.aspect.created';
 import { ActivityInputCanvasCreated } from './dto/activity.dto.input.canvas.created';
 import { ActivityInputMemberJoined } from './dto/activity.dto.input.member.joined';
-import { Hub } from '@domain/challenge/hub/hub.entity';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { ActivityInputAspectComment } from './dto/activity.dto.input.aspect.comment';
-import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { ActivityInputCalloutDiscussionComment } from './dto/activity.dto.input.callout.discussion.comment';
 
 @Injectable()
 export class ActivityAdapter {
@@ -23,12 +20,6 @@ export class ActivityAdapter {
     private activityService: ActivityService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
-    @InjectRepository(Hub)
-    private hubRepository: Repository<Hub>,
-    @InjectRepository(Challenge)
-    private challengeRepository: Repository<Challenge>,
-    @InjectRepository(Opportunity)
-    private opportunityRepository: Repository<Opportunity>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -42,7 +33,7 @@ export class ActivityAdapter {
     );
     const callout = eventData.callout;
     const collaborationID = await this.getCollaborationIdForCallout(callout.id);
-    const description = `[Published] Callout published with name: ${callout.displayName}`;
+    const description = `[Callout] New Callout published: '${callout.displayName}'`;
     await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
@@ -60,14 +51,14 @@ export class ActivityAdapter {
     );
 
     const aspect = eventData.aspect;
-    const description = `[${aspect.type}] New Card created with title: ${aspect.displayName}`;
+    const description = `[Card] New Card created with title: ${aspect.displayName}`;
     const collaborationID = await this.getCollaborationIdForAspect(aspect.id);
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: aspect.id,
       description: description,
-      type: ActivityEventType.CARD_CREATED,
+      type: ActivityEventType.CALLOUT_CARD_CREATED,
     });
     return true;
   }
@@ -78,7 +69,7 @@ export class ActivityAdapter {
       LogContext.ACTIVITY
     );
 
-    const description = `[Card] New comment added on card: ${eventData.aspect.displayName}`;
+    const description = `[Card] Comment added on card: ${eventData.aspect.displayName}`;
 
     const aspectID = eventData.aspect.id;
     const collaborationID = await this.getCollaborationIdForAspect(aspectID);
@@ -100,13 +91,36 @@ export class ActivityAdapter {
     const canvas = eventData.canvas;
     const collaborationID = await this.getCollaborationIdForCanvas(canvas.id);
 
-    const description = `[Canvas] New Canvas created with title: ${canvas.displayName}`;
+    const description = `[Canvas] New Canvas created: '${canvas.displayName}'`;
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: canvas.id,
       description: description,
-      type: ActivityEventType.CANVAS_CREATED,
+      type: ActivityEventType.CALLOUT_CANVAS_CREATED,
+    });
+    return true;
+  }
+
+  async calloutCommentCreated(
+    eventData: ActivityInputCalloutDiscussionComment
+  ): Promise<boolean> {
+    this.logger.verbose?.(
+      `Event received: ${JSON.stringify(eventData)}`,
+      LogContext.ACTIVITY
+    );
+
+    const collaborationID = await this.getCollaborationIdForCallout(
+      eventData.callout.id
+    );
+
+    const description = `[Callout] New comment added on: '${eventData.callout.displayName}'`;
+    await this.activityService.createActivity({
+      triggeredBy: eventData.triggeredBy,
+      collaborationID,
+      resourceID: eventData.callout.id,
+      description: description,
+      type: ActivityEventType.DISCUSSION_COMMENT,
     });
     return true;
   }
@@ -118,9 +132,9 @@ export class ActivityAdapter {
     );
     const community = eventData.community;
     const collaborationID = await this.getCollaborationIdFromCommunity(
-      eventData.user.id
+      community.id
     );
-    const description = `[${community.displayName}] New member: ${eventData.user.displayName}`;
+    const description = `[Community] New member: ${eventData.user.displayName}`;
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
@@ -129,22 +143,6 @@ export class ActivityAdapter {
       type: ActivityEventType.MEMBER_JOINED,
     });
     return true;
-  }
-
-  async getAspectForComments(commentsID: string): Promise<IAspect | undefined> {
-    // check if this is a comment related to an aspect
-    const [aspect]: {
-      id: string;
-      displayName: string;
-      createdBy: string;
-      createdDate: Date;
-      type: string;
-      description: string;
-      nameID: string;
-    }[] = await getConnection().query(
-      `SELECT id, displayName, createdBy, createdDate, type, description, nameID FROM aspect WHERE commentsId = '${commentsID}'`
-    );
-    return aspect;
   }
 
   private async getCollaborationIdForCallout(
@@ -199,16 +197,6 @@ export class ActivityAdapter {
     return collaboration.id;
   }
 
-  private async getAspectIdFromCommentId(commentId: string) {
-    const [result]: {
-      id: string;
-    }[] = await getConnection().query(`
-        SELECT id from \`aspect\`
-        WHERE \`aspect\`.\`commentsId\` = '${commentId}';
-      `);
-    return result.id;
-  }
-
   private async getCollaborationIdFromCommunity(communityId: string) {
     const [result]: {
       collaborationId: string;
@@ -224,6 +212,13 @@ export class ActivityAdapter {
         WHERE \`opportunity\`.\`communityId\` = '${communityId}';
       `
     );
+    if (!result) {
+      this.logger.error(
+        `Unable to identify Collaboration for provided communityID: ${communityId}`,
+        LogContext.COMMUNITY
+      );
+      return '';
+    }
     return result.collaborationId;
   }
 }

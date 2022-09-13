@@ -2,6 +2,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { NamingModule } from '@services/domain/naming/naming.module';
 import { ActivityAdapterModule } from '@services/platform/activity-adapter/activity.adapter.module';
 import { CommunicationAdapterModule } from '@services/platform/communication-adapter/communication-adapter.module';
 import { RoomModule } from '../room/room.module';
@@ -16,6 +17,7 @@ import { CommentsAuthorizationService } from './comments.service.authorization';
     ActivityAdapterModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
+    NamingModule,
     RoomModule,
     CommunicationAdapterModule,
     TypeOrmModule.forFeature([Comments]),

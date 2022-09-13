@@ -63,7 +63,6 @@ export class CalloutService {
       return await this.save(savedCallout);
     }
     return savedCallout;
-
   }
 
   public async getCalloutOrFail(

@@ -26,6 +26,7 @@ import { getRandomId } from '@src/common';
 import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
 import { ActivityInputAspectComment } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.comment';
 import { AspectMessageReceivedPayload } from '@domain/collaboration/aspect/dto/aspect.message.received.payload';
+import { NamingService } from '@services/domain/naming/naming.service';
 
 @Resolver()
 export class CommentsResolverMutations {
@@ -33,6 +34,7 @@ export class CommentsResolverMutations {
     private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
     private commentsService: CommentsService,
+    private namingService: NamingService,
     private commentsAuthorizationService: CommentsAuthorizationService,
     @Inject(SUBSCRIPTION_ASPECT_COMMENT)
     private readonly subscriptionAspectComments: PubSubEngine,
@@ -66,7 +68,7 @@ export class CommentsResolverMutations {
       agentInfo.communicationID,
       messageData
     );
-    const aspect = await this.activityAdapter.getAspectForComments(
+    const aspect = await this.namingService.getAspectForComments(
       messageData.commentsID
     );
     if (aspect) {
