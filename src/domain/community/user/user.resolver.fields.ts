@@ -15,6 +15,7 @@ import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -44,6 +45,29 @@ export class UserResolverFields {
   @Profiling.api
   async agent(@Parent() user: User): Promise<IAgent> {
     return await this.userService.getAgent(user.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('authorization', () => IAuthorizationPolicy, {
+    nullable: false,
+    description: 'The Authorization for this User.',
+  })
+  @Profiling.api
+  async authorization(
+    @Parent() parent: User,
+    @CurrentUser() agentInfo: AgentInfo
+  ) {
+    // Reload to ensure the authorization is loaded
+    const user = await this.userService.getUserOrFail(parent.id);
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      user.authorization,
+      AuthorizationPrivilege.READ,
+      `user authorization access: ${user.displayName}`
+    );
+
+    return user.authorization;
   }
 
   @ResolveField('preferences', () => [IPreference], {
