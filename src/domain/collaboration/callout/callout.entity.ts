@@ -57,6 +57,6 @@ export class Callout extends NameableEntity implements ICallout {
   })
   collaboration?: Collaboration;
 
-  @Column('int')
+  @Column('int', { default: 10 })
   sortOrder!: number;
 }

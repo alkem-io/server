@@ -47,11 +47,14 @@ export class CalloutService {
     calloutData: CreateCalloutInput,
     communicationGroupID: string
   ): Promise<ICallout> {
+    if (!calloutData.sortOrder) {
+      calloutData.sortOrder = 10;
+    }
     const callout: ICallout = Callout.create(calloutData);
     callout.authorization = new AuthorizationPolicy();
+
     const savedCallout: ICallout = await this.calloutRepository.save(callout);
 
-    // If creating a comments Callout, get the communicationGroupID to use for the callout comments
     if (calloutData.type === CalloutType.COMMENTS) {
       savedCallout.comments = await this.commentsService.createComments(
         communicationGroupID,
@@ -60,6 +63,7 @@ export class CalloutService {
       return await this.save(savedCallout);
     }
     return savedCallout;
+
   }
 
   public async getCalloutOrFail(
