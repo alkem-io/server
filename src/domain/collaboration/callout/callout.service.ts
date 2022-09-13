@@ -45,8 +45,12 @@ export class CalloutService {
   public async createCallout(
     calloutData: CreateCalloutInput
   ): Promise<ICallout> {
+    if (!calloutData.sortOrder) {
+      calloutData.sortOrder = 10;
+    }
     const callout: ICallout = Callout.create(calloutData);
     callout.authorization = new AuthorizationPolicy();
+
     return await this.calloutRepository.save(callout);
   }
 
