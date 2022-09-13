@@ -230,6 +230,7 @@ export class UserService {
       UserPreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_ADMIN,
       'true'
     );
+    defaults.set(UserPreferenceType.NOTIFICATION_CALLOUT_PUBLISHED, 'true');
 
     return defaults;
   }
