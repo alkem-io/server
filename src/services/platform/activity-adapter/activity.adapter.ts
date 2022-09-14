@@ -58,7 +58,7 @@ export class ActivityAdapter {
       collaborationID,
       resourceID: aspect.id,
       description: description,
-      type: ActivityEventType.CALLOUT_CARD_CREATED,
+      type: ActivityEventType.CARD_CREATED,
     });
     return true;
   }
@@ -97,7 +97,7 @@ export class ActivityAdapter {
       collaborationID,
       resourceID: canvas.id,
       description: description,
-      type: ActivityEventType.CALLOUT_CANVAS_CREATED,
+      type: ActivityEventType.CANVAS_CREATED,
     });
     return true;
   }
