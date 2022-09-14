@@ -49,7 +49,7 @@ export class UserResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
-    nullable: false,
+    nullable: true,
     description: 'The Authorization for this User.',
   })
   @Profiling.api
