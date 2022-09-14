@@ -79,7 +79,7 @@ export class CollaborationService {
     );
     if (!collaboration)
       throw new EntityNotFoundException(
-        `No Callout found with the given id: ${collaborationID}`,
+        `No Collaboration found with the given id: ${collaborationID}`,
         LogContext.CONTEXT
       );
     return collaboration;

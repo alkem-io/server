@@ -44,6 +44,7 @@ import { ActivityInputAspectCreated } from '@services/platform/activity-adapter/
 import { ActivityInputCalloutPublished } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.published';
 import { ActivityInputCanvasCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.canvas.created';
 import { CalloutMessageReceivedPayload } from './dto/callout.message.received.payload';
+import { ActivityInputCalloutDiscussionComment } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -134,6 +135,13 @@ export class CalloutResolverMutations {
       SubscriptionType.CALLOUT_MESSAGE_CREATED,
       subscriptionPayload
     );
+    // Register the activity
+    const activityLogInput: ActivityInputCalloutDiscussionComment = {
+      triggeredBy: agentInfo.userID,
+      callout: callout,
+      message: data.message,
+    };
+    await this.activityAdapter.calloutCommentCreated(activityLogInput);
 
     return commentSent;
   }

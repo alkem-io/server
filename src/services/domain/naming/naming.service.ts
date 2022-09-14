@@ -16,6 +16,7 @@ import { Community } from '@domain/community/community';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { EntityNotInitializedException } from '@common/exceptions';
+import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -285,5 +286,21 @@ export class NamingService {
     const communityPolicy: ICommunityPolicy = JSON.parse(community.policy);
 
     return communityPolicy.member.credential;
+  }
+
+  async getAspectForComments(commentsID: string): Promise<IAspect | undefined> {
+    // check if this is a comment related to an aspect
+    const [aspect]: {
+      id: string;
+      displayName: string;
+      createdBy: string;
+      createdDate: Date;
+      type: string;
+      description: string;
+      nameID: string;
+    }[] = await getConnection().query(
+      `SELECT id, displayName, createdBy, createdDate, type, description, nameID FROM aspect WHERE commentsId = '${commentsID}'`
+    );
+    return aspect;
   }
 }

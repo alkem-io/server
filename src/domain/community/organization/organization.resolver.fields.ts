@@ -106,7 +106,7 @@ export class OrganizationResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
-    nullable: false,
+    nullable: true,
     description: 'The Authorization for this Organization.',
   })
   @Profiling.api

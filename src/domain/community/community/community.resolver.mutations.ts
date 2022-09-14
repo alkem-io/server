@@ -38,13 +38,10 @@ import { RemoveCommunityLeadOrganizationInput } from './dto/community.dto.remove
 import { RemoveCommunityLeadUserInput } from './dto/community.dto.remove.lead.user';
 import { CommunityRole } from '@common/enums/community.role';
 import { AssignCommunityLeadUserInput } from './dto/community.dto.assign.lead.user';
-import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
-import { ActivityInputMemberJoined } from '@services/platform/activity-adapter/dto/activity.dto.input.member.joined';
 
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
-    private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
@@ -111,12 +108,6 @@ export class CommunityResolverMutations {
     // reset the user authorization policy so that their profile is visible to other community members
     const user = await this.userService.getUserOrFail(membershipData.userID);
     await this.userAuthorizationService.applyAuthorizationPolicy(user);
-    const activityLogInput: ActivityInputMemberJoined = {
-      triggeredBy: agentInfo.userID,
-      community: community,
-      user: user,
-    };
-    await this.activityAdapter.memberJoined(activityLogInput);
 
     return community;
   }
@@ -394,11 +385,12 @@ export class CommunityResolverMutations {
       );
     this.notificationsClient.emit(EventType.COMMUNITY_NEW_MEMBER, payload);
 
-    return await this.communityService.assignUserToRole(
+    const result = await this.communityService.assignUserToRole(
       community,
       agentInfo.userID,
       CommunityRole.MEMBER
     );
+    return result;
   }
 
   @UseGuards(GraphqlGuard)

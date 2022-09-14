@@ -37,10 +37,13 @@ import { CommunityContributorType } from '@common/enums/community.contributor.ty
 import { CommunityPolicy } from '../community-policy/community.policy';
 import { ICommunityPolicyRole } from '../community-policy/community.policy.role.interface';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
+import { ActivityInputMemberJoined } from '@services/platform/activity-adapter/dto/activity.dto.input.member.joined';
+import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
 
 @Injectable()
 export class CommunityService {
   constructor(
+    private activityAdapter: ActivityAdapter,
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private userService: UserService,
@@ -332,6 +335,12 @@ export class CommunityService {
 
     if (role === CommunityRole.MEMBER) {
       this.addMemberToCommunication(user, community);
+      const activityLogInput: ActivityInputMemberJoined = {
+        triggeredBy: userID,
+        community: community,
+        user: user,
+      };
+      await this.activityAdapter.memberJoined(activityLogInput);
     }
 
     return community;
