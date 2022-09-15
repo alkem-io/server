@@ -340,6 +340,7 @@ export class AuthorizationPolicyService {
       [
         AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
         AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.ADMIN,
       ],
       AuthorizationCredential.GLOBAL_ADMIN
     );
@@ -348,7 +349,7 @@ export class AuthorizationPolicyService {
 
     // Allow global admin Hubs to access Platform mgmt
     const globalAdminHubsNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.PLATFORM_ADMIN],
+      [AuthorizationPrivilege.PLATFORM_ADMIN, AuthorizationPrivilege.ADMIN],
       AuthorizationCredential.GLOBAL_ADMIN_HUBS
     );
     globalAdminHubsNotInherited.inheritable = false;
@@ -357,7 +358,7 @@ export class AuthorizationPolicyService {
     // Allow global admin Communities to access Platform mgmt
     const globalAdminCommunitiesNotInherited =
       new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [AuthorizationPrivilege.PLATFORM_ADMIN, AuthorizationPrivilege.ADMIN],
         AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
       );
     globalAdminCommunitiesNotInherited.inheritable = false;
@@ -375,7 +376,7 @@ export class AuthorizationPolicyService {
     const hubAdminsNotInherited = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.CREATE_ORGANIZATION,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.ADMIN,
       ],
       AuthorizationCredential.HUB_ADMIN
     );
@@ -386,17 +387,25 @@ export class AuthorizationPolicyService {
     const challengeAdminsNotInherited = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.CREATE_ORGANIZATION,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.ADMIN,
       ],
       AuthorizationCredential.CHALLENGE_ADMIN
     );
     challengeAdminsNotInherited.inheritable = false;
     credentialRules.push(challengeAdminsNotInherited);
 
+    // Allow Opportunity admins to access admin
+    const opportunityAdminNotInherited = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.ADMIN],
+      AuthorizationCredential.OPPORTUNITY_ADMIN
+    );
+    opportunityAdminNotInherited.inheritable = false;
+    credentialRules.push(opportunityAdminNotInherited);
+
     // Allow Organization admins to access platform admin
     const organizationAdminsNotInherited =
       new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [AuthorizationPrivilege.ADMIN],
         AuthorizationCredential.ORGANIZATION_ADMIN
       );
     organizationAdminsNotInherited.inheritable = false;
