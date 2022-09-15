@@ -6,7 +6,7 @@ import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
+import { IComments } from '@domain/communication/comments/comments.interface';
 
 @ObjectType('Callout')
 export abstract class ICallout extends INameable {
@@ -42,9 +42,15 @@ export abstract class ICallout extends INameable {
   })
   canvases?: ICanvas[];
 
-  @Field(() => IDiscussion, {
+  @Field(() => IComments, {
     nullable: true,
-    description: 'The Discussion object for this Callout.',
+    description: 'The Comments object for this Callout.',
   })
-  discussion?: IDiscussion;
+  comments?: IComments;
+
+  @Field(() => Number, {
+    nullable: false,
+    description: 'The sorting order for this Callout.',
+  })
+  sortOrder!: number;
 }

@@ -5,6 +5,7 @@ export enum LogContext {
   COMMUNICATION = 'communication',
   COLLABORATION = 'collaboration',
   AGENT = 'agent',
+  ACTIVITY = 'activity',
   API = 'api',
   AUTH = 'auth',
   AUTH_TOKEN = 'auth_token',

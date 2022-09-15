@@ -1,6 +1,6 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -8,7 +8,7 @@ import { AgentInfo } from '@core/authentication';
 import { CalloutService } from './callout.service';
 import { IAspect } from '@domain/collaboration/aspect';
 import {
-  CalloutAspectCreated,
+  CalloutAspectCreatedPayload,
   CreateAspectOnCalloutInput,
   CreateCanvasOnCalloutInput,
   DeleteCalloutInput,
@@ -21,22 +21,44 @@ import { ICanvas } from '@domain/common/canvas';
 import {
   NOTIFICATIONS_SERVICE,
   SUBSCRIPTION_CALLOUT_ASPECT_CREATED,
+  SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,
 } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { EventType } from '@common/enums/event.type';
 import { ICallout } from './callout.interface';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
+import {
+  EntityNotInitializedException,
+  getRandomId,
+  NotSupportedException,
+} from '@src/common';
+import { CommentsService } from '@domain/communication/comments/comments.service';
+import { SendMessageOnCalloutInput } from './dto/callout.args.message.created';
+import { CalloutType } from '@common/enums/callout.type';
+
+import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
+import { ActivityInputAspectCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.created';
+import { ActivityInputCalloutPublished } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.published';
+import { ActivityInputCanvasCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.canvas.created';
+import { CalloutMessageReceivedPayload } from './dto/callout.message.received.payload';
+import { ActivityInputCalloutDiscussionComment } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
 
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
+    private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
     private calloutService: CalloutService,
+    private commentsService: CommentsService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
     @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
     private aspectCreatedSubscription: PubSubEngine,
+    @Inject(SUBSCRIPTION_CALLOUT_MESSAGE_CREATED)
+    private calloutMessageCreatedSubscription: PubSubEngine,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
@@ -61,6 +83,70 @@ export class CalloutResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
+  @Mutation(() => CommunicationMessageResult, {
+    description: 'Send a message on a Comments Callout',
+  })
+  @Profiling.api
+  async sendMessageOnCallout(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('data') data: SendMessageOnCalloutInput
+  ): Promise<CommunicationMessageResult> {
+    const callout = await this.calloutService.getCalloutOrFail(data.calloutID);
+
+    if (callout.type !== CalloutType.COMMENTS) {
+      throw new NotSupportedException(
+        'Messages only supported on Comments Callout',
+        LogContext.COLLABORATION
+      );
+    }
+
+    const comments = await this.calloutService.getCommentsFromCallout(
+      data.calloutID
+    );
+
+    if (!comments) {
+      throw new EntityNotInitializedException(
+        `Comments not initialized on Callout with ID ${data.calloutID}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      comments.authorization,
+      AuthorizationPrivilege.CREATE_COMMENT,
+      `comments send message: ${comments.displayName}`
+    );
+
+    const commentSent = await this.commentsService.sendCommentsMessage(
+      comments,
+      agentInfo.communicationID,
+      { message: data.message }
+    );
+    // build subscription payload
+    const subscriptionPayload: CalloutMessageReceivedPayload = {
+      eventID: `callout-comment-msg-${getRandomId()}`,
+      calloutID: data.calloutID,
+      commentsID: comments.id,
+      message: commentSent,
+    };
+    // send the subscriptions event
+    this.calloutMessageCreatedSubscription.publish(
+      SubscriptionType.CALLOUT_MESSAGE_CREATED,
+      subscriptionPayload
+    );
+    // Register the activity
+    const activityLogInput: ActivityInputCalloutDiscussionComment = {
+      triggeredBy: agentInfo.userID,
+      callout: callout,
+      message: data.message,
+    };
+    await this.activityAdapter.calloutCommentCreated(activityLogInput);
+
+    return commentSent;
+  }
+
+  @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
     description: 'Update a Callout.',
   })
@@ -76,7 +162,28 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
-    return await this.calloutService.updateCallout(calloutData);
+    const result = await this.calloutService.updateCallout(calloutData);
+
+    if (result.visibility === CalloutVisibility.PUBLISHED) {
+      const payload =
+        await this.notificationsPayloadBuilder.buildCalloutPublishedPayload(
+          agentInfo.userID,
+          result
+        );
+
+      this.notificationsClient.emit<number>(
+        EventType.CALLOUT_PUBLISHED,
+        payload
+      );
+
+      const activityLogInput: ActivityInputCalloutPublished = {
+        triggeredBy: agentInfo.userID,
+        callout: callout,
+      };
+      await this.activityAdapter.calloutPublished(activityLogInput);
+    }
+
+    return result;
   }
 
   @UseGuards(GraphqlGuard)
@@ -105,7 +212,7 @@ export class CalloutResolverMutations {
       aspect,
       callout.authorization
     );
-    const aspectCreatedEvent: CalloutAspectCreated = {
+    const aspectCreatedEvent: CalloutAspectCreatedPayload = {
       eventID: `callout-aspect-created-${Math.round(Math.random() * 100)}`,
       calloutID: callout.id,
       aspect,
@@ -121,6 +228,12 @@ export class CalloutResolverMutations {
       );
 
     this.notificationsClient.emit<number>(EventType.ASPECT_CREATED, payload);
+
+    const activityLogInput: ActivityInputAspectCreated = {
+      triggeredBy: agentInfo.userID,
+      aspect: aspect,
+    };
+    await this.activityAdapter.aspectCreated(activityLogInput);
 
     return aspect;
   }
@@ -143,7 +256,15 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.CREATE_CANVAS,
       `create canvas on callout: ${callout.id}`
     );
-    const canvas = await this.calloutService.createCanvasOnCallout(canvasData);
+    const canvas = await this.calloutService.createCanvasOnCallout(
+      canvasData,
+      agentInfo.userID
+    );
+    const activityLogInput: ActivityInputCanvasCreated = {
+      triggeredBy: agentInfo.userID,
+      canvas: canvas,
+    };
+    await this.activityAdapter.canvasCreated(activityLogInput);
     return await this.canvasAuthorizationService.applyAuthorizationPolicy(
       canvas,
       callout.authorization

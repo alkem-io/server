@@ -385,11 +385,12 @@ export class CommunityResolverMutations {
       );
     this.notificationsClient.emit(EventType.COMMUNITY_NEW_MEMBER, payload);
 
-    return await this.communityService.assignUserToRole(
+    const result = await this.communityService.assignUserToRole(
       community,
       agentInfo.userID,
       CommunityRole.MEMBER
     );
+    return result;
   }
 
   @UseGuards(GraphqlGuard)

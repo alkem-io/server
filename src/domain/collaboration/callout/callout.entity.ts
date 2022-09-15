@@ -14,7 +14,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { Discussion } from '@domain/communication/discussion/discussion.entity';
+import { Comments } from '@domain/communication/comments/comments.entity';
 
 @Entity()
 export class Callout extends NameableEntity implements ICallout {
@@ -42,13 +42,13 @@ export class Callout extends NameableEntity implements ICallout {
   })
   aspects?: Aspect[];
 
-  @OneToOne(() => Discussion, {
+  @OneToOne(() => Comments, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  discussion?: Discussion;
+  comments?: Comments;
 
   @ManyToOne(() => Collaboration, collaboration => collaboration.callouts, {
     eager: false,
@@ -56,4 +56,7 @@ export class Callout extends NameableEntity implements ICallout {
     onDelete: 'CASCADE',
   })
   collaboration?: Collaboration;
+
+  @Column('int', { default: 10 })
+  sortOrder!: number;
 }

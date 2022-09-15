@@ -6,10 +6,21 @@ import { CanvasService } from './canvas.service';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@src/core';
 import { IVisual } from '@src/domain';
+import { UUID } from '../scalars/scalar.uuid';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverFields {
   constructor(private canvasService: CanvasService) {}
+
+  @ResolveField('createdBy', () => UUID, {
+    nullable: false,
+    description: 'The id of the user that created this Canvas',
+  })
+  async createdBy(@Parent() canvas: ICanvas): Promise<string> {
+    const createdBy = canvas.createdBy;
+    if (!createdBy) return '';
+    return createdBy;
+  }
 
   @ResolveField('checkout', () => ICanvasCheckout, {
     nullable: true,

@@ -32,4 +32,10 @@ export class UpdateCalloutInput extends UpdateNameableInput {
     description: 'Visibility of the Callout.',
   })
   visibility?: CalloutVisibility;
+
+  @Field(() => Number, {
+    nullable: true,
+    description: 'The sort order to assign to this Callout.',
+  })
+  sortOrder!: number;
 }

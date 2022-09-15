@@ -1,5 +1,5 @@
 import { Inject, UseGuards } from '@nestjs/common';
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -18,7 +18,10 @@ import { ICollaboration } from './collaboration.interface';
 import { NotificationsPayloadBuilder } from '@core/microservices';
 import { EventType } from '@common/enums/event.type';
 import { ClientProxy } from '@nestjs/microservices';
-import { NOTIFICATIONS_SERVICE } from '@common/constants';
+import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
+import { ActivityInputCalloutPublished } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.published';
 
 @Resolver()
 export class CollaborationResolverMutations {
@@ -29,6 +32,7 @@ export class CollaborationResolverMutations {
     private authorizationService: AuthorizationService,
     private collaborationService: CollaborationService,
     private notificationsPayloadBuilder: NotificationsPayloadBuilder,
+    private activityAdapter: ActivityAdapter,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
@@ -153,10 +157,32 @@ export class CollaborationResolverMutations {
     const membershipCredential =
       await this.collaborationService.getMembershipCredential(collaboration.id);
 
-    return await this.calloutAuthorizationService.applyAuthorizationPolicy(
-      callout,
-      collaboriationAuthorizationPolicy,
-      membershipCredential
-    );
+    const calloutAuthorized =
+      await this.calloutAuthorizationService.applyAuthorizationPolicy(
+        callout,
+        collaboriationAuthorizationPolicy,
+        membershipCredential
+      );
+
+    if (calloutAuthorized.visibility === CalloutVisibility.PUBLISHED) {
+      const payload =
+        await this.notificationsPayloadBuilder.buildCalloutPublishedPayload(
+          agentInfo.userID,
+          calloutAuthorized
+        );
+
+      this.notificationsClient.emit<number>(
+        EventType.CALLOUT_PUBLISHED,
+        payload
+      );
+
+      const activityLogInput: ActivityInputCalloutPublished = {
+        triggeredBy: agentInfo.userID,
+        callout: callout,
+      };
+      await this.activityAdapter.calloutPublished(activityLogInput);
+    }
+
+    return calloutAuthorized;
   }
 }

@@ -155,7 +155,7 @@ export class OrganizationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       organization.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.UPDATE, //// todo: replace with AUTHORIZATION_RESET once that has been granted
       `reset authorization definition on organization: ${authorizationResetData.organizationID}`
     );
     return await this.organizationAuthorizationService.applyAuthorizationPolicy(

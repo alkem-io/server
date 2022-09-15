@@ -2,7 +2,6 @@ import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { ClientProxy } from '@nestjs/microservices';
-import { getConnection } from 'typeorm';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
@@ -19,18 +18,23 @@ import {
   NOTIFICATIONS_SERVICE,
   SUBSCRIPTION_ASPECT_COMMENT,
 } from '@common/constants/providers';
-import { AspectCommentsMessageReceived } from '../../collaboration/aspect/dto/aspect.dto.event.message.received';
 import { CommentsAuthorizationService } from './comments.service.authorization';
 import { EventType } from '@common/enums/event.type';
 import { NotificationsPayloadBuilder } from '@core/microservices';
-import { IComments } from '@domain/communication/comments/comments.interface';
+import { IComments } from './comments.interface';
 import { getRandomId } from '@src/common';
+import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
+import { ActivityInputAspectComment } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.comment';
+import { AspectMessageReceivedPayload } from '@domain/collaboration/aspect/dto/aspect.message.received.payload';
+import { NamingService } from '@services/domain/naming/naming.service';
 
 @Resolver()
 export class CommentsResolverMutations {
   constructor(
+    private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
     private commentsService: CommentsService,
+    private namingService: NamingService,
     private commentsAuthorizationService: CommentsAuthorizationService,
     @Inject(SUBSCRIPTION_ASPECT_COMMENT)
     private readonly subscriptionAspectComments: PubSubEngine,
@@ -38,6 +42,7 @@ export class CommentsResolverMutations {
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
+  // todo should be removed to serve per entity e.g. send aspect comment
   @UseGuards(GraphqlGuard)
   @Mutation(() => CommunicationMessageResult, {
     description:
@@ -63,15 +68,16 @@ export class CommentsResolverMutations {
       agentInfo.communicationID,
       messageData
     );
-
-    // check if this is a comment related to an aspect
-    const [aspect]: { id: string; displayName: string; createdBy: string }[] =
-      await getConnection().query(
-        `SELECT id, displayName, createdBy FROM aspect WHERE commentsId = '${messageData.commentsID}'`
-      );
-
+    const aspect = await this.namingService.getAspectForComments(
+      messageData.commentsID
+    );
     if (aspect) {
       this.processAspectCommentEvents(aspect, comments, commentSent);
+      const activityLogInput: ActivityInputAspectComment = {
+        triggeredBy: agentInfo.userID,
+        aspect: aspect,
+      };
+      await this.activityAdapter.aspectComment(activityLogInput);
     }
 
     return commentSent;
@@ -117,7 +123,7 @@ export class CommentsResolverMutations {
   ) {
     // build subscription payload
     const eventID = `comment-msg-${getRandomId()}`;
-    const subscriptionPayload: AspectCommentsMessageReceived = {
+    const subscriptionPayload: AspectMessageReceivedPayload = {
       eventID: eventID,
       message: commentSent,
       aspectID: aspect.id,

@@ -23,6 +23,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { collaborationDefaults } from './collaboration.defaults';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
+import { CommunityType } from '@common/enums/community.type';
 
 @Injectable()
 export class CollaborationService {
@@ -35,17 +36,37 @@ export class CollaborationService {
     private collaborationRepository: Repository<Collaboration>
   ) {}
 
-  async createCollaboration(): Promise<ICollaboration> {
+  async createCollaboration(
+    communityType: CommunityType,
+    communicationGroupID: string
+  ): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
     collaboration.authorization = new AuthorizationPolicy();
     collaboration.relations = [];
     collaboration.callouts = [];
 
+    const savedCollaboration = await this.save(collaboration);
+
     for (const calloutDefault of collaborationDefaults.callouts) {
-      const callout = await this.calloutService.createCallout(calloutDefault);
-      collaboration.callouts.push(callout);
+      const communityTypeForDefault = calloutDefault.communityType;
+      // If communityType is not specified then create the callout; otherwose only create
+      //  when it matches the given communityType
+      if (
+        !communityTypeForDefault ||
+        communityTypeForDefault === communityType
+      ) {
+        const callout = await this.calloutService.createCallout(
+          calloutDefault,
+          communicationGroupID
+        );
+        savedCollaboration.callouts?.push(callout);
+      }
     }
     return collaboration;
+  }
+
+  async save(collaboration: ICollaboration): Promise<ICollaboration> {
+    return await this.collaborationRepository.save(collaboration);
   }
 
   async getCollaborationOrFail(
@@ -58,7 +79,7 @@ export class CollaborationService {
     );
     if (!collaboration)
       throw new EntityNotFoundException(
-        `No Callout found with the given id: ${collaborationID}`,
+        `No Collaboration found with the given id: ${collaborationID}`,
         LogContext.CONTEXT
       );
     return collaboration;
@@ -132,9 +153,17 @@ export class CollaborationService {
         LogContext.CHALLENGES
       );
 
-    const callout = await this.calloutService.createCallout(calloutData);
+    const communicationGroupID =
+      await this.namingService.getCommunicationGroupIdFromCollaborationId(
+        collaboration.id
+      );
+    const callout = await this.calloutService.createCallout(
+      calloutData,
+      communicationGroupID
+    );
     collaboration.callouts.push(callout);
     await this.collaborationRepository.save(collaboration);
+
     return callout;
   }
 
@@ -157,12 +186,19 @@ export class CollaborationService {
       );
 
     if (!calloutIDs) {
-      const limitAndShuffled = limitAndShuffle(
-        collaborationLoaded.callouts,
-        limit,
-        shuffle
+      if (shuffle) {
+        return limitAndShuffle(collaborationLoaded.callouts, limit, shuffle);
+      }
+      let results = collaborationLoaded.callouts;
+      if (limit) {
+        results = limitAndShuffle(collaborationLoaded.callouts, limit, false);
+      }
+
+      // Sort according to order
+      const sortedCallouts = results.sort((a, b) =>
+        a.sortOrder > b.sortOrder ? 1 : -1
       );
-      return limitAndShuffled;
+      return sortedCallouts;
     }
     const results: ICallout[] = [];
 

@@ -27,6 +27,9 @@ import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { NamingService } from '@src/services/domain/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
+import { CommentsService } from '@domain/communication/comments/comments.service';
+import { IComments } from '@domain/communication/comments/comments.interface';
+import { CalloutType } from '@common/enums/callout.type';
 
 @Injectable()
 export class CalloutService {
@@ -35,16 +38,31 @@ export class CalloutService {
     private aspectService: AspectService,
     private canvasService: CanvasService,
     private namingService: NamingService,
+    private commentsService: CommentsService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
 
   public async createCallout(
-    calloutData: CreateCalloutInput
+    calloutData: CreateCalloutInput,
+    communicationGroupID: string
   ): Promise<ICallout> {
+    if (!calloutData.sortOrder) {
+      calloutData.sortOrder = 10;
+    }
     const callout: ICallout = Callout.create(calloutData);
     callout.authorization = new AuthorizationPolicy();
-    return callout;
+
+    const savedCallout: ICallout = await this.calloutRepository.save(callout);
+
+    if (calloutData.type === CalloutType.COMMENTS) {
+      savedCallout.comments = await this.commentsService.createComments(
+        communicationGroupID,
+        `callout-comments-${savedCallout.displayName}`
+      );
+      return await this.save(savedCallout);
+    }
+    return savedCallout;
   }
 
   public async getCalloutOrFail(
@@ -73,6 +91,10 @@ export class CalloutService {
     return callout;
   }
 
+  async save(callout: ICallout): Promise<ICallout> {
+    return await this.calloutRepository.save(callout);
+  }
+
   public async updateCallout(
     calloutUpdateData: UpdateCalloutInput
   ): Promise<ICallout> {
@@ -91,12 +113,15 @@ export class CalloutService {
     if (calloutUpdateData.displayName)
       callout.displayName = calloutUpdateData.displayName;
 
+    if (calloutUpdateData.sortOrder)
+      callout.sortOrder = calloutUpdateData.sortOrder;
+
     return await this.calloutRepository.save(callout);
   }
 
   public async deleteCallout(calloutID: string): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['aspects', 'canvases'],
+      relations: ['aspects', 'canvases', 'comments'],
     });
 
     if (callout.canvases) {
@@ -109,6 +134,10 @@ export class CalloutService {
       for (const aspect of callout.aspects) {
         await this.aspectService.deleteAspect({ ID: aspect.id });
       }
+    }
+
+    if (callout.comments) {
+      await this.commentsService.deleteComments(callout.comments);
     }
 
     if (callout.authorization)
@@ -169,7 +198,7 @@ export class CalloutService {
 
     await this.setNameIdOnAspectData(aspectData, callout);
 
-    // Not idea: get the communicationGroupID to use for the comments
+    // Get the communicationGroupID to use for the aspect comments
     const communicationGroupID =
       await this.namingService.getCommunicationGroupIdForCallout(callout.id);
 
@@ -206,7 +235,8 @@ export class CalloutService {
   }
 
   public async createCanvasOnCallout(
-    canvasData: CreateCanvasOnCalloutInput
+    canvasData: CreateCanvasOnCalloutInput,
+    userID: string
   ): Promise<ICanvas> {
     const calloutID = canvasData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
@@ -220,11 +250,14 @@ export class CalloutService {
 
     this.setNameIdOnCanvasData(canvasData, callout);
 
-    const canvas = await this.canvasService.createCanvas({
-      displayName: canvasData.displayName,
-      nameID: canvasData.nameID,
-      value: canvasData.value,
-    });
+    const canvas = await this.canvasService.createCanvas(
+      {
+        displayName: canvasData.displayName,
+        nameID: canvasData.nameID,
+        value: canvasData.value,
+      },
+      userID
+    );
     callout.canvases.push(canvas);
     await this.calloutRepository.save(callout);
     return canvas;
@@ -359,5 +392,14 @@ export class CalloutService {
     }
 
     return aspect;
+  }
+
+  public async getCommentsFromCallout(
+    calloutID: string
+  ): Promise<IComments | undefined> {
+    const loadedCallout = await this.getCalloutOrFail(calloutID, {
+      relations: ['comments'],
+    });
+    return loadedCallout.comments;
   }
 }

@@ -106,6 +106,22 @@ export class OrganizationAuthorizationService {
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
+    // Allow global admins to reset authorization
+    const globalAdminNotInherited = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.AUTHORIZATION_RESET],
+      AuthorizationCredential.GLOBAL_ADMIN
+    );
+    globalAdminNotInherited.inheritable = false;
+    newRules.push(globalAdminNotInherited);
+
+    // Allow global admin hubs to reset authorization
+    const globalAdminHubsNotInherited = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.AUTHORIZATION_RESET],
+      AuthorizationCredential.GLOBAL_ADMIN_HUBS
+    );
+    globalAdminHubsNotInherited.inheritable = false;
+    newRules.push(globalAdminHubsNotInherited);
+
     const communityAdmin = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.GRANT,

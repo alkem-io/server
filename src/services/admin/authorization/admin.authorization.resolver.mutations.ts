@@ -17,11 +17,12 @@ import { AdminAuthorizationService } from './admin.authorization.service';
 import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
 import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AssignGlobalHubsAdminInput } from './dto/authorization.dto.assign.global.hubs.admin';
+import { RemoveGlobalHubsAdminInput } from './dto/authorization.dto.remove.global.hubs.admin';
 
 @Resolver()
 export class AdminAuthorizationResolverMutations {
   private authorizationGlobalAdminPolicy: IAuthorizationPolicy;
-  private authorizationGlobalCommunityAdminPolicy: IAuthorizationPolicy;
 
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -31,15 +32,7 @@ export class AdminAuthorizationResolverMutations {
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.GLOBAL_ADMIN],
-        [AuthorizationPrivilege.GRANT]
-      );
-    this.authorizationGlobalCommunityAdminPolicy =
-      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [
-          AuthorizationRoleGlobal.GLOBAL_ADMIN,
-          AuthorizationRoleGlobal.GLOBAL_COMMUNITY_ADMIN,
-        ],
-        [AuthorizationPrivilege.GRANT]
+        [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS]
       );
   }
 
@@ -56,7 +49,7 @@ export class AdminAuthorizationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT,
+      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `grant credential: ${agentInfo.email}`
     );
     return await this.adminAuthorizationService.grantCredential(
@@ -77,7 +70,7 @@ export class AdminAuthorizationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT,
+      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `revoke credential: ${agentInfo.email}`
     );
     return await this.adminAuthorizationService.revokeCredential(
@@ -97,7 +90,7 @@ export class AdminAuthorizationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT,
+      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `assign user global admin: ${membershipData.userID}`
     );
     return await this.adminAuthorizationService.assignGlobalAdmin(
@@ -117,7 +110,7 @@ export class AdminAuthorizationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT,
+      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `remove user global admin: ${membershipData.userID}`
     );
     return await this.adminAuthorizationService.removeGlobalAdmin(
@@ -136,8 +129,8 @@ export class AdminAuthorizationResolverMutations {
   ): Promise<IUser> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.authorizationGlobalCommunityAdminPolicy,
-      AuthorizationPrivilege.GRANT,
+      this.authorizationGlobalAdminPolicy,
+      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `assign user global communityadmin: ${membershipData.userID}`
     );
     return await this.adminAuthorizationService.assignGlobalCommunityAdmin(
@@ -156,11 +149,51 @@ export class AdminAuthorizationResolverMutations {
   ): Promise<IUser> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.authorizationGlobalCommunityAdminPolicy,
-      AuthorizationPrivilege.GRANT,
+      this.authorizationGlobalAdminPolicy,
+      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
       `remove user global community admin: ${membershipData.userID}`
     );
     return await this.adminAuthorizationService.removeGlobalCommunityAdmin(
+      membershipData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Assigns a User as a Global Hubs Admin.',
+  })
+  @Profiling.api
+  async assignUserAsGlobalHubsAdmin(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: AssignGlobalHubsAdminInput
+  ): Promise<IUser> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.authorizationGlobalAdminPolicy,
+      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
+      `assign user global hubs admin: ${membershipData.userID}`
+    );
+    return await this.adminAuthorizationService.assignGlobalHubsAdmin(
+      membershipData
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IUser, {
+    description: 'Removes a User from being a Global Hubs Admin.',
+  })
+  @Profiling.api
+  async removeUserAsGlobalHubsAdmin(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('membershipData') membershipData: RemoveGlobalHubsAdminInput
+  ): Promise<IUser> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.authorizationGlobalAdminPolicy,
+      AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
+      `remove user global hubs admin: ${membershipData.userID}`
+    );
+    return await this.adminAuthorizationService.removeGlobalHubsAdmin(
       membershipData
     );
   }

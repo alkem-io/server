@@ -11,7 +11,6 @@ import { IDiscussion } from '@domain/communication/discussion/discussion.interfa
 import { IUpdates } from '@domain/communication/updates/updates.interface';
 import { Community, ICommunity } from '@domain/community/community';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
-import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -23,8 +22,11 @@ import {
   AspectCreatedEventPayload,
   AspectCommentCreatedEventPayload,
   CommunityCollaborationInterestEventPayload,
+  CalloutPublishedEventPayload,
 } from './event-payloads';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { HubPayload } from './event-payloads/hub.payload';
 
 @Injectable()
 export class NotificationsPayloadBuilder {
@@ -51,6 +53,7 @@ export class NotificationsPayloadBuilder {
     applicantID: string,
     community: ICommunity
   ) {
+    const hubPayload = await this.buildHubPayload(community);
     const payload: any = {
       applicationCreatorID,
       applicantID,
@@ -58,13 +61,8 @@ export class NotificationsPayloadBuilder {
         name: community.displayName,
         type: community.type,
       },
-      hub: {
-        nameID: await this.getHubNameID(community.hubID),
-        id: community.hubID,
-      },
+      hub: hubPayload,
     };
-
-    await this.buildHubPayload(payload, community);
 
     return payload;
   }
@@ -92,11 +90,12 @@ export class NotificationsPayloadBuilder {
 
     if (!community) {
       throw new NotificationEventException(
-        `Could not acquire community from context with id: ${aspect.callout.id}`,
+        `Could not acquire community from Callout with id: ${aspect.callout.id}`,
         LogContext.NOTIFICATIONS
       );
     }
 
+    const hubPayload = await this.buildHubPayload(community);
     const payload: AspectCreatedEventPayload = {
       aspect: {
         id: aspectId,
@@ -108,13 +107,40 @@ export class NotificationsPayloadBuilder {
         name: community.displayName,
         type: community.type,
       },
-      hub: {
-        nameID: (await this.getHubNameID(community.hubID)) ?? '',
-        id: community.hubID,
-      },
+      hub: hubPayload,
     };
 
-    await this.buildHubPayload(payload, community);
+    return payload;
+  }
+
+  public async buildCalloutPublishedPayload(
+    userId: string,
+    callout: ICallout
+  ): Promise<CalloutPublishedEventPayload> {
+    const community = await this.getCommunityFromCallout(callout.id);
+
+    if (!community) {
+      throw new NotificationEventException(
+        `Could not acquire community from Callout with id: ${callout.id}`,
+        LogContext.NOTIFICATIONS
+      );
+    }
+
+    const hubPayload = await this.buildHubPayload(community);
+    const payload: CalloutPublishedEventPayload = {
+      userID: userId,
+      callout: {
+        id: callout.id,
+        displayName: callout.displayName,
+        description: callout.description,
+        type: callout.type,
+      },
+      community: {
+        name: community.displayName,
+        type: community.type,
+      },
+      hub: hubPayload,
+    };
 
     return payload;
   }
@@ -134,6 +160,7 @@ export class NotificationsPayloadBuilder {
       );
     }
 
+    const hubPayload = await this.buildHubPayload(community);
     const payload: AspectCommentCreatedEventPayload = {
       aspect: {
         displayName: aspectName,
@@ -147,48 +174,53 @@ export class NotificationsPayloadBuilder {
         name: community.displayName,
         type: community.type,
       },
-      hub: {
-        nameID: (await this.getHubNameID(community.hubID)) ?? '',
-        id: community.hubID,
-      },
+      hub: hubPayload,
     };
-
-    await this.buildHubPayload(payload, community);
 
     return payload;
   }
 
   async buildCommunityNewMemberPayload(userID: string, community: ICommunity) {
+    const hubPayload = await this.buildHubPayload(community);
     const payload = {
       userID,
       community: {
         name: community.displayName,
         type: community.type,
       },
-      hub: {
-        nameID: await this.getHubNameID(community.hubID),
-        id: community.hubID,
-      },
+      hub: hubPayload,
     };
-
-    await this.buildHubPayload(payload, community);
 
     return payload;
   }
 
-  async getOpportunityForCollaboration(
+  async getCommunityFromCollaboration(
     collaborationID: string
-  ): Promise<IOpportunity> {
-    const opportunity = await this.opportunityRepository.findOne({
-      where: { collaboration: collaborationID },
+  ): Promise<ICommunity> {
+    const [result]: {
+      communityId: string;
+    }[] = await getConnection().query(
+      `
+        SELECT communityId from \`hub\`
+        WHERE \`hub\`.\`collaborationId\` = '${collaborationID}' UNION
+        SELECT communityId from \`challenge\`
+        WHERE \`challenge\`.\`collaborationId\` = '${collaborationID}' UNION
+        SELECT communityId from \`opportunity\`
+        WHERE \`opportunity\`.\`collaborationId\` = '${collaborationID}';
+      `
+    );
+
+    const communityId = result.communityId;
+    const community = await this.communityRepository.findOne({
+      where: { id: communityId },
     });
-    if (!opportunity) {
+    if (!community) {
       throw new EntityNotFoundException(
-        `Unable to find Opportunity for Collaboration: ${collaborationID}`,
+        `Unable to find Community for Collaboration: ${collaborationID}`,
         LogContext.NOTIFICATIONS
       );
     }
-    return opportunity;
+    return community;
   }
 
   async buildCollaborationInterestPayload(
@@ -196,20 +228,22 @@ export class NotificationsPayloadBuilder {
     collaboration: ICollaboration,
     relation: IRelation
   ): Promise<CommunityCollaborationInterestEventPayload> {
-    const opportunity = await this.getOpportunityForCollaboration(
+    const community = await this.getCommunityFromCollaboration(
       collaboration.id
     );
-    const payload = {
+    const hubPayload = await this.buildHubPayload(community);
+    const payload: CommunityCollaborationInterestEventPayload = {
       userID,
-      opportunity: {
-        id: opportunity.id,
-        name: opportunity.displayName,
-        communityName: opportunity.community?.displayName,
+      community: {
+        id: community.id,
+        name: community.displayName,
+        type: community.type,
       },
       relation: {
-        role: relation.actorRole,
-        description: relation.description,
+        role: relation.actorRole || '',
+        description: relation.description || '',
       },
+      hub: hubPayload,
     };
 
     return payload;
@@ -226,6 +260,7 @@ export class NotificationsPayloadBuilder {
         LogContext.COMMUNICATION
       );
 
+    const hubPayload = await this.buildHubPayload(community);
     const payload: any = {
       update: {
         id: updates.id,
@@ -235,13 +270,8 @@ export class NotificationsPayloadBuilder {
         name: community.displayName,
         type: community.type,
       },
-      hub: {
-        nameID: await this.getHubNameID(community.hubID),
-        id: community.hubID,
-      },
+      hub: hubPayload,
     };
-
-    await this.buildHubPayload(payload, community);
 
     return payload;
   }
@@ -283,6 +313,7 @@ export class NotificationsPayloadBuilder {
         `Could not acquire community from discussion with id: ${discussion.id}`,
         LogContext.COMMUNICATION
       );
+    const hubPayload = await this.buildHubPayload(community);
     const payload: any = {
       discussion: {
         id: discussion.id,
@@ -294,21 +325,21 @@ export class NotificationsPayloadBuilder {
         name: community.displayName,
         type: community.type,
       },
-      hub: {
-        nameID: await this.getHubNameID(community.hubID),
-        id: community.hubID,
-      },
+      hub: hubPayload,
     };
-
-    await this.buildHubPayload(payload, community);
 
     return payload;
   }
-  private async buildHubPayload(payload: any, community: ICommunity) {
+
+  private async buildHubPayload(community: ICommunity): Promise<HubPayload> {
+    const result: HubPayload = {
+      id: community.hubID,
+      nameID: await this.getHubNameIdOrFail(community.hubID),
+    };
     if (community.type === CommunityType.CHALLENGE) {
-      payload.hub.challenge = {
-        nameID: await this.getChallengeNameID(community.parentID),
+      result.challenge = {
         id: community.parentID,
+        nameID: await this.getChallengeNameIdOrFail(community.parentID),
       };
     } else if (community.type === CommunityType.OPPORTUNITY) {
       const communityWithParent = await this.getCommunityWithParent(
@@ -323,49 +354,67 @@ export class NotificationsPayloadBuilder {
           LogContext.CHALLENGES
         );
       }
-
-      payload.hub.challenge = {
-        nameID: await this.getChallengeNameID(parentCommunity.parentID),
+      result.challenge = {
+        nameID: await this.getChallengeNameIdOrFail(parentCommunity.parentID),
         id: parentCommunity.parentID,
         opportunity: {
-          nameID: await this.getOpportunityNameID(community.parentID),
           id: community.parentID,
+          nameID: await this.getOpportunityNameIdOrFail(community.parentID),
         },
       };
     }
+
+    return result;
   }
 
-  private async getHubNameID(hubID: string): Promise<string | undefined> {
+  private async getHubNameIdOrFail(hubID: string): Promise<string> {
     const hub = await this.hubRepository
       .createQueryBuilder('hub')
       .where('hub.id = :id')
       .setParameters({ id: `${hubID}` })
       .getOne();
 
-    return hub?.nameID;
+    if (!hub) {
+      throw new EntityNotFoundException(
+        `Unable to find Hub with id: ${hubID}`,
+        LogContext.CHALLENGES
+      );
+    }
+    return hub.nameID;
   }
 
-  private async getChallengeNameID(
-    challengeID: string
-  ): Promise<string | undefined> {
+  private async getChallengeNameIdOrFail(challengeID: string): Promise<string> {
     const challenge = await this.challengeRepository
       .createQueryBuilder('challenge')
       .where('challenge.id = :id')
       .setParameters({ id: `${challengeID}` })
       .getOne();
-    return challenge?.nameID;
+    if (!challenge) {
+      throw new EntityNotFoundException(
+        `Unable to find Challenge with id: ${challengeID}`,
+        LogContext.CHALLENGES
+      );
+    }
+    return challenge.nameID;
   }
 
-  private async getOpportunityNameID(
+  private async getOpportunityNameIdOrFail(
     opportunityID: string
-  ): Promise<string | undefined> {
+  ): Promise<string> {
     const opportunity = await this.opportunityRepository
       .createQueryBuilder('opportunity')
       .where('opportunity.id = :id')
       .setParameters({ id: `${opportunityID}` })
       .getOne();
 
-    return opportunity?.nameID;
+    if (!opportunity) {
+      throw new EntityNotFoundException(
+        `Unable to find Opportunity with id: ${opportunityID}`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    return opportunity.nameID;
   }
 
   private async getCommunity(communityID: string) {

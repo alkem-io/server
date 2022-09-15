@@ -34,4 +34,10 @@ export class CreateCalloutInput extends CreateNameableInput {
     description: 'A readable identifier, unique within the containing scope.',
   })
   nameID!: string;
+
+  @Field(() => Number, {
+    nullable: true,
+    description: 'The sort order to assign to this Callout.',
+  })
+  sortOrder!: number;
 }

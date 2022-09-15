@@ -19,6 +19,7 @@ import { IPreference } from '@domain/common/preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { AgentInfo } from '@src/core';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
   constructor(
@@ -103,6 +104,31 @@ export class OrganizationResolverFields {
     return 'not accessible';
   }
 
+  @UseGuards(GraphqlGuard)
+  @ResolveField('authorization', () => IAuthorizationPolicy, {
+    nullable: true,
+    description: 'The Authorization for this Organization.',
+  })
+  @Profiling.api
+  async authorization(
+    @Parent() parent: Organization,
+    @CurrentUser() agentInfo: AgentInfo
+  ) {
+    // Reload to ensure the authorization is loaded
+    const organization = await this.organizationService.getOrganizationOrFail(
+      parent.id
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.READ,
+      `organization authorization access: ${organization.displayName}`
+    );
+
+    return organization.authorization;
+  }
+
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The profile for this organization.',
@@ -142,7 +168,6 @@ export class OrganizationResolverFields {
     return await this.organizationService.getActivity(organization);
   }
 
-  //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('preferences', () => [IPreference], {
     nullable: false,
     description: 'The preferences for this Organization',

@@ -1,14 +1,22 @@
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('CommunicationDiscussionMessageReceived')
-export class CommunicationDiscussionMessageReceived {
+@ObjectType('CalloutMessageReceived')
+export class CalloutMessageReceived {
+  // To identify the event
+  eventID!: string;
+
   @Field(() => String, {
     nullable: false,
-    description:
-      'The identifier for the Discussion on which the message was sent.',
+    description: 'The identifier for the Callout.',
   })
-  discussionID!: string;
+  calloutID!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'The identifier for the Comments.',
+  })
+  commentsID!: string;
 
   @Field(() => CommunicationMessageResult, {
     nullable: false,
