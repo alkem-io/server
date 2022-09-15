@@ -394,6 +394,14 @@ export class AuthorizationPolicyService {
     challengeAdminsNotInherited.inheritable = false;
     credentialRules.push(challengeAdminsNotInherited);
 
+    // Allow Opportunity admins to access admin
+    const opportunityAdminNotInherited = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.ADMIN],
+      AuthorizationCredential.OPPORTUNITY_ADMIN
+    );
+    opportunityAdminNotInherited.inheritable = false;
+    credentialRules.push(opportunityAdminNotInherited);
+
     // Allow Organization admins to access platform admin
     const organizationAdminsNotInherited =
       new AuthorizationPolicyRuleCredential(
