@@ -46,6 +46,7 @@ import { RedisLockModule } from '@core/caching/redis/redis.lock.module';
 import { ConversionModule } from '@services/domain/conversion/conversion.module';
 import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/domain/activity-log/activity.log.module';
+import { PlatformAuthorizationModule } from './platform/authorization/platform.authorization.module';
 
 @Module({
   imports: [
@@ -183,6 +184,7 @@ import { ActivityLogModule } from '@services/domain/activity-log/activity.log.mo
     AuthorizationModule,
     HubModule,
     MetadataModule,
+    PlatformAuthorizationModule,
     BootstrapModule,
     SearchModule,
     ActivityLogModule,
