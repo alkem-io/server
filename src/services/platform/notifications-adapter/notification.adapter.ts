@@ -4,8 +4,6 @@ import { LogContext } from '@common/enums/logging.context';
 import { NotificationInputAspectCreated } from './dto/notification.dto.input.aspect.created';
 import { NotificationInputCalloutPublished } from './dto/notification.dto.input.callout.published';
 import { NotificationInputAspectComment } from './dto/notification.dto.input.aspect.comment';
-import { NotificationInputCalloutDiscussionComment } from './dto/notification.dto.input.callout.discussion.comment';
-import { NotificationInputMemberJoined } from './dto/notification.dto.input.member.joined';
 import { NotificationPayloadBuilder } from './notification.payload.builder';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { ClientProxy } from '@nestjs/microservices';
@@ -240,28 +238,6 @@ export class NotificationAdapter {
     this.notificationsClient.emit<number>(
       NotificationEventType.USER_REGISTERED,
       payload
-    );
-
-    return true;
-  }
-
-  async calloutCommentCreated(
-    eventData: NotificationInputCalloutDiscussionComment
-  ): Promise<boolean> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
-
-    return true;
-  }
-
-  async memberJoined(
-    eventData: NotificationInputMemberJoined
-  ): Promise<boolean> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
     );
 
     return true;
