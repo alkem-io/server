@@ -20,7 +20,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { UserDataloaderService } from './user.dataloader.service';
-import { NotificationAdapterModule } from '@services/platform/notifications-adapter/notification.adapter.module';
+import { NotificationAdapterModule } from '@services/platform/notification-adapter/notification.adapter.module';
 
 @Module({
   imports: [

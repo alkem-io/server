@@ -13,7 +13,7 @@ import { CalloutResolverSubscriptions } from './callout.resolver.subscriptions';
 import { NamingModule } from '@services/domain/naming/naming.module';
 import { CommentsModule } from '@domain/communication/comments/comments.module';
 import { ActivityAdapterModule } from '@services/platform/activity-adapter/activity.adapter.module';
-import { NotificationAdapterModule } from '@services/platform/notifications-adapter/notification.adapter.module';
+import { NotificationAdapterModule } from '@services/platform/notification-adapter/notification.adapter.module';
 
 @Module({
   imports: [

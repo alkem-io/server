@@ -23,10 +23,10 @@ import {
   AspectCommentCreatedEventPayload,
   CommunityCollaborationInterestEventPayload,
   CalloutPublishedEventPayload,
-} from '../../../core/microservices/event-payloads';
+} from './event-payloads';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { HubPayload } from '../../../core/microservices/event-payloads/hub.payload';
+import { HubPayload } from './event-payloads/hub.payload';
 
 @Injectable()
 export class NotificationPayloadBuilder {

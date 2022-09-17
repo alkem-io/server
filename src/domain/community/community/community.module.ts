@@ -9,7 +9,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivityAdapterModule } from '@services/platform/activity-adapter/activity.adapter.module';
-import { NotificationAdapterModule } from '@services/platform/notifications-adapter/notification.adapter.module';
+import { NotificationAdapterModule } from '@services/platform/notification-adapter/notification.adapter.module';
 import { TrustRegistryAdapterModule } from '@services/platform/trust-registry/trust.registry.adapter/trust.registry.adapter.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { Community } from './community.entity';

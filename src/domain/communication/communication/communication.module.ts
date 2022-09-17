@@ -13,7 +13,7 @@ import { UpdatesModule } from '../updates/updates.module';
 import { IdentityResolverModule } from '../identity-resolver/identity.resolver.module';
 import { CommunicationResolverSubscriptions } from './communication.resolver.subscriptions';
 import { RoomModule } from '../room/room.module';
-import { NotificationAdapterModule } from '@services/platform/notifications-adapter/notification.adapter.module';
+import { NotificationAdapterModule } from '@services/platform/notification-adapter/notification.adapter.module';
 
 @Module({
   imports: [

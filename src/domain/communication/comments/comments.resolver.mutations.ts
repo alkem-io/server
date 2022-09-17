@@ -25,8 +25,8 @@ import { ActivityAdapter } from '@services/platform/activity-adapter/activity.ad
 import { ActivityInputAspectComment } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.comment';
 import { AspectMessageReceivedPayload } from '@domain/collaboration/aspect/dto/aspect.message.received.payload';
 import { NamingService } from '@services/domain/naming/naming.service';
-import { NotificationInputAspectComment } from '@services/platform/notifications-adapter/dto/notification.dto.input.aspect.comment';
-import { NotificationAdapter } from '@services/platform/notifications-adapter/notification.adapter';
+import { NotificationInputAspectComment } from '@services/platform/notification-adapter/dto/notification.dto.input.aspect.comment';
+import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 
 @Resolver()

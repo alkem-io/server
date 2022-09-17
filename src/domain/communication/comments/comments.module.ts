@@ -5,7 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { NamingModule } from '@services/domain/naming/naming.module';
 import { ActivityAdapterModule } from '@services/platform/activity-adapter/activity.adapter.module';
 import { CommunicationAdapterModule } from '@services/platform/communication-adapter/communication-adapter.module';
-import { NotificationAdapterModule } from '@services/platform/notifications-adapter/notification.adapter.module';
+import { NotificationAdapterModule } from '@services/platform/notification-adapter/notification.adapter.module';
 import { RoomModule } from '../room/room.module';
 import { Comments } from './comments.entity';
 import { CommentsResolverFields } from './comments.resolver.fields';

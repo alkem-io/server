@@ -40,9 +40,9 @@ import { ActivityInputCalloutPublished } from '@services/platform/activity-adapt
 import { ActivityInputCanvasCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.canvas.created';
 import { CalloutMessageReceivedPayload } from './dto/callout.message.received.payload';
 import { ActivityInputCalloutDiscussionComment } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
-import { NotificationInputAspectCreated } from '@services/platform/notifications-adapter/dto/notification.dto.input.aspect.created';
-import { NotificationAdapter } from '@services/platform/notifications-adapter/notification.adapter';
-import { NotificationInputCalloutPublished } from '@services/platform/notifications-adapter/dto/notification.dto.input.callout.published';
+import { NotificationInputAspectCreated } from '@services/platform/notification-adapter/dto/notification.dto.input.aspect.created';
+import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
+import { NotificationInputCalloutPublished } from '@services/platform/notification-adapter/dto/notification.dto.input.callout.published';
 
 @Resolver()
 export class CalloutResolverMutations {

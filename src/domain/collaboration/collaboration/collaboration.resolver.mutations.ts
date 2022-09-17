@@ -18,9 +18,9 @@ import { ICollaboration } from './collaboration.interface';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
 import { ActivityInputCalloutPublished } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.published';
-import { NotificationAdapter } from '@services/platform/notifications-adapter/notification.adapter';
-import { NotificationInputCollaborationInterest } from '@services/platform/notifications-adapter/dto/notification.dto.input.collaboration.interest';
-import { NotificationInputCalloutPublished } from '@services/platform/notifications-adapter/dto/notification.dto.input.callout.published';
+import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
+import { NotificationInputCollaborationInterest } from '@services/platform/notification-adapter/dto/notification.dto.input.collaboration.interest';
+import { NotificationInputCalloutPublished } from '@services/platform/notification-adapter/dto/notification.dto.input.callout.published';
 
 @Resolver()
 export class CollaborationResolverMutations {
