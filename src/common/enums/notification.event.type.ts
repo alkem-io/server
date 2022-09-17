@@ -1,4 +1,4 @@
-export enum EventType {
+export enum NotificationEventType {
   COMMUNITY_APPLICATION_CREATED = 'communityApplicationCreated',
   COMMUNITY_NEW_MEMBER = 'communityNewMember',
   COMMUNITY_COLLABORATION_INTEREST = 'communityCollaborationInterest',

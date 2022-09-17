@@ -9,7 +9,6 @@ import { MockAuthorizationPolicyService } from '@test/mocks/authorization.policy
 import { MockAgentService } from '@test/mocks/agent.service.mock';
 import { MockCommunicationAdapter } from '@test/mocks/communication.adapter.mock';
 import { MockUserAuthorizationService } from '@test/mocks/user.authorization.service.mock';
-import { MockNotificationsPayloadBuilder } from '@test/mocks/notifications.payload.builder.mock';
 import { MockPreferenceService } from '@test/mocks/preference.service.mock';
 import { MockPreferenceSetService } from '@test/mocks/preference.set.service.mock';
 import { MockNotificationsService } from '@test/mocks/notifications.service.mock';
@@ -29,7 +28,6 @@ describe('UserResolver', () => {
         MockAuthorizationPolicyService,
         MockCommunicationAdapter,
         MockUserAuthorizationService,
-        MockNotificationsPayloadBuilder,
         MockPreferenceService,
         MockPreferenceSetService,
         MockNotificationsService,

@@ -17,8 +17,6 @@ import { UserSendMessageInput } from './dto/user.dto.communication.message.send'
 import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization';
 import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
 import { ClientProxy } from '@nestjs/microservices';
-import { EventType } from '@common/enums/event.type';
-import { NotificationsPayloadBuilder } from '@core/microservices';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IPreference } from '@domain/common/preference/preference.interface';
@@ -26,16 +24,18 @@ import { PreferenceService } from '@domain/common/preference';
 import { UpdateUserPreferenceInput } from './dto/user.dto.update.preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { NotificationInputUserRegistered } from '@services/platform/notifications-adapter/dto/notification.dto.input.user.registered';
+import { NotificationAdapter } from '@services/platform/notifications-adapter/notification.adapter';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
   constructor(
     private communicationAdapter: CommunicationAdapter,
+    private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
-    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     private preferenceService: PreferenceService,
     private preferenceSetService: PreferenceSetService,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
@@ -66,12 +66,11 @@ export class UserResolverMutations {
     const savedUser =
       await this.userAuthorizationService.applyAuthorizationPolicy(user);
 
-    const payload =
-      await this.notificationsPayloadBuilder.buildUserRegisteredNotificationPayload(
-        user.id
-      );
-
-    this.notificationsClient.emit<number>(EventType.USER_REGISTERED, payload);
+    // Send the notification
+    const notificationInput: NotificationInputUserRegistered = {
+      triggeredBy: agentInfo.userID,
+    };
+    await this.notificationAdapter.userRegistered(notificationInput);
 
     return savedUser;
   }

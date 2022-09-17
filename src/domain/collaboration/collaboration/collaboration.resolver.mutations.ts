@@ -1,4 +1,4 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
@@ -15,13 +15,12 @@ import { DeleteCollaborationInput } from './dto/collaboration.dto.delete';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
 import { ICollaboration } from './collaboration.interface';
-import { NotificationsPayloadBuilder } from '@core/microservices';
-import { EventType } from '@common/enums/event.type';
-import { ClientProxy } from '@nestjs/microservices';
-import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
 import { ActivityInputCalloutPublished } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.published';
+import { NotificationAdapter } from '@services/platform/notifications-adapter/notification.adapter';
+import { NotificationInputCollaborationInterest } from '@services/platform/notifications-adapter/dto/notification.dto.input.collaboration.interest';
+import { NotificationInputCalloutPublished } from '@services/platform/notifications-adapter/dto/notification.dto.input.callout.published';
 
 @Resolver()
 export class CollaborationResolverMutations {
@@ -31,9 +30,8 @@ export class CollaborationResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private collaborationService: CollaborationService,
-    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     private activityAdapter: ActivityAdapter,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
+    private notificationAdapter: NotificationAdapter
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -97,16 +95,15 @@ export class CollaborationResolverMutations {
       await this.collaborationService.createRelationOnCollaboration(
         relationData
       );
-    const payload =
-      await this.notificationsPayloadBuilder.buildCollaborationInterestPayload(
-        agentInfo.userID,
-        collaboration,
-        relation
-      );
-    this.notificationsClient.emit(
-      EventType.COMMUNITY_COLLABORATION_INTEREST,
-      payload
-    );
+
+    // Send the notification
+    const notificationInput: NotificationInputCollaborationInterest = {
+      triggeredBy: agentInfo.userID,
+      relation: relation,
+      collaboration: collaboration,
+    };
+    await this.notificationAdapter.collaborationInterest(notificationInput);
+
     return await this.relationAuthorizationService.applyAuthorizationPolicy(
       relation,
       collaboriationAuthorizationPolicy,
@@ -165,16 +162,11 @@ export class CollaborationResolverMutations {
       );
 
     if (calloutAuthorized.visibility === CalloutVisibility.PUBLISHED) {
-      const payload =
-        await this.notificationsPayloadBuilder.buildCalloutPublishedPayload(
-          agentInfo.userID,
-          calloutAuthorized
-        );
-
-      this.notificationsClient.emit<number>(
-        EventType.CALLOUT_PUBLISHED,
-        payload
-      );
+      const notificationInput: NotificationInputCalloutPublished = {
+        triggeredBy: agentInfo.userID,
+        callout: callout,
+      };
+      await this.notificationAdapter.calloutPublished(notificationInput);
 
       const activityLogInput: ActivityInputCalloutPublished = {
         triggeredBy: agentInfo.userID,

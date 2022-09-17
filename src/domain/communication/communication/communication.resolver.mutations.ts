@@ -12,8 +12,6 @@ import { CommunicationCreateDiscussionInput } from './dto/communication.dto.crea
 import { DiscussionService } from '../discussion/discussion.service';
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
 import { ClientProxy } from '@nestjs/microservices';
-import { EventType } from '@common/enums/event.type';
-import { NotificationsPayloadBuilder } from '@core/microservices';
 import {
   NOTIFICATIONS_SERVICE,
   SUBSCRIPTION_DISCUSSION_UPDATED,
@@ -22,15 +20,17 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { CommunicationDiscussionUpdated } from './dto/communication.dto.event.discussion.updated';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { NotificationAdapter } from '@services/platform/notifications-adapter/notification.adapter';
+import { NotificationInputDiscussionCreated } from '@services/platform/notifications-adapter/dto/notification.dto.input.discussion.created';
 
 @Resolver()
 export class CommunicationResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private notificationAdapter: NotificationAdapter,
     private communicationService: CommunicationService,
     private discussionAuthorizationService: DiscussionAuthorizationService,
     private discussionService: DiscussionService,
-    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
     @Inject(SUBSCRIPTION_DISCUSSION_UPDATED)
     private readonly subscriptionDiscussionMessage: PubSubEngine,
@@ -68,15 +68,12 @@ export class CommunicationResolverMutations {
       communication.authorization
     );
 
-    // Emit the events to notify others
-    const payload =
-      await this.notificationsPayloadBuilder.buildCommunicationDiscussionCreatedNotificationPayload(
-        discussion
-      );
-    this.notificationsClient.emit<number>(
-      EventType.COMMUNICATION_DISCUSSION_CREATED,
-      payload
-    );
+    // Send the notification
+    const notificationInput: NotificationInputDiscussionCreated = {
+      triggeredBy: agentInfo.userID,
+      discussion: discussion,
+    };
+    await this.notificationAdapter.discussionCreated(notificationInput);
 
     // Send out the subscription event
     const eventID = `discussion-message-updated-${Math.floor(
