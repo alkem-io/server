@@ -45,6 +45,7 @@ import { ActivityInputCalloutPublished } from '@services/platform/activity-adapt
 import { ActivityInputCanvasCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.canvas.created';
 import { CalloutMessageReceivedPayload } from './dto/callout.message.received.payload';
 import { ActivityInputCalloutDiscussionComment } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
+import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -164,7 +165,37 @@ export class CalloutResolverMutations {
     );
     const result = await this.calloutService.updateCallout(calloutData);
 
-    if (result.visibility === CalloutVisibility.PUBLISHED) {
+    return result;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICallout, {
+    description:
+      'Update the visibility (Draft / Published) of the specified Callout.',
+  })
+  @Profiling.api
+  async updateCalloutVisibility(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('calloutData') calloutData: UpdateCalloutVisibilityInput
+  ): Promise<ICallout> {
+    const callout = await this.calloutService.getCalloutOrFail(
+      calloutData.calloutID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      callout.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update visibility on callout: ${callout.id}`
+    );
+    const oldVisibility = callout.visibility;
+    const result = await this.calloutService.updateCalloutVisibility(
+      calloutData
+    );
+
+    if (
+      oldVisibility === CalloutVisibility.DRAFT &&
+      result.visibility === CalloutVisibility.PUBLISHED
+    ) {
       const payload =
         await this.notificationsPayloadBuilder.buildCalloutPublishedPayload(
           agentInfo.userID,

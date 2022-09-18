@@ -1,0 +1,13 @@
+mutation updateCalloutVisibility($calloutData: UpdateCalloutVisibilityInput!) {
+  updateCalloutVisibility(calloutData: $calloutData) {
+    id
+  }
+}
+
+Variables:
+{
+  "calloutData": {
+    "calloutID": "uuid",
+    "visibility": "published"
+  }
+}

@@ -4,7 +4,6 @@ import { NameID } from '@domain/common/scalars';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 @InputType()
 export class CreateCalloutInput extends CreateNameableInput {
@@ -23,11 +22,6 @@ export class CreateCalloutInput extends CreateNameableInput {
     description: 'State of the callout.',
   })
   state!: CalloutState;
-
-  @Field(() => CalloutVisibility, {
-    description: 'Visibility of the Callout.',
-  })
-  visibility!: CalloutVisibility;
 
   @Field(() => NameID, {
     nullable: true,
