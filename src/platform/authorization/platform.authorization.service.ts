@@ -8,17 +8,17 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 
 @Injectable()
 export class PlatformAuthorizationService {
-  private platformAuthorizationPolicy: IAuthorizationPolicy;
+  private readonly platformAuthorizationPolicy: IAuthorizationPolicy;
 
   constructor(private authorizationPolicyService: AuthorizationPolicyService) {
     this.platformAuthorizationPolicy = this.createPlatformAuthorizationPolicy();
   }
 
-  getPlatformAuthorizationPolicy(): IAuthorizationPolicy {
+  public getPlatformAuthorizationPolicy(): IAuthorizationPolicy {
     return this.platformAuthorizationPolicy;
   }
 
-  inheritPlatformAuthorization(
+  public inheritPlatformAuthorization(
     childAuthorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
     return this.authorizationPolicyService.inheritParentAuthorization(
