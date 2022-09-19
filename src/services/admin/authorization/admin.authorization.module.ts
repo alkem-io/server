@@ -7,6 +7,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AdminAuthorizationResolverMutations } from './admin.authorization.resolver.mutations';
 import { AdminAuthorizationResolverQueries } from './admin.authorization.resolver.queries';
 import { AdminAuthorizationService } from './admin.authorization.service';
+import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AdminAuthorizationService } from './admin.authorization.service';
     AgentModule,
     UserModule,
     CredentialModule,
+    PlatformAuthorizationModule,
   ],
   providers: [
     AdminAuthorizationService,

@@ -4,19 +4,19 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RolesOrganizationInput } from './dto/roles.dto.input.organization';
 import { RolesService } from './roles.service';
 import { RolesUserInput } from './dto/roles.dto.input.user';
 import { ContributorRoles } from './dto/roles.dto.result.contributor';
+import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
 
 @Resolver()
 export class RolesResolverQueries {
   constructor(
     private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private rolesServices: RolesService
+    private rolesServices: RolesService,
+    private platformAuthorizationService: PlatformAuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -31,7 +31,7 @@ export class RolesResolverQueries {
   ): Promise<ContributorRoles> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
+      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `roles user query: ${agentInfo.email}`
     );

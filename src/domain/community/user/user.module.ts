@@ -21,6 +21,7 @@ import { PreferenceSetModule } from '@domain/common/preference-set/preference.se
 import { PreferenceModule } from '@domain/common/preference';
 import { UserDataloaderService } from './user.dataloader.service';
 import { NotificationAdapterModule } from '@services/platform/notification-adapter/notification.adapter.module';
+import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { NotificationAdapterModule } from '@services/platform/notification-adapt
     IdentityResolverModule,
     RoomModule,
     MicroservicesModule,
+    PlatformAuthorizationModule,
     PreferenceModule,
     PreferenceSetModule,
     KonfigModule,

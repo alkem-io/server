@@ -16,9 +16,6 @@ import { UserAuthorizationService } from './user.service.authorization';
 import { UserSendMessageInput } from './dto/user.dto.communication.message.send';
 import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization';
 import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
-import { ClientProxy } from '@nestjs/microservices';
-import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceService } from '@domain/common/preference';
 import { UpdateUserPreferenceInput } from './dto/user.dto.update.preference';
@@ -26,6 +23,7 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationInputUserRegistered } from '@services/platform/notification-adapter/dto/notification.dto.input.user.registered';
 import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
+import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -33,12 +31,11 @@ export class UserResolverMutations {
     private communicationAdapter: CommunicationAdapter,
     private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationService,
     private preferenceService: PreferenceService,
     private preferenceSetService: PreferenceSetService,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -53,7 +50,7 @@ export class UserResolverMutations {
     @Args('userData') userData: CreateUserInput
   ): Promise<IUser> {
     const authorization =
-      this.authorizationPolicyService.getPlatformAuthorizationPolicy();
+      this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorization,

@@ -6,7 +6,5 @@ export const MockAuthorizationPolicyService: ValueProvider<
   PublicPart<AuthorizationPolicyService>
 > = {
   provide: AuthorizationPolicyService,
-  useValue: {
-    getPlatformAuthorizationPolicy: jest.fn(),
-  },
+  useValue: {},
 };
