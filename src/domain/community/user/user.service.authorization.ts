@@ -13,12 +13,14 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
+import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
 
 @Injectable()
 export class UserAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private agentService: AgentService,
     private userService: UserService
@@ -30,7 +32,7 @@ export class UserAuthorizationService {
       user.authorization
     );
     user.authorization =
-      this.authorizationPolicyService.inheritPlatformAuthorization(
+      this.platformAuthorizationService.inheritPlatformAuthorization(
         user.authorization
       );
 
