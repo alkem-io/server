@@ -163,9 +163,7 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
-    const result = await this.calloutService.updateCallout(calloutData);
-
-    return result;
+    return await this.calloutService.updateCallout(calloutData);
   }
 
   @UseGuards(GraphqlGuard)

@@ -19,6 +19,7 @@ import { PreferenceSetAuthorizationService } from '@domain/common/preference-set
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
+import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -29,6 +30,7 @@ export class HubAuthorizationService {
     private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private preferenceSetService: PreferenceSetService,
+    private platformAuthorizationService: PlatformAuthorizationService,
     private hubService: HubService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>
@@ -42,7 +44,7 @@ export class HubAuthorizationService {
       hub.authorization
     );
     hub.authorization =
-      this.authorizationPolicyService.inheritPlatformAuthorization(
+      this.platformAuthorizationService.inheritPlatformAuthorization(
         hub.authorization
       );
     hub.authorization = this.extendAuthorizationPolicy(
