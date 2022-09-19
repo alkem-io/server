@@ -1,3 +1,3 @@
-export class NotificationInputBase {
-  triggeredBy!: string;
+export interface NotificationInputBase {
+  triggeredBy: string;
 }

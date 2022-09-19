@@ -3,8 +3,8 @@ import { IComments } from '@domain/communication/comments/comments.interface';
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import { NotificationInputBase } from './notification.dto.input.base';
 
-export class NotificationInputAspectComment extends NotificationInputBase {
-  aspect!: IAspect;
-  comments!: IComments;
-  commentSent!: CommunicationMessageResult;
+export interface NotificationInputAspectComment extends NotificationInputBase {
+  aspect: IAspect;
+  comments: IComments;
+  commentSent: CommunicationMessageResult;
 }

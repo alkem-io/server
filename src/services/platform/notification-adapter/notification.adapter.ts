@@ -27,7 +27,7 @@ export class NotificationAdapter {
 
   async calloutPublished(
     eventData: NotificationInputCalloutPublished
-  ): Promise<boolean> {
+  ): Promise<void> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.NOTIFICATIONS
@@ -43,13 +43,11 @@ export class NotificationAdapter {
       NotificationEventType.CALLOUT_PUBLISHED,
       payload
     );
-
-    return true;
   }
 
   async aspectCreated(
     eventData: NotificationInputAspectCreated
-  ): Promise<boolean> {
+  ): Promise<void> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.NOTIFICATIONS
@@ -64,13 +62,11 @@ export class NotificationAdapter {
       NotificationEventType.ASPECT_CREATED,
       payload
     );
-
-    return true;
   }
 
   async collaborationInterest(
     eventData: NotificationInputCollaborationInterest
-  ): Promise<boolean> {
+  ): Promise<void> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.NOTIFICATIONS
@@ -86,13 +82,11 @@ export class NotificationAdapter {
       NotificationEventType.COMMUNITY_COLLABORATION_INTEREST,
       payload
     );
-
-    return true;
   }
 
   async aspectComment(
     eventData: NotificationInputAspectComment
-  ): Promise<boolean> {
+  ): Promise<void> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.NOTIFICATIONS
@@ -111,11 +105,9 @@ export class NotificationAdapter {
       NotificationEventType.COMMENT_CREATED_ON_ASPECT,
       payload
     );
-
-    return true;
   }
 
-  async updateSent(eventData: NotificationInputUpdateSent): Promise<boolean> {
+  async updateSent(eventData: NotificationInputUpdateSent): Promise<void> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.NOTIFICATIONS
@@ -131,13 +123,11 @@ export class NotificationAdapter {
       NotificationEventType.COMMUNICATION_UPDATE_SENT,
       notificationsPayload
     );
-
-    return true;
   }
 
   async discussionCreated(
     eventData: NotificationInputDiscussionCreated
-  ): Promise<boolean> {
+  ): Promise<void> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.NOTIFICATIONS
@@ -151,13 +141,11 @@ export class NotificationAdapter {
       NotificationEventType.COMMUNICATION_DISCUSSION_CREATED,
       payload
     );
-
-    return true;
   }
 
   async applicationCreated(
     eventData: NotificationInputCommunityApplication
-  ): Promise<boolean> {
+  ): Promise<void> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.NOTIFICATIONS
@@ -174,13 +162,11 @@ export class NotificationAdapter {
       NotificationEventType.COMMUNITY_APPLICATION_CREATED,
       payload
     );
-
-    return true;
   }
 
   async communityNewMember(
     eventData: NotificationInputCommunityNewMember
-  ): Promise<boolean> {
+  ): Promise<void> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.NOTIFICATIONS
@@ -195,13 +181,11 @@ export class NotificationAdapter {
       NotificationEventType.COMMUNITY_NEW_MEMBER,
       payload
     );
-
-    return true;
   }
 
   async communityContextReview(
     eventData: NotificationInputCommunityContextReview
-  ): Promise<boolean> {
+  ): Promise<void> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.NOTIFICATIONS
@@ -218,13 +202,11 @@ export class NotificationAdapter {
       NotificationEventType.COMMUNITY_CONTEXT_REVIEW_SUBMITTED,
       payload
     );
-
-    return true;
   }
 
   async userRegistered(
     eventData: NotificationInputUserRegistered
-  ): Promise<boolean> {
+  ): Promise<void> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.NOTIFICATIONS
@@ -239,7 +221,5 @@ export class NotificationAdapter {
       NotificationEventType.USER_REGISTERED,
       payload
     );
-
-    return true;
   }
 }

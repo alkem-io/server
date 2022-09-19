@@ -12,6 +12,7 @@ import { MockUserAuthorizationService } from '@test/mocks/user.authorization.ser
 import { MockPreferenceService } from '@test/mocks/preference.service.mock';
 import { MockPreferenceSetService } from '@test/mocks/preference.set.service.mock';
 import { MockNotificationsService } from '@test/mocks/notifications.service.mock';
+import { MockNotificationAdapter } from '@test/mocks/notification.adapter.service.mock';
 
 describe('UserResolver', () => {
   let resolver: UserResolverQueries;
@@ -30,6 +31,7 @@ describe('UserResolver', () => {
         MockUserAuthorizationService,
         MockPreferenceService,
         MockPreferenceSetService,
+        MockNotificationAdapter,
         MockNotificationsService,
         UserResolverMutations,
         UserResolverQueries,

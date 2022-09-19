@@ -1,11 +1,11 @@
-import { NotificationsPayloadBuilder } from '@core/microservices';
 import { ValueProvider } from '@nestjs/common';
+import { NotificationPayloadBuilder } from '@services/platform/notification-adapter/notification.payload.builder';
 import { PublicPart } from '../utils/public-part';
 
 export const MockNotificationsPayloadBuilder: ValueProvider<
-  PublicPart<NotificationsPayloadBuilder>
+  PublicPart<NotificationPayloadBuilder>
 > = {
-  provide: NotificationsPayloadBuilder,
+  provide: NotificationPayloadBuilder,
   useValue: {
     buildApplicationCreatedNotificationPayload: jest.fn(),
     buildAspectCreatedPayload: jest.fn(),
