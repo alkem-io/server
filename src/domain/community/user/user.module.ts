@@ -20,6 +20,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { UserDataloaderService } from './user.dataloader.service';
+import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { UserDataloaderService } from './user.dataloader.service';
     IdentityResolverModule,
     RoomModule,
     MicroservicesModule,
+    PlatformAuthorizationModule,
     PreferenceModule,
     PreferenceSetModule,
     KonfigModule,

@@ -13,7 +13,6 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { OrganizationAuthorizationService } from './organization.service.authorization';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { OrganizationAuthorizationResetInput } from './dto/organization.dto.reset.authorization';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
@@ -29,17 +28,18 @@ import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set
 import { UpdateOrganizationPreferenceInput } from '@domain/community/organization/dto/organization.dto.update.preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { CreateUserGroupInput } from '../user-group/dto';
+import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverMutations {
   constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private organizationService: OrganizationService,
     private authorizationService: AuthorizationService,
     private preferenceService: PreferenceService,
-    private preferenceSetService: PreferenceSetService
+    private preferenceSetService: PreferenceSetService,
+    private platformAuthorizationService: PlatformAuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -52,7 +52,7 @@ export class OrganizationResolverMutations {
     @Args('organizationData') organizationData: CreateOrganizationInput
   ): Promise<IOrganization> {
     const authorizationPolicy =
-      this.authorizationPolicyService.getPlatformAuthorizationPolicy();
+      this.platformAuthorizationService.getPlatformAuthorizationPolicy();
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,

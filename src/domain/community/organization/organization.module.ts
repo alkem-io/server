@@ -18,6 +18,7 @@ import { OrganizationVerificationModule } from '../organization-verification/org
 import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { OrganizationDataloaderService } from './organization.dataloader.service';
+import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { OrganizationDataloaderService } from './organization.dataloader.service
     UserGroupModule,
     TagsetModule,
     NamingModule,
+    PlatformAuthorizationModule,
     ProfileModule,
     PreferenceModule,
     PreferenceSetModule,

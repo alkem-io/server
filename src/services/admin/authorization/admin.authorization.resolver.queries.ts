@@ -9,14 +9,14 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AdminAuthorizationService } from './admin.authorization.service';
 import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.users.with.credential';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
 
 @Resolver()
 export class AdminAuthorizationResolverQueries {
   constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
-    private adminAuthorizationService: AdminAuthorizationService
+    private adminAuthorizationService: AdminAuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationService
   ) {}
 
   @Query(() => [IUser], {
@@ -33,7 +33,7 @@ export class AdminAuthorizationResolverQueries {
   ): Promise<IUser[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
+      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `authorization query: ${agentInfo.email}`
     );
@@ -56,7 +56,7 @@ export class AdminAuthorizationResolverQueries {
   ): Promise<AuthorizationPrivilege[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      this.authorizationPolicyService.getPlatformAuthorizationPolicy(),
+      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `authorization query: ${agentInfo.email}`
     );
