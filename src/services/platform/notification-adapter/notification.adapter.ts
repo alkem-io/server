@@ -25,7 +25,7 @@ export class NotificationAdapter {
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
-  async calloutPublished(
+  public async calloutPublished(
     eventData: NotificationInputCalloutPublished
   ): Promise<void> {
     this.logger.verbose?.(
@@ -45,7 +45,7 @@ export class NotificationAdapter {
     );
   }
 
-  async aspectCreated(
+  public async aspectCreated(
     eventData: NotificationInputAspectCreated
   ): Promise<void> {
     this.logger.verbose?.(
@@ -64,7 +64,7 @@ export class NotificationAdapter {
     );
   }
 
-  async collaborationInterest(
+  public async collaborationInterest(
     eventData: NotificationInputCollaborationInterest
   ): Promise<void> {
     this.logger.verbose?.(
@@ -84,7 +84,7 @@ export class NotificationAdapter {
     );
   }
 
-  async aspectComment(
+  public async aspectComment(
     eventData: NotificationInputAspectComment
   ): Promise<void> {
     this.logger.verbose?.(
@@ -107,7 +107,9 @@ export class NotificationAdapter {
     );
   }
 
-  async updateSent(eventData: NotificationInputUpdateSent): Promise<void> {
+  public async updateSent(
+    eventData: NotificationInputUpdateSent
+  ): Promise<void> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.NOTIFICATIONS
@@ -125,7 +127,7 @@ export class NotificationAdapter {
     );
   }
 
-  async discussionCreated(
+  public async discussionCreated(
     eventData: NotificationInputDiscussionCreated
   ): Promise<void> {
     this.logger.verbose?.(
@@ -143,7 +145,7 @@ export class NotificationAdapter {
     );
   }
 
-  async applicationCreated(
+  public async applicationCreated(
     eventData: NotificationInputCommunityApplication
   ): Promise<void> {
     this.logger.verbose?.(
@@ -164,7 +166,7 @@ export class NotificationAdapter {
     );
   }
 
-  async communityNewMember(
+  public async communityNewMember(
     eventData: NotificationInputCommunityNewMember
   ): Promise<void> {
     this.logger.verbose?.(
@@ -183,7 +185,7 @@ export class NotificationAdapter {
     );
   }
 
-  async communityContextReview(
+  public async communityContextReview(
     eventData: NotificationInputCommunityContextReview
   ): Promise<void> {
     this.logger.verbose?.(
@@ -204,7 +206,7 @@ export class NotificationAdapter {
     );
   }
 
-  async userRegistered(
+  public async userRegistered(
     eventData: NotificationInputUserRegistered
   ): Promise<void> {
     this.logger.verbose?.(
