@@ -25,6 +25,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
+import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { TemplatesSetModule } from '@domain/template/templates-set/templates.set
     BaseChallengeModule,
     LifecycleModule,
     OpportunityModule,
+    PlatformAuthorizationModule,
     ProjectModule,
     OrganizationModule,
     TagsetModule,

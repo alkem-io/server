@@ -14,6 +14,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
     CommunityModule,
     OrganizationModule,
     HubModule,
+    PlatformAuthorizationModule,
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([Opportunity]),
   ],

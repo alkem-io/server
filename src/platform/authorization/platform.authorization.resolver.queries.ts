@@ -1,11 +1,13 @@
 import { Resolver, Query } from '@nestjs/graphql';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Profiling } from '@common/decorators/profiling.decorator';
-import { AuthorizationPolicyService } from './authorization.policy.service';
+import { PlatformAuthorizationService } from './platform.authorization.service';
 
 @Resolver()
-export class AuthorizationPolicyResolverQueries {
-  constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
+export class PlatformAuthorizationResolverQueries {
+  constructor(
+    private platformAuthorizationService: PlatformAuthorizationService
+  ) {}
 
   @Query(() => IAuthorizationPolicy, {
     nullable: false,
@@ -13,6 +15,6 @@ export class AuthorizationPolicyResolverQueries {
   })
   @Profiling.api
   authorization(): IAuthorizationPolicy {
-    return this.authorizationPolicyService.getPlatformAuthorizationPolicy();
+    return this.platformAuthorizationService.getPlatformAuthorizationPolicy();
   }
 }
