@@ -162,9 +162,13 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
+    const oldVisibility = callout.visibility;
     const result = await this.calloutService.updateCallout(calloutData);
 
-    if (result.visibility === CalloutVisibility.PUBLISHED) {
+    if (
+      oldVisibility === CalloutVisibility.DRAFT &&
+      result.visibility === CalloutVisibility.PUBLISHED
+    ) {
       const payload =
         await this.notificationsPayloadBuilder.buildCalloutPublishedPayload(
           agentInfo.userID,
