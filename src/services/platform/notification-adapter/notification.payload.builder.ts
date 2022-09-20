@@ -29,7 +29,7 @@ import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { HubPayload } from './event-payloads/hub.payload';
 
 @Injectable()
-export class NotificationsPayloadBuilder {
+export class NotificationPayloadBuilder {
   constructor(
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
