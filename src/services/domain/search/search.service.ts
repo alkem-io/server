@@ -14,11 +14,13 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Hub } from '@domain/challenge/hub/hub.entity';
 
 enum SearchEntityTypes {
   USER = 'user',
   GROUP = 'group',
   ORGANIZATION = 'organization',
+  HUB = 'hub',
   CHALLENGE = 'challenge',
   OPPORTUNITY = 'opportunity',
 }
@@ -27,6 +29,7 @@ const SEARCH_ENTITIES: string[] = [
   SearchEntityTypes.USER,
   SearchEntityTypes.GROUP,
   SearchEntityTypes.ORGANIZATION,
+  SearchEntityTypes.HUB,
   SearchEntityTypes.CHALLENGE,
   SearchEntityTypes.OPPORTUNITY,
 ];
@@ -40,7 +43,14 @@ class Match {
   key = 0;
   score = 0;
   terms: string[] = [];
-  entity: User | UserGroup | Organization | Challenge | Opportunity | undefined;
+  entity:
+    | User
+    | UserGroup
+    | Organization
+    | Hub
+    | Challenge
+    | Opportunity
+    | undefined;
 }
 
 export class SearchService {
@@ -51,6 +61,8 @@ export class SearchService {
     private groupRepository: Repository<UserGroup>,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
+    @InjectRepository(Hub)
+    private hubRepository: Repository<Hub>,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @InjectRepository(Opportunity)
@@ -69,6 +81,7 @@ export class SearchService {
     const userResults: Map<number, Match> = new Map();
     const groupResults: Map<number, Match> = new Map();
     const organizationResults: Map<number, Match> = new Map();
+    const hubResults: Map<number, Match> = new Map();
     const challengeResults: Map<number, Match> = new Map();
     const opportunityResults: Map<number, Match> = new Map();
 
@@ -80,6 +93,7 @@ export class SearchService {
       searchUsers,
       searchGroups,
       searchOrganizations,
+      searchHubs,
       searchChallenges,
       searchOpportunities,
     ] = await this.searchBy(agentInfo, entityTypesFilter);
@@ -106,6 +120,8 @@ export class SearchService {
       await this.searchGroupsByTerms(filteredTerms, groupResults);
     if (searchOrganizations)
       await this.searchOrganizationsByTerms(filteredTerms, organizationResults);
+    if (searchHubs)
+      await this.searchHubsByTerms(filteredTerms, hubResults, agentInfo);
     if (searchChallenges)
       await this.searchChallengesByTerms(
         filteredTerms,
@@ -119,7 +135,7 @@ export class SearchService {
         agentInfo
       );
     this.logger.verbose?.(
-      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organizationResults.size} organization results found; ${challengeResults.size} challenge results found; ${opportunityResults.size} opportunity results found`,
+      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organizationResults.size} organization results found; ${hubResults.size} hub results found; ${challengeResults.size} challenge results found; ${opportunityResults.size} opportunity results found`,
       LogContext.API
     );
 
@@ -129,6 +145,7 @@ export class SearchService {
     }
     results.push(...(await this.buildSearchResults(groupResults)));
     results.push(...(await this.buildSearchResults(organizationResults)));
+    results.push(...(await this.buildSearchResults(hubResults)));
     results.push(...(await this.buildSearchResults(challengeResults)));
     results.push(...(await this.buildSearchResults(opportunityResults)));
     this.ensureUniqueTermsPerResult(results);
@@ -160,10 +177,11 @@ export class SearchService {
   async searchBy(
     agentInfo: AgentInfo,
     entityTypesFilter?: string[]
-  ): Promise<[boolean, boolean, boolean, boolean, boolean]> {
+  ): Promise<[boolean, boolean, boolean, boolean, boolean, boolean]> {
     let searchUsers = true;
     let searchGroups = true;
     let searchOrganizations = true;
+    let searchHubs = true;
     let searchChallenges = true;
     let searchOpportunities = true;
 
@@ -174,6 +192,8 @@ export class SearchService {
         searchGroups = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.ORGANIZATION))
         searchOrganizations = false;
+      if (!entityTypesFilter.includes(SearchEntityTypes.HUB))
+        searchHubs = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.CHALLENGE))
         searchChallenges = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.OPPORTUNITY))
@@ -188,6 +208,7 @@ export class SearchService {
       searchUsers,
       searchGroups,
       searchOrganizations,
+      searchHubs,
       searchChallenges,
       searchOpportunities,
     ];
@@ -255,13 +276,63 @@ export class SearchService {
     }
   }
 
+  async searchHubsByTerms(
+    terms: string[],
+    hubResults: Map<number, Match>,
+    agentInfo: AgentInfo
+  ) {
+    for (const term of terms) {
+      const readableHubMatches: Hub[] = [];
+      const hubMatches = await this.hubRepository
+        .createQueryBuilder('hub')
+        .leftJoinAndSelect('hub.tagset', 'tagset')
+        .leftJoinAndSelect('hub.challenges', 'challenges')
+        .leftJoinAndSelect('hub.authorization', 'authorization')
+        .leftJoinAndSelect('hub.context', 'context')
+        .leftJoinAndSelect('hub.collaboration', 'collaboration')
+        .leftJoinAndSelect('collaboration.callouts', 'callouts')
+        .leftJoinAndSelect('callouts.aspects', 'aspects')
+        .leftJoinAndSelect('aspects.tagset', 'aspect_tagset')
+        .leftJoinAndSelect('context.location', 'location')
+        .where('hub.nameID like :term')
+        .orWhere('hub.displayName like :term')
+        .orWhere('tagset.tags like :term')
+        .orWhere('aspects.displayName like :term')
+        .orWhere('aspects.description like :term')
+        .orWhere('aspect_tagset.tags like :term')
+        .orWhere('context.tagline like :term')
+        .orWhere('context.background like :term')
+        .orWhere('context.impact like :term')
+        .orWhere('context.vision like :term')
+        .orWhere('context.who like :term')
+        .orWhere('location.country like :term')
+        .orWhere('location.city like :term')
+        .setParameters({ term: `%${term}%` })
+        .getMany();
+      // Only show challenges that the current user has read access to
+      for (const hub of hubMatches) {
+        if (
+          this.authorizationService.isAccessGranted(
+            agentInfo,
+            hub.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
+          readableHubMatches.push(hub);
+        }
+      }
+      // Create results for each match
+      await this.buildMatchingResults(readableHubMatches, hubResults, term);
+    }
+  }
+
   async searchChallengesByTerms(
     terms: string[],
     challengeResults: Map<number, Match>,
     agentInfo: AgentInfo
   ) {
     for (const term of terms) {
-      const readableChallengeMatches: Opportunity[] = [];
+      const readableChallengeMatches: Challenge[] = [];
       const challengeMatches = await this.challengeRepository
         .createQueryBuilder('challenge')
         .leftJoinAndSelect('challenge.tagset', 'tagset')

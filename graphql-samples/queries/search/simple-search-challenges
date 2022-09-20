@@ -13,6 +13,11 @@ query search($searchData: SearchInput!){
       ... on Organization {
         nameID
       }
+
+      ... on Hub {
+        nameID
+        id
+      }
       ... on Challenge {
         nameID
         hubID
