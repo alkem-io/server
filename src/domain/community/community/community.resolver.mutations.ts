@@ -14,12 +14,8 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { UserService } from '@domain/community/user/user.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
-import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { AssignCommunityMemberUserInput } from './dto/community.dto.assign.member.user';
 import { RemoveCommunityMemberUserInput } from './dto/community.dto.remove.member.user';
-import { ClientProxy } from '@nestjs/microservices';
-import { EventType } from '@common/enums/event.type';
-import { NotificationsPayloadBuilder } from '@core/microservices';
 import { DeleteApplicationInput } from '../application/dto/application.dto.delete';
 import { ApplicationEventInput } from '../application/dto/application.dto.event';
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
@@ -38,22 +34,25 @@ import { RemoveCommunityLeadOrganizationInput } from './dto/community.dto.remove
 import { RemoveCommunityLeadUserInput } from './dto/community.dto.remove.lead.user';
 import { CommunityRole } from '@common/enums/community.role';
 import { AssignCommunityLeadUserInput } from './dto/community.dto.assign.lead.user';
+import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
+import { NotificationInputCommunityApplication } from '@services/platform/notification-adapter/dto/notification.dto.input.community.application';
+import { NotificationInputCommunityNewMember } from '@services/platform/notification-adapter/dto/notification.dto.input.community.new.member';
+import { NotificationInputCommunityContextReview } from '@services/platform/notification-adapter/dto/notification.dto.input.community.context.review';
 
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private notificationAdapter: NotificationAdapter,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communityService: CommunityService,
-    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(CommunityLifecycleOptionsProvider)
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService,
     private agentService: AgentService,
-    private applicationAuthorizationService: ApplicationAuthorizationService,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
+    private applicationAuthorizationService: ApplicationAuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -342,17 +341,12 @@ export class CommunityResolverMutations {
         community.authorization
       );
 
-    const payload =
-      await this.notificationsPayloadBuilder.buildApplicationCreatedNotificationPayload(
-        agentInfo.userID,
-        agentInfo.userID,
-        community
-      );
-
-    this.notificationsClient.emit<number>(
-      EventType.COMMUNITY_APPLICATION_CREATED,
-      payload
-    );
+    // Send the notification
+    const notificationInput: NotificationInputCommunityApplication = {
+      triggeredBy: agentInfo.userID,
+      community: community,
+    };
+    await this.notificationAdapter.applicationCreated(notificationInput);
 
     return savedApplication;
   }
@@ -378,12 +372,12 @@ export class CommunityResolverMutations {
       `join community: ${community.displayName}`
     );
 
-    const payload =
-      await this.notificationsPayloadBuilder.buildCommunityNewMemberPayload(
-        agentInfo.userID,
-        community
-      );
-    this.notificationsClient.emit(EventType.COMMUNITY_NEW_MEMBER, payload);
+    // Send the notification
+    const notificationInput: NotificationInputCommunityNewMember = {
+      triggeredBy: agentInfo.userID,
+      community: community,
+    };
+    await this.notificationAdapter.communityNewMember(notificationInput);
 
     const result = await this.communityService.assignUserToRole(
       community,
@@ -497,17 +491,13 @@ export class CommunityResolverMutations {
       `creating feedback on community: ${community.id}`
     );
 
-    const payload =
-      await this.notificationsPayloadBuilder.buildCommunityContextReviewSubmittedNotificationPayload(
-        agentInfo.userID,
-        feedbackData.communityID,
-        community.parentID,
-        feedbackData.questions
-      );
-    this.notificationsClient.emit(
-      EventType.COMMUNITY_CONTEXT_REVIEW_SUBMITTED,
-      payload
-    );
+    // Send the notification
+    const notificationInput: NotificationInputCommunityContextReview = {
+      triggeredBy: agentInfo.userID,
+      community: community,
+      questions: feedbackData.questions,
+    };
+    await this.notificationAdapter.communityContextReview(notificationInput);
 
     return true;
   }

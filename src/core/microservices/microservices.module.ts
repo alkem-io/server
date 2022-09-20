@@ -1,5 +1,4 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { Global, Module } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { randomUUID } from 'crypto';
@@ -17,14 +16,6 @@ import {
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common';
-import { Aspect } from '@src/domain';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Hub } from '@domain/challenge/hub/hub.entity';
-import { Opportunity } from '@domain/collaboration';
-import { Communication } from '@domain/communication';
-import { Discussion } from '@domain/communication/discussion/discussion.entity';
-import { Community } from '@domain/community/community';
-import { NotificationsPayloadBuilder } from './notifications.payload.builder';
 import { subscriptionFactoryProvider } from './subscription.factory.provider';
 import { notificationsServiceFactory } from './notifications.service.factory';
 import { walletManagerServiceFactory } from './wallet-manager.service.factory';
@@ -77,20 +68,8 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
 
 @Global()
 @Module({
-  imports: [
-    ConfigModule,
-    TypeOrmModule.forFeature([
-      Hub,
-      Challenge,
-      Opportunity,
-      Community,
-      Discussion,
-      Communication,
-      Aspect,
-    ]),
-  ],
+  imports: [ConfigModule],
   providers: [
-    NotificationsPayloadBuilder,
     ...subscriptionFactoryProviders,
     {
       provide: NOTIFICATIONS_SERVICE,
@@ -115,7 +94,6 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     NOTIFICATIONS_SERVICE,
     WALLET_MANAGEMENT_SERVICE,
     NOTIFICATIONS_SERVICE,
-    NotificationsPayloadBuilder,
   ],
 })
 export class MicroservicesModule {}
