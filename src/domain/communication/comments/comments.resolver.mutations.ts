@@ -19,26 +19,27 @@ import {
   SUBSCRIPTION_ASPECT_COMMENT,
 } from '@common/constants/providers';
 import { CommentsAuthorizationService } from './comments.service.authorization';
-import { EventType } from '@common/enums/event.type';
-import { NotificationsPayloadBuilder } from '@core/microservices';
 import { IComments } from './comments.interface';
-import { getRandomId } from '@src/common';
+import { getRandomId } from '@src/common/utils';
 import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
 import { ActivityInputAspectComment } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.comment';
 import { AspectMessageReceivedPayload } from '@domain/collaboration/aspect/dto/aspect.message.received.payload';
 import { NamingService } from '@services/domain/naming/naming.service';
+import { NotificationInputAspectComment } from '@services/platform/notification-adapter/dto/notification.dto.input.aspect.comment';
+import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
+import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 
 @Resolver()
 export class CommentsResolverMutations {
   constructor(
     private activityAdapter: ActivityAdapter,
+    private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
     private commentsService: CommentsService,
     private namingService: NamingService,
     private commentsAuthorizationService: CommentsAuthorizationService,
     @Inject(SUBSCRIPTION_ASPECT_COMMENT)
     private readonly subscriptionAspectComments: PubSubEngine,
-    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
     @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
   ) {}
 
@@ -72,7 +73,7 @@ export class CommentsResolverMutations {
       messageData.commentsID
     );
     if (aspect) {
-      this.processAspectCommentEvents(aspect, comments, commentSent);
+      this.processAspectCommentEvents(aspect, comments, commentSent, agentInfo);
       const activityLogInput: ActivityInputAspectComment = {
         triggeredBy: agentInfo.userID,
         aspect: aspect,
@@ -117,9 +118,10 @@ export class CommentsResolverMutations {
   }
 
   private async processAspectCommentEvents(
-    aspect: { id: string; displayName: string; createdBy: string },
+    aspect: IAspect,
     comments: IComments,
-    commentSent: CommunicationMessageResult
+    commentSent: CommunicationMessageResult,
+    agentInfo: AgentInfo
   ) {
     // build subscription payload
     const eventID = `comment-msg-${getRandomId()}`;
@@ -133,18 +135,14 @@ export class CommentsResolverMutations {
       SubscriptionType.ASPECT_COMMENTS_MESSAGE_RECEIVED,
       subscriptionPayload
     );
-    // build notification payload
-    const payload =
-      await this.notificationsPayloadBuilder.buildCommentCreatedOnAspectPayload(
-        aspect.displayName,
-        aspect.createdBy,
-        comments.id,
-        commentSent
-      );
-    // send notification event
-    this.notificationsClient.emit<number>(
-      EventType.COMMENT_CREATED_ON_ASPECT,
-      payload
-    );
+
+    // Send the notification
+    const notificationInput: NotificationInputAspectComment = {
+      triggeredBy: agentInfo.userID,
+      aspect: aspect,
+      comments: comments,
+      commentSent: commentSent,
+    };
+    await this.notificationAdapter.aspectComment(notificationInput);
   }
 }

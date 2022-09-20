@@ -14,10 +14,12 @@ import { CollaborationAuthorizationService } from './collaboration.service.autho
 import { CanvasModule } from '@domain/common/canvas/canvas.module';
 import { AspectModule } from '../aspect/aspect.module';
 import { ActivityAdapterModule } from '@services/platform/activity-adapter/activity.adapter.module';
+import { NotificationAdapterModule } from '@services/platform/notification-adapter/notification.adapter.module';
 
 @Module({
   imports: [
     ActivityAdapterModule,
+    NotificationAdapterModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     CalloutModule,

@@ -11,28 +11,22 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { UpdatesRemoveMessageInput } from './dto/updates.dto.remove.message';
 import { MessageID } from '@domain/common/scalars';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
-import { EventType } from '@common/enums/event.type';
-
-import { ClientProxy } from '@nestjs/microservices';
-import { NotificationsPayloadBuilder } from '@core/microservices';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { CommunicationUpdateMessageReceived } from './dto/updates.dto.event.message.received';
-import {
-  NOTIFICATIONS_SERVICE,
-  SUBSCRIPTION_UPDATE_MESSAGE,
-} from '@common/constants/providers';
+import { SUBSCRIPTION_UPDATE_MESSAGE } from '@common/constants/providers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { getRandomId } from '@src/common';
+import { NotificationInputUpdateSent } from '@services/platform/notification-adapter/dto/notification.dto.input.update.sent';
+import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
 
 @Resolver()
 export class UpdatesResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private notificationAdapter: NotificationAdapter,
     private updatesService: UpdatesService,
-    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
     @Inject(SUBSCRIPTION_UPDATE_MESSAGE)
     private readonly subscriptionUpdateMessage: PubSubEngine,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -64,16 +58,12 @@ export class UpdatesResolverMutations {
       messageData
     );
 
-    // Send the notifications event
-    const notificationsPayload =
-      await this.notificationsPayloadBuilder.buildCommunicationUpdateSentNotificationPayload(
-        agentInfo.userID,
-        updates
-      );
-    this.notificationsClient.emit<number>(
-      EventType.COMMUNICATION_UPDATE_SENT,
-      notificationsPayload
-    );
+    // Send the notification
+    const notificationInput: NotificationInputUpdateSent = {
+      triggeredBy: agentInfo.userID,
+      updates: updates,
+    };
+    await this.notificationAdapter.updateSent(notificationInput);
 
     // Send the subscriptions event
     const eventID = `update-msg-${getRandomId()}`;

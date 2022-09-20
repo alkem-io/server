@@ -21,10 +21,12 @@ import { PreferenceSetModule } from '@domain/common/preference-set/preference.se
 import { PreferenceModule } from '@domain/common/preference';
 import { UserDataloaderService } from './user.dataloader.service';
 import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
+import { NotificationAdapterModule } from '@services/platform/notification-adapter/notification.adapter.module';
 
 @Module({
   imports: [
     ProfileModule,
+    NotificationAdapterModule,
     CommunicationAdapterModule,
     AgentModule,
     NamingModule,
