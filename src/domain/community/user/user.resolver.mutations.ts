@@ -65,7 +65,7 @@ export class UserResolverMutations {
 
     // Send the notification
     const notificationInput: NotificationInputUserRegistered = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: user.id,
     };
     await this.notificationAdapter.userRegistered(notificationInput);
 
