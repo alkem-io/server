@@ -13,11 +13,14 @@ import { ActivityInputCanvasCreated } from './dto/activity.dto.input.canvas.crea
 import { ActivityInputMemberJoined } from './dto/activity.dto.input.member.joined';
 import { ActivityInputAspectComment } from './dto/activity.dto.input.aspect.comment';
 import { ActivityInputCalloutDiscussionComment } from './dto/activity.dto.input.callout.discussion.comment';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 
 @Injectable()
 export class ActivityAdapter {
   constructor(
     private activityService: ActivityService,
+    @InjectRepository(Callout)
+    private calloutRepository: Repository<Callout>,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -38,6 +41,7 @@ export class ActivityAdapter {
       collaborationID,
       triggeredBy: eventData.triggeredBy,
       resourceID: callout.id,
+      parentID: collaborationID,
       description: description,
       type: ActivityEventType.CALLOUT_PUBLISHED,
     });
@@ -57,6 +61,7 @@ export class ActivityAdapter {
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: aspect.id,
+      parentID: eventData.callout.id,
       description: description,
       type: ActivityEventType.CARD_CREATED,
     });
@@ -72,11 +77,13 @@ export class ActivityAdapter {
     const description = `[Card] Comment added on card: ${eventData.aspect.displayName}`;
 
     const aspectID = eventData.aspect.id;
-    const collaborationID = await this.getCollaborationIdForAspect(aspectID);
+    const calloutID = await this.getCalloutIdForAspect(aspectID);
+    const collaborationID = await this.getCollaborationIdForCallout(calloutID);
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: aspectID,
+      parentID: calloutID,
       description: description,
       type: ActivityEventType.CARD_COMMENT,
     });
@@ -96,6 +103,7 @@ export class ActivityAdapter {
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: canvas.id,
+      parentID: eventData.callout.id,
       description: description,
       type: ActivityEventType.CANVAS_CREATED,
     });
@@ -119,6 +127,7 @@ export class ActivityAdapter {
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: eventData.callout.id,
+      parentID: collaborationID,
       description: description,
       type: ActivityEventType.DISCUSSION_COMMENT,
     });
@@ -139,6 +148,7 @@ export class ActivityAdapter {
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: community.id,
+      parentID: '',
       description: description,
       type: ActivityEventType.MEMBER_JOINED,
     });
@@ -161,6 +171,22 @@ export class ActivityAdapter {
       );
     }
     return collaboration.id;
+  }
+
+  private async getCalloutIdForAspect(aspectID: string): Promise<string> {
+    const callout = await this.calloutRepository
+      .createQueryBuilder('callout')
+      .innerJoinAndSelect('callout.aspects', 'aspect')
+      .where('aspect.id = :id')
+      .setParameters({ id: `${aspectID}` })
+      .getOne();
+    if (!callout) {
+      throw new EntityNotFoundException(
+        `Unable to identify Callout for Aspect with ID: ${aspectID}`,
+        LogContext.ACTIVITY
+      );
+    }
+    return callout.id;
   }
 
   private async getCollaborationIdForAspect(aspectID: string): Promise<string> {

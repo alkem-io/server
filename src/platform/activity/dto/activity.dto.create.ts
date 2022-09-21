@@ -5,5 +5,6 @@ export class CreateActivityInput extends ActivityInputBase {
   resourceID!: string;
   description!: string;
   collaborationID!: string;
+  parentID!: string;
   type!: ActivityEventType;
 }
