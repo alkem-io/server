@@ -57,6 +57,7 @@ import { TemplatesSetService } from '@domain/template/templates-set/templates.se
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { ILifecycleTemplate } from '@domain/template/lifecycle-template/lifecycle.template.interface';
 import { LifecycleType } from '@common/enums/lifecycle.type';
+import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
 
 @Injectable()
 export class HubService {
@@ -181,6 +182,16 @@ export class HubService {
     }
 
     return await this.hubRepository.save(hub);
+  }
+
+  public async updateHubVisibility(
+    visibilityData: UpdateHubVisibilityInput
+  ): Promise<IHub> {
+    const hub = await this.getHubOrFail(visibilityData.hubID);
+
+    hub.visibility = visibilityData.visibility;
+
+    return await this.save(hub);
   }
 
   async deleteHub(deleteData: DeleteHubInput): Promise<IHub> {
