@@ -30,6 +30,8 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CommentsService } from '@domain/communication/comments/comments.service';
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { CalloutType } from '@common/enums/callout.type';
+import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 @Injectable()
 export class CalloutService {
@@ -54,13 +56,14 @@ export class CalloutService {
     callout.authorization = new AuthorizationPolicy();
 
     const savedCallout: ICallout = await this.calloutRepository.save(callout);
+    savedCallout.visibility = CalloutVisibility.DRAFT;
 
     if (calloutData.type === CalloutType.COMMENTS) {
       savedCallout.comments = await this.commentsService.createComments(
         communicationGroupID,
         `callout-comments-${savedCallout.displayName}`
       );
-      return await this.save(savedCallout);
+      return await this.calloutRepository.save(savedCallout);
     }
     return savedCallout;
   }
@@ -91,7 +94,14 @@ export class CalloutService {
     return callout;
   }
 
-  async save(callout: ICallout): Promise<ICallout> {
+  public async updateCalloutVisibility(
+    calloutUpdateData: UpdateCalloutVisibilityInput
+  ): Promise<ICallout> {
+    const callout = await this.getCalloutOrFail(calloutUpdateData.calloutID);
+
+    if (calloutUpdateData.visibility)
+      callout.visibility = calloutUpdateData.visibility;
+
     return await this.calloutRepository.save(callout);
   }
 
@@ -106,9 +116,6 @@ export class CalloutService {
     if (calloutUpdateData.type) callout.type = calloutUpdateData.type;
 
     if (calloutUpdateData.state) callout.state = calloutUpdateData.state;
-
-    if (calloutUpdateData.visibility)
-      callout.visibility = calloutUpdateData.visibility;
 
     if (calloutUpdateData.displayName)
       callout.displayName = calloutUpdateData.displayName;

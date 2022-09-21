@@ -1,16 +1,15 @@
 mutation updateCallout($calloutData: UpdateCalloutInput!) {
-  updateCallout(calloutData: $aspectData) {
+  updateCallout(calloutData: $calloutData) {
     id
   }
 }
 
 Variables:
 {
-  "aspectData": {
+  "calloutData": {
     "ID": "uuid",
     "displayName": "some name",
     "description": "text",
-    "state": "closed",
-    "visibility": "published"
+    "state": "closed"
   }
 }
