@@ -11,7 +11,7 @@ export class UpdateCalloutVisibilityInput {
   calloutID!: string;
 
   @Field(() => CalloutVisibility, {
-    nullable: true,
+    nullable: false,
     description: 'Visibility of the Callout.',
   })
   visibility?: CalloutVisibility;
