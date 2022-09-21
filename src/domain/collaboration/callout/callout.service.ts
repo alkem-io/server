@@ -63,7 +63,7 @@ export class CalloutService {
         communicationGroupID,
         `callout-comments-${savedCallout.displayName}`
       );
-      return await this.save(savedCallout);
+      return await this.calloutRepository.save(savedCallout);
     }
     return savedCallout;
   }
@@ -92,10 +92,6 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
     return callout;
-  }
-
-  async save(callout: ICallout): Promise<ICallout> {
-    return await this.calloutRepository.save(callout);
   }
 
   public async updateCalloutVisibility(

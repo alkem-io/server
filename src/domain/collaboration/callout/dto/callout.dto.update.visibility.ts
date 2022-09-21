@@ -14,5 +14,5 @@ export class UpdateCalloutVisibilityInput {
     nullable: false,
     description: 'Visibility of the Callout.',
   })
-  visibility?: CalloutVisibility;
+  visibility!: CalloutVisibility;
 }

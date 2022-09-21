@@ -10,7 +10,6 @@ Variables:
     "ID": "uuid",
     "displayName": "some name",
     "description": "text",
-    "state": "closed",
-    "visibility": "published"
+    "state": "closed"
   }
 }

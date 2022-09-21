@@ -45,7 +45,6 @@ import { NotificationInputAspectCreated } from '@services/platform/notification-
 import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
 import { NotificationInputCalloutPublished } from '@services/platform/notification-adapter/dto/notification.dto.input.callout.published';
 
-
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
@@ -166,8 +165,7 @@ export class CalloutResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
-    description:
-      'Update the visibility (Draft / Published) of the specified Callout.',
+    description: 'Update the visibility of the specified Callout.',
   })
   @Profiling.api
   async updateCalloutVisibility(
