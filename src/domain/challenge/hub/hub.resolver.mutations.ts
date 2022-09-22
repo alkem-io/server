@@ -20,7 +20,6 @@ import { AssignHubAdminInput } from './dto/hub.dto.assign.admin';
 import { RemoveHubAdminInput } from './dto/hub.dto.remove.admin';
 import { HubAuthorizationResetInput } from './dto/hub.dto.reset.authorization';
 import { CreateChallengeOnHubInput } from '../challenge/dto/challenge.dto.create.in.hub';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PreferenceService } from '@domain/common/preference/preference.service';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
@@ -28,17 +27,18 @@ import { UpdateHubPreferenceInput } from './dto/hub.dto.update.preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { UpdateChallengePreferenceInput } from '@domain/challenge/challenge/dto/challenge.dto.update.preference';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
+import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
 @Resolver()
 export class HubResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private hubService: HubService,
     private hubAuthorizationService: HubAuthorizationService,
     private challengeService: ChallengeService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private preferenceService: PreferenceService,
-    private preferenceSetService: PreferenceSetService
+    private preferenceSetService: PreferenceSetService,
+    private platformAuthorizationService: PlatformAuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -51,7 +51,7 @@ export class HubResolverMutations {
     @Args('hubData') hubData: CreateHubInput
   ): Promise<IHub> {
     const authorizationPolicy =
-      this.authorizationPolicyService.getPlatformAuthorizationPolicy();
+      this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizationPolicy,

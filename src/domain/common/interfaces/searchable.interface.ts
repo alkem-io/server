@@ -7,11 +7,15 @@ import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
+import { IHub } from '@domain/challenge/hub/hub.interface';
 
 @InterfaceType('Searchable', {
   resolveType(searchable) {
     if (searchable.groups) {
       return IOrganization;
+    }
+    if (searchable.challenges) {
+      return IHub;
     }
     if (searchable.opportunities) {
       return IChallenge;

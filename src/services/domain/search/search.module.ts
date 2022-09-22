@@ -13,6 +13,7 @@ import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { Hub } from '@domain/challenge/hub/hub.entity';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     TypeOrmModule.forFeature([User]),
     TypeOrmModule.forFeature([UserGroup]),
     TypeOrmModule.forFeature([Organization]),
+    TypeOrmModule.forFeature([Hub]),
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([Opportunity]),
   ],

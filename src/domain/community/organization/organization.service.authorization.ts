@@ -13,6 +13,7 @@ import { UserGroupAuthorizationService } from '../user-group/user-group.service.
 import { OrganizationVerificationAuthorizationService } from '../organization-verification/organization.verification.service.authorization';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
+import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
 
 @Injectable()
 export class OrganizationAuthorizationService {
@@ -22,6 +23,7 @@ export class OrganizationAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private organizationVerificationAuthorizationService: OrganizationVerificationAuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     @InjectRepository(Organization)
@@ -35,7 +37,7 @@ export class OrganizationAuthorizationService {
       organization.authorization
     );
     organization.authorization =
-      this.authorizationPolicyService.inheritPlatformAuthorization(
+      this.platformAuthorizationService.inheritPlatformAuthorization(
         organization.authorization
       );
     organization.authorization = this.appendCredentialRules(

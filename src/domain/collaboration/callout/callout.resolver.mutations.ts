@@ -19,14 +19,10 @@ import { AspectAuthorizationService } from '@domain/collaboration/aspect/aspect.
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { ICanvas } from '@domain/common/canvas';
 import {
-  NOTIFICATIONS_SERVICE,
   SUBSCRIPTION_CALLOUT_ASPECT_CREATED,
   SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,
 } from '@common/constants';
-import { ClientProxy } from '@nestjs/microservices';
 import { PubSubEngine } from 'graphql-subscriptions';
-import { NotificationsPayloadBuilder } from '@core/microservices';
-import { EventType } from '@common/enums/event.type';
 import { ICallout } from './callout.interface';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
@@ -38,18 +34,22 @@ import {
 import { CommentsService } from '@domain/communication/comments/comments.service';
 import { SendMessageOnCalloutInput } from './dto/callout.args.message.created';
 import { CalloutType } from '@common/enums/callout.type';
-
 import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
 import { ActivityInputAspectCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.created';
 import { ActivityInputCalloutPublished } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.published';
 import { ActivityInputCanvasCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.canvas.created';
 import { CalloutMessageReceivedPayload } from './dto/callout.message.received.payload';
 import { ActivityInputCalloutDiscussionComment } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
+import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
+import { NotificationInputAspectCreated } from '@services/platform/notification-adapter/dto/notification.dto.input.aspect.created';
+import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
+import { NotificationInputCalloutPublished } from '@services/platform/notification-adapter/dto/notification.dto.input.callout.published';
 
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
     private activityAdapter: ActivityAdapter,
+    private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
     private calloutService: CalloutService,
     private commentsService: CommentsService,
@@ -58,9 +58,7 @@ export class CalloutResolverMutations {
     @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
     private aspectCreatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_CALLOUT_MESSAGE_CREATED)
-    private calloutMessageCreatedSubscription: PubSubEngine,
-    private notificationsPayloadBuilder: NotificationsPayloadBuilder,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
+    private calloutMessageCreatedSubscription: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -162,23 +160,41 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
+    return await this.calloutService.updateCallout(calloutData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICallout, {
+    description: 'Update the visibility of the specified Callout.',
+  })
+  @Profiling.api
+  async updateCalloutVisibility(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('calloutData') calloutData: UpdateCalloutVisibilityInput
+  ): Promise<ICallout> {
+    const callout = await this.calloutService.getCalloutOrFail(
+      calloutData.calloutID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      callout.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update visibility on callout: ${callout.id}`
+    );
     const oldVisibility = callout.visibility;
-    const result = await this.calloutService.updateCallout(calloutData);
+    const result = await this.calloutService.updateCalloutVisibility(
+      calloutData
+    );
 
     if (
       oldVisibility === CalloutVisibility.DRAFT &&
       result.visibility === CalloutVisibility.PUBLISHED
     ) {
-      const payload =
-        await this.notificationsPayloadBuilder.buildCalloutPublishedPayload(
-          agentInfo.userID,
-          result
-        );
-
-      this.notificationsClient.emit<number>(
-        EventType.CALLOUT_PUBLISHED,
-        payload
-      );
+      const notificationInput: NotificationInputCalloutPublished = {
+        triggeredBy: agentInfo.userID,
+        callout: callout,
+      };
+      await this.notificationAdapter.calloutPublished(notificationInput);
 
       const activityLogInput: ActivityInputCalloutPublished = {
         triggeredBy: agentInfo.userID,
@@ -226,16 +242,16 @@ export class CalloutResolverMutations {
       aspectCreatedEvent
     );
 
-    const payload =
-      await this.notificationsPayloadBuilder.buildAspectCreatedPayload(
-        aspect.id
-      );
-
-    this.notificationsClient.emit<number>(EventType.ASPECT_CREATED, payload);
+    const notificationInput: NotificationInputAspectCreated = {
+      aspect: aspect,
+      triggeredBy: agentInfo.userID,
+    };
+    await this.notificationAdapter.aspectCreated(notificationInput);
 
     const activityLogInput: ActivityInputAspectCreated = {
       triggeredBy: agentInfo.userID,
       aspect: aspect,
+      callout: callout,
     };
     await this.activityAdapter.aspectCreated(activityLogInput);
 
@@ -267,6 +283,7 @@ export class CalloutResolverMutations {
     const activityLogInput: ActivityInputCanvasCreated = {
       triggeredBy: agentInfo.userID,
       canvas: canvas,
+      callout: callout,
     };
     await this.activityAdapter.canvasCreated(activityLogInput);
     return await this.canvasAuthorizationService.applyAuthorizationPolicy(
