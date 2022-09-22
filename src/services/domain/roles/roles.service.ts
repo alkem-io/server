@@ -280,7 +280,10 @@ export class RolesService {
       challengeID,
       { relations: ['community'] }
     );
-    const hubResult = await this.ensureHubRolesResult(hubsMap, challenge.hubID);
+    const hubResult = await this.ensureHubRolesResult(
+      hubsMap,
+      this.challengeService.getHubID(challenge)
+    );
 
     const existingChallengeResult = hubResult.challenges.find(
       challengeResult => challengeResult.nameID === challenge.nameID

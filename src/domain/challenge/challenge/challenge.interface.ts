@@ -10,6 +10,9 @@ export abstract class IChallenge extends IBaseChallenge implements ISearchable {
   childChallenges?: IChallenge[];
   opportunities?: IOpportunity[];
 
-  @Field(() => String)
-  hubID!: string;
+  @Field(() => String, {
+    description: 'The ID of the containing Hub.',
+    nullable: false,
+  })
+  hubID?: string;
 }

@@ -4,6 +4,7 @@ import { HubService } from './hub.service';
 import { IHub } from './hub.interface';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { UUID_NAMEID } from '@domain/common/scalars';
+import { HubsQueryInput } from './dto/hub.args.query.hubs';
 
 @Resolver()
 export class HubResolverQueries {
@@ -14,8 +15,8 @@ export class HubResolverQueries {
     description: 'The Hubs on this platform',
   })
   @Profiling.api
-  async hubs(): Promise<IHub[]> {
-    return await this.hubService.getHubs();
+  async hubs(@Args({ nullable: true }) args: HubsQueryInput): Promise<IHub[]> {
+    return await this.hubService.getHubs(args);
   }
 
   @Query(() => IHub, {

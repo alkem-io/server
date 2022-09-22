@@ -93,7 +93,9 @@ export class ConversionResolverMutations {
         opportunity.hubID,
         agentInfo
       );
-    const parentHub = await this.hubService.getHubOrFail(newChallenge.hubID);
+    const parentHub = await this.hubService.getHubOrFail(
+      this.challengeService.getHubID(newChallenge)
+    );
     await this.hubAuthorizationService.applyAuthorizationPolicy(parentHub);
     return this.challengeService.getChallengeOrFail(newChallenge.id);
   }

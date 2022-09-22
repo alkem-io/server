@@ -172,7 +172,7 @@ export class ChallengeService {
         // updating the nameID, check new value is allowed
         await this.baseChallengeService.isNameAvailableOrFail(
           challengeData.nameID,
-          challenge.hubID
+          this.getHubID(challenge)
         );
         challenge.nameID = challengeData.nameID;
         await this.challengeRepository.save(challenge);
@@ -198,7 +198,7 @@ export class ChallengeService {
     const machineConfig: ILifecycleDefinition =
       await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
         challengeData.innovationFlowTemplateID,
-        challenge.hubID,
+        this.getHubID(challenge),
         LifecycleType.CHALLENGE
       );
 
@@ -486,14 +486,15 @@ export class ChallengeService {
       relations: ['childChallenges', 'community'],
     });
 
+    const hubID = this.getHubID(challenge);
     await this.baseChallengeService.isNameAvailableOrFail(
       challengeData.nameID,
-      challenge.hubID
+      hubID
     );
 
     const childChallenge = await this.createChallenge(
       challengeData,
-      challenge.hubID,
+      hubID,
       agentInfo
     );
 
@@ -508,6 +509,17 @@ export class ChallengeService {
     await this.challengeRepository.save(challenge);
 
     return childChallenge;
+  }
+
+  getHubID(challenge: IChallenge): string {
+    const hubID = challenge.hubID;
+    if (!hubID) {
+      throw new RelationshipNotFoundException(
+        `Unable to load child challenges for challenge ${challenge.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+    return hubID;
   }
 
   async createOpportunity(
@@ -526,14 +538,15 @@ export class ChallengeService {
       }
     );
 
+    const hubID = this.getHubID(challenge);
     await this.baseChallengeService.isNameAvailableOrFail(
       opportunityData.nameID,
-      challenge.hubID
+      hubID
     );
 
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
-      challenge.hubID,
+      hubID,
       agentInfo
     );
 

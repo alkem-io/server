@@ -58,6 +58,8 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { ILifecycleTemplate } from '@domain/template/lifecycle-template/lifecycle.template.interface';
 import { LifecycleType } from '@common/enums/lifecycle.type';
 import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
+import { HubsQueryInput } from './dto/hub.args.query.hubs';
+import { HubVisibility } from '@common/enums/hub.visibility';
 
 @Injectable()
 export class HubService {
@@ -236,13 +238,21 @@ export class HubService {
     return result;
   }
 
-  async getHubs(): Promise<IHub[]> {
+  async getHubs(args: HubsQueryInput): Promise<IHub[]> {
+    let visibilities = [HubVisibility.ACTIVE];
+    if (args && args.visibilities && args.visibilities.length > 0) {
+      visibilities = args.visibilities;
+    }
+    this.logger.verbose?.(
+      `Loading hubs with visibilities: ${visibilities}`,
+      LogContext.CHALLENGES
+    );
     // Load the hubs
     const hubs: IHub[] = await this.hubRepository.find();
     if (hubs.length === 0) return [];
 
     // Get the order to return the data in
-    const sortedIDs = await this.getHubsSortOrderDefault();
+    const sortedIDs = await this.getFilteredHubsSortOrderDefault(visibilities);
     const hubsResult: IHub[] = [];
     for (const hubID of sortedIDs) {
       const hub = hubs.find(hub => hub.id === hubID);
@@ -258,7 +268,27 @@ export class HubService {
     return hubsResult;
   }
 
-  private async getHubsSortOrderDefault(): Promise<string[]> {
+  public getVisibility(hub: IHub): HubVisibility {
+    const visibility = hub.visibility;
+    if (!visibility) {
+      throw new RelationshipNotFoundException(
+        `Unable to load visibility of Hub: ${hub.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+    return visibility;
+  }
+
+  private isVisible(hub: IHub, allowedVisibilities: HubVisibility[]) {
+    const visibility = this.getVisibility(hub);
+    const result = allowedVisibilities.find(v => v === visibility);
+    if (result) return true;
+    return false;
+  }
+
+  private async getFilteredHubsSortOrderDefault(
+    visibilities: HubVisibility[]
+  ): Promise<string[]> {
     // Then load data to do the sorting
     const hubsDataForSorting = await this.hubRepository
       .createQueryBuilder('hub')
@@ -267,7 +297,11 @@ export class HubService {
       .leftJoinAndSelect('challenge.opportunities', 'opportunities')
       .getMany();
 
-    const sortedHubs = hubsDataForSorting.sort((a, b) => {
+    const visibleHubs = hubsDataForSorting.filter(hub =>
+      this.isVisible(hub, visibilities)
+    );
+
+    const sortedHubs = visibleHubs.sort((a, b) => {
       if (
         a.authorization?.anonymousReadAccess === true &&
         b.authorization?.anonymousReadAccess === false

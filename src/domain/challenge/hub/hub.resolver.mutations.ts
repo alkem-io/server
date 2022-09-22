@@ -188,7 +188,9 @@ export class HubResolverMutations {
       preferenceData.value
     );
 
-    const hub = await this.hubService.getHubOrFail(challenge.hubID);
+    const hub = await this.hubService.getHubOrFail(
+      this.challengeService.getHubID(challenge)
+    );
     const hubCommunityCredential =
       await this.hubService.getCommunityMembershipCredential(hub);
     // As the preferences may update the authorization, the authorization policy will need to be reset

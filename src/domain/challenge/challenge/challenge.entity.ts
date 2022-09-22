@@ -42,7 +42,7 @@ export class Challenge extends BaseChallenge implements IChallenge {
   parentHub?: Hub;
 
   @Column()
-  hubID!: string;
+  hubID?: string;
 
   @OneToOne(() => PreferenceSet, {
     eager: false,
