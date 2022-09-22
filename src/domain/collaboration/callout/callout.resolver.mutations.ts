@@ -251,6 +251,7 @@ export class CalloutResolverMutations {
     const activityLogInput: ActivityInputAspectCreated = {
       triggeredBy: agentInfo.userID,
       aspect: aspect,
+      callout: callout,
     };
     await this.activityAdapter.aspectCreated(activityLogInput);
 
@@ -282,6 +283,7 @@ export class CalloutResolverMutations {
     const activityLogInput: ActivityInputCanvasCreated = {
       triggeredBy: agentInfo.userID,
       canvas: canvas,
+      callout: callout,
     };
     await this.activityAdapter.canvasCreated(activityLogInput);
     return await this.canvasAuthorizationService.applyAuthorizationPolicy(

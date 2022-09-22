@@ -20,6 +20,13 @@ export abstract class IActivity extends IBaseAlkemio {
   collaborationID!: string;
 
   @Field(() => UUID, {
+    nullable: true,
+    description:
+      'The id of the parent of the entity within which the Activity was generated.',
+  })
+  parentID!: string;
+
+  @Field(() => UUID, {
     nullable: false,
     description: 'The id of the user that triggered this Activity.',
   })
