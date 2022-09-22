@@ -6,13 +6,16 @@ import { ActivityEventType } from '@common/enums/activity.event.type';
 
 @Entity()
 export class Activity extends BaseAlkemioEntity implements IActivity {
-  @Column('varchar', { length: 36, nullable: true })
+  @Column('varchar', { length: 36, nullable: false })
   triggeredBy!: string;
 
-  @Column('varchar', { length: 36, nullable: true })
+  @Column('varchar', { length: 36, nullable: false })
   resourceID!: string;
 
-  @Column('varchar', { length: 36, nullable: true })
+  @Column('varchar', { length: 36, nullable: true, default: '' })
+  parentID!: string;
+
+  @Column('varchar', { length: 36, nullable: false })
   collaborationID!: string;
 
   @Column()
