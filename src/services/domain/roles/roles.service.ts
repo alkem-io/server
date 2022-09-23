@@ -31,6 +31,7 @@ import {
 import { IApplication } from '@domain/community';
 import { isCommunity, isOrganization } from '@common/utils/groupable.util';
 import { RolesResultCommunity } from './dto/roles.dto.result.community';
+import { HubVisibility } from '@common/enums/hub.visibility';
 
 export type UserGroupResult = {
   userGroup: IUserGroup;
@@ -52,9 +53,14 @@ export class RolesService {
     membershipData: RolesUserInput
   ): Promise<ContributorRoles> {
     const user = await this.userService.getUserWithAgent(membershipData.userID);
+    let hubVisibilitiesFilter = [HubVisibility.ACTIVE];
+    if (membershipData.visibilities && membershipData.visibilities.length > 0) {
+      hubVisibilitiesFilter = membershipData.visibilities;
+    }
     const contributorRoles = await this.getContributorRoles(
       user.agent?.credentials || [],
-      user.id
+      user.id,
+      hubVisibilitiesFilter
     );
     contributorRoles.applications = await this.getUserApplications(user);
     return contributorRoles;
@@ -67,23 +73,34 @@ export class RolesService {
       await this.organizationService.getOrganizationAndAgent(
         membershipData.organizationID
       );
+    let hubVisibilitiesFilter = [HubVisibility.ACTIVE];
+    if (membershipData.visibilities && membershipData.visibilities.length > 0) {
+      hubVisibilitiesFilter = membershipData.visibilities;
+    }
     const contributorRoles = await this.getContributorRoles(
       agent?.credentials || [],
-      organization.id
+      organization.id,
+      hubVisibilitiesFilter
     );
     return contributorRoles;
   }
 
   private async getContributorRoles(
     credentials: ICredential[],
-    contributorID: string
+    contributorID: string,
+    hubVisibilities: HubVisibility[]
   ): Promise<ContributorRoles> {
     const membership = new ContributorRoles();
 
     membership.id = contributorID;
     const hubsMap: Map<string, RolesResultHub> = new Map();
     const orgsMap: Map<string, RolesResultOrganization> = new Map();
-    await this.mapCredentialsToRoles(credentials, orgsMap, hubsMap);
+    await this.mapCredentialsToRoles(
+      credentials,
+      orgsMap,
+      hubsMap,
+      hubVisibilities
+    );
 
     membership.hubs.push(...hubsMap.values());
     membership.organizations.push(...orgsMap.values());
@@ -94,7 +111,8 @@ export class RolesService {
   private async mapCredentialsToRoles(
     credentials: ICredential[],
     orgsMap: Map<string, RolesResultOrganization>,
-    hubsMap: Map<string, RolesResultHub>
+    hubsMap: Map<string, RolesResultHub>,
+    hubVisibilities: HubVisibility[]
   ) {
     for (const credential of credentials) {
       switch (credential.type) {
@@ -122,6 +140,20 @@ export class RolesService {
         case AuthorizationCredential.USER_GROUP_MEMBER:
           await this.addUserGroupMemberRole(hubsMap, orgsMap, credential);
           break;
+      }
+    }
+    // Iterate over the hubsMap and remove those whose visibility does not match the provided filter
+    for (const hubResult of hubsMap.values()) {
+      const hubVisibility = hubResult.hub.visibility;
+      if (!hubVisibility) {
+        throw new RelationshipNotFoundException(
+          `Unable to find visibility on hub: ${hubResult.hub.nameID}`,
+          LogContext.COMMUNITY
+        );
+      }
+      const visibilityMatched = hubVisibilities.includes(hubVisibility);
+      if (!visibilityMatched) {
+        hubsMap.delete(hubResult.hubID);
       }
     }
   }
