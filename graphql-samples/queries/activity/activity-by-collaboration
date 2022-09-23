@@ -1,6 +1,7 @@
 query activityLogOnCollaboration($queryData: ActivityLogInput!){
   activityLogOnCollaboration(queryData: $queryData) {
     collaborationID
+    parentID
     triggeredBy
     resourceID
     description
