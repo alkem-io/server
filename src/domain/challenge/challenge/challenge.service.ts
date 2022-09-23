@@ -23,7 +23,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, getConnection, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
@@ -55,6 +55,7 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
 import { LifecycleType } from '@common/enums/lifecycle.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
+import { HubVisibility } from '@common/enums/hub.visibility';
 
 @Injectable()
 export class ChallengeService {
@@ -575,8 +576,13 @@ export class ChallengeService {
     return count;
   }
 
-  async getChallengeCount(): Promise<number> {
-    return await this.challengeRepository.count();
+  async getChallengeCount(visibility = HubVisibility.ACTIVE): Promise<number> {
+    const sqlQuery = `SELECT COUNT(*) as challengesCount FROM challenge RIGHT JOIN hub ON challenge.hubID = hub.id WHERE hub.visibility = '${visibility}'`;
+    const [queryResult]: {
+      challengesCount: number;
+    }[] = await getConnection().query(sqlQuery);
+
+    return queryResult.challengesCount;
   }
 
   async getChildChallengesCount(challengeID: string): Promise<number> {

@@ -727,8 +727,10 @@ export class HubService {
     );
   }
 
-  async getHubCount(): Promise<number> {
-    return await this.hubRepository.count();
+  async getHubCount(visibility = HubVisibility.ACTIVE): Promise<number> {
+    return await this.hubRepository.count({
+      where: { visibility: visibility },
+    });
   }
 
   async getHost(hubID: string): Promise<IOrganization | undefined> {
