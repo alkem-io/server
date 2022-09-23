@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, getConnection, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -38,6 +38,7 @@ import { ICollaboration } from '../collaboration/collaboration.interface';
 import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
 import { LifecycleType } from '@common/enums/lifecycle.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
+import { HubVisibility } from '@common/enums/hub.visibility';
 
 @Injectable()
 export class OpportunityService {
@@ -365,8 +366,15 @@ export class OpportunityService {
     });
   }
 
-  async getOpportunitiesCount(): Promise<number> {
-    return await this.opportunityRepository.count();
+  async getOpportunitiesCount(
+    visibility = HubVisibility.ACTIVE
+  ): Promise<number> {
+    const sqlQuery = `SELECT COUNT(*) as opportunitiesCount FROM opportunity RIGHT JOIN hub ON opportunity.hubID = hub.id WHERE hub.visibility = '${visibility}'`;
+    const [queryResult]: {
+      opportunitiesCount: number;
+    }[] = await getConnection().query(sqlQuery);
+
+    return queryResult.opportunitiesCount;
   }
 
   async getOpportunitiesInChallengeCount(challengeID: string): Promise<number> {
