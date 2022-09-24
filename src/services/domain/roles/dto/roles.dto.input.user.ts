@@ -14,5 +14,5 @@ export class RolesUserInput {
     nullable: true,
     description: 'Return membership in Hubs matching the provided filter.',
   })
-  filter!: HubFilterInput;
+  filter?: HubFilterInput;
 }
