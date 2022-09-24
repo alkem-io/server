@@ -18,6 +18,7 @@ import { OrganizationService } from '@domain/community/organization/organization
 import { CommunityService } from '@domain/community/community/community.service';
 import { asyncToThrow, testData } from '@test/utils';
 import { RelationshipNotFoundException } from '@common/exceptions';
+import { MockHubFilterService } from '@test/mocks/hub.filter.service.mock';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -40,6 +41,7 @@ describe('RolesService', () => {
         MockCommunityService,
         MockOpportunityService,
         MockOrganizationService,
+        MockHubFilterService,
         MockWinstonProvider,
         RolesService,
       ],
