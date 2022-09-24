@@ -89,6 +89,8 @@ export class HubService {
   ): Promise<IHub> {
     await this.validateHubData(hubData);
     const hub: IHub = Hub.create(hubData);
+    // default to active hub
+    hub.visibility = HubVisibility.ACTIVE;
 
     // remove context before saving as want to control that creation
     hub.context = undefined;
