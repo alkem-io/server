@@ -6,6 +6,5 @@ export const MockHubService: ValueProvider<PublicPart<HubService>> = {
   provide: HubService,
   useValue: {
     getHubOrFail: jest.fn(),
-    getHubID: jest.fn(),
   },
 };
