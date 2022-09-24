@@ -20,7 +20,7 @@ export class Opportunity extends BaseChallenge implements IOpportunity {
   projects?: Project[];
 
   @Column()
-  hubID!: string;
+  hubID?: string;
 
   constructor() {
     super();

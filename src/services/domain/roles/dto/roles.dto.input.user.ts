@@ -1,6 +1,6 @@
-import { HubVisibility } from '@common/enums/hub.visibility';
 import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
+import { HubsFilterInput } from '@services/domain/hub-filter/dto/hub.filter.dto.input';
 
 @InputType()
 export class RolesUserInput {
@@ -10,10 +10,9 @@ export class RolesUserInput {
   })
   userID!: string;
 
-  @Field(() => [HubVisibility], {
+  @Field(() => HubsFilterInput, {
     nullable: true,
-    description:
-      'Return roles in Hubs with a Visibility matching one of the provided types.',
+    description: 'Return membership in Hubs matching the provided filter.',
   })
-  visibilities?: HubVisibility[];
+  filter!: HubsFilterInput;
 }

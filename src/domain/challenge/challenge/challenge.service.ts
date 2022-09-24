@@ -516,7 +516,7 @@ export class ChallengeService {
     const hubID = challenge.hubID;
     if (!hubID) {
       throw new RelationshipNotFoundException(
-        `Unable to load child challenges for challenge ${challenge.id} `,
+        `Unable to find hubID for challenge: ${challenge.id} `,
         LogContext.CHALLENGES
       );
     }

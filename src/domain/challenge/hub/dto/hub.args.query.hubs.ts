@@ -1,12 +1,11 @@
 import { ArgsType, Field } from '@nestjs/graphql';
-import { HubVisibility } from '@common/enums/hub.visibility';
+import { HubsFilterInput } from '@services/domain/hub-filter/dto/hub.filter.dto.input';
 
 @ArgsType()
-export class HubsQueryInput {
-  @Field(() => [HubVisibility], {
+export class HubsQueryArgs {
+  @Field(() => HubsFilterInput, {
     nullable: true,
-    description:
-      'Return Hubs with a Visibility matching one of the provided types.',
+    description: 'Return Hubs matching the provided filter.',
   })
-  visibilities!: HubVisibility[];
+  filter!: HubsFilterInput;
 }

@@ -90,7 +90,7 @@ export class ConversionResolverMutations {
     const newChallenge =
       await this.conversionService.convertOpportunityToChallenge(
         convertOpportunityToChallengeData.opportunityID,
-        opportunity.hubID,
+        this.opportunityService.getHubID(opportunity),
         agentInfo
       );
     const parentHub = await this.hubService.getHubOrFail(

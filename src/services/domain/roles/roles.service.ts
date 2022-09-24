@@ -32,6 +32,7 @@ import { IApplication } from '@domain/community';
 import { isCommunity, isOrganization } from '@common/utils/groupable.util';
 import { RolesResultCommunity } from './dto/roles.dto.result.community';
 import { HubVisibility } from '@common/enums/hub.visibility';
+import { HubFilterService } from '../hub-filter/hub.filter.service';
 
 export type UserGroupResult = {
   userGroup: IUserGroup;
@@ -46,6 +47,7 @@ export class RolesService {
     private applicationService: ApplicationService,
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
+    private hubFilterService: HubFilterService,
     private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -53,14 +55,14 @@ export class RolesService {
     membershipData: RolesUserInput
   ): Promise<ContributorRoles> {
     const user = await this.userService.getUserWithAgent(membershipData.userID);
-    let hubVisibilitiesFilter = [HubVisibility.ACTIVE];
-    if (membershipData.visibilities && membershipData.visibilities.length > 0) {
-      hubVisibilitiesFilter = membershipData.visibilities;
-    }
+    const allowedVisibilities = this.hubFilterService.getVisibilityToFilter(
+      membershipData.filter
+    );
+
     const contributorRoles = await this.getContributorRoles(
       user.agent?.credentials || [],
       user.id,
-      hubVisibilitiesFilter
+      allowedVisibilities
     );
     contributorRoles.applications = await this.getUserApplications(user);
     return contributorRoles;
@@ -73,14 +75,13 @@ export class RolesService {
       await this.organizationService.getOrganizationAndAgent(
         membershipData.organizationID
       );
-    let hubVisibilitiesFilter = [HubVisibility.ACTIVE];
-    if (membershipData.visibilities && membershipData.visibilities.length > 0) {
-      hubVisibilitiesFilter = membershipData.visibilities;
-    }
+    const allowedVisibilities = this.hubFilterService.getVisibilityToFilter(
+      membershipData.filter
+    );
     const contributorRoles = await this.getContributorRoles(
       agent?.credentials || [],
       organization.id,
-      hubVisibilitiesFilter
+      allowedVisibilities
     );
     return contributorRoles;
   }
@@ -112,7 +113,7 @@ export class RolesService {
     credentials: ICredential[],
     orgsMap: Map<string, RolesResultOrganization>,
     hubsMap: Map<string, RolesResultHub>,
-    hubVisibilities: HubVisibility[]
+    allowedVisibilities: HubVisibility[]
   ) {
     for (const credential of credentials) {
       switch (credential.type) {
@@ -144,14 +145,10 @@ export class RolesService {
     }
     // Iterate over the hubsMap and remove those whose visibility does not match the provided filter
     for (const hubResult of hubsMap.values()) {
-      const hubVisibility = hubResult.hub.visibility;
-      if (!hubVisibility) {
-        throw new RelationshipNotFoundException(
-          `Unable to find visibility on hub: ${hubResult.hub.nameID}`,
-          LogContext.COMMUNITY
-        );
-      }
-      const visibilityMatched = hubVisibilities.includes(hubVisibility);
+      const visibilityMatched = this.hubFilterService.isVisible(
+        hubResult.hub.visibility,
+        allowedVisibilities
+      );
       if (!visibilityMatched) {
         hubsMap.delete(hubResult.hubID);
       }
@@ -342,7 +339,7 @@ export class RolesService {
     );
     const hubResult = await this.ensureHubRolesResult(
       hubsMap,
-      opportunity.hubID
+      this.opportunityService.getHubID(opportunity)
     );
 
     const existingOpportunityResult = hubResult.opportunities.find(

@@ -58,8 +58,9 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { ILifecycleTemplate } from '@domain/template/lifecycle-template/lifecycle.template.interface';
 import { LifecycleType } from '@common/enums/lifecycle.type';
 import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
-import { HubsQueryInput } from './dto/hub.args.query.hubs';
+import { HubsQueryArgs } from './dto/hub.args.query.hubs';
 import { HubVisibility } from '@common/enums/hub.visibility';
+import { HubFilterService } from '@services/domain/hub-filter/hub.filter.service';
 
 @Injectable()
 export class HubService {
@@ -75,6 +76,7 @@ export class HubService {
     private communityService: CommunityService,
     private challengeService: ChallengeService,
     private preferenceSetService: PreferenceSetService,
+    private hubsFilterService: HubFilterService,
     private templatesSetService: TemplatesSetService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
@@ -238,14 +240,9 @@ export class HubService {
     return result;
   }
 
-  async getHubs(args: HubsQueryInput): Promise<IHub[]> {
-    let visibilities = [HubVisibility.ACTIVE];
-    if (args && args.visibilities && args.visibilities.length > 0) {
-      visibilities = args.visibilities;
-    }
-    this.logger.verbose?.(
-      `Loading hubs with visibilities: ${visibilities}`,
-      LogContext.CHALLENGES
+  async getHubs(args: HubsQueryArgs): Promise<IHub[]> {
+    const visibilities = this.hubsFilterService.getVisibilityToFilter(
+      args.filter
     );
     // Load the hubs
     const hubs: IHub[] = await this.hubRepository.find();
@@ -268,26 +265,8 @@ export class HubService {
     return hubsResult;
   }
 
-  public getVisibility(hub: IHub): HubVisibility {
-    const visibility = hub.visibility;
-    if (!visibility) {
-      throw new RelationshipNotFoundException(
-        `Unable to load visibility of Hub: ${hub.id} `,
-        LogContext.CHALLENGES
-      );
-    }
-    return visibility;
-  }
-
-  private isVisible(hub: IHub, allowedVisibilities: HubVisibility[]) {
-    const visibility = this.getVisibility(hub);
-    const result = allowedVisibilities.find(v => v === visibility);
-    if (result) return true;
-    return false;
-  }
-
   private async getFilteredHubsSortOrderDefault(
-    visibilities: HubVisibility[]
+    allowedVisibilities: HubVisibility[]
   ): Promise<string[]> {
     // Then load data to do the sorting
     const hubsDataForSorting = await this.hubRepository
@@ -297,9 +276,12 @@ export class HubService {
       .leftJoinAndSelect('challenge.opportunities', 'opportunities')
       .getMany();
 
-    const visibleHubs = hubsDataForSorting.filter(hub =>
-      this.isVisible(hub, visibilities)
-    );
+    const visibleHubs = hubsDataForSorting.filter(hub => {
+      return this.hubsFilterService.isVisible(
+        hub.visibility,
+        allowedVisibilities
+      );
+    });
 
     const sortedHubs = visibleHubs.sort((a, b) => {
       if (

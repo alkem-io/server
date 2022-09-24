@@ -16,7 +16,7 @@ export abstract class IOpportunity
   })
   projects?: IProject[];
 
-  hubID!: string;
+  hubID?: string;
 
   @Field(() => IChallenge, {
     nullable: true,

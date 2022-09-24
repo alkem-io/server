@@ -4,6 +4,7 @@ import { FindOneOptions, getConnection, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import {
@@ -131,7 +132,7 @@ export class OpportunityService {
     const machineConfig: ILifecycleDefinition =
       await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
         opportunityData.innovationFlowTemplateID,
-        opportunity.hubID,
+        this.getHubID(opportunity),
         LifecycleType.OPPORTUNITY
       );
 
@@ -245,7 +246,7 @@ export class OpportunityService {
         // updating the nameID, check new value is allowed
         await this.baseChallengeService.isNameAvailableOrFail(
           opportunityData.nameID,
-          opportunity.hubID
+          this.getHubID(opportunity)
         );
         baseOpportunity.nameID = opportunityData.nameID;
         await this.opportunityRepository.save(baseOpportunity);
@@ -300,7 +301,7 @@ export class OpportunityService {
 
     const project = await this.projectService.createProject(
       projectData,
-      opportunity.hubID
+      this.getHubID(opportunity)
     );
     if (!opportunity.projects)
       throw new EntityNotInitializedException(
@@ -310,6 +311,17 @@ export class OpportunityService {
     opportunity.projects.push(project);
     await this.opportunityRepository.save(opportunity);
     return project;
+  }
+
+  getHubID(opportunity: IOpportunity): string {
+    const hubID = opportunity.hubID;
+    if (!hubID) {
+      throw new RelationshipNotFoundException(
+        `Unable to load hubID for opportunity: ${opportunity.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+    return hubID;
   }
 
   async getActivity(opportunity: IOpportunity): Promise<INVP[]> {
