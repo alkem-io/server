@@ -3,14 +3,14 @@ import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { HubsFilterInput } from './dto/hub.filter.dto.input';
+import { HubFilterInput } from './dto/hub.filter.dto.input';
 
 export class HubFilterService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  getVisibilityToFilter(filter: HubsFilterInput | undefined) {
+  getVisibilityToFilter(filter: HubFilterInput | undefined) {
     let visibilities = [HubVisibility.ACTIVE];
     if (filter && filter.visibilities && filter.visibilities.length > 0) {
       visibilities = filter.visibilities;

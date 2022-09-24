@@ -2,7 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { HubVisibility } from '@common/enums/hub.visibility';
 
 @InputType()
-export class HubsFilterInput {
+export class HubFilterInput {
   @Field(() => [HubVisibility], {
     nullable: true,
     description:

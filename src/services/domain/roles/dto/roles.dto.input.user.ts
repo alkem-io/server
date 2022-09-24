@@ -1,6 +1,6 @@
 import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
-import { HubsFilterInput } from '@services/domain/hub-filter/dto/hub.filter.dto.input';
+import { HubFilterInput } from '@services/domain/hub-filter/dto/hub.filter.dto.input';
 
 @InputType()
 export class RolesUserInput {
@@ -10,9 +10,9 @@ export class RolesUserInput {
   })
   userID!: string;
 
-  @Field(() => HubsFilterInput, {
+  @Field(() => HubFilterInput, {
     nullable: true,
     description: 'Return membership in Hubs matching the provided filter.',
   })
-  filter!: HubsFilterInput;
+  filter!: HubFilterInput;
 }
