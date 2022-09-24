@@ -576,7 +576,7 @@ export class ChallengeService {
     return count;
   }
 
-  async getChallengeCount(visibility = HubVisibility.ACTIVE): Promise<number> {
+  async getChallengesCount(visibility = HubVisibility.ACTIVE): Promise<number> {
     const sqlQuery = `SELECT COUNT(*) as challengesCount FROM challenge RIGHT JOIN hub ON challenge.hubID = hub.id WHERE hub.visibility = '${visibility}'`;
     const [queryResult]: {
       challengesCount: number;

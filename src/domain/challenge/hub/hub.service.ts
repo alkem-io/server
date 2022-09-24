@@ -241,7 +241,7 @@ export class HubService {
   }
 
   async getHubs(args: HubsQueryArgs): Promise<IHub[]> {
-    const visibilities = this.hubsFilterService.getVisibilityToFilter(
+    const visibilities = this.hubsFilterService.getAllowedVisibilities(
       args.filter
     );
     // Load the hubs

@@ -10,7 +10,7 @@ export class HubFilterService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  getVisibilityToFilter(filter: HubFilterInput | undefined) {
+  getAllowedVisibilities(filter: HubFilterInput | undefined) {
     let visibilities = [HubVisibility.ACTIVE];
     if (filter && filter.visibilities && filter.visibilities.length > 0) {
       visibilities = filter.visibilities;

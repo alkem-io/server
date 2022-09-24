@@ -55,7 +55,7 @@ export class RolesService {
     membershipData: RolesUserInput
   ): Promise<ContributorRoles> {
     const user = await this.userService.getUserWithAgent(membershipData.userID);
-    const allowedVisibilities = this.hubFilterService.getVisibilityToFilter(
+    const allowedVisibilities = this.hubFilterService.getAllowedVisibilities(
       membershipData.filter
     );
 
@@ -75,7 +75,7 @@ export class RolesService {
       await this.organizationService.getOrganizationAndAgent(
         membershipData.organizationID
       );
-    const allowedVisibilities = this.hubFilterService.getVisibilityToFilter(
+    const allowedVisibilities = this.hubFilterService.getAllowedVisibilities(
       membershipData.filter
     );
     const contributorRoles = await this.getContributorRoles(
