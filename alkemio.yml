@@ -346,16 +346,16 @@ platform:
   about: ${PLATFORM_ABOUT}:https://alkemio.foundation/about/
 
   # Home page - Impact
-  impact: ${PLATFORM_IMPACT}:https://alkemio.foundation
+  impact: ${PLATFORM_IMPACT}:https://alkemio.foundation/manifesto
 
   # Home page - Foundation
-  foundation: ${PLATFORM_FOUNDATION}:https://alkemio.foundation/vision/
+  foundation: ${PLATFORM_FOUNDATION}:https://alkemio.foundation/
 
   # Home page - Opensource
   opensource: ${PLATFORM_OPENSOURCE}:https://github.com/alkem-io
 
   # Home page - Opensource
-  releases: ${PLATFORM_RELEASES}:https://www.alkemio.foundation/releases
+  releases: ${PLATFORM_RELEASES}:https://dalkemio.foundation/releases
 
 ssi:
   # Jolocom SDK is used for providing SSI capabilities on the platform.
