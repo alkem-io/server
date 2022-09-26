@@ -10,7 +10,9 @@ export class HubFilterService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  getAllowedVisibilities(filter: HubFilterInput | undefined) {
+  public getAllowedVisibilities(
+    filter: HubFilterInput | undefined
+  ): HubVisibility[] {
     let visibilities = [HubVisibility.ACTIVE];
     if (filter && filter.visibilities && filter.visibilities.length > 0) {
       visibilities = filter.visibilities;
@@ -22,10 +24,10 @@ export class HubFilterService {
     return visibilities;
   }
 
-  isVisible(
+  public isVisible(
     visibility: HubVisibility | undefined,
     allowedVisibilities: HubVisibility[]
-  ) {
+  ): boolean {
     if (!visibility) {
       throw new RelationshipNotFoundException(
         `Hub Visibility not provided when searching for ${allowedVisibilities}`,
