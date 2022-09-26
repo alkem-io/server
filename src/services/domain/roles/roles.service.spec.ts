@@ -98,7 +98,7 @@ describe('RolesService', () => {
         .spyOn(applicationService, 'getApplicationState')
         .mockResolvedValue('new');
 
-      jest.spyOn(hubFilterService, 'isVisible').mockResolvedValue(true);
+      jest.spyOn(hubFilterService, 'isVisible').mockReturnValue(true);
 
       jest.spyOn(communityService, 'isHubCommunity').mockResolvedValue(true);
 
