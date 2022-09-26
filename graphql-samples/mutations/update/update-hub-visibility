@@ -8,6 +8,6 @@ Variables:
 {
   "visibilityData": {
     "hubID": "uuid_nameid",
-    "visibility": "active"
+    "visibility": "ARCHIVED"
   }
 }
