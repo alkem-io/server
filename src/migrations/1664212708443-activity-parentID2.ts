@@ -17,12 +17,14 @@ export class activityParentID21664212708443 implements MigrationInterface {
           const calloutsAspects = await queryRunner.query(
             `SELECT id, calloutId from aspect where id='${activity.resourceID}'`
           );
+          if (!calloutsAspects?.[0].calloutId) continue;
           parentID = calloutsAspects[0].calloutId;
           break;
         case 'canvas-created':
           const calloutsCanvases = await queryRunner.query(
             `SELECT id, calloutId from canvas where id='${activity.resourceID}'`
           );
+          if (!calloutsCanvases?.[0].calloutId) continue;
           parentID = calloutsCanvases[0].calloutId;
           break;
       }
