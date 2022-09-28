@@ -1,0 +1,13 @@
+mutation updateHubVisibility($visibilityData: UpdateHubVisibilityInput!) {
+  updateHubVisibility(visibilityData: $visibilityData) {
+    id
+  }
+}
+
+Variables:
+{
+  "visibilityData": {
+    "hubID": "uuid_nameid",
+    "visibility": "ARCHIVED"
+  }
+}

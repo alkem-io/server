@@ -31,6 +31,8 @@ import {
 import { IApplication } from '@domain/community';
 import { isCommunity, isOrganization } from '@common/utils/groupable.util';
 import { RolesResultCommunity } from './dto/roles.dto.result.community';
+import { HubVisibility } from '@common/enums/hub.visibility';
+import { HubFilterService } from '../hub-filter/hub.filter.service';
 
 export type UserGroupResult = {
   userGroup: IUserGroup;
@@ -45,6 +47,7 @@ export class RolesService {
     private applicationService: ApplicationService,
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
+    private hubFilterService: HubFilterService,
     private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -52,9 +55,14 @@ export class RolesService {
     membershipData: RolesUserInput
   ): Promise<ContributorRoles> {
     const user = await this.userService.getUserWithAgent(membershipData.userID);
+    const allowedVisibilities = this.hubFilterService.getAllowedVisibilities(
+      membershipData.filter
+    );
+
     const contributorRoles = await this.getContributorRoles(
       user.agent?.credentials || [],
-      user.id
+      user.id,
+      allowedVisibilities
     );
     contributorRoles.applications = await this.getUserApplications(user);
     return contributorRoles;
@@ -67,23 +75,33 @@ export class RolesService {
       await this.organizationService.getOrganizationAndAgent(
         membershipData.organizationID
       );
+    const allowedVisibilities = this.hubFilterService.getAllowedVisibilities(
+      membershipData.filter
+    );
     const contributorRoles = await this.getContributorRoles(
       agent?.credentials || [],
-      organization.id
+      organization.id,
+      allowedVisibilities
     );
     return contributorRoles;
   }
 
   private async getContributorRoles(
     credentials: ICredential[],
-    contributorID: string
+    contributorID: string,
+    hubVisibilities: HubVisibility[]
   ): Promise<ContributorRoles> {
     const membership = new ContributorRoles();
 
     membership.id = contributorID;
     const hubsMap: Map<string, RolesResultHub> = new Map();
     const orgsMap: Map<string, RolesResultOrganization> = new Map();
-    await this.mapCredentialsToRoles(credentials, orgsMap, hubsMap);
+    await this.mapCredentialsToRoles(
+      credentials,
+      orgsMap,
+      hubsMap,
+      hubVisibilities
+    );
 
     membership.hubs.push(...hubsMap.values());
     membership.organizations.push(...orgsMap.values());
@@ -94,7 +112,8 @@ export class RolesService {
   private async mapCredentialsToRoles(
     credentials: ICredential[],
     orgsMap: Map<string, RolesResultOrganization>,
-    hubsMap: Map<string, RolesResultHub>
+    hubsMap: Map<string, RolesResultHub>,
+    allowedVisibilities: HubVisibility[]
   ) {
     for (const credential of credentials) {
       switch (credential.type) {
@@ -122,6 +141,16 @@ export class RolesService {
         case AuthorizationCredential.USER_GROUP_MEMBER:
           await this.addUserGroupMemberRole(hubsMap, orgsMap, credential);
           break;
+      }
+    }
+    // Iterate over the hubsMap and remove those whose visibility does not match the provided filter
+    for (const hubResult of hubsMap.values()) {
+      const visibilityMatched = this.hubFilterService.isVisible(
+        hubResult.hub.visibility,
+        allowedVisibilities
+      );
+      if (!visibilityMatched) {
+        hubsMap.delete(hubResult.hubID);
       }
     }
   }
@@ -280,7 +309,10 @@ export class RolesService {
       challengeID,
       { relations: ['community'] }
     );
-    const hubResult = await this.ensureHubRolesResult(hubsMap, challenge.hubID);
+    const hubResult = await this.ensureHubRolesResult(
+      hubsMap,
+      this.challengeService.getHubID(challenge)
+    );
 
     const existingChallengeResult = hubResult.challenges.find(
       challengeResult => challengeResult.nameID === challenge.nameID
@@ -307,7 +339,7 @@ export class RolesService {
     );
     const hubResult = await this.ensureHubRolesResult(
       hubsMap,
-      opportunity.hubID
+      this.opportunityService.getHubID(opportunity)
     );
 
     const existingOpportunityResult = hubResult.opportunities.find(

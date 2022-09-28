@@ -15,6 +15,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
+import { HubFilterModule } from '../hub-filter/hub.filter.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { PlatformAuthorizationModule } from '@src/platform/authorization/platfor
     OrganizationModule,
     HubModule,
     PlatformAuthorizationModule,
+    HubFilterModule,
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([Opportunity]),
   ],

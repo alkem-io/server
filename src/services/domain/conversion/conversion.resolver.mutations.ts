@@ -90,10 +90,12 @@ export class ConversionResolverMutations {
     const newChallenge =
       await this.conversionService.convertOpportunityToChallenge(
         convertOpportunityToChallengeData.opportunityID,
-        opportunity.hubID,
+        this.opportunityService.getHubID(opportunity),
         agentInfo
       );
-    const parentHub = await this.hubService.getHubOrFail(newChallenge.hubID);
+    const parentHub = await this.hubService.getHubOrFail(
+      this.challengeService.getHubID(newChallenge)
+    );
     await this.hubAuthorizationService.applyAuthorizationPolicy(parentHub);
     return this.challengeService.getChallengeOrFail(newChallenge.id);
   }

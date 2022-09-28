@@ -53,7 +53,7 @@ export class MetadataService {
     hubsTopic.id = 'hubs';
     activity.push(hubsTopic);
 
-    const challengesCount = await this.challengeService.getChallengeCount();
+    const challengesCount = await this.challengeService.getChallengesCount();
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     challengesTopic.id = 'challenges';
     activity.push(challengesTopic);

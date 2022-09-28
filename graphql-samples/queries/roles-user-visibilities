@@ -1,0 +1,30 @@
+query {
+  rolesUser(rolesData: {userID: "admin-alkemio", filter: {visibilities: [ARCHIVED, ACTIVE, DEMO]}}) {
+   	hubs {
+      nameID
+      id
+      roles
+      challenges {
+        nameID
+        id
+        roles
+      }
+      opportunities {
+        nameID
+        displayName
+        id
+        roles
+      }
+      userGroups {
+        nameID
+        id
+      }
+    }
+    organizations {
+      nameID
+      id
+      roles
+    }
+  }
+
+}

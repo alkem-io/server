@@ -1,0 +1,7 @@
+query {
+  hubs(filter: {visibilities: [ARCHIVED, ACTIVE, DEMO]}) {
+    nameID
+    visibility
+
+  }
+}

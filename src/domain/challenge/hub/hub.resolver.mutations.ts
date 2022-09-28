@@ -28,6 +28,7 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { UpdateChallengePreferenceInput } from '@domain/challenge/challenge/dto/challenge.dto.update.preference';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
 @Resolver()
 export class HubResolverMutations {
   constructor(
@@ -86,6 +87,33 @@ export class HubResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
+  @Mutation(() => IHub, {
+    description: 'Update the visibility of the specified Hub.',
+  })
+  @Profiling.api
+  async updateHubVisibility(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('visibilityData') visibilityData: UpdateHubVisibilityInput
+  ): Promise<IHub> {
+    const hub = await this.hubService.getHubOrFail(visibilityData.hubID);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      hub.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update visibility on hub: ${hub.id}`
+    );
+    const oldVisibility = hub.visibility;
+    const result = await this.hubService.updateHubVisibility(visibilityData);
+    if (oldVisibility !== result.visibility) {
+      return await this.hubAuthorizationService.applyAuthorizationPolicy(
+        result
+      );
+    }
+
+    return result;
+  }
+
+  @UseGuards(GraphqlGuard)
   @Mutation(() => IPreference, {
     description: 'Updates one of the Preferences on a Hub',
   })
@@ -97,7 +125,7 @@ export class HubResolverMutations {
     const hub = await this.hubService.getHubOrFail(preferenceData.hubID);
     const preferenceSet = await this.hubService.getPreferenceSetOrFail(hub.id);
 
-    const preference = await this.preferenceSetService.getPreferenceOrFail(
+    const preference = this.preferenceSetService.getPreferenceOrFail(
       preferenceSet,
       preferenceData.type
     );
@@ -160,7 +188,9 @@ export class HubResolverMutations {
       preferenceData.value
     );
 
-    const hub = await this.hubService.getHubOrFail(challenge.hubID);
+    const hub = await this.hubService.getHubOrFail(
+      this.challengeService.getHubID(challenge)
+    );
     const hubCommunityCredential =
       await this.hubService.getCommunityMembershipCredential(hub);
     // As the preferences may update the authorization, the authorization policy will need to be reset
