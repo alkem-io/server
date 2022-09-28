@@ -14,5 +14,5 @@ export abstract class IChallenge extends IBaseChallenge implements ISearchable {
     description: 'The ID of the containing Hub.',
     nullable: false,
   })
-  hubID?: string;
+  hubID?: string; //toDo make mandatory https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2196
 }

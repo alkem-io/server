@@ -16,7 +16,7 @@ export abstract class IOpportunity
   })
   projects?: IProject[];
 
-  hubID?: string;
+  hubID?: string; //toDo make mandatory https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2196
 
   @Field(() => IChallenge, {
     nullable: true,
