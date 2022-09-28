@@ -7,6 +7,7 @@ import { MockOrganizationService } from '@test/mocks/organization.service.mock';
 import { MockUserGroupService } from '@test/mocks/user.group.service.mock';
 import { MockUserService } from '@test/mocks/user.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { MockHubFilterService } from '@test/mocks/hub.filter.service.mock';
 import { Test } from '@nestjs/testing';
 import { RolesService } from './roles.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -16,6 +17,7 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import { ApplicationService } from '@domain/community/application/application.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { CommunityService } from '@domain/community/community/community.service';
+import { HubFilterService } from '../hub-filter/hub.filter.service';
 import { asyncToThrow, testData } from '@test/utils';
 import { RelationshipNotFoundException } from '@common/exceptions';
 
@@ -24,6 +26,7 @@ describe('RolesService', () => {
   let userService: UserService;
   let hubService: HubService;
   let challengeSerivce: ChallengeService;
+  let hubFilterService: HubFilterService;
   let opportunityService: OpportunityService;
   let applicationService: ApplicationService;
   let organizationService: OrganizationService;
@@ -40,6 +43,7 @@ describe('RolesService', () => {
         MockCommunityService,
         MockOpportunityService,
         MockOrganizationService,
+        MockHubFilterService,
         MockWinstonProvider,
         RolesService,
       ],
@@ -53,6 +57,7 @@ describe('RolesService', () => {
     applicationService = moduleRef.get(ApplicationService);
     organizationService = moduleRef.get(OrganizationService);
     communityService = moduleRef.get(CommunityService);
+    hubFilterService = moduleRef.get(HubFilterService);
   });
 
   it('should be defined', () => {
@@ -93,6 +98,8 @@ describe('RolesService', () => {
         .spyOn(applicationService, 'getApplicationState')
         .mockResolvedValue('new');
 
+      jest.spyOn(hubFilterService, 'isVisible').mockReturnValue(true);
+
       jest.spyOn(communityService, 'isHubCommunity').mockResolvedValue(true);
 
       const res = await rolesService.getUserRoles({
@@ -115,6 +122,8 @@ describe('RolesService', () => {
           }),
         ])
       );
+
+      console.log(JSON.stringify(res.hubs));
 
       expect(res.hubs).toEqual(
         expect.arrayContaining([

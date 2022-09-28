@@ -20,6 +20,7 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { HubVisibility } from '@common/enums/hub.visibility';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -38,6 +39,12 @@ export class HubAuthorizationService {
 
   async applyAuthorizationPolicy(hub: IHub): Promise<IHub> {
     const preferenceSet = await this.hubService.getPreferenceSetOrFail(hub.id);
+    if (!hub.visibility) {
+      throw new EntityNotInitializedException(
+        `HubVisibility not found for Hub: ${hub.id}`,
+        LogContext.CHALLENGES
+      );
+    }
 
     // Ensure always applying from a clean state
     hub.authorization = await this.authorizationPolicyService.reset(
@@ -47,31 +54,49 @@ export class HubAuthorizationService {
       this.platformAuthorizationService.inheritPlatformAuthorization(
         hub.authorization
       );
-    hub.authorization = this.extendAuthorizationPolicy(
-      hub.authorization,
-      hub.id
-    );
-    hub.authorization = this.appendVerifiedCredentialRules(hub.authorization);
 
-    hub.authorization.anonymousReadAccess =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        HubPreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
-      );
+    // FExtend rules depending on the Visibility
+    switch (hub.visibility) {
+      case HubVisibility.ACTIVE:
+      case HubVisibility.DEMO:
+        hub.authorization = this.extendAuthorizationPolicy(
+          hub.authorization,
+          hub.id
+        );
+        hub.authorization = this.appendVerifiedCredentialRules(
+          hub.authorization
+        );
 
-    hub = await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
-      hub,
-      this.hubRepository
-    );
+        hub.authorization.anonymousReadAccess =
+          this.preferenceSetService.getPreferenceValue(
+            preferenceSet,
+            HubPreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
+          );
+        hub =
+          await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
+            hub,
+            this.hubRepository
+          );
 
-    hub.community = await this.hubService.getCommunity(hub);
-    const hostOrg = await this.hubService.getHost(hub.id);
-    hub.community.authorization =
-      await this.extendMembershipAuthorizationPolicy(
-        hub.community.authorization,
-        preferenceSet,
-        hostOrg
-      );
+        hub.community = await this.hubService.getCommunity(hub);
+        const hostOrg = await this.hubService.getHost(hub.id);
+        hub.community.authorization =
+          await this.extendMembershipAuthorizationPolicy(
+            hub.id,
+            hub.community.authorization,
+            preferenceSet,
+            hostOrg
+          );
+        break;
+      case HubVisibility.ARCHIVED:
+        // do not extend beyond propagating to child entities
+        hub =
+          await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
+            hub,
+            this.hubRepository
+          );
+        break;
+    }
 
     // propagate authorization rules for child entities
     const hubCommunityCredential =
@@ -174,13 +199,14 @@ export class HubAuthorizationService {
   }
 
   private extendMembershipAuthorizationPolicy(
+    hubID: string,
     authorization: IAuthorizationPolicy | undefined,
     preferenceSet: IPreferenceSet,
     hostOrg?: IOrganization
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${hostOrg?.id}`,
+        `Authorization definition not found for: ${hubID}`,
         LogContext.CHALLENGES
       );
 

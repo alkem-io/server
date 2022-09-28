@@ -26,6 +26,7 @@ import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
+import { HubFilterModule } from '@services/domain/hub-filter/hub.filter.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { PlatformAuthorizationModule } from '@src/platform/authorization/platfor
     PreferenceModule,
     PreferenceSetModule,
     TemplatesSetModule,
+    HubFilterModule,
     TypeOrmModule.forFeature([Hub]),
   ],
   providers: [
