@@ -9,5 +9,5 @@ export class LimitAndShuffleIdsQueryArgs extends LimitAndShuffleQueryArgs {
     description: 'The IDs of the entities to return',
     nullable: true,
   })
-  ids?: string;
+  IDs?: string[];
 }

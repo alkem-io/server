@@ -61,6 +61,7 @@ import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
 import { HubsQueryArgs } from './dto/hub.args.query.hubs';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { HubFilterService } from '@services/domain/hub-filter/hub.filter.service';
+import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 
 @Injectable()
 export class HubService {
@@ -448,12 +449,21 @@ export class HubService {
 
   async getChallenges(
     hub: IHub,
-    limit?: number,
-    shuffle?: boolean
+    args?: LimitAndShuffleIdsQueryArgs
   ): Promise<IChallenge[]> {
-    const hubWithChallenges = await this.getHubOrFail(hub.id, {
-      relations: ['challenges'],
-    });
+    let hubWithChallenges;
+    if (args && args.IDs) {
+      {
+        hubWithChallenges = await this.getHubOrFail(hub.id, {
+          relations: ['challenges'],
+        });
+        //toDo Carlos filter challenges with IDs
+      }
+    } else
+      hubWithChallenges = await this.getHubOrFail(hub.id, {
+        relations: ['challenges'],
+      });
+
     const challenges = hubWithChallenges.challenges;
     if (!challenges) {
       throw new RelationshipNotFoundException(
@@ -462,7 +472,11 @@ export class HubService {
       );
     }
 
-    const limitAndShuffled = limitAndShuffle(challenges, limit, shuffle);
+    const limitAndShuffled = limitAndShuffle(
+      challenges,
+      args?.limit,
+      args?.shuffle
+    );
 
     // Sort the challenges base on their display name
     const sortedChallenges = limitAndShuffled.sort((a, b) =>
