@@ -17,23 +17,33 @@ export class activityParentID21664212708443 implements MigrationInterface {
           const calloutsAspects = await queryRunner.query(
             `SELECT id, calloutId from aspect where id='${activity.resourceID}'`
           );
-          if (!calloutsAspects?.[0]?.calloutId) continue;
+          if (!this.hasCalloutId(calloutsAspects)) continue;
           parentID = calloutsAspects[0].calloutId;
           break;
         case 'canvas-created':
           const calloutsCanvases = await queryRunner.query(
             `SELECT id, calloutId from canvas where id='${activity.resourceID}'`
           );
-          if (!calloutsCanvases?.[0]?.calloutId) continue;
+          if (!this.hasCalloutId(calloutsCanvases))  continue;
           parentID = calloutsCanvases[0].calloutId;
           break;
       }
 
-      await queryRunner.query(
-        `UPDATE activity SET parentID= '${parentID}' WHERE id= '${activity.id}'`
-      );
+      if(parentID)
+        await queryRunner.query(
+          `UPDATE activity SET parentID= '${parentID}' WHERE id= '${activity.id}'`
+        );
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `UPDATE activity SET parentID = NULL`
+    );
+  }
+
+  private hasCalloutId(calloutsChildren: any): boolean {
+    if(!calloutsChildren || !calloutsChildren[0] || !calloutsChildren[0].calloutId) return false;
+    return true
+  }
 }
