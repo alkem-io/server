@@ -30,7 +30,7 @@ import { NamingService } from '@src/services/domain/naming/naming.service';
 import { challengeLifecycleConfigDefault } from '@domain/template/templates-set/templates.set.default.lifecycle.challenge';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, In, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Hub } from './hub.entity';
@@ -247,11 +247,20 @@ export class HubService {
       args.filter
     );
     // Load the hubs
-    const hubs: IHub[] = await this.hubRepository.find();
+    let hubs: IHub[];
+    if (args && args.IDs)
+      hubs = await this.hubRepository.find({
+        where: { id: In(args.IDs) },
+      });
+    else hubs = await this.hubRepository.find();
+
     if (hubs.length === 0) return [];
 
     // Get the order to return the data in
-    const sortedIDs = await this.getFilteredHubsSortOrderDefault(visibilities);
+    const sortedIDs = await this.getFilteredHubsSortOrderDefault(
+      visibilities,
+      hubs.flatMap(x => x.id)
+    );
     const hubsResult: IHub[] = [];
     for (const hubID of sortedIDs) {
       const hub = hubs.find(hub => hub.id === hubID);
@@ -268,7 +277,8 @@ export class HubService {
   }
 
   private async getFilteredHubsSortOrderDefault(
-    allowedVisibilities: HubVisibility[]
+    allowedVisibilities: HubVisibility[],
+    IDs?: string[]
   ): Promise<string[]> {
     // Then load data to do the sorting
     const hubsDataForSorting = await this.hubRepository
@@ -276,6 +286,7 @@ export class HubService {
       .leftJoinAndSelect('hub.challenges', 'challenge')
       .leftJoinAndSelect('hub.authorization', 'authorization_policy')
       .leftJoinAndSelect('challenge.opportunities', 'opportunities')
+      .whereInIds(IDs)
       .getMany();
 
     const visibleHubs = hubsDataForSorting.filter(hub => {
