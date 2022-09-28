@@ -6,9 +6,9 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CredentialMetadataOutput } from '@domain/agent/verified-credential/dto/verified.credential.dto.metadata';
-import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
+import { UUID, UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
-import { Args, Float, Query, Resolver } from '@nestjs/graphql';
+import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { PaginationArgs, PaginatedUsers } from '@core/pagination';
@@ -16,6 +16,7 @@ import { UserService } from './user.service';
 import { IUser } from './';
 import { UserFilterInput } from '@core/filtering';
 import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
@@ -34,22 +35,7 @@ export class UserResolverQueries {
   @Profiling.api
   async users(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args({
-      name: 'limit',
-      type: () => Float,
-      description:
-        'The number of users to return; if omitted return all Users.',
-      nullable: true,
-    })
-    limit: number,
-    @Args({
-      name: 'shuffle',
-      type: () => Boolean,
-      description:
-        'If true and limit is specified then return a random selection of Users. Defaults to false.',
-      nullable: true,
-    })
-    shuffle: boolean
+    @Args({ nullable: true }) args: ContributorQueryArgs
   ): Promise<IUser[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -57,7 +43,7 @@ export class UserResolverQueries {
       AuthorizationPrivilege.READ_USERS,
       `users query: ${agentInfo.email}`
     );
-    return await this.userService.getUsers(limit, shuffle);
+    return await this.userService.getUsers(args);
   }
 
   @UseGuards(GraphqlGuard)
@@ -108,7 +94,7 @@ export class UserResolverQueries {
   @Profiling.api
   async usersById(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args({ name: 'IDs', type: () => [UUID_NAMEID_EMAIL] }) ids: string[]
+    @Args({ name: 'IDs', type: () => [UUID] }) ids: string[]
   ): Promise<IUser[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -116,10 +102,7 @@ export class UserResolverQueries {
       AuthorizationPrivilege.READ_USERS,
       `users query: ${agentInfo.email}`
     );
-    const users = await this.userService.getUsers();
-    return users.filter(x => {
-      return ids ? ids.indexOf(x.id) > -1 : false;
-    });
+    return await this.userService.getUsersByIDs(ids);
   }
 
   @UseGuards(GraphqlGuard)
