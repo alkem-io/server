@@ -57,6 +57,10 @@ import { TemplatesSetService } from '@domain/template/templates-set/templates.se
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { ILifecycleTemplate } from '@domain/template/lifecycle-template/lifecycle.template.interface';
 import { LifecycleType } from '@common/enums/lifecycle.type';
+import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
+import { HubsQueryArgs } from './dto/hub.args.query.hubs';
+import { HubVisibility } from '@common/enums/hub.visibility';
+import { HubFilterService } from '@services/domain/hub-filter/hub.filter.service';
 
 @Injectable()
 export class HubService {
@@ -72,6 +76,7 @@ export class HubService {
     private communityService: CommunityService,
     private challengeService: ChallengeService,
     private preferenceSetService: PreferenceSetService,
+    private hubsFilterService: HubFilterService,
     private templatesSetService: TemplatesSetService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
@@ -84,6 +89,8 @@ export class HubService {
   ): Promise<IHub> {
     await this.validateHubData(hubData);
     const hub: IHub = Hub.create(hubData);
+    // default to active hub
+    hub.visibility = HubVisibility.ACTIVE;
 
     // remove context before saving as want to control that creation
     hub.context = undefined;
@@ -183,6 +190,16 @@ export class HubService {
     return await this.hubRepository.save(hub);
   }
 
+  public async updateHubVisibility(
+    visibilityData: UpdateHubVisibilityInput
+  ): Promise<IHub> {
+    const hub = await this.getHubOrFail(visibilityData.hubID);
+
+    hub.visibility = visibilityData.visibility;
+
+    return await this.save(hub);
+  }
+
   async deleteHub(deleteData: DeleteHubInput): Promise<IHub> {
     const hub = await this.getHubOrFail(deleteData.ID, {
       relations: ['challenges', 'preferenceSet', 'templatesSet'],
@@ -225,13 +242,16 @@ export class HubService {
     return result;
   }
 
-  async getHubs(): Promise<IHub[]> {
+  async getHubs(args: HubsQueryArgs): Promise<IHub[]> {
+    const visibilities = this.hubsFilterService.getAllowedVisibilities(
+      args.filter
+    );
     // Load the hubs
     const hubs: IHub[] = await this.hubRepository.find();
     if (hubs.length === 0) return [];
 
     // Get the order to return the data in
-    const sortedIDs = await this.getHubsSortOrderDefault();
+    const sortedIDs = await this.getFilteredHubsSortOrderDefault(visibilities);
     const hubsResult: IHub[] = [];
     for (const hubID of sortedIDs) {
       const hub = hubs.find(hub => hub.id === hubID);
@@ -247,7 +267,9 @@ export class HubService {
     return hubsResult;
   }
 
-  private async getHubsSortOrderDefault(): Promise<string[]> {
+  private async getFilteredHubsSortOrderDefault(
+    allowedVisibilities: HubVisibility[]
+  ): Promise<string[]> {
     // Then load data to do the sorting
     const hubsDataForSorting = await this.hubRepository
       .createQueryBuilder('hub')
@@ -256,7 +278,14 @@ export class HubService {
       .leftJoinAndSelect('challenge.opportunities', 'opportunities')
       .getMany();
 
-    const sortedHubs = hubsDataForSorting.sort((a, b) => {
+    const visibleHubs = hubsDataForSorting.filter(hub => {
+      return this.hubsFilterService.isVisible(
+        hub.visibility,
+        allowedVisibilities
+      );
+    });
+
+    const sortedHubs = visibleHubs.sort((a, b) => {
       if (
         a.authorization?.anonymousReadAccess === true &&
         b.authorization?.anonymousReadAccess === false
@@ -682,8 +711,10 @@ export class HubService {
     );
   }
 
-  async getHubCount(): Promise<number> {
-    return await this.hubRepository.count();
+  async getHubCount(visibility = HubVisibility.ACTIVE): Promise<number> {
+    return await this.hubRepository.count({
+      where: { visibility: visibility },
+    });
   }
 
   async getHost(hubID: string): Promise<IOrganization | undefined> {

@@ -1,9 +1,10 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, getConnection, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import {
@@ -38,6 +39,7 @@ import { ICollaboration } from '../collaboration/collaboration.interface';
 import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
 import { LifecycleType } from '@common/enums/lifecycle.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
+import { HubVisibility } from '@common/enums/hub.visibility';
 
 @Injectable()
 export class OpportunityService {
@@ -130,7 +132,7 @@ export class OpportunityService {
     const machineConfig: ILifecycleDefinition =
       await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
         opportunityData.innovationFlowTemplateID,
-        opportunity.hubID,
+        this.getHubID(opportunity),
         LifecycleType.OPPORTUNITY
       );
 
@@ -244,7 +246,7 @@ export class OpportunityService {
         // updating the nameID, check new value is allowed
         await this.baseChallengeService.isNameAvailableOrFail(
           opportunityData.nameID,
-          opportunity.hubID
+          this.getHubID(opportunity)
         );
         baseOpportunity.nameID = opportunityData.nameID;
         await this.opportunityRepository.save(baseOpportunity);
@@ -299,7 +301,7 @@ export class OpportunityService {
 
     const project = await this.projectService.createProject(
       projectData,
-      opportunity.hubID
+      this.getHubID(opportunity)
     );
     if (!opportunity.projects)
       throw new EntityNotInitializedException(
@@ -309,6 +311,17 @@ export class OpportunityService {
     opportunity.projects.push(project);
     await this.opportunityRepository.save(opportunity);
     return project;
+  }
+
+  getHubID(opportunity: IOpportunity): string {
+    const hubID = opportunity.hubID;
+    if (!hubID) {
+      throw new RelationshipNotFoundException(
+        `Unable to load hubID for opportunity: ${opportunity.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+    return hubID;
   }
 
   async getActivity(opportunity: IOpportunity): Promise<INVP[]> {
@@ -365,8 +378,15 @@ export class OpportunityService {
     });
   }
 
-  async getOpportunitiesCount(): Promise<number> {
-    return await this.opportunityRepository.count();
+  async getOpportunitiesCount(
+    visibility = HubVisibility.ACTIVE
+  ): Promise<number> {
+    const sqlQuery = `SELECT COUNT(*) as opportunitiesCount FROM opportunity RIGHT JOIN hub ON opportunity.hubID = hub.id WHERE hub.visibility = '${visibility}'`;
+    const [queryResult]: {
+      opportunitiesCount: number;
+    }[] = await getConnection().query(sqlQuery);
+
+    return queryResult.opportunitiesCount;
   }
 
   async getOpportunitiesInChallengeCount(challengeID: string): Promise<number> {

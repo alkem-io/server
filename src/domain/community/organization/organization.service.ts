@@ -49,6 +49,7 @@ import { applyFiltering, OrganizationFilterInput } from '@core/filtering';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { CreateUserGroupInput } from '../user-group/dto/user-group.dto.create';
+import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 
 @Injectable()
 export class OrganizationService {
@@ -354,16 +355,29 @@ export class OrganizationService {
     return { organization: organization, agent: organization.agent };
   }
 
-  async getOrganizations(
-    limit?: number,
-    shuffle = false
-  ): Promise<IOrganization[]> {
+  async getOrganizations(args: ContributorQueryArgs): Promise<IOrganization[]> {
+    const limit = args.limit;
+    const shuffle = args.shuffle || false;
     this.logger.verbose?.(
       `Querying all organizations with limit: ${limit} and shuffle: ${shuffle}`,
       LogContext.COMMUNITY
     );
-    const organizations: IOrganization[] =
-      await this.organizationRepository.find();
+
+    const credentialsFilter = args.filter?.credentials;
+    let organizations: IOrganization[] = [];
+    if (credentialsFilter) {
+      organizations = await this.organizationRepository
+        .createQueryBuilder('organization')
+        .leftJoinAndSelect('organization.agent', 'agent')
+        .leftJoinAndSelect('agent.credentials', 'credential')
+        .where('credential.type IN (:credentialsFilter)')
+        .setParameters({
+          credentialsFilter: credentialsFilter,
+        })
+        .getMany();
+    } else {
+      organizations = await this.organizationRepository.find();
+    }
 
     return limitAndShuffle(organizations, limit, shuffle);
   }

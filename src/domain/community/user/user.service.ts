@@ -39,7 +39,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
 import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, In, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { KonfigService } from '@services/platform/configuration/config/config.service';
 import { IUserTemplate } from '@services/platform/configuration';
@@ -59,6 +59,7 @@ import { validateEmail } from '@common/utils';
 import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
+import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 
 @Injectable()
 export class UserService {
@@ -519,12 +520,37 @@ export class UserService {
     return user;
   }
 
-  async getUsers(limit?: number, shuffle = false): Promise<IUser[]> {
+  async getUsersByIDs(userIDs: string[]): Promise<IUser[]> {
+    const users = await this.userRepository.find({
+      where: { id: In(userIDs) },
+    });
+
+    return users;
+  }
+
+  async getUsers(args: ContributorQueryArgs): Promise<IUser[]> {
+    const limit = args.limit;
+    const shuffle = args.shuffle || false;
+
     this.logger.verbose?.(
       `Querying all users with limit: ${limit} and shuffle: ${shuffle}`,
       LogContext.COMMUNITY
     );
-    const users = await this.userRepository.find({ serviceProfile: false });
+    const credentialsFilter = args.filter?.credentials;
+    let users = [];
+    if (credentialsFilter) {
+      users = await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.agent', 'agent')
+        .leftJoinAndSelect('agent.credentials', 'credential')
+        .where('credential.type IN (:credentialsFilter)')
+        .setParameters({
+          credentialsFilter: credentialsFilter,
+        })
+        .getMany();
+    } else {
+      users = await this.userRepository.find({ serviceProfile: false });
+    }
     return limitAndShuffle(users, limit, shuffle);
   }
 

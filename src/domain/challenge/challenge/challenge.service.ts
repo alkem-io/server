@@ -23,7 +23,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, getConnection, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
@@ -55,6 +55,7 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
 import { LifecycleType } from '@common/enums/lifecycle.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
+import { HubVisibility } from '@common/enums/hub.visibility';
 
 @Injectable()
 export class ChallengeService {
@@ -172,7 +173,7 @@ export class ChallengeService {
         // updating the nameID, check new value is allowed
         await this.baseChallengeService.isNameAvailableOrFail(
           challengeData.nameID,
-          challenge.hubID
+          this.getHubID(challenge)
         );
         challenge.nameID = challengeData.nameID;
         await this.challengeRepository.save(challenge);
@@ -198,7 +199,7 @@ export class ChallengeService {
     const machineConfig: ILifecycleDefinition =
       await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
         challengeData.innovationFlowTemplateID,
-        challenge.hubID,
+        this.getHubID(challenge),
         LifecycleType.CHALLENGE
       );
 
@@ -486,14 +487,15 @@ export class ChallengeService {
       relations: ['childChallenges', 'community'],
     });
 
+    const hubID = this.getHubID(challenge);
     await this.baseChallengeService.isNameAvailableOrFail(
       challengeData.nameID,
-      challenge.hubID
+      hubID
     );
 
     const childChallenge = await this.createChallenge(
       challengeData,
-      challenge.hubID,
+      hubID,
       agentInfo
     );
 
@@ -508,6 +510,17 @@ export class ChallengeService {
     await this.challengeRepository.save(challenge);
 
     return childChallenge;
+  }
+
+  getHubID(challenge: IChallenge): string {
+    const hubID = challenge.hubID;
+    if (!hubID) {
+      throw new RelationshipNotFoundException(
+        `Unable to find hubID for challenge: ${challenge.id} `,
+        LogContext.CHALLENGES
+      );
+    }
+    return hubID;
   }
 
   async createOpportunity(
@@ -526,14 +539,15 @@ export class ChallengeService {
       }
     );
 
+    const hubID = this.getHubID(challenge);
     await this.baseChallengeService.isNameAvailableOrFail(
       opportunityData.nameID,
-      challenge.hubID
+      hubID
     );
 
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
-      challenge.hubID,
+      hubID,
       agentInfo
     );
 
@@ -562,8 +576,13 @@ export class ChallengeService {
     return count;
   }
 
-  async getChallengeCount(): Promise<number> {
-    return await this.challengeRepository.count();
+  async getChallengesCount(visibility = HubVisibility.ACTIVE): Promise<number> {
+    const sqlQuery = `SELECT COUNT(*) as challengesCount FROM challenge RIGHT JOIN hub ON challenge.hubID = hub.id WHERE hub.visibility = '${visibility}'`;
+    const [queryResult]: {
+      challengesCount: number;
+    }[] = await getConnection().query(sqlQuery);
+
+    return queryResult.challengesCount;
   }
 
   async getChildChallengesCount(challengeID: string): Promise<number> {

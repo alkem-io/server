@@ -1,5 +1,5 @@
 import { UUID_NAMEID } from '@domain/common/scalars';
-import { Args, Float, Query, Resolver } from '@nestjs/graphql';
+import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { IOrganization } from './organization.interface';
 import { OrganizationService } from './organization.service';
@@ -8,6 +8,7 @@ import { PaginationArgs } from '@core/pagination';
 import { OrganizationFilterInput } from '@core/filtering';
 import { UseGuards } from '@nestjs/common';
 import { PaginatedOrganization } from '@core/pagination/paginated.organization';
+import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 
 @Resolver()
 export class OrganizationResolverQueries {
@@ -19,24 +20,9 @@ export class OrganizationResolverQueries {
   })
   @Profiling.api
   async organizations(
-    @Args({
-      name: 'limit',
-      type: () => Float,
-      description:
-        'The number of Organizations to return; if omitted return all Organizations.',
-      nullable: true,
-    })
-    limit: number,
-    @Args({
-      name: 'shuffle',
-      type: () => Boolean,
-      description:
-        'If true and limit is specified then return the Organizations based on a random selection. Defaults to false.',
-      nullable: true,
-    })
-    shuffle: boolean
+    @Args({ nullable: true }) args: ContributorQueryArgs
   ): Promise<IOrganization[]> {
-    return await this.organizationService.getOrganizations(limit, shuffle);
+    return await this.organizationService.getOrganizations(args);
   }
 
   @Query(() => IOrganization, {
