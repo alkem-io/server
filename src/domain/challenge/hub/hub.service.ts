@@ -457,7 +457,9 @@ export class HubService {
         hubWithChallenges = await this.getHubOrFail(hub.id, {
           relations: ['challenges'],
         });
-        //toDo Carlos filter challenges with IDs
+        hubWithChallenges.challenges = hubWithChallenges.challenges?.filter(c =>
+          args.IDs?.includes(c.id)
+        );
       }
     } else
       hubWithChallenges = await this.getHubOrFail(hub.id, {
