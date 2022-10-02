@@ -23,13 +23,13 @@ export class MetadataService {
   async getMetadata(): Promise<IMetadata> {
     return {
       services: await this.getServicesMetadata(),
-      activity: await this.getActivity(),
+      metrics: await this.getMetrics(),
     };
   }
 
   async getServicesMetadata(): Promise<IServiceMetadata[]> {
-    const ctServerMetadata = await this.getAlkemioServerMetadata();
-    const servicesMetadata = [ctServerMetadata];
+    const alkemioServerMetadata = await this.getAlkemioServerMetadata();
+    const servicesMetadata = [alkemioServerMetadata];
     return servicesMetadata;
   }
 
@@ -44,19 +44,19 @@ export class MetadataService {
     return process.env.npm_package_version ?? '';
   }
 
-  async getActivity(): Promise<INVP[]> {
-    const activity: INVP[] = [];
+  async getMetrics(): Promise<INVP[]> {
+    const metrics: INVP[] = [];
 
     // Challenges
     const hubsCount = await this.hubService.getHubCount();
     const hubsTopic = new NVP('hubs', hubsCount.toString());
     hubsTopic.id = 'hubs';
-    activity.push(hubsTopic);
+    metrics.push(hubsTopic);
 
     const challengesCount = await this.challengeService.getChallengesCount();
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     challengesTopic.id = 'challenges';
-    activity.push(challengesTopic);
+    metrics.push(challengesTopic);
 
     const opportunitiesCount =
       await this.opportunityService.getOpportunitiesCount();
@@ -65,13 +65,13 @@ export class MetadataService {
       opportunitiesCount.toString()
     );
     opportunitiesTopic.id = 'opportunities';
-    activity.push(opportunitiesTopic);
+    metrics.push(opportunitiesTopic);
 
     // Users
     const usersCount = await this.userService.getUserCount();
     const usersTopic = new NVP('users', usersCount.toString());
     usersTopic.id = 'users';
-    activity.push(usersTopic);
+    metrics.push(usersTopic);
 
     // Organizations
     const organizationsCount =
@@ -81,8 +81,8 @@ export class MetadataService {
       organizationsCount.toString()
     );
     organizationsTopic.id = 'organizations';
-    activity.push(organizationsTopic);
+    metrics.push(organizationsTopic);
 
-    return activity;
+    return metrics;
   }
 }

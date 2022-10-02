@@ -283,13 +283,13 @@ export class HubResolverFields {
     return application;
   }
 
-  @ResolveField('activity', () => [INVP], {
+  @ResolveField('metrics', () => [INVP], {
     nullable: true,
-    description: 'The activity within this Hub.',
+    description: 'Metrics about activity within this Hub.',
   })
   @Profiling.api
-  async activity(@Parent() hub: Hub) {
-    return await this.hubService.getActivity(hub);
+  async metrics(@Parent() hub: Hub) {
+    return await this.hubService.getMetrics(hub);
   }
 
   @ResolveField('host', () => IOrganization, {
