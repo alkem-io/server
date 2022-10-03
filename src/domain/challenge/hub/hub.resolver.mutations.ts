@@ -233,7 +233,7 @@ export class HubResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       hub.authorization,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.CREATE_CHALLENGE,
       `challengeCreate: ${hub.nameID}`
     );
     const challenge = await this.hubService.createChallengeInHub(
