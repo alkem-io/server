@@ -30,6 +30,7 @@ import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -119,24 +120,9 @@ export class HubResolverFields {
   @Profiling.api
   async challenges(
     @Parent() hub: Hub,
-    @Args({
-      name: 'limit',
-      type: () => Float,
-      description:
-        'The number of Challenges to return; if omitted return all Challenges.',
-      nullable: true,
-    })
-    limit: number,
-    @Args({
-      name: 'shuffle',
-      type: () => Boolean,
-      description:
-        'If true and limit is specified then return the Challenges based on a random selection.',
-      nullable: true,
-    })
-    shuffle: boolean
+    @Args({ nullable: true }) args: LimitAndShuffleIdsQueryArgs
   ) {
-    return await this.hubService.getChallenges(hub, limit, shuffle);
+    return await this.hubService.getChallenges(hub, args);
   }
 
   @ResolveField('tagset', () => ITagset, {
