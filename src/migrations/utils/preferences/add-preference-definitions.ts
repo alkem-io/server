@@ -1,4 +1,3 @@
-import { PreferenceType } from '@common/enums/preference.type';
 import { QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
@@ -8,7 +7,7 @@ export type DefinitionInsertType = {
   displayName: string;
   description: string;
   valueType: string;
-  type: PreferenceType;
+  type: string;
 };
 
 export const addPreferenceDefinitions = async (
