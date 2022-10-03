@@ -159,13 +159,13 @@ export class OrganizationResolverFields {
     return await this.organizationService.getAgent(organization);
   }
 
-  @ResolveField('activity', () => [INVP], {
+  @ResolveField('metrics', () => [INVP], {
     nullable: true,
-    description: 'The activity within this Organization.',
+    description: 'Metrics about the activity within this Organization.',
   })
   @Profiling.api
-  async activity(@Parent() organization: Organization) {
-    return await this.organizationService.getActivity(organization);
+  async metrics(@Parent() organization: Organization) {
+    return await this.organizationService.getMetrics(organization);
   }
 
   @ResolveField('preferences', () => [IPreference], {

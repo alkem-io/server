@@ -324,22 +324,22 @@ export class OpportunityService {
     return hubID;
   }
 
-  async getActivity(opportunity: IOpportunity): Promise<INVP[]> {
-    const activity: INVP[] = [];
+  async getMetrics(opportunity: IOpportunity): Promise<INVP[]> {
+    const metrics: INVP[] = [];
     const community = await this.getCommunity(opportunity.id);
 
     // Members
     const membersCount = await this.communityService.getMembersCount(community);
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${opportunity.id}`;
-    activity.push(membersTopic);
+    metrics.push(membersTopic);
 
     // Projects
     const projectsCount =
       await this.projectService.getProjectsInOpportunityCount(opportunity.id);
     const projectsTopic = new NVP('projects', projectsCount.toString());
     projectsTopic.id = `projects-${opportunity.id}`;
-    activity.push(projectsTopic);
+    metrics.push(projectsTopic);
 
     // Relations
     const relationsCount = await this.baseChallengeService.getRelationsCount(
@@ -349,7 +349,7 @@ export class OpportunityService {
 
     const relationsTopic = new NVP('relations', relationsCount.toString());
     relationsTopic.id = `relations-${opportunity.id}`;
-    activity.push(relationsTopic);
+    metrics.push(relationsTopic);
 
     // Aspects
     const aspectsCount = await this.baseChallengeService.getAspectsCount(
@@ -358,7 +358,7 @@ export class OpportunityService {
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${opportunity.id}`;
-    activity.push(aspectsTopic);
+    metrics.push(aspectsTopic);
 
     // Canvases
     const canvasesCount = await this.baseChallengeService.getCanvasesCount(
@@ -367,9 +367,9 @@ export class OpportunityService {
     );
     const canvasesTopic = new NVP('canvases', canvasesCount.toString());
     canvasesTopic.id = `canvases-${opportunity.id}`;
-    activity.push(canvasesTopic);
+    metrics.push(canvasesTopic);
 
-    return activity;
+    return metrics;
   }
 
   async getOpportunitiesInHubCount(hubID: string): Promise<number> {

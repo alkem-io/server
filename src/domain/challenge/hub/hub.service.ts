@@ -679,8 +679,8 @@ export class HubService {
     return await this.projectService.getProjects(hub.id);
   }
 
-  async getActivity(hub: IHub): Promise<INVP[]> {
-    const activity: INVP[] = [];
+  async getMetrics(hub: IHub): Promise<INVP[]> {
+    const metrics: INVP[] = [];
 
     // Challenges
     const challengesCount = await this.challengeService.getChallengesInHubCount(
@@ -688,7 +688,7 @@ export class HubService {
     );
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     challengesTopic.id = `challenges-${hub.id}`;
-    activity.push(challengesTopic);
+    metrics.push(challengesTopic);
 
     const opportunitiesCount =
       await this.opportunityService.getOpportunitiesInHubCount(hub.id);
@@ -697,7 +697,7 @@ export class HubService {
       opportunitiesCount.toString()
     );
     opportunitiesTopic.id = `opportunities-${hub.id}`;
-    activity.push(opportunitiesTopic);
+    metrics.push(opportunitiesTopic);
 
     // Projects
     const projectsCount = await this.projectService.getProjectsInHubCount(
@@ -705,13 +705,13 @@ export class HubService {
     );
     const projectsTopic = new NVP('projects', projectsCount.toString());
     projectsTopic.id = `projects-${hub.id}`;
-    activity.push(projectsTopic);
+    metrics.push(projectsTopic);
 
     // Members
     const membersCount = await this.getMembersCount(hub);
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${hub.id}`;
-    activity.push(membersTopic);
+    metrics.push(membersTopic);
 
     // Aspects
     const aspectsCount = await this.baseChallengeService.getAspectsCount(
@@ -720,7 +720,7 @@ export class HubService {
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${hub.id}`;
-    activity.push(aspectsTopic);
+    metrics.push(aspectsTopic);
 
     // Canvases
     const canvasesCount = await this.baseChallengeService.getCanvasesCount(
@@ -729,9 +729,9 @@ export class HubService {
     );
     const canvasesTopic = new NVP('canvases', canvasesCount.toString());
     canvasesTopic.id = `canvases-${hub.id}`;
-    activity.push(canvasesTopic);
+    metrics.push(canvasesTopic);
 
-    return activity;
+    return metrics;
   }
 
   async getChallengesCount(hubID: string): Promise<number> {
