@@ -1,12 +1,11 @@
 import { QueryRunner } from 'typeorm';
-import { PreferenceType } from '@common/enums/preference.type';
 
 /***
  * Removes the definition and each preference and authorization per definition
  */
 export const removePreferences = async (
   queryRunner: QueryRunner,
-  definitionType: PreferenceType[]
+  definitionType: string[]
 ) => {
   const types = definitionType.map(x => `'${x}'`).join(',');
   const prefDefs: { id: string }[] = await queryRunner.query(

@@ -148,6 +148,7 @@ export class HubService {
     const defaults: Map<PreferenceType, string> = new Map();
     defaults.set(PreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE, 'true');
     defaults.set(PreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS, 'false');
+    defaults.set(PreferenceType.ALLOW_MEMBERS_TO_CREATE_CHALLENGES, 'false');
 
     return defaults;
   }
@@ -241,6 +242,16 @@ export class HubService {
     const result = await this.hubRepository.remove(hub as Hub);
     result.id = deleteData.ID;
     return result;
+  }
+
+  getVisibility(hub: IHub): HubVisibility {
+    if (!hub.visibility) {
+      throw new EntityNotInitializedException(
+        `HubVisibility not found for Hub: ${hub.id}`,
+        LogContext.CHALLENGES
+      );
+    }
+    return hub.visibility;
   }
 
   async getHubs(args: HubsQueryArgs): Promise<IHub[]> {
