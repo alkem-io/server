@@ -40,6 +40,7 @@ import { LifecycleTemplateService } from '@domain/template/lifecycle-template/li
 import { LifecycleType } from '@common/enums/lifecycle.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 import { HubVisibility } from '@common/enums/hub.visibility';
+import { NamingService } from '@services/domain/naming/naming.service';
 
 @Injectable()
 export class OpportunityService {
@@ -51,6 +52,7 @@ export class OpportunityService {
     private communityService: CommunityService,
     private userService: UserService,
     private agentService: AgentService,
+    private namingService: NamingService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -75,6 +77,16 @@ export class OpportunityService {
           LifecycleType.OPPORTUNITY
         );
     }
+
+    if (!opportunityData.nameID) {
+      opportunityData.nameID = this.namingService.createNameID(
+        opportunityData.displayName
+      );
+    }
+    await this.baseChallengeService.isNameAvailableOrFail(
+      opportunityData.nameID,
+      hubID
+    );
 
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
     opportunity.hubID = hubID;

@@ -56,6 +56,7 @@ import { LifecycleTemplateService } from '@domain/template/lifecycle-template/li
 import { LifecycleType } from '@common/enums/lifecycle.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 import { HubVisibility } from '@common/enums/hub.visibility';
+import { NamingService } from '@services/domain/naming/naming.service';
 
 @Injectable()
 export class ChallengeService {
@@ -70,6 +71,7 @@ export class ChallengeService {
     private organizationService: OrganizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
+    private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -93,6 +95,17 @@ export class ChallengeService {
           LifecycleType.CHALLENGE
         );
     }
+
+    if (!challengeData.nameID) {
+      challengeData.nameID = this.namingService.createNameID(
+        challengeData.displayName
+      );
+    }
+    await this.baseChallengeService.isNameAvailableOrFail(
+      challengeData.nameID,
+      hubID
+    );
+
     const challenge: IChallenge = Challenge.create(challengeData);
     challenge.hubID = hubID;
     challenge.childChallenges = [];
