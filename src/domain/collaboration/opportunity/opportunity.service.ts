@@ -8,15 +8,15 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import {
-  Opportunity,
-  IOpportunity,
   CreateOpportunityInput,
-  UpdateOpportunityInput,
+  IOpportunity,
+  Opportunity,
   opportunityCommunityPolicy,
+  UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-import { IProject, CreateProjectInput } from '@domain/collaboration/project';
+import { CreateProjectInput, IProject } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { ICommunity } from '@domain/community/community/community.interface';
@@ -62,11 +62,20 @@ export class OpportunityService {
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     // Validate incoming data
-    await this.lifecycleTemplateService.validateLifecycleDefinitionOrFail(
-      opportunityData.innovationFlowTemplateID,
-      hubID,
-      LifecycleType.OPPORTUNITY
-    );
+    if (opportunityData.innovationFlowTemplateID) {
+      await this.lifecycleTemplateService.validateLifecycleDefinitionOrFail(
+        opportunityData.innovationFlowTemplateID,
+        hubID,
+        LifecycleType.OPPORTUNITY
+      );
+    } else {
+      opportunityData.innovationFlowTemplateID =
+        await this.lifecycleTemplateService.getDefaultLifecycleTemplateId(
+          hubID,
+          LifecycleType.OPPORTUNITY
+        );
+    }
+
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
     opportunity.hubID = hubID;
     opportunity.projects = [];
@@ -99,17 +108,19 @@ export class OpportunityService {
       });
     }
 
-    const machineConfig: ILifecycleDefinition =
-      await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
-        opportunityData.innovationFlowTemplateID,
-        hubID,
-        LifecycleType.OPPORTUNITY
-      );
+    if (opportunityData.innovationFlowTemplateID) {
+      const machineConfig: ILifecycleDefinition =
+        await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
+          opportunityData.innovationFlowTemplateID,
+          hubID,
+          LifecycleType.OPPORTUNITY
+        );
 
-    opportunity.lifecycle = await this.lifecycleService.createLifecycle(
-      opportunity.id,
-      machineConfig
-    );
+      opportunity.lifecycle = await this.lifecycleService.createLifecycle(
+        opportunity.id,
+        machineConfig
+      );
+    }
 
     return await this.saveOpportunity(opportunity);
   }

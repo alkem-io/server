@@ -80,11 +80,19 @@ export class ChallengeService {
     hubID: string,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
-    await this.lifecycleTemplateService.validateLifecycleDefinitionOrFail(
-      challengeData.innovationFlowTemplateID,
-      hubID,
-      LifecycleType.CHALLENGE
-    );
+    if (challengeData.innovationFlowTemplateID) {
+      await this.lifecycleTemplateService.validateLifecycleDefinitionOrFail(
+        challengeData.innovationFlowTemplateID,
+        hubID,
+        LifecycleType.CHALLENGE
+      );
+    } else {
+      challengeData.innovationFlowTemplateID =
+        await this.lifecycleTemplateService.getDefaultLifecycleTemplateId(
+          hubID,
+          LifecycleType.CHALLENGE
+        );
+    }
     const challenge: IChallenge = Challenge.create(challengeData);
     challenge.hubID = hubID;
     challenge.childChallenges = [];
