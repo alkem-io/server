@@ -63,6 +63,18 @@ export class OrganizationVerificationAuthorizationService {
     );
     newRules.push(globalAdmin);
 
+    const hubsAdmin = new AuthorizationPolicyRuleCredential(
+      [
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ],
+      AuthorizationCredential.GLOBAL_ADMIN_HUBS
+    );
+    newRules.push(hubsAdmin);
+
     const communityAdmin = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.GRANT,
