@@ -13,7 +13,7 @@ import { IUserGroup } from '@domain/community/user-group';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
-import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationAgentPrivilege,
   CurrentUser,

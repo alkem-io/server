@@ -73,6 +73,8 @@ export class HubAuthorizationService {
         );
         break;
       case HubVisibility.ARCHIVED:
+        // ensure it has visibility privilege set to private
+        hub.authorization.anonymousReadAccess = false;
         break;
     }
 
