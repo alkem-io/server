@@ -68,7 +68,7 @@ export class ChallengeAuthorizationService {
       challenge.id
     );
     challenge.community.authorization =
-      await this.extendMembershipAuthorizationPolicy(
+      await this.extendCommunityAuthorizationPolicy(
         challenge.community.authorization,
         preferenceSet,
         parentCommunityCredential
@@ -157,6 +157,20 @@ export class ChallengeAuthorizationService {
     );
     rules.push(challengeMember);
 
+    const updateInnovationFlowRule = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
+      AuthorizationCredential.GLOBAL_ADMIN
+    );
+    updateInnovationFlowRule.inheritable = false;
+    rules.push(updateInnovationFlowRule);
+
+    const updateInnovationFlowRuleHubs = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
+      AuthorizationCredential.GLOBAL_ADMIN_HUBS
+    );
+    updateInnovationFlowRuleHubs.inheritable = false;
+    rules.push(updateInnovationFlowRuleHubs);
+
     return rules;
   }
 
@@ -198,7 +212,7 @@ export class ChallengeAuthorizationService {
     return rules;
   }
 
-  private extendMembershipAuthorizationPolicy(
+  private extendCommunityAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
     challengePreferenceSet: IPreferenceSet,
     parentCommunityCredential: CredentialDefinition
@@ -240,13 +254,6 @@ export class ChallengeAuthorizationService {
       hubMemberCanJoin.inheritable = false;
       newRules.push(hubMemberCanJoin);
     }
-
-    const updateInnovationFlowRule = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
-      AuthorizationCredential.GLOBAL_ADMIN
-    );
-    updateInnovationFlowRule.inheritable = false;
-    newRules.push(updateInnovationFlowRule);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,

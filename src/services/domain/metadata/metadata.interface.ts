@@ -14,5 +14,5 @@ export abstract class IMetadata {
     nullable: false,
     description: 'Metrics about the activity on the platform',
   })
-  activity?: INVP[];
+  metrics?: INVP[];
 }
