@@ -1,5 +1,5 @@
 import { ValueProvider } from '@nestjs/common';
-import { HubFilterService } from '@services/domain/hub-filter/hub.filter.service';
+import { HubFilterService } from '@services/infrastructure/hub-filter/hub.filter.service';
 import { PublicPart } from '../utils/public-part';
 
 export const MockHubFilterService: ValueProvider<PublicPart<HubFilterService>> =
