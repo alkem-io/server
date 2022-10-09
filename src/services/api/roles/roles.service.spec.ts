@@ -17,7 +17,7 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import { ApplicationService } from '@domain/community/application/application.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { CommunityService } from '@domain/community/community/community.service';
-import { HubFilterService } from '../hub-filter/hub.filter.service';
+import { HubFilterService } from '@services/infrastructure/hub-filter/hub.filter.service';
 import { asyncToThrow, testData } from '@test/utils';
 import { RelationshipNotFoundException } from '@common/exceptions';
 
