@@ -7,7 +7,7 @@ import { User } from '@domain/community/user';
 import { UserResolverFields } from './user.resolver.fields';
 import { UserResolverMutations } from './user.resolver.mutations';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { NamingModule } from '@src/services/domain/naming/naming.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { UserAuthorizationService } from './user.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';

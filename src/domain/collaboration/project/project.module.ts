@@ -6,7 +6,7 @@ import { ProjectService } from './project.service';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { ProjectLifecycleOptionsProvider } from './project.lifecycle.options.provider';
 import { ProjectResolverFields } from './project.resolver.fields';
-import { NamingModule } from '@src/services/domain/naming/naming.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 

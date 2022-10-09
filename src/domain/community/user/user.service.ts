@@ -43,7 +43,7 @@ import { FindOneOptions, In, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { KonfigService } from '@src/platform/configuration/config/config.service';
 import { IUserTemplate } from '@src/platform/configuration';
-import { NamingService } from '@services/domain/naming/naming.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';

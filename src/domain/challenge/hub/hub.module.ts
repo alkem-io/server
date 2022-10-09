@@ -15,7 +15,7 @@ import { UserGroupModule } from '@domain/community/user-group/user-group.module'
 import { ApplicationModule } from '@domain/community/application/application.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
-import { NamingModule } from '@src/services/domain/naming/naming.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { HubAuthorizationService } from '@domain/challenge/hub/hub.service.authorization';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
@@ -26,7 +26,7 @@ import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
-import { HubFilterModule } from '@services/domain/hub-filter/hub.filter.module';
+import { HubFilterModule } from '@services/infrastructure/hub-filter/hub.filter.module';
 
 @Module({
   imports: [

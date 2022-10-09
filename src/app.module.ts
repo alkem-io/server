@@ -37,13 +37,13 @@ import {
   SubscriptionsTransportWsWebsocket,
   WebsocketContext,
 } from '@src/types';
-import { RegistrationModule } from '@services/domain/registration/registration.module';
+import { RegistrationModule } from '@services/api/registration/registration.module';
 import { RolesModule } from '@services/api/roles/roles.module';
 import { DataloaderService } from '@core/dataloader/dataloader.service';
 import { DataloaderModule } from '@core/dataloader/dataloader.module';
 import * as redisStore from 'cache-manager-redis-store';
 import { RedisLockModule } from '@core/caching/redis/redis.lock.module';
-import { ConversionModule } from '@services/domain/conversion/conversion.module';
+import { ConversionModule } from '@services/api/conversion/conversion.module';
 import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
 

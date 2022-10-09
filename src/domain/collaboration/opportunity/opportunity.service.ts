@@ -40,7 +40,7 @@ import { LifecycleTemplateService } from '@domain/template/lifecycle-template/li
 import { LifecycleType } from '@common/enums/lifecycle.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 import { HubVisibility } from '@common/enums/hub.visibility';
-import { NamingService } from '@services/domain/naming/naming.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Injectable()
 export class OpportunityService {
