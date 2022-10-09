@@ -7,7 +7,7 @@ import {
 import { Disposable } from '@interfaces/disposable.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { OnModuleDestroy, OnModuleInit } from '@nestjs/common/interfaces';
-import { MatrixUserManagementService } from '@src/services/platform/matrix/management/matrix.user.management.service';
+import { MatrixUserManagementService } from '@services/external/matrix/management/matrix.user.management.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixAgent } from '../agent/matrix.agent';
 import { MatrixAgentService } from '../agent/matrix.agent.service';

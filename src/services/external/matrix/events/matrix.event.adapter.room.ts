@@ -5,7 +5,7 @@ import { MatrixRoomInvitationReceived } from '@services/platform/communication-a
 import {
   IMatrixEventHandler,
   RoomTimelineEvent,
-} from '@src/services/platform/matrix/events/matrix.event.dispatcher';
+} from '@services/external/matrix/events/matrix.event.dispatcher';
 import { MatrixMessageAdapter } from '../adapter-message/matrix.message.adapter';
 import { MatrixRoom } from '../adapter-room/matrix.room';
 import { MatrixRoomAdapter } from '../adapter-room/matrix.room.adapter';

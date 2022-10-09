@@ -8,13 +8,13 @@ import {
   roomMembershipLeaveGuardFactory,
   RoomMonitorFactory,
   RoomTimelineMonitorFactory,
-} from '@services/platform/matrix/events/matrix.event.adapter.room';
-import { AutoAcceptGroupMembershipMonitorFactory } from '@src/services/platform/matrix/events/matrix.event.adapter.group';
+} from '@services/external/matrix/events/matrix.event.adapter.room';
+import { AutoAcceptGroupMembershipMonitorFactory } from '@services/external/matrix/events/matrix.event.adapter.group';
 import {
   IConditionalMatrixEventHandler,
   IMatrixEventHandler,
   MatrixEventDispatcher,
-} from '@src/services/platform/matrix/events/matrix.event.dispatcher';
+} from '@services/external/matrix/events/matrix.event.dispatcher';
 import { MatrixMessageAdapter } from '../adapter-message/matrix.message.adapter';
 import { MatrixRoomAdapter } from '../adapter-room/matrix.room.adapter';
 import { MatrixClient } from '../types/matrix.client.type';

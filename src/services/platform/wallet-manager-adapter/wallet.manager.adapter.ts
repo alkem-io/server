@@ -4,7 +4,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { WALLET_MANAGEMENT_SERVICE } from '@common/constants';
 import { WalletManagerCommand } from '@common/enums/wallet.manager.command';
 import { firstValueFrom } from 'rxjs';
-import { TrustRegistryAdapter } from '../trust-registry/trust.registry.adapter/trust.registry.adapter';
+import { TrustRegistryAdapter } from '@services/external/trust-registry/trust.registry.adapter/trust.registry.adapter';
 import { LogContext } from '@common/enums';
 import { WalletManagerRequestVcCompleteResponse } from './dto/wallet.manager.dto.request.vc.complete.response';
 import { WalletManagerOfferVcBeginResponse } from './dto/wallet.manager.dto.offer.vc.begin.response';
@@ -23,7 +23,7 @@ import { WalletManagerVerifiedCredential } from './dto/wallet.manager.dto.verifi
 import { WalletManagerGetAgentInfoResponse } from './dto/wallet.manager.dto.get.agent.info.response';
 import { WalletManagerRequestVcBegin } from './dto/wallet.manager.dto.request.vc.begin';
 import { WalletManagerRequestVcCompleteSovrhd } from './dto/wallet.manager.dto.request.vc.complete.sovrhd';
-import { TrustRegistryCredentialMetadata } from '../trust-registry/trust.registry.configuration/trust.registry.dto.credential.metadata';
+import { TrustRegistryCredentialMetadata } from '@services/external/trust-registry/trust.registry.configuration/trust.registry.dto.credential.metadata';
 
 @Injectable()
 export class WalletManagerAdapter {

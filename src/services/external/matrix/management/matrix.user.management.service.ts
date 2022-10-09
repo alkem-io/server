@@ -3,7 +3,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from 'matrix-js-sdk/lib';
-import { MatrixCryptographyService } from '@src/services/platform/matrix/cryptography/matrix.cryptography.service';
+import { MatrixCryptographyService } from '@services/external/matrix/cryptography/matrix.cryptography.service';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { MatrixUserAdapter } from '../adapter-user/matrix.user.adapter';
 import { CommunicationsSynapseEndpoint } from '@common/enums/communications.synapse.endpoint';

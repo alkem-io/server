@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { MatrixUserManagementModule } from '@src/services/platform/matrix/management/matrix.user.management.module';
+import { MatrixUserManagementModule } from '@services/external/matrix/management/matrix.user.management.module';
 import { MatrixGroupAdapterModule } from '../adapter-group/matrix.group.adapter.module';
 import { MatrixMessageAdapterModule } from '../adapter-message/matrix.message.adapter.module';
 import { MatrixRoomAdapterModule } from '../adapter-room/matrix.room.adapter.module';
