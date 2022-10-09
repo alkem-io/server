@@ -1,8 +1,8 @@
 import { User } from '@domain/community/user/user.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Discussion } from '../discussion/discussion.entity';
-import { Updates } from '../updates/updates.entity';
+import { Discussion } from '@domain/communication/discussion/discussion.entity';
+import { Updates } from '@domain/communication/updates/updates.entity';
 import { IdentityResolverService } from './identity.resolver.service';
 
 @Module({

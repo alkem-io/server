@@ -2,7 +2,7 @@ import { LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IdentityResolverService } from '../identity-resolver/identity.resolver.service';
+import { IdentityResolverService } from '@services/infrastructure/identity-resolver/identity.resolver.service';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 import { CommunicationRoomResult } from './dto/communication.dto.room.result';
 import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';

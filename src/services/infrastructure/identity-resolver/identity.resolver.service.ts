@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '@domain/community/user/user.entity';
-import { Discussion } from '../discussion/discussion.entity';
-import { Updates } from '../updates/updates.entity';
+import { Discussion } from '@domain/communication/discussion/discussion.entity';
+import { Updates } from '@domain/communication/updates/updates.entity';
 
 @Injectable()
 export class IdentityResolverService {

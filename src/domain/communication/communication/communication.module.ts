@@ -10,7 +10,7 @@ import { CommunicationAuthorizationService } from './communication.service.autho
 import { DiscussionModule } from '../discussion/discussion.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { UpdatesModule } from '../updates/updates.module';
-import { IdentityResolverModule } from '../identity-resolver/identity.resolver.module';
+import { IdentityResolverModule } from '@services/infrastructure/identity-resolver/identity.resolver.module';
 import { CommunicationResolverSubscriptions } from './communication.resolver.subscriptions';
 import { RoomModule } from '../room/room.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
