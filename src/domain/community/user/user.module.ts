@@ -15,7 +15,7 @@ import { CommunicationAdapterModule } from '@services/platform/communication-ada
 import { IdentityResolverModule } from '@domain/communication/identity-resolver/identity.resolver.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
-import { KonfigModule } from '@services/platform/configuration/config/config.module';
+import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { ConfigModule } from '@nestjs/config';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PreferenceModule } from '@domain/common/preference';

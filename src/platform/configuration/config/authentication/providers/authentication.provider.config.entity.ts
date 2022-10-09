@@ -5,7 +5,8 @@ import { OryConfig } from './ory/ory.config.entity';
 
 @ObjectType()
 export class AuthenticationProviderConfig
-  implements IAuthenticationProviderConfig {
+  implements IAuthenticationProviderConfig
+{
   @Field(() => String, {
     nullable: false,
     description: 'Name of the authentication provider.',

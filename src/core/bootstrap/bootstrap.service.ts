@@ -22,7 +22,7 @@ import {
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AdminAuthorizationService } from '@services/admin/authorization/admin.authorization.service';
+import { AdminAuthorizationService } from '@platform/admin/authorization/admin.authorization.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 
 @Injectable()

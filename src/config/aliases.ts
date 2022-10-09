@@ -12,6 +12,7 @@ moduleAlias.addAliases({
   '@common': path.join(rootCommonPath),
   '@core': path.join(rootCorePath),
   '@config': path.join(rootCorePath, 'config'),
+  '@platform': path.join(rootCorePath, 'platform'),
   '@templates': path.join(rootServicesPath, 'configuration', 'templates'),
   '@src': rootPath,
 });

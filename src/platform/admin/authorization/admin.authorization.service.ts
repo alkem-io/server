@@ -11,11 +11,11 @@ import {
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AssignGlobalAdminInput } from '@services/admin/authorization/dto/authorization.dto.assign.global.admin';
-import { RemoveGlobalAdminInput } from '@services/admin/authorization/dto/authorization.dto.remove.global.admin';
-import { AssignGlobalCommunityAdminInput } from '@services/admin/authorization/dto/authorization.dto.assign.global.community.admin';
-import { RemoveGlobalCommunityAdminInput } from '@services/admin/authorization/dto/authorization.dto.remove.global.community.admin';
-import { UserAuthorizationPrivilegesInput } from '@services/admin/authorization/dto/authorization.dto.user.authorization.privileges';
+import { AssignGlobalAdminInput } from '@platform/admin/authorization/dto/authorization.dto.assign.global.admin';
+import { RemoveGlobalAdminInput } from '@platform/admin/authorization/dto/authorization.dto.remove.global.admin';
+import { AssignGlobalCommunityAdminInput } from '@platform/admin/authorization/dto/authorization.dto.assign.global.community.admin';
+import { RemoveGlobalCommunityAdminInput } from '@platform/admin/authorization/dto/authorization.dto.remove.global.community.admin';
+import { UserAuthorizationPrivilegesInput } from '@platform/admin/authorization/dto/authorization.dto.user.authorization.privileges';
 import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
 import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke';
 import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.users.with.credential';

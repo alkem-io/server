@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { QuestionTemplate } from '@src/services/platform/configuration/config/template/question.template.entity';
+import { QuestionTemplate } from '@src/platform/configuration/config/template/question.template.entity';
 
 @ObjectType()
 export class ApplicationTemplate {
