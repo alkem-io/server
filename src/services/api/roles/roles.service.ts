@@ -32,7 +32,7 @@ import { IApplication } from '@domain/community';
 import { isCommunity, isOrganization } from '@common/utils/groupable.util';
 import { RolesResultCommunity } from './dto/roles.dto.result.community';
 import { HubVisibility } from '@common/enums/hub.visibility';
-import { HubFilterService } from '../hub-filter/hub.filter.service';
+import { HubFilterService } from '@services/domain/hub-filter/hub.filter.service';
 
 export type UserGroupResult = {
   userGroup: IUserGroup;
