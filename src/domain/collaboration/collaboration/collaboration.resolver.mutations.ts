@@ -16,11 +16,11 @@ import { ICallout } from '../callout/callout.interface';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
 import { ICollaboration } from './collaboration.interface';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
-import { ActivityInputCalloutPublished } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.published';
-import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
-import { NotificationInputCollaborationInterest } from '@services/platform/notification-adapter/dto/notification.dto.input.collaboration.interest';
-import { NotificationInputCalloutPublished } from '@services/platform/notification-adapter/dto/notification.dto.input.callout.published';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { NotificationInputCollaborationInterest } from '@services/adapters/notification-adapter/dto/notification.dto.input.collaboration.interest';
+import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
 
 @Resolver()
 export class CollaborationResolverMutations {

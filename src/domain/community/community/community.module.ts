@@ -8,8 +8,8 @@ import { UserGroupModule } from '@domain/community/user-group/user-group.module'
 import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ActivityAdapterModule } from '@services/platform/activity-adapter/activity.adapter.module';
-import { NotificationAdapterModule } from '@services/platform/notification-adapter/notification.adapter.module';
+import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
+import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { TrustRegistryAdapterModule } from '@services/external/trust-registry/trust.registry.adapter/trust.registry.adapter.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { Community } from './community.entity';

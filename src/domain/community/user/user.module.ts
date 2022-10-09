@@ -11,7 +11,7 @@ import { NamingModule } from '@src/services/domain/naming/naming.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { UserAuthorizationService } from './user.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { CommunicationAdapterModule } from '@services/platform/communication-adapter/communication-adapter.module';
+import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { IdentityResolverModule } from '@domain/communication/identity-resolver/identity.resolver.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
@@ -21,7 +21,7 @@ import { PreferenceSetModule } from '@domain/common/preference-set/preference.se
 import { PreferenceModule } from '@domain/common/preference';
 import { UserDataloaderService } from './user.dataloader.service';
 import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
-import { NotificationAdapterModule } from '@services/platform/notification-adapter/notification.adapter.module';
+import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 
 @Module({
   imports: [

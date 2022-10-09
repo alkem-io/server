@@ -10,7 +10,7 @@ import { IUpdates } from './updates.interface';
 import { CommunicationRoomResult } from '../room/dto/communication.dto.room.result';
 import { RoomRemoveMessageInput } from '../room/dto/room.dto.remove.message';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
-import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 

@@ -2,7 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CommunicationAdminMembershipInput } from './dto';
 import { LogContext } from '@common/enums';
-import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { CommunicationAdminMembershipResult } from './dto/admin.communication.dto.membership.result';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';

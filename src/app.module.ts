@@ -28,7 +28,7 @@ import { WinstonConfigService } from '@src/config/winston.config';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { SearchModule } from '@services/api/search/search.module';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
-import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
+import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
 import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';

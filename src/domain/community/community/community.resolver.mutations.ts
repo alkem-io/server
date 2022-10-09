@@ -34,10 +34,10 @@ import { RemoveCommunityLeadOrganizationInput } from './dto/community.dto.remove
 import { RemoveCommunityLeadUserInput } from './dto/community.dto.remove.lead.user';
 import { CommunityRole } from '@common/enums/community.role';
 import { AssignCommunityLeadUserInput } from './dto/community.dto.assign.lead.user';
-import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
-import { NotificationInputCommunityApplication } from '@services/platform/notification-adapter/dto/notification.dto.input.community.application';
-import { NotificationInputCommunityNewMember } from '@services/platform/notification-adapter/dto/notification.dto.input.community.new.member';
-import { NotificationInputCommunityContextReview } from '@services/platform/notification-adapter/dto/notification.dto.input.community.context.review';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
+import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';
+import { NotificationInputCommunityContextReview } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.context.review';
 
 @Resolver()
 export class CommunityResolverMutations {

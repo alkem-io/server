@@ -13,8 +13,8 @@ import { CollaborationDataloaderService } from './collaboration.dataloader.servi
 import { CollaborationAuthorizationService } from './collaboration.service.authorization';
 import { CanvasModule } from '@domain/common/canvas/canvas.module';
 import { AspectModule } from '../aspect/aspect.module';
-import { ActivityAdapterModule } from '@services/platform/activity-adapter/activity.adapter.module';
-import { NotificationAdapterModule } from '@services/platform/notification-adapter/notification.adapter.module';
+import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
+import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 
 @Module({
   imports: [

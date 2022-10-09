@@ -8,7 +8,7 @@ import { TrustRegistryConfigurationAdapter } from '../trust.registry.configurati
 import { IClaim } from '../trust.registry.claim/claim.interface';
 import { TrustRegistryClaimService } from '../trust.registry.claim/trust.registry.claim.service';
 import { SsiVcNotVerifiable } from '@common/exceptions/ssi.vc.not.verifiable';
-import { WalletManagerCredentialOfferMetadata } from '@services/platform/wallet-manager-adapter/dto/wallet.manager.dto.credential.offer.metadata';
+import { WalletManagerCredentialOfferMetadata } from '@services/adapters/wallet-manager-adapter/dto/wallet.manager.dto.credential.offer.metadata';
 import { SsiCredentialTypeNotSupported } from '@common/exceptions/ssi.credential.type.not.supported';
 import { SsiIssuerType } from '@common/enums/ssi.issuer.type';
 

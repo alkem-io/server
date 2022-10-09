@@ -8,7 +8,7 @@ import { IDiscussion } from './discussion.interface';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
 import { CommunicationRoomResult } from '../room/dto/communication.dto.room.result';
-import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { RoomService } from '../room/room.service';
 import { CommunicationCreateDiscussionInput } from '../communication/dto/communication.dto.create.discussion';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';

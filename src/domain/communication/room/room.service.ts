@@ -1,6 +1,6 @@
 import { LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IdentityResolverService } from '../identity-resolver/identity.resolver.service';
 import { CommunicationMessageResult } from '../message/communication.dto.message.result';

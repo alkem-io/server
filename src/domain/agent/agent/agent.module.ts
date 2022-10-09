@@ -10,8 +10,8 @@ import { TrustRegistryAdapterModule } from '@services/external/trust-registry/tr
 import { AgentResolverMutations } from './agent.resolver.mutations';
 import { VerifiedCredentialModule } from '../verified-credential/verified.credential.module';
 import { AgentResolverSubscriptions } from '@domain/agent/agent/agent.resolver.subscriptions';
-import { SsiSovrhdAdapterModule } from '@services/platform/ssi-sovrhd/ssi.sovrhd.adapter.module';
-import { WalletManagerAdapterModule } from '@services/platform/wallet-manager-adapter/wallet.manager.adapter.module';
+import { SsiSovrhdAdapterModule } from '@services/adapters/ssi-sovrhd/ssi.sovrhd.adapter.module';
+import { WalletManagerAdapterModule } from '@services/adapters/wallet-manager-adapter/wallet.manager.adapter.module';
 import { AgentCacheService } from './agent.cache.service';
 
 @Module({

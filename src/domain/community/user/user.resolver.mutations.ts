@@ -15,15 +15,15 @@ import { AgentInfo } from '@core/authentication';
 import { UserAuthorizationService } from './user.service.authorization';
 import { UserSendMessageInput } from './dto/user.dto.communication.message.send';
 import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization';
-import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceService } from '@domain/common/preference';
 import { UpdateUserPreferenceInput } from './dto/user.dto.update.preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
-import { NotificationInputUserRegistered } from '@services/platform/notification-adapter/dto/notification.dto.input.user.registered';
-import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
+import { NotificationInputUserRegistered } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.registered';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {

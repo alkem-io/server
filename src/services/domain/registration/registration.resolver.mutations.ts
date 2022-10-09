@@ -9,8 +9,8 @@ import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { RegistrationService } from './registration.service';
-import { NotificationInputUserRegistered } from '@services/platform/notification-adapter/dto/notification.dto.input.user.registered';
-import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
+import { NotificationInputUserRegistered } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.registered';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 
 @Resolver()
 export class RegistrationResolverMutations {
