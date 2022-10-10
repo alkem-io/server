@@ -73,6 +73,12 @@ export class AuthorizationPolicyService {
     );
   }
 
+  async save(
+    authorizationPolicy: IAuthorizationPolicy
+  ): Promise<IAuthorizationPolicy> {
+    return await this.authorizationPolicyRepository.save(authorizationPolicy);
+  }
+
   validateAuthorization(
     authorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
