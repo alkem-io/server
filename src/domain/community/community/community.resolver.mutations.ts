@@ -22,9 +22,9 @@ import { ApplicationAuthorizationService } from '../application/application.serv
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityJoinInput } from './dto/community.dto.join';
 import { CommunityApplyInput } from './dto/community.dto.apply';
-import { CommunityMemberClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.community.member';
+import { CommunityMemberClaim } from '@services/external/trust-registry/trust.registry.claim/claim.community.member';
 import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto/agent.dto.verified.credential.offer.begin.output';
-import { AlkemioUserClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.alkemio.user';
+import { AlkemioUserClaim } from '@services/external/trust-registry/trust.registry.claim/claim.alkemio.user';
 import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 import { CreateUserGroupInput } from '../user-group/dto';
 import { AssignCommunityMemberOrganizationInput } from './dto/community.dto.assign.member.organization';
@@ -34,10 +34,10 @@ import { RemoveCommunityLeadOrganizationInput } from './dto/community.dto.remove
 import { RemoveCommunityLeadUserInput } from './dto/community.dto.remove.lead.user';
 import { CommunityRole } from '@common/enums/community.role';
 import { AssignCommunityLeadUserInput } from './dto/community.dto.assign.lead.user';
-import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
-import { NotificationInputCommunityApplication } from '@services/platform/notification-adapter/dto/notification.dto.input.community.application';
-import { NotificationInputCommunityNewMember } from '@services/platform/notification-adapter/dto/notification.dto.input.community.new.member';
-import { NotificationInputCommunityContextReview } from '@services/platform/notification-adapter/dto/notification.dto.input.community.context.review';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
+import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';
+import { NotificationInputCommunityContextReview } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.context.review';
 
 @Resolver()
 export class CommunityResolverMutations {

@@ -1,5 +1,5 @@
 import { ValueProvider } from '@nestjs/common';
-import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { PublicPart } from '../utils/public-part';
 
 export const MockNotificationAdapter: ValueProvider<

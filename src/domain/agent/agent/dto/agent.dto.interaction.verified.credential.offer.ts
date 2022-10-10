@@ -1,5 +1,5 @@
 import { SsiIssuerType } from '@common/enums/ssi.issuer.type';
-import { WalletManagerCredentialOfferMetadata } from '@services/platform/wallet-manager-adapter/dto/wallet.manager.dto.credential.offer.metadata';
+import { WalletManagerCredentialOfferMetadata } from '@services/adapters/wallet-manager-adapter/dto/wallet.manager.dto.credential.offer.metadata';
 import { IAgent } from '../agent.interface';
 
 export class AgentInteractionVerifiedCredentialOffer {

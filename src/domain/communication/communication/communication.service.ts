@@ -15,7 +15,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { ConfigService } from '@nestjs/config';
 import { IDiscussion } from '../discussion/discussion.interface';
 import { DiscussionService } from '../discussion/discussion.service';
-import { CommunicationAdapter } from '@services/platform/communication-adapter/communication.adapter';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { IUser } from '@domain/community/user/user.interface';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
 import { UpdatesService } from '../updates/updates.service';
