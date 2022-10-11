@@ -9,7 +9,7 @@ import { OrganizationResolverFields } from './organization.resolver.fields';
 import { ProfileModule } from '@domain/community/profile/profile.module';
 import { OrganizationResolverQueries } from './organization.resolver.queries';
 import { UserModule } from '@domain/community/user/user.module';
-import { NamingModule } from '@src/services/domain/naming/naming.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { OrganizationAuthorizationService } from './organization.service.authorization';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';

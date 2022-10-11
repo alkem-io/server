@@ -18,7 +18,7 @@ import { DeleteProjectInput } from './project.dto.delete';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { UUID_LENGTH } from '@common/constants';
-import { NamingService } from '@src/services/domain/naming/naming.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()

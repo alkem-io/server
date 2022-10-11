@@ -16,7 +16,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { UserModule } from '@domain/community/user/user.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { LifecycleTemplateModule } from '@domain/template/lifecycle-template/lifecycle.template.module';
-import { NamingModule } from '@services/domain/naming/naming.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
   imports: [

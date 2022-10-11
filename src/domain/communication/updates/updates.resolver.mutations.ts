@@ -18,8 +18,8 @@ import { SUBSCRIPTION_UPDATE_MESSAGE } from '@common/constants/providers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { getRandomId } from '@src/common';
-import { NotificationInputUpdateSent } from '@services/platform/notification-adapter/dto/notification.dto.input.update.sent';
-import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
+import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/notification.dto.input.update.sent';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 
 @Resolver()
 export class UpdatesResolverMutations {

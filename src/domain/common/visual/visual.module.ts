@@ -5,7 +5,7 @@ import { AuthorizationPolicyModule } from '../authorization-policy/authorization
 import { Visual } from './visual.entity';
 import { VisualResolverMutations } from './visual.resolver.mutations';
 import { VisualService } from './visual.service';
-import { IpfsModule } from '@services/platform/ipfs/ipfs.module';
+import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
 
 @Module({
   imports: [

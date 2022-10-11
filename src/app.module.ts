@@ -21,14 +21,14 @@ import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { AdminCommunicationModule } from '@services/admin/communication/admin.communication.module';
+import { AdminCommunicationModule } from '@platform/admin/communication/admin.communication.module';
 import { AppController } from '@src/app.controller';
 import { AppService } from '@src/app.service';
 import { WinstonConfigService } from '@src/config/winston.config';
-import { MetadataModule } from '@src/services/domain/metadata/metadata.module';
-import { SearchModule } from '@src/services/domain/search/search.module';
-import { KonfigModule } from '@src/services/platform/configuration/config/config.module';
-import { IpfsModule } from '@src/services/platform/ipfs/ipfs.module';
+import { MetadataModule } from '@src/platform/metadata/metadata.module';
+import { SearchModule } from '@services/api/search/search.module';
+import { KonfigModule } from '@src/platform/configuration/config/config.module';
+import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
 import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
@@ -37,15 +37,15 @@ import {
   SubscriptionsTransportWsWebsocket,
   WebsocketContext,
 } from '@src/types';
-import { RegistrationModule } from '@services/domain/registration/registration.module';
-import { RolesModule } from '@services/domain/roles/roles.module';
+import { RegistrationModule } from '@services/api/registration/registration.module';
+import { RolesModule } from '@services/api/roles/roles.module';
 import { DataloaderService } from '@core/dataloader/dataloader.service';
 import { DataloaderModule } from '@core/dataloader/dataloader.module';
 import * as redisStore from 'cache-manager-redis-store';
 import { RedisLockModule } from '@core/caching/redis/redis.lock.module';
-import { ConversionModule } from '@services/domain/conversion/conversion.module';
+import { ConversionModule } from '@services/api/conversion/conversion.module';
 import { SessionExtendMiddleware } from '@src/core/middleware';
-import { ActivityLogModule } from '@services/domain/activity-log/activity.log.module';
+import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
 
 @Module({
   imports: [

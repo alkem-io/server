@@ -21,9 +21,10 @@
       "@config/*": ["src/config/*"],
       "@common/*": ["src/common/*"],
       "@core/*": ["src/core/*"],
+      "@platform/*": ["src/platform/*"],
       "@services/*": ["src/services/*"],
       "@constants/*": ["src/common/constants/*"],
-      "@templates/*": ["src/services/platform/configuration/templates/*"],
+      "@templates/*": ["src/platform/configuration/templates/*"],
       "@src/*": ["src/*"],
       "@test/*": ["test/*"]
     }

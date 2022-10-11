@@ -26,7 +26,7 @@ import { OrganizationService } from '@domain/community/organization/organization
 import { IUserGroup } from '@domain/community/user-group';
 import { IContext } from '@domain/context/context';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { NamingService } from '@src/services/domain/naming/naming.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { challengeLifecycleConfigDefault } from '@domain/template/templates-set/templates.set.default.lifecycle.challenge';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -60,7 +60,7 @@ import { LifecycleType } from '@common/enums/lifecycle.type';
 import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
 import { HubsQueryArgs } from './dto/hub.args.query.hubs';
 import { HubVisibility } from '@common/enums/hub.visibility';
-import { HubFilterService } from '@services/domain/hub-filter/hub.filter.service';
+import { HubFilterService } from '@services/infrastructure/hub-filter/hub.filter.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 
 @Injectable()

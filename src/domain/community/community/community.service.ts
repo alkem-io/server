@@ -37,8 +37,8 @@ import { CommunityContributorType } from '@common/enums/community.contributor.ty
 import { CommunityPolicy } from '../community-policy/community.policy';
 import { ICommunityPolicyRole } from '../community-policy/community.policy.role.interface';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
-import { ActivityInputMemberJoined } from '@services/platform/activity-adapter/dto/activity.dto.input.member.joined';
-import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
+import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/dto/activity.dto.input.member.joined';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 
 @Injectable()
 export class CommunityService {

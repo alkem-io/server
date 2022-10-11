@@ -34,16 +34,16 @@ import {
 import { CommentsService } from '@domain/communication/comments/comments.service';
 import { SendMessageOnCalloutInput } from './dto/callout.args.message.created';
 import { CalloutType } from '@common/enums/callout.type';
-import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
-import { ActivityInputAspectCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.created';
-import { ActivityInputCalloutPublished } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.published';
-import { ActivityInputCanvasCreated } from '@services/platform/activity-adapter/dto/activity.dto.input.canvas.created';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { ActivityInputAspectCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.aspect.created';
+import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
+import { ActivityInputCanvasCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.canvas.created';
 import { CalloutMessageReceivedPayload } from './dto/callout.message.received.payload';
-import { ActivityInputCalloutDiscussionComment } from '@services/platform/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
+import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
-import { NotificationInputAspectCreated } from '@services/platform/notification-adapter/dto/notification.dto.input.aspect.created';
-import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
-import { NotificationInputCalloutPublished } from '@services/platform/notification-adapter/dto/notification.dto.input.callout.published';
+import { NotificationInputAspectCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.aspect.created';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
 
 @Resolver()
 export class CalloutResolverMutations {

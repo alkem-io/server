@@ -20,8 +20,8 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { CommunicationDiscussionUpdated } from './dto/communication.dto.event.discussion.updated';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
-import { NotificationInputDiscussionCreated } from '@services/platform/notification-adapter/dto/notification.dto.input.discussion.created';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { NotificationInputDiscussionCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.created';
 
 @Resolver()
 export class CommunicationResolverMutations {
