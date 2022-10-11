@@ -56,6 +56,7 @@ import { LifecycleTemplateService } from '@domain/template/lifecycle-template/li
 import { LifecycleType } from '@common/enums/lifecycle.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 import { HubVisibility } from '@common/enums/hub.visibility';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Injectable()
 export class ChallengeService {
@@ -70,6 +71,7 @@ export class ChallengeService {
     private organizationService: OrganizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
+    private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -80,11 +82,30 @@ export class ChallengeService {
     hubID: string,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
-    await this.lifecycleTemplateService.validateLifecycleDefinitionOrFail(
-      challengeData.innovationFlowTemplateID,
-      hubID,
-      LifecycleType.CHALLENGE
+    if (challengeData.innovationFlowTemplateID) {
+      await this.lifecycleTemplateService.validateLifecycleDefinitionOrFail(
+        challengeData.innovationFlowTemplateID,
+        hubID,
+        LifecycleType.CHALLENGE
+      );
+    } else {
+      challengeData.innovationFlowTemplateID =
+        await this.lifecycleTemplateService.getDefaultLifecycleTemplateId(
+          hubID,
+          LifecycleType.CHALLENGE
+        );
+    }
+
+    if (!challengeData.nameID) {
+      challengeData.nameID = this.namingService.createNameID(
+        challengeData.displayName
+      );
+    }
+    await this.baseChallengeService.isNameAvailableOrFail(
+      challengeData.nameID,
+      hubID
     );
+
     const challenge: IChallenge = Challenge.create(challengeData);
     challenge.hubID = hubID;
     challenge.childChallenges = [];
@@ -595,15 +616,15 @@ export class ChallengeService {
     return await this.communityService.getMembersCount(community);
   }
 
-  async getActivity(challenge: IChallenge): Promise<INVP[]> {
-    const activity: INVP[] = [];
+  async getMetrics(challenge: IChallenge): Promise<INVP[]> {
+    const metrics: INVP[] = [];
 
     // Members
     const community = await this.getCommunity(challenge.id);
     const membersCount = await this.communityService.getMembersCount(community);
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${challenge.id}`;
-    activity.push(membersTopic);
+    metrics.push(membersTopic);
 
     // Opportunities
     const opportunitiesCount =
@@ -615,7 +636,7 @@ export class ChallengeService {
       opportunitiesCount.toString()
     );
     opportunitiesTopic.id = `opportunities-${challenge.id}`;
-    activity.push(opportunitiesTopic);
+    metrics.push(opportunitiesTopic);
 
     // Projects
     const projectsCount = await this.projectService.getProjectsInChallengeCount(
@@ -623,13 +644,13 @@ export class ChallengeService {
     );
     const projectsTopic = new NVP('projects', projectsCount.toString());
     projectsTopic.id = `projects-${challenge.id}`;
-    activity.push(projectsTopic);
+    metrics.push(projectsTopic);
 
     // Challenges
     const challengesCount = await this.getChildChallengesCount(challenge.id);
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     challengesTopic.id = `challenges-${challenge.id}`;
-    activity.push(challengesTopic);
+    metrics.push(challengesTopic);
 
     // Aspects
     const aspectsCount = await this.baseChallengeService.getAspectsCount(
@@ -638,7 +659,7 @@ export class ChallengeService {
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${challenge.id}`;
-    activity.push(aspectsTopic);
+    metrics.push(aspectsTopic);
 
     // Canvases
     const canvasesCount = await this.baseChallengeService.getCanvasesCount(
@@ -647,9 +668,9 @@ export class ChallengeService {
     );
     const canvasesTopic = new NVP('canvases', canvasesCount.toString());
     canvasesTopic.id = `canvases-${challenge.id}`;
-    activity.push(canvasesTopic);
+    metrics.push(canvasesTopic);
 
-    return activity;
+    return metrics;
   }
 
   async getLeadOrganizations(challengeID: string): Promise<IOrganization[]> {

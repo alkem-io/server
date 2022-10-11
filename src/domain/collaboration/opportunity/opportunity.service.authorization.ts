@@ -105,6 +105,14 @@ export class OpportunityAuthorizationService {
     updateInnovationFlowRule.inheritable = false;
     rules.push(updateInnovationFlowRule);
 
+    const updateInnovationFlowRuleGlobalHubs =
+      new AuthorizationPolicyRuleCredential(
+        [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
+        AuthorizationCredential.GLOBAL_ADMIN_HUBS
+      );
+    updateInnovationFlowRuleGlobalHubs.inheritable = false;
+    rules.push(updateInnovationFlowRuleGlobalHubs);
+
     return rules;
   }
 }

@@ -127,6 +127,32 @@ export class LifecycleTemplateService {
     return JSON.parse(lifecycleTemplate.definition);
   }
 
+  public async getDefaultLifecycleTemplateId(
+    hubID: string,
+    templateType: LifecycleType
+  ): Promise<string> {
+    const [{ lifecycleTemplateId }]: {
+      lifecycleTemplateId: string;
+    }[] = await getConnection().query(
+      `
+      SELECT lifecycle_template.id AS lifecycleTemplateId FROM hub
+      LEFT JOIN lifecycle_template ON hub.templatesSetId = lifecycle_template.templatesSetId
+      WHERE lifecycle_template.type = '${templateType}'
+      AND hub.id = '${hubID}'
+      LIMIT 1
+      `
+    );
+
+    if (!lifecycleTemplateId) {
+      throw new EntityNotFoundException(
+        `Not able to locate LifecycleTemplate with type: ${templateType} for Hub: ${hubID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+
+    return lifecycleTemplateId;
+  }
+
   async validateLifecycleDefinitionOrFail(
     templateID: string,
     hubID: string,

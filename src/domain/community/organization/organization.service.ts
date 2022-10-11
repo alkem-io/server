@@ -396,7 +396,7 @@ export class OrganizationService {
     return getPaginationResults(qb, paginationArgs);
   }
 
-  async getActivity(organization: IOrganization): Promise<INVP[]> {
+  async getMetrics(organization: IOrganization): Promise<INVP[]> {
     const activity: INVP[] = [];
 
     const membersCount = await this.getMembersCount(organization);

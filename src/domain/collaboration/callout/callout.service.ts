@@ -25,7 +25,7 @@ import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { limitAndShuffle } from '@common/utils';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
-import { NamingService } from '@src/services/domain/naming/naming.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CommentsService } from '@domain/communication/comments/comments.service';
 import { IComments } from '@domain/communication/comments/comments.interface';

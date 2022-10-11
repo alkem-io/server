@@ -20,12 +20,14 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
 import { getRandomId } from '@src/common';
 import { DeleteCanvasInput } from './dto/canvas.dto.delete';
+import { CanvasCheckoutService } from '../canvas-checkout/canvas.checkout.service';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private canvasService: CanvasService,
+    private canvasCheckoutService: CanvasCheckoutService,
     private canvasCheckoutAuthorizationService: CanvasCheckoutAuthorizationService,
     private canvasCheckoutLifecycleOptionsProvider: CanvasCheckoutLifecycleOptionsProvider,
     @Inject(SUBSCRIPTION_CANVAS_CONTENT)
@@ -50,9 +52,12 @@ export class CanvasResolverMutations {
     const canvas = await this.canvasService.getCanvasOrFail(
       canvasCheckout.canvasID
     );
-    return await this.canvasCheckoutAuthorizationService.applyAuthorizationPolicy(
+    await this.canvasCheckoutAuthorizationService.applyAuthorizationPolicy(
       canvasCheckout,
       canvas.authorization
+    );
+    return this.canvasCheckoutService.getCanvasCheckoutOrFail(
+      canvasCheckout.id
     );
   }
 

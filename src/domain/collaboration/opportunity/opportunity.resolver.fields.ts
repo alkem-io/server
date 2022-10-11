@@ -60,13 +60,13 @@ export class OpportunityResolverFields {
     return await this.opportunityService.getCollaboration(opportunity);
   }
 
-  @ResolveField('activity', () => [INVP], {
+  @ResolveField('metrics', () => [INVP], {
     nullable: true,
-    description: 'The activity within this Opportunity.',
+    description: 'Metrics about the activity within this Opportunity.',
   })
   @Profiling.api
-  async activity(@Parent() opportunity: Opportunity) {
-    return await this.opportunityService.getActivity(opportunity);
+  async metrics(@Parent() opportunity: Opportunity) {
+    return await this.opportunityService.getMetrics(opportunity);
   }
 
   @ResolveField('parentId', () => String, {

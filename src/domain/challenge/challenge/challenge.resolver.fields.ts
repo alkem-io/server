@@ -118,13 +118,13 @@ export class ChallengeResolverFields {
     return await this.challengeService.getAgent(challenge.id);
   }
 
-  @ResolveField('activity', () => [INVP], {
+  @ResolveField('metrics', () => [INVP], {
     nullable: true,
-    description: 'The activity within this Challenge.',
+    description: 'Metrics about activity within this Challenge.',
   })
   @Profiling.api
-  async activity(@Parent() challenge: Challenge) {
-    return await this.challengeService.getActivity(challenge);
+  async metrics(@Parent() challenge: Challenge) {
+    return await this.challengeService.getMetrics(challenge);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

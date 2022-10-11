@@ -21,6 +21,7 @@ import { IPreferenceSet } from '@domain/common/preference-set';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
 import { HubVisibility } from '@common/enums/hub.visibility';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -39,65 +40,75 @@ export class HubAuthorizationService {
 
   async applyAuthorizationPolicy(hub: IHub): Promise<IHub> {
     const preferenceSet = await this.hubService.getPreferenceSetOrFail(hub.id);
-    if (!hub.visibility) {
-      throw new EntityNotInitializedException(
-        `HubVisibility not found for Hub: ${hub.id}`,
-        LogContext.CHALLENGES
-      );
-    }
+
+    const hubVisibility = this.hubService.getVisibility(hub);
+    const hostOrg = await this.hubService.getHost(hub.id);
 
     // Ensure always applying from a clean state
-    hub.authorization = await this.authorizationPolicyService.reset(
+    hub.authorization = this.authorizationPolicyService.reset(
       hub.authorization
     );
+    hub.authorization.anonymousReadAccess = false;
     hub.authorization =
       this.platformAuthorizationService.inheritPlatformAuthorization(
         hub.authorization
       );
 
-    // FExtend rules depending on the Visibility
-    switch (hub.visibility) {
+    // Extend for global roles
+    hub.authorization = this.extendAuthorizationPolicyGlobal(
+      hub.authorization,
+      hub.id
+    );
+    // Extend rules depending on the Visibility
+    switch (hubVisibility) {
       case HubVisibility.ACTIVE:
       case HubVisibility.DEMO:
-        hub.authorization = this.extendAuthorizationPolicy(
+        hub.authorization = this.extendAuthorizationPolicyLocal(
           hub.authorization,
-          hub.id
+          hub.id,
+          preferenceSet
         );
         hub.authorization = this.appendVerifiedCredentialRules(
           hub.authorization
         );
+        break;
+      case HubVisibility.ARCHIVED:
+        // ensure it has visibility privilege set to private
+        hub.authorization.anonymousReadAccess = false;
+        break;
+    }
 
-        hub.authorization.anonymousReadAccess =
-          this.preferenceSetService.getPreferenceValue(
-            preferenceSet,
-            HubPreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
-          );
-        hub =
-          await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
-            hub,
-            this.hubRepository
-          );
+    // Cascade down
+    const hubSaved = await this.propagateAuthorizationToChildEntities(hub);
 
-        hub.community = await this.hubService.getCommunity(hub);
-        const hostOrg = await this.hubService.getHost(hub.id);
-        hub.community.authorization =
-          await this.extendMembershipAuthorizationPolicy(
-            hub.id,
-            hub.community.authorization,
+    // Finally update the child community directly after propagation
+    switch (hubVisibility) {
+      case HubVisibility.ACTIVE:
+      case HubVisibility.DEMO:
+        hubSaved.community = await this.hubService.getCommunity(hubSaved);
+        hubSaved.community.authorization =
+          this.extendCommunityAuthorizationPolicy(
+            hubSaved.community.authorization,
+            hubSaved.id,
             preferenceSet,
             hostOrg
           );
         break;
       case HubVisibility.ARCHIVED:
-        // do not extend beyond propagating to child entities
-        hub =
-          await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
-            hub,
-            this.hubRepository
-          );
         break;
     }
 
+    return await this.hubRepository.save(hubSaved);
+  }
+
+  private async propagateAuthorizationToChildEntities(
+    hubBase: IHub
+  ): Promise<IHub> {
+    const hub: IHub =
+      await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
+        hubBase,
+        this.hubRepository
+      );
     // propagate authorization rules for child entities
     const hubCommunityCredential =
       await this.hubService.getCommunityMembershipCredential(hub);
@@ -121,7 +132,7 @@ export class HubAuthorizationService {
 
     hub.preferenceSet =
       await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
-        preferenceSet,
+        await this.hubService.getPreferenceSetOrFail(hub.id),
         hub.authorization
       );
 
@@ -135,7 +146,7 @@ export class HubAuthorizationService {
     return await this.hubRepository.save(hub);
   }
 
-  private extendAuthorizationPolicy(
+  private extendAuthorizationPolicyGlobal(
     authorization: IAuthorizationPolicy | undefined,
     hubID: string
   ): IAuthorizationPolicy {
@@ -170,6 +181,42 @@ export class HubAuthorizationService {
     );
     newRules.push(communityAdmin);
 
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
+
+    // Ensure that CREATE also allows CREATE_CHALLENGE
+    const createChallengePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE_CHALLENGE],
+      AuthorizationPrivilege.CREATE
+    );
+    this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      [createChallengePrivilege]
+    );
+
+    return authorization;
+  }
+
+  private extendAuthorizationPolicyLocal(
+    authorization: IAuthorizationPolicy | undefined,
+    hubID: string,
+    preferenceSet: IPreferenceSet
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${hubID}`,
+        LogContext.CHALLENGES
+      );
+    const newRules: AuthorizationPolicyRuleCredential[] = [];
+
+    authorization.anonymousReadAccess =
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
+        HubPreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
+      );
+
     const hubAdmin = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.CREATE,
@@ -183,12 +230,28 @@ export class HubAuthorizationService {
     );
     newRules.push(hubAdmin);
 
-    const hubMember = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.READ],
-      AuthorizationCredential.HUB_MEMBER,
-      hubID
-    );
-    newRules.push(hubMember);
+    // Grant members privileges depending on the preferences
+    const allowMembersToCreateChallengesPref =
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
+        HubPreferenceType.ALLOW_MEMBERS_TO_CREATE_CHALLENGES
+      );
+
+    if (allowMembersToCreateChallengesPref) {
+      const hubMember = new AuthorizationPolicyRuleCredential(
+        [AuthorizationPrivilege.READ, AuthorizationPrivilege.CREATE_CHALLENGE],
+        AuthorizationCredential.HUB_MEMBER,
+        hubID
+      );
+      newRules.push(hubMember);
+    } else {
+      const hubMember = new AuthorizationPolicyRuleCredential(
+        [AuthorizationPrivilege.READ],
+        AuthorizationCredential.HUB_MEMBER,
+        hubID
+      );
+      newRules.push(hubMember);
+    }
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
@@ -198,13 +261,13 @@ export class HubAuthorizationService {
     return authorization;
   }
 
-  private extendMembershipAuthorizationPolicy(
+  private extendCommunityAuthorizationPolicy(
+    communityAuthorization: IAuthorizationPolicy | undefined,
     hubID: string,
-    authorization: IAuthorizationPolicy | undefined,
     preferenceSet: IPreferenceSet,
     hostOrg?: IOrganization
   ): IAuthorizationPolicy {
-    if (!authorization)
+    if (!communityAuthorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for: ${hubID}`,
         LogContext.CHALLENGES
@@ -264,11 +327,11 @@ export class HubAuthorizationService {
     }
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
+      communityAuthorization,
       newRules
     );
 
-    return authorization;
+    return communityAuthorization;
   }
 
   appendVerifiedCredentialRules(

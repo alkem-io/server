@@ -29,8 +29,8 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { CredentialService } from '../credential/credential.service';
 import { WalletManagerCommand } from '@common/enums/wallet.manager.command';
 import { CredentialMetadataOutput } from '../verified-credential/dto/verified.credential.dto.metadata';
-import { IClaim } from '@services/platform/trust-registry/trust.registry.claim/claim.interface';
-import { TrustRegistryAdapter } from '@services/platform/trust-registry/trust.registry.adapter/trust.registry.adapter';
+import { IClaim } from '@services/external/trust-registry/trust.registry.claim/claim.interface';
+import { TrustRegistryAdapter } from '@services/external/trust-registry/trust.registry.adapter/trust.registry.adapter';
 import { GrantCredentialInput } from './dto/agent.dto.credential.grant';
 import { RevokeCredentialInput } from './dto/agent.dto.credential.revoke';
 import { AgentBeginVerifiedCredentialRequestOutput } from './dto/agent.dto.verified.credential.request.begin.output';
@@ -41,12 +41,12 @@ import { AgentInteractionVerifiedCredentialRequestJolocom } from './dto/agent.dt
 import { SsiIssuerType } from '@common/enums/ssi.issuer.type';
 import { SsiInteractionNotFound } from '@common/exceptions/ssi.interaction.not.found';
 import { AgentInteractionVerifiedCredentialOffer } from './dto/agent.dto.interaction.verified.credential.offer';
-import { SsiSovrhdAdapter } from '@services/platform/ssi-sovrhd/ssi.sovrhd.adapter';
-import { WalletManagerAdapter } from '@services/platform/wallet-manager-adapter/wallet.manager.adapter';
+import { SsiSovrhdAdapter } from '@services/adapters/ssi-sovrhd/ssi.sovrhd.adapter';
+import { WalletManagerAdapter } from '@services/adapters/wallet-manager-adapter/wallet.manager.adapter';
 import { VerifiedCredential } from '../verified-credential/dto/verified.credential.dto.result';
-import { SsiSovrhdRegisterCallbackSession } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.session';
+import { SsiSovrhdRegisterCallbackSession } from '@services/adapters/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.session';
 import { AgentInteractionVerifiedCredentialRequestSovrhd } from './dto/agent.dto.interaction.verified.credential.request.sovrhd';
-import { SsiSovrhdRegisterCallbackCredential } from '@services/platform/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.credential';
+import { SsiSovrhdRegisterCallbackCredential } from '@services/adapters/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.credential';
 import { getRandomId } from '@src/common';
 import { AgentCacheService } from './agent.cache.service';
 

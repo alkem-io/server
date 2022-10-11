@@ -11,6 +11,7 @@ export enum AuthorizationPrivilege {
   ADMIN = 'admin',
   PLATFORM_ADMIN = 'platform-admin', // To determine if the user should have access to the platform administration
   CREATE_CANVAS = 'create-canvas',
+  CREATE_CHALLENGE = 'create-challenge',
   CREATE_ASPECT = 'create-aspect',
   CREATE_COMMENT = 'create-comment',
   CREATE_HUB = 'create-hub',

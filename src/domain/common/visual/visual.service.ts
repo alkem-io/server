@@ -15,7 +15,7 @@ import { streamToBuffer, getImageSize } from '@common/utils';
 import { Visual } from './visual.entity';
 import { IVisual } from './visual.interface';
 import { DeleteVisualInput } from './dto/visual.dto.delete';
-import { IpfsService } from '@src/services/platform/ipfs/ipfs.service';
+import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
 
 @Injectable()
 export class VisualService {

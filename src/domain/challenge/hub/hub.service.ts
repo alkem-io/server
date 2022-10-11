@@ -26,11 +26,11 @@ import { OrganizationService } from '@domain/community/organization/organization
 import { IUserGroup } from '@domain/community/user-group';
 import { IContext } from '@domain/context/context';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { NamingService } from '@src/services/domain/naming/naming.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { challengeLifecycleConfigDefault } from '@domain/template/templates-set/templates.set.default.lifecycle.challenge';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, In, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Hub } from './hub.entity';
@@ -60,7 +60,8 @@ import { LifecycleType } from '@common/enums/lifecycle.type';
 import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
 import { HubsQueryArgs } from './dto/hub.args.query.hubs';
 import { HubVisibility } from '@common/enums/hub.visibility';
-import { HubFilterService } from '@services/domain/hub-filter/hub.filter.service';
+import { HubFilterService } from '@services/infrastructure/hub-filter/hub.filter.service';
+import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 
 @Injectable()
 export class HubService {
@@ -147,6 +148,7 @@ export class HubService {
     const defaults: Map<PreferenceType, string> = new Map();
     defaults.set(PreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE, 'true');
     defaults.set(PreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS, 'false');
+    defaults.set(PreferenceType.ALLOW_MEMBERS_TO_CREATE_CHALLENGES, 'false');
 
     return defaults;
   }
@@ -242,16 +244,35 @@ export class HubService {
     return result;
   }
 
+  getVisibility(hub: IHub): HubVisibility {
+    if (!hub.visibility) {
+      throw new EntityNotInitializedException(
+        `HubVisibility not found for Hub: ${hub.id}`,
+        LogContext.CHALLENGES
+      );
+    }
+    return hub.visibility;
+  }
+
   async getHubs(args: HubsQueryArgs): Promise<IHub[]> {
     const visibilities = this.hubsFilterService.getAllowedVisibilities(
       args.filter
     );
     // Load the hubs
-    const hubs: IHub[] = await this.hubRepository.find();
+    let hubs: IHub[];
+    if (args && args.IDs)
+      hubs = await this.hubRepository.find({
+        where: { id: In(args.IDs) },
+      });
+    else hubs = await this.hubRepository.find();
+
     if (hubs.length === 0) return [];
 
     // Get the order to return the data in
-    const sortedIDs = await this.getFilteredHubsSortOrderDefault(visibilities);
+    const sortedIDs = await this.getFilteredHubsSortOrderDefault(
+      visibilities,
+      hubs.flatMap(x => x.id)
+    );
     const hubsResult: IHub[] = [];
     for (const hubID of sortedIDs) {
       const hub = hubs.find(hub => hub.id === hubID);
@@ -268,7 +289,8 @@ export class HubService {
   }
 
   private async getFilteredHubsSortOrderDefault(
-    allowedVisibilities: HubVisibility[]
+    allowedVisibilities: HubVisibility[],
+    IDs?: string[]
   ): Promise<string[]> {
     // Then load data to do the sorting
     const hubsDataForSorting = await this.hubRepository
@@ -276,6 +298,7 @@ export class HubService {
       .leftJoinAndSelect('hub.challenges', 'challenge')
       .leftJoinAndSelect('hub.authorization', 'authorization_policy')
       .leftJoinAndSelect('challenge.opportunities', 'opportunities')
+      .whereInIds(IDs)
       .getMany();
 
     const visibleHubs = hubsDataForSorting.filter(hub => {
@@ -437,12 +460,23 @@ export class HubService {
 
   async getChallenges(
     hub: IHub,
-    limit?: number,
-    shuffle?: boolean
+    args?: LimitAndShuffleIdsQueryArgs
   ): Promise<IChallenge[]> {
-    const hubWithChallenges = await this.getHubOrFail(hub.id, {
-      relations: ['challenges'],
-    });
+    let hubWithChallenges;
+    if (args && args.IDs) {
+      {
+        hubWithChallenges = await this.getHubOrFail(hub.id, {
+          relations: ['challenges'],
+        });
+        hubWithChallenges.challenges = hubWithChallenges.challenges?.filter(c =>
+          args.IDs?.includes(c.id)
+        );
+      }
+    } else
+      hubWithChallenges = await this.getHubOrFail(hub.id, {
+        relations: ['challenges'],
+      });
+
     const challenges = hubWithChallenges.challenges;
     if (!challenges) {
       throw new RelationshipNotFoundException(
@@ -451,7 +485,11 @@ export class HubService {
       );
     }
 
-    const limitAndShuffled = limitAndShuffle(challenges, limit, shuffle);
+    const limitAndShuffled = limitAndShuffle(
+      challenges,
+      args?.limit,
+      args?.shuffle
+    );
 
     // Sort the challenges base on their display name
     const sortedChallenges = limitAndShuffled.sort((a, b) =>
@@ -641,8 +679,8 @@ export class HubService {
     return await this.projectService.getProjects(hub.id);
   }
 
-  async getActivity(hub: IHub): Promise<INVP[]> {
-    const activity: INVP[] = [];
+  async getMetrics(hub: IHub): Promise<INVP[]> {
+    const metrics: INVP[] = [];
 
     // Challenges
     const challengesCount = await this.challengeService.getChallengesInHubCount(
@@ -650,7 +688,7 @@ export class HubService {
     );
     const challengesTopic = new NVP('challenges', challengesCount.toString());
     challengesTopic.id = `challenges-${hub.id}`;
-    activity.push(challengesTopic);
+    metrics.push(challengesTopic);
 
     const opportunitiesCount =
       await this.opportunityService.getOpportunitiesInHubCount(hub.id);
@@ -659,7 +697,7 @@ export class HubService {
       opportunitiesCount.toString()
     );
     opportunitiesTopic.id = `opportunities-${hub.id}`;
-    activity.push(opportunitiesTopic);
+    metrics.push(opportunitiesTopic);
 
     // Projects
     const projectsCount = await this.projectService.getProjectsInHubCount(
@@ -667,13 +705,13 @@ export class HubService {
     );
     const projectsTopic = new NVP('projects', projectsCount.toString());
     projectsTopic.id = `projects-${hub.id}`;
-    activity.push(projectsTopic);
+    metrics.push(projectsTopic);
 
     // Members
     const membersCount = await this.getMembersCount(hub);
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${hub.id}`;
-    activity.push(membersTopic);
+    metrics.push(membersTopic);
 
     // Aspects
     const aspectsCount = await this.baseChallengeService.getAspectsCount(
@@ -682,7 +720,7 @@ export class HubService {
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${hub.id}`;
-    activity.push(aspectsTopic);
+    metrics.push(aspectsTopic);
 
     // Canvases
     const canvasesCount = await this.baseChallengeService.getCanvasesCount(
@@ -691,9 +729,9 @@ export class HubService {
     );
     const canvasesTopic = new NVP('canvases', canvasesCount.toString());
     canvasesTopic.id = `canvases-${hub.id}`;
-    activity.push(canvasesTopic);
+    metrics.push(canvasesTopic);
 
-    return activity;
+    return metrics;
   }
 
   async getChallengesCount(hubID: string): Promise<number> {

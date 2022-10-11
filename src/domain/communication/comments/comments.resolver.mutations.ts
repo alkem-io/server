@@ -21,12 +21,12 @@ import {
 import { CommentsAuthorizationService } from './comments.service.authorization';
 import { IComments } from './comments.interface';
 import { getRandomId } from '@src/common/utils';
-import { ActivityAdapter } from '@services/platform/activity-adapter/activity.adapter';
-import { ActivityInputAspectComment } from '@services/platform/activity-adapter/dto/activity.dto.input.aspect.comment';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { ActivityInputAspectComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.aspect.comment';
 import { AspectMessageReceivedPayload } from '@domain/collaboration/aspect/dto/aspect.message.received.payload';
-import { NamingService } from '@services/domain/naming/naming.service';
-import { NotificationInputAspectComment } from '@services/platform/notification-adapter/dto/notification.dto.input.aspect.comment';
-import { NotificationAdapter } from '@services/platform/notification-adapter/notification.adapter';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { NotificationInputAspectComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.aspect.comment';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 
 @Resolver()

@@ -62,8 +62,8 @@ export class CanvasCheckoutService {
     return result;
   }
 
-  async save(CanvasCheckout: ICanvasCheckout): Promise<ICanvasCheckout> {
-    return await this.canvasCheckoutRepository.save(CanvasCheckout);
+  async save(canvasCheckout: ICanvasCheckout): Promise<ICanvasCheckout> {
+    return await this.canvasCheckoutRepository.save(canvasCheckout);
   }
 
   async getCanvasCheckoutOrFail(

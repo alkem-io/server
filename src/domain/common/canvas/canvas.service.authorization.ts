@@ -33,7 +33,7 @@ export class CanvasAuthorizationService {
     canvas.authorization = this.appendPrivilegeRules(canvas.authorization);
 
     if (canvas.checkout) {
-      canvas.checkout =
+      canvas.checkout.authorization =
         await this.canvasCheckoutAuthorizationService.applyAuthorizationPolicy(
           canvas.checkout,
           canvas.authorization

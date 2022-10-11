@@ -8,15 +8,15 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import {
-  Opportunity,
-  IOpportunity,
   CreateOpportunityInput,
-  UpdateOpportunityInput,
+  IOpportunity,
+  Opportunity,
   opportunityCommunityPolicy,
+  UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-import { IProject, CreateProjectInput } from '@domain/collaboration/project';
+import { CreateProjectInput, IProject } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { ICommunity } from '@domain/community/community/community.interface';
@@ -40,6 +40,7 @@ import { LifecycleTemplateService } from '@domain/template/lifecycle-template/li
 import { LifecycleType } from '@common/enums/lifecycle.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 import { HubVisibility } from '@common/enums/hub.visibility';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Injectable()
 export class OpportunityService {
@@ -51,6 +52,7 @@ export class OpportunityService {
     private communityService: CommunityService,
     private userService: UserService,
     private agentService: AgentService,
+    private namingService: NamingService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -62,11 +64,30 @@ export class OpportunityService {
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     // Validate incoming data
-    await this.lifecycleTemplateService.validateLifecycleDefinitionOrFail(
-      opportunityData.innovationFlowTemplateID,
-      hubID,
-      LifecycleType.OPPORTUNITY
+    if (opportunityData.innovationFlowTemplateID) {
+      await this.lifecycleTemplateService.validateLifecycleDefinitionOrFail(
+        opportunityData.innovationFlowTemplateID,
+        hubID,
+        LifecycleType.OPPORTUNITY
+      );
+    } else {
+      opportunityData.innovationFlowTemplateID =
+        await this.lifecycleTemplateService.getDefaultLifecycleTemplateId(
+          hubID,
+          LifecycleType.OPPORTUNITY
+        );
+    }
+
+    if (!opportunityData.nameID) {
+      opportunityData.nameID = this.namingService.createNameID(
+        opportunityData.displayName
+      );
+    }
+    await this.baseChallengeService.isNameAvailableOrFail(
+      opportunityData.nameID,
+      hubID
     );
+
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
     opportunity.hubID = hubID;
     opportunity.projects = [];
@@ -99,17 +120,19 @@ export class OpportunityService {
       });
     }
 
-    const machineConfig: ILifecycleDefinition =
-      await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
-        opportunityData.innovationFlowTemplateID,
-        hubID,
-        LifecycleType.OPPORTUNITY
-      );
+    if (opportunityData.innovationFlowTemplateID) {
+      const machineConfig: ILifecycleDefinition =
+        await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
+          opportunityData.innovationFlowTemplateID,
+          hubID,
+          LifecycleType.OPPORTUNITY
+        );
 
-    opportunity.lifecycle = await this.lifecycleService.createLifecycle(
-      opportunity.id,
-      machineConfig
-    );
+      opportunity.lifecycle = await this.lifecycleService.createLifecycle(
+        opportunity.id,
+        machineConfig
+      );
+    }
 
     return await this.saveOpportunity(opportunity);
   }
@@ -324,22 +347,22 @@ export class OpportunityService {
     return hubID;
   }
 
-  async getActivity(opportunity: IOpportunity): Promise<INVP[]> {
-    const activity: INVP[] = [];
+  async getMetrics(opportunity: IOpportunity): Promise<INVP[]> {
+    const metrics: INVP[] = [];
     const community = await this.getCommunity(opportunity.id);
 
     // Members
     const membersCount = await this.communityService.getMembersCount(community);
     const membersTopic = new NVP('members', membersCount.toString());
     membersTopic.id = `members-${opportunity.id}`;
-    activity.push(membersTopic);
+    metrics.push(membersTopic);
 
     // Projects
     const projectsCount =
       await this.projectService.getProjectsInOpportunityCount(opportunity.id);
     const projectsTopic = new NVP('projects', projectsCount.toString());
     projectsTopic.id = `projects-${opportunity.id}`;
-    activity.push(projectsTopic);
+    metrics.push(projectsTopic);
 
     // Relations
     const relationsCount = await this.baseChallengeService.getRelationsCount(
@@ -349,7 +372,7 @@ export class OpportunityService {
 
     const relationsTopic = new NVP('relations', relationsCount.toString());
     relationsTopic.id = `relations-${opportunity.id}`;
-    activity.push(relationsTopic);
+    metrics.push(relationsTopic);
 
     // Aspects
     const aspectsCount = await this.baseChallengeService.getAspectsCount(
@@ -358,7 +381,7 @@ export class OpportunityService {
     );
     const aspectsTopic = new NVP('aspects', aspectsCount.toString());
     aspectsTopic.id = `aspects-${opportunity.id}`;
-    activity.push(aspectsTopic);
+    metrics.push(aspectsTopic);
 
     // Canvases
     const canvasesCount = await this.baseChallengeService.getCanvasesCount(
@@ -367,9 +390,9 @@ export class OpportunityService {
     );
     const canvasesTopic = new NVP('canvases', canvasesCount.toString());
     canvasesTopic.id = `canvases-${opportunity.id}`;
-    activity.push(canvasesTopic);
+    metrics.push(canvasesTopic);
 
-    return activity;
+    return metrics;
   }
 
   async getOpportunitiesInHubCount(hubID: string): Promise<number> {

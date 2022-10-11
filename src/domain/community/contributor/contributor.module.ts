@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ProfileModule } from '@domain/community/profile/profile.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { NamingModule } from '@src/services/domain/naming/naming.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { KonfigModule } from '@services/platform/configuration/config/config.module';
+import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { ConfigModule } from '@nestjs/config';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PreferenceModule } from '@domain/common/preference';
