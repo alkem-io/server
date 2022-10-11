@@ -5,28 +5,23 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ICanvasCheckout } from './canvas.checkout.interface';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
-import { CanvasCheckoutService } from './canvas.checkout.service';
 
 @Injectable()
 export class CanvasCheckoutAuthorizationService {
-  constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private canvasCheckoutService: CanvasCheckoutService
-  ) {}
+  constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
   async applyAuthorizationPolicy(
     canvasCheckout: ICanvasCheckout,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<ICanvasCheckout> {
+  ): Promise<IAuthorizationPolicy> {
     canvasCheckout.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         canvasCheckout.authorization,
         parentAuthorization
       );
-    canvasCheckout.authorization =
+    const extendedAuthPolicy =
       this.extendAuthorizationPolicyForCheckoutOwner(canvasCheckout);
-
-    return await this.canvasCheckoutService.save(canvasCheckout);
+    return await this.authorizationPolicyService.save(extendedAuthPolicy);
   }
 
   private extendAuthorizationPolicyForCheckoutOwner(
