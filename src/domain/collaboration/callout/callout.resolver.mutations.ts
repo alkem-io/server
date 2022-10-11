@@ -44,6 +44,8 @@ import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibilit
 import { NotificationInputAspectCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.aspect.created';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
+import { CalloutState } from '@common/enums/callout.state';
+import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -95,6 +97,12 @@ export class CalloutResolverMutations {
       throw new NotSupportedException(
         'Messages only supported on Comments Callout',
         LogContext.COLLABORATION
+      );
+    }
+
+    if (callout.state === CalloutState.CLOSED) {
+      throw new CalloutClosedException(
+        `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
       );
     }
 
@@ -224,6 +232,13 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.CREATE_ASPECT,
       `create aspect on callout: ${callout.id}`
     );
+
+    if (callout.state === CalloutState.CLOSED) {
+      throw new CalloutClosedException(
+        `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
+      );
+    }
+
     let aspect = await this.calloutService.createAspectOnCallout(
       aspectData,
       agentInfo.userID
@@ -276,6 +291,13 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.CREATE_CANVAS,
       `create canvas on callout: ${callout.id}`
     );
+
+    if (callout.state === CalloutState.CLOSED) {
+      throw new CalloutClosedException(
+        `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
+      );
+    }
+
     const canvas = await this.calloutService.createCanvasOnCallout(
       canvasData,
       agentInfo.userID
