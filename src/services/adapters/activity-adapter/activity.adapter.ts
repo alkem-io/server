@@ -143,7 +143,7 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdFromCommunity(
       community.id
     );
-    const description = `[Community] New member: ${eventData.user.displayName}`;
+    const description = `[${community.type}] '${eventData.user.displayName}'`;
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
