@@ -1,9 +1,9 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IAuthenticationConfig } from './authentication/authentication.config.interface';
+import { IAuthenticationConfig } from './authentication';
 import { IPlatformConfig } from './platform';
 import { ISentryConfig } from './sentry';
-import { Template } from './template/template.entity';
-import { ITemplate } from './template/template.interface';
+import { Template, ITemplate } from './template';
+import { IApmConfig } from './apm';
 
 @ObjectType('Config')
 export abstract class IConfig {
@@ -30,4 +30,11 @@ export abstract class IConfig {
     description: 'Sentry (client monitoring) related configuration.',
   })
   sentry?: ISentryConfig;
+
+  @Field(() => IApmConfig, {
+    nullable: false,
+    description:
+      'Elastic APM (RUM & performance monitoring) related configuration.',
+  })
+  apm?: IApmConfig;
 }
