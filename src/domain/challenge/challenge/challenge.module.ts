@@ -22,9 +22,11 @@ import { UserModule } from '@domain/community/user/user.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { LifecycleTemplateModule } from '@domain/template/lifecycle-template/lifecycle.template.module';
+import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 
 @Module({
   imports: [
+    ActivityAdapterModule,
     AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,

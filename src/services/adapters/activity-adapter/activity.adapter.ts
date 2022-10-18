@@ -3,17 +3,22 @@ import { getConnection, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
-import { ActivityInputCalloutPublished } from './dto/activity.dto.input.callout.published';
 import { ActivityService } from '@src/platform/activity/activity.service';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+} from '@common/exceptions';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { ActivityInputCalloutPublished } from './dto/activity.dto.input.callout.published';
 import { ActivityInputAspectCreated } from './dto/activity.dto.input.aspect.created';
 import { ActivityInputCanvasCreated } from './dto/activity.dto.input.canvas.created';
 import { ActivityInputMemberJoined } from './dto/activity.dto.input.member.joined';
 import { ActivityInputAspectComment } from './dto/activity.dto.input.aspect.comment';
 import { ActivityInputCalloutDiscussionComment } from './dto/activity.dto.input.callout.discussion.comment';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { ActivityInputChallengeCreated } from './dto/activity.dto.input.challenge.created';
+import { ActivityInputOpportunityCreated } from './dto/activity.dto.input.opportunity.created';
 
 @Injectable()
 export class ActivityAdapter {
@@ -26,6 +31,67 @@ export class ActivityAdapter {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  async challengeCreated(
+    eventData: ActivityInputChallengeCreated
+  ): Promise<boolean> {
+    this.logger.verbose?.(
+      `Event received: ${JSON.stringify(eventData)}`,
+      LogContext.ACTIVITY
+    );
+
+    const challenge = eventData.challenge;
+
+    if (!challenge.hubID) {
+      throw new EntityNotInitializedException(
+        `Unable to get hubID of Challenge: ${challenge.id}`,
+        LogContext.ACTIVITY
+      );
+    }
+
+    const collaborationID = await this.getCollaborationIdForHub(
+      challenge.hubID
+    );
+    const description = `New Challenge created: '${challenge.displayName}'`;
+
+    await this.activityService.createActivity({
+      collaborationID,
+      triggeredBy: eventData.triggeredBy,
+      resourceID: challenge.id,
+      parentID: challenge.hubID,
+      description,
+      type: ActivityEventType.CHALLENGE_CREATED,
+    });
+
+    return true;
+  }
+
+  async opportunityCreated(
+    eventData: ActivityInputOpportunityCreated
+  ): Promise<boolean> {
+    this.logger.verbose?.(
+      `Event received: ${JSON.stringify(eventData)}`,
+      LogContext.ACTIVITY
+    );
+
+    const opportunity = eventData.opportunity;
+
+    const collaborationID = await this.getCollaborationIdForChallenge(
+      eventData.challengeId
+    );
+    const description = `New Opportunity created: '${opportunity.displayName}'`;
+
+    await this.activityService.createActivity({
+      collaborationID,
+      triggeredBy: eventData.triggeredBy,
+      resourceID: opportunity.id,
+      parentID: eventData.challengeId,
+      description,
+      type: ActivityEventType.OPPORTUNITY_CREATED,
+    });
+
+    return true;
+  }
 
   async calloutPublished(
     eventData: ActivityInputCalloutPublished
@@ -153,6 +219,68 @@ export class ActivityAdapter {
       type: ActivityEventType.MEMBER_JOINED,
     });
     return true;
+  }
+
+  private async getCollaborationIdOfHubForChallenge(
+    challengeID: string
+  ): Promise<string> {
+    const collaborationId = await this.collaborationRepository
+      .createQueryBuilder('collab')
+      .select('collab.id')
+      .leftJoin('hub.collaboration', 'hub')
+      .leftJoin('challenge.hub', 'challenge')
+      .where('challenge.id = :challengeId')
+      .setParameter('challengeId', challengeID)
+      .getRawOne<string>();
+
+    if (!collaborationId) {
+      throw new EntityNotFoundException(
+        `Unable to find Collaboration of Hub from Challenge: ${challengeID} `,
+        LogContext.ACTIVITY
+      );
+    }
+
+    return collaborationId;
+  }
+
+  private async getCollaborationIdForHub(hubID: string): Promise<string> {
+    const [result]: { collaborationId: string }[] = await getConnection().query(
+      `
+          SELECT collaboration.id as collaborationId FROM collaboration
+          LEFT JOIN hub ON hub.collaborationId = collaboration.id
+          WHERE hub.id = '${hubID}'
+        `
+    );
+
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to identify Collaboration for Hub with ID: ${hubID}`,
+        LogContext.ACTIVITY
+      );
+    }
+
+    return result.collaborationId;
+  }
+
+  private async getCollaborationIdForChallenge(
+    challengeID: string
+  ): Promise<string> {
+    const [result]: { collaborationId: string }[] = await getConnection().query(
+      `
+          SELECT collaboration.id as collaborationId FROM collaboration
+          LEFT JOIN challenge ON challenge.collaborationId = collaboration.id
+          WHERE challenge.id = '${challengeID}'
+        `
+    );
+
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to identify Collaboration for Challenge with ID: ${challengeID}`,
+        LogContext.ACTIVITY
+      );
+    }
+
+    return result.collaborationId;
   }
 
   private async getCollaborationIdForCallout(

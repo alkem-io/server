@@ -27,9 +27,11 @@ import { PreferenceSetModule } from '@domain/common/preference-set/preference.se
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
 import { HubFilterModule } from '@services/infrastructure/hub-filter/hub.filter.module';
+import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 
 @Module({
   imports: [
+    ActivityAdapterModule,
     AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,

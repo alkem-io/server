@@ -21,6 +21,7 @@ import { ChallengeAuthorizationService } from '@domain/challenge/challenge/chall
 import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
 import { IChallenge } from './challenge.interface';
 import { IUser } from '@domain/community/user/user.interface';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
 import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
@@ -29,6 +30,7 @@ import { UpdateChallengeInnovationFlowInput } from './dto/challenge.dto.update.i
 @Resolver()
 export class ChallengeResolverMutations {
   constructor(
+    private activityAdapter: ActivityAdapter,
     private opportunityAuthorizationService: OpportunityAuthorizationService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private authorizationService: AuthorizationService,
@@ -91,6 +93,13 @@ export class ChallengeResolverMutations {
       opportunityData,
       agentInfo
     );
+
+    this.activityAdapter.opportunityCreated({
+      opportunity,
+      triggeredBy: agentInfo.userID,
+      challengeId: opportunityData.challengeID,
+    });
+
     return await this.opportunityAuthorizationService.applyAuthorizationPolicy(
       opportunity,
       challenge.authorization

@@ -29,9 +29,12 @@ import { UpdateChallengePreferenceInput } from '@domain/challenge/challenge/dto/
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
 import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+
 @Resolver()
 export class HubResolverMutations {
   constructor(
+    private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
     private hubService: HubService,
     private hubAuthorizationService: HubAuthorizationService,
@@ -242,6 +245,12 @@ export class HubResolverMutations {
     );
     const hubCommunityCredential =
       await this.hubService.getCommunityMembershipCredential(hub);
+
+    this.activityAdapter.challengeCreated({
+      triggeredBy: agentInfo.userID,
+      challenge: challenge,
+    });
+
     return await this.challengeAuthorizationService.applyAuthorizationPolicy(
       challenge,
       hub.authorization,

@@ -7,6 +7,8 @@ export enum ActivityEventType {
   CARD_COMMENT = 'card-comment',
   DISCUSSION_COMMENT = 'discussion-comment',
   MEMBER_JOINED = 'member-joined',
+  CHALLENGE_CREATED = 'challenge-created',
+  OPPORTUNITY_CREATED = 'opportunity-created',
 }
 
 registerEnumType(ActivityEventType, {
