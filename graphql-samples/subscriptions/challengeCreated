@@ -1,0 +1,8 @@
+subscription {
+  challengeCreated(hubID: "uuid") {
+		hubID
+    challenge{
+      displayName
+    }
+  }
+}

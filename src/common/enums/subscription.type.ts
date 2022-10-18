@@ -7,4 +7,6 @@ export enum SubscriptionType {
   PROFILE_VERIFIED_CREDENTIAL = 'profileVerifiedCredential',
   CALLOUT_ASPECT_CREATED = 'calloutAspectCreated',
   CALLOUT_MESSAGE_CREATED = 'calloutMessageCreated',
+  OPPORTUNITY_CREATED = 'opportunityCreated',
+  CHALLENGE_CREATED = 'challengeCreated',
 }

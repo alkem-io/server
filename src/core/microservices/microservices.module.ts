@@ -13,6 +13,8 @@ import {
   SUBSCRIPTION_DISCUSSION_UPDATED,
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
   SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,
+  SUBSCRIPTION_CHALLENGE_OPPORTUNITY_CREATED,
+  SUBSCRIPTION_HUB_CHALLENGE_CREATED,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common';
@@ -52,6 +54,14 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
     provide: SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,
     queueName: MessagingQueue.SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,
+  },
+  {
+    provide: SUBSCRIPTION_CHALLENGE_OPPORTUNITY_CREATED,
+    queueName: MessagingQueue.SUBSCRIPTION_CHALLENGE_OPPORTUNITY_CREATED,
+  },
+  {
+    provide: SUBSCRIPTION_HUB_CHALLENGE_CREATED,
+    queueName: MessagingQueue.SUBSCRIPTION_HUB_CHALLENGE_CREATED,
   },
 ];
 
@@ -94,6 +104,8 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     NOTIFICATIONS_SERVICE,
     WALLET_MANAGEMENT_SERVICE,
     NOTIFICATIONS_SERVICE,
+    SUBSCRIPTION_CHALLENGE_OPPORTUNITY_CREATED,
+    SUBSCRIPTION_HUB_CHALLENGE_CREATED,
   ],
 })
 export class MicroservicesModule {}
