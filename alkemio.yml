@@ -229,6 +229,13 @@ monitoring:
     # Flag to control whether PII should be included on monitoring
     submit_pii: ${LOGGING_SENTRY_PII_ENABLED}:false
 
+  # Elastic APM configuration
+  apm:
+    # Is real user monitoring enabled
+    rumEnabled: ${APM_RUM_ENABLED}:false
+    # Endpoint to the APM logging service where events are sent
+    endpoint: ${APM_ENDPOINT}
+
 ## communications ##
 # Section defining all configuration parameters / endpoints required for communication between different actors (user-user, community-user etc) in Alkemio.
 communications:

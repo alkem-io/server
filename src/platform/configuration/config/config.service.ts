@@ -15,6 +15,9 @@ export class KonfigService {
     const sentryConfig = this.configService.get(
       ConfigurationTypes.MONITORING
     )?.sentry;
+    const apmConfig = this.configService.get(
+      ConfigurationTypes.MONITORING
+    )?.apm;
     return {
       template: await this.getTemplate(),
       authentication: {
@@ -69,6 +72,10 @@ export class KonfigService {
         enabled: sentryConfig?.enabled,
         endpoint: sentryConfig?.endpoint,
         submitPII: sentryConfig?.submit_pii,
+      },
+      apm: {
+        rumEnabled: apmConfig?.rumEnabled,
+        endpoint: apmConfig?.endpoint,
       },
     };
   }
