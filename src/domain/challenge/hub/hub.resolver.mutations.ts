@@ -31,7 +31,7 @@ import { PlatformAuthorizationService } from '@src/platform/authorization/platfo
 import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
 import { ChallengeCreatedPayload } from './dto/hub.challenge.created.payload';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_HUB_CHALLENGE_CREATED } from '@common/constants';
+import { SUBSCRIPTION_CHALLENGE_CREATED } from '@common/constants';
 import { PubSubEngine } from 'graphql-subscriptions';
 @Resolver()
 export class HubResolverMutations {
@@ -44,7 +44,7 @@ export class HubResolverMutations {
     private preferenceService: PreferenceService,
     private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationService,
-    @Inject(SUBSCRIPTION_HUB_CHALLENGE_CREATED)
+    @Inject(SUBSCRIPTION_CHALLENGE_CREATED)
     private challengeCreatedSubscription: PubSubEngine
   ) {}
 

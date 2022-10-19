@@ -9,8 +9,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { SUBSCRIPTION_HUB_CHALLENGE_CREATED } from '@common/constants/providers';
-import { UUID } from '@domain/common/scalars';
+import { SUBSCRIPTION_CHALLENGE_CREATED } from '@common/constants/providers';
 import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
 import { HubService } from './hub.service';
 import { ChallengeCreatedPayload } from './dto/hub.challenge.created.payload';
@@ -22,7 +21,7 @@ export class HubResolverSubscriptions {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(SUBSCRIPTION_HUB_CHALLENGE_CREATED)
+    @Inject(SUBSCRIPTION_CHALLENGE_CREATED)
     private challengeCreatedSubscription: PubSubEngine,
     private hubService: HubService,
     private authorizationService: AuthorizationService
@@ -32,20 +31,19 @@ export class HubResolverSubscriptions {
   @TypedSubscription<ChallengeCreatedPayload, ChallengeCreatedArgs>(
     () => ChallengeCreated,
     {
-      description:
-        'Receive new Update messages on Communities the currently authenticated User is a member of.',
+      description: 'Receive new Challenges created on the Hub.',
       resolve(this: HubResolverSubscriptions, payload, args, context) {
         const agentInfo = context.req.user;
-        const logMsgPrefix = `[User (${agentInfo.email}) Hub Challenges] - `;
+        const logMsgPrefix = `[ChallengeCreated subscription] - [${agentInfo.email}] -`;
         this.logger.verbose?.(
-          `${logMsgPrefix} sending out event for Challenges on Hub: ${payload.hubID} `,
+          `${logMsgPrefix} sending out event for created challenge on Hub: ${payload.hubID} `,
           LogContext.SUBSCRIPTIONS
         );
         return payload;
       },
       filter(this: HubResolverSubscriptions, payload, variables, context) {
         const agentInfo = context.req.user;
-        const logMsgPrefix = `[User (${agentInfo.email}) Hub Challenges] - `;
+        const logMsgPrefix = `[ChallengeCreated subscription] - [${agentInfo.email}] -`;
         this.logger.verbose?.(
           `${logMsgPrefix} Filtering event '${payload.eventID}'`,
           LogContext.SUBSCRIPTIONS
@@ -63,20 +61,17 @@ export class HubResolverSubscriptions {
   async challengeCreated(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
-      name: 'hubID',
-      type: () => UUID,
-      description: 'The ID of the Hub to subscribe to.',
       nullable: false,
     })
-    hubID: string
+    args: ChallengeCreatedArgs
   ) {
-    const logMsgPrefix = `[User (${agentInfo.email}) Hub Challenges] - `;
+    const logMsgPrefix = '[ChallengeCreated subscription] -';
     this.logger.verbose?.(
-      `${logMsgPrefix} Subscribing to Challenges on the following Hub: ${hubID}`,
+      `${logMsgPrefix} User ${agentInfo.email} subscribed for new challenges on the following Hub: ${args.hubID}`,
       LogContext.SUBSCRIPTIONS
     );
     // Validate
-    const hub = await this.hubService.getHubOrFail(hubID);
+    const hub = await this.hubService.getHubOrFail(args.hubID);
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,

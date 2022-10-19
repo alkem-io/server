@@ -9,8 +9,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { SUBSCRIPTION_CHALLENGE_OPPORTUNITY_CREATED } from '@common/constants/providers';
-import { UUID } from '@domain/common/scalars';
+import { SUBSCRIPTION_OPPORTUNITY_CREATED } from '@common/constants/providers';
 import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
 import { ChallengeService } from './challenge.service';
 import { OpportunityCreatedPayload } from './dto/challenge.opportunity.created.payload';
@@ -22,7 +21,7 @@ export class ChallengeResolverSubscriptions {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(SUBSCRIPTION_CHALLENGE_OPPORTUNITY_CREATED)
+    @Inject(SUBSCRIPTION_OPPORTUNITY_CREATED)
     private opportunityCreatedSubscription: PubSubEngine,
     private challengeService: ChallengeService,
     private authorizationService: AuthorizationService
@@ -32,13 +31,12 @@ export class ChallengeResolverSubscriptions {
   @TypedSubscription<OpportunityCreatedPayload, OpportunityCreatedArgs>(
     () => OpportunityCreated,
     {
-      description:
-        'Receive new Update messages on Communities the currently authenticated User is a member of.',
+      description: 'Receive new Opportunities created on the Challenge.',
       resolve(this: ChallengeResolverSubscriptions, payload, args, context) {
         const agentInfo = context.req.user;
-        const logMsgPrefix = `[User (${agentInfo.email}) Challenge Opportunities] - `;
+        const logMsgPrefix = `[OpportunityCreated subscription] - [${agentInfo.email}] -`;
         this.logger.verbose?.(
-          `${logMsgPrefix} sending out event for Opportunities on Challenge: ${payload.challengeID} `,
+          `${logMsgPrefix} sending out event for created opportunity on Challenge: ${payload.challengeID} `,
           LogContext.SUBSCRIPTIONS
         );
         return payload;
@@ -50,7 +48,7 @@ export class ChallengeResolverSubscriptions {
         context
       ) {
         const agentInfo = context.req.user;
-        const logMsgPrefix = `[User (${agentInfo.email}) Challenge Opportunities] - `;
+        const logMsgPrefix = `[OpportunityCreated subscription] - [${agentInfo.email}] -`;
         this.logger.verbose?.(
           `${logMsgPrefix} Filtering event '${payload.eventID}'`,
           LogContext.SUBSCRIPTIONS
@@ -68,21 +66,18 @@ export class ChallengeResolverSubscriptions {
   async opportunityCreated(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
-      name: 'challengeID',
-      type: () => UUID,
-      description: 'The ID of the Challenge to subscribe to.',
       nullable: false,
     })
-    challengeID: string
+    args: OpportunityCreatedArgs
   ) {
-    const logMsgPrefix = `[User (${agentInfo.email}) Challenge Opportunities] - `;
+    const logMsgPrefix = '[OpportunityCreated subscription] -';
     this.logger.verbose?.(
-      `${logMsgPrefix} Subscribing to Opportunities on the following Challenge: ${challengeID}`,
+      `${logMsgPrefix} User ${agentInfo.email} subscribed for new opportunities on the following Challenge: ${args.challengeID}`,
       LogContext.SUBSCRIPTIONS
     );
     // Validate
     const challenge = await this.challengeService.getChallengeOrFail(
-      challengeID
+      args.challengeID
     );
 
     await this.authorizationService.grantAccessOrFail(

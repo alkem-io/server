@@ -28,7 +28,7 @@ import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.c
 import { UpdateChallengeInnovationFlowInput } from './dto/challenge.dto.update.innovation.flow';
 import { OpportunityCreatedPayload } from './dto/challenge.opportunity.created.payload';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_CHALLENGE_OPPORTUNITY_CREATED } from '@common/constants';
+import { SUBSCRIPTION_OPPORTUNITY_CREATED } from '@common/constants';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -38,7 +38,7 @@ export class ChallengeResolverMutations {
     private authorizationService: AuthorizationService,
     private challengeService: ChallengeService,
     private challengeLifecycleOptionsProvider: ChallengeLifecycleOptionsProvider,
-    @Inject(SUBSCRIPTION_CHALLENGE_OPPORTUNITY_CREATED)
+    @Inject(SUBSCRIPTION_OPPORTUNITY_CREATED)
     private opportunityCreatedSubscription: PubSubEngine
   ) {}
 
@@ -103,13 +103,11 @@ export class ChallengeResolverMutations {
     );
 
     const opportunityCreatedEvent: OpportunityCreatedPayload = {
-      eventID: `challenge-opportunity-created-${Math.round(
-        Math.random() * 100
-      )}`,
+      eventID: `opportunity-created-${Math.round(Math.random() * 100)}`,
       challengeID: challenge.id,
       opportunity,
     };
-    await this.opportunityCreatedSubscription.publish(
+    this.opportunityCreatedSubscription.publish(
       SubscriptionType.OPPORTUNITY_CREATED,
       opportunityCreatedEvent
     );
