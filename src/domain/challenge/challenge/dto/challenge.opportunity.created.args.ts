@@ -1,9 +1,9 @@
 import { ArgsType, Field } from '@nestjs/graphql';
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @ArgsType()
 export class OpportunityCreatedArgs {
-  @Field(() => UUID_NAMEID, {
+  @Field(() => UUID, {
     description: 'The Challenge to receive the Opportunity from.',
     nullable: false,
   })
