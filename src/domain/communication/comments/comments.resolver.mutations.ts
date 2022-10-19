@@ -77,6 +77,7 @@ export class CommentsResolverMutations {
       const activityLogInput: ActivityInputAspectComment = {
         triggeredBy: agentInfo.userID,
         aspect: aspect,
+        message: commentSent.message,
       };
       await this.activityAdapter.aspectComment(activityLogInput);
     }
