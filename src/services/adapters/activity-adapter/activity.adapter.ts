@@ -36,7 +36,7 @@ export class ActivityAdapter {
     );
     const callout = eventData.callout;
     const collaborationID = await this.getCollaborationIdForCallout(callout.id);
-    const description = `[Callout] New Callout published: '${callout.displayName}'`;
+    const description = `[${callout.displayName}] - ${callout.description}`;
     await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
@@ -55,7 +55,7 @@ export class ActivityAdapter {
     );
 
     const aspect = eventData.aspect;
-    const description = `[Card] New Card created with title: ${aspect.displayName}`;
+    const description = `[${aspect.displayName}] - ${aspect.description}`;
     const collaborationID = await this.getCollaborationIdForAspect(aspect.id);
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
@@ -74,7 +74,7 @@ export class ActivityAdapter {
       LogContext.ACTIVITY
     );
 
-    const description = `[Card] Comment added on card: ${eventData.aspect.displayName}`;
+    const description = `[${eventData.aspect.displayName}] - '${eventData.message}'`;
 
     const aspectID = eventData.aspect.id;
     const calloutID = await this.getCalloutIdForAspect(aspectID);
@@ -98,7 +98,7 @@ export class ActivityAdapter {
     const canvas = eventData.canvas;
     const collaborationID = await this.getCollaborationIdForCanvas(canvas.id);
 
-    const description = `[Canvas] New Canvas created: '${canvas.displayName}'`;
+    const description = `[${canvas.displayName}]`;
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
@@ -122,7 +122,7 @@ export class ActivityAdapter {
       eventData.callout.id
     );
 
-    const description = `[Callout] New comment added on: '${eventData.callout.displayName}'`;
+    const description = `'${eventData.message}'`;
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
@@ -143,7 +143,7 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdFromCommunity(
       community.id
     );
-    const description = `[Community] New member: ${eventData.user.displayName}`;
+    const description = `[${community.type}] '${eventData.user.displayName}'`;
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
