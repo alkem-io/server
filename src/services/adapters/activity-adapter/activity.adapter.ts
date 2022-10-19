@@ -145,10 +145,10 @@ export class ActivityAdapter {
     );
     const description = `[Community] New member: ${eventData.user.displayName}`;
     await this.activityService.createActivity({
-      triggeredBy: eventData.triggeredBy,
+      triggeredBy: eventData.triggeredBy, // this should be the user that triggered the action
       collaborationID,
-      resourceID: community.id,
-      parentID: '',
+      resourceID: eventData.user.id, // the user that joined
+      parentID: community.id, // the communit that was joined
       description: description,
       type: ActivityEventType.MEMBER_JOINED,
     });
