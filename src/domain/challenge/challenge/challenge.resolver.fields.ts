@@ -1,4 +1,4 @@
-import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
@@ -15,6 +15,7 @@ import { IAgent } from '@domain/agent/agent';
 import { IPreference } from '@domain/common/preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -63,28 +64,9 @@ export class ChallengeResolverFields {
   @Profiling.api
   async opportunities(
     @Parent() challenge: Challenge,
-    @Args({
-      name: 'limit',
-      type: () => Float,
-      description:
-        'The number of Opportunities to return; if omitted return all Opportunities.',
-      nullable: true,
-    })
-    limit: number,
-    @Args({
-      name: 'shuffle',
-      type: () => Boolean,
-      description:
-        'If true and limit is specified then return the Opportunities based on a random selection.',
-      nullable: true,
-    })
-    shuffle: boolean
+    @Args({ nullable: true }) args: LimitAndShuffleIdsQueryArgs
   ) {
-    return await this.challengeService.getOpportunities(
-      challenge.id,
-      limit,
-      shuffle
-    );
+    return await this.challengeService.getOpportunities(challenge.id, args);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

@@ -503,9 +503,13 @@ export class HubService {
     return await this.communityService.getUserGroups(community);
   }
 
-  async getOpportunitiesInNameableScope(hub: IHub): Promise<IOpportunity[]> {
+  async getOpportunitiesInNameableScope(
+    hub: IHub,
+    IDs?: string[]
+  ): Promise<IOpportunity[]> {
     return await this.opportunityService.getOpportunitiesInNameableScope(
-      hub.id
+      hub.id,
+      IDs
     );
   }
 

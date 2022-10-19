@@ -57,6 +57,7 @@ import { LifecycleType } from '@common/enums/lifecycle.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 
 @Injectable()
 export class ChallengeService {
@@ -445,13 +446,13 @@ export class ChallengeService {
 
   async getOpportunities(
     challengeId: string,
-    limit?: number,
-    shuffle = false
+    args?: LimitAndShuffleIdsQueryArgs
   ): Promise<IOpportunity[]> {
     const challenge = await this.getChallengeOrFail(challengeId, {
       relations: ['opportunities'],
     });
 
+    const { IDs, limit, shuffle } = args ?? {};
     const opportunities = challenge.opportunities;
     if (!opportunities)
       throw new RelationshipNotFoundException(
@@ -459,11 +460,19 @@ export class ChallengeService {
         LogContext.COLLABORATION
       );
     this.logger.verbose?.(
-      `Querying all Opportunities with limit: ${limit} and shuffle: ${shuffle}`,
+      `Querying all Opportunities with limit: ${limit}, shuffle: ${shuffle} and in list: ${IDs}`,
       LogContext.CHALLENGES
     );
 
-    const limitAndShuffled = limitAndShuffle(opportunities, limit, shuffle);
+    const filteredOpportunities = IDs
+      ? opportunities.filter(({ id }) => IDs.includes(id))
+      : opportunities;
+
+    const limitAndShuffled = limitAndShuffle(
+      filteredOpportunities,
+      limit,
+      shuffle
+    );
 
     // Sort the opportunities base on their display name
     const sortedOpportunities = limitAndShuffled.sort((a, b) =>

@@ -155,8 +155,15 @@ export class HubResolverFields {
   })
   @UseGuards(GraphqlGuard)
   @Profiling.api
-  async opportunities(@Parent() hub: Hub): Promise<IOpportunity[]> {
-    return await this.hubService.getOpportunitiesInNameableScope(hub);
+  async opportunities(
+    @Parent() hub: Hub,
+    @Args('IDs', {
+      type: () => [UUID],
+      nullable: true,
+    })
+    IDs: string[]
+  ): Promise<IOpportunity[]> {
+    return await this.hubService.getOpportunitiesInNameableScope(hub, IDs);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
