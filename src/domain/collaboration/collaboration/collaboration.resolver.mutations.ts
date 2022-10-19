@@ -124,30 +124,14 @@ export class CollaborationResolverMutations {
       await this.collaborationService.getCollaborationOrFail(
         calloutData.collaborationID
       );
-    // Extend the authorization definition to use for creating the relation
-    const authorization =
-      this.relationAuthorizationService.localExtendAuthorizationPolicy(
-        collaboration.authorization
-      );
-    // First check if the user has read access
+
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      authorization,
-      AuthorizationPrivilege.READ,
-      `read callout on collaboration: ${collaboration.id}`
-    );
-    // Then check if the user can create
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      authorization,
+      collaboration.authorization,
       AuthorizationPrivilege.CREATE_CALLOUT,
       `create callout on collaboration: ${collaboration.id}`
     );
-    // Load the authorization policy again to avoid the temporary extension above
-    const collaboriationAuthorizationPolicy =
-      await this.authorizationPolicyService.getAuthorizationPolicyOrFail(
-        authorization.id
-      );
+
     const callout =
       await this.collaborationService.createCalloutOnCollaboration(calloutData);
 
@@ -157,7 +141,7 @@ export class CollaborationResolverMutations {
     const calloutAuthorized =
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         callout,
-        collaboriationAuthorizationPolicy,
+        collaboration.authorization,
         membershipCredential
       );
 
