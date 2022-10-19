@@ -74,7 +74,7 @@ export class ActivityAdapter {
       LogContext.ACTIVITY
     );
 
-    const description = `'${eventData.message}'`;
+    const description = `[${eventData.aspect.displayName}] - '${eventData.message}'`;
 
     const aspectID = eventData.aspect.id;
     const calloutID = await this.getCalloutIdForAspect(aspectID);
