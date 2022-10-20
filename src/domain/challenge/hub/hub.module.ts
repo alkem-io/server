@@ -27,6 +27,7 @@ import { PreferenceSetModule } from '@domain/common/preference-set/preference.se
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
 import { HubFilterModule } from '@services/infrastructure/hub-filter/hub.filter.module';
+import { HubResolverSubscriptions } from './hub.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 
 @Module({
@@ -61,6 +62,7 @@ import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activ
     HubResolverFields,
     HubResolverQueries,
     HubResolverMutations,
+    HubResolverSubscriptions,
   ],
   exports: [HubService, HubAuthorizationService],
 })

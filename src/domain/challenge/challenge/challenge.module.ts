@@ -22,6 +22,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { LifecycleTemplateModule } from '@domain/template/lifecycle-template/lifecycle.template.module';
+import { ChallengeResolverSubscriptions } from './challenge.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 
 @Module({
@@ -51,6 +52,7 @@ import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activ
     ChallengeResolverMutations,
     ChallengeResolverFields,
     ChallengeLifecycleOptionsProvider,
+    ChallengeResolverSubscriptions,
   ],
   exports: [ChallengeService, ChallengeAuthorizationService],
 })

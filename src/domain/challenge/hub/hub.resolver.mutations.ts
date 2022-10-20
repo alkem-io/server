@@ -1,5 +1,5 @@
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver, Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { HubService } from './hub.service';
@@ -29,6 +29,10 @@ import { UpdateChallengePreferenceInput } from '@domain/challenge/challenge/dto/
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
 import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
+import { ChallengeCreatedPayload } from './dto/hub.challenge.created.payload';
+import { SubscriptionType } from '@common/enums/subscription.type';
+import { SUBSCRIPTION_CHALLENGE_CREATED } from '@common/constants';
+import { PubSubEngine } from 'graphql-subscriptions';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 
 @Resolver()
@@ -42,7 +46,9 @@ export class HubResolverMutations {
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private preferenceService: PreferenceService,
     private preferenceSetService: PreferenceSetService,
-    private platformAuthorizationService: PlatformAuthorizationService
+    private platformAuthorizationService: PlatformAuthorizationService,
+    @Inject(SUBSCRIPTION_CHALLENGE_CREATED)
+    private challengeCreatedSubscription: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -243,19 +249,32 @@ export class HubResolverMutations {
       challengeData,
       agentInfo
     );
-    const hubCommunityCredential =
-      await this.hubService.getCommunityMembershipCredential(hub);
 
     this.activityAdapter.challengeCreated({
       triggeredBy: agentInfo.userID,
       challenge: challenge,
     });
 
-    return await this.challengeAuthorizationService.applyAuthorizationPolicy(
+    const hubCommunityCredential =
+      await this.hubService.getCommunityMembershipCredential(hub);
+
+    await this.challengeAuthorizationService.applyAuthorizationPolicy(
       challenge,
       hub.authorization,
       hubCommunityCredential
     );
+
+    const challengeCreatedEvent: ChallengeCreatedPayload = {
+      eventID: `hub-challenge-created-${Math.round(Math.random() * 100)}`,
+      hubID: hub.id,
+      challenge,
+    };
+    this.challengeCreatedSubscription.publish(
+      SubscriptionType.CHALLENGE_CREATED,
+      challengeCreatedEvent
+    );
+
+    return challenge;
   }
 
   @UseGuards(GraphqlGuard)
