@@ -1,6 +1,7 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
+import { PubSubEngine } from 'graphql-subscriptions';
 import { ChallengeService } from './challenge.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
@@ -25,6 +26,9 @@ import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
 import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
 import { UpdateChallengeInnovationFlowInput } from './dto/challenge.dto.update.innovation.flow';
+import { OpportunityCreatedPayload } from './dto/challenge.opportunity.created.payload';
+import { SubscriptionType } from '@common/enums/subscription.type';
+import { SUBSCRIPTION_OPPORTUNITY_CREATED } from '@common/constants';
 
 @Resolver()
 export class ChallengeResolverMutations {
@@ -33,7 +37,9 @@ export class ChallengeResolverMutations {
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private authorizationService: AuthorizationService,
     private challengeService: ChallengeService,
-    private challengeLifecycleOptionsProvider: ChallengeLifecycleOptionsProvider
+    private challengeLifecycleOptionsProvider: ChallengeLifecycleOptionsProvider,
+    @Inject(SUBSCRIPTION_OPPORTUNITY_CREATED)
+    private opportunityCreatedSubscription: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -91,10 +97,22 @@ export class ChallengeResolverMutations {
       opportunityData,
       agentInfo
     );
-    return await this.opportunityAuthorizationService.applyAuthorizationPolicy(
+    await this.opportunityAuthorizationService.applyAuthorizationPolicy(
       opportunity,
       challenge.authorization
     );
+
+    const opportunityCreatedEvent: OpportunityCreatedPayload = {
+      eventID: `opportunity-created-${Math.round(Math.random() * 100)}`,
+      challengeID: challenge.id,
+      opportunity,
+    };
+    this.opportunityCreatedSubscription.publish(
+      SubscriptionType.OPPORTUNITY_CREATED,
+      opportunityCreatedEvent
+    );
+
+    return opportunity;
   }
 
   @UseGuards(GraphqlGuard)
