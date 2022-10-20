@@ -260,7 +260,7 @@ export class HubResolverMutations {
       hubID: hub.id,
       challenge,
     };
-    await this.challengeCreatedSubscription.publish(
+    this.challengeCreatedSubscription.publish(
       SubscriptionType.CHALLENGE_CREATED,
       challengeCreatedEvent
     );
