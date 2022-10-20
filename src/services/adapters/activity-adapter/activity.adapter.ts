@@ -52,7 +52,7 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdForHub(
       challenge.hubID
     );
-    const description = `New Challenge created: '${challenge.displayName}'`;
+    const description = challenge.displayName;
 
     await this.activityService.createActivity({
       collaborationID,
@@ -79,7 +79,7 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdForChallenge(
       eventData.challengeId
     );
-    const description = `New Opportunity created: '${opportunity.displayName}'`;
+    const description = opportunity.displayName;
 
     await this.activityService.createActivity({
       collaborationID,
@@ -219,28 +219,6 @@ export class ActivityAdapter {
       type: ActivityEventType.MEMBER_JOINED,
     });
     return true;
-  }
-
-  private async getCollaborationIdOfHubForChallenge(
-    challengeID: string
-  ): Promise<string> {
-    const collaborationId = await this.collaborationRepository
-      .createQueryBuilder('collab')
-      .select('collab.id')
-      .leftJoin('hub.collaboration', 'hub')
-      .leftJoin('challenge.hub', 'challenge')
-      .where('challenge.id = :challengeId')
-      .setParameter('challengeId', challengeID)
-      .getRawOne<string>();
-
-    if (!collaborationId) {
-      throw new EntityNotFoundException(
-        `Unable to find Collaboration of Hub from Challenge: ${challengeID} `,
-        LogContext.ACTIVITY
-      );
-    }
-
-    return collaborationId;
   }
 
   private async getCollaborationIdForHub(hubID: string): Promise<string> {
