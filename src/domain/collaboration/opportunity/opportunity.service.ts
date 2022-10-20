@@ -222,8 +222,15 @@ export class OpportunityService {
   }
 
   async getOpportunitiesInNameableScope(
-    nameableScopeID: string
+    nameableScopeID: string,
+    IDs?: string[]
   ): Promise<IOpportunity[]> {
+    if (IDs && IDs.length > 0) {
+      return await this.opportunityRepository.findByIds(IDs, {
+        hubID: nameableScopeID,
+      });
+    }
+
     return await this.opportunityRepository.find({
       hubID: nameableScopeID,
     });

@@ -33,9 +33,12 @@ import { ChallengeCreatedPayload } from './dto/hub.challenge.created.payload';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_CHALLENGE_CREATED } from '@common/constants';
 import { PubSubEngine } from 'graphql-subscriptions';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+
 @Resolver()
 export class HubResolverMutations {
   constructor(
+    private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
     private hubService: HubService,
     private hubAuthorizationService: HubAuthorizationService,
@@ -246,6 +249,12 @@ export class HubResolverMutations {
       challengeData,
       agentInfo
     );
+
+    this.activityAdapter.challengeCreated({
+      triggeredBy: agentInfo.userID,
+      challenge: challenge,
+    });
+
     const hubCommunityCredential =
       await this.hubService.getCommunityMembershipCredential(hub);
 
