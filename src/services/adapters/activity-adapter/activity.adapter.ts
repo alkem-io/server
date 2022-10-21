@@ -213,8 +213,8 @@ export class ActivityAdapter {
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
-      resourceID: community.id,
-      parentID: '',
+      resourceID: eventData.user.id, // the user that joined
+      parentID: community.id, // the community that was joined
       description: description,
       type: ActivityEventType.MEMBER_JOINED,
     });

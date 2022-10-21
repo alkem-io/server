@@ -6,6 +6,9 @@ import { ActivityLog2ResolverQueries } from './activity2.log.resolver.queries';
 import { ActivityLog2Service } from './activity2.log.service';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { UserModule } from '@domain/community/user/user.module';
+import { CommunityModule } from '@domain/community/community/community.module';
+import { CalloutModule } from '@domain/collaboration/callout/callout.module';
+import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
 
 @Module({
   imports: [
@@ -14,6 +17,9 @@ import { UserModule } from '@domain/community/user/user.module';
     ActivityModule,
     CollaborationModule,
     UserModule,
+    CommunityModule,
+    CalloutModule,
+    AspectModule,
   ],
   providers: [ActivityLog2Service, ActivityLog2ResolverQueries],
   exports: [],

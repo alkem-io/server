@@ -1,0 +1,40 @@
+query activityLog2OnCollaboration($queryData: ActivityLog2Input!) {
+  activityLog2OnCollaboration(queryData: $queryData) {
+    collaborationID
+    triggeredBy {
+      nameID
+    }
+    description
+    type
+    __typename
+    ... on ActivityLogEntryMemberJoined {
+      community {
+        id
+      }
+    }
+    ... on ActivityLogEntryCalloutPublished {
+      callout {
+        id
+        type
+      }
+    }
+    ... on ActivityLogEntryCalloutCardCreated {
+      callout {
+        id
+        type
+      }
+      card {
+        id
+        displayName
+      }
+    }
+  }
+}
+
+
+{
+  "queryData":
+  {
+    "collaborationID": "uuid"
+  }
+}

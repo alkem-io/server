@@ -6,13 +6,17 @@ import { ActivityEventType } from '@common/enums/activity.event.type';
 import { IUser } from '@domain/community/user/user.interface';
 import { IActivityLogEntryMemberJoined } from './activity.log.dto.entry.member.joined.interface';
 import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
+import { IActivityLogEntryCalloutPublished } from './activity.log.dto.entry.callout.published';
+import { IActivityLogEntryCalloutCardCreated } from './activity.log.dto.entry.callout.card.created';
 
 @InterfaceType('ActivityLogEntry', {
   resolveType(activityLogEntry) {
     const type = activityLogEntry.type;
     switch (type) {
       case ActivityEventType.CALLOUT_PUBLISHED:
+        return IActivityLogEntryCalloutPublished;
       case ActivityEventType.CARD_CREATED:
+        return IActivityLogEntryCalloutCardCreated;
       case ActivityEventType.CANVAS_CREATED:
       case ActivityEventType.CHALLENGE_CREATED:
       case ActivityEventType.OPPORTUNITY_CREATED:
