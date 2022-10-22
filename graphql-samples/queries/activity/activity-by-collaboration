@@ -1,5 +1,5 @@
-query activityLog2OnCollaboration($queryData: ActivityLog2Input!) {
-  activityLog2OnCollaboration(queryData: $queryData) {
+query activityLogOnCollaboration($queryData: ActivityLogInput!) {
+  activityLogOnCollaboration(queryData: $queryData) {
     collaborationID
     triggeredBy {
       nameID

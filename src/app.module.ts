@@ -46,7 +46,6 @@ import { RedisLockModule } from '@core/caching/redis/redis.lock.module';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
 import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
-import { ActivityLog2Module } from '@services/api/activity-log2/activity2.log.module';
 
 @Module({
   imports: [
@@ -187,7 +186,6 @@ import { ActivityLog2Module } from '@services/api/activity-log2/activity2.log.mo
     BootstrapModule,
     SearchModule,
     ActivityLogModule,
-    ActivityLog2Module,
     RolesModule,
     KonfigModule,
     IpfsModule,
