@@ -24,7 +24,7 @@ export class ActivityLogResolverQueries {
     description: 'Retrieve the ActivityLog for the specified Collaboration',
   })
   @Profiling.api
-  async activityLog2OnCollaboration(
+  async activityLogOnCollaboration(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('queryData', { type: () => ActivityLogInput, nullable: false })
     queryData: ActivityLogInput

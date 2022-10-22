@@ -78,6 +78,7 @@ export class ActivityLogService {
             ...activityLogEntryBase,
             community: community,
             user: userJoining,
+            communityType: `${community.type}`,
           };
           results.push(activityMemberJoined);
           break;
