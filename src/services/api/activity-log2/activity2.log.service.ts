@@ -13,6 +13,13 @@ import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { IActivityLogEntryCalloutPublished } from './dto/activity.log.dto.entry.callout.published';
 import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { IActivityLogEntryCalloutCardCreated } from './dto/activity.log.dto.entry.callout.card.created';
+import { CanvasService } from '@domain/common/canvas/canvas.service';
+import { IActivityLogEntryCalloutCanvasCreated } from './dto/activity.log.dto.entry.callout.canvas.created';
+import { IActivityLogEntryCalloutDiscussionComment } from './dto/activity.log.dto.entry.callout.discussion.comment';
+import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { IActivityLogEntryChallengeCreated } from './dto/activity.log.dto.entry.challenge.created';
+import { IActivityLogEntryOpportunityCreated } from './dto/activity.log.dto.entry.opportunity.created';
 
 export class ActivityLog2Service {
   constructor(
@@ -20,6 +27,9 @@ export class ActivityLog2Service {
     private userService: UserService,
     private calloutService: CalloutService,
     private aspectService: AspectService,
+    private canvasService: CanvasService,
+    private challengeService: ChallengeService,
+    private opportunityService: OpportunityService,
     private communityService: CommunityService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -45,12 +55,12 @@ export class ActivityLog2Service {
     }
     const results: IActivityLogEntry[] = [];
     for (const rawActivity of rawActivities) {
-      const user = await this.userService.getUserOrFail(
+      const userTriggeringActivity = await this.userService.getUserOrFail(
         rawActivity.triggeredBy
       );
       const activityLogEntryBase = {
         id: rawActivity.id,
-        triggeredBy: user,
+        triggeredBy: userTriggeringActivity,
         createdDate: rawActivity.createdDate,
         type: rawActivity.type,
         description: rawActivity.description,
@@ -61,9 +71,13 @@ export class ActivityLog2Service {
           const community = await this.communityService.getCommunityOrFail(
             rawActivity.parentID
           );
+          const userJoining = await this.userService.getUserOrFail(
+            rawActivity.resourceID
+          );
           const activityMemberJoined: IActivityLogEntryMemberJoined = {
             ...activityLogEntryBase,
             community: community,
+            user: userJoining,
           };
           results.push(activityMemberJoined);
           break;
@@ -93,19 +107,65 @@ export class ActivityLog2Service {
           results.push(activityCalloutCardCreated);
           break;
         case ActivityEventType.CANVAS_CREATED:
+          const calloutCanvasCreated =
+            await this.calloutService.getCalloutOrFail(rawActivity.parentID);
+          const canvasCreated = await this.canvasService.getCanvasOrFail(
+            rawActivity.resourceID
+          );
+          const activityCalloutCanvasCreated: IActivityLogEntryCalloutCanvasCreated =
+            {
+              ...activityLogEntryBase,
+              callout: calloutCanvasCreated,
+              canvas: canvasCreated,
+            };
+          results.push(activityCalloutCanvasCreated);
+          break;
         case ActivityEventType.CHALLENGE_CREATED:
-        case ActivityEventType.OPPORTUNITY_CREATED:
-        case ActivityEventType.CARD_COMMENT:
-        case ActivityEventType.DISCUSSION_COMMENT:
-          const activity: IActivityLogEntry = {
-            id: rawActivity.id,
-            triggeredBy: user,
-            createdDate: rawActivity.createdDate,
-            type: rawActivity.type,
-            description: rawActivity.description,
-            collaborationID: rawActivity.collaborationID,
+          const challenge = await this.challengeService.getChallengeOrFail(
+            rawActivity.resourceID
+          );
+          const activityChallengeCreated: IActivityLogEntryChallengeCreated = {
+            ...activityLogEntryBase,
+            challenge: challenge,
           };
-          results.push(activity);
+          results.push(activityChallengeCreated);
+          break;
+        case ActivityEventType.OPPORTUNITY_CREATED:
+          const opportunity =
+            await this.opportunityService.getOpportunityOrFail(
+              rawActivity.resourceID
+            );
+          const activityOpportunityCreated: IActivityLogEntryOpportunityCreated =
+            {
+              ...activityLogEntryBase,
+              opportunity: opportunity,
+            };
+          results.push(activityOpportunityCreated);
+          break;
+        case ActivityEventType.CARD_COMMENT:
+          const calloutCardComment = await this.calloutService.getCalloutOrFail(
+            rawActivity.parentID
+          );
+          const cardCommentedOn = await this.aspectService.getAspectOrFail(
+            rawActivity.resourceID
+          );
+          const activityCalloutCardCommentedOn: IActivityLogEntryCalloutCardCreated =
+            {
+              ...activityLogEntryBase,
+              callout: calloutCardComment,
+              card: cardCommentedOn,
+            };
+          results.push(activityCalloutCardCommentedOn);
+          break;
+        case ActivityEventType.DISCUSSION_COMMENT:
+          const calloutDiscussionComment =
+            await this.calloutService.getCalloutOrFail(rawActivity.resourceID);
+          const activityCalloutDiscussionComment: IActivityLogEntryCalloutDiscussionComment =
+            {
+              ...activityLogEntryBase,
+              callout: calloutDiscussionComment,
+            };
+          results.push(activityCalloutDiscussionComment);
       }
     }
     return results;

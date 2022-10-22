@@ -5,9 +5,13 @@ import { LogContext } from '@common/enums';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { IUser } from '@domain/community/user/user.interface';
 import { IActivityLogEntryMemberJoined } from './activity.log.dto.entry.member.joined.interface';
-import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntryCalloutPublished } from './activity.log.dto.entry.callout.published';
 import { IActivityLogEntryCalloutCardCreated } from './activity.log.dto.entry.callout.card.created';
+import { IActivityLogEntryCalloutCanvasCreated } from './activity.log.dto.entry.callout.canvas.created';
+import { IActivityLogEntryCalloutCardComment } from './activity.log.dto.entry.callout.card.comment';
+import { IActivityLogEntryCalloutDiscussionComment } from './activity.log.dto.entry.callout.discussion.comment';
+import { IActivityLogEntryChallengeCreated } from './activity.log.dto.entry.challenge.created';
+import { IActivityLogEntryOpportunityCreated } from './activity.log.dto.entry.opportunity.created';
 
 @InterfaceType('ActivityLogEntry', {
   resolveType(activityLogEntry) {
@@ -18,11 +22,15 @@ import { IActivityLogEntryCalloutCardCreated } from './activity.log.dto.entry.ca
       case ActivityEventType.CARD_CREATED:
         return IActivityLogEntryCalloutCardCreated;
       case ActivityEventType.CANVAS_CREATED:
+        return IActivityLogEntryCalloutCanvasCreated;
       case ActivityEventType.CHALLENGE_CREATED:
+        return IActivityLogEntryChallengeCreated;
       case ActivityEventType.OPPORTUNITY_CREATED:
+        return IActivityLogEntryOpportunityCreated;
       case ActivityEventType.CARD_COMMENT:
+        return IActivityLogEntryCalloutCardComment;
       case ActivityEventType.DISCUSSION_COMMENT:
-        return IActivityLogEntryBase;
+        return IActivityLogEntryCalloutDiscussionComment;
       case ActivityEventType.MEMBER_JOINED:
         return IActivityLogEntryMemberJoined;
     }

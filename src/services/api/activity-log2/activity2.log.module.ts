@@ -9,6 +9,9 @@ import { UserModule } from '@domain/community/user/user.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
+import { CanvasModule } from '@domain/common/canvas/canvas.module';
+import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
+import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
     CommunityModule,
     CalloutModule,
     AspectModule,
+    CanvasModule,
+    ChallengeModule,
+    OpportunityModule,
   ],
   providers: [ActivityLog2Service, ActivityLog2ResolverQueries],
   exports: [],
