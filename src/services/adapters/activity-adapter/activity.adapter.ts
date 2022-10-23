@@ -140,8 +140,6 @@ export class ActivityAdapter {
       LogContext.ACTIVITY
     );
 
-    const description = `[${eventData.aspect.displayName}] - '${eventData.message}'`;
-
     const aspectID = eventData.aspect.id;
     const calloutID = await this.getCalloutIdForAspect(aspectID);
     const collaborationID = await this.getCollaborationIdForCallout(calloutID);
@@ -150,7 +148,7 @@ export class ActivityAdapter {
       collaborationID,
       resourceID: aspectID,
       parentID: calloutID,
-      description: description,
+      description: eventData.message,
       type: ActivityEventType.CARD_COMMENT,
     });
     return true;
@@ -188,13 +186,12 @@ export class ActivityAdapter {
       eventData.callout.id
     );
 
-    const description = `'${eventData.message}'`;
     await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: eventData.callout.id,
       parentID: collaborationID,
-      description: description,
+      description: eventData.message,
       type: ActivityEventType.DISCUSSION_COMMENT,
     });
     return true;
