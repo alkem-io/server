@@ -400,8 +400,8 @@ export class OrganizationService {
     const activity: INVP[] = [];
 
     const membersCount = await this.getMembersCount(organization);
-    const membersTopic = new NVP('members', membersCount.toString());
-    membersTopic.id = `members-${organization.id}`;
+    const membersTopic = new NVP('associates', membersCount.toString());
+    membersTopic.id = `associates-${organization.id}`;
     activity.push(membersTopic);
 
     return activity;
