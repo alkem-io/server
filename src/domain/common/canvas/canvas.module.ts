@@ -10,6 +10,7 @@ import { CanvasService } from './canvas.service';
 import { CanvasAuthorizationService } from './canvas.service.authorization';
 import { CanvasResolverSubscriptions } from '@domain/common/canvas/canvas.resolver.subscriptions';
 import { VisualModule } from '@domain/common/visual/visual.module';
+import { UserModule } from '@domain/community/user/user.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { VisualModule } from '@domain/common/visual/visual.module';
     AuthorizationPolicyModule,
     CanvasCheckoutModule,
     VisualModule,
+    UserModule,
     TypeOrmModule.forFeature([Canvas]),
   ],
   providers: [

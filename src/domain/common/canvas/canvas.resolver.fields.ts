@@ -5,21 +5,32 @@ import { ICanvas } from './canvas.interface';
 import { CanvasService } from './canvas.service';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@src/core';
-import { IVisual } from '@src/domain';
-import { UUID } from '../scalars/scalar.uuid';
+import { IVisual } from '@src/domain/common/visual/visual.interface';
+import { IUser } from '@domain/community/user/user.interface';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { LogContext } from '@common/enums/logging.context';
+import { UserService } from '@domain/community/user/user.service';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverFields {
-  constructor(private canvasService: CanvasService) {}
+  constructor(
+    private canvasService: CanvasService,
+    private userService: UserService
+  ) {}
 
-  @ResolveField('createdBy', () => UUID, {
+  @ResolveField('createdBy', () => IUser, {
     nullable: false,
-    description: 'The id of the user that created this Canvas',
+    description: 'The user that created this Canvas',
   })
-  async createdBy(@Parent() canvas: ICanvas): Promise<string> {
+  async createdBy(@Parent() canvas: ICanvas): Promise<IUser> {
     const createdBy = canvas.createdBy;
-    if (!createdBy) return '';
-    return createdBy;
+    if (!createdBy) {
+      throw new EntityNotInitializedException(
+        'CreatedBy not set on Aspect',
+        LogContext.COLLABORATION
+      );
+    }
+    return await this.userService.getUserOrFail(createdBy);
   }
 
   @ResolveField('checkout', () => ICanvasCheckout, {
