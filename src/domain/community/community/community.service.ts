@@ -39,6 +39,7 @@ import { ICommunityPolicyRole } from '../community-policy/community.policy.role.
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
 import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/dto/activity.dto.input.member.joined';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { AgentInfo } from '@core/authentication';
 
 @Injectable()
 export class CommunityService {
@@ -312,7 +313,8 @@ export class CommunityService {
   async assignUserToRole(
     community: ICommunity,
     userID: string,
-    role: CommunityRole
+    role: CommunityRole,
+    agentInfo?: AgentInfo
   ): Promise<ICommunity> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
     const hasMemberRoleInParent = await this.isMemberInParentCommunity(
@@ -335,8 +337,12 @@ export class CommunityService {
 
     if (role === CommunityRole.MEMBER) {
       this.addMemberToCommunication(user, community);
+      let triggeredUserID = userID;
+      if (agentInfo) {
+        triggeredUserID = agentInfo.userID;
+      }
       const activityLogInput: ActivityInputMemberJoined = {
-        triggeredBy: userID,
+        triggeredBy: triggeredUserID,
         community: community,
         user: user,
       };
