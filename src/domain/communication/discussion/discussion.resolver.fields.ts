@@ -5,7 +5,7 @@ import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { DiscussionService } from './discussion.service';
 import { IDiscussion } from './discussion.interface';
-import { CommunicationMessageResult } from '../message/communication.dto.message.result';
+import { IMessage } from '../message/message.interface';
 import { Discussion } from './discussion.entity';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 
@@ -15,14 +15,12 @@ export class DiscussionResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('messages', () => [CommunicationMessageResult], {
+  @ResolveField('messages', () => [IMessage], {
     nullable: true,
     description: 'Messages for this Discussion.',
   })
   @Profiling.api
-  async messages(
-    @Parent() discussion: IDiscussion
-  ): Promise<CommunicationMessageResult[]> {
+  async messages(@Parent() discussion: IDiscussion): Promise<IMessage[]> {
     const discussionRoom = await this.discussionService.getDiscussionRoom(
       discussion
     );

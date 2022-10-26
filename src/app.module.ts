@@ -46,6 +46,7 @@ import { RedisLockModule } from '@core/caching/redis/redis.lock.module';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
 import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
+import { MessageModule } from '@domain/communication/message/message.module';
 
 @Module({
   imports: [
@@ -191,6 +192,7 @@ import { ActivityLogModule } from '@services/api/activity-log/activity.log.modul
     IpfsModule,
     AdminCommunicationModule,
     AgentModule,
+    MessageModule,
     RegistrationModule,
     RedisLockModule,
     ConversionModule,

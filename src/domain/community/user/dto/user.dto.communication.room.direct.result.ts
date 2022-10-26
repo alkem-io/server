@@ -1,4 +1,4 @@
-import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
+import { IMessage } from '@domain/communication/message/message.interface';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { Field, ObjectType } from '@nestjs/graphql';
 
@@ -16,9 +16,9 @@ export class DirectRoomResult extends CommunicationRoomResult {
   })
   id!: string;
 
-  @Field(() => [CommunicationMessageResult], {
+  @Field(() => [IMessage], {
     nullable: false,
     description: 'The messages that have been sent to the Direct Room.',
   })
-  messages!: CommunicationMessageResult[];
+  messages!: IMessage[];
 }
