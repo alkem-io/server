@@ -17,7 +17,7 @@ import { IActivity } from '@platform/activity';
 import ActivityLogBuilderService, {
   IActivityLogBuilder,
 } from '@services/api/activity-log/activity.log.builder.service';
-import { IActivityLogEntryBase } from '@services/api/activity-log/activity.log.entry.base.interface';
+import { IActivityLogEntryBase } from './activity.log.entry.base.interface';
 
 export class ActivityLogService {
   constructor(
@@ -51,16 +51,18 @@ export class ActivityLogService {
     } else {
       rawActivities = await this.activityService.getAllActivity();
     }
-    // Filter out events that trigger errors. Todo: fix properly
-    const filteredActivites = rawActivities.filter(a => {
-      // Work around for community member joined without parentID set
-      if (a.type === ActivityEventType.MEMBER_JOINED && !a.parentID) {
-        return false;
-      }
-      return true;
-    });
-    const results: IActivityLogEntry[] = await Promise.all(
-      filteredActivites.map(async rawActivity => {
+
+    const results: IActivityLogEntry[] = [];
+    for (const rawActivity of rawActivities) {
+      try {
+        // Work around for community member joined without parentID set
+        if (
+          rawActivity.type === ActivityEventType.MEMBER_JOINED &&
+          !rawActivity.parentID
+        ) {
+          continue;
+        }
+
         const userTriggeringActivity = await this.userService.getUserOrFail(
           rawActivity.triggeredBy
         );
@@ -84,10 +86,16 @@ export class ActivityLogService {
             this.communityService
           );
         const activityType = rawActivity.type as ActivityEventType;
-
-        return activityBuilder[activityType](rawActivity);
-      })
-    );
+        const result = await activityBuilder[activityType](rawActivity);
+        results.push(result);
+      } catch (error) {
+        //
+        this.logger.warn(
+          `Unable to process activity entry ${rawActivity.id}: ${error}`,
+          LogContext.ACTIVITY
+        );
+      }
+    }
     return results;
   }
 }
