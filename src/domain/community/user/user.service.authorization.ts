@@ -188,7 +188,7 @@ export class UserAuthorizationService {
 
         newRules.push(challengeAdmin);
       } else if (
-        credential.type === AuthorizationCredential.ORGANIZATION_MEMBER
+        credential.type === AuthorizationCredential.ORGANIZATION_ASSOCIATE
       ) {
         const challengeAdmin = new AuthorizationPolicyRuleCredential(
           [AuthorizationPrivilege.READ],

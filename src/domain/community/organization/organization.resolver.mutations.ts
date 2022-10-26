@@ -16,8 +16,8 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { IUser } from '@domain/community/user/user.interface';
 import { OrganizationAuthorizationResetInput } from './dto/organization.dto.reset.authorization';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
-import { AssignOrganizationMemberInput } from './dto/organization.dto.assign.member';
-import { RemoveOrganizationMemberInput } from './dto/organization.dto.remove.member';
+import { AssignOrganizationAssociateInput } from './dto/organization.dto.assign.associate';
+import { RemoveOrganizationAssociateInput } from './dto/organization.dto.remove.associate';
 import { RemoveOrganizationAdminInput } from './dto/organization.dto.remove.admin';
 import { AssignOrganizationAdminInput } from './dto/organization.dto.assign.admin';
 import { AssignOrganizationOwnerInput } from './dto/organization.dto.assign.owner';
@@ -165,12 +165,13 @@ export class OrganizationResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IOrganization, {
-    description: 'Assigns a User as a member of the specified Organization.',
+    description:
+      'Assigns a User as an associate of the specified Organization.',
   })
   @Profiling.api
   async assignUserToOrganization(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignOrganizationMemberInput
+    @Args('membershipData') membershipData: AssignOrganizationAssociateInput
   ): Promise<IOrganization> {
     const organization = await this.organizationService.getOrganizationOrFail(
       membershipData.organizationID
@@ -191,7 +192,7 @@ export class OrganizationResolverMutations {
   @Profiling.api
   async removeUserFromOrganization(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveOrganizationMemberInput
+    @Args('membershipData') membershipData: RemoveOrganizationAssociateInput
   ): Promise<IOrganization> {
     const organization = await this.organizationService.getOrganizationOrFail(
       membershipData.organizationID
@@ -202,7 +203,7 @@ export class OrganizationResolverMutations {
       AuthorizationPrivilege.GRANT,
       `remove user organization: ${organization.displayName}`
     );
-    return await this.organizationService.removeMember(membershipData);
+    return await this.organizationService.removeAssociate(membershipData);
   }
 
   @UseGuards(GraphqlGuard)

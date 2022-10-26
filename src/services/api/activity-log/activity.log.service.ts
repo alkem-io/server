@@ -51,8 +51,16 @@ export class ActivityLogService {
     } else {
       rawActivities = await this.activityService.getAllActivity();
     }
+    // Filter out events that trigger errors. Todo: fix properly
+    const filteredActivites = rawActivities.filter(a => {
+      // Work around for community member joined without parentID set
+      if (a.type === ActivityEventType.MEMBER_JOINED && !a.parentID) {
+        return false;
+      }
+      return true;
+    });
     const results: IActivityLogEntry[] = await Promise.all(
-      rawActivities.map(async rawActivity => {
+      filteredActivites.map(async rawActivity => {
         const userTriggeringActivity = await this.userService.getUserOrFail(
           rawActivity.triggeredBy
         );
@@ -67,7 +75,6 @@ export class ActivityLogService {
         const activityBuilder: IActivityLogBuilder =
           new ActivityLogBuilderService(
             activityLogEntryBase,
-            this.activityService,
             this.userService,
             this.calloutService,
             this.aspectService,
@@ -77,6 +84,7 @@ export class ActivityLogService {
             this.communityService
           );
         const activityType = rawActivity.type as ActivityEventType;
+
         return activityBuilder[activityType](rawActivity);
       })
     );

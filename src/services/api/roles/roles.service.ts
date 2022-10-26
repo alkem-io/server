@@ -117,8 +117,8 @@ export class RolesService {
   ) {
     for (const credential of credentials) {
       switch (credential.type) {
-        case AuthorizationCredential.ORGANIZATION_MEMBER:
-          await this.addOrganizationMemberRole(orgsMap, credential);
+        case AuthorizationCredential.ORGANIZATION_ASSOCIATE:
+          await this.addOrganizationAssociateRole(orgsMap, credential);
           break;
         case AuthorizationCredential.HUB_MEMBER:
           await this.addHubMemberRole(hubsMap, credential);
@@ -246,7 +246,7 @@ export class RolesService {
     this.addRole(hubResult, ROLE_MEMBER);
   }
 
-  private async addOrganizationMemberRole(
+  private async addOrganizationAssociateRole(
     orgsMap: Map<string, RolesResultOrganization>,
     credential: ICredential
   ) {
