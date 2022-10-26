@@ -64,17 +64,18 @@ export class ActivityLogService {
           description: rawActivity.description,
           collaborationID: rawActivity.collaborationID,
         };
-        const activityBuilder = new ActivityLogBuilderService(
-          activityLogEntryBase,
-          this.activityService,
-          this.userService,
-          this.calloutService,
-          this.aspectService,
-          this.canvasService,
-          this.challengeService,
-          this.opportunityService,
-          this.communityService
-        ) as IActivityLogBuilder;
+        const activityBuilder: IActivityLogBuilder =
+          new ActivityLogBuilderService(
+            activityLogEntryBase,
+            this.activityService,
+            this.userService,
+            this.calloutService,
+            this.aspectService,
+            this.canvasService,
+            this.challengeService,
+            this.opportunityService,
+            this.communityService
+          );
         const activityType = rawActivity.type as ActivityEventType;
         return activityBuilder[activityType](rawActivity);
       })
