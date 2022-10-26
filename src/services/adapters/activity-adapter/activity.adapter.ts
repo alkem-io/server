@@ -11,6 +11,7 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { SubscriptionPublishService } from '../../subscriptions/subscription-publish-service';
 import { ActivityInputCalloutPublished } from './dto/activity.dto.input.callout.published';
 import { ActivityInputAspectCreated } from './dto/activity.dto.input.aspect.created';
 import { ActivityInputCanvasCreated } from './dto/activity.dto.input.canvas.created';
@@ -29,10 +30,11 @@ export class ActivityAdapter {
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private readonly graphqlSubscriptionService: SubscriptionPublishService
   ) {}
 
-  async challengeCreated(
+  public async challengeCreated(
     eventData: ActivityInputChallengeCreated
   ): Promise<boolean> {
     this.logger.verbose?.(
@@ -54,7 +56,7 @@ export class ActivityAdapter {
     );
     const description = challenge.displayName;
 
-    await this.activityService.createActivity({
+    const activity = await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
       resourceID: challenge.id,
@@ -63,10 +65,12 @@ export class ActivityAdapter {
       type: ActivityEventType.CHALLENGE_CREATED,
     });
 
+    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+
     return true;
   }
 
-  async opportunityCreated(
+  public async opportunityCreated(
     eventData: ActivityInputOpportunityCreated
   ): Promise<boolean> {
     this.logger.verbose?.(
@@ -81,7 +85,7 @@ export class ActivityAdapter {
     );
     const description = opportunity.displayName;
 
-    await this.activityService.createActivity({
+    const activity = await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
       resourceID: opportunity.id,
@@ -90,10 +94,12 @@ export class ActivityAdapter {
       type: ActivityEventType.OPPORTUNITY_CREATED,
     });
 
+    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+
     return true;
   }
 
-  async calloutPublished(
+  public async calloutPublished(
     eventData: ActivityInputCalloutPublished
   ): Promise<boolean> {
     this.logger.verbose?.(
@@ -103,7 +109,7 @@ export class ActivityAdapter {
     const callout = eventData.callout;
     const collaborationID = await this.getCollaborationIdForCallout(callout.id);
     const description = `[${callout.displayName}] - ${callout.description}`;
-    await this.activityService.createActivity({
+    const activity = await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
       resourceID: callout.id,
@@ -111,10 +117,15 @@ export class ActivityAdapter {
       description: description,
       type: ActivityEventType.CALLOUT_PUBLISHED,
     });
+
+    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+
     return true;
   }
 
-  async aspectCreated(eventData: ActivityInputAspectCreated): Promise<boolean> {
+  public async aspectCreated(
+    eventData: ActivityInputAspectCreated
+  ): Promise<boolean> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.ACTIVITY
@@ -123,7 +134,7 @@ export class ActivityAdapter {
     const aspect = eventData.aspect;
     const description = `[${aspect.displayName}] - ${aspect.description}`;
     const collaborationID = await this.getCollaborationIdForAspect(aspect.id);
-    await this.activityService.createActivity({
+    const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: aspect.id,
@@ -131,10 +142,15 @@ export class ActivityAdapter {
       description: description,
       type: ActivityEventType.CARD_CREATED,
     });
+
+    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+
     return true;
   }
 
-  async aspectComment(eventData: ActivityInputAspectComment): Promise<boolean> {
+  public async aspectComment(
+    eventData: ActivityInputAspectComment
+  ): Promise<boolean> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.ACTIVITY
@@ -143,7 +159,7 @@ export class ActivityAdapter {
     const aspectID = eventData.aspect.id;
     const calloutID = await this.getCalloutIdForAspect(aspectID);
     const collaborationID = await this.getCollaborationIdForCallout(calloutID);
-    await this.activityService.createActivity({
+    const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: aspectID,
@@ -151,10 +167,15 @@ export class ActivityAdapter {
       description: eventData.message,
       type: ActivityEventType.CARD_COMMENT,
     });
+
+    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+
     return true;
   }
 
-  async canvasCreated(eventData: ActivityInputCanvasCreated): Promise<boolean> {
+  public async canvasCreated(
+    eventData: ActivityInputCanvasCreated
+  ): Promise<boolean> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.ACTIVITY
@@ -163,7 +184,7 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdForCanvas(canvas.id);
 
     const description = `[${canvas.displayName}]`;
-    await this.activityService.createActivity({
+    const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: canvas.id,
@@ -171,10 +192,13 @@ export class ActivityAdapter {
       description: description,
       type: ActivityEventType.CANVAS_CREATED,
     });
+
+    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+
     return true;
   }
 
-  async calloutCommentCreated(
+  public async calloutCommentCreated(
     eventData: ActivityInputCalloutDiscussionComment
   ): Promise<boolean> {
     this.logger.verbose?.(
@@ -186,7 +210,7 @@ export class ActivityAdapter {
       eventData.callout.id
     );
 
-    await this.activityService.createActivity({
+    const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: eventData.callout.id,
@@ -194,10 +218,15 @@ export class ActivityAdapter {
       description: eventData.message,
       type: ActivityEventType.DISCUSSION_COMMENT,
     });
+
+    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+
     return true;
   }
 
-  async memberJoined(eventData: ActivityInputMemberJoined): Promise<boolean> {
+  public async memberJoined(
+    eventData: ActivityInputMemberJoined
+  ): Promise<boolean> {
     this.logger.verbose?.(
       `Event received: ${JSON.stringify(eventData)}`,
       LogContext.ACTIVITY
@@ -207,7 +236,7 @@ export class ActivityAdapter {
       community.id
     );
     const description = `[${community.type}] '${eventData.user.displayName}'`;
-    await this.activityService.createActivity({
+    const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: eventData.user.id, // the user that joined
@@ -215,6 +244,9 @@ export class ActivityAdapter {
       description: description,
       type: ActivityEventType.MEMBER_JOINED,
     });
+
+    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+
     return true;
   }
 

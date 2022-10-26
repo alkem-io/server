@@ -6,7 +6,8 @@ import {
   SUBSCRIPTION_ACTIVITY_CREATED,
 } from '@src/common';
 import { subscriptionFactoryProvider } from '@core/microservices/subscription.factory.provider';
-import { GraphqlSubscriptionService } from './graphql.subscription.service';
+import { SubscriptionPublishService } from './subscription.publish.service';
+import { SubscriptionReadService } from './subscription.read.service';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -25,11 +26,18 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
       trackingUUID
     )
 );
-
+// having the read and write service under one module is done in order
+// to use the same topic with the same name
+// right now topic names are generated on random so there isn't any way
+// for the read service to guess which topic to consume
 // todo refactor so subscriptions are moved from the MicroservicesModule
 @Module({
   imports: [],
-  providers: [...subscriptionFactoryProviders, GraphqlSubscriptionService],
-  exports: [GraphqlSubscriptionService],
+  providers: [
+    ...subscriptionFactoryProviders,
+    SubscriptionPublishService,
+    SubscriptionReadService,
+  ],
+  exports: [SubscriptionPublishService, SubscriptionReadService],
 })
-export class GraphqlSubscriptionServiceModule {}
+export class SubscriptionPublishServiceModule {}
