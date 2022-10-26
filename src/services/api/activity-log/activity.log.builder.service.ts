@@ -8,7 +8,6 @@ import { IActivityLogEntryChallengeCreated } from '@services/api/activity-log/dt
 import { IActivityLogEntryOpportunityCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.opportunity.created';
 import { IActivityLogEntryCalloutCardComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.card.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.discussion.comment';
-import { ActivityService } from '@platform/activity/activity.service';
 import { UserService } from '@domain/community/user/user.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { AspectService } from '@domain/collaboration/aspect/aspect.service';
@@ -36,7 +35,6 @@ export interface IActivityLogBuilder {
 export default class ActivityLogBuilderService implements IActivityLogBuilder {
   constructor(
     private readonly activityLogEntryBase: IActivityLogEntryBase,
-    private readonly activityService: ActivityService,
     private readonly userService: UserService,
     private readonly calloutService: CalloutService,
     private readonly aspectService: AspectService,
