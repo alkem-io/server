@@ -15,8 +15,9 @@ import { ChallengeService } from '@domain/challenge/challenge/challenge.service'
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { IActivity } from '@platform/activity';
 import ActivityLogBuilderService, {
-  ActivityLogEntryBase,
+  IActivityLogBuilder,
 } from '@services/api/activity-log/activity.log.builder.service';
+import { IActivityLogEntryBase } from '@services/api/activity-log/activity.log.entry.base.interface';
 
 export class ActivityLogService {
   constructor(
@@ -55,7 +56,7 @@ export class ActivityLogService {
         const userTriggeringActivity = await this.userService.getUserOrFail(
           rawActivity.triggeredBy
         );
-        const activityLogEntryBase: ActivityLogEntryBase = {
+        const activityLogEntryBase: IActivityLogEntryBase = {
           id: rawActivity.id,
           triggeredBy: userTriggeringActivity,
           createdDate: rawActivity.createdDate,
@@ -73,7 +74,7 @@ export class ActivityLogService {
           this.challengeService,
           this.opportunityService,
           this.communityService
-        );
+        ) as IActivityLogBuilder;
         const activityType = rawActivity.type as ActivityEventType;
         return activityBuilder[activityType](rawActivity);
       })

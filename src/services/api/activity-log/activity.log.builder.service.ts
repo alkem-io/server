@@ -8,7 +8,6 @@ import { IActivityLogEntryChallengeCreated } from '@services/api/activity-log/dt
 import { IActivityLogEntryOpportunityCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.opportunity.created';
 import { IActivityLogEntryCalloutCardComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.card.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.discussion.comment';
-import { IUser } from '@src/domain';
 import { ActivityService } from '@platform/activity/activity.service';
 import { UserService } from '@domain/community/user/user.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
@@ -17,12 +16,13 @@ import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { CommunityService } from '@domain/community/community/community.service';
+import { IActivityLogEntryBase } from '@services/api/activity-log/activity.log.entry.base.interface';
 
 interface ActivityLogBuilderFunction<TypedActivityLogEntry> {
   (rawActivity: IActivity): Promise<TypedActivityLogEntry>;
 }
 
-interface IActivityLogBuilder {
+export interface IActivityLogBuilder {
   [ActivityEventType.MEMBER_JOINED]: ActivityLogBuilderFunction<IActivityLogEntryMemberJoined>;
   [ActivityEventType.CALLOUT_PUBLISHED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPublished>;
   [ActivityEventType.CARD_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutCardCreated>;
@@ -33,18 +33,9 @@ interface IActivityLogBuilder {
   [ActivityEventType.DISCUSSION_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutDiscussionComment>;
 }
 
-export interface ActivityLogEntryBase {
-  id: string;
-  triggeredBy: IUser;
-  createdDate: Date;
-  type: string;
-  description: string | undefined;
-  collaborationID: string;
-}
-
 export default class ActivityLogBuilderService implements IActivityLogBuilder {
   constructor(
-    private readonly activityLogEntryBase: ActivityLogEntryBase,
+    private readonly activityLogEntryBase: IActivityLogEntryBase,
     private readonly activityService: ActivityService,
     private readonly userService: UserService,
     private readonly calloutService: CalloutService,
