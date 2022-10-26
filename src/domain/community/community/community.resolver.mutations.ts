@@ -101,7 +101,8 @@ export class CommunityResolverMutations {
     await this.communityService.assignUserToRole(
       community,
       membershipData.userID,
-      CommunityRole.MEMBER
+      CommunityRole.MEMBER,
+      agentInfo
     );
 
     // reset the user authorization policy so that their profile is visible to other community members
@@ -132,7 +133,8 @@ export class CommunityResolverMutations {
     await this.communityService.assignUserToRole(
       community,
       leadershipData.userID,
-      CommunityRole.LEAD
+      CommunityRole.LEAD,
+      agentInfo
     );
 
     // reset the user authorization policy so that their profile is visible to other community members
@@ -382,7 +384,8 @@ export class CommunityResolverMutations {
     const result = await this.communityService.assignUserToRole(
       community,
       agentInfo.userID,
-      CommunityRole.MEMBER
+      CommunityRole.MEMBER,
+      agentInfo
     );
     return result;
   }
