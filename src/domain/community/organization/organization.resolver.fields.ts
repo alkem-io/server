@@ -82,12 +82,12 @@ export class OrganizationResolverFields {
 
   //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('members', () => [IUser], {
+  @ResolveField('associates', () => [IUser], {
     nullable: true,
-    description: 'All users that are members of this Organization.',
+    description: 'All Users that are associated with this Organization.',
   })
   @Profiling.api
-  async members(
+  async associates(
     @Parent() organization: Organization,
     @CurrentUser() agentInfo: AgentInfo
   ) {
@@ -98,7 +98,7 @@ export class OrganizationResolverFields {
         AuthorizationPrivilege.READ
       )
     ) {
-      return await this.organizationService.getMembers(organization);
+      return await this.organizationService.getAssociates(organization);
     }
 
     return 'not accessible';

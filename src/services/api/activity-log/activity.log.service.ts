@@ -17,7 +17,7 @@ import { IActivity } from '@platform/activity';
 import ActivityLogBuilderService, {
   IActivityLogBuilder,
 } from '@services/api/activity-log/activity.log.builder.service';
-import { IActivityLogEntryBase } from '@services/api/activity-log/activity.log.entry.base.interface';
+import { IActivityLogEntryBase } from './activity.log.entry.base.interface';
 
 export class ActivityLogService {
   constructor(
@@ -51,8 +51,18 @@ export class ActivityLogService {
     } else {
       rawActivities = await this.activityService.getAllActivity();
     }
-    const results: IActivityLogEntry[] = await Promise.all(
-      rawActivities.map(async rawActivity => {
+
+    const results: IActivityLogEntry[] = [];
+    for (const rawActivity of rawActivities) {
+      try {
+        // Work around for community member joined without parentID set
+        if (
+          rawActivity.type === ActivityEventType.MEMBER_JOINED &&
+          !rawActivity.parentID
+        ) {
+          continue;
+        }
+
         const userTriggeringActivity = await this.userService.getUserOrFail(
           rawActivity.triggeredBy
         );
@@ -67,7 +77,6 @@ export class ActivityLogService {
         const activityBuilder: IActivityLogBuilder =
           new ActivityLogBuilderService(
             activityLogEntryBase,
-            this.activityService,
             this.userService,
             this.calloutService,
             this.aspectService,
@@ -77,9 +86,16 @@ export class ActivityLogService {
             this.communityService
           );
         const activityType = rawActivity.type as ActivityEventType;
-        return activityBuilder[activityType](rawActivity);
-      })
-    );
+        const result = await activityBuilder[activityType](rawActivity);
+        results.push(result);
+      } catch (error) {
+        //
+        this.logger.warn(
+          `Unable to process activity entry ${rawActivity.id}: ${error}`,
+          LogContext.ACTIVITY
+        );
+      }
+    }
     return results;
   }
 }

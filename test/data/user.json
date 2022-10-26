@@ -76,7 +76,7 @@
           "id": "2e753488-09c4-4ac0-913c-c8c27ba41161"
         },
         {
-          "type": "organization-member",
+          "type": "organization-associate",
           "resourceID": "65755d1d-c0fb-4efa-b4f7-7ad3f2466adb",
           "id": "3e233016-e10f-4d57-bcb6-db406f0f32a6"
         },
@@ -101,7 +101,7 @@
           "id": "44d0f6f0-75c3-4b0c-a196-65f5e6067704"
         },
         {
-          "type": "organization-member",
+          "type": "organization-associate",
           "resourceID": "82a9d004-847e-453e-9e1b-f36f3f53a4c6",
           "id": "494229ad-8716-4113-87fe-7b8d789550b3"
         },
@@ -161,17 +161,17 @@
           "id": "7b1eb85d-8d14-40f4-9e16-2907da31e0b0"
         },
         {
-          "type": "organization-member",
+          "type": "organization-associate",
           "resourceID": "03bb5b07-f134-4074-97b9-1dd7950c7fa4",
           "id": "7c9d0f56-8403-4f70-88f6-df3bb03649c5"
         },
         {
-          "type": "organization-member",
+          "type": "organization-associate",
           "resourceID": "d965c8e6-d194-432d-9f0a-68e58cbe9fb5",
           "id": "7d423bfa-406d-41e5-a188-2e0619bb3920"
         },
         {
-          "type": "organization-member",
+          "type": "organization-associate",
           "resourceID": "e8171dcf-118a-46a3-940d-3416a7dd9264",
           "id": "7ece4943-4524-411a-ac5f-b2d77989cda5"
         },
@@ -191,7 +191,7 @@
           "id": "8fb3148e-79cc-47b1-8872-2e0a8bd0232b"
         },
         {
-          "type": "organization-member",
+          "type": "organization-associate",
           "resourceID": "9b042a97-0c72-4b30-b4eb-e6f50fe071bc",
           "id": "9b24ab82-f93c-4e40-b7dc-fb9820a47920"
         },
@@ -337,7 +337,7 @@
           "id": "f8f643f0-836d-43cd-9f53-a43bd5560fb0"
         },
         {
-          "type": "organization-member",
+          "type": "organization-associate",
           "resourceID": "f1f63669-4a36-4eeb-af33-1403ffcf13b7",
           "id": "fbb39fee-e656-485d-af48-872d6685e8b1"
         },

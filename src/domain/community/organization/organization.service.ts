@@ -28,8 +28,8 @@ import { IAgent } from '@domain/agent/agent';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
-import { RemoveOrganizationMemberInput } from './dto/organization.dto.remove.member';
-import { AssignOrganizationMemberInput } from './dto/organization.dto.assign.member';
+import { RemoveOrganizationAssociateInput } from './dto/organization.dto.remove.associate';
+import { AssignOrganizationAssociateInput } from './dto/organization.dto.assign.associate';
 import { AssignOrganizationAdminInput } from './dto/organization.dto.assign.admin';
 import { RemoveOrganizationAdminInput } from './dto/organization.dto.remove.admin';
 import { RemoveOrganizationOwnerInput } from './dto/organization.dto.remove.owner';
@@ -238,9 +238,9 @@ export class OrganizationService {
     }
 
     // Remove all issued membership credentials
-    const members = await this.getMembers(organization);
+    const members = await this.getAssociates(organization);
     for (const member of members) {
-      await this.removeMember({
+      await this.removeAssociate({
         userID: member.id,
         organizationID: organization.id,
       });
@@ -400,8 +400,8 @@ export class OrganizationService {
     const activity: INVP[] = [];
 
     const membersCount = await this.getMembersCount(organization);
-    const membersTopic = new NVP('members', membersCount.toString());
-    membersTopic.id = `members-${organization.id}`;
+    const membersTopic = new NVP('associates', membersCount.toString());
+    membersTopic.id = `associates-${organization.id}`;
     activity.push(membersTopic);
 
     return activity;
@@ -410,16 +410,16 @@ export class OrganizationService {
   async getMembersCount(organization: IOrganization): Promise<number> {
     const credentialMatches =
       await this.agentService.countAgentsWithMatchingCredentials({
-        type: AuthorizationCredential.ORGANIZATION_MEMBER,
+        type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
         resourceID: organization.id,
       });
 
     return credentialMatches;
   }
 
-  async getMembers(organization: IOrganization): Promise<IUser[]> {
+  async getAssociates(organization: IOrganization): Promise<IUser[]> {
     return await this.userService.usersWithCredentials({
-      type: AuthorizationCredential.ORGANIZATION_MEMBER,
+      type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
       resourceID: organization.id,
     });
   }
@@ -563,7 +563,7 @@ export class OrganizationService {
   }
 
   async assignMember(
-    membershipData: AssignOrganizationMemberInput
+    membershipData: AssignOrganizationAssociateInput
   ): Promise<IOrganization> {
     const organization = await this.getOrganizationOrFail(
       membershipData.organizationID
@@ -576,14 +576,14 @@ export class OrganizationService {
 
     user.agent = await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ORGANIZATION_MEMBER,
+      type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
       resourceID: organization.id,
     });
     return organization;
   }
 
-  async removeMember(
-    membershipData: RemoveOrganizationMemberInput
+  async removeAssociate(
+    membershipData: RemoveOrganizationAssociateInput
   ): Promise<IOrganization> {
     const { user, agent } = await this.userService.getUserAndAgent(
       membershipData.userID
@@ -594,7 +594,7 @@ export class OrganizationService {
     );
     user.agent = await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.ORGANIZATION_MEMBER,
+      type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
       resourceID: organization.id,
     });
 
