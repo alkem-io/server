@@ -1,13 +1,79 @@
-query activityLogOnCollaboration($queryData: ActivityLogInput!){
+query activityLogOnCollaboration($queryData: ActivityLogInput!) {
   activityLogOnCollaboration(queryData: $queryData) {
     collaborationID
-    parentID
-    triggeredBy
-    resourceID
+    triggeredBy {
+      nameID
+    }
     description
     type
+    __typename
+    ... on ActivityLogEntryMemberJoined {
+      community {
+        id
+      }
+      user {
+        id
+        displayName
+      }
+    }
+    ... on ActivityLogEntryCalloutPublished {
+      callout {
+        id
+        type
+      }
+    }
+    ... on ActivityLogEntryCalloutCardCreated {
+      callout {
+        id
+        type
+      }
+      card {
+        id
+        displayName
+      }
+    }
+    ... on ActivityLogEntryCalloutCardComment {
+      callout {
+        id
+        type
+      }
+      card {
+        id
+        displayName
+      }
+    }
+    ... on ActivityLogEntryCalloutCanvasCreated {
+      callout {
+        id
+        type
+      }
+      canvas {
+        id
+        displayName
+      }
+    }
+    ... on ActivityLogEntryCalloutDiscussionComment {
+      callout {
+        id
+        type
+      }
+    }
+    ... on ActivityLogEntryChallengeCreated {
+      challenge {
+        id
+        displayName
+      }
+    }
+    ... on ActivityLogEntryOpportunityCreated {
+      opportunity {
+        id
+        displayName
+      }
+    }
   }
 }
+
+
 
 {
   "queryData":
