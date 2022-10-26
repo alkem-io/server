@@ -23,7 +23,7 @@ export enum AuthorizationCredential {
 
   ORGANIZATION_OWNER = 'organization-owner', // Able to commit an organization
   ORGANIZATION_ADMIN = 'organization-admin', // Able to administer an organization
-  ORGANIZATION_MEMBER = 'organization-member', // Able to be a part of an organization
+  ORGANIZATION_ASSOCIATE = 'organization-associate', // Able to be a part of an organization
 
   USER_GROUP_MEMBER = 'user-group-member', // Able to be a part of an user group
 }

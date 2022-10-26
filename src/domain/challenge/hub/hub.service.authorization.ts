@@ -319,7 +319,7 @@ export class HubAuthorizationService {
         );
       const hostOrgMembersCanJoin = new AuthorizationPolicyRuleCredential(
         [AuthorizationPrivilege.COMMUNITY_JOIN],
-        AuthorizationCredential.ORGANIZATION_MEMBER,
+        AuthorizationCredential.ORGANIZATION_ASSOCIATE,
         hostOrg.id
       );
       hostOrgMembersCanJoin.inheritable = false;

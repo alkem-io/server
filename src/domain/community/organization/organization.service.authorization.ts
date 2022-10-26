@@ -165,7 +165,7 @@ export class OrganizationAuthorizationService {
 
     const organizationMember = new AuthorizationPolicyRuleCredential(
       [AuthorizationPrivilege.READ],
-      AuthorizationCredential.ORGANIZATION_MEMBER,
+      AuthorizationCredential.ORGANIZATION_ASSOCIATE,
       organizationID
     );
     newRules.push(organizationMember);
