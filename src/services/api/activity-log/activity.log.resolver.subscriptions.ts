@@ -22,7 +22,7 @@ export class ActivityLogResolverSubscriptions {
     private readonly logger: LoggerService,
     private readonly subscriptionReadService: SubscriptionReadService,
     private readonly collaborationService: CollaborationService,
-    private authorizationService: AuthorizationService
+    private readonly authorizationService: AuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
