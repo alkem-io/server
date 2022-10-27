@@ -60,34 +60,37 @@ export class ActivityLogService {
       return true;
     });
     const results: IActivityLogEntry[] = await Promise.all(
-      filteredActivites.map(async rawActivity => {
-        const userTriggeringActivity = await this.userService.getUserOrFail(
-          rawActivity.triggeredBy
-        );
-        const activityLogEntryBase: IActivityLogEntryBase = {
-          id: rawActivity.id,
-          triggeredBy: userTriggeringActivity,
-          createdDate: rawActivity.createdDate,
-          type: rawActivity.type,
-          description: rawActivity.description,
-          collaborationID: rawActivity.collaborationID,
-        };
-        const activityBuilder: IActivityLogBuilder =
-          new ActivityLogBuilderService(
-            activityLogEntryBase,
-            this.userService,
-            this.calloutService,
-            this.aspectService,
-            this.canvasService,
-            this.challengeService,
-            this.opportunityService,
-            this.communityService
-          );
-        const activityType = rawActivity.type as ActivityEventType;
-
-        return activityBuilder[activityType](rawActivity);
-      })
+      filteredActivites.map(async rawActivity =>
+        this.toActivityLogEntry(rawActivity)
+      )
     );
     return results;
+  }
+
+  public async toActivityLogEntry(activity: IActivity) {
+    const userTriggeringActivity = await this.userService.getUserOrFail(
+      activity.triggeredBy
+    );
+    const activityLogEntryBase: IActivityLogEntryBase = {
+      id: activity.id,
+      triggeredBy: userTriggeringActivity,
+      createdDate: activity.createdDate,
+      type: activity.type,
+      description: activity.description,
+      collaborationID: activity.collaborationID,
+    };
+    const activityBuilder: IActivityLogBuilder = new ActivityLogBuilderService(
+      activityLogEntryBase,
+      this.userService,
+      this.calloutService,
+      this.aspectService,
+      this.canvasService,
+      this.challengeService,
+      this.opportunityService,
+      this.communityService
+    );
+    const activityType = activity.type as ActivityEventType;
+
+    return activityBuilder[activityType](activity);
   }
 }

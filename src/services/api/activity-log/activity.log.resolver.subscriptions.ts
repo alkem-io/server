@@ -30,14 +30,25 @@ export class ActivityLogResolverSubscriptions {
     ActivityCreatedSubscriptionPayload,
     ActivityCreatedSubscriptionArgs
   >(() => ActivityCreatedSubscriptionResult, {
-    resolve(this: ActivityLogResolverSubscriptions, payload, args, context) {
+    async resolve(
+      this: ActivityLogResolverSubscriptions,
+      payload,
+      args,
+      context
+    ) {
       const agentInfo = context.req.user;
       const logMsgPrefix = `[New activity subscription] - [${agentInfo.email}] -`;
       this.logger.verbose?.(
         `${logMsgPrefix} sending out event for new activity on Collaboration: ${args.collaborationID} `,
         LogContext.SUBSCRIPTIONS
       );
-      return payload;
+
+      return {
+        activity: {
+          ...payload.activity,
+          createdDate: new Date(payload.activity.createdDate),
+        },
+      };
     },
     filter(
       this: ActivityLogResolverSubscriptions,

@@ -153,6 +153,7 @@ import { ActivityLogModule } from '@services/api/activity-log/activity.log.modul
                   ...ctx.connectionParams?.headers,
                 },
                 connectionParams: ctx.connectionParams,
+                loaders: dataloaderService.createLoaders(),
               },
             };
           }
@@ -170,7 +171,10 @@ import { ActivityLogModule } from '@services/api/activity-log/activity.log.modul
               websocket: SubscriptionsTransportWsWebsocket // couldn't find a better type
             ) => {
               return {
-                req: { headers: websocket?.upgradeReq?.headers },
+                req: {
+                  headers: websocket?.upgradeReq?.headers,
+                  loaders: dataloaderService.createLoaders(),
+                },
               };
             },
           },

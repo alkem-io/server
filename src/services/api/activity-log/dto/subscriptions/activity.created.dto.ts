@@ -1,10 +1,9 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivity } from '@platform/activity';
-import { IActivityLogEntry } from '../activity.log.entry.interface';
 
 @ObjectType('ActivityCreatedSubscriptionResult')
 export class ActivityCreatedSubscriptionResult {
-  @Field(() => IActivityLogEntry, {
+  @Field(() => IActivity, {
     nullable: false,
     description: 'The newly created activity',
   })
