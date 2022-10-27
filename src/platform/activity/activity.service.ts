@@ -6,6 +6,8 @@ import { LogContext } from '@common/enums';
 import { Activity } from './activity.entity';
 import { IActivity } from './activity.interface';
 import { CreateActivityInput } from './dto/activity.dto.create';
+import { ensureMaxLength } from '@common/utils';
+import { SMALL_TEXT_LENGTH } from '@common/constants';
 
 @Injectable()
 export class ActivityService {
@@ -15,8 +17,12 @@ export class ActivityService {
   ) {}
 
   async createActivity(activityData: CreateActivityInput): Promise<IActivity> {
-    const activity: IActivity = Activity.create(activityData);
+    activityData.description = ensureMaxLength(
+      activityData.description,
+      SMALL_TEXT_LENGTH
+    );
 
+    const activity: IActivity = Activity.create(activityData);
     return await this.save(activity);
   }
 
