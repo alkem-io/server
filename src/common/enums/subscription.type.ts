@@ -9,4 +9,5 @@ export enum SubscriptionType {
   CALLOUT_MESSAGE_CREATED = 'calloutMessageCreated',
   OPPORTUNITY_CREATED = 'opportunityCreated',
   CHALLENGE_CREATED = 'challengeCreated',
+  ACTIVITY_CREATED = 'activityCreated',
 }
