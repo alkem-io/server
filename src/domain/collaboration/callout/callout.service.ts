@@ -32,12 +32,15 @@ import { IComments } from '@domain/communication/comments/comments.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+// import { AspectTemplateService } from '@domain/template/aspect-template/aspect.template.service';
+import { AspectTemplateService } from '../../template/aspect-template/aspect.template.service';
 
 @Injectable()
 export class CalloutService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private aspectService: AspectService,
+    private aspectTemplateService: AspectTemplateService,
     private canvasService: CanvasService,
     private namingService: NamingService,
     private commentsService: CommentsService,
@@ -49,6 +52,10 @@ export class CalloutService {
     calloutData: CreateCalloutInput,
     communicationGroupID: string
   ): Promise<ICallout> {
+    if (calloutData.type == CalloutType.CARD && !calloutData.cardTemplate) {
+      throw new Error('Please provide a card template');
+    }
+
     if (!calloutData.sortOrder) {
       calloutData.sortOrder = 10;
     }
@@ -65,6 +72,14 @@ export class CalloutService {
       );
       return await this.calloutRepository.save(savedCallout);
     }
+
+    if (calloutData.type == CalloutType.CARD && calloutData.cardTemplate) {
+      callout.cardTemplate =
+        await this.aspectTemplateService.createAspectTemplate(
+          calloutData.cardTemplate
+        );
+    }
+
     return savedCallout;
   }
 

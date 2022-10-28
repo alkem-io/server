@@ -7,6 +7,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { IComments } from '@domain/communication/comments/comments.interface';
+import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 
 @ObjectType('Callout')
 export abstract class ICallout extends INameable {
@@ -35,6 +36,12 @@ export abstract class ICallout extends INameable {
     description: 'The Aspects associated with this Callout.',
   })
   aspects?: IAspect[];
+
+  @Field(() => [IAspectTemplate], {
+    nullable: true,
+    description: 'The Aspect template associated with this Card Callout.',
+  })
+  cardTemplate?: IAspectTemplate;
 
   @Field(() => [ICanvas], {
     nullable: true,
