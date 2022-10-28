@@ -1,15 +1,9 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseChallenge } from '../../challenge/base-challenge/base.challenge.interface';
 import { IProject } from '@domain/collaboration/project/project.interface';
-import { ISearchable } from '@domain/common/interfaces/searchable.interface';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-@ObjectType('Opportunity', {
-  implements: () => [ISearchable],
-})
-export abstract class IOpportunity
-  extends IBaseChallenge
-  implements ISearchable
-{
+@ObjectType('Opportunity')
+export abstract class IOpportunity extends IBaseChallenge {
   @Field(() => [IProject], {
     nullable: true,
     description: 'The set of projects within the context of this Opportunity',
