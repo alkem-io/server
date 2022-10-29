@@ -1,16 +1,21 @@
 query create($searchData: SearchInput!){
   search(searchData: $searchData) {
     score
-    result {
-      __typename
-      ... on User {
-        name
+    terms
+    type
+    ... on SearchResultChallenge {
+      challenge {
+        nameID
       }
-      ... on UserGroup {
-        name
+    }
+    ... on SearchResultUser {
+      user {
+        nameID
       }
-      ... on Organization {
-        name
+    }
+    ... on SearchResultOrganization {
+      organization {
+        nameID
       }
     }
   }
