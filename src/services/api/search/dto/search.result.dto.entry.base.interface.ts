@@ -10,18 +10,19 @@ import { IBaseAlkemio } from '@domain/common/entity/base-entity/base.alkemio.int
 export abstract class ISearchResultBase implements ISearchResult {
   @Field(() => UUID, {
     nullable: false,
+    description: 'The unique identifier for this search result.',
   })
   id!: string;
 
   @Field(() => Number, {
-    nullable: true,
+    nullable: false,
     description:
       'The score for this search result; more matches means a higher score.',
   })
   score!: number;
 
   @Field(() => [String], {
-    nullable: true,
+    nullable: false,
     description: 'The terms that were matched for this result',
   })
   terms!: string[];

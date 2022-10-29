@@ -14,6 +14,8 @@ import { ISearchResultOrganization } from './dto/search.result.dto.entry.organiz
 import { ISearchResult } from './dto/search.result.entry.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { ISearchResultUserGroup } from './dto/search.result.dto.entry.user.group';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 export default class SearchResultBuilderService
   implements ISearchResultBuilder
@@ -41,9 +43,13 @@ export default class SearchResultBuilderService
     const challenge = await this.challengeService.getChallengeOrFail(
       rawSearchResult.result.id
     );
+    const hub = await this.hubService.getHubOrFail(
+      this.challengeService.getHubID(challenge)
+    );
     const searchResultChallenge: ISearchResultChallenge = {
       ...this.searchResultBase,
       challenge,
+      hub,
     };
     return searchResultChallenge;
   }
@@ -52,9 +58,23 @@ export default class SearchResultBuilderService
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       rawSearchResult.result.id
     );
+    const hub = await this.hubService.getHubOrFail(
+      this.opportunityService.getHubID(opportunity)
+    );
+    if (!opportunity.challenge) {
+      throw new RelationshipNotFoundException(
+        `Unable to find challenge for ${opportunity.nameID}`,
+        LogContext.SEARCH
+      );
+    }
+    const challenge = await this.challengeService.getChallengeOrFail(
+      opportunity.challenge.id
+    );
     const searchResultOpportunity: ISearchResultOpportunity = {
       ...this.searchResultBase,
       opportunity,
+      hub,
+      challenge,
     };
     return searchResultOpportunity;
   }
