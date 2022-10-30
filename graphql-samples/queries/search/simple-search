@@ -1,4 +1,4 @@
-query create($searchData: SearchInput!){
+query search($searchData: SearchInput!){
   search(searchData: $searchData) {
     id
     score
