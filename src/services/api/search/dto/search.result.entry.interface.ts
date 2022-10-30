@@ -1,7 +1,7 @@
 import { Field, InterfaceType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
 import { RelationshipNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext } from '@common/enums/logging.context';
 import { SearchResultType } from '@common/enums/search.result.type';
 import { ISearchResultOpportunity } from './search.result.dto.entry.opportunity';
 import { ISearchResultHub } from './search.result.dto.entry.hub';
