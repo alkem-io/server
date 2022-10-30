@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
-import { IdentityResolverModule } from '@services/infrastructure/identity-resolver/identity.resolver.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { RoomService } from './room.service';
 
 @Module({
-  imports: [IdentityResolverModule, CommunicationAdapterModule],
+  imports: [EntityResolverModule, CommunicationAdapterModule],
   providers: [RoomService],
   exports: [RoomService],
 })

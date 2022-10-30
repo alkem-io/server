@@ -46,6 +46,7 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -60,7 +61,8 @@ export class CalloutResolverMutations {
     @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
     private aspectCreatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_CALLOUT_MESSAGE_CREATED)
-    private calloutMessageCreatedSubscription: PubSubEngine
+    private calloutMessageCreatedSubscription: PubSubEngine,
+    private communityResolverService: CommunityResolverService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -308,6 +310,7 @@ export class CalloutResolverMutations {
       callout: callout,
     };
     await this.activityAdapter.canvasCreated(activityLogInput);
+
     return await this.canvasAuthorizationService.applyAuthorizationPolicy(
       canvas,
       callout.authorization
