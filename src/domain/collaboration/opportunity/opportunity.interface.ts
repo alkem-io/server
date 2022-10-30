@@ -12,9 +12,5 @@ export abstract class IOpportunity extends IBaseChallenge {
 
   hubID?: string; //toDo make mandatory https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2196
 
-  @Field(() => IChallenge, {
-    nullable: true,
-    description: 'The parent Challenge of the Opportunity',
-  })
   challenge?: IChallenge;
 }

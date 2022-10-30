@@ -1,10 +1,21 @@
 query create($searchData: SearchInput!){
   search(searchData: $searchData) {
+    id
     score
     terms
     type
+    ... on SearchResultHub {
+      hub {
+        nameID
+      }
+    }
     ... on SearchResultChallenge {
       challenge {
+        nameID
+      }
+    }
+    ... on SearchResultOpportunity {
+      opportunity {
         nameID
       }
     }
@@ -24,7 +35,6 @@ query create($searchData: SearchInput!){
 {
   "searchData":
   {
-    "tagsetNames": ["Keywords"],
     "terms": ["Alisha"]
   }
 }

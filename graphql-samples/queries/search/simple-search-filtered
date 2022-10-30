@@ -1,18 +1,15 @@
-query search($searchData: SearchInput!){
+query create($searchData: SearchInput!){
   search(searchData: $searchData) {
+    id
     score
-    result {
-      __typename
-      ... on User {
-        name
-      }
-      ... on UserGroup {
-        name
-      }
-      ... on Organization {
-        name
+    terms
+    type
+    ... on SearchResultUser {
+      user {
+        nameID
       }
     }
+
   }
 }
 

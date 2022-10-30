@@ -1,16 +1,31 @@
-query search($searchData: SearchInput!){
+query create($searchData: SearchInput!){
   search(searchData: $searchData) {
+    id
     score
-    result {
-      __typename
-      ... on User {
+    terms
+    type
+    ... on SearchResultHub {
+      hub {
         nameID
-        email
       }
-      ... on UserGroup {
-        name
+    }
+    ... on SearchResultChallenge {
+      challenge {
+        nameID
       }
-      ... on Organization {
+    }
+    ... on SearchResultOpportunity {
+      opportunity {
+        nameID
+      }
+    }
+    ... on SearchResultUser {
+      user {
+        nameID
+      }
+    }
+    ... on SearchResultOrganization {
+      organization {
         nameID
       }
     }
@@ -21,7 +36,6 @@ query search($searchData: SearchInput!){
   "searchData":
   {
     "tagsetNames": ["Keywords"],
-    "terms": ["twi", "Java", "architecture"],
-    "tagsetNames": ["skills"]
+    "terms": ["twi", "Java", "architecture"]
   }
 }
