@@ -1,7 +1,7 @@
 import { Column, Entity } from 'typeorm';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { IActivity } from './activity.interface';
-import { TINY_TEXT_LENGTH } from '@common/constants';
+import { SMALL_TEXT_LENGTH, TINY_TEXT_LENGTH } from '@common/constants';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 
 @Entity()
@@ -18,7 +18,10 @@ export class Activity extends BaseAlkemioEntity implements IActivity {
   @Column('varchar', { length: 36, nullable: false })
   collaborationID!: string;
 
-  @Column()
+  @Column({
+    // TODO: It's 255, migrate it to something else
+    length: SMALL_TEXT_LENGTH,
+  })
   description?: string;
 
   @Column({

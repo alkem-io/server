@@ -1,4 +1,4 @@
-import { SubscriptionOptions } from '@nestjs/graphql';
+import { ReturnTypeFuncValue, SubscriptionOptions } from '@nestjs/graphql';
 import { GraphQLResolveInfo } from 'graphql';
 
 export interface TypedSubscriptionOptions<TPayload, TVariables, TContext>
@@ -20,5 +20,9 @@ export interface TypedSubscriptionOptions<TPayload, TVariables, TContext>
     args: TVariables,
     context: TContext,
     info: GraphQLResolveInfo
-  ) => TPayload | Promise<TPayload>; // todo: change to provide other return type than payload
+  ) =>
+    | TPayload
+    | Promise<TPayload>
+    | ReturnTypeFuncValue
+    | Promise<ReturnTypeFuncValue>; // todo: change to provide other return type than payload
 }

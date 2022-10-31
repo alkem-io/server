@@ -143,7 +143,8 @@ import { MessageModule } from '@domain/communication/message/message.module';
          * graphql-ws requires passing the request object through the context method
          * !!! this is graphql-ws ONLY
          */
-
+        // todo provide the dataloaders into the subscription context
+        // https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2252
         context: (ctx: ConnectionContext) => {
           if (isWebsocketContext(ctx)) {
             return {
