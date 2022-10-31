@@ -25,7 +25,6 @@ import {
 import { PubSubEngine } from 'graphql-subscriptions';
 import { ICallout } from './callout.interface';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import {
   EntityNotInitializedException,
   getRandomId,
@@ -46,6 +45,7 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
+import { IMessage } from '@domain/communication/message/message.interface';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -83,14 +83,14 @@ export class CalloutResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => CommunicationMessageResult, {
+  @Mutation(() => IMessage, {
     description: 'Send a message on a Comments Callout',
   })
   @Profiling.api
   async sendMessageOnCallout(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('data') data: SendMessageOnCalloutInput
-  ): Promise<CommunicationMessageResult> {
+  ): Promise<IMessage> {
     const callout = await this.calloutService.getCalloutOrFail(data.calloutID);
 
     if (callout.type !== CalloutType.COMMENTS) {

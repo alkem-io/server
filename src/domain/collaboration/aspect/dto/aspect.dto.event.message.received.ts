@@ -1,4 +1,4 @@
-import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
+import { IMessage } from '@domain/communication/message/message.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('AspectCommentsMessageReceived')
@@ -12,9 +12,9 @@ export class AspectCommentsMessageReceived {
   })
   aspectID!: string;
 
-  @Field(() => CommunicationMessageResult, {
+  @Field(() => IMessage, {
     nullable: false,
     description: 'The message that has been sent.',
   })
-  message!: CommunicationMessageResult;
+  message!: IMessage;
 }

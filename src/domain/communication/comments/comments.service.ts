@@ -11,7 +11,7 @@ import { CommunicationRoomResult } from '../room/dto/communication.dto.room.resu
 import { RoomRemoveMessageInput } from '../room/dto/room.dto.remove.message';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { CommunicationMessageResult } from '../message/communication.dto.message.result';
+import { IMessage } from '../message/message.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
@@ -67,7 +67,7 @@ export class CommentsService {
     comments: IComments,
     communicationUserID: string,
     messageData: RoomSendMessageInput
-  ): Promise<CommunicationMessageResult> {
+  ): Promise<IMessage> {
     return await this.roomService.sendMessage(
       comments,
       communicationUserID,
