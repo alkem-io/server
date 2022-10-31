@@ -3,7 +3,8 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { IdentityResolverService } from '@services/infrastructure/entity-resolver/identity.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CommunicationMessageResult } from '../message/communication.dto.message.result';
+import { IdentityResolverService } from '@services/infrastructure/identity-resolver/identity.resolver.service';
+import { IMessage } from '../message/message.interface';
 import { CommunicationRoomResult } from './dto/communication.dto.room.result';
 import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { RoomSendMessageInput } from './dto/room.dto.send.message';
@@ -84,7 +85,7 @@ export class RoomService {
     roomable: IRoomable,
     communicationUserID: string,
     messageData: RoomSendMessageInput
-  ): Promise<CommunicationMessageResult> {
+  ): Promise<IMessage> {
     // Ensure the user is a member of room and group so can send
     await this.communicationAdapter.addUserToRoom(
       roomable.communicationRoomID,

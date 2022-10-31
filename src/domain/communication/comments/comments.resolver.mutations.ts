@@ -11,7 +11,7 @@ import { CommentsSendMessageInput } from './dto/comments.dto.send.message';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CommentsRemoveMessageInput } from './dto/comments.dto.remove.message';
 import { MessageID } from '@domain/common/scalars';
-import { CommunicationMessageResult } from '../message/communication.dto.message.result';
+import { IMessage } from '../message/message.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import {
@@ -45,7 +45,7 @@ export class CommentsResolverMutations {
 
   // todo should be removed to serve per entity e.g. send aspect comment
   @UseGuards(GraphqlGuard)
-  @Mutation(() => CommunicationMessageResult, {
+  @Mutation(() => IMessage, {
     description:
       'Sends an comment message. Returns the id of the new Update message.',
   })
@@ -53,7 +53,7 @@ export class CommentsResolverMutations {
   async sendComment(
     @Args('messageData') messageData: CommentsSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<CommunicationMessageResult> {
+  ): Promise<IMessage> {
     const comments = await this.commentsService.getCommentsOrFail(
       messageData.commentsID
     );
@@ -121,7 +121,7 @@ export class CommentsResolverMutations {
   private async processAspectCommentEvents(
     aspect: IAspect,
     comments: IComments,
-    commentSent: CommunicationMessageResult,
+    commentSent: IMessage,
     agentInfo: AgentInfo
   ) {
     // build subscription payload

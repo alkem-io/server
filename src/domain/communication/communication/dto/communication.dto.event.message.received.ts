@@ -1,11 +1,11 @@
-import { CommunicationMessageResult } from '../../message/communication.dto.message.result';
+import { IMessage } from '../../message/message.interface';
 
 export class CommunicationEventMessageReceived {
   roomId!: string;
 
   roomName!: string;
 
-  message!: CommunicationMessageResult;
+  message!: IMessage;
 
   communicationID!: string;
 

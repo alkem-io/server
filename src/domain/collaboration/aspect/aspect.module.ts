@@ -12,6 +12,7 @@ import { AspectService } from './aspect.service';
 import { AspectResolverFields } from './aspect.resolver.fields';
 import { AspectAuthorizationService } from './aspect.service.authorization';
 import { AspectResolverSubscriptions } from './aspect.resolver.subscriptions';
+import { UserModule } from '@domain/community/user/user.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AspectResolverSubscriptions } from './aspect.resolver.subscriptions';
     CommentsModule,
     VisualModule,
     TagsetModule,
+    UserModule,
     ReferenceModule,
     TypeOrmModule.forFeature([Aspect]),
   ],
