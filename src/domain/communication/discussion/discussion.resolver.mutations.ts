@@ -14,7 +14,7 @@ import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { DiscussionAuthorizationService } from './discussion.service.authorization';
 import { MessageID } from '@domain/common/scalars/scalar.message';
-import { CommunicationMessageResult } from '../message/communication.dto.message.result';
+import { IMessage } from '../message/message.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_DISCUSSION_MESSAGE } from '@common/constants/providers';
@@ -33,14 +33,14 @@ export class DiscussionResolverMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => CommunicationMessageResult, {
+  @Mutation(() => IMessage, {
     description: 'Sends a message to the specified Discussion. ',
   })
   @Profiling.api
   async sendMessageToDiscussion(
     @Args('messageData') messageData: DiscussionSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<CommunicationMessageResult> {
+  ): Promise<IMessage> {
     const discussion = await this.discussionService.getDiscussionOrFail(
       messageData.discussionID
     );

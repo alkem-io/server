@@ -17,7 +17,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { getConnection, Repository } from 'typeorm';
 import { CreateNVPInput } from '@src/domain/common/nvp/nvp.dto.create';
 import { Aspect } from '@src/domain/collaboration/aspect/aspect.entity';
-import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
 import {
   AspectCreatedEventPayload,
   AspectCommentCreatedEventPayload,
@@ -27,6 +26,7 @@ import {
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { HubPayload } from './event-payloads/hub.payload';
+import { IMessage } from '@domain/communication/message/message.interface';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -149,7 +149,7 @@ export class NotificationPayloadBuilder {
     aspectName: string,
     aspectCreatedBy: string,
     commentsId: string,
-    messageResult: CommunicationMessageResult
+    messageResult: IMessage
   ) {
     const community = await this.getCommunityFromComments(commentsId);
 

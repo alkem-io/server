@@ -1,6 +1,6 @@
 import { LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
-import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
+import { IMessage } from '@domain/communication/message/message.interface';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communication.room.direct.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -277,7 +277,7 @@ export class MatrixRoomAdapter {
   async getMatrixRoomTimelineAsMessages(
     matrixClient: MatrixClient,
     matrixRoom: MatrixRoom
-  ): Promise<CommunicationMessageResult[]> {
+  ): Promise<IMessage[]> {
     this.logger.verbose?.(
       `[MatrixRoom] Obtaining messages on room: ${matrixRoom.name}`,
       LogContext.COMMUNICATION
@@ -295,8 +295,8 @@ export class MatrixRoomAdapter {
 
   async convertMatrixTimelineToMessages(
     timeline: MatrixRoomResponseMessage[]
-  ): Promise<CommunicationMessageResult[]> {
-    const messages: CommunicationMessageResult[] = [];
+  ): Promise<IMessage[]> {
+    const messages: IMessage[] = [];
 
     for (const timelineMessage of timeline) {
       if (this.matrixMessageAdapter.isEventToIgnore(timelineMessage)) continue;

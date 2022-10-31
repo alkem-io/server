@@ -10,7 +10,7 @@ import { UpdatesSendMessageInput } from './dto/updates.dto.send.message';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { UpdatesRemoveMessageInput } from './dto/updates.dto.remove.message';
 import { MessageID } from '@domain/common/scalars';
-import { CommunicationMessageResult } from '../message/communication.dto.message.result';
+import { IMessage } from '../message/message.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { CommunicationUpdateMessageReceived } from './dto/updates.dto.event.message.received';
@@ -33,7 +33,7 @@ export class UpdatesResolverMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => CommunicationMessageResult, {
+  @Mutation(() => IMessage, {
     description:
       'Sends an update message. Returns the id of the new Update message.',
   })
@@ -41,7 +41,7 @@ export class UpdatesResolverMutations {
   async sendUpdate(
     @Args('messageData') messageData: UpdatesSendMessageInput,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<CommunicationMessageResult> {
+  ): Promise<IMessage> {
     const updates = await this.updatesService.getUpdatesOrFail(
       messageData.updatesID
     );
