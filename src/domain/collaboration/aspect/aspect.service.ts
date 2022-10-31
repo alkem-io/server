@@ -43,8 +43,12 @@ export class AspectService {
     const aspect: IAspect = Aspect.create(aspectInput);
     aspect.authorization = new AuthorizationPolicy();
     aspect.createdBy = userID;
-    aspect.banner = await this.visualService.createVisualBanner();
-    aspect.bannerNarrow = await this.visualService.createVisualBannerNarrow();
+    aspect.banner = await this.visualService.createVisualBanner(
+      aspectInput.visualUri
+    );
+    aspect.bannerNarrow = await this.visualService.createVisualBannerNarrow(
+      aspectInput.visualUri
+    );
     aspect.references = [];
 
     aspect.comments = await this.commentsService.createComments(

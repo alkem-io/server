@@ -37,7 +37,7 @@ export abstract class ICallout extends INameable {
   })
   aspects?: IAspect[];
 
-  @Field(() => [IAspectTemplate], {
+  @Field(() => IAspectTemplate, {
     nullable: true,
     description: 'The Aspect template associated with this Card Callout.',
   })

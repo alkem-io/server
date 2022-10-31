@@ -34,6 +34,7 @@ import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibilit
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 // import { AspectTemplateService } from '@domain/template/aspect-template/aspect.template.service';
 import { AspectTemplateService } from '../../template/aspect-template/aspect.template.service';
+import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 
 @Injectable()
 export class CalloutService {
@@ -423,5 +424,14 @@ export class CalloutService {
       relations: ['comments'],
     });
     return loadedCallout.comments;
+  }
+
+  public async getCardTemplateFromCallout(
+    calloutID: string
+  ): Promise<IAspectTemplate | undefined> {
+    const loadedCallout = await this.getCalloutOrFail(calloutID, {
+      relations: ['cardTemplate'],
+    });
+    return loadedCallout.cardTemplate;
   }
 }
