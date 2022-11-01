@@ -32,8 +32,7 @@ import { IComments } from '@domain/communication/comments/comments.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-// import { AspectTemplateService } from '@domain/template/aspect-template/aspect.template.service';
-import { AspectTemplateService } from '../../template/aspect-template/aspect.template.service';
+import { AspectTemplateService } from '@domain/template/aspect-template/aspect.template.service';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 
 @Injectable()
