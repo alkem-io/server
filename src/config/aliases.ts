@@ -13,6 +13,7 @@ moduleAlias.addAliases({
   '@core': path.join(rootCorePath),
   '@config': path.join(rootCorePath, 'config'),
   '@platform': path.join(rootCorePath, 'platform'),
+  '@library': path.join(rootCorePath, 'library'),
   '@templates': path.join(rootServicesPath, 'configuration', 'templates'),
   '@src': rootPath,
 });
