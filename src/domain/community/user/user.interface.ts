@@ -1,11 +1,8 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ISearchable } from '@domain/common/interfaces/searchable.interface';
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { IContributor } from '../contributor/contributor.interface';
 
-@ObjectType('User', {
-  implements: () => [ISearchable],
-})
+@ObjectType('User')
 export class IUser extends IContributor {
   rowId!: number;
 
