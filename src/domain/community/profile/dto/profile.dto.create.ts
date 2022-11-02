@@ -30,4 +30,6 @@ export class CreateProfileInput {
   @ValidateNested({ each: true })
   @Type(() => CreateReferenceInput)
   referencesData?: CreateReferenceInput[];
+
+  avatarURL?: string;
 }

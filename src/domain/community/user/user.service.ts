@@ -116,6 +116,10 @@ export class UserService {
       LogContext.COMMUNITY
     );
 
+    if (profileData.avatarURL && user.profile.avatar) {
+      user.profile.avatar.uri = profileData.avatarURL;
+    }
+
     // ensure have a random avatar. todo: use a package we control
     if (user.profile.avatar?.uri === '') {
       user.profile.avatar.uri = this.profileService.generateRandomAvatar(
@@ -268,6 +272,9 @@ export class UserService {
       lastName: agentInfo.lastName,
       displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       accountUpn: email,
+      profileData: {
+        avatarURL: agentInfo.avatarURL,
+      },
     });
   }
 
