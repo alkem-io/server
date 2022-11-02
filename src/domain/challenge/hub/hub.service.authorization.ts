@@ -181,6 +181,18 @@ export class HubAuthorizationService {
     );
     newRules.push(communityAdmin);
 
+    // Allow Global admins + Global Hub Admins to manage access to Hubs + contents
+    const globalAdmin = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.GRANT],
+      AuthorizationCredential.GLOBAL_ADMIN
+    );
+    newRules.push(globalAdmin);
+    const globalHubsAdmin = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.GRANT],
+      AuthorizationCredential.GLOBAL_ADMIN_HUBS
+    );
+    newRules.push(globalHubsAdmin);
+
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules

@@ -1,13 +1,12 @@
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ISearchable } from '@domain/common/interfaces/searchable.interface';
 import { IGroupable } from '@domain/common/interfaces/groupable.interface';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { IContributor } from '../contributor/contributor.interface';
 
 @ObjectType('Organization', {
-  implements: () => [IGroupable, ISearchable],
+  implements: () => [IGroupable],
 })
 export class IOrganization extends IContributor {
   rowId!: number;

@@ -14,6 +14,8 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Hub } from '@domain/challenge/hub/hub.entity';
+import { HubModule } from '@domain/challenge/hub/hub.module';
+import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { Hub } from '@domain/challenge/hub/hub.entity';
     UserGroupModule,
     OrganizationModule,
     ChallengeModule,
+    HubModule,
+    OpportunityModule,
     TypeOrmModule.forFeature([User]),
     TypeOrmModule.forFeature([UserGroup]),
     TypeOrmModule.forFeature([Organization]),
