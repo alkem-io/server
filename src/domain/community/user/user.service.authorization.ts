@@ -49,17 +49,6 @@ export class UserAuthorizationService {
         user.authorization
       );
 
-    // Allow users to also delete entities within the profile
-    user.profile.authorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRule(
-        user.profile.authorization,
-        {
-          type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-          resourceID: user.id,
-        },
-        [AuthorizationPrivilege.DELETE]
-      );
-
     user.agent = await this.userService.getAgent(user.id);
     user.agent.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -124,7 +113,6 @@ export class UserAuthorizationService {
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.GRANT,
       ],
       AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
     );
@@ -160,6 +148,7 @@ export class UserAuthorizationService {
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
       ],
       AuthorizationCredential.USER_SELF_MANAGEMENT,
       user.id

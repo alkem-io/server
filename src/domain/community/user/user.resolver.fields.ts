@@ -49,23 +49,13 @@ export class UserResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
-    nullable: true,
+    nullable: false,
     description: 'The Authorization for this User.',
   })
   @Profiling.api
-  async authorization(
-    @Parent() parent: User,
-    @CurrentUser() agentInfo: AgentInfo
-  ) {
+  async authorization(@Parent() parent: User) {
     // Reload to ensure the authorization is loaded
     const user = await this.userService.getUserOrFail(parent.id);
-
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      user.authorization,
-      AuthorizationPrivilege.READ,
-      `user authorization access: ${user.displayName}`
-    );
 
     return user.authorization;
   }

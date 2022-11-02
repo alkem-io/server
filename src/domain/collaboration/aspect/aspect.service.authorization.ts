@@ -14,6 +14,7 @@ import {
 } from '@common/enums';
 import { AspectService } from './aspect.service';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class AspectAuthorizationService {
@@ -34,6 +35,7 @@ export class AspectAuthorizationService {
         aspect.authorization,
         parentAuthorization
       );
+    aspect.authorization = this.appendPrivilegeRules(aspect.authorization);
 
     // Inherit for comments before extending so that the creating user does not
     // have rights to delete comments
@@ -105,5 +107,22 @@ export class AspectAuthorizationService {
       );
 
     return updatedAuthorization;
+  }
+
+  private appendPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    const communityJoinPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE_COMMENT],
+      AuthorizationPrivilege.CREATE
+    );
+    privilegeRules.push(communityJoinPrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
   }
 }
