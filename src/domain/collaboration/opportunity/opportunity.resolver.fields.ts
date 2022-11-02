@@ -69,21 +69,6 @@ export class OpportunityResolverFields {
     return await this.opportunityService.getMetrics(opportunity);
   }
 
-  @ResolveField('parentId', () => String, {
-    nullable: true,
-    description: 'The parent entity (challenge) ID.',
-  })
-  @Profiling.api
-  async parentID(@Parent() opportunity: Opportunity) {
-    const opp = await this.opportunityService.getOpportunityOrFail(
-      opportunity.id,
-      {
-        relations: ['challenge'],
-      }
-    );
-    return opp.challenge?.id;
-  }
-
   @ResolveField('parentNameID', () => String, {
     nullable: true,
     description: 'The parent entity name (challenge) ID.',
