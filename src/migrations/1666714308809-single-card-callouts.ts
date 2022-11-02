@@ -102,7 +102,7 @@ const getOtherTemplateVisualUri = async (
         LEFT JOIN aspect_template ON aspect_template.templatesSetId = templates_set.id
         LEFT JOIN template_info ON template_info.id = aspect_template.templateInfoId
         LEFT JOIN visual ON visual.id = template_info.visualId
-        WHERE template_info.title = 'other' AND callout.id = '${calloutId}'
+        WHERE aspect_template.type = 'other' AND callout.id = '${calloutId}'
         GROUP BY aspect_template.id
     `
     )
