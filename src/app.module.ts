@@ -77,6 +77,8 @@ import { MessageModule } from '@domain/communication/message/message.module';
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
         host: configService.get(ConfigurationTypes.STORAGE)?.database?.host,
         port: configService.get(ConfigurationTypes.STORAGE)?.database?.port,
+        charset: configService.get(ConfigurationTypes.STORAGE)?.database
+          ?.charset,
         username: configService.get(ConfigurationTypes.STORAGE)?.database
           ?.username,
         password: configService.get(ConfigurationTypes.STORAGE)?.database
