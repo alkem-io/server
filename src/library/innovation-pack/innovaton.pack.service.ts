@@ -20,6 +20,7 @@ import { OrganizationService } from '@domain/community/organization/organization
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CreateInnovationPackInput } from './dto/innovation.pack.dto.create';
 import { DeleteInnovationPackInput } from './dto/innovationPack.dto.delete';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 
 @Injectable()
 export class InnovationPackService {
@@ -37,6 +38,7 @@ export class InnovationPackService {
   ): Promise<IInnovationPack> {
     const innovationPack: IInnovationPack =
       InnovationPack.create(innovationPackData);
+    innovationPack.authorization = new AuthorizationPolicy();
 
     innovationPack.templatesSet =
       await this.templatesSetService.createTemplatesSet();
