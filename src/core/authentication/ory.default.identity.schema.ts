@@ -18,6 +18,7 @@ export interface OryDefaultIdentitySchema extends Identity {
   state_changed_at: string;
   traits: {
     accepted_terms: boolean;
+    picture: string;
     email: string;
     name: {
       first: string;

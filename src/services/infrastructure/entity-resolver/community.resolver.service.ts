@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { getConnection, Repository } from 'typeorm';
-import { User } from '@domain/community/user/user.entity';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { Community, ICommunity } from '@domain/community/community';
 import { EntityNotFoundException } from '@common/exceptions';
@@ -11,7 +10,7 @@ import { Communication } from '@domain/communication/communication/communication
 @Injectable()
 export class CommunityResolverService {
   constructor(
-    @InjectRepository(User)
+    @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
@@ -99,7 +98,7 @@ export class CommunityResolverService {
     });
     if (!community) {
       throw new EntityNotFoundException(
-        `Unable to find Community for Updates: ${calloutId}`,
+        `Unable to find Community: ${result.communityId} for Callout: ${calloutId}`,
         LogContext.COMMUNITY
       );
     }
