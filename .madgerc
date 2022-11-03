@@ -1,0 +1,9 @@
+{
+    "fileExtensions": ["js", "ts"],
+    "tsConfig": "./tsconfig.json",
+    "graphVizOptions": {
+        "G": {
+            "splines": "ortho"
+        }
+    }
+}
