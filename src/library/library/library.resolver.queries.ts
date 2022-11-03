@@ -10,7 +10,7 @@ export class LibraryResolverQueries {
     nullable: false,
     description: 'Alkemio Library',
   })
-  async metadata(): Promise<ILibrary> {
+  async library(): Promise<ILibrary> {
     return await this.libraryService.getLibraryOrFail();
   }
 }

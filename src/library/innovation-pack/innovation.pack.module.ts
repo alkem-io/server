@@ -6,9 +6,20 @@ import { InnovationPackService } from './innovaton.pack.service';
 import { InnovationPackAuthorizationService } from './innovation.pack.service.authorization';
 import { InnovationPackResolverFields } from './innovation.pack.resolver.fields';
 import { InnovationPackResolverMutations } from './innovation.pack.resolver.mutations';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { OrganizationModule } from '@domain/community/organization/organization.module';
+import { AgentModule } from '@domain/agent/agent/agent.module';
 
 @Module({
-  imports: [TemplatesSetModule, TypeOrmModule.forFeature([InnovationPack])],
+  imports: [
+    TemplatesSetModule,
+    AuthorizationModule,
+    AuthorizationPolicyModule,
+    OrganizationModule,
+    AgentModule,
+    TypeOrmModule.forFeature([InnovationPack]),
+  ],
   providers: [
     InnovationPackService,
     InnovationPackAuthorizationService,
