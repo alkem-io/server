@@ -288,6 +288,9 @@ storage:
     # MySQL schema / database name.
     database: ${MYSQL_DATABASE}:alkemio
 
+    # MySQL character set
+    charset: ${MYSQL_CHARSET}:utf8mb4
+
     # Flag setting whether MySQL operations should be logged to the console.
     logging: ${ENABLE_ORM_LOGGING}:false
 
