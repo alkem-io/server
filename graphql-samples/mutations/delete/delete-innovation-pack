@@ -1,0 +1,14 @@
+mutation deleteInnovationPack($deleteData: DeleteInnovationPackInput!) {
+  deleteInnovationPack(deleteData: $deleteData) {
+    info {
+      title
+    }
+  }
+}
+
+Variables:
+{
+  "deleteData": {
+      "ID": "uuid"
+  }
+}
