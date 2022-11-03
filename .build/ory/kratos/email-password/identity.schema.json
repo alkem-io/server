@@ -42,6 +42,10 @@
         "accepted_terms": {
           "title": "TERMS_MESSAGE",
           "type": "boolean"
+        },
+        "picture": {
+          "title": "Profile Picture",
+          "type": "string"
         }
       },
       "required": ["email", "accepted_terms"],
