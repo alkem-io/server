@@ -1,0 +1,14 @@
+mutation createInnovationPackOnLibrary($data: CreateInnovationPackOnLibraryInput!){
+  createInnovationPackOnLibrary(packData: $data){
+    id
+  }
+}
+
+Variables:
+{
+	"data": {
+    "displayName": "innovationPack 1",
+    "nameID": "pack1",
+    "providerID": "uuid_nameid"
+  }
+}
