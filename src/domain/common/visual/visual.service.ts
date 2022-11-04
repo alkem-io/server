@@ -139,26 +139,32 @@ export class VisualService {
       );
   }
 
-  async createVisualBanner(): Promise<IVisual> {
-    return await this.createVisual({
-      name: 'banner',
-      minWidth: 384,
-      maxWidth: 768,
-      minHeight: 32,
-      maxHeight: 128,
-      aspectRatio: 6,
-    });
+  async createVisualBanner(uri?: string): Promise<IVisual> {
+    return await this.createVisual(
+      {
+        name: 'banner',
+        minWidth: 384,
+        maxWidth: 768,
+        minHeight: 32,
+        maxHeight: 128,
+        aspectRatio: 6,
+      },
+      uri
+    );
   }
 
-  async createVisualBannerNarrow(): Promise<IVisual> {
-    return await this.createVisual({
-      name: 'bannerNarrow',
-      minWidth: 192,
-      maxWidth: 384,
-      minHeight: 32,
-      maxHeight: 128,
-      aspectRatio: 3,
-    });
+  async createVisualBannerNarrow(uri?: string): Promise<IVisual> {
+    return await this.createVisual(
+      {
+        name: 'bannerNarrow',
+        minWidth: 192,
+        maxWidth: 384,
+        minHeight: 32,
+        maxHeight: 128,
+        aspectRatio: 3,
+      },
+      uri
+    );
   }
 
   async createVisualAvatar(): Promise<IVisual> {
