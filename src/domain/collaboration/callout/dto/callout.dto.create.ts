@@ -4,6 +4,7 @@ import { NameID } from '@domain/common/scalars';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
+import { CreateAspectTemplateInput } from '@domain/template/aspect-template/dto/aspect.template.dto.create';
 
 @InputType()
 export class CreateCalloutInput extends CreateNameableInput {
@@ -34,4 +35,10 @@ export class CreateCalloutInput extends CreateNameableInput {
     description: 'The sort order to assign to this Callout.',
   })
   sortOrder!: number;
+
+  @Field(() => CreateAspectTemplateInput, {
+    nullable: true,
+    description: 'CardTemplate data for Card Callouts.',
+  })
+  cardTemplate?: CreateAspectTemplateInput;
 }
