@@ -1,4 +1,4 @@
-import { IAspect } from '@domain/collaboration';
+import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { NotificationInputBase } from './notification.dto.input.base';
