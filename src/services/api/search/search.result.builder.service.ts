@@ -56,7 +56,10 @@ export default class SearchResultBuilderService
 
   async [SearchResultType.OPPORTUNITY](rawSearchResult: ISearchResult) {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
-      rawSearchResult.result.id
+      rawSearchResult.result.id,
+      {
+        relations: ['challenge'],
+      }
     );
     const hub = await this.hubService.getHubOrFail(
       this.opportunityService.getHubID(opportunity)
