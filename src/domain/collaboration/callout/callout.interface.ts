@@ -1,13 +1,13 @@
-import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { IAspect } from '../../collaboration/aspect/aspect.interface';
 import { ObjectType, Field } from '@nestjs/graphql';
-import { ICanvas } from '@domain/common/canvas';
-import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
-import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { ICanvas } from '../../common/canvas/canvas.interface';
+import { INameable } from '../../common/entity/nameable-entity/nameable.interface';
+import { Markdown } from '../../common/scalars/scalar.markdown';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { IComments } from '@domain/communication/comments/comments.interface';
-import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
+import { IComments } from '../../communication/comments/comments.interface';
+import { IAspectTemplate } from '../../template/aspect-template/aspect.template.interface';
 
 @ObjectType('Callout')
 export abstract class ICallout extends INameable {

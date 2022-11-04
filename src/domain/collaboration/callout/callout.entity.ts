@@ -6,16 +6,16 @@ import {
   JoinColumn,
   OneToOne,
 } from 'typeorm';
-import { Canvas } from '@domain/common/canvas/canvas.entity';
-import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
-import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { Canvas } from '../../common/canvas/canvas.entity';
+import { Aspect } from '../../collaboration/aspect/aspect.entity';
+import { NameableEntity } from '../../common/entity/nameable-entity/nameable.entity';
 import { ICallout } from './callout.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { Comments } from '@domain/communication/comments/comments.entity';
-import { AspectTemplate } from '@domain/template/aspect-template/aspect.template.entity';
+import { Collaboration } from '../../collaboration/collaboration/collaboration.entity';
+import { Comments } from '../../communication/comments/comments.entity';
+import { AspectTemplate } from '../../template/aspect-template/aspect.template.entity';
 
 @Entity()
 export class Callout extends NameableEntity implements ICallout {

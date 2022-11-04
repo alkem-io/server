@@ -1,9 +1,9 @@
 import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
-import { IContext } from '@domain/context/context/context.interface';
+import { IContext } from '../../context/context/context.interface';
 import { EcosystemModel } from '@domain/context/ecosystem-model/ecosystem-model.entity';
-import { Reference } from '@domain/common/reference/reference.entity';
+import { Reference } from '../../common/reference/reference.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Visual } from '@domain/common/visual/visual.entity';
+import { Visual } from '../../common/visual/visual.entity';
 import { Location } from '@domain/common/location/location.entity';
 @Entity()
 export class Context extends AuthorizableEntity implements IContext {

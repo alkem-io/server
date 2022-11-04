@@ -1,18 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IAuthorizationPolicy } from '../../common/authorization-policy';
+import { AuthorizationPolicyService } from '../../common/authorization-policy/authorization.policy.service';
 import { CalloutService } from './callout.service';
-import { ICallout, Callout } from '@domain/collaboration/callout';
-import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
-import { AspectAuthorizationService } from '@domain/collaboration/aspect/aspect.service.authorization';
+import { Callout } from '../../collaboration/callout/callout.entity';
+import { ICallout } from '../../collaboration/callout/callout.interface';
+import { CanvasAuthorizationService } from '../../common/canvas/canvas.service.authorization';
+import { AspectAuthorizationService } from '../../collaboration/aspect/aspect.service.authorization';
 import { LogContext, AuthorizationPrivilege } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+import { CredentialDefinition } from '../../agent/credential/credential.definition';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
+import { CommentsAuthorizationService } from '../../communication/comments/comments.service.authorization';
 
 @Injectable()
 export class CalloutAuthorizationService {

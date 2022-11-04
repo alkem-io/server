@@ -4,12 +4,13 @@ import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { Callout, ICallout } from '@domain/collaboration/callout';
-import { IAspect } from '@domain/collaboration/aspect';
-import { IComments } from '@domain/communication/comments/comments.interface';
-import { UUID_NAMEID, UUID } from '@domain/common/scalars';
-import { ICanvas } from '@domain/common/canvas/canvas.interface';
-import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
+import { Callout } from '../../collaboration/callout/callout.entity';
+import { ICallout } from '../../collaboration/callout/callout.interface';
+import { IAspect } from '../../collaboration/aspect/aspect.interface';
+import { IComments } from '../../communication/comments/comments.interface';
+import { UUID_NAMEID, UUID } from '../../common/scalars';
+import { ICanvas } from '../../common/canvas/canvas.interface';
+import { IAspectTemplate } from '../../template/aspect-template/aspect.template.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {

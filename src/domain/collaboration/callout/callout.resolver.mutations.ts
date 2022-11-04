@@ -6,18 +6,18 @@ import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { CalloutService } from './callout.service';
-import { IAspect } from '@domain/collaboration/aspect';
+import { IAspect } from '../../collaboration/aspect/aspect.interface';
 import {
   CalloutAspectCreatedPayload,
   CreateAspectOnCalloutInput,
   CreateCanvasOnCalloutInput,
   DeleteCalloutInput,
   UpdateCalloutInput,
-} from '@domain/collaboration/callout/dto';
-import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
-import { AspectAuthorizationService } from '@domain/collaboration/aspect/aspect.service.authorization';
+} from '../../collaboration/callout/dto';
+import { CanvasAuthorizationService } from '../../common/canvas/canvas.service.authorization';
+import { AspectAuthorizationService } from '../../collaboration/aspect/aspect.service.authorization';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { ICanvas } from '@domain/common/canvas';
+import { ICanvas } from '../../common/canvas';
 import {
   SUBSCRIPTION_CALLOUT_ASPECT_CREATED,
   SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,
@@ -30,7 +30,7 @@ import {
   getRandomId,
   NotSupportedException,
 } from '@src/common';
-import { CommentsService } from '@domain/communication/comments/comments.service';
+import { CommentsService } from '../../communication/comments/comments.service';
 import { SendMessageOnCalloutInput } from './dto/callout.args.message.created';
 import { CalloutType } from '@common/enums/callout.type';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
@@ -46,7 +46,7 @@ import { NotificationInputCalloutPublished } from '@services/adapters/notificati
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { IMessage } from '@domain/communication/message/message.interface';
+import { IMessage } from '../../communication/message/message.interface';
 
 @Resolver()
 export class CalloutResolverMutations {
