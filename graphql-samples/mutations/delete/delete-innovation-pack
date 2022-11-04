@@ -1,8 +1,6 @@
 mutation deleteInnovationPack($deleteData: DeleteInnovationPackInput!) {
   deleteInnovationPack(deleteData: $deleteData) {
-    info {
-      title
-    }
+    id
   }
 }
 
