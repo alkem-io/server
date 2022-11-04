@@ -31,13 +31,12 @@ export class TemplateInfoService {
     const templateInfo: ITemplateInfo = TemplateInfo.create(templateInfoData);
     templateInfo.tagset = await this.tagsetService.createTagset({
       name: RestrictedTagsetNames.DEFAULT,
-      tags: [],
+      tags: templateInfoData.tags,
     });
-    if (templateInfoData.tags) {
-      templateInfo.tagset.tags = templateInfoData.tags;
-    }
 
-    templateInfo.visual = await this.visualService.createVisualBannerNarrow();
+    templateInfo.visual = await this.visualService.createVisualBannerNarrow(
+      templateInfoData.visualUri
+    );
 
     return await this.templateInfoRepository.save(templateInfo);
   }
