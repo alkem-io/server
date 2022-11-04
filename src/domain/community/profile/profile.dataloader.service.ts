@@ -2,11 +2,11 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
-import { IReference } from '@domain/common/reference';
-import { ITagset } from '@domain/common/tagset';
-import { Profile } from '@domain/community/profile';
-import { IVisual } from '@domain/common/visual';
-import { ILocation } from '@domain/common/location';
+import { IReference } from '@domain/common/reference/reference.interface';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { Profile } from '@domain/community/profile/profile.entity';
+import { IVisual } from '@domain/common/visual/visual.interface';
+import { ILocation } from '@domain/common/location/location.interface';
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 

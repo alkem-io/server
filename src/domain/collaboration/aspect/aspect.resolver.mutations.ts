@@ -1,11 +1,9 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AspectService } from './aspect.service';
-import {
-  DeleteAspectInput,
-  UpdateAspectInput,
-  IAspect,
-} from '@domain/collaboration/aspect';
+import { DeleteAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.delete';
+import { UpdateAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.update';
+import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { CurrentUser } from '@common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';

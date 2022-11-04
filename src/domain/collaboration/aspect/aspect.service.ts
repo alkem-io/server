@@ -8,7 +8,8 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { Aspect, IAspect } from '@domain/collaboration/aspect';
+import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DeleteAspectInput } from './dto/aspect.dto.delete';

@@ -12,12 +12,12 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { ITagsetable } from '@src/common/interfaces';
+import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
 import {
   CreateTagsetInput,
   UpdateTagsetInput,
   DeleteTagsetInput,
-} from '@domain/common/tagset';
+} from '@domain/common/tagset/';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';

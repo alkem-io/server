@@ -6,7 +6,7 @@ import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { CalloutService } from './callout.service';
-import { IAspect } from '@domain/collaboration/aspect';
+import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import {
   CalloutAspectCreatedPayload,
   CreateAspectOnCalloutInput,
@@ -17,7 +17,7 @@ import {
 import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
 import { AspectAuthorizationService } from '@domain/collaboration/aspect/aspect.service.authorization';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { ICanvas } from '@domain/common/canvas';
+import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import {
   SUBSCRIPTION_CALLOUT_ASPECT_CREATED,
   SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,

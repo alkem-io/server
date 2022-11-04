@@ -13,9 +13,9 @@ import {
   DeleteHubInput,
   hubCommunityPolicy,
 } from '@domain/challenge/hub';
-import { IOpportunity } from '@domain/collaboration/opportunity';
+import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
-import { IProject } from '@domain/collaboration/project';
+import { IProject } from '@domain/collaboration/project/project.interface';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';

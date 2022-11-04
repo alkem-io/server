@@ -12,7 +12,7 @@ import {
   ProjectEventInput,
   UpdateProjectInput,
 } from '@domain/collaboration/project';
-import { CreateRelationInput } from '@domain/collaboration/relation';
+import { CreateRelationInput } from '@domain/collaboration/relation/relation.dto.create';
 import { CreateUserInput, UpdateUserInput } from '@domain/community/user';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
