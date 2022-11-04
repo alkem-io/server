@@ -47,6 +47,7 @@ import { ConversionModule } from '@services/api/conversion/conversion.module';
 import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
 import { MessageModule } from '@domain/communication/message/message.module';
+import { LibraryModule } from '@library/library/library.module';
 
 @Module({
   imports: [
@@ -199,6 +200,7 @@ import { MessageModule } from '@domain/communication/message/message.module';
     RegistrationModule,
     RedisLockModule,
     ConversionModule,
+    LibraryModule,
   ],
   controllers: [AppController],
   providers: [

@@ -22,6 +22,7 @@
       "@common/*": ["src/common/*"],
       "@core/*": ["src/core/*"],
       "@platform/*": ["src/platform/*"],
+      "@library/*": ["src/library/*"],
       "@services/*": ["src/services/*"],
       "@constants/*": ["src/common/constants/*"],
       "@templates/*": ["src/platform/configuration/templates/*"],
