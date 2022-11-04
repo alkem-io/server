@@ -8,7 +8,11 @@ import {
 import { Logger } from '@nestjs/common';
 import { IBaseAlkemio } from '@src/domain';
 import { LogContext } from '@src/common';
-import { IRelayStyleEdge, IRelayStylePaginatedType, PaginationArgs } from './';
+import { PaginationArgs } from './pagination.args';
+import {
+  IRelayStyleEdge,
+  IRelayStylePaginatedType,
+} from './relay.style.paginated.type';
 import { tryValidateArgs } from './validate.pagination.args';
 import { EntityNotFoundException } from '@src/common';
 
