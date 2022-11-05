@@ -16,8 +16,10 @@ import { CanvasTemplateAuthorizationService } from '../canvas-template/canvas.te
 import { CreateLifecycleTemplateOnTemplatesSetInput } from './dto/lifecycle.template.dto.create.on.templates.set';
 import { ILifecycleTemplate } from '../lifecycle-template/lifecycle.template.interface';
 import { LifecycleTemplateAuthorizationService } from '../lifecycle-template/lifecycle.template.service.authorization';
-import { DeleteLifecycleTemplateOnTemplatesSetInput } from './dto/lifecycle.template.dto.delete.on.templates.set';
 import { LifecycleTemplateService } from '../lifecycle-template/lifecycle.template.service';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
+import { DeleteLifecycleTemplateInput } from './dto/lifecycle.template.dto.delete.on.templates.set';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
@@ -135,21 +137,31 @@ export class TemplatesSetResolverMutations {
   })
   async deleteLifecycleTemplate(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteLifecycleTemplateOnTemplatesSetInput
+    @Args('deleteData') deleteData: DeleteLifecycleTemplateInput
   ): Promise<ILifecycleTemplate> {
-    const lifecycleTemplate =
+    const innovationFlowTemplate =
       await this.lifecycleTemplateService.getLifecycleTemplateOrFail(
-        deleteData.ID
+        deleteData.ID,
+        {
+          relations: ['templatesSet'],
+        }
       );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      lifecycleTemplate.authorization,
+      innovationFlowTemplate.authorization,
       AuthorizationPrivilege.DELETE,
-      `lifecycle template delete: ${lifecycleTemplate.id}`
+      `lifecycle template delete: ${innovationFlowTemplate.id}`
     );
+    const templatesSet = innovationFlowTemplate.templatesSet;
+    if (!templatesSet) {
+      throw new RelationshipNotFoundException(
+        `Unable to load TemplatesSet for innovation flow template: ${innovationFlowTemplate.id}`,
+        LogContext.TEMPLATES
+      );
+    }
     return await this.templatesSetService.deleteInnovationFlowTemplate(
-      lifecycleTemplate,
-      deleteData.templatesSetID
+      innovationFlowTemplate,
+      templatesSet
     );
   }
 }

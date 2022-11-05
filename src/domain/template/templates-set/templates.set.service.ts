@@ -226,9 +226,8 @@ export class TemplatesSetService {
 
   async deleteInnovationFlowTemplate(
     innovationFlowTemplate: ILifecycleTemplate,
-    templatesSetID: string
+    templatesSet: ITemplatesSet
   ): Promise<ILifecycleTemplate> {
-    const templatesSet = await this.getTemplatesSetOrFail(templatesSetID);
     const innovationFlowTemplates = await this.getInnovationFlowTemplates(
       templatesSet
     );

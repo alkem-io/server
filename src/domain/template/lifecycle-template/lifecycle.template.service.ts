@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, getConnection } from 'typeorm';
+import { Repository, getConnection, FindOneOptions } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -37,11 +37,16 @@ export class LifecycleTemplateService {
   }
 
   async getLifecycleTemplateOrFail(
-    lifecycleTemplateID: string
+    lifecycleTemplateID: string,
+    options?: FindOneOptions<LifecycleTemplate>
   ): Promise<ILifecycleTemplate> {
-    const lifecycleTemplate = await this.lifecycleTemplateRepository.findOne({
-      id: lifecycleTemplateID,
-    });
+    const lifecycleTemplate = await this.lifecycleTemplateRepository.findOne(
+      {
+        id: lifecycleTemplateID,
+      },
+      options
+    );
+
     if (!lifecycleTemplate)
       throw new EntityNotFoundException(
         `Not able to locate LifecycleTemplate with the specified ID: ${lifecycleTemplateID}`,
