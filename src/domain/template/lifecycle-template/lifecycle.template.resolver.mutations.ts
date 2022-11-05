@@ -8,7 +8,6 @@ import { ILifecycleTemplate } from './lifecycle.template.interface';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { UpdateLifecycleTemplateInput } from './dto/lifecycle.template.dto.update';
-import { DeleteLifecycleTemplateInput } from './dto/lifecycle.template.dto.delete';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver()
@@ -41,29 +40,6 @@ export class LifecycleTemplateResolverMutations {
     return await this.lifecycleTemplateService.updateLifecycleTemplate(
       lifecycleTemplate,
       lifecycleTemplateInput
-    );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ILifecycleTemplate, {
-    description: 'Deletes the specified LifecycleTemplate.',
-  })
-  async deleteLifecycleTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteLifecycleTemplateInput
-  ): Promise<ILifecycleTemplate> {
-    const lifecycleTemplate =
-      await this.lifecycleTemplateService.getLifecycleTemplateOrFail(
-        deleteData.ID
-      );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      lifecycleTemplate.authorization,
-      AuthorizationPrivilege.DELETE,
-      `lifecycle template delete: ${lifecycleTemplate.id}`
-    );
-    return await this.lifecycleTemplateService.deleteLifecycleTemplate(
-      lifecycleTemplate
     );
   }
 }

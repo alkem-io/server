@@ -16,12 +16,15 @@ import { CanvasTemplateAuthorizationService } from '../canvas-template/canvas.te
 import { CreateLifecycleTemplateOnTemplatesSetInput } from './dto/lifecycle.template.dto.create.on.templates.set';
 import { ILifecycleTemplate } from '../lifecycle-template/lifecycle.template.interface';
 import { LifecycleTemplateAuthorizationService } from '../lifecycle-template/lifecycle.template.service.authorization';
+import { DeleteLifecycleTemplateOnTemplatesSetInput } from './dto/lifecycle.template.dto.delete.on.templates.set';
+import { LifecycleTemplateService } from '../lifecycle-template/lifecycle.template.service';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private templatesSetService: TemplatesSetService,
+    private lifecycleTemplateService: LifecycleTemplateService,
     private aspectTemplateAuthorizationService: AspectTemplateAuthorizationService,
     private canvasTemplateAuthorizationService: CanvasTemplateAuthorizationService,
     private lifecycleTemplateAuthorizationService: LifecycleTemplateAuthorizationService,
@@ -124,5 +127,29 @@ export class TemplatesSetResolverMutations {
       templatesSet.authorization
     );
     return lifecycleTemplate;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ILifecycleTemplate, {
+    description: 'Deletes the specified LifecycleTemplate.',
+  })
+  async deleteLifecycleTemplate(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('deleteData') deleteData: DeleteLifecycleTemplateOnTemplatesSetInput
+  ): Promise<ILifecycleTemplate> {
+    const lifecycleTemplate =
+      await this.lifecycleTemplateService.getLifecycleTemplateOrFail(
+        deleteData.ID
+      );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      lifecycleTemplate.authorization,
+      AuthorizationPrivilege.DELETE,
+      `lifecycle template delete: ${lifecycleTemplate.id}`
+    );
+    return await this.templatesSetService.deleteInnovationFlowTemplate(
+      lifecycleTemplate,
+      deleteData.templatesSetID
+    );
   }
 }

@@ -8,6 +8,7 @@ import { TemplatesSetService } from './templates.set.service';
 import { ITemplatesSet } from './templates.set.interface';
 import { ICanvasTemplate } from '../canvas-template/canvas.template.interface';
 import { ILifecycleTemplate } from '../lifecycle-template/lifecycle.template.interface';
+import { ITemplatesSetPolicy } from '../templates-set-policy/templates.set.policy.interface';
 
 @Resolver(() => ITemplatesSet)
 export class TemplatesSetResolverFields {
@@ -82,7 +83,9 @@ export class TemplatesSetResolverFields {
   async lifecycleTemplates(
     @Parent() templatesSet: ITemplatesSet
   ): Promise<ILifecycleTemplate[]> {
-    return await this.templatesSetService.getInnovationFlowTemplates(templatesSet);
+    return await this.templatesSetService.getInnovationFlowTemplates(
+      templatesSet
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -101,5 +104,17 @@ export class TemplatesSetResolverFields {
     ID: string
   ): Promise<ILifecycleTemplate> {
     return this.templatesSetService.getLifecycleTemplate(ID);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('policy', () => ITemplatesSetPolicy, {
+    nullable: true,
+    description: 'The policy for this TemplatesSet.',
+  })
+  @Profiling.api
+  async policy(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<ITemplatesSetPolicy> {
+    return this.templatesSetService.getPolicy(templatesSet);
   }
 }
