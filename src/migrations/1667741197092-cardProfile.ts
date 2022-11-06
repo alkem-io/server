@@ -8,29 +8,29 @@ export class cardProfile1667741197092 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create the card profile entity definition
     // Create templates_set
-    await queryRunner.query(
-      `CREATE TABLE \`card_profile\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-             \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-              \`version\` int NOT NULL,
-               \`authorizationId\` varchar(36) NULL,
-               \`description\` text NULL,
-                \`tagsetId\` varchar(36) NULL
-                ) ENGINE=InnoDB`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`card_profile\` ADD CONSTRAINT \`FK_22223901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`card_profile\` ADD CONSTRAINT \`FK_44443901817dd09d5906537e088\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
+    // await queryRunner.query(
+    //   `CREATE TABLE \`card_profile\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    //          \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    //           \`version\` int NOT NULL,
+    //            \`authorizationId\` varchar(36) NULL,
+    //            \`description\` text NULL,
+    //             \`tagsetId\` varchar(36) NULL
+    //             ) ENGINE=InnoDB`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`card_profile\` ADD CONSTRAINT \`FK_22223901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`card_profile\` ADD CONSTRAINT \`FK_44443901817dd09d5906537e088\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    // );
 
-    // Update the aspect entity definition to add new column
-    await queryRunner.query(
-      `ALTER TABLE \`aspect\` ADD \`cardProfileId\` varchar(36) NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_55553901817dd09d5906537e088\` FOREIGN KEY (\`cardProfileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
+    // // Update the aspect entity definition to add new column
+    // await queryRunner.query(
+    //   `ALTER TABLE \`aspect\` ADD \`cardProfileId\` varchar(36) NULL`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_66663901817dd09d5906537e088\` FOREIGN KEY (\`cardProfileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    // );
 
     // Migrate the data
     const aspects: any[] = await queryRunner.query(
@@ -49,9 +49,15 @@ export class cardProfile1667741197092 implements MigrationInterface {
       );
     }
 
-    // Update where references point to
+    // Update where references point to, first dropping FK to aspect
+    await queryRunner.query(
+      `ALTER TABLE \`reference\` DROP FOREIGN KEY \`FK_a21a8eda24f18cd6af58b0d4e72\``
+    );
     await queryRunner.query(
       `ALTER TABLE \`reference\` RENAME COLUMN \`aspectId\` TO \`cardProfileId\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`reference\` ADD CONSTRAINT \`FK_a21a8eda24f18cd6af58b0d4e72\` FOREIGN KEY (\`cardProfileIdId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
     // Remove old entity definition fields no longer needed: tagset, description
@@ -59,7 +65,7 @@ export class cardProfile1667741197092 implements MigrationInterface {
       `ALTER TABLE \`aspect\` DROP COLUMN \`description\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`aspect\` DROP FOREIGN KEY \`IDX_777b0355b4e9bd6b02c66507aa\``
+      `ALTER TABLE \`reference\` DROP FOREIGN KEY \`FK_bd7b636888fc391cf1d7406e891\``
     );
     await queryRunner.query(`ALTER TABLE \`aspect\` DROP COLUMN \`tagsetId\``);
   }
