@@ -7,6 +7,7 @@ module.exports = {
     '^@core/(.*)': '<rootDir>/src/core/$1',
     '^@platform/(.*)': '<rootDir>/src/platform/$1',
     '^@config/(.*)': '<rootDir>/src/config/$1',
+    '^@library/(.*)': '<rootDir>/src/library/$1',
     '^@services/(.*)': '<rootDir>/src/services/$1',
     '^@templates/(.*)': '<rootDir>/src/platform/configuration/templates/$1',
     '^@src/(.*)': '<rootDir>/src/$1',
