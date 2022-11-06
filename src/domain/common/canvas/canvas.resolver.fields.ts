@@ -4,7 +4,7 @@ import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
 import { ICanvas } from './canvas.interface';
 import { CanvasService } from './canvas.service';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
-import { GraphqlGuard } from '@src/core';
+import { GraphqlGuard } from '@src/core/authorization/graphql.guard';
 import { IVisual } from '@src/domain/common/visual/visual.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';

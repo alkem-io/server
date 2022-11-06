@@ -13,7 +13,7 @@ import {
   UpdateProjectInput,
 } from '@domain/collaboration/project';
 import { CreateRelationInput } from '@domain/collaboration/relation/relation.dto.create';
-import { CreateUserInput, UpdateUserInput } from '@domain/community/user';
+import { CreateUserInput, UpdateUserInput } from '@domain/community/user/dto';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { validate, ValidationError } from 'class-validator';
@@ -21,7 +21,7 @@ import { AbstractHandler } from './abstract.handler';
 import {
   CreateOrganizationInput,
   UpdateOrganizationInput,
-} from '@domain/community/organization';
+} from '@domain/community/organization/dto';
 import {
   CreateOpportunityInput,
   OpportunityEventInput,

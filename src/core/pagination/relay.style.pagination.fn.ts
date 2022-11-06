@@ -6,11 +6,11 @@ import {
   SelectQueryBuilder,
 } from 'typeorm';
 import { Logger } from '@nestjs/common';
-import { IBaseAlkemio } from '@src/domain';
-import { LogContext } from '@src/common';
+import { IBaseAlkemio } from '@src/domain/common/entity/base-entity';
+import { LogContext } from '@src/common/enums';
 import { IRelayStyleEdge, IRelayStylePaginatedType, PaginationArgs } from './';
 import { tryValidateArgs } from './validate.pagination.args';
-import { EntityNotFoundException } from '@src/common';
+import { EntityNotFoundException } from '@src/common/exceptions';
 
 export type Paginationable = { rowId: number };
 

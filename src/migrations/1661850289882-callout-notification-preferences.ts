@@ -6,7 +6,7 @@ import {
   PreferenceInsertType,
   removePreferences,
 } from '@src/migrations/utils/preferences';
-import { UserPreferenceType } from '@src/common';
+import { UserPreferenceType } from '@src/common/enums';
 import { PreferenceType } from '@common/enums/preference.type';
 
 export class calloutNotificationPreferences1661850289882

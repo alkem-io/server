@@ -27,9 +27,8 @@ import { ICallout } from './callout.interface';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import {
   EntityNotInitializedException,
-  getRandomId,
   NotSupportedException,
-} from '@src/common';
+} from '@src/common/exceptions';
 import { CommentsService } from '@domain/communication/comments/comments.service';
 import { SendMessageOnCalloutInput } from './dto/callout.args.message.created';
 import { CalloutType } from '@common/enums/callout.type';
@@ -47,6 +46,7 @@ import { CalloutState } from '@common/enums/callout.state';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IMessage } from '@domain/communication/message/message.interface';
+import { getRandomId } from '@common/utils/random.id.generator.util';
 
 @Resolver()
 export class CalloutResolverMutations {

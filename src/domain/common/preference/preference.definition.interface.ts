@@ -1,7 +1,7 @@
 import { PreferenceType } from '@common/enums/preference.type';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { PreferenceValueType } from '@src/common/enums';
-import { IBaseAlkemio } from '@src/domain/common';
+import { IBaseAlkemio } from '@src/domain/common/entity/base-entity/base.alkemio.interface';
 
 @ObjectType('PreferenceDefinition')
 export abstract class IPreferenceDefinition extends IBaseAlkemio {

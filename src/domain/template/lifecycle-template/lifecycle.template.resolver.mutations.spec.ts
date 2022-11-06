@@ -4,7 +4,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { LifecycleTemplateResolverMutations } from '@domain/template/lifecycle-template/lifecycle.template.resolver.mutations';
 
-describe('LifecycleTemplateResolverMutations', () => {
+describe('LiecycleTemplateResolverMutations', () => {
   let resolver: LifecycleTemplateResolverMutations;
 
   beforeEach(async () => {

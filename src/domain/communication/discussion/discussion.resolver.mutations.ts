@@ -19,7 +19,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_DISCUSSION_MESSAGE } from '@common/constants/providers';
 import { CommunicationDiscussionUpdated } from '../communication/dto/communication.dto.event.discussion.updated';
-import { getRandomId } from '@src/common';
+import { getRandomId } from '@src/common/utils';
 import { DiscussionMessageReceivedPayload } from './dto/discussion.message.received.payload';
 
 @Resolver()
