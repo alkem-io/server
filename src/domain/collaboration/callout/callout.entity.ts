@@ -15,7 +15,7 @@ import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Comments } from '@domain/communication/comments/comments.entity';
-import { AspectTemplate } from '@domain/template/aspect-template/aspect.template.entity';
+import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 
 @Entity()
 export class Callout extends NameableEntity implements ICallout {
@@ -43,13 +43,13 @@ export class Callout extends NameableEntity implements ICallout {
   })
   aspects?: Aspect[];
 
-  @OneToOne(() => AspectTemplate, {
+  @OneToOne(() => IAspectTemplate, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  cardTemplate?: AspectTemplate;
+  cardTemplate?: IAspectTemplate;
 
   @OneToOne(() => Comments, {
     eager: false,
