@@ -1,30 +1,30 @@
-import { ContextResolverMutations } from '@domain/context/context/context.resolver.mutations';
 import { Test, TestingModule } from '@nestjs/testing';
+import { InnovationPackService } from './innovaton.pack.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { InnovationPack } from './innovation.pack.entity';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 
-describe('CanvasTemplateResolverMutations', () => {
-  //toDo fix this hack placeholder asap
-  // let resolver: CanvasTemplateResolverMutations;
-  let resolver: ContextResolverMutations;
+describe('InnovationPackService', () => {
+  let service: InnovationPackService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        // CanvasTemplateResolverMutations,
-        ContextResolverMutations, //toDo fix this hack placeholder asap
+        InnovationPackService,
         MockCacheManager,
         MockWinstonProvider,
+        repositoryProviderMockFactory(InnovationPack),
       ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
 
-    resolver = module.get(ContextResolverMutations);
+    service = module.get<InnovationPackService>(InnovationPackService);
   });
 
   it('should be defined', () => {
-    expect(resolver).toBeDefined();
+    expect(service).toBeDefined();
   });
 });

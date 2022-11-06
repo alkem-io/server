@@ -1,3 +1,4 @@
+import { ContextResolverMutations } from '@domain/context/context/context.resolver.mutations';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -10,7 +11,9 @@ describe('LiecycleTemplateResolverMutations', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        LifecycleTemplateResolverMutations,
+        //toDo fix this hack placeholder asap
+        // LifecycleTemplateResolverMutations,
+        ContextResolverMutations,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -18,7 +21,7 @@ describe('LiecycleTemplateResolverMutations', () => {
       .useMocker(defaultMockerFactory)
       .compile();
 
-    resolver = module.get(LifecycleTemplateResolverMutations);
+    resolver = module.get(ContextResolverMutations);
   });
 
   it('should be defined', () => {

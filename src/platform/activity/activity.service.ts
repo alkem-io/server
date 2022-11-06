@@ -47,22 +47,23 @@ export class ActivityService {
     return await this.activityRepository.save(activity as Activity);
   }
 
-  async getAllActivity(): Promise<IActivity[]> {
-    // Load all Activity naively for now
-    const activity: IActivity[] = await this.activityRepository.find();
-    if (activity.length === 0) return [];
-
-    return activity;
-  }
-
-  async getAllActivityForCollaboration(
-    collaborationID: string
+  async getActivityForCollaboration(
+    collaborationID: string,
+    limit?: number
   ): Promise<IActivity[]> {
-    const activity: IActivity[] = await this.activityRepository.find({
-      collaborationID: collaborationID,
-    });
-    if (activity.length === 0) return [];
+    const entries: IActivity[] = await this.activityRepository
+      .createQueryBuilder('activity')
+      .where('collaborationID = :collaborationID')
+      .setParameters({
+        collaborationID: collaborationID,
+      })
+      .orderBy('createdDate', 'DESC')
+      .getMany();
 
-    return activity;
+    if (limit) {
+      return entries.slice(0, limit);
+    }
+
+    return entries;
   }
 }
