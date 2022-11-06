@@ -72,8 +72,41 @@ export class cardProfile1667741197092 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Create the card profile entity definition
-    // Update the aspect entity definition
-    // update the reference entity definition
+    await queryRunner.query(
+      `ALTER TABLE \`aspect\` ADD \`tagsetId\` varchar(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_bd7b636888fc391cf1d7406e891\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`aspect\` ADD \`description\` text NULL`
+    );
+
+    // Revert the reference FK + name
+    await queryRunner.query(
+      `ALTER TABLE \`reference\` DROP FOREIGN KEY \`FK_a21a8eda24f18cd6af58b0d4e72\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`reference\` RENAME COLUMN \`cardProfileId\` TO \`aspectId\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`reference\` ADD CONSTRAINT \`FK_a21a8eda24f18cd6af58b0d4e72\` FOREIGN KEY (\`aspectId\`) REFERENCES \`aspect\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
+
+    // Drop the link to profile (card profile)
+    await queryRunner.query(
+      `ALTER TABLE \`aspect\` DROP FOREIGN KEY \`FK_67663901817dd09d5906537e088\``
+    );
+    await queryRunner.query(`ALTER TABLE \`aspect\` DROP COLUMN \`profileId\``);
+
+    // drop the card profile table
+    await queryRunner.query(
+      `ALTER TABLE \`card_profile\` DROP FOREIGN KEY \`FK_44443901817dd09d5906537e088\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`card_profile\` DROP FOREIGN KEY \`FK_22223901817dd09d5906537e088\``
+    );
+
+    await queryRunner.query('DROP TABLE `card_profile`');
   }
 }
