@@ -59,9 +59,10 @@ export class CardProfileService {
   }
 
   async updateCardProfile(
+    cardProfileOrig: ICardProfile,
     cardProfileData: UpdateCardProfileInput
   ): Promise<ICardProfile> {
-    const cardProfile = await this.getCardProfileOrFail(cardProfileData.ID, {
+    const cardProfile = await this.getCardProfileOrFail(cardProfileOrig.id, {
       relations: ['references', 'tagset', 'authorization'],
     });
 

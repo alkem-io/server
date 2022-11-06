@@ -8,11 +8,8 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { UpdateCardProfileInput } from './dto';
 import { CardProfileService } from './card.profile.service';
 import { CreateReferenceOnCardProfileInput } from './dto/card.profile.dto.create.reference';
-import { ICardProfile } from './card.profile.interface';
-
 @Resolver()
 export class CardProfileResolverMutations {
   constructor(
@@ -52,26 +49,5 @@ export class CardProfileResolverMutations {
         cardProfile.authorization
       );
     return await this.referenceService.saveReference(reference);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ICardProfile, {
-    description: 'Updates the specified CardProfile.',
-  })
-  @Profiling.api
-  async updateCardProfile(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('cardProfileData') cardProfileData: UpdateCardProfileInput
-  ): Promise<ICardProfile> {
-    const cardProfile = await this.cardProfileService.getCardProfileOrFail(
-      cardProfileData.ID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      cardProfile.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `cardProfile: ${cardProfile.id}`
-    );
-    return await this.cardProfileService.updateCardProfile(cardProfileData);
   }
 }

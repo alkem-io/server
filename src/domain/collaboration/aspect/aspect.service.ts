@@ -98,7 +98,7 @@ export class AspectService {
 
   public async updateAspect(aspectData: UpdateAspectInput): Promise<IAspect> {
     const aspect = await this.getAspectOrFail(aspectData.ID, {
-      relations: ['references'],
+      relations: ['profile'],
     });
 
     // Copy over the received data
@@ -106,7 +106,14 @@ export class AspectService {
       aspect.displayName = aspectData.displayName;
     }
     if (aspectData.profileData) {
+      if (!aspect.profile) {
+        throw new EntityNotFoundException(
+          `Aspect not initialised: ${aspect.id}`,
+          LogContext.COLLABORATION
+        );
+      }
       aspect.profile = await this.cardProfileService.updateCardProfile(
+        aspect.profile,
         aspectData.profileData
       );
     }

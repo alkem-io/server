@@ -2,11 +2,10 @@ import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
 import { LONG_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateReferenceInput } from '@domain/common/reference';
-import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
 import { Type } from 'class-transformer';
 
 @InputType()
-export class UpdateCardProfileInput extends UpdateBaseAlkemioInput {
+export class UpdateCardProfileInput {
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
