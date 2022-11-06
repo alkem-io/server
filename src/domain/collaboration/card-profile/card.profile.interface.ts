@@ -15,6 +15,7 @@ export abstract class ICardProfile extends IAuthorizable {
   tagset?: ITagset;
 
   @Field(() => Markdown, {
+    nullable: false,
     description: 'The description of this aspect',
   })
   description!: string;
