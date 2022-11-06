@@ -9,9 +9,6 @@ import { CardProfile } from '../card-profile';
 @Entity()
 export class Aspect extends NameableEntity implements IAspect {
   @Column('text')
-  description: string;
-
-  @Column('text')
   type: string;
 
   @Column('varchar', { length: 36, nullable: true })
@@ -56,9 +53,8 @@ export class Aspect extends NameableEntity implements IAspect {
   })
   callout?: Callout;
 
-  constructor(type: string, description: string) {
+  constructor(type: string) {
     super();
     this.type = type;
-    this.description = description;
   }
 }

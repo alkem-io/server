@@ -27,10 +27,10 @@ export class cardProfile1667741197092 implements MigrationInterface {
 
     // Update the aspect entity definition to add new column
     await queryRunner.query(
-      `ALTER TABLE \`aspect\` ADD \`cardProfileId\` varchar(36) NULL`
+      `ALTER TABLE \`aspect\` ADD \`profileId\` varchar(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_67663901817dd09d5906537e088\` FOREIGN KEY (\`cardProfileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_67663901817dd09d5906537e088\` FOREIGN KEY (\`profileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     // Migrate the data
@@ -66,7 +66,7 @@ export class cardProfile1667741197092 implements MigrationInterface {
       `ALTER TABLE \`aspect\` DROP COLUMN \`description\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`reference\` DROP FOREIGN KEY \`FK_bd7b636888fc391cf1d7406e891\``
+      `ALTER TABLE \`aspect\` DROP FOREIGN KEY \`FK_bd7b636888fc391cf1d7406e891\``
     );
     await queryRunner.query(`ALTER TABLE \`aspect\` DROP COLUMN \`tagsetId\``);
   }
