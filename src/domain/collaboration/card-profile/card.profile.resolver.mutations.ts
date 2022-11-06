@@ -29,7 +29,7 @@ export class CardProfileResolverMutations {
   @Profiling.api
   async createReferenceOnCardProfile(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('referenceInput') referenceInput: CreateReferenceOnCardProfileInput
+    @Args('referenceData') referenceInput: CreateReferenceOnCardProfileInput
   ): Promise<IReference> {
     const cardProfile = await this.cardProfileService.getCardProfileOrFail(
       referenceInput.cardProfileID,
