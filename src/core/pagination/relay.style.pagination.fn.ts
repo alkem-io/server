@@ -8,9 +8,13 @@ import {
 import { Logger } from '@nestjs/common';
 import { IBaseAlkemio } from '@src/domain/common/entity/base-entity';
 import { LogContext } from '@src/common/enums';
-import { IRelayStyleEdge, IRelayStylePaginatedType, PaginationArgs } from './';
 import { tryValidateArgs } from './validate.pagination.args';
 import { EntityNotFoundException } from '@src/common/exceptions';
+import { PaginationArgs } from './pagination.args';
+import {
+  IRelayStyleEdge,
+  IRelayStylePaginatedType,
+} from './relay.style.paginated.type';
 
 export type Paginationable = { rowId: number };
 
