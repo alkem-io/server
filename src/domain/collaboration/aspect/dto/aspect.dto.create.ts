@@ -19,6 +19,10 @@ export class CreateAspectInput extends CreateNameableInput {
   @IsOptional()
   tags?: string[];
 
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  visualUri?: string;
+
   // Override
   @Field(() => NameID, {
     nullable: true,

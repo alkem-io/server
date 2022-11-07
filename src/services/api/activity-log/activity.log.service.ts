@@ -13,7 +13,6 @@ import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
-import { IActivity } from '@platform/activity';
 import ActivityLogBuilderService, {
   IActivityLogBuilder,
 } from '@services/api/activity-log/activity.log.builder.service';
@@ -43,14 +42,11 @@ export class ActivityLogService {
       LogContext.ACTIVITY
     );
 
-    let rawActivities: IActivity[] = [];
-    if (queryData && queryData.collaborationID) {
-      rawActivities = await this.activityService.getAllActivityForCollaboration(
-        queryData.collaborationID
+    const rawActivities =
+      await this.activityService.getActivityForCollaboration(
+        queryData.collaborationID,
+        queryData.limit
       );
-    } else {
-      rawActivities = await this.activityService.getAllActivity();
-    }
 
     const results: IActivityLogEntry[] = [];
     for (const rawActivity of rawActivities) {

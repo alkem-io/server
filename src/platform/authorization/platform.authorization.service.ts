@@ -51,7 +51,6 @@ export class PlatformAuthorizationService {
     const globalAdmin = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
@@ -63,7 +62,6 @@ export class PlatformAuthorizationService {
     const globalHubsAdmin = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,

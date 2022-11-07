@@ -11,10 +11,6 @@ export abstract class ICanvas extends INameable {
   })
   value?: string;
 
-  @Field(() => IVisual, {
-    description: 'The preview image for the Canvas.',
-    nullable: true,
-  })
   preview?: IVisual;
 
   // Expose the date at which the Canvas was created from parent entity

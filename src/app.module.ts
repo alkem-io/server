@@ -46,6 +46,8 @@ import { RedisLockModule } from '@core/caching/redis/redis.lock.module';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
 import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
+import { MessageModule } from '@domain/communication/message/message.module';
+import { LibraryModule } from '@library/library/library.module';
 
 @Module({
   imports: [
@@ -76,6 +78,8 @@ import { ActivityLogModule } from '@services/api/activity-log/activity.log.modul
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
         host: configService.get(ConfigurationTypes.STORAGE)?.database?.host,
         port: configService.get(ConfigurationTypes.STORAGE)?.database?.port,
+        charset: configService.get(ConfigurationTypes.STORAGE)?.database
+          ?.charset,
         username: configService.get(ConfigurationTypes.STORAGE)?.database
           ?.username,
         password: configService.get(ConfigurationTypes.STORAGE)?.database
@@ -192,9 +196,11 @@ import { ActivityLogModule } from '@services/api/activity-log/activity.log.modul
     IpfsModule,
     AdminCommunicationModule,
     AgentModule,
+    MessageModule,
     RegistrationModule,
     RedisLockModule,
     ConversionModule,
+    LibraryModule,
   ],
   controllers: [AppController],
   providers: [

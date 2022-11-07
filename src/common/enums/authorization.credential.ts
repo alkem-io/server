@@ -26,6 +26,9 @@ export enum AuthorizationCredential {
   ORGANIZATION_ASSOCIATE = 'organization-associate', // Able to be a part of an organization
 
   USER_GROUP_MEMBER = 'user-group-member', // Able to be a part of an user group
+
+  // Library related credentials
+  INNOVATION_PACK_PROVIDER = 'innovation-pack-provider',
 }
 
 registerEnumType(AuthorizationCredential, {

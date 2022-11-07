@@ -12,5 +12,6 @@ Variables:
     "nameID": "test-callout-4",
     "state": "OPEN",
     "type": "CARD",
+    "description": "testing callouts"
   }
 }

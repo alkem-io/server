@@ -1,12 +1,10 @@
 import { Inject, LoggerService, NotImplementedException } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { SearchInput } from './search-input.dto';
+import { SearchInput } from './dto/search.dto.input';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { User } from '@domain/community/user/user.entity';
-import { SearchResultEntry } from './search-result-entry.dto';
-import { ISearchResultEntry } from './search-result-entry.interface';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { Organization } from '@domain/community/organization/organization.entity';
@@ -15,6 +13,16 @@ import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entit
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Hub } from '@domain/challenge/hub/hub.entity';
+import { ISearchResult } from './dto/search.result.entry.interface';
+import { SearchResultType } from '@common/enums/search.result.type';
+import { ISearchResultBuilder } from './search.result.builder.interface';
+import { HubService } from '@domain/challenge/hub/hub.service';
+import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { UserService } from '@domain/community/user/user.service';
+import { OrganizationService } from '@domain/community/organization/organization.service';
+import { UserGroupService } from '@domain/community/user-group/user-group.service';
+import SearchResultBuilderService from './search.result.builder.service';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -43,14 +51,8 @@ class Match {
   key = 0;
   score = 0;
   terms: string[] = [];
-  entity:
-    | User
-    | UserGroup
-    | Organization
-    | Hub
-    | Challenge
-    | Opportunity
-    | undefined;
+  entity!: User | UserGroup | Organization | Hub | Challenge | Opportunity;
+  type!: SearchResultType;
 }
 
 export class SearchService {
@@ -67,6 +69,12 @@ export class SearchService {
     private challengeRepository: Repository<Challenge>,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
+    private hubService: HubService,
+    private challengeService: ChallengeService,
+    private opportunityService: OpportunityService,
+    private userService: UserService,
+    private organizationService: OrganizationService,
+    private userGroupService: UserGroupService,
     private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -74,7 +82,7 @@ export class SearchService {
   async search(
     searchData: SearchInput,
     agentInfo: AgentInfo
-  ): Promise<ISearchResultEntry[]> {
+  ): Promise<ISearchResult[]> {
     this.validateSearchParameters(searchData);
 
     // Use maps to aggregate results as searching; data structure chosen for linear lookup o(1)
@@ -139,7 +147,7 @@ export class SearchService {
       LogContext.API
     );
 
-    const results: ISearchResultEntry[] = [];
+    const results: ISearchResult[] = [];
     if (searchUsers) {
       results.push(...(await this.buildSearchResults(userResults)));
     }
@@ -167,7 +175,7 @@ export class SearchService {
     return filteredTerms;
   }
 
-  ensureUniqueTermsPerResult(results: ISearchResultEntry[]) {
+  ensureUniqueTermsPerResult(results: ISearchResult[]) {
     for (const result of results) {
       const uniqueTerms = [...new Set(result.terms)];
       result.terms = uniqueTerms;
@@ -231,7 +239,12 @@ export class SearchService {
         .getMany();
 
       // Create results for each match
-      await this.buildMatchingResults(userMatches, userResults, term);
+      await this.buildMatchingResults(
+        userMatches,
+        userResults,
+        term,
+        SearchResultType.USER
+      );
     }
   }
 
@@ -245,7 +258,12 @@ export class SearchService {
         .setParameters({ term: `%${term}%` })
         .getMany();
       // Create results for each match
-      await this.buildMatchingResults(groupMatches, groupResults, term);
+      await this.buildMatchingResults(
+        groupMatches,
+        groupResults,
+        term,
+        SearchResultType.USERGROUP
+      );
     }
   }
 
@@ -271,7 +289,8 @@ export class SearchService {
       await this.buildMatchingResults(
         organizationMatches,
         organizationResults,
-        term
+        term,
+        SearchResultType.ORGANIZATION
       );
     }
   }
@@ -322,7 +341,12 @@ export class SearchService {
         }
       }
       // Create results for each match
-      await this.buildMatchingResults(readableHubMatches, hubResults, term);
+      await this.buildMatchingResults(
+        readableHubMatches,
+        hubResults,
+        term,
+        SearchResultType.HUB
+      );
     }
   }
 
@@ -375,7 +399,8 @@ export class SearchService {
       await this.buildMatchingResults(
         readableChallengeMatches,
         challengeResults,
-        term
+        term,
+        SearchResultType.CHALLENGE
       );
     }
   }
@@ -430,7 +455,8 @@ export class SearchService {
       await this.buildMatchingResults(
         readableOpportunityMatches,
         opportunityResults,
-        term
+        term,
+        SearchResultType.OPPORTUNITY
       );
     }
   }
@@ -477,7 +503,12 @@ export class SearchService {
         .getMany();
 
       // Create results for each match
-      await this.buildMatchingResults(userMatches, userResults, term);
+      await this.buildMatchingResults(
+        userMatches,
+        userResults,
+        term,
+        SearchResultType.USER
+      );
     }
   }
 
@@ -497,7 +528,12 @@ export class SearchService {
         .getMany();
 
       // Create results for each match
-      await this.buildMatchingResults(groupMatches, groupResults, term);
+      await this.buildMatchingResults(
+        groupMatches,
+        groupResults,
+        term,
+        SearchResultType.USERGROUP
+      );
     }
   }
 
@@ -521,7 +557,8 @@ export class SearchService {
       await this.buildMatchingResults(
         organizationMatches,
         organizationResults,
-        term
+        term,
+        SearchResultType.ORGANIZATION
       );
     }
   }
@@ -529,28 +566,47 @@ export class SearchService {
   async buildMatchingResults(
     rawMatches: any[],
     resultsMap: Map<number, Match>,
-    term: string
+    term: string,
+    type: SearchResultType
   ) {
     for (const rawMatch of rawMatches) {
       const match = new Match();
       match.entity = rawMatch;
       match.terms.push(term);
       match.key = rawMatch.id;
+      match.type = type;
       this.addMatchingResult(resultsMap, match);
     }
   }
 
   async buildSearchResults(
     results: Map<number, Match>
-  ): Promise<ISearchResultEntry[]> {
-    const searchResults: ISearchResultEntry[] = [];
-    results.forEach(value => {
-      const resultEntry = new SearchResultEntry();
-      resultEntry.score = value.score;
-      resultEntry.terms = value.terms;
-      resultEntry.result = value.entity;
-      searchResults.push(resultEntry);
-    });
+  ): Promise<ISearchResult[]> {
+    const searchResults: ISearchResult[] = [];
+    for (const result of results.values()) {
+      const searchResultBase: ISearchResult = {
+        score: result.score,
+        terms: result.terms,
+        result: result.entity,
+        type: result.type,
+        id: `${result.type}-${result.entity.id}`,
+      };
+      const searchResultBuilder: ISearchResultBuilder =
+        new SearchResultBuilderService(
+          searchResultBase,
+          this.hubService,
+          this.challengeService,
+          this.opportunityService,
+          this.userService,
+          this.organizationService,
+          this.userGroupService
+        );
+      const searchResultType = searchResultBase.type as SearchResultType;
+      const searchResult = await searchResultBuilder[searchResultType](
+        searchResultBase
+      );
+      searchResults.push(searchResult);
+    }
 
     return searchResults;
   }

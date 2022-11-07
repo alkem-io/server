@@ -1,5 +1,5 @@
 import { LogContext } from '@common/enums';
-import { CommunicationMessageResult } from '@domain/communication/message/communication.dto.message.result';
+import { IMessage } from '@domain/communication/message/message.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MatrixRoomResponseMessage } from '../adapter-room/matrix.room.dto.response.message';
@@ -13,9 +13,7 @@ export class MatrixMessageAdapter {
     private readonly logger: LoggerService
   ) {}
 
-  convertFromMatrixMessage(
-    message: MatrixRoomResponseMessage
-  ): CommunicationMessageResult {
+  convertFromMatrixMessage(message: MatrixRoomResponseMessage): IMessage {
     const { event, sender } = message;
 
     // need to use getContent - should be able to resolve the edited value if any

@@ -5,6 +5,7 @@ export const typeormCliConfig: ConnectionOptions = {
   type: 'mysql',
   host: process.env.DATABASE_HOST ?? 'localhost',
   port: process.env.MYSQL_DB_PORT ? Number(process.env.MYSQL_DB_PORT) : 3306,
+  charset: process.env.MYSQL_CHARSET ?? 'utf8mb4',
   cache: true,
   username: 'root',
   password: process.env.MYSQL_ROOT_PASSWORD ?? 'toor',

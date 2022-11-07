@@ -1,8 +1,6 @@
 mutation deleteLifecycleTemplate($deleteData: DeleteLifecycleTemplateInput!) {
   deleteLifecycleTemplate(deleteData: $deleteData) {
-    info {
-      title
-    }
+    id
   }
 }
 

@@ -1,4 +1,4 @@
-import { MessageID, UUID } from '@domain/common/scalars';
+import { MessageID } from '@domain/common/scalars';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { Field, ObjectType } from '@nestjs/graphql';
 
@@ -6,7 +6,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
   description:
     'A message that was sent either as an Update or as part of a Discussion.',
 })
-export class CommunicationMessageResult {
+export class IMessage {
   @Field(() => MessageID, {
     nullable: false,
     description: 'The id for the message event.',
@@ -19,10 +19,6 @@ export class CommunicationMessageResult {
   })
   message!: string;
 
-  @Field(() => UUID, {
-    nullable: false,
-    description: 'The sender user ID',
-  })
   sender!: string;
 
   @Field(() => Number, {
