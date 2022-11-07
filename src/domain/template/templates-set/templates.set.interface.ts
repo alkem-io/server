@@ -9,5 +9,8 @@ export abstract class ITemplatesSet extends IAuthorizable {
   aspectTemplates?: IAspectTemplate[];
 
   canvasTemplates?: ICanvasTemplate[];
+
   lifecycleTemplates?: ILifecycleTemplate[];
+
+  policy!: string;
 }

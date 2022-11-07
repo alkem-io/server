@@ -14,6 +14,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { CommentsModule } from '@domain/communication/comments/comments.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
+import { AspectTemplateModule } from '@domain/template/aspect-template/aspect.template.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
@@ -27,6 +28,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     CommentsModule,
     EntityResolverModule,
     NamingModule,
+    AspectTemplateModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [

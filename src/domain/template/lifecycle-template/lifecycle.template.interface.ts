@@ -2,6 +2,7 @@ import { LifecycleType } from '@common/enums/lifecycle.type';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ITemplateBase } from '../template-base/template.base.interface';
 import { LifecycleDefinitionScalar } from '@domain/common/scalars/scalar.lifecycle.definition';
+import { ITemplatesSet } from '../templates-set';
 
 @ObjectType('LifecycleTemplate')
 export abstract class ILifecycleTemplate extends ITemplateBase {
@@ -16,4 +17,6 @@ export abstract class ILifecycleTemplate extends ITemplateBase {
     description: 'The XState definition for this LifecycleTemplate.',
   })
   definition!: string;
+
+  templatesSet?: ITemplatesSet;
 }

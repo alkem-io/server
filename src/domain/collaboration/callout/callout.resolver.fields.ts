@@ -9,6 +9,7 @@ import { IAspect } from '@domain/collaboration/aspect';
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { UUID_NAMEID, UUID } from '@domain/common/scalars';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
+import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -105,5 +106,18 @@ export class CalloutResolverFields {
   @Profiling.api
   async comments(@Parent() callout: ICallout): Promise<IComments | undefined> {
     return await this.calloutService.getCommentsFromCallout(callout.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('cardTemplate', () => IAspectTemplate, {
+    nullable: true,
+    description: 'The card template for this Callout.',
+  })
+  @Profiling.api
+  async cardTemplate(
+    @Parent() callout: ICallout
+  ): Promise<IAspectTemplate | undefined> {
+    return await this.calloutService.getCardTemplateFromCallout(callout.id);
   }
 }

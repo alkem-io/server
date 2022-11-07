@@ -7,7 +7,6 @@ import { Context } from '@domain/context/context/context.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { IBaseChallenge } from './base.challenge.interface';
 import { Agent } from '@domain/agent/agent/agent.entity';
-// import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Collaboration } from '../../collaboration/collaboration/collaboration.entity';
 
 export abstract class BaseChallenge

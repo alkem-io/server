@@ -45,6 +45,16 @@ export const collaborationDefaults: any = {
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 5,
+      cardTemplate: {
+        type: 'contribution',
+        defaultDescription:
+          'Please share your contribution. The more details the better!',
+        info: {
+          title: 'contribution',
+          description:
+            'To share contributions with detailed explanations how they help.',
+        },
+      },
     },
     {
       type: CalloutType.CANVAS,
