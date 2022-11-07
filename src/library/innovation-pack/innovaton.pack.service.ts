@@ -41,7 +41,12 @@ export class InnovationPackService {
     innovationPack.authorization = new AuthorizationPolicy();
 
     innovationPack.templatesSet =
-      await this.templatesSetService.createTemplatesSet();
+      await this.templatesSetService.createTemplatesSet(
+        {
+          minInnovationFlow: 0,
+        },
+        false
+      );
 
     // save before assigning host in case that fails
     const savedInnovationPack = await this.innovationPackRepository.save(

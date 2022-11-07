@@ -24,11 +24,11 @@ export class LibraryAuthorizationService {
     library.authorization = this.authorizationPolicyService.reset(
       library.authorization
     );
-    library.authorization.anonymousReadAccess = true;
     library.authorization =
       this.platformAuthorizationService.inheritPlatformAuthorization(
         library.authorization
       );
+    library.authorization.anonymousReadAccess = true;
 
     // Cascade down
     const libraryPropagated = await this.propagateAuthorizationToChildEntities(

@@ -117,7 +117,12 @@ export class HubService {
       this.createPreferenceDefaults()
     );
 
-    hub.templatesSet = await this.templatesSetService.createTemplatesSet();
+    hub.templatesSet = await this.templatesSetService.createTemplatesSet(
+      {
+        minInnovationFlow: 1,
+      },
+      true
+    );
 
     // Lifecycle
 
