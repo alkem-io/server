@@ -107,10 +107,11 @@ export class PlatformAuthorizationService {
     userNotInherited.inheritable = false;
     credentialRules.push(userNotInherited);
 
-    // Allow hub admins to create new organizations
+    // Allow hub admins to create new organizations + move card
     const hubAdminsNotInherited = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.CREATE_ORGANIZATION,
+        AuthorizationPrivilege.MOVE_CARD,
         AuthorizationPrivilege.ADMIN,
       ],
       AuthorizationCredential.HUB_ADMIN
@@ -118,10 +119,11 @@ export class PlatformAuthorizationService {
     hubAdminsNotInherited.inheritable = false;
     credentialRules.push(hubAdminsNotInherited);
 
-    // Allow challenge admins to create new organizations + access platform admin
+    // Allow challenge admins to create new organizations + move card + access platform admin
     const challengeAdminsNotInherited = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.CREATE_ORGANIZATION,
+        AuthorizationPrivilege.MOVE_CARD,
         AuthorizationPrivilege.ADMIN,
       ],
       AuthorizationCredential.CHALLENGE_ADMIN
@@ -160,6 +162,12 @@ export class PlatformAuthorizationService {
       AuthorizationPrivilege.CREATE
     );
     privilegeRules.push(createPrivilege);
+
+    const updatePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.MOVE_CARD],
+      AuthorizationPrivilege.UPDATE
+    );
+    privilegeRules.push(updatePrivilege);
 
     return privilegeRules;
   }
