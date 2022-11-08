@@ -48,7 +48,7 @@ export class PlatformAuthorizationService {
   private createPlatformCredentialRules(): AuthorizationPolicyRuleCredential[] {
     const credentialRules: AuthorizationPolicyRuleCredential[] = [];
 
-    const globalAdmin = new AuthorizationPolicyRuleCredential(
+    const globalAdmins = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
@@ -58,19 +58,8 @@ export class PlatformAuthorizationService {
       ],
       AuthorizationCredential.GLOBAL_ADMIN
     );
-    credentialRules.push(globalAdmin);
-
-    const globalHubsAdmin = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.MOVE_CARD,
-      ],
-      AuthorizationCredential.GLOBAL_ADMIN_HUBS
-    );
-    credentialRules.push(globalHubsAdmin);
+    globalAdmins.appendCriteria(AuthorizationCredential.GLOBAL_ADMIN_HUBS);
+    credentialRules.push(globalAdmins);
 
     // Allow global admins to manage global privileges, access Platform mgmt
     const globalAdminNotInherited = new AuthorizationPolicyRuleCredential(

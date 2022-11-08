@@ -22,4 +22,12 @@ export class AuthorizationPolicyRuleCredential
     this.grantedPrivileges = grantedPrivileges;
     this.inheritable = true;
   }
+
+  appendCriteria(type: string, resourceID?: string) {
+    const criteria: ICredentialDefinition = {
+      type: type,
+      resourceID: resourceID || '',
+    };
+    this.criterias.push(criteria);
+  }
 }
