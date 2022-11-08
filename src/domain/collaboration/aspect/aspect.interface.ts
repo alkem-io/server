@@ -5,6 +5,7 @@ import { IComments } from '@domain/communication/comments/comments.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { INameable } from '@domain/common/entity/nameable-entity';
+import { ICallout } from '@domain/collaboration/callout';
 
 @ObjectType('Aspect')
 export abstract class IAspect extends INameable {
@@ -24,6 +25,12 @@ export abstract class IAspect extends INameable {
     description: 'The set of tags for the Aspect',
   })
   tagset?: ITagset;
+
+  @Field(() => ICallout, {
+    nullable: true,
+    description: 'The parent Callout of the Aspect',
+  })
+  callout?: ICallout;
 
   // Expose the date at which the aspect was created from parent entity
   @Field(() => Date)

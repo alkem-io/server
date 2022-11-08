@@ -24,6 +24,7 @@ export enum AuthorizationPrivilege {
   COMMUNITY_CONTEXT_REVIEW = 'community-context-review',
   CREATE_CALLOUT = 'create-callout',
   CREATE_RELATION = 'create-relation',
+  MOVE_CARD = 'move-card',
 }
 
 registerEnumType(AuthorizationPrivilege, {
