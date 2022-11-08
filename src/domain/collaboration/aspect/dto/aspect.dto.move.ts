@@ -1,18 +1,17 @@
-import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
-import { NameID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 
 @InputType()
-export class MoveAspectInput extends UpdateNameableInput {
-  @Field(() => NameID, {
+export class MoveAspectInput {
+  @Field(() => UUID, {
     nullable: false,
-    description: 'A display identifier of the Aspect to move.',
+    description: 'ID of the Aspect to move.',
   })
   aspectID!: string;
 
-  @Field(() => NameID, {
+  @Field(() => UUID, {
     nullable: false,
-    description: 'A display identifier of the Callout to move the Aspect to.',
+    description: 'ID of the Callout to move the Aspect to.',
   })
   calloutID!: string;
 }

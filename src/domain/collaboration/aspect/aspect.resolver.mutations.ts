@@ -66,9 +66,9 @@ export class AspectResolverMutations {
   @Mutation(() => IAspect, {
     description: 'Moves the specified Aspect to another Callout.',
   })
-  async moveAspectToCollaboration(
+  async moveAspectToCallout(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('aspectID') moveAspectData: MoveAspectInput
+    @Args('moveAspectData') moveAspectData: MoveAspectInput
   ): Promise<IAspect> {
     const aspect = await this.aspectService.getAspectOrFail(
       moveAspectData.aspectID
