@@ -15,6 +15,7 @@ import { CreateReferenceOnAspectInput } from './dto/aspect.dto.create.reference'
 import { IReference } from '@domain/common/reference/reference.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ReferenceService } from '@domain/common/reference/reference.service';
+import { MoveAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.move';
 
 @Resolver()
 export class AspectResolverMutations {
@@ -59,6 +60,29 @@ export class AspectResolverMutations {
       `update aspect: ${aspect.nameID}`
     );
     return await this.aspectService.updateAspect(aspectData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IAspect, {
+    description: 'Moves the specified Aspect to another Callout.',
+  })
+  async moveAspectToCollaboration(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('aspectID') moveAspectData: MoveAspectInput
+  ): Promise<IAspect> {
+    const aspect = await this.aspectService.getAspectOrFail(
+      moveAspectData.aspectID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      aspect.authorization,
+      AuthorizationPrivilege.MOVE_CARD,
+      `move card: ${aspect.nameID}`
+    );
+    return await this.aspectService.moveAspectToCallout(
+      moveAspectData.aspectID,
+      moveAspectData.calloutID
+    );
   }
 
   @UseGuards(GraphqlGuard)

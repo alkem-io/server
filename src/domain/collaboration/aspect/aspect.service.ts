@@ -2,11 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-  ValidationException,
-} from '@common/exceptions';
+import { EntityNotFoundException, EntityNotInitializedException, ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Aspect, IAspect } from '@domain/collaboration/aspect';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -21,6 +17,8 @@ import { CommentsService } from '@domain/communication/comments/comments.service
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { CreateAspectInput } from './dto/aspect.dto.create';
+import { Callout } from '@domain/collaboration/callout';
+import { CalloutType } from '@common/enums/callout.type';
 
 @Injectable()
 export class AspectService {
@@ -32,6 +30,8 @@ export class AspectService {
     private tagsetService: TagsetService,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>,
+    @InjectRepository(Callout)
+    private calloutRepository: Repository<Callout>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -145,6 +145,40 @@ export class AspectService {
     }
 
     await this.aspectRepository.save(aspect);
+
+    return aspect;
+  }
+
+  public async moveAspectToCallout(
+    aspectID: string,
+    calloutID: string
+  ): Promise<IAspect> {
+    const aspect = await this.getAspectOrFail(aspectID, {
+      relations: ['callout'],
+    });
+
+    const sourceCallout = await this.calloutRepository.findOne(
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      aspect.callout.id
+    );
+    const targetCallout = await this.calloutRepository.findOne(calloutID);
+
+    if (!targetCallout) {
+      throw new Error('Target Callout not found.');
+    }
+
+    if (
+      targetCallout.type !== CalloutType.CARD &&
+      targetCallout.collaboration?.id !== sourceCallout?.collaboration?.id
+    ) {
+      throw new Error('Not moving the card for you!');
+    }
+
+    await this.aspectRepository.save({
+      ...aspect,
+      calloutID: targetCallout.id,
+    });
 
     return aspect;
   }
