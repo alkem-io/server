@@ -8,7 +8,13 @@ export class credentials1667933499673 implements MigrationInterface {
       `SELECT id, credentialRules FROM authorization_policy`
     );
     for (const authorization of authorizations) {
-      const rules: oldCredentialRule[] = authorization.credentialRules;
+      if (!authorization.credentialRules) {
+        //console.log(`No credential rules found for policy with id: ${authorization.id}`);
+        continue;
+      }
+      const rules: oldCredentialRule[] = JSON.parse(
+        authorization.credentialRules
+      );
       const newRules: newCredentialRule[] = [];
       for (const rule of rules) {
         const newRule: newCredentialRule = {
@@ -31,7 +37,36 @@ export class credentials1667933499673 implements MigrationInterface {
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    const authorizations: any[] = await queryRunner.query(
+      `SELECT id, credentialRules FROM authorization_policy`
+    );
+    for (const authorization of authorizations) {
+      if (!authorization.credentialRules) {
+        //console.log(`No credential rules found for policy with id: ${authorization.id}`);
+        continue;
+      }
+      const rules: newCredentialRule[] = JSON.parse(
+        authorization.credentialRules
+      );
+      const oldRules: oldCredentialRule[] = [];
+      for (const rule of rules) {
+        const criteria = rule.criterias[0];
+        const oldRule: oldCredentialRule = {
+          inherited: rule.inherited,
+          grantedPrivileges: rule.grantedPrivileges,
+          type: criteria.type,
+          resourceID: criteria.resourceID,
+        };
+        oldRules.push(oldRule);
+      }
+      await queryRunner.query(
+        `UPDATE authorization_policy SET credentialRules = '${JSON.stringify(
+          oldRules
+        )}' WHERE (id = '${authorization.id}')`
+      );
+    }
+  }
 }
 
 type oldCredentialRule = {
