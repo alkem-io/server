@@ -100,30 +100,6 @@ export class AspectAuthorizationService {
     );
     newRules.push(manageCreatedAspectPolicy);
 
-    const moveAspectPolicyGlobalAdmin = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.MOVE_CARD],
-      AuthorizationCredential.GLOBAL_ADMIN
-    );
-    newRules.push(moveAspectPolicyGlobalAdmin);
-
-    const moveAspectPolicyHubAdmin = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.MOVE_CARD],
-      AuthorizationCredential.HUB_ADMIN
-    );
-    newRules.push(moveAspectPolicyHubAdmin);
-    const moveAspectPolicyChallengeAdmin =
-      new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.MOVE_CARD],
-        AuthorizationCredential.CHALLENGE_ADMIN
-      );
-    newRules.push(moveAspectPolicyChallengeAdmin);
-    const moveAspectPolicyOpportunityAdmin =
-      new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.MOVE_CARD],
-        AuthorizationCredential.OPPORTUNITY_ADMIN
-      );
-    newRules.push(moveAspectPolicyOpportunityAdmin);
-
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
         authorization,
