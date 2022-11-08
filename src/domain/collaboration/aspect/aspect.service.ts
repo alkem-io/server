@@ -2,7 +2,11 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { EntityNotFoundException, EntityNotInitializedException, ValidationException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+  ValidationException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Aspect, IAspect } from '@domain/collaboration/aspect';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
