@@ -21,8 +21,6 @@ import { CommentsService } from '@domain/communication/comments/comments.service
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { CreateAspectInput } from './dto/aspect.dto.create';
-import { Callout } from '@domain/collaboration/callout';
-import { CalloutType } from '@common/enums/callout.type';
 
 @Injectable()
 export class AspectService {
@@ -34,8 +32,6 @@ export class AspectService {
     private tagsetService: TagsetService,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>,
-    @InjectRepository(Callout)
-    private calloutRepository: Repository<Callout>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -151,46 +147,6 @@ export class AspectService {
     await this.aspectRepository.save(aspect);
 
     return aspect;
-  }
-
-  public async moveAspectToCallout(
-    aspectID: string,
-    calloutID: string
-  ): Promise<IAspect> {
-    const aspect = await this.getAspectOrFail(aspectID, {
-      relations: ['callout', 'callout.collaboration'],
-    });
-
-    const sourceCallout = aspect.callout as Callout;
-    const targetCallout = await this.calloutRepository.findOne(calloutID, {
-      relations: ['collaboration'],
-    });
-
-    if (!targetCallout) {
-      throw new Error('Target Callout not found.');
-    }
-
-    if (targetCallout.type !== CalloutType.CARD) {
-      throw new TypeError(
-        'A Card can be moved to a callout of type CARD only.'
-      );
-    }
-
-    if (targetCallout.collaboration?.id !== sourceCallout?.collaboration?.id) {
-      throw new TypeError(
-        'A Card can only be moved between Callouts in the same Collaboration.'
-      );
-    }
-
-    aspect.callout = targetCallout;
-
-    await this.aspectRepository.save(aspect);
-
-    const movedAspect = await this.getAspectOrFail(aspectID, {
-      relations: ['callout'],
-    });
-
-    return movedAspect;
   }
 
   public async saveAspect(aspect: IAspect): Promise<IAspect> {

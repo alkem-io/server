@@ -13,7 +13,6 @@ import { AspectResolverFields } from './aspect.resolver.fields';
 import { AspectAuthorizationService } from './aspect.service.authorization';
 import { AspectResolverSubscriptions } from './aspect.resolver.subscriptions';
 import { UserModule } from '@domain/community/user/user.module';
-import { Callout } from '@domain/collaboration/callout';
 
 @Module({
   imports: [
@@ -24,7 +23,7 @@ import { Callout } from '@domain/collaboration/callout';
     TagsetModule,
     UserModule,
     ReferenceModule,
-    TypeOrmModule.forFeature([Aspect, Callout]),
+    TypeOrmModule.forFeature([Aspect]),
   ],
   providers: [
     AspectResolverMutations,

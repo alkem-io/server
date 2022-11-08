@@ -54,6 +54,7 @@ export class PlatformAuthorizationService {
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
+        AuthorizationPrivilege.MOVE_CARD,
       ],
       AuthorizationCredential.GLOBAL_ADMIN
     );
@@ -65,6 +66,7 @@ export class PlatformAuthorizationService {
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
+        AuthorizationPrivilege.MOVE_CARD,
       ],
       AuthorizationCredential.GLOBAL_ADMIN_HUBS
     );
@@ -162,12 +164,6 @@ export class PlatformAuthorizationService {
       AuthorizationPrivilege.CREATE
     );
     privilegeRules.push(createPrivilege);
-
-    const updatePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.MOVE_CARD],
-      AuthorizationPrivilege.UPDATE
-    );
-    privilegeRules.push(updatePrivilege);
 
     return privilegeRules;
   }
