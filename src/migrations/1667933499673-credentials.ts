@@ -1,0 +1,51 @@
+import { MigrationInterface, QueryRunner } from 'typeorm';
+
+export class credentials1667933499673 implements MigrationInterface {
+  name = 'credentials1667933499673';
+
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    const authorizations: any[] = await queryRunner.query(
+      `SELECT id, credentialRules FROM authorization_policy`
+    );
+    for (const authorization of authorizations) {
+      const rules: oldCredentialRule[] = authorization.credentialRules;
+      const newRules: newCredentialRule[] = [];
+      for (const rule of rules) {
+        const newRule: newCredentialRule = {
+          inherited: rule.inherited,
+          grantedPrivileges: rule.grantedPrivileges,
+          criterias: [
+            {
+              type: rule.type,
+              resourceID: rule.resourceID,
+            },
+          ],
+        };
+        newRules.push(newRule);
+      }
+      await queryRunner.query(
+        `UPDATE authorization_policy SET credentialRules = '${JSON.stringify(
+          newRules
+        )}' WHERE (id = '${authorization.id}')`
+      );
+    }
+  }
+
+  public async down(queryRunner: QueryRunner): Promise<void> {}
+}
+
+type oldCredentialRule = {
+  inherited: boolean;
+  grantedPrivileges: string[];
+  type: string;
+  resourceID: string;
+};
+
+type newCredentialRule = {
+  inherited: boolean;
+  grantedPrivileges: string[];
+  criterias: {
+    type: string;
+    resourceID: string;
+  }[];
+};

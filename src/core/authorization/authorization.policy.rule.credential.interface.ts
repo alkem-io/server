@@ -1,13 +1,11 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('AuthorizationPolicyRuleCredential')
 export abstract class IAuthorizationPolicyRuleCredential {
-  @Field(() => String)
-  type!: string;
-
-  @Field(() => String)
-  resourceID!: string;
+  @Field(() => [ICredentialDefinition])
+  criterias!: ICredentialDefinition[];
 
   @Field(() => [AuthorizationPrivilege])
   grantedPrivileges!: AuthorizationPrivilege[];
