@@ -44,6 +44,9 @@ export class ProfileService {
     });
     profile.authorization = new AuthorizationPolicy();
     profile.avatar = await this.visualService.createVisualAvatar();
+    if (profileData?.avatarURL) {
+      profile.avatar.uri = profileData.avatarURL;
+    }
     profile.location = await this.locationService.createLocation(
       profileData?.location
     );
