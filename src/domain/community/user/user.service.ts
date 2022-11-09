@@ -268,6 +268,9 @@ export class UserService {
       lastName: agentInfo.lastName,
       displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       accountUpn: email,
+      profileData: {
+        avatarURL: agentInfo.avatarURL,
+      },
     });
   }
 
