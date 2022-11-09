@@ -130,17 +130,6 @@ export class CalloutService {
     if (calloutUpdateData.description)
       callout.description = calloutUpdateData.description;
 
-    if (calloutUpdateData.type) {
-      if (!calloutUpdateData.cardTemplate) {
-        throw new Error('Please provide a card template');
-      }
-      callout.type = calloutUpdateData.type;
-      callout.cardTemplate =
-        await this.aspectTemplateService.createAspectTemplate(
-          calloutUpdateData.cardTemplate
-        );
-    }
-
     if (calloutUpdateData.state) callout.state = calloutUpdateData.state;
 
     if (calloutUpdateData.displayName)
