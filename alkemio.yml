@@ -12,6 +12,7 @@
 ## hosting ##
 # The hosting configuration for the Alkemio Server
 hosting:
+  environment: ${ENVIRONMENT}:local
   # The port that the Alkemio server will be listening on.
   # For clusters (e.g. docker-compose, kubernetes) this should also be the port that is used  in the ingress configuration (e.g. traefik).
   # This is then used for routing the requests from the public-facing endpoint (e.g. https://dev.alkem.io/graphql)
