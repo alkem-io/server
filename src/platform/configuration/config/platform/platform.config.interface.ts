@@ -5,6 +5,12 @@ import { FeatureFlag } from './platform.dto.feature.flag';
 export abstract class IPlatformConfig {
   @Field(() => String, {
     nullable: false,
+    description: 'Name of the environment',
+  })
+  environment!: string;
+
+  @Field(() => String, {
+    nullable: false,
     description: 'URL to the terms of usage for the platform',
   })
   terms!: string;

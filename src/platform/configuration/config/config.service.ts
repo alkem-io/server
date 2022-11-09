@@ -24,6 +24,8 @@ export class KonfigService {
         providers: await this.getAuthenticationProvidersConfig(),
       },
       platform: {
+        environment: this.configService.get(ConfigurationTypes.HOSTING)
+          ?.environment,
         terms: this.configService.get(ConfigurationTypes.PLATFORM)?.terms,
         privacy: this.configService.get(ConfigurationTypes.PLATFORM)?.privacy,
         security: this.configService.get(ConfigurationTypes.PLATFORM)?.security,
