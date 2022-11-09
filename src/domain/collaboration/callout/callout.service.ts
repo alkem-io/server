@@ -123,12 +123,12 @@ export class CalloutService {
   public async updateCallout(
     calloutUpdateData: UpdateCalloutInput
   ): Promise<ICallout> {
-    const callout = await this.getCalloutOrFail(calloutUpdateData.ID);
+    const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
+      relations: ['cardTemplate'],
+    });
 
     if (calloutUpdateData.description)
       callout.description = calloutUpdateData.description;
-
-    if (calloutUpdateData.type) callout.type = calloutUpdateData.type;
 
     if (calloutUpdateData.state) callout.state = calloutUpdateData.state;
 
@@ -137,6 +137,18 @@ export class CalloutService {
 
     if (calloutUpdateData.sortOrder)
       callout.sortOrder = calloutUpdateData.sortOrder;
+
+    if (
+      callout.type == CalloutType.CARD &&
+      callout.cardTemplate &&
+      calloutUpdateData.cardTemplate
+    ) {
+      callout.cardTemplate =
+        await this.aspectTemplateService.updateAspectTemplate(
+          callout.cardTemplate,
+          { ID: callout.cardTemplate.id, ...calloutUpdateData.cardTemplate }
+        );
+    }
 
     return await this.calloutRepository.save(callout);
   }
