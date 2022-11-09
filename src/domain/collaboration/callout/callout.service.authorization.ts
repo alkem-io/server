@@ -13,6 +13,7 @@ import { AuthorizationPolicyRuleCredential } from '@core/authorization/authoriza
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
+import { AspectTemplateAuthorizationService } from '@domain/template/aspect-template/aspect.template.service.authorization';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -21,6 +22,7 @@ export class CalloutAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
+    private aspectTemplateAuthorizationService: AspectTemplateAuthorizationService,
     private commentsAuthorizationService: CommentsAuthorizationService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
@@ -70,6 +72,17 @@ export class CalloutAuthorizationService {
       callout.comments =
         await this.commentsAuthorizationService.applyAuthorizationPolicy(
           callout.comments,
+          callout.authorization
+        );
+    }
+
+    callout.cardTemplate = await this.calloutService.getCardTemplateFromCallout(
+      callout.id
+    );
+    if (callout.cardTemplate) {
+      callout.cardTemplate =
+        await this.aspectTemplateAuthorizationService.applyAuthorizationPolicy(
+          callout.cardTemplate,
           callout.authorization
         );
     }

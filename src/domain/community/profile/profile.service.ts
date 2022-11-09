@@ -41,21 +41,32 @@ export class ProfileService {
   async createProfile(profileData?: CreateProfileInput): Promise<IProfile> {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
-      tagsets: profileData?.tagsetsData,
-      references: profileData?.referencesData,
     });
     profile.authorization = new AuthorizationPolicy();
     profile.avatar = await this.visualService.createVisualAvatar();
+    if (profileData?.avatarURL) {
+      profile.avatar.uri = profileData.avatarURL;
+    }
     profile.location = await this.locationService.createLocation(
       profileData?.location
     );
 
-    if (!profile.references) {
-      profile.references = [];
+    profile.references = [];
+    if (profileData?.referencesData) {
+      for (const referenceData of profileData.referencesData) {
+        const reference = await this.referenceService.createReference(
+          referenceData
+        );
+        profile.references.push(reference);
+      }
     }
 
-    if (!profile.tagsets) {
-      profile.tagsets = [];
+    profile.tagsets = [];
+    if (profileData?.tagsetsData) {
+      for (const tagsetData of profileData.tagsetsData) {
+        const tagset = await this.tagsetService.createTagset(tagsetData);
+        profile.tagsets.push(tagset);
+      }
     }
 
     await this.profileRepository.save(profile);
