@@ -80,6 +80,7 @@ export class AuthenticationService {
     agentInfo.emailVerified = isEmailVerified;
     agentInfo.firstName = oryTraits.name.first;
     agentInfo.lastName = oryTraits.name.last;
+    agentInfo.avatarURL = oryTraits.picture;
     let agentInfoMetadata;
 
     try {
