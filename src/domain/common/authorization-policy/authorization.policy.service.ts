@@ -172,7 +172,11 @@ export class AuthorizationPolicyService {
     childAuthorization: IAuthorizationPolicy | undefined,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
-    const child = this.validateAuthorization(childAuthorization);
+    // create a new child definition if one is not provided, a temporary fix
+    let child = childAuthorization;
+    if (!child) {
+      child = new AuthorizationPolicy();
+    }
     const parent = this.validateAuthorization(parentAuthorization);
     const resetAuthPolicy = this.reset(child);
     // (a) Inherit the visibility
