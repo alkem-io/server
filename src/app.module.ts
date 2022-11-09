@@ -48,6 +48,7 @@ import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { LibraryModule } from '@library/library/library.module';
+import { AspectMoveModule } from '@domain/collaboration/aspect/aspect.move.module';
 
 @Module({
   imports: [
@@ -146,8 +147,6 @@ import { LibraryModule } from '@library/library/library.module';
          * graphql-ws requires passing the request object through the context method
          * !!! this is graphql-ws ONLY
          */
-        // todo provide the dataloaders into the subscription context
-        // https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2252
         context: (ctx: ConnectionContext) => {
           if (isWebsocketContext(ctx)) {
             return {
@@ -159,6 +158,7 @@ import { LibraryModule } from '@library/library/library.module';
                 },
                 connectionParams: ctx.connectionParams,
               },
+              loaders: dataloaderService.createLoaders(),
             };
           }
 
@@ -176,6 +176,7 @@ import { LibraryModule } from '@library/library/library.module';
             ) => {
               return {
                 req: { headers: websocket?.upgradeReq?.headers },
+                loaders: dataloaderService.createLoaders(),
               };
             },
           },
@@ -201,6 +202,7 @@ import { LibraryModule } from '@library/library/library.module';
     RedisLockModule,
     ConversionModule,
     LibraryModule,
+    AspectMoveModule,
   ],
   controllers: [AppController],
   providers: [
