@@ -48,6 +48,7 @@ import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { LibraryModule } from '@library/library/library.module';
+import { AspectMoveModule } from '@domain/collaboration/aspect/aspect.move.module';
 
 @Module({
   imports: [
@@ -201,6 +202,7 @@ import { LibraryModule } from '@library/library/library.module';
     RedisLockModule,
     ConversionModule,
     LibraryModule,
+    AspectMoveModule,
   ],
   controllers: [AppController],
   providers: [
