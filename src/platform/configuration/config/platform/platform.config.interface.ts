@@ -67,7 +67,7 @@ export abstract class IPlatformConfig {
 
   @Field(() => String, {
     nullable: false,
-    description: 'URL where users can get information about previouse releases',
+    description: 'URL where users can get information about previous releases',
   })
   releases!: string;
 
@@ -76,4 +76,28 @@ export abstract class IPlatformConfig {
     description: 'The feature flags for the platform',
   })
   featureFlags?: FeatureFlag[];
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'URL where users can get help',
+  })
+  help!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'URL where users can see the community forum',
+  })
+  community!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'URL where new users can get onboarding help',
+  })
+  newuser!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'URL where users can get tips and tricks',
+  })
+  tips!: string;
 }

@@ -38,6 +38,11 @@ export class KonfigService {
         opensource: this.configService.get(ConfigurationTypes.PLATFORM)
           ?.opensource,
         releases: this.configService.get(ConfigurationTypes.PLATFORM)?.releases,
+        help: this.configService.get(ConfigurationTypes.PLATFORM)?.help,
+        community: this.configService.get(ConfigurationTypes.PLATFORM)
+          ?.community,
+        newuser: this.configService.get(ConfigurationTypes.PLATFORM)?.newuser,
+        tips: this.configService.get(ConfigurationTypes.PLATFORM)?.tips,
         featureFlags: [
           {
             name: 'ssi',
