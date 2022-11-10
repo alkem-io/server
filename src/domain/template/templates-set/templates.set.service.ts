@@ -22,6 +22,7 @@ import { CreateCanvasTemplateInput } from '../canvas-template/dto/canvas.templat
 import { ILifecycleTemplate } from '../lifecycle-template/lifecycle.template.interface';
 import { CreateInnovationFlowTemplateInput } from '../lifecycle-template/dto/lifecycle.template.dto.create';
 import { LifecycleTemplateService } from '../lifecycle-template/lifecycle.template.service';
+import { ITemplatesSetPolicy } from '../templates-set-policy/templates.set.policy.interface';
 
 @Injectable()
 export class TemplatesSetService {
@@ -35,28 +36,34 @@ export class TemplatesSetService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createTemplatesSet(): Promise<ITemplatesSet> {
+  async createTemplatesSet(
+    policy: ITemplatesSetPolicy,
+    addDefaults: boolean
+  ): Promise<ITemplatesSet> {
     const templatesSet: ITemplatesSet = TemplatesSet.create();
     templatesSet.authorization = new AuthorizationPolicy();
+    templatesSet.policy = this.convertPolicy(policy);
     templatesSet.aspectTemplates = [];
-    for (const aspectTemplateDefault of templatesSetDefaults.aspects) {
-      const aspectTemplate =
-        await this.aspectTemplateService.createAspectTemplate(
-          aspectTemplateDefault
-        );
-      templatesSet.aspectTemplates.push(aspectTemplate);
-    }
-
-    templatesSet.lifecycleTemplates = [];
-    for (const lifecycleTemplateDefault of templatesSetDefaults.lifecycles) {
-      const lifecycleTemplate =
-        await this.lifecycleTemplateService.createInnovationFLowTemplate(
-          lifecycleTemplateDefault
-        );
-      templatesSet.lifecycleTemplates.push(lifecycleTemplate);
-    }
-
     templatesSet.canvasTemplates = [];
+    templatesSet.lifecycleTemplates = [];
+
+    if (addDefaults) {
+      for (const aspectTemplateDefault of templatesSetDefaults.aspects) {
+        const aspectTemplate =
+          await this.aspectTemplateService.createAspectTemplate(
+            aspectTemplateDefault
+          );
+        templatesSet.aspectTemplates.push(aspectTemplate);
+      }
+
+      for (const lifecycleTemplateDefault of templatesSetDefaults.lifecycles) {
+        const lifecycleTemplate =
+          await this.lifecycleTemplateService.createInnovationFLowTemplate(
+            lifecycleTemplateDefault
+          );
+        templatesSet.lifecycleTemplates.push(lifecycleTemplate);
+      }
+    }
 
     return await this.templatesSetRepository.save(templatesSet);
   }
@@ -103,8 +110,7 @@ export class TemplatesSetService {
     if (templatesSet.lifecycleTemplates) {
       for (const lifecycleTemplate of templatesSet.lifecycleTemplates) {
         await this.lifecycleTemplateService.deleteLifecycleTemplate(
-          lifecycleTemplate,
-          true
+          lifecycleTemplate
         );
       }
     }
@@ -218,6 +224,29 @@ export class TemplatesSetService {
     return templatesSetPopulated.lifecycleTemplates;
   }
 
+  async deleteInnovationFlowTemplate(
+    innovationFlowTemplate: ILifecycleTemplate,
+    templatesSet: ITemplatesSet
+  ): Promise<ILifecycleTemplate> {
+    const innovationFlowTemplates = await this.getInnovationFlowTemplates(
+      templatesSet
+    );
+    const typeCount = innovationFlowTemplates.filter(
+      t => t.type === innovationFlowTemplate.type
+    ).length;
+    const policy = this.getPolicy(templatesSet);
+
+    if (typeCount <= policy.minInnovationFlow) {
+      throw new ValidationException(
+        `Cannot delete last lifecycle template: ${innovationFlowTemplate.id} of type ${innovationFlowTemplate.type} from templateSet: ${templatesSet.id}!`,
+        LogContext.LIFECYCLE
+      );
+    }
+    return await this.lifecycleTemplateService.deleteLifecycleTemplate(
+      innovationFlowTemplate
+    );
+  }
+
   async createInnovationFlowTemplate(
     templatesSet: ITemplatesSet,
     innovationFlowTemplateInput: CreateInnovationFlowTemplateInput
@@ -232,5 +261,20 @@ export class TemplatesSetService {
     templatesSet.lifecycleTemplates.push(innovationFlowTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return innovationFlowTemplate;
+  }
+
+  getPolicy(templatesSet: ITemplatesSet): ITemplatesSetPolicy {
+    if (!templatesSet.policy) {
+      throw new EntityNotInitializedException(
+        `Unable to locate policy for TemplatesSet: ${templatesSet.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    const policy = JSON.parse(templatesSet.policy);
+    return policy;
+  }
+
+  convertPolicy(policy: ITemplatesSetPolicy): string {
+    return JSON.stringify(policy);
   }
 }

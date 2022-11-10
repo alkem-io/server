@@ -16,4 +16,8 @@ export class UpdateTemplateInfoInput {
   @Field(() => [String], { nullable: true })
   @IsOptional()
   tags?: string[];
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  visualUri?: string;
 }

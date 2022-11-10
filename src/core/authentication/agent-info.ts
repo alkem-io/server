@@ -11,4 +11,5 @@ export class AgentInfo {
   verifiedCredentials: IVerifiedCredential[] = [];
   communicationID = '';
   agentID = '';
+  avatarURL = '';
 }

@@ -48,27 +48,18 @@ export class PlatformAuthorizationService {
   private createPlatformCredentialRules(): AuthorizationPolicyRuleCredential[] {
     const credentialRules: AuthorizationPolicyRuleCredential[] = [];
 
-    const globalAdmin = new AuthorizationPolicyRuleCredential(
+    const globalAdmins = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
+        AuthorizationPrivilege.MOVE_CARD,
       ],
       AuthorizationCredential.GLOBAL_ADMIN
     );
-    credentialRules.push(globalAdmin);
-
-    const globalHubsAdmin = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.GLOBAL_ADMIN_HUBS
-    );
-    credentialRules.push(globalHubsAdmin);
+    globalAdmins.appendCriteria(AuthorizationCredential.GLOBAL_ADMIN_HUBS);
+    credentialRules.push(globalAdmins);
 
     // Allow global admins to manage global privileges, access Platform mgmt
     const globalAdminNotInherited = new AuthorizationPolicyRuleCredential(
@@ -118,6 +109,14 @@ export class PlatformAuthorizationService {
     hubAdminsNotInherited.inheritable = false;
     credentialRules.push(hubAdminsNotInherited);
 
+    // Allow hub admins to move card
+    const hubAdminsInherited = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.MOVE_CARD],
+      AuthorizationCredential.HUB_ADMIN
+    );
+    hubAdminsInherited.inheritable = true;
+    credentialRules.push(hubAdminsInherited);
+
     // Allow challenge admins to create new organizations + access platform admin
     const challengeAdminsNotInherited = new AuthorizationPolicyRuleCredential(
       [
@@ -128,6 +127,14 @@ export class PlatformAuthorizationService {
     );
     challengeAdminsNotInherited.inheritable = false;
     credentialRules.push(challengeAdminsNotInherited);
+
+    // Allow challenge admins to create to move card
+    const challengeAdminsInherited = new AuthorizationPolicyRuleCredential(
+      [AuthorizationPrivilege.MOVE_CARD],
+      AuthorizationCredential.CHALLENGE_ADMIN
+    );
+    challengeAdminsInherited.inheritable = true;
+    credentialRules.push(challengeAdminsInherited);
 
     // Allow Opportunity admins to access admin
     const opportunityAdminNotInherited = new AuthorizationPolicyRuleCredential(

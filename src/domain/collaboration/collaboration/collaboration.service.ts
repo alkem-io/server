@@ -49,7 +49,7 @@ export class CollaborationService {
 
     for (const calloutDefault of collaborationDefaults.callouts) {
       const communityTypeForDefault = calloutDefault.communityType;
-      // If communityType is not specified then create the callout; otherwose only create
+      // If communityType is not specified then create the callout; otherwise only create
       //  when it matches the given communityType
       if (
         !communityTypeForDefault ||
