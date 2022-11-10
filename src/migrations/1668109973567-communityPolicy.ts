@@ -42,9 +42,9 @@ export class communityPolicy1668109973567 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // await queryRunner.query(
-    //   `ALTER TABLE \`community\` ADD \`policy\` text NULL`
-    // );
+    await queryRunner.query(
+      `ALTER TABLE \`community\` ADD \`policy\` text NULL`
+    );
 
     const communities: any[] = await queryRunner.query(
       `SELECT id, policyId FROM community`
@@ -55,8 +55,8 @@ export class communityPolicy1668109973567 implements MigrationInterface {
       );
       const communityPolicy = communityPolicies[0];
       const revertedPolicy: oldCommunityPolicy = {
-        member: communityPolicy.member,
-        lead: communityPolicy.lead,
+        member: JSON.parse(communityPolicy.member),
+        lead: JSON.parse(communityPolicy.lead),
       };
       const revertedPolicyStr = JSON.stringify(revertedPolicy);
 
