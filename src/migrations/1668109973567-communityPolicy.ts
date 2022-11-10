@@ -9,7 +9,7 @@ export class communityPolicy1668109973567 implements MigrationInterface {
     await queryRunner.query(
       `CREATE TABLE \`community_policy\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
              \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-              \`version\` int NOT NULL, \`member\` text NULL, \`lead\` text NULL,PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+              \`version\` int NOT NULL, \`member\` text NULL, \`lead\` text NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
 
     await queryRunner.query(
@@ -35,12 +35,39 @@ export class communityPolicy1668109973567 implements MigrationInterface {
 
     await queryRunner.query('ALTER TABLE `community` DROP COLUMN `policy`');
 
-    await queryRunner.query(
-      `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_35533901817dd09d5906537e088\` FOREIGN KEY (\`policyId\`) REFERENCES \`community_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
+    // Todo:
+    // await queryRunner.query(
+    //   `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_35533901817dd09d5906537e088\` FOREIGN KEY (\`policyId\`) REFERENCES \`community_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    // );
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // await queryRunner.query(
+    //   `ALTER TABLE \`community\` ADD \`policy\` text NULL`
+    // );
+
+    const communities: any[] = await queryRunner.query(
+      `SELECT id, policyId FROM community`
+    );
+    for (const community of communities) {
+      const communityPolicies = await queryRunner.query(
+        `SELECT id, member, lead FROM community_policy WHERE (id = '${community.policyId}')`
+      );
+      const communityPolicy = communityPolicies[0];
+      const revertedPolicy: oldCommunityPolicy = {
+        member: communityPolicy.member,
+        lead: communityPolicy.lead,
+      };
+      const revertedPolicyStr = JSON.stringify(revertedPolicy);
+
+      await queryRunner.query(
+        `UPDATE community SET policy = '${revertedPolicyStr}' WHERE (id = '${community.id}')`
+      );
+    }
+
+    await queryRunner.query('ALTER TABLE `community` DROP COLUMN `policyId`');
+    await queryRunner.query('DROP TABLE `community_policy`');
+  }
 }
 
 type oldCommunityPolicy = {
