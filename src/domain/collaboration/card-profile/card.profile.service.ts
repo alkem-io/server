@@ -93,7 +93,7 @@ export class CardProfileService {
   async deleteCardProfile(cardProfileID: string): Promise<ICardProfile> {
     // Note need to load it in with all contained entities so can remove fully
     const cardProfile = await this.getCardProfileOrFail(cardProfileID, {
-      relations: ['references', 'tagsets', 'authorization'],
+      relations: ['references', 'tagset', 'authorization'],
     });
 
     if (cardProfile.tagset) {

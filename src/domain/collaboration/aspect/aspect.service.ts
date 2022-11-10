@@ -57,7 +57,7 @@ export class AspectService {
   public async deleteAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
     const aspectID = deleteData.ID;
     const aspect = await this.getAspectOrFail(aspectID, {
-      relations: ['references', 'profile'],
+      relations: ['profile'],
     });
     if (aspect.authorization) {
       await this.authorizationPolicyService.delete(aspect.authorization);
