@@ -2,18 +2,17 @@ import { Args, Resolver } from '@nestjs/graphql';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SubscriptionReadService } from '@services/subscriptions/subscription-publish-service';
-import { AgentInfo, GraphqlGuard } from '@src/core';
-import {
-  AuthorizationPrivilege,
-  CurrentUser,
-  LogContext,
-  TypedSubscription,
-} from '@src/common';
+import { AgentInfo } from '@src/core/authentication/agent-info';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ActivityCreatedSubscriptionPayload } from './dto/subscriptions/activity.log.dto.activity.created.subscription.payload';
 import { ActivityCreatedSubscriptionArgs } from './dto/subscriptions/activity.log.activity.created.subscription.args';
 import { ActivityCreatedSubscriptionResult } from './dto/subscriptions/activity.created.dto';
+import { GraphqlGuard } from '@core/authorization/graphql.guard';
+import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
+import { LogContext } from '@common/enums/logging.context';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 @Resolver()
 export class ActivityLogResolverSubscriptions {

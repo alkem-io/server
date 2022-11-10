@@ -1,24 +1,13 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-  OneToOne,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IAspect } from './aspect.interface';
 import { Visual } from '@domain/common/visual/visual.entity';
-import { Reference } from '@domain/common/reference/reference.entity';
 import { Comments } from '@domain/communication/comments';
-import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { CardProfile } from '../card-profile';
 
 @Entity()
 export class Aspect extends NameableEntity implements IAspect {
-  @Column('text')
-  description: string;
-
   @Column('text')
   type: string;
 
@@ -49,11 +38,13 @@ export class Aspect extends NameableEntity implements IAspect {
   @JoinColumn()
   comments?: Comments;
 
-  @OneToMany(() => Reference, reference => reference.aspect, {
+  @OneToOne(() => CardProfile, {
     eager: false,
     cascade: true,
+    onDelete: 'SET NULL',
   })
-  references?: Reference[];
+  @JoinColumn()
+  profile?: CardProfile;
 
   @ManyToOne(() => Callout, callout => callout.aspects, {
     eager: false,
@@ -62,13 +53,8 @@ export class Aspect extends NameableEntity implements IAspect {
   })
   callout?: Callout;
 
-  @OneToOne(() => Tagset, { eager: true, cascade: true, onDelete: 'SET NULL' })
-  @JoinColumn()
-  tagset?: Tagset;
-
-  constructor(type: string, description: string) {
+  constructor(type: string) {
     super();
     this.type = type;
-    this.description = description;
   }
 }

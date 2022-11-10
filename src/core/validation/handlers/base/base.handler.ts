@@ -12,8 +12,8 @@ import {
   ProjectEventInput,
   UpdateProjectInput,
 } from '@domain/collaboration/project';
-import { CreateRelationInput } from '@domain/collaboration/relation';
-import { CreateUserInput, UpdateUserInput } from '@domain/community/user';
+import { CreateRelationInput } from '@domain/collaboration/relation/relation.dto.create';
+import { CreateUserInput, UpdateUserInput } from '@domain/community/user/dto';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { validate, ValidationError } from 'class-validator';
@@ -21,7 +21,7 @@ import { AbstractHandler } from './abstract.handler';
 import {
   CreateOrganizationInput,
   UpdateOrganizationInput,
-} from '@domain/community/organization';
+} from '@domain/community/organization/dto';
 import {
   CreateOpportunityInput,
   OpportunityEventInput,
@@ -39,7 +39,7 @@ import { CreateAspectOnCalloutInput } from '@domain/collaboration/callout/dto/ca
 import { CreateCanvasOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.canvas';
 import { CommunicationCreateDiscussionInput } from '@domain/communication/communication/dto/communication.dto.create.discussion';
 import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
-import { CreateReferenceOnAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.create.reference';
+import { CreateReferenceOnCardProfileInput } from '@domain/collaboration/card-profile/dto/card.profile.dto.create.reference';
 import { CreateReferenceOnContextInput } from '@domain/context/context/dto/context.dto.create.reference';
 import { CreateReferenceOnProfileInput } from '@domain/community/profile/dto/profile.dto.create.reference';
 import {
@@ -91,7 +91,7 @@ export class BaseHandler extends AbstractHandler {
       CreateRelationInput,
       CreateUserInput,
       CreateFeedbackOnCommunityContextInput,
-      CreateReferenceOnAspectInput,
+      CreateReferenceOnCardProfileInput,
       CreateReferenceOnContextInput,
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,

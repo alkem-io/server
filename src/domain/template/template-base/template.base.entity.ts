@@ -1,7 +1,7 @@
 import { JoinColumn, OneToOne } from 'typeorm';
-import { ITemplateBase } from './template.base.interface';
+import { ITemplateBase } from '@domain/template/template-base/template.base.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
-import { TemplateInfo } from '../template-info/template.info.entity';
+import { TemplateInfo } from '@domain/template/template-info/template.info.entity';
 
 export abstract class TemplateBase
   extends AuthorizableEntity

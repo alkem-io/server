@@ -7,7 +7,7 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { IRelation } from '@domain/collaboration/relation';
+import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';

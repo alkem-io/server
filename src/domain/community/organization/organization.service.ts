@@ -15,10 +15,8 @@ import { UserGroupService } from '@domain/community/user-group/user-group.servic
 import {
   CreateOrganizationInput,
   DeleteOrganizationInput,
-  IOrganization,
-  Organization,
   UpdateOrganizationInput,
-} from '@domain/community/organization';
+} from '@domain/community/organization/dto';
 import { IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
@@ -50,6 +48,8 @@ import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { CreateUserGroupInput } from '../user-group/dto/user-group.dto.create';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
+import { Organization } from './organization.entity';
+import { IOrganization } from './organization.interface';
 
 @Injectable()
 export class OrganizationService {

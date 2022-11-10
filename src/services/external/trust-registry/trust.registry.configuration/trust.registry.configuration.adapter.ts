@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ConfigurationTypes } from '@src/common';
+import { ConfigurationTypes } from '@src/common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TrustRegistryCredentialMetadata } from './trust.registry.dto.credential.metadata';
 

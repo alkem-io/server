@@ -32,7 +32,7 @@ import { AssignOpportunityAdminInput } from './dto/opportunity.dto.assign.admin'
 import { RemoveOpportunityAdminInput } from './dto/opportunity.dto.remove.admin';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
-import { AgentInfo } from '@src/core';
+import { AgentInfo } from '@src/core/authentication/agent-info';
 import { IContext } from '@domain/context/context/context.interface';
 import { UpdateOpportunityInnovationFlowInput } from './dto/opportunity.dto.update.innovation.flow';
 import { ICollaboration } from '../collaboration/collaboration.interface';

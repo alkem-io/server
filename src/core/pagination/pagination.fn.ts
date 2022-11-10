@@ -1,5 +1,5 @@
 import { SelectQueryBuilder } from 'typeorm';
-import { IBaseAlkemio } from '@src/domain';
+import { IBaseAlkemio } from '@src/domain/common/entity/base-entity';
 import { IPaginatedType } from './paginated.type';
 import {
   getRelayStylePaginationResults,

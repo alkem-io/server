@@ -1,8 +1,8 @@
 import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Discussion } from '../discussion/discussion.entity';
-import { Updates } from '../updates/updates.entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
+import { Discussion } from '@domain/communication/discussion/discussion.entity';
+import { Updates } from '@domain/communication/updates/updates.entity';
 
 @Entity()
 export class Communication

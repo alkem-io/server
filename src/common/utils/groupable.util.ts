@@ -1,6 +1,6 @@
-import { IGroupable } from '@domain/common';
-import { IOrganization } from '@domain/community';
-import { ICommunity } from '@domain/community/community';
+import { IGroupable } from '@domain/common/interfaces/groupable.interface';
+import { IOrganization } from '@domain/community/organization/organization.interface';
+import { ICommunity } from '@domain/community/community/community.interface';
 
 export const isCommunity = (groupable: IGroupable): groupable is ICommunity =>
   'hubID' in groupable;

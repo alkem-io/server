@@ -3,12 +3,12 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ContextService } from './context.service';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { IReference } from '@domain/common/reference';
+import { IReference } from '@domain/common/reference/reference.interface';
 import { IVisual } from '@domain/common/visual/visual.interface';
-import { ILocation } from '@domain/common/location';
+import { ILocation } from '@domain/common/location/location.interface';
 
 @Resolver(() => IContext)
 export class ContextResolverFields {

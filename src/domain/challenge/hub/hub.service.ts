@@ -13,9 +13,9 @@ import {
   DeleteHubInput,
   hubCommunityPolicy,
 } from '@domain/challenge/hub';
-import { IOpportunity } from '@domain/collaboration/opportunity';
+import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
-import { IProject } from '@domain/collaboration/project';
+import { IProject } from '@domain/collaboration/project/project.interface';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
@@ -44,7 +44,7 @@ import { UpdateHubInput } from './dto/hub.dto.update';
 import { CreateChallengeOnHubInput } from '../challenge/dto/challenge.dto.create.in.hub';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CommunityType } from '@common/enums/community.type';
-import { AgentInfo } from '@src/core';
+import { AgentInfo } from '@src/core/authentication/agent-info';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
