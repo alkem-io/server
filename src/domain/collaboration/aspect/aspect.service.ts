@@ -136,7 +136,7 @@ export class AspectService {
     });
     if (!aspectLoaded.profile)
       throw new EntityNotFoundException(
-        `Aspect not initialised: ${aspect.id}`,
+        `Card profile not initialised for aspect: ${aspect.id}`,
         LogContext.COLLABORATION
       );
 

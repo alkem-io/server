@@ -33,10 +33,17 @@ export class cardProfile1667741197092 implements MigrationInterface {
       `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_67663901817dd09d5906537e088\` FOREIGN KEY (\`profileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
-    // Migrate the data
-    const aspects: any[] = await queryRunner.query(
-      `SELECT id, description, tagsetId from aspect`
+    // Update where references point to, first dropping FK to aspect
+    await queryRunner.query(
+      `ALTER TABLE \`reference\` ADD \`cardProfileId\` varchar(36) NULL`
     );
+    await queryRunner.query(
+      `ALTER TABLE \`reference\` ADD CONSTRAINT \`FK_282838434c7198a323ea6f475fb\` FOREIGN KEY (\`cardProfileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
+
+    // Migrate the data
+    const aspects: { id: string; description: string; tagsetId: string }[] =
+      await queryRunner.query(`SELECT id, description, tagsetId from aspect`);
     for (const aspect of aspects) {
       // create library instance with authorization
       const authID = randomUUID();
@@ -48,18 +55,29 @@ export class cardProfile1667741197092 implements MigrationInterface {
       await queryRunner.query(
         `INSERT INTO card_profile (id, createdDate, updatedDate, version, authorizationId, tagsetId, description) VALUES ('${cardProfileID}', NOW(), NOW(), 1, '${authID}', '${aspect.tagsetId}', '${aspect.description}')`
       );
+
+      await queryRunner.query(
+        `UPDATE aspect SET profileId = ${cardProfileID} WHERE id = ${aspect.id}`
+      );
+
+      // const references: { aspectId: string }[] = await queryRunner.query(
+      //   `SELECT aspectId FROM reference WHERE reference.aspectId = ${aspect.id}`
+      // );
+
+      // for (const reference of references) {
+      //   queryRunner.query(
+      //     `UPDATE reference SET cardProfileId = ${cardProfileID} WHERE aspectId = ${reference.aspectId}`
+      //   );
+      // }
+      queryRunner.query(
+        `UPDATE reference SET cardProfileId = ${cardProfileID} WHERE aspectId = ${aspect.id}`
+      );
     }
 
-    // Update where references point to, first dropping FK to aspect
     await queryRunner.query(
       `ALTER TABLE \`reference\` DROP FOREIGN KEY \`FK_a21a8eda24f18cd6af58b0d4e72\``
     );
-    await queryRunner.query(
-      `ALTER TABLE \`reference\` RENAME COLUMN \`aspectId\` TO \`cardProfileId\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`reference\` ADD CONSTRAINT \`FK_a21a8eda24f18cd6af58b0d4e72\` FOREIGN KEY (\`cardProfileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
-    );
+    await queryRunner.query('ALTER TABLE `reference` DROP `aspectId`;');
 
     // Remove old entity definition fields no longer needed: tagset, description
     await queryRunner.query(
