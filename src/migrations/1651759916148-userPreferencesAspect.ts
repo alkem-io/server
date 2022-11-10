@@ -6,7 +6,7 @@ import {
   PreferenceInsertType,
   removePreferences,
 } from './utils/preferences';
-import { UserPreferenceType } from '@src/common/enums';
+import { UserPreferenceType } from '@src/common/enums/user.preference.type';
 import { PreferenceType } from '@common/enums/preference.type';
 
 export class userPreferencesAspect1651759916148 implements MigrationInterface {

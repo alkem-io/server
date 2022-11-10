@@ -1,5 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { UserPreferenceType } from '@src/common/enums';
+import { UserPreferenceType } from '@src/common/enums/user.preference.type';
 import { PreferenceType } from '@common/enums/preference.type';
 import {
   addPreferenceDefinitions,
