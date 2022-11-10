@@ -13,10 +13,10 @@ import { LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Community } from '@domain/community/community';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { ICommunityRolePolicy } from '@domain/community/community-policy/community.policy.role.interface';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -273,19 +273,24 @@ export class NamingService {
       collaborationID
     );
 
-    const community = await this.communityRepository.findOne({
-      id: communityID,
-    });
+    const community = await this.communityRepository
+      .createQueryBuilder('community')
+      .leftJoinAndSelect('community.policy', 'policy')
+      .where('community.id = :id')
+      .setParameters({ id: `${communityID}` })
+      .getOne();
 
-    if (!community)
+    if (!community || !community.policy)
       throw new EntityNotInitializedException(
-        `Community for collaboration ${collaborationID} not initialized!`,
+        `Unable to load policy for community ${communityID} not initialized!`,
         LogContext.COMMUNITY
       );
 
-    const communityPolicy: ICommunityPolicy = JSON.parse(community.policy);
-
-    return communityPolicy.member.credential;
+    const communityPolicy = community.policy;
+    const memberRolePolicy: ICommunityRolePolicy = JSON.parse(
+      communityPolicy.member
+    );
+    return memberRolePolicy.credential;
   }
 
   async getAspectForComments(commentsID: string): Promise<IAspect | undefined> {

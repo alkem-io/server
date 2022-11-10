@@ -1,0 +1,36 @@
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { CommunityRole } from '@common/enums/community.role';
+import { ICommunityPolicy } from './community.policy.interface';
+import { CommunityPolicyService } from './community.policy.service';
+import { ICommunityRolePolicy } from './community.policy.role.interface';
+
+@Resolver(() => ICommunityPolicy)
+export class CommunityPolicyResolverFields {
+  constructor(private communityPolicyService: CommunityPolicyService) {}
+
+  @ResolveField('member', () => ICommunityRolePolicy, {
+    nullable: false,
+    description: 'The role policy that defines the members for this Community.',
+  })
+  async memmber(
+    @Parent() communityPolicy: ICommunityPolicy
+  ): Promise<ICommunityRolePolicy> {
+    return this.communityPolicyService.getCommunityRolePolicy(
+      communityPolicy,
+      CommunityRole.MEMBER
+    );
+  }
+
+  @ResolveField('lead', () => ICommunityRolePolicy, {
+    nullable: false,
+    description: 'The role policy that defines the leads for this Community.',
+  })
+  async lead(
+    @Parent() communityPolicy: ICommunityPolicy
+  ): Promise<ICommunityRolePolicy> {
+    return this.communityPolicyService.getCommunityRolePolicy(
+      communityPolicy,
+      CommunityRole.LEAD
+    );
+  }
+}

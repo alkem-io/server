@@ -5,6 +5,7 @@ import { IGroupable } from '@domain/common/interfaces/groupable.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ICommunication } from '@domain/communication/communication';
 import { CommunityType } from '@common/enums/community.type';
+import { ICommunityPolicy } from '../community-policy/community.policy.interface';
 
 @ObjectType('Community', {
   implements: () => [IGroupable],
@@ -22,7 +23,7 @@ export abstract class ICommunity extends IAuthorizable {
 
   parentCommunity?: ICommunity;
 
-  policy!: string;
+  policy?: ICommunityPolicy;
 
   hubID!: string;
 

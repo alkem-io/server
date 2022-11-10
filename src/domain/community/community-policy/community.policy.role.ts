@@ -1,7 +1,7 @@
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
-import { ICommunityPolicyRole } from './community.policy.role.interface';
+import { ICommunityRolePolicy } from './community.policy.role.interface';
 
-export class CommunityPolicyRole implements ICommunityPolicyRole {
+export class CommunityRolePolicy implements ICommunityRolePolicy {
   credential: CredentialDefinition;
   minUser: number;
   maxUser: number;
