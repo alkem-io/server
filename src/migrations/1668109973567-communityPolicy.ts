@@ -43,10 +43,80 @@ export class communityPolicy1668109973567 implements MigrationInterface {
 
     await queryRunner.query('ALTER TABLE `community` DROP COLUMN `policy`');
 
+    // Now set the parent credentials
+    const communitiesNewPolicy: any[] = await queryRunner.query(
+      `SELECT id, policyId, parentCommunityId FROM community`
+    );
+    for (const community of communitiesNewPolicy) {
+      const parentCommunityId = community.parentCommunityId;
+      if (parentCommunityId) {
+        // Need to get the parents
+        const parentMemberCredentials: any[] = [];
+        const parentLeadCredentials: any[] = [];
+        await this.getCredentialsForCommunity(
+          parentCommunityId,
+          queryRunner,
+          parentMemberCredentials,
+          parentLeadCredentials
+        );
+        const communityPolicy = await queryRunner.query(
+          `SELECT id, member, lead  FROM community_policy  WHERE (id = '${community.policyId}')`
+        );
+        const memberPolicy: newCommunityRolePolicy = JSON.parse(
+          communityPolicy.member
+        );
+        memberPolicy.parentCredentials = parentMemberCredentials;
+        const memberStr = JSON.stringify(memberPolicy);
+        const leadPolicy: newCommunityRolePolicy = JSON.parse(
+          communityPolicy.lead
+        );
+        leadPolicy.parentCredentials = parentLeadCredentials;
+        const leadStr = JSON.stringify(leadPolicy);
+
+        await queryRunner.query(
+          `UPDATE community_policy SET member = '${memberStr}', lead = '${leadStr}' WHERE (id = '${communityPolicy.id}')`
+        );
+      } else {
+        console.log(
+          `No parent community for community with id: ${community.id}`
+        );
+      }
+    }
+
     // Todo:
     // await queryRunner.query(
     //   `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_35533901817dd09d5906537e088\` FOREIGN KEY (\`policyId\`) REFERENCES \`community_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     // );
+  }
+
+  private async getCredentialsForCommunity(
+    communityID: string,
+    queryRunner: QueryRunner,
+    parentMemberCredentials: any[],
+    parentLeadCredentials: any[]
+  ): Promise<void> {
+    const community = await queryRunner.query(
+      `SELECT id, policyId, parentCommunityId  FROM community  WHERE (id = '${communityID}')`
+    );
+    const communityPolicy = await queryRunner.query(
+      `SELECT id, member, lead  FROM community_policy  WHERE (id = '${community.policyId}')`
+    );
+    const memberPolicy = JSON.parse(
+      communityPolicy.member
+    ) as newCommunityRolePolicy;
+    const leadPolicy = JSON.parse(
+      communityPolicy.lead
+    ) as newCommunityRolePolicy;
+    parentMemberCredentials.push(memberPolicy.credential);
+    parentLeadCredentials.push(leadPolicy.credential);
+    if (community.parentCommunityId) {
+      return await this.getCredentialsForCommunity(
+        community.parentCommunityId,
+        queryRunner,
+        parentMemberCredentials,
+        parentLeadCredentials
+      );
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
