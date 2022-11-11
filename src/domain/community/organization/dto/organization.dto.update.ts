@@ -1,7 +1,7 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { IsEmail, IsOptional, MaxLength } from 'class-validator';
-import { SMALL_TEXT_LENGTH } from '@src/common';
+import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateContributorInput } from '@domain/community/contributor/dto/contributor.dto.update';
 @InputType()
 export class UpdateOrganizationInput extends UpdateContributorInput {

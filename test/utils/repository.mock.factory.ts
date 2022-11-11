@@ -1,4 +1,4 @@
-import { BaseAlkemioEntity } from '@domain/common';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity/base.alkemio.entity';
 import { Repository } from 'typeorm';
 import { MockType } from './mock.type';
 

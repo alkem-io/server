@@ -16,7 +16,6 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import ActivityLogBuilderService, {
   IActivityLogBuilder,
 } from '@services/api/activity-log/activity.log.builder.service';
-import { IActivityLogEntryBase } from './activity.log.entry.base.interface';
 
 export class ActivityLogService {
   constructor(
@@ -62,7 +61,7 @@ export class ActivityLogService {
         const userTriggeringActivity = await this.userService.getUserOrFail(
           rawActivity.triggeredBy
         );
-        const activityLogEntryBase: IActivityLogEntryBase = {
+        const activityLogEntryBase: IActivityLogEntry = {
           id: rawActivity.id,
           triggeredBy: userTriggeringActivity,
           createdDate: rawActivity.createdDate,

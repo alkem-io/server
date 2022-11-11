@@ -15,6 +15,7 @@ import {
 import { AspectService } from './aspect.service';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { CardProfileAuthorizationService } from '../card-profile/card.profile.service.authorization';
 
 @Injectable()
 export class AspectAuthorizationService {
@@ -22,6 +23,7 @@ export class AspectAuthorizationService {
     private aspectService: AspectService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private commentsAuthorizationService: CommentsAuthorizationService,
+    private cardProfileAuthorizationService: CardProfileAuthorizationService,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>
   ) {}
@@ -66,14 +68,12 @@ export class AspectAuthorizationService {
         );
     }
 
-    aspect.references = await this.aspectService.getReferences(aspect);
-    for (const reference of aspect.references) {
-      reference.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          reference.authorization,
-          aspect.authorization
-        );
-    }
+    aspect.profile = await this.aspectService.getCardProfile(aspect);
+    aspect.profile =
+      await this.cardProfileAuthorizationService.applyAuthorizationPolicy(
+        aspect.profile,
+        aspect.authorization
+      );
 
     return await this.aspectRepository.save(aspect);
   }

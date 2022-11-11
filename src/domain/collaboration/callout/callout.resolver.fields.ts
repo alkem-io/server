@@ -1,11 +1,12 @@
 import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { CalloutService } from './callout.service';
+import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { Callout, ICallout } from '@domain/collaboration/callout';
-import { IAspect } from '@domain/collaboration/aspect';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { UUID_NAMEID, UUID } from '@domain/common/scalars';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';

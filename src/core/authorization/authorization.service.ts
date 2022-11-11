@@ -200,12 +200,14 @@ export class AuthorizationService {
     credential: ICredential,
     credentialRule: IAuthorizationPolicyRuleCredential
   ): boolean {
-    if (credential.type === credentialRule.type) {
-      if (
-        credentialRule.resourceID === '' ||
-        credential.resourceID === credentialRule.resourceID
-      ) {
-        return true;
+    for (const criteria of credentialRule.criterias) {
+      if (credential.type === criteria.type) {
+        if (
+          criteria.resourceID === '' ||
+          credential.resourceID === criteria.resourceID
+        ) {
+          return true;
+        }
       }
     }
     return false;

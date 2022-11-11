@@ -1,8 +1,7 @@
 import { Args, Resolver, Subscription } from '@nestjs/graphql';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
-import { AgentInfo, GraphqlGuard } from '@src/core';
+import { AgentInfo } from '@src/core/authentication/agent-info';
 import { CanvasContentUpdated } from '@domain/common/canvas/dto/canvas.dto.event.content.updated';
-import { AuthorizationPrivilege, CurrentUser, LogContext } from '@src/common';
 import { UUID } from '@domain/common/scalars';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PubSubEngine } from 'graphql-subscriptions';
@@ -10,6 +9,10 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_CANVAS_CONTENT } from '@common/constants/providers';
+import { GraphqlGuard } from '@core/authorization/graphql.guard';
+import { LogContext } from '@common/enums/logging.context';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
 
 @Resolver()
 export class CanvasResolverSubscriptions {

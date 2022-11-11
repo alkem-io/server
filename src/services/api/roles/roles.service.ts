@@ -13,7 +13,7 @@ import { ApplicationService } from '@domain/community/application/application.se
 import { IUser } from '@domain/community/user/user.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
-import { IGroupable } from '@domain/common';
+import { IGroupable } from '@domain/common/interfaces/groupable.interface';
 import { RolesResult } from './dto/roles.dto.result';
 import { RolesResultOrganization } from './dto/roles.dto.result.organization';
 import { ApplicationForRoleResult } from './dto/roles.dto.result.application';

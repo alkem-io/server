@@ -17,7 +17,7 @@ import {
   SUBSCRIPTION_CHALLENGE_CREATED,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
-import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common';
+import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common/constants';
 import { subscriptionFactoryProvider } from './subscription.factory.provider';
 import { notificationsServiceFactory } from './notifications.service.factory';
 import { walletManagerServiceFactory } from './wallet-manager.service.factory';

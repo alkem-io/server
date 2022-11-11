@@ -9,8 +9,8 @@ import {
   DeleteReferenceInput,
   Reference,
   IReference,
-} from '@domain/common/reference';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+} from '../reference';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 
 @Injectable()

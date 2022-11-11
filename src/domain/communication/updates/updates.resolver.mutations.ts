@@ -17,7 +17,7 @@ import { CommunicationUpdateMessageReceived } from './dto/updates.dto.event.mess
 import { SUBSCRIPTION_UPDATE_MESSAGE } from '@common/constants/providers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
-import { getRandomId } from '@src/common';
+import { getRandomId } from '@src/common/utils';
 import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/notification.dto.input.update.sent';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 
