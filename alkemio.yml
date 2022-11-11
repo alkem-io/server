@@ -369,16 +369,16 @@ platform:
   releases: ${PLATFORM_RELEASES}:https://alkemio.foundation/releases
 
   # Help Dialog - Help
-  help: ${PLATFORM_HELP}:https://alkemio.foundation/support/
+  help: ${PLATFORM_HELP}:https://alkemio.foundation/help/
 
   # Help Dialog - Community Forum
   community: ${PLATFORM_COMMUNITY}:https://alkemio.foundation/support/
 
   # Help Dialog - blog
-  newuser: ${PLATFORM_NEWUSER}:https://alkemio.foundation/support/
+  newuser: ${PLATFORM_NEWUSER}:https://alkemio.foundation/help/
 
   # Help Dialog - tips
-  tips: ${PLATFORM_TIPS}:https://alkemio.foundation/support/
+  tips: ${PLATFORM_TIPS}:https://alkemio.foundation/post/
 ssi:
   # Jolocom SDK is used for providing SSI capabilities on the platform.
   # Note: NOT FOR PRODUCTION USAGE, experimental functionality,
