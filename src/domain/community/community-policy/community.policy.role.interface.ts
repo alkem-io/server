@@ -8,6 +8,12 @@ export abstract class ICommunityRolePolicy {
   })
   credential!: ICredentialDefinition;
 
+  @Field(() => [ICredentialDefinition], {
+    description:
+      'The CredentialDefinitions associated with this role in parent communities',
+  })
+  parentCredentials?: ICredentialDefinition[];
+
   @Field(() => Number, {
     description: 'Minimum number of Users in this role',
   })

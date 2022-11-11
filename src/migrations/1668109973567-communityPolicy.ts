@@ -22,8 +22,16 @@ export class communityPolicy1668109973567 implements MigrationInterface {
     for (const community of communities) {
       const policyStr = community.policy;
       const policy: oldCommunityPolicy = JSON.parse(policyStr);
-      const memberStr = JSON.stringify(policy.member);
-      const leadStr = JSON.stringify(policy.lead);
+      const newMemberPolicy: newCommunityRolePolicy = {
+        ...policy.member,
+        parentCredentials: [],
+      };
+      const newLeadPolicy: newCommunityRolePolicy = {
+        ...policy.lead,
+        parentCredentials: [],
+      };
+      const memberStr = JSON.stringify(newMemberPolicy);
+      const leadStr = JSON.stringify(newLeadPolicy);
       const communityPolicyID = randomUUID();
       await queryRunner.query(
         `INSERT INTO community_policy (id, createdDate, updatedDate, version, member, lead) VALUES ('${communityPolicyID}', NOW(), NOW(), 1, '${memberStr}', '${leadStr}')`
@@ -54,9 +62,13 @@ export class communityPolicy1668109973567 implements MigrationInterface {
         `SELECT id, member, lead FROM community_policy WHERE (id = '${community.policyId}')`
       );
       const communityPolicy = communityPolicies[0];
+      const { parentCredentials: memberParents, ...oldMemberRolePolicy } =
+        JSON.parse(communityPolicy.member) as newCommunityRolePolicy;
+      const { parentCredentials: leadParents, ...oldLeadRolePolicy } =
+        JSON.parse(communityPolicy.lead) as newCommunityRolePolicy;
       const revertedPolicy: oldCommunityPolicy = {
-        member: JSON.parse(communityPolicy.member),
-        lead: JSON.parse(communityPolicy.lead),
+        member: oldMemberRolePolicy,
+        lead: oldLeadRolePolicy,
       };
       const revertedPolicyStr = JSON.stringify(revertedPolicy);
 
@@ -71,6 +83,28 @@ export class communityPolicy1668109973567 implements MigrationInterface {
 }
 
 type oldCommunityPolicy = {
-  member: any;
-  lead: any;
+  member: oldCommunityRolePolicy;
+  lead: oldCommunityRolePolicy;
+};
+
+type newCommunityPolicy = {
+  member: newCommunityRolePolicy;
+  lead: newCommunityRolePolicy;
+};
+
+type oldCommunityRolePolicy = {
+  credential: any;
+  minUser: number;
+  maxUser: number;
+  minOrg: number;
+  maxOrg: number;
+};
+
+type newCommunityRolePolicy = {
+  credential: any;
+  parentCredentials: any[];
+  minUser: number;
+  maxUser: number;
+  minOrg: number;
+  maxOrg: number;
 };
