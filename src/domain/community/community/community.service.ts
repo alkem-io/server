@@ -68,8 +68,8 @@ export class CommunityService {
     const community: ICommunity = new Community(name, type);
     community.authorization = new AuthorizationPolicy();
     community.policy = await this.communityPolicyService.createCommunityPolicy(
-      policy.lead,
-      policy.member
+      policy.member,
+      policy.lead
     );
     community.hubID = hubID;
 
@@ -221,6 +221,12 @@ export class CommunityService {
         LogContext.COMMUNITY
       );
     community.parentCommunity = parentCommunity;
+    // Also update the communityPolicy
+    community.policy =
+      await this.communityPolicyService.inheritParentCredentials(
+        this.getCommunityPolicy(parentCommunity),
+        this.getCommunityPolicy(community)
+      );
     await this.communityRepository.save(community);
     return community;
   }

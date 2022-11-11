@@ -76,6 +76,41 @@ export class CommunityPolicyService {
     return this.save(communityPolicy);
   }
 
+  async inheritParentCredentials(
+    communityPolicyParent: ICommunityPolicy,
+    communityPolicy: ICommunityPolicy
+  ): Promise<ICommunityPolicy> {
+    const memberPolicy = this.inheritParentRoleCredentials(
+      communityPolicyParent.member,
+      communityPolicy.member
+    );
+    const leadPolicy = this.inheritParentRoleCredentials(
+      communityPolicyParent.lead,
+      communityPolicy.lead
+    );
+
+    communityPolicy.member = this.serializeRolePolicy(memberPolicy);
+    communityPolicy.lead = this.serializeRolePolicy(leadPolicy);
+
+    return this.save(communityPolicy);
+  }
+
+  private inheritParentRoleCredentials(
+    rolePolicyParentStr: string,
+    rolePolicyStr: string
+  ): ICommunityRolePolicy {
+    const rolePolicyParent: ICommunityRolePolicy =
+      this.deserializeRolePolicy(rolePolicyParentStr);
+    const rolePolicy: ICommunityRolePolicy =
+      this.deserializeRolePolicy(rolePolicyStr);
+    rolePolicy.parentCredentials?.push(rolePolicyParent.credential);
+    rolePolicyParent.parentCredentials?.forEach(c =>
+      rolePolicy.parentCredentials?.push(c)
+    );
+
+    return rolePolicy;
+  }
+
   private deserializeRolePolicy(rolePolicyStr: string): ICommunityRolePolicy {
     return JSON.parse(rolePolicyStr);
   }

@@ -3,6 +3,7 @@ import { ICommunityRolePolicy } from './community.policy.role.interface';
 
 export class CommunityRolePolicy implements ICommunityRolePolicy {
   credential: CredentialDefinition;
+  parentCredentials: CredentialDefinition[];
   minUser: number;
   maxUser: number;
   minOrg: number;
@@ -10,6 +11,7 @@ export class CommunityRolePolicy implements ICommunityRolePolicy {
 
   constructor(credential: CredentialDefinition) {
     this.credential = credential;
+    this.parentCredentials = [];
     this.minOrg = -1;
     this.maxOrg = -1;
     this.minUser = -1;
