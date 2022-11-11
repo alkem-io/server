@@ -1,5 +1,5 @@
-import { IAspect } from '@domain/collaboration';
-import { ICallout } from '@domain/collaboration/callout';
+import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntry } from './activity.log.entry.interface';

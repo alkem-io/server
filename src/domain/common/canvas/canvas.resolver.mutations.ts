@@ -18,7 +18,7 @@ import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_CANVAS_CONTENT } from '@common/constants/providers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
-import { getRandomId } from '@src/common';
+import { getRandomId } from '@src/common/utils';
 import { DeleteCanvasInput } from './dto/canvas.dto.delete';
 import { CanvasCheckoutService } from '../canvas-checkout/canvas.checkout.service';
 

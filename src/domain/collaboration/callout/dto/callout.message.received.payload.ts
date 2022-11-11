@@ -1,7 +1,7 @@
 import {
   BaseSubscriptionPayload,
   CommunicationMessagePayload,
-} from '@src/common';
+} from '@src/common/interfaces';
 
 export interface CalloutMessageReceivedPayload extends BaseSubscriptionPayload {
   calloutID: string;

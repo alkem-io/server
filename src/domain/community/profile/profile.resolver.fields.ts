@@ -6,7 +6,7 @@ import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ProfileService } from './profile.service';
-import { ITagset } from '@domain/common';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ILocation } from '@domain/common/location/location.interface';
 
 @Resolver(() => IProfile)

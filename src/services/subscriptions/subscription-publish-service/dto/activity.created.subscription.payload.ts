@@ -1,4 +1,4 @@
-import { BaseSubscriptionPayload } from '@src/common';
+import { BaseSubscriptionPayload } from '@src/common/interfaces';
 import { IActivity } from '@platform/activity';
 
 export interface ActivityCreatedSubscriptionPayload

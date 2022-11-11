@@ -3,7 +3,7 @@ import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { IOrganization } from './organization.interface';
 import { OrganizationService } from './organization.service';
-import { GraphqlGuard } from '@src/core';
+import { GraphqlGuard } from '@src/core/authorization/graphql.guard';
 import { PaginationArgs } from '@core/pagination';
 import { OrganizationFilterInput } from '@core/filtering';
 import { UseGuards } from '@nestjs/common';

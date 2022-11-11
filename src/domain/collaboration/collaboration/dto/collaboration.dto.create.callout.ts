@@ -1,4 +1,4 @@
-import { CreateCalloutInput } from '@domain/collaboration/callout';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { UUID } from '@domain/common/scalars';
 import { InputType, Field } from '@nestjs/graphql';
 

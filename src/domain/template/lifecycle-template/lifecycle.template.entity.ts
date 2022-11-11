@@ -1,8 +1,8 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
-import { TemplateBase } from '../template-base/template.base.entity';
-import { TemplatesSet } from '../templates-set/templates.set.entity';
+import { TemplateBase } from '@domain/template/template-base/template.base.entity';
+import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { LifecycleType } from '@common/enums/lifecycle.type';
-import { ILifecycleTemplate } from './lifecycle.template.interface';
+import { ILifecycleTemplate } from '@domain/template/lifecycle-template/lifecycle.template.interface';
 
 @Entity()
 export class LifecycleTemplate

@@ -47,7 +47,7 @@ import { VerifiedCredential } from '../verified-credential/dto/verified.credenti
 import { SsiSovrhdRegisterCallbackSession } from '@services/adapters/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.session';
 import { AgentInteractionVerifiedCredentialRequestSovrhd } from './dto/agent.dto.interaction.verified.credential.request.sovrhd';
 import { SsiSovrhdRegisterCallbackCredential } from '@services/adapters/ssi-sovrhd/dto/ssi.sovrhd.dto.register.callback.credential';
-import { getRandomId } from '@src/common';
+import { getRandomId } from '@src/common/utils';
 import { AgentCacheService } from './agent.cache.service';
 
 @Injectable()

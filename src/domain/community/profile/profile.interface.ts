@@ -2,7 +2,7 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ILocation } from '@domain/common/location';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { IVisual } from '@domain/common/visual';
+import { IVisual } from '@domain/common/visual/visual.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 @ObjectType('Profile')
 export abstract class IProfile extends IAuthorizable {

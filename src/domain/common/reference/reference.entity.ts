@@ -3,7 +3,7 @@ import { IReference } from './reference.interface';
 import { Context } from '@domain/context/context/context.entity';
 import { Profile } from '@domain/community/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
+import { CardProfile } from '@domain/collaboration/card-profile/card.profile.entity';
 
 @Entity()
 export class Reference extends AuthorizableEntity implements IReference {
@@ -23,12 +23,12 @@ export class Reference extends AuthorizableEntity implements IReference {
   })
   context?: Context;
 
-  @ManyToOne(() => Aspect, aspect => aspect.references, {
+  @ManyToOne(() => CardProfile, profile => profile.references, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  aspect?: Aspect;
+  cardProfile?: CardProfile;
 
   @ManyToOne(() => Profile, profile => profile.references, {
     eager: false,

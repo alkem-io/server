@@ -16,7 +16,7 @@ import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { AgentInfo } from '@core/authentication';
 import { VisualService } from '@domain/common/visual/visual.service';
-import { IVisual } from '@src/domain';
+import { IVisual } from '@src/domain/common/visual/visual.interface';
 
 @Injectable()
 export class CanvasService {

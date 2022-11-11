@@ -5,9 +5,8 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import {
   CreateOrganizationInput,
   UpdateOrganizationInput,
-  IOrganization,
   DeleteOrganizationInput,
-} from '@domain/community/organization';
+} from '@domain/community/organization/dto';
 import { IUserGroup } from '@domain/community/user-group';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -29,6 +28,7 @@ import { UpdateOrganizationPreferenceInput } from '@domain/community/organizatio
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { CreateUserGroupInput } from '../user-group/dto';
 import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { IOrganization } from './organization.interface';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverMutations {

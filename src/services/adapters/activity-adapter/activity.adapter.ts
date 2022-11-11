@@ -132,7 +132,7 @@ export class ActivityAdapter {
     );
 
     const aspect = eventData.aspect;
-    const description = `[${aspect.displayName}] - ${aspect.description}`;
+    const description = `[${aspect.displayName}] - ${aspect.profile?.description}`;
     const collaborationID = await this.getCollaborationIdForAspect(aspect.id);
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,

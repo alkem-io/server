@@ -15,7 +15,7 @@ import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { CommunityService } from '@domain/community/community/community.service';
-import { IActivityLogEntryBase } from '@services/api/activity-log/activity.log.entry.base.interface';
+import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 
 interface ActivityLogBuilderFunction<TypedActivityLogEntry> {
   (rawActivity: IActivity): Promise<TypedActivityLogEntry>;
@@ -34,7 +34,7 @@ export interface IActivityLogBuilder {
 
 export default class ActivityLogBuilderService implements IActivityLogBuilder {
   constructor(
-    private readonly activityLogEntryBase: IActivityLogEntryBase,
+    private readonly activityLogEntryBase: IActivityLogEntry,
     private readonly userService: UserService,
     private readonly calloutService: CalloutService,
     private readonly aspectService: AspectService,

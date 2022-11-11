@@ -1,13 +1,9 @@
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { IUser } from '@domain/community';
-import { Field, ObjectType } from '@nestjs/graphql';
-import { IActivityLogEntry } from './activity.log.entry.interface';
+import { Field } from '@nestjs/graphql';
 
-@ObjectType('ActivityLogEntryBase', {
-  implements: () => [IActivityLogEntry],
-})
-export abstract class IActivityLogEntryBase implements IActivityLogEntry {
+export abstract class IActivityLogEntryBase {
   @Field(() => UUID, {
     nullable: false,
   })

@@ -8,15 +8,17 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { Reference, IReference } from '@domain/common/reference';
+import { Reference } from '@domain/common/reference/reference.entity';
+import { IReference } from '@domain/common/reference/reference.interface';
 import { ReferenceService } from '@domain/common/reference/reference.service';
-import { ITagset } from '@domain/common/tagset';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { Profile, IProfile } from '@domain/community/profile';
+import { Profile } from '@domain/community/profile/profile.entity';
+import { IProfile } from '@domain/community/profile/profile.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { VisualService } from '@domain/common/visual/visual.service';
-import { IVisual } from '@domain/common/visual';
+import { IVisual } from '@domain/common/visual/visual.interface';
 import {
   CreateProfileInput,
   CreateTagsetOnProfileInput,

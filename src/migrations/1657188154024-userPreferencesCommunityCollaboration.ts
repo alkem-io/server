@@ -6,7 +6,7 @@ import {
   PreferenceInsertType,
   removePreferences,
 } from './utils/preferences';
-import { UserPreferenceType } from '@src/common';
+import { UserPreferenceType } from '@src/common/enums/user.preference.type';
 import { PreferenceType } from '@common/enums/preference.type';
 
 export class userPreferencesCommunityCollaboration1657188154024

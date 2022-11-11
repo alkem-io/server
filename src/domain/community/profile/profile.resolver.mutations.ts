@@ -1,12 +1,12 @@
 import { IReference } from '@domain/common/reference';
-import { ITagset } from '@domain/common/tagset';
-import { IProfile } from '@domain/community/profile';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { IProfile } from '@domain/community/profile/profile.interface';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { ProfileService } from './profile.service';
 import { GraphqlGuard } from '@core/authorization';
-import { AgentInfo } from '@core/authentication';
+import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TagsetService } from '@domain/common/tagset/tagset.service';

@@ -304,7 +304,7 @@ export class NamingService {
       description: string;
       nameID: string;
     }[] = await getConnection().query(
-      `SELECT id, displayName, createdBy, createdDate, type, description, nameID FROM aspect WHERE commentsId = '${commentsID}'`
+      `SELECT id, displayName, createdBy, createdDate, type, nameID FROM aspect WHERE commentsId = '${commentsID}'`
     );
     return aspect;
   }

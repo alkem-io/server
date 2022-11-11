@@ -1,5 +1,5 @@
-import { IBaseAlkemio } from '@domain/common/entity/base-entity';
-import { ITagset } from '@domain/common/tagset';
+import { IBaseAlkemio } from '@domain/common/entity/base-entity/base.alkemio.interface';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Agreement')

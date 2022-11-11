@@ -6,7 +6,8 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { UpdateVisualInput, CreateVisualInput } from '@domain/common/visual';
+import { UpdateVisualInput } from '@domain/common/visual/dto/visual.dto.update';
+import { CreateVisualInput } from '@domain/common/visual/dto/visual.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ReadStream } from 'fs';

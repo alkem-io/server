@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
-import { ICanvasTemplate } from './canvas.template.interface';
-import { TemplateBase } from '../template-base/template.base.entity';
-import { TemplatesSet } from '../templates-set/templates.set.entity';
+import { ICanvasTemplate } from '@domain/template/canvas-template/canvas.template.interface';
+import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
+import { TemplateBase } from '@domain/template/template-base/template.base.entity';
 
 @Entity()
 export class CanvasTemplate extends TemplateBase implements ICanvasTemplate {

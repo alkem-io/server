@@ -1,7 +1,7 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
-import { IAspectTemplate } from './aspect.template.interface';
-import { TemplateBase } from '../template-base/template.base.entity';
-import { TemplatesSet } from '../templates-set/templates.set.entity';
+import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
+import { TemplateBase } from '@domain/template/template-base/template.base.entity';
+import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 
 @Entity()
 export class AspectTemplate extends TemplateBase implements IAspectTemplate {

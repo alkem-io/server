@@ -1,10 +1,10 @@
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { LifecycleTemplateService } from './lifecycle.template.service';
+import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
-import { ILifecycleTemplate } from './lifecycle.template.interface';
+import { ILifecycleTemplate } from '@domain/template/lifecycle-template/lifecycle.template.interface';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { UpdateLifecycleTemplateInput } from './dto/lifecycle.template.dto.update';
