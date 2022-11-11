@@ -5,7 +5,6 @@ export class communityPolicy1668109973567 implements MigrationInterface {
   name = 'communityPolicy1668109973567';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Create Library
     await queryRunner.query(
       `CREATE TABLE \`community_policy\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
              \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
@@ -50,6 +49,9 @@ export class communityPolicy1668109973567 implements MigrationInterface {
     for (const community of communitiesNewPolicy) {
       const parentCommunityId = community.parentCommunityId;
       if (parentCommunityId) {
+        console.log(
+          `===> Updating parent credentials for community with id: ${community.id}`
+        );
         // Need to get the parents
         const parentMemberCredentials: any[] = [];
         const parentLeadCredentials: any[] = [];
@@ -59,14 +61,17 @@ export class communityPolicy1668109973567 implements MigrationInterface {
           parentMemberCredentials,
           parentLeadCredentials
         );
-        const communityPolicy = await queryRunner.query(
+        const communityPolicyResult = await queryRunner.query(
           `SELECT id, member, lead  FROM community_policy  WHERE (id = '${community.policyId}')`
         );
+        const communityPolicy = communityPolicyResult[0];
+
         const memberPolicy: newCommunityRolePolicy = JSON.parse(
           communityPolicy.member
         );
         memberPolicy.parentCredentials = parentMemberCredentials;
         const memberStr = JSON.stringify(memberPolicy);
+
         const leadPolicy: newCommunityRolePolicy = JSON.parse(
           communityPolicy.lead
         );
@@ -75,10 +80,6 @@ export class communityPolicy1668109973567 implements MigrationInterface {
 
         await queryRunner.query(
           `UPDATE community_policy SET member = '${memberStr}', lead = '${leadStr}' WHERE (id = '${communityPolicy.id}')`
-        );
-      } else {
-        console.log(
-          `No parent community for community with id: ${community.id}`
         );
       }
     }
@@ -95,12 +96,14 @@ export class communityPolicy1668109973567 implements MigrationInterface {
     parentMemberCredentials: any[],
     parentLeadCredentials: any[]
   ): Promise<void> {
-    const community = await queryRunner.query(
+    const communityResult = await queryRunner.query(
       `SELECT id, policyId, parentCommunityId  FROM community  WHERE (id = '${communityID}')`
     );
-    const communityPolicy = await queryRunner.query(
+    const community = communityResult[0];
+    const communityPolicyResult = await queryRunner.query(
       `SELECT id, member, lead  FROM community_policy  WHERE (id = '${community.policyId}')`
     );
+    const communityPolicy = communityPolicyResult[0];
     const memberPolicy = JSON.parse(
       communityPolicy.member
     ) as newCommunityRolePolicy;
