@@ -1,13 +1,8 @@
 import { SearchResultType } from '@common/enums/search.result.type';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { Field, ObjectType } from '@nestjs/graphql';
-import { ISearchResult } from './search.result.entry.interface';
+import { Field } from '@nestjs/graphql';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity/base.alkemio.interface';
-
-@ObjectType('SearchResultBase', {
-  implements: () => [ISearchResult],
-})
-export abstract class ISearchResultBase implements ISearchResult {
+export abstract class ISearchResultBase {
   @Field(() => UUID, {
     nullable: false,
     description: 'The unique identifier for this search result.',

@@ -12,7 +12,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { DiscussionService } from './discussion.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SUBSCRIPTION_DISCUSSION_MESSAGE } from '@common/constants/providers';
-import { TypedSubscription } from '@src/common';
+import { TypedSubscription } from '@src/common/decorators';
 import { DiscussionMessageReceivedArgs } from './dto/discussion.message.received.args';
 import { DiscussionMessageReceivedPayload } from './dto/discussion.message.received.payload';
 

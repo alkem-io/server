@@ -1,7 +1,9 @@
-import { ILocation, IReference, ITagset } from '@domain/common';
-import { IVisual } from '@domain/common/visual';
-import { IProfile } from '@domain/community';
 import DataLoader from 'dataloader';
+import { ILocation } from '@domain/common/location/location.interface';
+import { IReference } from '@domain/common/reference/reference.interface';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { IVisual } from '@domain/common/visual/visual.interface';
+import { IProfile } from '@domain/community/profile/profile.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 

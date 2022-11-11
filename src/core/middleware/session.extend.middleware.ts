@@ -9,7 +9,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import jwt_decode from 'jwt-decode';
 import { KratosPayload } from '@core/authentication/kratos.payload';
 import { AuthenticationService } from '@core/authentication/authentication.service';
-import { LogContext } from '@src/common';
+import { LogContext } from '@src/common/enums';
 
 const ORY_KRATOS_COOKIE = 'ory_kratos_session';
 

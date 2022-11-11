@@ -123,8 +123,6 @@ describe('RolesService', () => {
         ])
       );
 
-      console.log(JSON.stringify(res.hubs));
-
       expect(res.hubs).toEqual(
         expect.arrayContaining([
           expect.objectContaining({

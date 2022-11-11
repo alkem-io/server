@@ -3,7 +3,7 @@ import { UUID } from '@domain/common/scalars';
 import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
-export class CreateReferenceOnAspectInput extends CreateReferenceInput {
+export class CreateReferenceOnCardProfileInput extends CreateReferenceInput {
   @Field(() => UUID, { nullable: false })
-  aspectID!: string;
+  cardProfileID!: string;
 }

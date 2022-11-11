@@ -1,4 +1,4 @@
-import { IAspect } from '@src/domain';
+import { IAspect } from '@src/domain/collaboration/aspect/aspect.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('CalloutAspectCreated')

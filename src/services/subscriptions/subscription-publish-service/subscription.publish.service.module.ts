@@ -1,13 +1,13 @@
 import { randomUUID } from 'crypto';
 import { Module } from '@nestjs/common';
 import {
-  MessagingQueue,
   RABBITMQ_EXCHANGE_NAME_DIRECT,
   SUBSCRIPTION_ACTIVITY_CREATED,
-} from '@src/common';
+} from '@src/common/constants';
 import { subscriptionFactoryProvider } from '@core/microservices/subscription.factory.provider';
 import { SubscriptionPublishService } from './subscription.publish.service';
 import { SubscriptionReadService } from './subscription.read.service';
+import { MessagingQueue } from '@common/enums/messaging.queue';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {

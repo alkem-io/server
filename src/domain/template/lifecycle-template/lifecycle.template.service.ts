@@ -4,11 +4,11 @@ import { Repository, getConnection, FindOneOptions } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LifecycleTemplate } from './lifecycle.template.entity';
-import { ILifecycleTemplate } from './lifecycle.template.interface';
-import { TemplateBaseService } from '../template-base/template.base.service';
-import { CreateInnovationFlowTemplateInput } from './dto/lifecycle.template.dto.create';
-import { UpdateLifecycleTemplateInput } from './dto/lifecycle.template.dto.update';
+import { LifecycleTemplate } from '@domain/template/lifecycle-template/lifecycle.template.entity';
+import { ILifecycleTemplate } from '@domain/template/lifecycle-template/lifecycle.template.interface';
+import { TemplateBaseService } from '@domain/template/template-base/template.base.service';
+import { CreateInnovationFlowTemplateInput } from '@domain/template/lifecycle-template/dto/lifecycle.template.dto.create';
+import { UpdateLifecycleTemplateInput } from '@domain/template/lifecycle-template/dto/lifecycle.template.dto.update';
 import { LifecycleType } from '@common/enums/lifecycle.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 

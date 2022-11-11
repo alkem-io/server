@@ -4,7 +4,7 @@ import { Hub } from '@domain/challenge/hub/hub.entity';
 import { IProject } from '@domain/collaboration/project';
 import { INVP } from '@domain/common/nvp';
 import { UUID, UUID_NAMEID } from '@domain/common/scalars';
-import { ITagset } from '@domain/common/tagset';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { IOrganization } from '@domain/community';
 import { IApplication } from '@domain/community/application';
 import { ApplicationService } from '@domain/community/application/application.service';

@@ -1,4 +1,4 @@
-import { ITagset } from '@domain/common';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity/base.alkemio.interface';

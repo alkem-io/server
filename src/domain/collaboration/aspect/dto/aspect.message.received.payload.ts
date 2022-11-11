@@ -1,7 +1,7 @@
 import {
   BaseSubscriptionPayload,
   CommunicationMessagePayload,
-} from '@src/common';
+} from '@src/common/interfaces';
 
 export interface AspectMessageReceivedPayload extends BaseSubscriptionPayload {
   aspectID: string;

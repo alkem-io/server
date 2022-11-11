@@ -2,7 +2,7 @@ import { PaginationArgs } from '@core/pagination/pagination.args';
 import {
   PaginationInputOutOfBoundException,
   PaginationParameterNotFoundException,
-} from '@src/common';
+} from '@src/common/exceptions';
 
 export const tryValidateArgs = (
   paginationArgs: PaginationArgs

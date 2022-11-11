@@ -4,7 +4,7 @@ import { UserGroupService } from '@domain/community/user-group/user-group.servic
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { IUser } from '@domain/community/user';
 import { UserGroup, IUserGroup } from '@domain/community/user-group';
-import { IGroupable } from '@domain/common/interfaces';
+import { IGroupable } from '@domain/common/interfaces/groupable.interface';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
