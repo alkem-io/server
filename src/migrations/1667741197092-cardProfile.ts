@@ -53,7 +53,10 @@ export class cardProfile1667741197092 implements MigrationInterface {
         `INSERT INTO authorization_policy VALUES ('${authID}', NOW(), NOW(), 1, '', '', 0, '')`
       );
       await queryRunner.query(
-        `INSERT INTO card_profile (id, createdDate, updatedDate, version, authorizationId, tagsetId, description) VALUES ('${cardProfileID}', NOW(), NOW(), 1, '${authID}', '${aspect.tagsetId}', '${aspect.description}')`
+        `INSERT INTO card_profile (id, createdDate, updatedDate, version, authorizationId, tagsetId, description)
+         VALUES ('${cardProfileID}', NOW(), NOW(), 1, '${authID}', ${
+          aspect.tagsetId ? "'" + aspect.tagsetId + "'" : aspect.tagsetId
+        }, '${escapeString(aspect.description)}')`
       );
 
       await queryRunner.query(
@@ -85,7 +88,9 @@ export class cardProfile1667741197092 implements MigrationInterface {
       `ALTER TABLE \`aspect\` ADD \`tagsetId\` varchar(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_bd7b636888fc391cf1d7406e891\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_bd7b636888fc391cf1d7406e891\`
+       FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`)
+        ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       `ALTER TABLE \`aspect\` ADD \`description\` text NULL`
@@ -96,7 +101,9 @@ export class cardProfile1667741197092 implements MigrationInterface {
       `ALTER TABLE \`reference\` ADD \`aspectId\` varchar(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`reference\` ADD CONSTRAINT \`FK_a21a8eda24f18cd6af58b0d4e72\` FOREIGN KEY (\`aspectId\`) REFERENCES \`aspect\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+      `ALTER TABLE \`reference\` ADD CONSTRAINT \`FK_a21a8eda24f18cd6af58b0d4e72\`
+       FOREIGN KEY (\`aspectId\`) REFERENCES \`aspect\`(\`id\`)
+        ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
     // Migrate the data
@@ -110,7 +117,9 @@ export class cardProfile1667741197092 implements MigrationInterface {
     );
     for (const aspect of aspects) {
       await queryRunner.query(
-        `UPDATE aspect SET description = '${aspect.description}', tagsetId = '${aspect.tagsetId}' WHERE \`id\` = '${aspect.id}'`
+        `UPDATE aspect SET description = '${escapeString(
+          aspect.description
+        )}', tagsetId = '${aspect.tagsetId}' WHERE \`id\` = '${aspect.id}'`
       );
 
       await queryRunner.query(
