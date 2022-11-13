@@ -18,12 +18,12 @@ import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collabo
 import { CreateRelationOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.relation';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { collaborationDefaults } from './collaboration.defaults';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CommunityType } from '@common/enums/community.type';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 
 @Injectable()
 export class CollaborationService {
@@ -325,10 +325,10 @@ export class CollaborationService {
     return aspectsCount;
   }
 
-  public async getMembershipCredential(
+  public async getCommunityPolicy(
     collaborationID: string
-  ): Promise<CredentialDefinition> {
-    return await this.namingService.getMembershipCredentialForCollaboration(
+  ): Promise<ICommunityPolicy> {
+    return await this.namingService.getCommunityPolicyForCollaboration(
       collaborationID
     );
   }

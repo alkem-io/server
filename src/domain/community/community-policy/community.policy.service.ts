@@ -1,6 +1,9 @@
+import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { CommunityRole } from '@common/enums/community.role';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -60,6 +63,42 @@ export class CommunityPolicyService {
     }
   }
 
+  setFlag(policy: ICommunityPolicy, flag: CommunityPolicyFlag, value: boolean) {
+    policy.flags.set(flag, value);
+  }
+
+  getFlag(policy: ICommunityPolicy, flag: CommunityPolicyFlag): boolean {
+    const result = policy.flags.get(flag);
+    if (result === undefined) {
+      throw new EntityNotInitializedException(
+        `Unable to locate flag for community policy: ${policy.id}, flag: ${flag}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return result;
+  }
+
+  getParentMembershipCredential(
+    policy: ICommunityPolicy
+  ): ICredentialDefinition {
+    const memberRolePolicy = this.getCommunityRolePolicy(
+      policy,
+      CommunityRole.MEMBER
+    );
+
+    // todo: not entirely safe...
+    const parentCommunityCredential = memberRolePolicy.parentCredentials[0];
+    return parentCommunityCredential;
+  }
+
+  getAdminCredentials(policy: ICommunityPolicy): ICredentialDefinition[] {
+    const leadRolePolicy = this.getCommunityRolePolicy(
+      policy,
+      CommunityRole.LEAD
+    );
+    return [leadRolePolicy.credential, ...leadRolePolicy.parentCredentials];
+  }
+
   // Update the Community policy to have the right resource ID
   async updateCommunityPolicyResourceID(
     communityPolicy: ICommunityPolicy,
@@ -117,5 +156,13 @@ export class CommunityPolicyService {
 
   private serializeRolePolicy(rolePolicy: ICommunityRolePolicy): string {
     return JSON.stringify(rolePolicy);
+  }
+
+  getMembershipCredential(policy: ICommunityPolicy): CredentialDefinition {
+    const rolePolicy = this.getCommunityRolePolicy(
+      policy,
+      CommunityRole.MEMBER
+    );
+    return rolePolicy.credential;
   }
 }

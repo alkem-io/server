@@ -51,7 +51,6 @@ import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceType } from '@common/enums/preference.type';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -62,6 +61,7 @@ import { HubsQueryArgs } from './dto/hub.args.query.hubs';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { HubFilterService } from '@services/infrastructure/hub-filter/hub.filter.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 
 @Injectable()
 export class HubService {
@@ -556,10 +556,8 @@ export class HubService {
     );
   }
 
-  async getCommunityMembershipCredential(
-    hub: IHub
-  ): Promise<CredentialDefinition> {
-    return await this.baseChallengeService.getCommunityMembershipCredential(
+  async getCommunityPolicy(hub: IHub): Promise<ICommunityPolicy> {
+    return await this.baseChallengeService.getCommunityPolicy(
       hub.id,
       this.hubRepository
     );

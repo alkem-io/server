@@ -44,9 +44,9 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { getRandomId } from '@common/utils/random.id.generator.util';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -55,14 +55,14 @@ export class CalloutResolverMutations {
     private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
     private calloutService: CalloutService,
+    private namingService: NamingService,
     private commentsService: CommentsService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
     @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
     private aspectCreatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_CALLOUT_MESSAGE_CREATED)
-    private calloutMessageCreatedSubscription: PubSubEngine,
-    private communityResolverService: CommunityResolverService
+    private calloutMessageCreatedSubscription: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -245,9 +245,13 @@ export class CalloutResolverMutations {
       aspectData,
       agentInfo.userID
     );
+
+    const communityPolicy =
+      await this.namingService.getCommunityPolicyForCallout(callout.id);
     aspect = await this.aspectAuthorizationService.applyAuthorizationPolicy(
       aspect,
-      callout.authorization
+      callout.authorization,
+      communityPolicy
     );
     const aspectCreatedEvent: CalloutAspectCreatedPayload = {
       eventID: `callout-aspect-created-${Math.round(Math.random() * 100)}`,

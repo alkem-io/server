@@ -24,6 +24,7 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { IAuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class AuthorizationPolicyService {
@@ -34,6 +35,92 @@ export class AuthorizationPolicyService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  createCredentialRule(
+    grantedPrivileges: AuthorizationPrivilege[],
+    criterias: ICredentialDefinition[]
+  ): IAuthorizationPolicyRuleCredential {
+    return {
+      grantedPrivileges,
+      criterias,
+      inheritable: true,
+    };
+  }
+
+  createCredentialRuleUsingTypesOnly(
+    grantedPrivileges: AuthorizationPrivilege[],
+    createntialTypes: AuthorizationCredential[]
+  ): IAuthorizationPolicyRuleCredential {
+    const criterias: ICredentialDefinition[] = [];
+
+    for (const credentialType of createntialTypes) {
+      const criteria: ICredentialDefinition = {
+        type: credentialType,
+        resourceID: '',
+      };
+
+      criterias.push(criteria);
+    }
+
+    return {
+      grantedPrivileges,
+      criterias,
+      inheritable: true,
+    };
+  }
+
+  private createCredentialRuleGlobalAdmins(
+    grantedPrivileges: AuthorizationPrivilege[],
+    globalRoles: AuthorizationRoleGlobal[]
+  ): IAuthorizationPolicyRuleCredential {
+    const criterias: ICredentialDefinition[] = [];
+
+    for (const globalRole of globalRoles) {
+      let credType: AuthorizationCredential;
+      switch (globalRole) {
+        case AuthorizationRoleGlobal.GLOBAL_ADMIN:
+          credType = AuthorizationCredential.GLOBAL_ADMIN;
+          break;
+        case AuthorizationRoleGlobal.GLOBAL_COMMUNITY_ADMIN:
+          credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
+          break;
+        case AuthorizationRoleGlobal.GLOBAL_ADMIN_HUBS:
+          credType = AuthorizationCredential.GLOBAL_ADMIN_HUBS;
+          break;
+        default:
+          throw new ForbiddenException(
+            `Authorization: invalid global role encountered: ${globalRole}`,
+            LogContext.AUTH
+          );
+      }
+
+      const criteria: ICredentialDefinition = {
+        type: credType,
+        resourceID: '',
+      };
+
+      criterias.push(criteria);
+    }
+
+    return {
+      grantedPrivileges,
+      criterias,
+      inheritable: true,
+    };
+  }
+
+  createGlobalRolesAuthorizationPolicy(
+    globalRoles: AuthorizationRoleGlobal[],
+    privileges: AuthorizationPrivilege[]
+  ): IAuthorizationPolicy {
+    const authorization = new AuthorizationPolicy();
+    const rule = this.createCredentialRuleGlobalAdmins(privileges, globalRoles);
+
+    const rules = [rule];
+    this.appendCredentialAuthorizationRules(authorization, rules);
+
+    return authorization;
+  }
 
   reset(
     authorizationPolicy: IAuthorizationPolicy | undefined
@@ -111,7 +198,7 @@ export class AuthorizationPolicyService {
 
   appendCredentialAuthorizationRules(
     authorization: IAuthorizationPolicy | undefined,
-    additionalRules: AuthorizationPolicyRuleCredential[]
+    additionalRules: IAuthorizationPolicyRuleCredential[]
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
 
@@ -244,43 +331,5 @@ export class AuthorizationPolicyService {
       agentInfo.verifiedCredentials,
       authorizationPolicy
     );
-  }
-
-  createGlobalRolesAuthorizationPolicy(
-    globalRoles: AuthorizationRoleGlobal[],
-    privileges: AuthorizationPrivilege[]
-  ): IAuthorizationPolicy {
-    const authorization = new AuthorizationPolicy();
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
-
-    for (const globalRole of globalRoles) {
-      let credType: AuthorizationCredential;
-      switch (globalRole) {
-        case AuthorizationRoleGlobal.GLOBAL_ADMIN:
-          credType = AuthorizationCredential.GLOBAL_ADMIN;
-          break;
-        case AuthorizationRoleGlobal.GLOBAL_COMMUNITY_ADMIN:
-          credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
-          break;
-        case AuthorizationRoleGlobal.GLOBAL_ADMIN_HUBS:
-          credType = AuthorizationCredential.GLOBAL_ADMIN_HUBS;
-          break;
-        default:
-          throw new ForbiddenException(
-            `Authorization: invalid global role encountered: ${globalRole}`,
-            LogContext.AUTH
-          );
-      }
-
-      const roleCred = new AuthorizationPolicyRuleCredential(
-        privileges,
-        credType
-      );
-
-      newRules.push(roleCred);
-    }
-    this.appendCredentialAuthorizationRules(authorization, newRules);
-
-    return authorization;
   }
 }

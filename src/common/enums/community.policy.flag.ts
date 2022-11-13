@@ -1,0 +1,12 @@
+export enum CommunityPolicyFlag {
+  ALLOW_ANONYMOUS_READ_ACCESS = 'AuthorizationAnonymousReadAccess',
+  MEMBERSHIP_JOIN_HUB_FROM_ANYONE = 'MembershipJoinHubFromAnyone',
+  MEMBERSHIP_JOIN_HUB_FROM_HOST_ORGANIZATION_MEMBERS = 'MembershipJoinHubFromHostOrganizationMembers',
+  MEMBERSHIP_APPLICATIONS_FROM_ANYONE = 'MembershipApplicationsFromAnyone',
+  AUTHORIZATION_ANONYMOUS_READ_ACCESS = 'AuthorizationAnonymousReadAccess',
+  ALLOW_MEMBERS_TO_CREATE_CHALLENGES = 'AllowMembersToCreateChallenges',
+
+  MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS = 'MembershipJoinChallengeFromHubMembers',
+  MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS = 'MembershipApplyChallengeFromHubMembers',
+  MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT = 'MembershipFeedbackOnChallengeContext',
+}

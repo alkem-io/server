@@ -1,6 +1,6 @@
-import { CommunityRole } from '@common/enums/community.role';
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
@@ -18,7 +18,8 @@ export class BaseChallengeAuthorizationService {
     private contextAuthorizationService: ContextAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
-    private communityService: CommunityService
+    private communityService: CommunityService,
+    private communityPolicyService: CommunityPolicyService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -30,11 +31,7 @@ export class BaseChallengeAuthorizationService {
       baseChallenge.id,
       repository
     );
-    const membershipCredential =
-      this.communityService.getCredentialDefinitionForRole(
-        community,
-        CommunityRole.MEMBER
-      );
+    const communityPolicy = this.communityService.getCommunityPolicy(community);
 
     if (community.authorization) {
       baseChallenge.community =
@@ -71,7 +68,7 @@ export class BaseChallengeAuthorizationService {
       await this.collaborationAuthorizationService.applyAuthorizationPolicy(
         collaboration,
         baseChallenge.authorization,
-        membershipCredential
+        communityPolicy
       );
 
     baseChallenge.agent = await this.baseChallengeService.getAgent(

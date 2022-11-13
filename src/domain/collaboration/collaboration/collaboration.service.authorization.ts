@@ -8,12 +8,12 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 import { AuthorizationCredential } from '@common/enums';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -28,7 +28,7 @@ export class CollaborationAuthorizationService {
   public async applyAuthorizationPolicy(
     collaboration: ICollaboration,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityCredential: CredentialDefinition
+    communityPolicy: ICommunityPolicy
   ): Promise<ICollaboration> {
     collaboration.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -51,7 +51,7 @@ export class CollaborationAuthorizationService {
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         callout,
         collaboration.authorization,
-        communityCredential
+        communityPolicy
       );
     }
 
