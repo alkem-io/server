@@ -1,3 +1,4 @@
+import { AuthorizationCredential } from '@common/enums';
 import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { CommunityRole } from '@common/enums/community.role';
 import { LogContext } from '@common/enums/logging.context';
@@ -91,12 +92,42 @@ export class CommunityPolicyService {
     return parentCommunityCredential;
   }
 
-  getAdminCredentials(policy: ICommunityPolicy): ICredentialDefinition[] {
+  getLeadCredentials(policy: ICommunityPolicy): ICredentialDefinition[] {
     const leadRolePolicy = this.getCommunityRolePolicy(
       policy,
       CommunityRole.LEAD
     );
     return [leadRolePolicy.credential, ...leadRolePolicy.parentCredentials];
+  }
+
+  // Todo: this is a bit of a hack...
+  getAdminCredentials(policy: ICommunityPolicy): ICredentialDefinition[] {
+    const leadCredentials = this.getLeadCredentials(policy);
+    const adminCredentials: ICredentialDefinition[] = [];
+    for (const leadCredential of leadCredentials) {
+      const resourceID = leadCredential.resourceID;
+      switch (leadCredential.type) {
+        case AuthorizationCredential.HUB_HOST:
+          adminCredentials.push({
+            type: AuthorizationCredential.HUB_ADMIN,
+            resourceID,
+          });
+          break;
+        case AuthorizationCredential.CHALLENGE_LEAD:
+          adminCredentials.push({
+            type: AuthorizationCredential.CHALLENGE_ADMIN,
+            resourceID,
+          });
+          break;
+        case AuthorizationCredential.OPPORTUNITY_LEAD:
+          adminCredentials.push({
+            type: AuthorizationCredential.OPPORTUNITY_LEAD,
+            resourceID,
+          });
+          break;
+      }
+    }
+    return adminCredentials;
   }
 
   // Update the Community policy to have the right resource ID
