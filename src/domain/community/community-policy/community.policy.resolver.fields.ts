@@ -12,9 +12,7 @@ export class CommunityPolicyResolverFields {
     nullable: false,
     description: 'The role policy that defines the members for this Community.',
   })
-  async memmber(
-    @Parent() communityPolicy: ICommunityPolicy
-  ): Promise<ICommunityRolePolicy> {
+  member(@Parent() communityPolicy: ICommunityPolicy): ICommunityRolePolicy {
     return this.communityPolicyService.getCommunityRolePolicy(
       communityPolicy,
       CommunityRole.MEMBER
@@ -25,9 +23,7 @@ export class CommunityPolicyResolverFields {
     nullable: false,
     description: 'The role policy that defines the leads for this Community.',
   })
-  async lead(
-    @Parent() communityPolicy: ICommunityPolicy
-  ): Promise<ICommunityRolePolicy> {
+  lead(@Parent() communityPolicy: ICommunityPolicy): ICommunityRolePolicy {
     return this.communityPolicyService.getCommunityRolePolicy(
       communityPolicy,
       CommunityRole.LEAD
