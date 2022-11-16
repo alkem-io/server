@@ -158,7 +158,7 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
 
   async [ActivityEventType.UPDATE_SENT](rawActivity: IActivity) {
     const updates = await this.updatesService.getUpdatesOrFail(
-      rawActivity.parentID
+      rawActivity.resourceID
     );
     const activityUpdateSent: IActivityLogEntryUpdateSent = {
       ...this.activityLogEntryBase,
