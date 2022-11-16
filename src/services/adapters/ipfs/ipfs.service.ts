@@ -50,4 +50,14 @@ export class IpfsService {
     );
     return `${this.ipfsClientEndpoint}/${res.path}`;
   }
+
+  public async removeFile(filePath: string): Promise<void> {
+    this.logger.verbose?.(
+      `Removing file from path: ${filePath}`,
+      LogContext.IPFS
+    );
+
+    const ipfsClient = create(new URL(this.ipfsEndpoint));
+    return ipfsClient.files.rm(filePath);
+  }
 }
