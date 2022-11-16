@@ -14,6 +14,7 @@ import { SubscriptionPublishServiceModule } from '@services/subscriptions/subscr
 import { ActivityLogService } from './activity.log.service';
 import { ActivityLogResolverQueries } from './activity.log.resolver.queries';
 import { ActivityLogResolverSubscriptions } from './activity.log.resolver.subscriptions';
+import { UpdatesModule } from '@domain/communication/updates/updates.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ActivityLogResolverSubscriptions } from './activity.log.resolver.subscr
     CanvasModule,
     ChallengeModule,
     OpportunityModule,
+    UpdatesModule,
     SubscriptionPublishServiceModule,
   ],
   providers: [

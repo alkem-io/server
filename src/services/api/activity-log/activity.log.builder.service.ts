@@ -16,6 +16,8 @@ import { ChallengeService } from '@domain/challenge/challenge/challenge.service'
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { IActivityLogEntry } from './dto/activity.log.entry.interface';
+import { IActivityLogEntryUpdateSent } from './dto/activity.log.dto.entry.update.sent';
+import { UpdatesService } from '@domain/communication/updates/updates.service';
 
 interface ActivityLogBuilderFunction<TypedActivityLogEntry> {
   (rawActivity: IActivity): Promise<TypedActivityLogEntry>;
@@ -30,6 +32,7 @@ export interface IActivityLogBuilder {
   [ActivityEventType.OPPORTUNITY_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryOpportunityCreated>;
   [ActivityEventType.CARD_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutCardComment>;
   [ActivityEventType.DISCUSSION_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutDiscussionComment>;
+  [ActivityEventType.UPDATE_SENT]: ActivityLogBuilderFunction<IActivityLogEntryUpdateSent>;
 }
 
 export default class ActivityLogBuilderService implements IActivityLogBuilder {
@@ -41,7 +44,8 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     private readonly canvasService: CanvasService,
     private readonly challengeService: ChallengeService,
     private readonly opportunityService: OpportunityService,
-    private readonly communityService: CommunityService
+    private readonly communityService: CommunityService,
+    private readonly updatesService: UpdatesService
   ) {}
 
   async [ActivityEventType.MEMBER_JOINED](rawActivity: IActivity) {
@@ -150,5 +154,17 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
         callout: calloutDiscussionComment,
       };
     return activityCalloutDiscussionComment;
+  }
+
+  async [ActivityEventType.UPDATE_SENT](rawActivity: IActivity) {
+    const updates = await this.updatesService.getUpdatesOrFail(
+      rawActivity.parentID
+    );
+    const activityUpdateSent: IActivityLogEntryUpdateSent = {
+      ...this.activityLogEntryBase,
+      updates: updates,
+      message: rawActivity.description || '',
+    };
+    return activityUpdateSent;
   }
 }
