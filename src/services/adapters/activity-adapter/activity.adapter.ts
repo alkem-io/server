@@ -262,15 +262,16 @@ export class ActivityAdapter {
       LogContext.ACTIVITY
     );
     const updates = eventData.updates;
-    const collaborationID = await this.getCollaborationIdFromUpdates(
-      updates.id
+    const communityID = await this.getCommunityIdFromUpdates(updates.id);
+    const collaborationID = await this.getCollaborationIdFromCommunity(
+      communityID
     );
 
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: updates.id,
-      parentID: updates.id,
+      parentID: communityID,
       description: eventData.message,
       type: ActivityEventType.UPDATE_SENT,
     });
@@ -413,7 +414,7 @@ export class ActivityAdapter {
     return result.collaborationId;
   }
 
-  private async getCollaborationIdFromUpdates(updatesID: string) {
+  private async getCommunityIdFromUpdates(updatesID: string) {
     const community = await this.communityRepository
       .createQueryBuilder('community')
       .leftJoinAndSelect('community.communication', 'communication')
@@ -425,11 +426,11 @@ export class ActivityAdapter {
       .getOne();
     if (!community) {
       this.logger.error(
-        `Unable to identify Collaboration for provided updates: ${updatesID}`,
+        `Unable to identify Community for provided updates: ${updatesID}`,
         LogContext.COMMUNITY
       );
       return '';
     }
-    return await this.getCollaborationIdFromCommunity(community.id);
+    return community.id;
   }
 }
