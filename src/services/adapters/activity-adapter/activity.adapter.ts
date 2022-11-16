@@ -265,14 +265,14 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdFromUpdates(
       updates.id
     );
-    const description = `'${eventData.message}'`;
+
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
       resourceID: updates.id,
       parentID: updates.id,
-      description: description,
-      type: ActivityEventType.MEMBER_JOINED,
+      description: eventData.message,
+      type: ActivityEventType.UPDATE_SENT,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
