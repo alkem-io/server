@@ -186,13 +186,9 @@ export class HubAuthorizationService {
 
     hub.challenges = await this.hubService.getChallenges(hub);
     for (const challenge of hub.challenges) {
-      const challengePolicy = await this.challengeService.getCommunityPolicy(
-        challenge.id
-      );
       await this.challengeAuthorizationService.applyAuthorizationPolicy(
         challenge,
-        hub.authorization,
-        challengePolicy
+        hub.authorization
       );
       challenge.authorization =
         await this.authorizationPolicyService.appendCredentialAuthorizationRule(

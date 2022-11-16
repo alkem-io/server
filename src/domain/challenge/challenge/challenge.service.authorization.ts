@@ -41,10 +41,12 @@ export class ChallengeAuthorizationService {
 
   async applyAuthorizationPolicy(
     challenge: IChallenge,
-    parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IChallenge> {
     const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
+      challenge.id
+    );
+    const communityPolicy = await this.challengeService.getCommunityPolicy(
       challenge.id
     );
     this.setCommunityPolicyFlags(communityPolicy, preferenceSet);
@@ -86,8 +88,7 @@ export class ChallengeAuthorizationService {
       for (const childChallenge of challenge.childChallenges) {
         await this.applyAuthorizationPolicy(
           childChallenge,
-          challenge.authorization,
-          communityPolicy
+          challenge.authorization
         );
       }
     }

@@ -642,11 +642,13 @@ export class HubService {
       agentInfo
     );
 
-    await this.addChallengeToHub(hub.id, newChallenge);
-    return newChallenge;
+    return await this.addChallengeToHub(hub.id, newChallenge);
   }
 
-  async addChallengeToHub(hubID: string, challenge: IChallenge): Promise<IHub> {
+  async addChallengeToHub(
+    hubID: string,
+    challenge: IChallenge
+  ): Promise<IChallenge> {
     const hub = await this.getHubOrFail(hubID, {
       relations: ['challenges', 'community'],
     });
@@ -658,12 +660,13 @@ export class HubService {
 
     hub.challenges.push(challenge);
     // Finally set the community relationship
-    await this.communityService.setParentCommunity(
+    challenge.community = await this.communityService.setParentCommunity(
       challenge.community,
       hub.community
     );
 
-    return await this.hubRepository.save(hub);
+    await this.hubRepository.save(hub);
+    return challenge;
   }
 
   async getChallenge(challengeID: string, hub: IHub): Promise<IChallenge> {

@@ -66,13 +66,10 @@ export class ChallengeResolverMutations {
       challengeData,
       agentInfo
     );
-    const communityPolicy = await this.challengeService.getCommunityPolicy(
-      challenge.id
-    );
+
     return await this.challengeAuthorizationService.applyAuthorizationPolicy(
       childChallenge,
-      challenge.authorization,
-      communityPolicy
+      challenge.authorization
     );
   }
 
