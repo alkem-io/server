@@ -57,7 +57,7 @@ export class Community
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  policy?: CommunityPolicy;
+  policy!: CommunityPolicy;
 
   // The parent community can have many child communities; the relationship is controlled by the child.
   @ManyToOne(() => Community, {

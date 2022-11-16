@@ -23,7 +23,7 @@ export abstract class ICommunity extends IAuthorizable {
 
   parentCommunity?: ICommunity;
 
-  policy?: ICommunityPolicy;
+  policy!: ICommunityPolicy;
 
   hubID!: string;
 
