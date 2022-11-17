@@ -126,8 +126,8 @@ export class ChallengeService {
     // set immediate community parent + resourceID
     if (challenge.community) {
       challenge.community.parentID = challenge.id;
-      challenge.community =
-        this.communityService.updateCommunityPolicyResourceID(
+      challenge.community.policy =
+        await this.communityService.updateCommunityPolicyResourceID(
           challenge.community,
           challenge.id
         );

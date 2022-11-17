@@ -1,12 +1,18 @@
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('CommunityPolicyRole')
-export abstract class ICommunityPolicyRole {
+@ObjectType('CommunityRolePolicy')
+export abstract class ICommunityRolePolicy {
   @Field(() => ICredentialDefinition, {
     description: 'The CredentialDefinition that is associated with this role',
   })
   credential!: ICredentialDefinition;
+
+  @Field(() => [ICredentialDefinition], {
+    description:
+      'The CredentialDefinitions associated with this role in parent communities',
+  })
+  parentCredentials!: ICredentialDefinition[];
 
   @Field(() => Number, {
     description: 'Minimum number of Users in this role',

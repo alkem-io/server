@@ -1,8 +1,9 @@
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
-import { ICommunityPolicyRole } from './community.policy.role.interface';
+import { ICommunityRolePolicy } from './community.policy.role.interface';
 
-export class CommunityPolicyRole implements ICommunityPolicyRole {
+export class CommunityRolePolicy implements ICommunityRolePolicy {
   credential: CredentialDefinition;
+  parentCredentials: CredentialDefinition[];
   minUser: number;
   maxUser: number;
   minOrg: number;
@@ -10,6 +11,7 @@ export class CommunityPolicyRole implements ICommunityPolicyRole {
 
   constructor(credential: CredentialDefinition) {
     this.credential = credential;
+    this.parentCredentials = [];
     this.minOrg = -1;
     this.maxOrg = -1;
     this.minUser = -1;
