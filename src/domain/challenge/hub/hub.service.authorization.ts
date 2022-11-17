@@ -355,7 +355,7 @@ export class HubAuthorizationService {
     // Any registered user can apply
     const allowAnyRegisteredUserToApply = this.communityPolicyService.getFlag(
       policy,
-      CommunityPolicyFlag.MEMBERSHIP_JOIN_HUB_FROM_ANYONE
+      CommunityPolicyFlag.MEMBERSHIP_APPLICATIONS_FROM_ANYONE
     );
 
     if (allowAnyRegisteredUserToApply) {
