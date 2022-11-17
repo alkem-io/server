@@ -1,17 +1,18 @@
-import { Injectable, NotImplementedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ValidationException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { ReadStream } from 'fs';
-import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
+import { IpfsUploadFailedException } from '@common/exceptions/ipfs.upload.exception';
 import { streamToBuffer } from '@common/utils';
 import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
+import { ConfigService } from '@nestjs/config/dist/config.service';
+import { IpfsDeleteFailedException } from '@common/exceptions/ipfs.delete.exception';
 
 @Injectable()
 export class FileManagerService {
   constructor(
-    private authorizationPolicyService: AuthorizationPolicyService,
-    private ipfsService: IpfsService
+    private ipfsService: IpfsService,
+    private configService: ConfigService
   ) {}
 
   async uploadFile(
@@ -31,7 +32,7 @@ export class FileManagerService {
         LogContext.FILE_MANAGER
       );
 
-    if (await this.validateMimeTypes(mimetype)) {
+    if (!(await this.validateMimeTypes(mimetype))) {
       throw new ValidationException(
         `Tried to import invalid mimetype ${mimetype}!`,
         LogContext.FILE_MANAGER
@@ -53,13 +54,17 @@ export class FileManagerService {
     try {
       return await this.ipfsService.removeFile(filePath);
     } catch (error: any) {
-      throw new IpfsUploadFailedException(
+      throw new IpfsDeleteFailedException(
         `Ipfs removing file at path ${filePath} failed! Error: ${error.message}`
       );
     }
   }
 
   private async validateMimeTypes(mimeType: string): Promise<boolean> {
-    throw new NotImplementedException('Not implemented');
+    const mimeTypes: string = this.configService.get(ConfigurationTypes.STORAGE)
+      ?.ipfs.mime_types;
+    const allowedMimeTypes: string[] = mimeTypes.split(',');
+    if (!allowedMimeTypes.includes(mimeType)) return false;
+    return true;
   }
 }

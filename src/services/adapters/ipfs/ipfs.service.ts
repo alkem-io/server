@@ -42,7 +42,7 @@ export class IpfsService {
   public async uploadFileFromBuffer(buffer: Buffer): Promise<string> {
     const res = await this.ipfsClient.add(buffer, { pin: true });
     this.logger.verbose?.(
-      `Uploaded filewith CID: ${res.path}`,
+      `Uploaded file with CID: ${res.path}`,
       LogContext.IPFS
     );
     return `${this.ipfsClientEndpoint}/${res.path}`;

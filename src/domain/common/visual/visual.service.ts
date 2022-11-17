@@ -11,7 +11,7 @@ import { CreateVisualInput } from '@domain/common/visual/dto/visual.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ReadStream } from 'fs';
-import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
+import { IpfsUploadFailedException } from '@common/exceptions/ipfs.upload.exception';
 import { streamToBuffer, getImageSize } from '@common/utils';
 import { Visual } from './visual.entity';
 import { IVisual } from './visual.interface';
