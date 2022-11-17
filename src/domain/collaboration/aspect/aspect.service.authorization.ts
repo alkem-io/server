@@ -112,6 +112,14 @@ export class AspectAuthorizationService {
     // Allow hub admins to move card
     const credentials =
       this.communityPolicyService.getAdminCredentials(communityPolicy);
+    credentials.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN,
+      resourceID: '',
+    });
+    credentials.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+      resourceID: '',
+    });
     const adminsMoveCardRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.MOVE_CARD],
