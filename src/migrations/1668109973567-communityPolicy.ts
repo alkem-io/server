@@ -6,13 +6,14 @@ export class communityPolicy1668109973567 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `CREATE TABLE \`community_policy\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+      `CREATE TABLE \`community_policy\` (\`id\` varchar(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
              \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-              \`version\` int NOT NULL, \`member\` text NULL, \`lead\` text NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+              \`version\` int NOT NULL, \`member\` text NULL, \`lead\` text NULL,
+              PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`community\` ADD \`policyId\` char(36) NOT NULL`
+      `ALTER TABLE \`community\` ADD \`policyId\` varchar(36) NOT NULL`
     );
 
     const communities: { id: string; policy: string }[] =
@@ -84,10 +85,12 @@ export class communityPolicy1668109973567 implements MigrationInterface {
       }
     }
 
-    // Todo:
-    // await queryRunner.query(
-    //   `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_35533901817dd09d5906537e088\` FOREIGN KEY (\`policyId\`) REFERENCES \`community_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    // );
+    await queryRunner.query(
+      'ALTER TABLE `community` ADD UNIQUE INDEX `IDX_c9ff67519d26140f98265a542e` (`policyId`)'
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_35533901817dd09d5906537e088\` FOREIGN KEY (\`policyId\`) REFERENCES \`community_policy\`(\`id\`) ON UPDATE NO ACTION`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -119,6 +122,12 @@ export class communityPolicy1668109973567 implements MigrationInterface {
       );
     }
 
+    await queryRunner.query(
+      `ALTER TABLE \`community\` DROP FOREIGN KEY \`FK_35533901817dd09d5906537e088\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`community\` DROP INDEX \`IDX_c9ff67519d26140f98265a542e\``
+    );
     await queryRunner.query('ALTER TABLE `community` DROP COLUMN `policyId`');
     await queryRunner.query('DROP TABLE `community_policy`');
   }
