@@ -30,7 +30,7 @@ import { CredentialDefinition } from '@domain/agent/credential/credential.defini
 import { CommunityRole } from '@common/enums/community.role';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.type';
+import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 
 @Injectable()

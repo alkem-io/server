@@ -1,5 +1,5 @@
 import { AuthorizationCredential } from '@common/enums';
-import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.type';
+import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
 
 export const hubCommunityPolicy: ICommunityPolicyDefinition = {
   member: {

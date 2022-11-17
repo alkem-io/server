@@ -21,7 +21,7 @@ export class CommunityPolicyService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createCommunityPolicy(
+  public createCommunityPolicy(
     member: ICommunityRolePolicy,
     lead: ICommunityRolePolicy
   ): Promise<ICommunityPolicy> {
@@ -29,10 +29,10 @@ export class CommunityPolicyService {
       this.serializeRolePolicy(member),
       this.serializeRolePolicy(lead)
     );
-    return await this.save(policy);
+    return this.save(policy);
   }
 
-  async removeCommunityPolicy(
+  public async removeCommunityPolicy(
     communityPolicy: ICommunityPolicy
   ): Promise<boolean> {
     await this.communityPolicyRepository.remove(
@@ -41,22 +41,16 @@ export class CommunityPolicyService {
     return true;
   }
 
-  async save(policy: ICommunityPolicy): Promise<ICommunityPolicy> {
-    return await this.communityPolicyRepository.save(policy);
-  }
-
-  getCommunityRolePolicy(
+  public getCommunityRolePolicy(
     policy: ICommunityPolicy,
     role: CommunityRole
   ): ICommunityRolePolicy {
     switch (role) {
       case CommunityRole.MEMBER:
         return this.deserializeRolePolicy(policy.member);
-        break;
       case CommunityRole.LEAD:
         return this.deserializeRolePolicy(policy.lead);
-        break;
-
+      default:
         throw new EntityNotInitializedException(
           `Unable to locate role for community policy: ${policy.id}`,
           LogContext.COMMUNITY
@@ -131,7 +125,7 @@ export class CommunityPolicyService {
   }
 
   // Update the Community policy to have the right resource ID
-  async updateCommunityPolicyResourceID(
+  public updateCommunityPolicyResourceID(
     communityPolicy: ICommunityPolicy,
     resourceID: string
   ): Promise<ICommunityPolicy> {
@@ -146,7 +140,7 @@ export class CommunityPolicyService {
     return this.save(communityPolicy);
   }
 
-  async inheritParentCredentials(
+  public inheritParentCredentials(
     communityPolicyParent: ICommunityPolicy,
     communityPolicy: ICommunityPolicy
   ): Promise<ICommunityPolicy> {
@@ -163,6 +157,10 @@ export class CommunityPolicyService {
     communityPolicy.lead = this.serializeRolePolicy(leadPolicy);
 
     return this.save(communityPolicy);
+  }
+
+  private save(policy: ICommunityPolicy): Promise<ICommunityPolicy> {
+    return this.communityPolicyRepository.save(policy);
   }
 
   private inheritParentRoleCredentials(
