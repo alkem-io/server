@@ -1,12 +1,13 @@
 import { AuthorizationCredential } from '@common/enums';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
 
-export const opportunityCommunityPolicy: ICommunityPolicy = {
+export const opportunityCommunityPolicy: ICommunityPolicyDefinition = {
   member: {
     credential: {
       type: AuthorizationCredential.OPPORTUNITY_MEMBER,
       resourceID: '',
     },
+    parentCredentials: [],
     minOrg: 0,
     maxOrg: -1,
     minUser: 0,
@@ -17,6 +18,7 @@ export const opportunityCommunityPolicy: ICommunityPolicy = {
       type: AuthorizationCredential.OPPORTUNITY_LEAD,
       resourceID: '',
     },
+    parentCredentials: [],
     minOrg: 0,
     maxOrg: 9,
     minUser: 0,

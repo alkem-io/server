@@ -190,7 +190,6 @@ export class CommunityResolverFields {
     return await this.communityService.getCommunication(community.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('policy', () => ICommunityPolicy, {
     nullable: true,

@@ -34,12 +34,13 @@ import { CredentialDefinition } from '@domain/agent/credential/credential.defini
 import { CommunityRole } from '@common/enums/community.role';
 import { CommunityContributorsUpdateType } from '@common/enums/community.contributors.update.type';
 import { CommunityContributorType } from '@common/enums/community.contributor.type';
-import { CommunityPolicy } from '../community-policy/community.policy';
-import { ICommunityPolicyRole } from '../community-policy/community.policy.role.interface';
+import { ICommunityRolePolicy } from '../community-policy/community.policy.role.interface';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
 import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/dto/activity.dto.input.member.joined';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { AgentInfo } from '@core/authentication';
+import { CommunityPolicyService } from '../community-policy/community.policy.service';
+import { ICommunityPolicyDefinition } from '../community-policy/community.policy.definition';
 
 @Injectable()
 export class CommunityService {
@@ -52,6 +53,7 @@ export class CommunityService {
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
     private communicationService: CommunicationService,
+    private communityPolicyService: CommunityPolicyService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -61,10 +63,14 @@ export class CommunityService {
     name: string,
     hubID: string,
     type: CommunityType,
-    policy: CommunityPolicy
+    policy: ICommunityPolicyDefinition
   ): Promise<ICommunity> {
     const community: ICommunity = new Community(name, type);
     community.authorization = new AuthorizationPolicy();
+    community.policy = await this.communityPolicyService.createCommunityPolicy(
+      policy.member,
+      policy.lead
+    );
     community.hubID = hubID;
 
     community.groups = [];
@@ -73,8 +79,6 @@ export class CommunityService {
         community.displayName,
         hubID
       );
-
-    this.setCommunityPolicy(community, policy);
     return await this.communityRepository.save(community);
   }
 
@@ -181,6 +185,10 @@ export class CommunityService {
       );
     }
 
+    if (community.policy) {
+      await this.communityPolicyService.removeCommunityPolicy(community.policy);
+    }
+
     await this.communityRepository.remove(community as Community);
     return true;
   }
@@ -203,36 +211,6 @@ export class CommunityService {
     return undefined;
   }
 
-  getCommunityPolicy(community: ICommunity): ICommunityPolicy {
-    if (!community.policy) {
-      throw new EntityNotInitializedException(
-        `Unable to locate communication for community: ${community.displayName}`,
-        LogContext.COMMUNITY
-      );
-    }
-    const policy = JSON.parse(community.policy);
-    return policy;
-  }
-
-  setCommunityPolicy(
-    community: ICommunity,
-    policy: CommunityPolicy
-  ): ICommunity {
-    community.policy = JSON.stringify(policy);
-    return community;
-  }
-
-  updateCommunityPolicyResourceID(
-    community: ICommunity,
-    resourceID: string
-  ): ICommunity {
-    const policy = this.getCommunityPolicy(community);
-    // Update the Community policy to have the right resource ID
-    policy.member.credential.resourceID = resourceID;
-    policy.lead.credential.resourceID = resourceID;
-    return this.setCommunityPolicy(community, policy);
-  }
-
   async setParentCommunity(
     community?: ICommunity,
     parentCommunity?: ICommunity
@@ -243,6 +221,12 @@ export class CommunityService {
         LogContext.COMMUNITY
       );
     community.parentCommunity = parentCommunity;
+    // Also update the communityPolicy
+    community.policy =
+      await this.communityPolicyService.inheritParentCredentials(
+        this.getCommunityPolicy(parentCommunity),
+        this.getCommunityPolicy(community)
+      );
     await this.communityRepository.save(community);
     return community;
   }
@@ -398,6 +382,17 @@ export class CommunityService {
     });
   }
 
+  public getCommunityPolicy(community: ICommunity): ICommunityPolicy {
+    const policy = community.policy;
+    if (!policy) {
+      throw new EntityNotInitializedException(
+        `Unable to locate policy for community: ${community.displayName}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return policy;
+  }
+
   async getCommunication(communityID: string): Promise<ICommunication> {
     const community = await this.getCommunityOrFail(communityID, {
       relations: ['communication'],
@@ -480,7 +475,7 @@ export class CommunityService {
 
   private async validateUserCommunityPolicy(
     community: ICommunity,
-    communityPolicyRole: ICommunityPolicyRole,
+    communityPolicyRole: ICommunityRolePolicy,
     role: CommunityRole,
     action: CommunityContributorsUpdateType
   ) {
@@ -511,7 +506,7 @@ export class CommunityService {
 
   private async validateOrganizationCommunityPolicy(
     community: ICommunity,
-    communityPolicyRole: ICommunityPolicyRole,
+    communityPolicyRole: ICommunityRolePolicy,
     role: CommunityRole,
     action: CommunityContributorsUpdateType
   ) {
@@ -542,7 +537,7 @@ export class CommunityService {
 
   private async validateCommunityPolicyLimits(
     community: ICommunity,
-    communityPolicyRole: ICommunityPolicyRole,
+    communityPolicyRole: ICommunityRolePolicy,
     role: CommunityRole,
     action: CommunityContributorsUpdateType,
     contributorType: CommunityContributorType
@@ -611,16 +606,19 @@ export class CommunityService {
   private getCommunityPolicyForRole(
     community: ICommunity,
     role: CommunityRole
-  ): ICommunityPolicyRole {
+  ): ICommunityRolePolicy {
     const policy = this.getCommunityPolicy(community);
-    if (role === CommunityRole.MEMBER) {
-      return policy.member;
-    } else if (role === CommunityRole.LEAD) {
-      return policy.lead;
-    }
-    throw new EntityNotFoundException(
-      `Unable to find Community role of type: ${role}`,
-      LogContext.COMMUNITY
+    return this.communityPolicyService.getCommunityRolePolicy(policy, role);
+  }
+
+  public updateCommunityPolicyResourceID(
+    community: ICommunity,
+    resourceID: string
+  ): Promise<ICommunityPolicy> {
+    const policy = this.getCommunityPolicy(community);
+    return this.communityPolicyService.updateCommunityPolicyResourceID(
+      policy,
+      resourceID
     );
   }
 
