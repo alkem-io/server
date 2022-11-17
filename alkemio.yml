@@ -306,6 +306,9 @@ storage:
     # Max file size of files that will be uploaded to IPFS (in bytes).
     max_file_size: 1048576
 
+    # Supported mime types
+    mime_type: ${IPFS_MIME_TYPES}:image/bmp,image/jpeg,image/x-png,image/png,image/gif,application/pdf
+
   # Redis configuration
   redis:
     # Redis host

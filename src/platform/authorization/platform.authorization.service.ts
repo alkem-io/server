@@ -102,6 +102,7 @@ export class PlatformAuthorizationService {
     const hubAdminsNotInherited = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.CREATE_ORGANIZATION,
+        AuthorizationPrivilege.FILE_UPLOAD,
         AuthorizationPrivilege.ADMIN,
       ],
       AuthorizationCredential.HUB_ADMIN
@@ -121,6 +122,7 @@ export class PlatformAuthorizationService {
     const challengeAdminsNotInherited = new AuthorizationPolicyRuleCredential(
       [
         AuthorizationPrivilege.CREATE_ORGANIZATION,
+        AuthorizationPrivilege.FILE_UPLOAD,
         AuthorizationPrivilege.ADMIN,
       ],
       AuthorizationCredential.CHALLENGE_ADMIN
@@ -163,10 +165,17 @@ export class PlatformAuthorizationService {
       [
         AuthorizationPrivilege.CREATE_HUB,
         AuthorizationPrivilege.CREATE_ORGANIZATION,
+        AuthorizationPrivilege.FILE_UPLOAD,
       ],
       AuthorizationPrivilege.CREATE
     );
     privilegeRules.push(createPrivilege);
+
+    const deletePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.FILE_DELETE],
+      AuthorizationPrivilege.DELETE
+    );
+    privilegeRules.push(deletePrivilege);
 
     return privilegeRules;
   }

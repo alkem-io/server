@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotImplementedException } from '@nestjs/common';
 import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-// import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ReadStream } from 'fs';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs.exception';
 import { streamToBuffer } from '@common/utils';
@@ -10,7 +10,7 @@ import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
 @Injectable()
 export class FileManagerService {
   constructor(
-    // private authorizationPolicyService: AuthorizationPolicyService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private ipfsService: IpfsService
   ) {}
 
@@ -31,6 +31,13 @@ export class FileManagerService {
         LogContext.FILE_MANAGER
       );
 
+    if (await this.validateMimeTypes(mimetype)) {
+      throw new ValidationException(
+        `Tried to import invalid mimetype ${mimetype}!`,
+        LogContext.FILE_MANAGER
+      );
+    }
+
     const buffer = await streamToBuffer(readStream);
 
     try {
@@ -50,5 +57,9 @@ export class FileManagerService {
         `Ipfs removing file at path ${filePath} failed! Error: ${error.message}`
       );
     }
+  }
+
+  private async validateMimeTypes(mimeType: string): Promise<boolean> {
+    throw new NotImplementedException('Not implemented');
   }
 }
