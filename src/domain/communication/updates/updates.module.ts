@@ -1,6 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { RoomModule } from '../room/room.module';
@@ -16,6 +17,7 @@ import { UpdatesService } from './updates.service';
     NotificationAdapterModule,
     RoomModule,
     CommunicationAdapterModule,
+    ActivityAdapterModule,
     TypeOrmModule.forFeature([Updates]),
   ],
   providers: [

@@ -172,6 +172,7 @@ export class AuthorizationPolicyService {
     childAuthorization: IAuthorizationPolicy | undefined,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
+    // TODO: remove this
     // create a new child definition if one is not provided, a temporary fix
     let child = childAuthorization;
     if (!child) {

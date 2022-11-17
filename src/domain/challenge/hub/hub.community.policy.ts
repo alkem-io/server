@@ -1,12 +1,13 @@
 import { AuthorizationCredential } from '@common/enums';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
 
-export const hubCommunityPolicy: ICommunityPolicy = {
+export const hubCommunityPolicy: ICommunityPolicyDefinition = {
   member: {
     credential: {
       type: AuthorizationCredential.HUB_MEMBER,
       resourceID: '',
     },
+    parentCredentials: [],
     minOrg: 0,
     maxOrg: -1,
     minUser: 0,
@@ -17,6 +18,7 @@ export const hubCommunityPolicy: ICommunityPolicy = {
       type: AuthorizationCredential.HUB_HOST,
       resourceID: '',
     },
+    parentCredentials: [],
     minOrg: 0,
     maxOrg: 1,
     minUser: 0,

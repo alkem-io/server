@@ -18,6 +18,7 @@ import {
   TINY_TEXT_LENGTH,
   UUID_LENGTH,
 } from '@src/common/constants/entity.field.length.constants';
+import { CommunityPolicy } from '../community-policy/community.policy.entity';
 
 @Entity()
 export class Community
@@ -50,8 +51,13 @@ export class Community
   })
   applications?: IApplication[];
 
-  @Column('text')
-  policy: string;
+  @OneToOne(() => CommunityPolicy, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  policy!: CommunityPolicy;
 
   // The parent community can have many child communities; the relationship is controlled by the child.
   @ManyToOne(() => Community, {
@@ -77,6 +83,5 @@ export class Community
     this.type = type;
     this.hubID = '';
     this.parentID = '';
-    this.policy = '';
   }
 }
