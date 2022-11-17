@@ -13,7 +13,7 @@ export class communityPolicy1668109973567 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`community\` ADD \`policyId\` varchar(36) NULL`
+      `ALTER TABLE \`community\` ADD \`policyId\` varchar(36) NOT NULL`
     );
 
     const communities: { id: string; policy: string }[] =
@@ -89,7 +89,7 @@ export class communityPolicy1668109973567 implements MigrationInterface {
       'ALTER TABLE `community` ADD UNIQUE INDEX `IDX_c9ff67519d26140f98265a542e` (`policyId`)'
     );
     await queryRunner.query(
-      `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_35533901817dd09d5906537e088\` FOREIGN KEY (\`policyId\`) REFERENCES \`community_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_35533901817dd09d5906537e088\` FOREIGN KEY (\`policyId\`) REFERENCES \`community_policy\`(\`id\`) ON UPDATE NO ACTION`
     );
   }
 
