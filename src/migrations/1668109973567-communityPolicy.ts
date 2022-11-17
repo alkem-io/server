@@ -16,9 +16,8 @@ export class communityPolicy1668109973567 implements MigrationInterface {
       `ALTER TABLE \`community\` ADD \`policyId\` varchar(36) NOT NULL`
     );
 
-    const communities: any[] = await queryRunner.query(
-      `SELECT id, policy FROM community`
-    );
+    const communities: { id: string; policy: string }[] =
+      await queryRunner.query(`SELECT id, policy FROM community`);
     for (const community of communities) {
       const policyStr = community.policy;
       const policy: oldCommunityPolicy = JSON.parse(policyStr);
@@ -37,26 +36,27 @@ export class communityPolicy1668109973567 implements MigrationInterface {
         `INSERT INTO community_policy (id, createdDate, updatedDate, version, member, lead) VALUES ('${communityPolicyID}', NOW(), NOW(), 1, '${memberStr}', '${leadStr}')`
       );
       await queryRunner.query(
-        `UPDATE community SET policyId = '${communityPolicyID}' WHERE (id = '${community.id}')`
+        `UPDATE community SET policyId = '${communityPolicyID}' WHERE id = '${community.id}'`
       );
     }
 
     await queryRunner.query('ALTER TABLE `community` DROP COLUMN `policy`');
 
     // Now set the parent credentials
-    const communitiesNewPolicy: any[] = await queryRunner.query(
+    const communitiesNewPolicy: {
+      id: string;
+      policyId: string;
+      parentCommunityId: string;
+    }[] = await queryRunner.query(
       `SELECT id, policyId, parentCommunityId FROM community`
     );
     for (const community of communitiesNewPolicy) {
       const parentCommunityId = community.parentCommunityId;
       if (parentCommunityId) {
-        console.log(
-          `===> Updating parent credentials for community with id: ${community.id}`
-        );
         // Need to get the parents
         const parentMemberCredentials: any[] = [];
         const parentLeadCredentials: any[] = [];
-        await this.getCredentialsForCommunity(
+        await getCredentialsForCommunity(
           parentCommunityId,
           queryRunner,
           parentMemberCredentials,
@@ -93,38 +93,6 @@ export class communityPolicy1668109973567 implements MigrationInterface {
     );
   }
 
-  private async getCredentialsForCommunity(
-    communityID: string,
-    queryRunner: QueryRunner,
-    parentMemberCredentials: any[],
-    parentLeadCredentials: any[]
-  ): Promise<void> {
-    const communityResult = await queryRunner.query(
-      `SELECT id, policyId, parentCommunityId  FROM community  WHERE (id = '${communityID}')`
-    );
-    const community = communityResult[0];
-    const communityPolicyResult = await queryRunner.query(
-      `SELECT id, member, lead  FROM community_policy  WHERE (id = '${community.policyId}')`
-    );
-    const communityPolicy = communityPolicyResult[0];
-    const memberPolicy = JSON.parse(
-      communityPolicy.member
-    ) as newCommunityRolePolicy;
-    const leadPolicy = JSON.parse(
-      communityPolicy.lead
-    ) as newCommunityRolePolicy;
-    parentMemberCredentials.push(memberPolicy.credential);
-    parentLeadCredentials.push(leadPolicy.credential);
-    if (community.parentCommunityId) {
-      return await this.getCredentialsForCommunity(
-        community.parentCommunityId,
-        queryRunner,
-        parentMemberCredentials,
-        parentLeadCredentials
-      );
-    }
-  }
-
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `ALTER TABLE \`community\` ADD \`policy\` text NULL`
@@ -134,9 +102,10 @@ export class communityPolicy1668109973567 implements MigrationInterface {
       `SELECT id, policyId FROM community`
     );
     for (const community of communities) {
-      const communityPolicies = await queryRunner.query(
-        `SELECT id, member, lead FROM community_policy WHERE (id = '${community.policyId}')`
-      );
+      const communityPolicies: { id: string; member: string; lead: string }[] =
+        await queryRunner.query(
+          `SELECT id, member, lead FROM community_policy WHERE (id = '${community.policyId}')`
+        );
       const communityPolicy = communityPolicies[0];
       const { parentCredentials: memberParents, ...oldMemberRolePolicy } =
         JSON.parse(communityPolicy.member) as newCommunityRolePolicy;
@@ -163,6 +132,41 @@ export class communityPolicy1668109973567 implements MigrationInterface {
     await queryRunner.query('DROP TABLE `community_policy`');
   }
 }
+
+const getCredentialsForCommunity = async (
+  communityID: string,
+  queryRunner: QueryRunner,
+  parentMemberCredentials: any[],
+  parentLeadCredentials: any[]
+): Promise<void> => {
+  const communityResult: {
+    id: string;
+    policyId: string;
+    parentCommunityId: string;
+  }[] = await queryRunner.query(
+    `SELECT id, policyId, parentCommunityId  FROM community  WHERE id = '${communityID}'`
+  );
+  const community = communityResult[0];
+  const communityPolicyResult: { id: string; member: string; lead: string }[] =
+    await queryRunner.query(
+      `SELECT id, member, lead  FROM community_policy  WHERE id = '${community.policyId}'`
+    );
+  const communityPolicy = communityPolicyResult[0];
+  const memberPolicy = JSON.parse(
+    communityPolicy.member
+  ) as newCommunityRolePolicy;
+  const leadPolicy = JSON.parse(communityPolicy.lead) as newCommunityRolePolicy;
+  parentMemberCredentials.push(memberPolicy.credential);
+  parentLeadCredentials.push(leadPolicy.credential);
+  if (community.parentCommunityId) {
+    return getCredentialsForCommunity(
+      community.parentCommunityId,
+      queryRunner,
+      parentMemberCredentials,
+      parentLeadCredentials
+    );
+  }
+};
 
 type oldCommunityPolicy = {
   member: oldCommunityRolePolicy;

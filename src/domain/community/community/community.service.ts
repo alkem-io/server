@@ -40,7 +40,7 @@ import { ActivityInputMemberJoined } from '@services/adapters/activity-adapter/d
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { AgentInfo } from '@core/authentication';
 import { CommunityPolicyService } from '../community-policy/community.policy.service';
-import { ICommunityPolicyDefinition } from '../community-policy/community.policy.type';
+import { ICommunityPolicyDefinition } from '../community-policy/community.policy.definition';
 
 @Injectable()
 export class CommunityService {
@@ -382,7 +382,7 @@ export class CommunityService {
     });
   }
 
-  getCommunityPolicy(community: ICommunity): ICommunityPolicy {
+  public getCommunityPolicy(community: ICommunity): ICommunityPolicy {
     const policy = community.policy;
     if (!policy) {
       throw new EntityNotInitializedException(
@@ -611,12 +611,12 @@ export class CommunityService {
     return this.communityPolicyService.getCommunityRolePolicy(policy, role);
   }
 
-  async updateCommunityPolicyResourceID(
+  public updateCommunityPolicyResourceID(
     community: ICommunity,
     resourceID: string
   ): Promise<ICommunityPolicy> {
     const policy = this.getCommunityPolicy(community);
-    return await this.communityPolicyService.updateCommunityPolicyResourceID(
+    return this.communityPolicyService.updateCommunityPolicyResourceID(
       policy,
       resourceID
     );
