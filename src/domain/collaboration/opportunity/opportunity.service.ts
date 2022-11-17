@@ -105,8 +105,8 @@ export class OpportunityService {
     // set immediate community parent
     if (opportunity.community) {
       opportunity.community.parentID = opportunity.id;
-      opportunity.community =
-        this.communityService.updateCommunityPolicyResourceID(
+      opportunity.community.policy =
+        await this.communityService.updateCommunityPolicyResourceID(
           opportunity.community,
           opportunity.id
         );
