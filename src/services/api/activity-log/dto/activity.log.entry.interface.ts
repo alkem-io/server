@@ -12,6 +12,7 @@ import { IActivityLogEntryCalloutCardComment } from './activity.log.dto.entry.ca
 import { IActivityLogEntryCalloutDiscussionComment } from './activity.log.dto.entry.callout.discussion.comment';
 import { IActivityLogEntryChallengeCreated } from './activity.log.dto.entry.challenge.created';
 import { IActivityLogEntryOpportunityCreated } from './activity.log.dto.entry.opportunity.created';
+import { IActivityLogEntryUpdateSent } from './activity.log.dto.entry.update.sent';
 
 @InterfaceType('ActivityLogEntry', {
   resolveType(activityLogEntry) {
@@ -33,6 +34,8 @@ import { IActivityLogEntryOpportunityCreated } from './activity.log.dto.entry.op
         return IActivityLogEntryCalloutDiscussionComment;
       case ActivityEventType.MEMBER_JOINED:
         return IActivityLogEntryMemberJoined;
+      case ActivityEventType.UPDATE_SENT:
+        return IActivityLogEntryUpdateSent;
     }
 
     throw new RelationshipNotFoundException(

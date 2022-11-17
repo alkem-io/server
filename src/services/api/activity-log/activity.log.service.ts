@@ -16,6 +16,7 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import ActivityLogBuilderService, {
   IActivityLogBuilder,
 } from '@services/api/activity-log/activity.log.builder.service';
+import { UpdatesService } from '@domain/communication/updates/updates.service';
 
 export class ActivityLogService {
   constructor(
@@ -26,6 +27,7 @@ export class ActivityLogService {
     private canvasService: CanvasService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
+    private updatesService: UpdatesService,
     private communityService: CommunityService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -78,7 +80,8 @@ export class ActivityLogService {
             this.canvasService,
             this.challengeService,
             this.opportunityService,
-            this.communityService
+            this.communityService,
+            this.updatesService
           );
         const activityType = rawActivity.type as ActivityEventType;
         const result = await activityBuilder[activityType](rawActivity);

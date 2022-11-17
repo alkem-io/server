@@ -22,4 +22,5 @@ export interface IActivityLogBuilder {
   [ActivityEventType.OPPORTUNITY_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryOpportunityCreated>;
   [ActivityEventType.CARD_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutCardComment>;
   [ActivityEventType.DISCUSSION_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutDiscussionComment>;
+  [ActivityEventType.UPDATE_SENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutDiscussionComment>;
 }
