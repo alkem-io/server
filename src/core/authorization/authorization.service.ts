@@ -10,6 +10,7 @@ import { AuthorizationPolicyRulePrivilege } from './authorization.policy.rule.pr
 import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.credential.interface';
 import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicyRuleVerifiedCredential } from './authorization.policy.rule.verified.credential.interface';
+import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception copy';
 
 @Injectable()
 export class AuthorizationService {
@@ -200,7 +201,14 @@ export class AuthorizationService {
     credential: ICredential,
     credentialRule: IAuthorizationPolicyRuleCredential
   ): boolean {
-    for (const criteria of credentialRule.criterias) {
+    const criterias = credentialRule.criterias;
+    if (criterias.length === 0) {
+      throw new AuthorizationInvalidPolicyException(
+        `Credential rule without criteria: ${credentialRule}`,
+        LogContext.AUTH
+      );
+    }
+    for (const criteria of criterias) {
       if (credential.type === criteria.type) {
         if (
           criteria.resourceID === '' ||

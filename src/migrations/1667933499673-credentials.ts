@@ -9,7 +9,9 @@ export class credentials1667933499673 implements MigrationInterface {
     );
     for (const authorization of authorizations) {
       if (!authorization.credentialRules) {
-        //console.log(`No credential rules found for policy with id: ${authorization.id}`);
+        // throw new Error(
+        //   `Encuontered empty credential Rule: ${authorization.id}`
+        // );
         continue;
       }
       const rules: oldCredentialRule[] = JSON.parse(

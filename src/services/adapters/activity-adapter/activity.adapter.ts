@@ -20,11 +20,15 @@ import { ActivityInputAspectComment } from './dto/activity.dto.input.aspect.comm
 import { ActivityInputCalloutDiscussionComment } from './dto/activity.dto.input.callout.discussion.comment';
 import { ActivityInputChallengeCreated } from './dto/activity.dto.input.challenge.created';
 import { ActivityInputOpportunityCreated } from './dto/activity.dto.input.opportunity.created';
+import { ActivityInputUpdateSent } from './dto/activity.dto.input.update.sent';
+import { Community } from '@domain/community/community/community.entity';
 
 @Injectable()
 export class ActivityAdapter {
   constructor(
     private activityService: ActivityService,
+    @InjectRepository(Community)
+    private communityRepository: Repository<Community>,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>,
     @InjectRepository(Collaboration)
@@ -250,6 +254,33 @@ export class ActivityAdapter {
     return true;
   }
 
+  public async updateSent(
+    eventData: ActivityInputUpdateSent
+  ): Promise<boolean> {
+    this.logger.verbose?.(
+      `Event received: ${JSON.stringify(eventData)}`,
+      LogContext.ACTIVITY
+    );
+    const updates = eventData.updates;
+    const communityID = await this.getCommunityIdFromUpdates(updates.id);
+    const collaborationID = await this.getCollaborationIdFromCommunity(
+      communityID
+    );
+
+    const activity = await this.activityService.createActivity({
+      triggeredBy: eventData.triggeredBy,
+      collaborationID,
+      resourceID: updates.id,
+      parentID: communityID,
+      description: eventData.message,
+      type: ActivityEventType.UPDATE_SENT,
+    });
+
+    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+
+    return true;
+  }
+
   private async getCollaborationIdForHub(hubID: string): Promise<string> {
     const [result]: { collaborationId: string }[] = await getConnection().query(
       `
@@ -381,5 +412,25 @@ export class ActivityAdapter {
       return '';
     }
     return result.collaborationId;
+  }
+
+  private async getCommunityIdFromUpdates(updatesID: string) {
+    const community = await this.communityRepository
+      .createQueryBuilder('community')
+      .leftJoinAndSelect('community.communication', 'communication')
+      .leftJoinAndSelect('communication.updates', 'updates')
+      .where('updates.id = :updatesID')
+      .setParameters({
+        updatesID: `${updatesID}`,
+      })
+      .getOne();
+    if (!community) {
+      this.logger.error(
+        `Unable to identify Community for provided updates: ${updatesID}`,
+        LogContext.COMMUNITY
+      );
+      return '';
+    }
+    return community.id;
   }
 }

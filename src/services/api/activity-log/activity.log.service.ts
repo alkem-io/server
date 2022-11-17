@@ -16,6 +16,8 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import ActivityLogBuilderService, {
   IActivityLogBuilder,
 } from '@services/api/activity-log/activity.log.builder.service';
+import { UpdatesService } from '@domain/communication/updates/updates.service';
+import { IActivity } from '@platform/activity/activity.interface';
 
 export class ActivityLogService {
   constructor(
@@ -26,6 +28,7 @@ export class ActivityLogService {
     private canvasService: CanvasService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
+    private updatesService: UpdatesService,
     private communityService: CommunityService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -41,56 +44,72 @@ export class ActivityLogService {
       LogContext.ACTIVITY
     );
 
+    // Get all raw activities; limit is used to determine the amount of results
     const rawActivities =
       await this.activityService.getActivityForCollaboration(
-        queryData.collaborationID,
-        queryData.limit
+        queryData.collaborationID
       );
 
+    // Convert results until have enough
     const results: IActivityLogEntry[] = [];
     for (const rawActivity of rawActivities) {
-      try {
-        // Work around for community member joined without parentID set
-        if (
-          rawActivity.type === ActivityEventType.MEMBER_JOINED &&
-          !rawActivity.parentID
-        ) {
-          continue;
+      if (!queryData.limit || queryData.limit > results.length) {
+        const result = await this.convertRawActivityToResult(rawActivity);
+        if (result) {
+          results.push(result);
         }
-
-        const userTriggeringActivity = await this.userService.getUserOrFail(
-          rawActivity.triggeredBy
-        );
-        const activityLogEntryBase: IActivityLogEntry = {
-          id: rawActivity.id,
-          triggeredBy: userTriggeringActivity,
-          createdDate: rawActivity.createdDate,
-          type: rawActivity.type,
-          description: rawActivity.description,
-          collaborationID: rawActivity.collaborationID,
-        };
-        const activityBuilder: IActivityLogBuilder =
-          new ActivityLogBuilderService(
-            activityLogEntryBase,
-            this.userService,
-            this.calloutService,
-            this.aspectService,
-            this.canvasService,
-            this.challengeService,
-            this.opportunityService,
-            this.communityService
-          );
-        const activityType = rawActivity.type as ActivityEventType;
-        const result = await activityBuilder[activityType](rawActivity);
-        results.push(result);
-      } catch (error) {
-        //
-        this.logger.warn(
-          `Unable to process activity entry ${rawActivity.id}: ${error}`,
-          LogContext.ACTIVITY
-        );
+        if (queryData.limit && results.length >= queryData.limit) {
+          break;
+        }
       }
     }
     return results;
+  }
+
+  private async convertRawActivityToResult(
+    rawActivity: IActivity
+  ): Promise<IActivityLogEntry | undefined> {
+    try {
+      // Work around for community member joined without parentID set
+      if (
+        rawActivity.type === ActivityEventType.MEMBER_JOINED &&
+        !rawActivity.parentID
+      ) {
+        return undefined;
+      }
+
+      const userTriggeringActivity = await this.userService.getUserOrFail(
+        rawActivity.triggeredBy
+      );
+      const activityLogEntryBase: IActivityLogEntry = {
+        id: rawActivity.id,
+        triggeredBy: userTriggeringActivity,
+        createdDate: rawActivity.createdDate,
+        type: rawActivity.type,
+        description: rawActivity.description,
+        collaborationID: rawActivity.collaborationID,
+      };
+      const activityBuilder: IActivityLogBuilder =
+        new ActivityLogBuilderService(
+          activityLogEntryBase,
+          this.userService,
+          this.calloutService,
+          this.aspectService,
+          this.canvasService,
+          this.challengeService,
+          this.opportunityService,
+          this.communityService,
+          this.updatesService
+        );
+      const activityType = rawActivity.type as ActivityEventType;
+      const result = await activityBuilder[activityType](rawActivity);
+      return result;
+    } catch (error) {
+      //
+      this.logger.warn(
+        `Unable to process activity entry ${rawActivity.id}: ${error}`,
+        LogContext.ACTIVITY
+      );
+    }
   }
 }
