@@ -22,17 +22,17 @@ selfservice:
       enabled: true
       # to enable & configure read https://hackmd.io/yXMYkiK9QHq4sJGWcGlwQA
     oidc:
-      enabled: false
-      # config:
-      #   providers:
-      #     - id: linkedin
-      #       provider: linkedin
-      #       client_id: 77tjjnhvonojf4
-      #       client_secret: s66LUXd3nj2jxB4G
-      #       mapper_url: file:///etc/config/kratos/oidc.linkedin.jsonnet
-      #       scope:
-      #         - r_emailaddress
-      #         - r_liteprofile
+      enabled: true
+      config:
+        providers:
+          - id: linkedin
+            provider: linkedin
+            client_id: 77tjjnhvonojf4
+            client_secret: s66LUXd3nj2jxB4G
+            mapper_url: file:///etc/config/kratos/oidc.linkedin.jsonnet
+            scope:
+              - r_emailaddress
+              - r_liteprofile
 
   flows:
     error:
