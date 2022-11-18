@@ -29,6 +29,7 @@ import { PlatformAuthorizationModule } from '@src/platform/authorization/platfor
 import { HubFilterModule } from '@services/infrastructure/hub-filter/hub.filter.module';
 import { HubResolverSubscriptions } from './hub.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
+import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activ
     AuthorizationModule,
     ContextModule,
     CommunityModule,
+    CommunityPolicyModule,
     ChallengeModule,
     BaseChallengeModule,
     LifecycleModule,

@@ -58,6 +58,7 @@ import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 
 @Injectable()
 export class ChallengeService {
@@ -396,10 +397,8 @@ export class ChallengeService {
     );
   }
 
-  async getCommunityMembershipCredential(
-    challengeId: string
-  ): Promise<CredentialDefinition> {
-    return await this.baseChallengeService.getCommunityMembershipCredential(
+  async getCommunityPolicy(challengeId: string): Promise<ICommunityPolicy> {
+    return await this.baseChallengeService.getCommunityPolicy(
       challengeId,
       this.challengeRepository
     );

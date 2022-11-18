@@ -24,6 +24,7 @@ import { PreferenceSetModule } from '@domain/common/preference-set/preference.se
 import { LifecycleTemplateModule } from '@domain/template/lifecycle-template/lifecycle.template.module';
 import { ChallengeResolverSubscriptions } from './challenge.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
+import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activ
     ContextModule,
     BaseChallengeModule,
     CommunityModule,
+    CommunityPolicyModule,
     OpportunityModule,
     TagsetModule,
     OrganizationModule,

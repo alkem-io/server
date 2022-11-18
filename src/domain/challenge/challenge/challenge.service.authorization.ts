@@ -21,7 +21,9 @@ import { IPreferenceSet } from '@domain/common/preference-set/preference.set.int
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ChallengePreferenceType } from '@common/enums/challenge.preference.type';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -31,6 +33,7 @@ export class ChallengeAuthorizationService {
     private challengeService: ChallengeService,
     private opportunityAuthorizationService: OpportunityAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
+    private communityPolicyService: CommunityPolicyService,
     private preferenceSetService: PreferenceSetService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
@@ -38,12 +41,16 @@ export class ChallengeAuthorizationService {
 
   async applyAuthorizationPolicy(
     challenge: IChallenge,
-    parentAuthorization: IAuthorizationPolicy | undefined,
-    parentCommunityCredential: CredentialDefinition
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IChallenge> {
     const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
       challenge.id
     );
+    const communityPolicy = await this.challengeService.getCommunityPolicy(
+      challenge.id
+    );
+    this.setCommunityPolicyFlags(communityPolicy, preferenceSet);
+
     challenge.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         challenge.authorization,
@@ -55,7 +62,7 @@ export class ChallengeAuthorizationService {
     );
     challenge.authorization = this.appendVerifiedCredentialRules(
       challenge.authorization,
-      preferenceSet
+      communityPolicy
     );
 
     // propagate authorization rules for child entities
@@ -70,15 +77,10 @@ export class ChallengeAuthorizationService {
     challenge.community.authorization =
       await this.extendCommunityAuthorizationPolicy(
         challenge.community.authorization,
-        preferenceSet,
-        parentCommunityCredential
+        communityPolicy
       );
 
     // Cascade
-    const challengeCommunityCredential =
-      await this.challengeService.getCommunityMembershipCredential(
-        challenge.id
-      );
     challenge.childChallenges = await this.challengeService.getChildChallenges(
       challenge
     );
@@ -86,8 +88,7 @@ export class ChallengeAuthorizationService {
       for (const childChallenge of challenge.childChallenges) {
         await this.applyAuthorizationPolicy(
           childChallenge,
-          challenge.authorization,
-          challengeCommunityCredential
+          challenge.authorization
         );
       }
     }
@@ -112,6 +113,44 @@ export class ChallengeAuthorizationService {
     }
 
     return await this.challengeRepository.save(challenge);
+  }
+
+  private setCommunityPolicyFlags(
+    policy: ICommunityPolicy,
+    preferenceSet: IPreferenceSet
+  ) {
+    // Anonymouse Read access
+    const allowContextReview = this.preferenceSetService.getPreferenceValue(
+      preferenceSet,
+      ChallengePreferenceType.MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT
+    );
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT,
+      allowContextReview
+    );
+
+    //
+    const allowHubMembersToApply = this.preferenceSetService.getPreferenceValue(
+      preferenceSet,
+      ChallengePreferenceType.MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS
+    );
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS,
+      allowHubMembersToApply
+    );
+
+    //
+    const allowHubMembersToJoin = this.preferenceSetService.getPreferenceValue(
+      preferenceSet,
+      ChallengePreferenceType.MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS
+    );
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS,
+      allowHubMembersToJoin
+    );
   }
 
   private appendCredentialRules(
@@ -176,7 +215,7 @@ export class ChallengeAuthorizationService {
 
   private appendVerifiedCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    challengePreferenceSet: IPreferenceSet
+    policy: ICommunityPolicy
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -186,19 +225,19 @@ export class ChallengeAuthorizationService {
 
     return this.authorizationPolicyService.appendVerifiedCredentialAuthorizationRules(
       authorization,
-      this.createVerifiedCredentialRules(challengePreferenceSet)
+      this.createVerifiedCredentialRules(policy)
     );
   }
 
   private createVerifiedCredentialRules(
-    challengePreferenceSet: IPreferenceSet
+    communityPolicy: ICommunityPolicy
   ): AuthorizationPolicyRuleVerifiedCredential[] {
     const rules: AuthorizationPolicyRuleVerifiedCredential[] = [];
 
     // Allow feedback based on a particular VC
-    const allowContextReview = this.preferenceSetService.getPreferenceValue(
-      challengePreferenceSet,
-      ChallengePreferenceType.MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT
+    const allowContextReview = this.communityPolicyService.getFlag(
+      communityPolicy,
+      CommunityPolicyFlag.MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT
     );
     if (allowContextReview) {
       const theHagueCredential = new AuthorizationPolicyRuleVerifiedCredential(
@@ -214,8 +253,7 @@ export class ChallengeAuthorizationService {
 
   private extendCommunityAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    challengePreferenceSet: IPreferenceSet,
-    parentCommunityCredential: CredentialDefinition
+    policy: ICommunityPolicy
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -225,10 +263,13 @@ export class ChallengeAuthorizationService {
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
+    const parentCommunityCredential =
+      this.communityPolicyService.getParentMembershipCredential(policy);
+
     // Allow member of the parent community to Apply
-    const allowHubMembersToApply = this.preferenceSetService.getPreferenceValue(
-      challengePreferenceSet,
-      ChallengePreferenceType.MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS
+    const allowHubMembersToApply = this.communityPolicyService.getFlag(
+      policy,
+      CommunityPolicyFlag.MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS
     );
     if (allowHubMembersToApply) {
       const hubMemberCanApply = new AuthorizationPolicyRuleCredential(
@@ -241,9 +282,9 @@ export class ChallengeAuthorizationService {
     }
 
     // Allow member of the parent community to Join
-    const allowHubMembersToJoin = this.preferenceSetService.getPreferenceValue(
-      challengePreferenceSet,
-      ChallengePreferenceType.MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS
+    const allowHubMembersToJoin = this.communityPolicyService.getFlag(
+      policy,
+      CommunityPolicyFlag.MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS
     );
     if (allowHubMembersToJoin) {
       const hubMemberCanJoin = new AuthorizationPolicyRuleCredential(

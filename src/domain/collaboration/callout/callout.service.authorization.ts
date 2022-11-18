@@ -11,15 +11,17 @@ import { AspectAuthorizationService } from '@domain/collaboration/aspect/aspect.
 import { LogContext, AuthorizationPrivilege } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 import { AspectTemplateAuthorizationService } from '@domain/template/aspect-template/aspect.template.service.authorization';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 
 @Injectable()
 export class CalloutAuthorizationService {
   constructor(
     private calloutService: CalloutService,
+    private communityPolicyService: CommunityPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
@@ -32,7 +34,7 @@ export class CalloutAuthorizationService {
   public async applyAuthorizationPolicy(
     callout: ICallout,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityCredential: CredentialDefinition
+    communityPolicy: ICommunityPolicy
   ): Promise<ICallout> {
     callout.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -45,14 +47,15 @@ export class CalloutAuthorizationService {
     callout.authorization = this.appendCredentialRules(
       callout.authorization,
       callout.id,
-      communityCredential
+      communityPolicy
     );
 
     callout.aspects = await this.calloutService.getAspectsFromCallout(callout);
     for (const aspect of callout.aspects) {
       await this.aspectAuthorizationService.applyAuthorizationPolicy(
         aspect,
-        callout.authorization
+        callout.authorization,
+        communityPolicy
       );
     }
 
@@ -94,13 +97,16 @@ export class CalloutAuthorizationService {
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
     calloutId: string,
-    membershipCredential: CredentialDefinition
+    policy: ICommunityPolicy
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for Context: ${calloutId}`,
         LogContext.COLLABORATION
       );
+
+    const membershipCredential =
+      this.communityPolicyService.getMembershipCredential(policy);
 
     const newRules: AuthorizationPolicyRuleCredential[] = [];
 
