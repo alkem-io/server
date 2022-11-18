@@ -20,12 +20,15 @@ import { LogContext } from '@common/enums';
 import { getRandomId } from '@src/common/utils';
 import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/notification.dto.input.update.sent';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { ActivityInputUpdateSent } from '@services/adapters/activity-adapter/dto/activity.dto.input.update.sent';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 
 @Resolver()
 export class UpdatesResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private notificationAdapter: NotificationAdapter,
+    private activityAdapter: ActivityAdapter,
     private updatesService: UpdatesService,
     @Inject(SUBSCRIPTION_UPDATE_MESSAGE)
     private readonly subscriptionUpdateMessage: PubSubEngine,
@@ -80,6 +83,14 @@ export class UpdatesResolverMutations {
       SubscriptionType.COMMUNICATION_UPDATE_MESSAGE_RECEIVED,
       subscriptionPayload
     );
+
+    // Register activity
+    const activityLogInput: ActivityInputUpdateSent = {
+      triggeredBy: agentInfo.userID,
+      updates: updates,
+      message: updateSent.message,
+    };
+    await this.activityAdapter.updateSent(activityLogInput);
 
     return updateSent;
   }
