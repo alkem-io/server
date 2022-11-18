@@ -5,7 +5,9 @@ import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import { ReadStream } from 'fs';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { create, IPFSHTTPClient } from 'ipfs-http-client';
+import { CID, create, IPFSHTTPClient } from 'ipfs-http-client';
+import { IpfsDeleteFailedException } from '@common/exceptions/ipfs.delete.exception';
+import { IpfsGCFailedException } from '@common/exceptions/ipfs.gc.exception';
 
 @Injectable()
 export class IpfsService {
@@ -48,12 +50,39 @@ export class IpfsService {
     return `${this.ipfsClientEndpoint}/${res.path}`;
   }
 
-  public async removeFile(filePath: string): Promise<void> {
-    this.logger.verbose?.(
-      `Removing file from path: ${filePath}`,
-      LogContext.IPFS
-    );
+  public async unpinFile(CID: string): Promise<CID> {
+    this.logger.verbose?.(`Unpinning file from CID: ${CID}`, LogContext.IPFS);
 
-    return this.ipfsClient.files.rm(filePath);
+    try {
+      return this.ipfsClient.pin.rm(CID);
+    } catch (error: any) {
+      this.logger.error('Unpinning failed', LogContext.IPFS);
+      throw new IpfsDeleteFailedException(`Unpinning failed ${error.message}`);
+    }
+  }
+
+  public async garbageCollect(): Promise<boolean> {
+    this.logger.verbose?.('Garbage collection started!', LogContext.IPFS);
+    try {
+      for await (const gcFile of this.ipfsClient.repo.gc()) {
+        this.logger.verbose?.(
+          `Garbage collected ${gcFile.cid}`,
+          LogContext.IPFS
+        );
+
+        if (gcFile.err) {
+          this.logger.error(
+            `Error in collection ${gcFile.err}`,
+            LogContext.IPFS
+          );
+        }
+      }
+    } catch (error: any) {
+      this.logger.error('Garbage collection failed', LogContext.IPFS);
+      throw new IpfsGCFailedException(
+        `Garbage collection failed ${error.message}`
+      );
+    }
+    return true;
   }
 }

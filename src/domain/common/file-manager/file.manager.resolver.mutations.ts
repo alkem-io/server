@@ -7,6 +7,7 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationService } from '@platform/authorization/platform.authorization.service';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
+import { CID } from 'ipfs-http-client';
 import { FileManagerService } from './file.manager.service';
 
 @Resolver()
@@ -49,10 +50,15 @@ export class FileManagerResolverMutations {
   @Mutation(() => Boolean, {
     description: 'Removes a file.',
   })
-  async removeFile(
+  async deleteFile(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('filePath') filePath: string
-  ): Promise<void> {
+    @Args({
+      name: 'CID',
+      description:
+        'IPFS Content Identifier (CID) of the file, e.g. Qmde6CnXDGGe7Dynz1pnxgNARtdVBme9YBwNbo4HJiRy2W',
+    })
+    CID: string
+  ): Promise<boolean> {
     const authorizationPolicy =
       this.platformAuthorizationService.getPlatformAuthorizationPolicy();
 
@@ -60,8 +66,9 @@ export class FileManagerResolverMutations {
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.FILE_DELETE,
-      `file delete: ${filePath}`
+      `file delete: ${CID}`
     );
-    return await this.fileManagerService.removeFile(filePath);
+
+    return await this.fileManagerService.removeFile(CID);
   }
 }

@@ -50,12 +50,15 @@ export class FileManagerService {
     }
   }
 
-  async removeFile(filePath: string): Promise<void> {
+  async removeFile(CID: string): Promise<boolean> {
     try {
-      return await this.ipfsService.removeFile(filePath);
+      await this.ipfsService.unpinFile(CID);
+      await this.ipfsService.garbageCollect();
+
+      return true;
     } catch (error: any) {
       throw new IpfsDeleteFailedException(
-        `Ipfs removing file at path ${filePath} failed! Error: ${error.message}`
+        `Ipfs removing file at path ${CID} failed! Error: ${error.message}`
       );
     }
   }
