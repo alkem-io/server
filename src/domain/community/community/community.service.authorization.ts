@@ -7,12 +7,12 @@ import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { CommunityRole } from '@common/enums/community.role';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -93,25 +93,27 @@ export class CommunityAuthorizationService {
     authorization: IAuthorizationPolicy | undefined,
     allowGlobalRegisteredReadAccess: boolean | undefined
   ): IAuthorizationPolicy {
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const globalCommunityAdmin = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
-    );
+    const globalCommunityAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.GRANT,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY]
+      );
     newRules.push(globalCommunityAdmin);
 
     if (allowGlobalRegisteredReadAccess) {
-      const globalRegistered = new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.READ],
-        AuthorizationCredential.GLOBAL_REGISTERED
-      );
+      const globalRegistered =
+        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+          [AuthorizationPrivilege.READ],
+          [AuthorizationCredential.GLOBAL_REGISTERED]
+        );
       newRules.push(globalRegistered);
     }
 

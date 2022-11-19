@@ -11,7 +11,6 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IHub } from './hub.interface';
 import { Hub } from './hub.entity';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { HubPreferenceType } from '@common/enums/hub.preference.type';
 import { IOrganization } from '@domain/community';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
@@ -242,10 +241,11 @@ export class HubAuthorizationService {
     authorizationReset.inheritable = false;
     newRules.push(authorizationReset);
 
-    const communityAdmin = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.READ],
-      AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
-    );
+    const communityAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY]
+      );
     newRules.push(communityAdmin);
 
     // Allow Global admins + Global Hub Admins to manage access to Hubs + contents
@@ -287,14 +287,14 @@ export class HubAuthorizationService {
         `Authorization definition not found for: ${hubID}`,
         LogContext.CHALLENGES
       );
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     authorization.anonymousReadAccess = this.communityPolicyService.getFlag(
       policy,
       CommunityPolicyFlag.AUTHORIZATION_ANONYMOUS_READ_ACCESS
     );
 
-    const hubAdmin = new AuthorizationPolicyRuleCredential(
+    const hubAdmin = this.authorizationPolicyService.createCredentialRule(
       [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
@@ -302,33 +302,31 @@ export class HubAuthorizationService {
         AuthorizationPrivilege.DELETE,
         AuthorizationPrivilege.GRANT,
       ],
-      AuthorizationCredential.HUB_ADMIN,
-      hubID
+      [this.communityPolicyService.getAdminCredential(policy)]
     );
     newRules.push(hubAdmin);
 
-    // Grant members privileges depending on the preferences
+    // Members allowed to create challenges?
     const allowMembersToCreateChallengesPref =
       this.communityPolicyService.getFlag(
         policy,
         CommunityPolicyFlag.ALLOW_MEMBERS_TO_CREATE_CHALLENGES
       );
-
     if (allowMembersToCreateChallengesPref) {
-      const hubMember = new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.READ, AuthorizationPrivilege.CREATE_CHALLENGE],
-        AuthorizationCredential.HUB_MEMBER,
-        hubID
-      );
-      newRules.push(hubMember);
-    } else {
-      const hubMember = new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.READ],
-        AuthorizationCredential.HUB_MEMBER,
-        hubID
-      );
-      newRules.push(hubMember);
+      const memberChallenge =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.CREATE_CHALLENGE],
+          [this.communityPolicyService.getMembershipCredential(policy)]
+        );
+      memberChallenge.inheritable = false;
+      newRules.push(memberChallenge);
     }
+
+    const hubMember = this.authorizationPolicyService.createCredentialRule(
+      [AuthorizationPrivilege.READ, AuthorizationPrivilege.CONTRIBUTE],
+      [this.communityPolicyService.getMembershipCredential(policy)]
+    );
+    newRules.push(hubMember);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
@@ -350,7 +348,7 @@ export class HubAuthorizationService {
         LogContext.CHALLENGES
       );
 
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // Any registered user can apply
     const allowAnyRegisteredUserToApply = this.communityPolicyService.getFlag(
@@ -359,10 +357,11 @@ export class HubAuthorizationService {
     );
 
     if (allowAnyRegisteredUserToApply) {
-      const anyUserCanApply = new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.COMMUNITY_APPLY],
-        AuthorizationCredential.GLOBAL_REGISTERED
-      );
+      const anyUserCanApply =
+        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+          [AuthorizationPrivilege.COMMUNITY_APPLY],
+          [AuthorizationCredential.GLOBAL_REGISTERED]
+        );
       anyUserCanApply.inheritable = false;
       newRules.push(anyUserCanApply);
     }
@@ -373,10 +372,11 @@ export class HubAuthorizationService {
       CommunityPolicyFlag.MEMBERSHIP_JOIN_HUB_FROM_ANYONE
     );
     if (allowAnyRegisteredUserToJoin) {
-      const anyUserCanJoin = new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.COMMUNITY_JOIN],
-        AuthorizationCredential.GLOBAL_REGISTERED
-      );
+      const anyUserCanJoin =
+        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+          [AuthorizationPrivilege.COMMUNITY_JOIN],
+          [AuthorizationCredential.GLOBAL_REGISTERED]
+        );
       anyUserCanJoin.inheritable = false;
       newRules.push(anyUserCanJoin);
     }
@@ -393,11 +393,16 @@ export class HubAuthorizationService {
           'Not able to extend to allowing membership for host org that is not specified',
           LogContext.CHALLENGES
         );
-      const hostOrgMembersCanJoin = new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.COMMUNITY_JOIN],
-        AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-        hostOrg.id
-      );
+      const hostOrgMembersCanJoin =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.COMMUNITY_JOIN],
+          [
+            {
+              type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+              resourceID: hostOrg.id,
+            },
+          ]
+        );
       hostOrgMembersCanJoin.inheritable = false;
       newRules.push(hostOrgMembersCanJoin);
     }

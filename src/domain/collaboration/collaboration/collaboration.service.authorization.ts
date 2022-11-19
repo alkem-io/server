@@ -6,7 +6,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
@@ -14,6 +13,7 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 import { AuthorizationCredential } from '@common/enums';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -82,12 +82,13 @@ export class CollaborationAuthorizationService {
         LogContext.COLLABORATION
       );
 
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const communityMemberNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.CREATE_RELATION],
-      AuthorizationCredential.USER_SELF_MANAGEMENT
-    );
+    const communityMemberNotInherited =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.CREATE_RELATION],
+        [AuthorizationCredential.USER_SELF_MANAGEMENT]
+      );
     communityMemberNotInherited.inheritable = false;
     newRules.push(communityMemberNotInherited);
 

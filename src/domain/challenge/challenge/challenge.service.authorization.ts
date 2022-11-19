@@ -263,6 +263,27 @@ export class ChallengeAuthorizationService {
       rules.push(createOpportunityRule);
     }
 
+    // Who is able to contribute
+    const contributors = [
+      this.communityPolicyService.getMembershipCredential(policy),
+    ];
+    if (
+      this.communityPolicyService.getFlag(
+        policy,
+        CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+      )
+    ) {
+      contributors.push(
+        this.communityPolicyService.getParentMembershipCredential(policy)
+      );
+    }
+    const contributorsRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.CONTRIBUTE],
+        contributors
+      );
+    rules.push(contributorsRule);
+
     return rules;
   }
 

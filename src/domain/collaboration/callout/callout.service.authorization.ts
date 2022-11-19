@@ -10,12 +10,12 @@ import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service
 import { AspectAuthorizationService } from '@domain/collaboration/aspect/aspect.service.authorization';
 import { LogContext, AuthorizationPrivilege } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 import { AspectTemplateAuthorizationService } from '@domain/template/aspect-template/aspect.template.service.authorization';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -108,27 +108,27 @@ export class CalloutAuthorizationService {
     const membershipCredential =
       this.communityPolicyService.getMembershipCredential(policy);
 
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const communityMemberNotInherited = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE_ASPECT,
-        AuthorizationPrivilege.CREATE_CANVAS,
-      ],
-      membershipCredential.type,
-      membershipCredential.resourceID
-    );
+    const communityMemberNotInherited =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.CREATE_ASPECT,
+          AuthorizationPrivilege.CREATE_CANVAS,
+        ],
+        [membershipCredential]
+      );
     communityMemberNotInherited.inheritable = false;
     newRules.push(communityMemberNotInherited);
 
-    const communityMemberInherited = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.UPDATE_CANVAS,
-        AuthorizationPrivilege.CREATE_COMMENT,
-      ],
-      membershipCredential.type,
-      membershipCredential.resourceID
-    );
+    const communityMemberInherited =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.UPDATE_CANVAS,
+          AuthorizationPrivilege.CREATE_COMMENT,
+        ],
+        [membershipCredential]
+      );
     communityMemberInherited.inheritable = true;
     newRules.push(communityMemberInherited);
 
@@ -155,6 +155,16 @@ export class CalloutAuthorizationService {
       AuthorizationPrivilege.CREATE
     );
     privilegeRules.push(createPrivilege);
+
+    const contributorsCreatePrivilege = new AuthorizationPolicyRulePrivilege(
+      [
+        AuthorizationPrivilege.CREATE_ASPECT,
+        AuthorizationPrivilege.CREATE_CANVAS,
+        AuthorizationPrivilege.CREATE_COMMENT,
+      ],
+      AuthorizationPrivilege.CONTRIBUTE
+    );
+    privilegeRules.push(contributorsCreatePrivilege);
 
     const updatePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.UPDATE_CANVAS],

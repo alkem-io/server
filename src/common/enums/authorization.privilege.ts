@@ -14,6 +14,7 @@ export enum AuthorizationPrivilege {
   CREATE_CHALLENGE = 'create-challenge',
   CREATE_ASPECT = 'create-aspect',
   CREATE_COMMENT = 'create-comment',
+  CONTRIBUTE = 'contribute',
   CREATE_HUB = 'create-hub',
   CREATE_ORGANIZATION = 'create-organization',
   READ_USERS = 'read-users',
