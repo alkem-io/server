@@ -99,29 +99,44 @@ export class CommunityPolicyService {
     const leadCredentials = this.getLeadCredentials(policy);
     const adminCredentials: ICredentialDefinition[] = [];
     for (const leadCredential of leadCredentials) {
-      const resourceID = leadCredential.resourceID;
-      switch (leadCredential.type) {
-        case AuthorizationCredential.HUB_HOST:
-          adminCredentials.push({
-            type: AuthorizationCredential.HUB_ADMIN,
-            resourceID,
-          });
-          break;
-        case AuthorizationCredential.CHALLENGE_LEAD:
-          adminCredentials.push({
-            type: AuthorizationCredential.CHALLENGE_ADMIN,
-            resourceID,
-          });
-          break;
-        case AuthorizationCredential.OPPORTUNITY_LEAD:
-          adminCredentials.push({
-            type: AuthorizationCredential.OPPORTUNITY_LEAD,
-            resourceID,
-          });
-          break;
-      }
+      const adminCredential = this.convertLeadToAdminCredential(leadCredential);
+      adminCredentials.push(adminCredential);
     }
     return adminCredentials;
+  }
+
+  getAdminCredential(policy: ICommunityPolicy): ICredentialDefinition {
+    const leadCredential = this.getLeadCredential(policy);
+    return this.convertLeadToAdminCredential(leadCredential);
+  }
+
+  private convertLeadToAdminCredential(
+    leadCredential: ICredentialDefinition
+  ): ICredentialDefinition {
+    const resourceID = leadCredential.resourceID;
+    switch (leadCredential.type) {
+      case AuthorizationCredential.HUB_HOST:
+        return {
+          type: AuthorizationCredential.HUB_ADMIN,
+          resourceID,
+        };
+      case AuthorizationCredential.CHALLENGE_LEAD:
+        return {
+          type: AuthorizationCredential.CHALLENGE_ADMIN,
+          resourceID,
+        };
+      case AuthorizationCredential.OPPORTUNITY_LEAD:
+        return {
+          type: AuthorizationCredential.OPPORTUNITY_LEAD,
+          resourceID,
+        };
+    }
+    throw new EntityNotInitializedException(
+      `Unable to convert Lead to admin credential: ${JSON.stringify(
+        leadCredential
+      )}`,
+      LogContext.COMMUNITY
+    );
   }
 
   // Update the Community policy to have the right resource ID
@@ -192,6 +207,11 @@ export class CommunityPolicyService {
       policy,
       CommunityRole.MEMBER
     );
+    return rolePolicy.credential;
+  }
+
+  getLeadCredential(policy: ICommunityPolicy): CredentialDefinition {
+    const rolePolicy = this.getCommunityRolePolicy(policy, CommunityRole.LEAD);
     return rolePolicy.credential;
   }
 }
