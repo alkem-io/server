@@ -79,9 +79,17 @@ export class ChallengeAuthorizationService {
     challenge.community = await this.challengeService.getCommunity(
       challenge.id
     );
-    challenge.community.authorization =
-      await this.extendCommunityAuthorizationPolicy(
-        challenge.community.authorization,
+    challenge.community.authorization = this.extendCommunityAuthorizationPolicy(
+      challenge.community.authorization,
+      communityPolicy
+    );
+
+    challenge.collaboration = await this.challengeService.getCollaboration(
+      challenge
+    );
+    challenge.collaboration.authorization =
+      this.extendCollaborationAuthorizationPolicy(
+        challenge.collaboration.authorization,
         communityPolicy
       );
 
@@ -263,27 +271,6 @@ export class ChallengeAuthorizationService {
       rules.push(createOpportunityRule);
     }
 
-    // Who is able to contribute
-    const contributors = [
-      this.communityPolicyService.getMembershipCredential(policy),
-    ];
-    if (
-      this.communityPolicyService.getFlag(
-        policy,
-        CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
-      )
-    ) {
-      contributors.push(
-        this.communityPolicyService.getParentMembershipCredential(policy)
-      );
-    }
-    const contributorsRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.CONTRIBUTE],
-        contributors
-      );
-    rules.push(contributorsRule);
-
     return rules;
   }
 
@@ -373,6 +360,47 @@ export class ChallengeAuthorizationService {
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       newRules
+    );
+
+    return authorization;
+  }
+
+  private extendCollaborationAuthorizationPolicy(
+    authorization: IAuthorizationPolicy | undefined,
+    policy: ICommunityPolicy
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        'Authorization definition not found',
+        LogContext.CHALLENGES
+      );
+
+    const rules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Who is able to contribute
+    const contributors = [
+      this.communityPolicyService.getMembershipCredential(policy),
+    ];
+    if (
+      this.communityPolicyService.getFlag(
+        policy,
+        CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+      )
+    ) {
+      contributors.push(
+        this.communityPolicyService.getParentMembershipCredential(policy)
+      );
+    }
+    const contributorsRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.CONTRIBUTE],
+        contributors
+      );
+    rules.push(contributorsRule);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      rules
     );
 
     return authorization;

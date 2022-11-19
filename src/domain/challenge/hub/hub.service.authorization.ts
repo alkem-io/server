@@ -24,7 +24,6 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
-import { ChallengeService } from '../challenge/challenge.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
@@ -38,7 +37,6 @@ export class HubAuthorizationService {
     private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
-    private challengeService: ChallengeService,
     private hubService: HubService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>
@@ -100,6 +98,15 @@ export class HubAuthorizationService {
             hubSaved.id,
             hubPolicy,
             hostOrg
+          );
+
+        hubSaved.collaboration = await this.hubService.getCollaboration(
+          hubSaved
+        );
+        hubSaved.collaboration.authorization =
+          this.extendCollaborationAuthorizationPolicy(
+            hubSaved.collaboration.authorization,
+            hubPolicy
           );
         break;
       case HubVisibility.ARCHIVED:
@@ -413,6 +420,41 @@ export class HubAuthorizationService {
     );
 
     return communityAuthorization;
+  }
+
+  private extendCollaborationAuthorizationPolicy(
+    authorization: IAuthorizationPolicy | undefined,
+    policy: ICommunityPolicy
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        'Authorization definition not found',
+        LogContext.CHALLENGES
+      );
+
+    const rules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Who is able to contribute
+    const contributors = [
+      this.communityPolicyService.getMembershipCredential(policy),
+    ];
+    contributors.push(
+      this.communityPolicyService.getParentMembershipCredential(policy)
+    );
+
+    const contributorsRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.CONTRIBUTE],
+        contributors
+      );
+    rules.push(contributorsRule);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      rules
+    );
+
+    return authorization;
   }
 
   appendVerifiedCredentialRules(
