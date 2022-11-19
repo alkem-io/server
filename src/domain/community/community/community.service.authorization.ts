@@ -11,7 +11,6 @@ import { CommunicationAuthorizationService } from '@domain/communication/communi
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
-import { CommunityRole } from '@common/enums/community.role';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
@@ -54,13 +53,13 @@ export class CommunityAuthorizationService {
     community.communication = await this.communityService.getCommunication(
       community.id
     );
+    community.policy = await this.communityService.getCommunityPolicy(
+      community
+    );
     await this.communicationAuthorizationService.applyAuthorizationPolicy(
       community.communication,
       community.authorization,
-      this.communityService.getCredentialDefinitionForRole(
-        community,
-        CommunityRole.MEMBER
-      )
+      community.policy
     );
 
     // cascade

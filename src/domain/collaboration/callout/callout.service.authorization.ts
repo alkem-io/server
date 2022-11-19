@@ -115,22 +115,12 @@ export class CalloutAuthorizationService {
         [
           AuthorizationPrivilege.CREATE_ASPECT,
           AuthorizationPrivilege.CREATE_CANVAS,
+          AuthorizationPrivilege.CREATE_COMMENT,
         ],
         [membershipCredential]
       );
     communityMemberNotInherited.inheritable = false;
     newRules.push(communityMemberNotInherited);
-
-    const communityMemberInherited =
-      this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.UPDATE_CANVAS,
-          AuthorizationPrivilege.CREATE_COMMENT,
-        ],
-        [membershipCredential]
-      );
-    communityMemberInherited.inheritable = true;
-    newRules.push(communityMemberInherited);
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(

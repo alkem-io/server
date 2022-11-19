@@ -297,9 +297,10 @@ export class AuthorizationPolicyService {
   getCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleCredential[] {
-    return this.authorizationService.convertCredentialRulesStr(
+    const rules = this.authorizationService.convertCredentialRulesStr(
       authorization.credentialRules
     );
+    return rules;
   }
 
   getVerifiedCredentialRules(

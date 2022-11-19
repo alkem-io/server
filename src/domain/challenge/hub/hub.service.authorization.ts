@@ -95,7 +95,6 @@ export class HubAuthorizationService {
         hubSaved.community.authorization =
           this.extendCommunityAuthorizationPolicy(
             hubSaved.community.authorization,
-            hubSaved.id,
             hubPolicy,
             hostOrg
           );
@@ -345,13 +344,12 @@ export class HubAuthorizationService {
 
   private extendCommunityAuthorizationPolicy(
     communityAuthorization: IAuthorizationPolicy | undefined,
-    hubID: string,
     policy: ICommunityPolicy,
     hostOrg?: IOrganization
   ): IAuthorizationPolicy {
     if (!communityAuthorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${hubID}`,
+        `Authorization definition not found for: ${JSON.stringify(policy)}`,
         LogContext.CHALLENGES
       );
 
@@ -438,9 +436,11 @@ export class HubAuthorizationService {
     const contributors = [
       this.communityPolicyService.getMembershipCredential(policy),
     ];
-    contributors.push(
-      this.communityPolicyService.getParentMembershipCredential(policy)
-    );
+    const parentCred =
+      this.communityPolicyService.getParentMembershipCredential(policy);
+    if (parentCred) {
+      contributors.push(parentCred);
+    }
 
     const contributorsRule =
       this.authorizationPolicyService.createCredentialRule(

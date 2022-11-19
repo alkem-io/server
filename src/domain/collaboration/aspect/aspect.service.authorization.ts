@@ -152,6 +152,12 @@ export class AspectAuthorizationService {
     );
     privilegeRules.push(communityJoinPrivilege);
 
+    const contributePrivilegePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE_COMMENT],
+      AuthorizationPrivilege.CONTRIBUTE
+    );
+    privilegeRules.push(contributePrivilegePrivilege);
+
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,
       privilegeRules
