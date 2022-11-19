@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { IAspect } from './aspect.interface';
 import { Aspect } from './aspect.entity';
 import {
@@ -97,16 +96,21 @@ export class AspectAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const manageCreatedAspectPolicy = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.USER_SELF_MANAGEMENT,
-      aspect.createdBy
-    );
+    const manageCreatedAspectPolicy =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [
+          {
+            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+            resourceID: aspect.createdBy,
+          },
+        ]
+      );
     newRules.push(manageCreatedAspectPolicy);
 
     // Allow hub admins to move card

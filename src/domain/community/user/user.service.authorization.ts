@@ -11,9 +11,10 @@ import { ProfileAuthorizationService } from '@domain/community/profile/profile.s
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -89,33 +90,30 @@ export class UserAuthorizationService {
   private appendGlobalCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicy {
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // Allow global admins to reset authorization
-    const globalAdminNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.AUTHORIZATION_RESET],
-      AuthorizationCredential.GLOBAL_ADMIN
-    );
+    const globalAdminNotInherited =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.AUTHORIZATION_RESET],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+        ]
+      );
     globalAdminNotInherited.inheritable = false;
     newRules.push(globalAdminNotInherited);
 
-    // Allow global admin hubs to reset authorization
-    const globalAdminHubsNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.AUTHORIZATION_RESET],
-      AuthorizationCredential.GLOBAL_ADMIN_HUBS
-    );
-    globalAdminHubsNotInherited.inheritable = false;
-    newRules.push(globalAdminHubsNotInherited);
-
-    const communityAdmin = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
-    );
+    const communityAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY]
+      );
 
     newRules.push(communityAdmin);
 
@@ -141,17 +139,21 @@ export class UserAuthorizationService {
     this.appendGlobalCredentialRules(authorization);
 
     // add the rules dependent on the user
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const userSelfAdmin = new AuthorizationPolicyRuleCredential(
+    const userSelfAdmin = this.authorizationPolicyService.createCredentialRule(
       [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
       ],
-      AuthorizationCredential.USER_SELF_MANAGEMENT,
-      user.id
+      [
+        {
+          type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+          resourceID: user.id,
+        },
+      ]
     );
     newRules.push(userSelfAdmin);
 
@@ -159,34 +161,33 @@ export class UserAuthorizationService {
     const { credentials } = await this.userService.getUserAndCredentials(
       user.id
     );
+    const readCredentials: ICredentialDefinition[] = [];
     for (const credential of credentials) {
       // Grant read access to Hub Admins for hubs the user is a member of
       if (credential.type === AuthorizationCredential.HUB_MEMBER) {
-        const hubAdmin = new AuthorizationPolicyRuleCredential(
-          [AuthorizationPrivilege.READ],
-          AuthorizationCredential.HUB_ADMIN,
-          credential.resourceID
-        );
-        newRules.push(hubAdmin);
+        readCredentials.push({
+          type: AuthorizationCredential.HUB_ADMIN,
+          resourceID: credential.resourceID,
+        });
       } else if (credential.type === AuthorizationCredential.CHALLENGE_MEMBER) {
-        const challengeAdmin = new AuthorizationPolicyRuleCredential(
-          [AuthorizationPrivilege.READ],
-          AuthorizationCredential.CHALLENGE_ADMIN,
-          credential.resourceID
-        );
-
-        newRules.push(challengeAdmin);
+        readCredentials.push({
+          type: AuthorizationCredential.CHALLENGE_ADMIN,
+          resourceID: credential.resourceID,
+        });
       } else if (
         credential.type === AuthorizationCredential.ORGANIZATION_ASSOCIATE
       ) {
-        const challengeAdmin = new AuthorizationPolicyRuleCredential(
-          [AuthorizationPrivilege.READ],
-          AuthorizationCredential.ORGANIZATION_ADMIN,
-          credential.resourceID
-        );
-
-        newRules.push(challengeAdmin);
+        readCredentials.push({
+          type: AuthorizationCredential.ORGANIZATION_ADMIN,
+          resourceID: credential.resourceID,
+        });
       }
+
+      const readRule = this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.READ],
+        readCredentials
+      );
+      newRules.push(readRule);
     }
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
