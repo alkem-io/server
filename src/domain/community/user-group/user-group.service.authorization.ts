@@ -12,7 +12,7 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { IUserGroup, UserGroup } from '@domain/community/user-group';
 import { UserGroupService } from './user-group.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class UserGroupAuthorizationService {
@@ -59,13 +59,18 @@ export class UserGroupAuthorizationService {
         `Authorization definition not found for: ${userGroupID}`,
         LogContext.COMMUNITY
       );
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const userGroupMember = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.READ],
-      AuthorizationCredential.USER_GROUP_MEMBER,
-      userGroupID
-    );
+    const userGroupMember =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.READ],
+        [
+          {
+            type: AuthorizationCredential.USER_GROUP_MEMBER,
+            resourceID: userGroupID,
+          },
+        ]
+      );
 
     newRules.push(userGroupMember);
 

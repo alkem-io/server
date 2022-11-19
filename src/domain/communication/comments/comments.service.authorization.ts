@@ -5,8 +5,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CommentsService } from './comments.service';
 import { IComments } from './comments.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { RoomService } from '../room/room.service';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class CommentsAuthorizationService {
@@ -52,7 +52,7 @@ export class CommentsAuthorizationService {
     comments: IComments,
     messageID: string
   ): Promise<IAuthorizationPolicy> {
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     const senderUserID = await this.roomService.getUserIdForMessage(
       comments,
@@ -60,11 +60,16 @@ export class CommentsAuthorizationService {
     );
 
     if (senderUserID !== '') {
-      const messageSender = new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.UPDATE, AuthorizationPrivilege.DELETE],
-        AuthorizationCredential.USER_SELF_MANAGEMENT,
-        senderUserID
-      );
+      const messageSender =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.UPDATE, AuthorizationPrivilege.DELETE],
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: senderUserID,
+            },
+          ]
+        );
       newRules.push(messageSender);
     }
 
