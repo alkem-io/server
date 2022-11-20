@@ -11,8 +11,8 @@ import {
 
 // Do NOT make links back to the main code base
 const ALLOW_HUB_MEMBERS_TO_CONTRIBUTE = 'AllowHubMembersToContribute';
-const ALLOW_MEMBERS_TO_CREATE_OPPORTUNITIES =
-  'AllowMembersToCreateOpportunities';
+const ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES =
+  'AllowContributorsToCreateOpportunities';
 const ALLOW_NON_MEMBERS_READ_ACCESS = 'AllowNonMembersReadAccess';
 
 export class hubMembers1668835532642 implements MigrationInterface {
@@ -32,10 +32,11 @@ export class hubMembers1668835532642 implements MigrationInterface {
       {
         definitionSet: 'challenge',
         group: 'Privileges',
-        displayName: 'Allow members to create Opportunities.',
-        description: 'Allow members of the Challenge to create Opportunities.',
+        displayName: 'Allow contributors to create Opportunities.',
+        description:
+          'Allow contributors to the Challenge to create Opportunities.',
         valueType: 'boolean',
-        type: ALLOW_MEMBERS_TO_CREATE_OPPORTUNITIES,
+        type: ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES,
         defaultValue: 'false',
       },
       {
@@ -67,7 +68,7 @@ export class hubMembers1668835532642 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     await removePreferences(queryRunner, [ALLOW_HUB_MEMBERS_TO_CONTRIBUTE]);
     await removePreferences(queryRunner, [
-      ALLOW_MEMBERS_TO_CREATE_OPPORTUNITIES,
+      ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES,
     ]);
     await removePreferences(queryRunner, [ALLOW_NON_MEMBERS_READ_ACCESS]);
   }

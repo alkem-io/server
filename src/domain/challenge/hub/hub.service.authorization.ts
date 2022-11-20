@@ -329,7 +329,7 @@ export class HubAuthorizationService {
     }
 
     const hubMember = this.authorizationPolicyService.createCredentialRule(
-      [AuthorizationPrivilege.READ, AuthorizationPrivilege.CONTRIBUTE],
+      [AuthorizationPrivilege.READ],
       [this.communityPolicyService.getMembershipCredential(policy)]
     );
     newRules.push(hubMember);
@@ -436,11 +436,6 @@ export class HubAuthorizationService {
     const contributors = [
       this.communityPolicyService.getMembershipCredential(policy),
     ];
-    const parentCred =
-      this.communityPolicyService.getParentMembershipCredential(policy);
-    if (parentCred) {
-      contributors.push(parentCred);
-    }
 
     const contributorsRule =
       this.authorizationPolicyService.createCredentialRule(

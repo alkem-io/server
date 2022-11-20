@@ -10,7 +10,7 @@ export enum CommunityPolicyFlag {
   MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS = 'MembershipApplyChallengeFromHubMembers',
   MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT = 'MembershipFeedbackOnChallengeContext',
 
-  ALLOW_MEMBERS_TO_CREATE_OPPORTUNITIES = 'AllowMembersToCreateOpportunities',
+  ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES = 'AllowContributorsToCreateOpportunities',
   ALLOW_HUB_MEMBERS_TO_CONTRIBUTE = 'AllowHubMembersToContribute',
   ALLOW_NON_MEMBERS_READ_ACCESS = 'AllowNonMembersReadAccess',
 }

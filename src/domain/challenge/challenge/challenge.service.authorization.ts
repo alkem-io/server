@@ -67,7 +67,8 @@ export class ChallengeAuthorizationService {
       communityPolicy
     );
     challenge.authorization = this.appendPrivilegeRules(
-      challenge.authorization
+      challenge.authorization,
+      communityPolicy
     );
 
     // propagate authorization rules for child entities
@@ -181,11 +182,11 @@ export class ChallengeAuthorizationService {
     const allowMembersToCreateOpportunities =
       this.preferenceSetService.getPreferenceValue(
         preferenceSet,
-        ChallengePreferenceType.ALLOW_MEMBERS_TO_CREATE_OPPORTUNITIES
+        ChallengePreferenceType.ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES
       );
     this.communityPolicyService.setFlag(
       policy,
-      CommunityPolicyFlag.ALLOW_MEMBERS_TO_CREATE_OPPORTUNITIES,
+      CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES,
       allowMembersToCreateOpportunities
     );
 
@@ -255,19 +256,31 @@ export class ChallengeAuthorizationService {
     updateInnovationFlowRule.inheritable = false;
     rules.push(updateInnovationFlowRule);
 
-    // Members to be able to create opporunties
     if (
       this.communityPolicyService.getFlag(
         policy,
-        CommunityPolicyFlag.ALLOW_MEMBERS_TO_CREATE_OPPORTUNITIES
+        CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES
       )
     ) {
+      const criteria = [
+        this.communityPolicyService.getMembershipCredential(policy),
+      ];
+      if (
+        this.communityPolicyService.getFlag(
+          policy,
+          CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+        )
+      ) {
+        criteria.push(
+          this.communityPolicyService.getParentMembershipCredential(policy)
+        );
+      }
       const createOpportunityRule =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.CREATE_OPPORTUNITY],
-          [this.communityPolicyService.getMembershipCredential(policy)]
+          criteria
         );
-      updateInnovationFlowRule.inheritable = false;
+      createOpportunityRule.inheritable = false;
       rules.push(createOpportunityRule);
     }
 
@@ -407,11 +420,12 @@ export class ChallengeAuthorizationService {
   }
 
   private appendPrivilegeRules(
-    authorization: IAuthorizationPolicy | undefined
+    authorization: IAuthorizationPolicy | undefined,
+    policy: ICommunityPolicy
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
-        'Authorization definition not found',
+        `Authorization definition not found for policy: ${policy}`,
         LogContext.CHALLENGES
       );
     const privilegeRules: IAuthorizationPolicyRulePrivilege[] = [];
