@@ -15,7 +15,6 @@ import { CommentsAuthorizationService } from '@domain/communication/comments/com
 import { AspectTemplateAuthorizationService } from '@domain/template/aspect-template/aspect.template.service.authorization';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -46,7 +45,6 @@ export class CalloutAuthorizationService {
 
     callout.authorization = this.appendCredentialRules(
       callout.authorization,
-      callout.id,
       communityPolicy
     );
 
@@ -96,39 +94,15 @@ export class CalloutAuthorizationService {
 
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    calloutId: string,
     policy: ICommunityPolicy
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for Context: ${calloutId}`,
+        `Authorization definition not found for Context: ${policy}`,
         LogContext.COLLABORATION
       );
 
-    const membershipCredential =
-      this.communityPolicyService.getMembershipCredential(policy);
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    const communityMemberNotInherited =
-      this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.CREATE_ASPECT,
-          AuthorizationPrivilege.CREATE_CANVAS,
-          AuthorizationPrivilege.CREATE_COMMENT,
-        ],
-        [membershipCredential]
-      );
-    communityMemberNotInherited.inheritable = false;
-    newRules.push(communityMemberNotInherited);
-
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        authorization,
-        newRules
-      );
-
-    return updatedAuthorization;
+    return authorization;
   }
 
   private appendPrivilegeRules(
@@ -155,12 +129,6 @@ export class CalloutAuthorizationService {
       AuthorizationPrivilege.CONTRIBUTE
     );
     privilegeRules.push(contributorsCreatePrivilege);
-
-    const updatePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.UPDATE_CANVAS],
-      AuthorizationPrivilege.UPDATE
-    );
-    privilegeRules.push(updatePrivilege);
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,
