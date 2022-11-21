@@ -6,13 +6,13 @@ import * as fs from 'fs';
 import { ReadStream } from 'fs';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CID, create, IPFSHTTPClient } from 'ipfs-http-client';
-import { IpfsDeleteFailedException } from '@common/exceptions/ipfs.delete.exception';
-import { IpfsGCFailedException } from '@common/exceptions/ipfs.gc.exception';
+import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
+import { IpfsGCFailedException } from '@common/exceptions/ipfs/ipfs.gc.exception';
 
 @Injectable()
 export class IpfsService {
-  private ipfsClient: IPFSHTTPClient;
-  private ipfsClientEndpoint;
+  private readonly ipfsClient: IPFSHTTPClient;
+  private readonly ipfsClientEndpoint;
 
   constructor(
     private configService: ConfigService,

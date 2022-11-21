@@ -2,11 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { ValidationException } from '@common/exceptions';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { ReadStream } from 'fs';
-import { IpfsUploadFailedException } from '@common/exceptions/ipfs.upload.exception';
 import { streamToBuffer } from '@common/utils';
 import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
 import { ConfigService } from '@nestjs/config/dist/config.service';
-import { IpfsDeleteFailedException } from '@common/exceptions/ipfs.delete.exception';
+import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
+import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
 
 @Injectable()
 export class FileManagerService {
@@ -15,23 +15,11 @@ export class FileManagerService {
     private configService: ConfigService
   ) {}
 
-  async uploadFile(
+  public async uploadFile(
     readStream: ReadStream,
     fileName: string,
     mimetype: string
   ): Promise<string> {
-    if (!readStream)
-      throw new ValidationException(
-        'Readstream should be defined!',
-        LogContext.FILE_MANAGER
-      );
-
-    if (!mimetype)
-      throw new ValidationException(
-        'Mimetype should be defined!',
-        LogContext.FILE_MANAGER
-      );
-
     if (!(await this.validateMimeTypes(mimetype))) {
       throw new ValidationException(
         `Tried to import invalid mimetype ${mimetype}!`,
@@ -43,31 +31,33 @@ export class FileManagerService {
 
     try {
       return await this.ipfsService.uploadFileFromBuffer(buffer);
-    } catch (error: any) {
+    } catch (error) {
       throw new IpfsUploadFailedException(
-        `Ipfs upload of ${fileName} failed! Error: ${error.message}`
+        `Ipfs upload of ${fileName} failed! Error: ${
+          (error as Error).message ?? String(error)
+        }`
       );
     }
   }
 
-  async removeFile(CID: string): Promise<boolean> {
+  public async removeFile(CID: string): Promise<boolean> {
     try {
       await this.ipfsService.unpinFile(CID);
       await this.ipfsService.garbageCollect();
-
-      return true;
-    } catch (error: any) {
+    } catch (error) {
       throw new IpfsDeleteFailedException(
-        `Ipfs removing file at path ${CID} failed! Error: ${error.message}`
+        `Ipfs removing file at path ${CID} failed! Error: ${
+          (error as Error).message ?? String(error)
+        }`
       );
     }
+    return true;
   }
 
-  private async validateMimeTypes(mimeType: string): Promise<boolean> {
+  private validateMimeTypes(mimeType: string): boolean {
     const mimeTypes: string = this.configService.get(ConfigurationTypes.STORAGE)
-      ?.ipfs.mime_types;
+      ?.file.mime_types;
     const allowedMimeTypes: string[] = mimeTypes.split(',');
-    if (!allowedMimeTypes.includes(mimeType)) return false;
-    return true;
+    return allowedMimeTypes.includes(mimeType);
   }
 }

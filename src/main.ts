@@ -45,7 +45,7 @@ const bootstrap = async () => {
 
   app.use(
     graphqlUploadExpress({
-      maxFileSize: configService.get(ConfigurationTypes.STORAGE)?.ipfs
+      maxFileSize: configService.get(ConfigurationTypes.STORAGE)?.file
         ?.max_file_size,
     })
   );

@@ -1,10 +1,11 @@
-mutation deleteFile($filePath: String!) {
-  deleteFile(filePath: $filePath)
+mutation deleteFile($deleteData: DeleteFileInput!) {
+  deleteFile(deleteData: $deleteData)
 }
-
-
 
 Variables:
 {
-  "CID": "Qmde6CnXDGGe7Dynz1pnxgNARtdVBme9YBwNbo4HJiRy2W"
+  "deleteData":
+  {
+    "CID": "Qmde6CnXDGGe7Dynz1pnxgNARtdVBme9YBwNbo4HJiRy2W"
+  }
 }
