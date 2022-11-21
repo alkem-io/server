@@ -267,6 +267,12 @@ communications:
 ## storage ##
 # Alkemio uses multiple types of persistent storage, including SQL database and IPFS.
 storage:
+  file:
+    # Max file size of files that will be uploaded to IPFS (in bytes).
+    max_file_size: 5242880
+
+    # Supported mime types
+    mime_types: ${IPFS_MIME_TYPES}:image/bmp,image/jpeg,image/x-png,image/png,image/gif,application/pdf
   # MySQL database configuration for usage by the Alkemio Server.
   # The authentication method used by Alkemio Server is MySQL Native Password.
   # Note: both schema / database name are used for configuration and they need to have the same value.
@@ -302,9 +308,6 @@ storage:
 
     # IPFS http proxy endpoint. Exposed through traefik (or any ingress / reverse proxy of choice).
     client_endpoint: ${IPFS_CLIENT_ENDPOINT}:http://localhost:3000/ipfs
-
-    # Max file size of files that will be uploaded to IPFS (in bytes).
-    max_file_size: 1048576
 
   # Redis configuration
   redis:

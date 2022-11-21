@@ -49,6 +49,7 @@ import { ActivityLogModule } from '@services/api/activity-log/activity.log.modul
 import { MessageModule } from '@domain/communication/message/message.module';
 import { LibraryModule } from '@library/library/library.module';
 import { AspectMoveModule } from '@domain/collaboration/aspect/aspect.move.module';
+import { FileManagerModule } from '@domain/common/file-manager/file.manager.module';
 
 @Module({
   imports: [
@@ -203,6 +204,7 @@ import { AspectMoveModule } from '@domain/collaboration/aspect/aspect.move.modul
     ConversionModule,
     LibraryModule,
     AspectMoveModule,
+    FileManagerModule,
   ],
   controllers: [AppController],
   providers: [
