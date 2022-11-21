@@ -16,7 +16,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
-import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ChallengePreferenceType } from '@common/enums/challenge.preference.type';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
@@ -45,13 +44,10 @@ export class ChallengeAuthorizationService {
     challenge: IChallenge,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IChallenge> {
+    const communityPolicy = await this.setCommunityPolicyFlags(challenge);
     const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
       challenge.id
     );
-    const communityPolicy = await this.challengeService.getCommunityPolicy(
-      challenge.id
-    );
-    this.setCommunityPolicyFlags(communityPolicy, preferenceSet);
 
     challenge.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -119,7 +115,7 @@ export class ChallengeAuthorizationService {
       }
     }
 
-    if (preferenceSet) {
+    if (challenge.preferenceSet) {
       challenge.preferenceSet =
         await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
           preferenceSet,
@@ -130,10 +126,13 @@ export class ChallengeAuthorizationService {
     return await this.challengeRepository.save(challenge);
   }
 
-  private setCommunityPolicyFlags(
-    policy: ICommunityPolicy,
-    preferenceSet: IPreferenceSet
-  ) {
+  public async setCommunityPolicyFlags(
+    challenge: IChallenge
+  ): Promise<ICommunityPolicy> {
+    const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
+      challenge.id
+    );
+    const policy = await this.challengeService.getCommunityPolicy(challenge.id);
     // Anonymouse Read access
     const allowContextReview = this.preferenceSetService.getPreferenceValue(
       preferenceSet,
@@ -202,6 +201,7 @@ export class ChallengeAuthorizationService {
       CommunityPolicyFlag.ALLOW_NON_MEMBERS_READ_ACCESS,
       allowNonMembersReadAccess
     );
+    return policy;
   }
 
   private appendCredentialRules(

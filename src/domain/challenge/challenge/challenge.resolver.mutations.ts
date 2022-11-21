@@ -103,7 +103,9 @@ export class ChallengeResolverMutations {
     });
 
     const challengeCommunityPolicy =
-      await this.challengeService.getCommunityPolicy(challenge.id);
+      await this.challengeAuthorizationService.setCommunityPolicyFlags(
+        challenge
+      );
     await this.opportunityAuthorizationService.applyAuthorizationPolicy(
       opportunity,
       challenge.authorization,

@@ -79,7 +79,7 @@ export class OpportunityAuthorizationService {
     );
     this.communityPolicyService.setFlag(
       policy,
-      CommunityPolicyFlag.MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT,
+      CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE,
       challengeContributors
     );
   }
