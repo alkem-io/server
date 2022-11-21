@@ -9,7 +9,7 @@ export class CID implements CustomScalar<string, string> {
   description = 'A Content identifier for IPFS(CID).';
 
   parseValue(value: unknown): string {
-    return this.validate(value).toLowerCase();
+    return this.validate(value);
   }
 
   serialize(value: any): string {
@@ -18,7 +18,7 @@ export class CID implements CustomScalar<string, string> {
 
   parseLiteral(ast: ValueNode): string {
     if (ast.kind === Kind.STRING) {
-      return this.validate(ast.value).toLowerCase();
+      return this.validate(ast.value);
     }
     return '';
   }
@@ -38,7 +38,7 @@ export class CID implements CustomScalar<string, string> {
   };
 
   static isValidFormat = (value: any) => {
-    return true;
     // return isCID(value);
+    return true;
   };
 }
