@@ -2,7 +2,7 @@ import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { Scalar, CustomScalar } from '@nestjs/graphql';
 import { Kind, ValueNode } from 'graphql';
-import { isCID } from 'cids';
+import CidClass = require('cids');
 
 @Scalar('CID')
 export class CID implements CustomScalar<string, string> {
@@ -31,14 +31,20 @@ export class CID implements CustomScalar<string, string> {
       );
     }
 
-    if (!CID.isValidFormat(value))
+    if (!CID.isValidFormat(value)) {
       throw new ValidationException(`CID not valid: ${value}`, LogContext.API);
+    }
 
     return value;
   };
 
-  static isValidFormat = (value: any) => {
-    // return isCID(value);
+  static isValidFormat = (value: string) => {
+    try {
+      new CidClass(value);
+    } catch (error) {
+      return false;
+    }
+
     return true;
   };
 }
