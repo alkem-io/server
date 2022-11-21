@@ -94,7 +94,10 @@ export class PlatformAuthorizationService {
 
     const createOrg =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.CREATE_ORGANIZATION],
+        [
+          AuthorizationPrivilege.CREATE_ORGANIZATION,
+          AuthorizationPrivilege.FILE_UPLOAD,
+        ],
         [
           AuthorizationCredential.HUB_ADMIN,
           AuthorizationCredential.CHALLENGE_ADMIN,
