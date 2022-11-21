@@ -16,6 +16,9 @@ import { AspectService } from './aspect.service';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { CardProfileAuthorizationService } from '../card-profile/card.profile.service.authorization';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class AspectAuthorizationService {
@@ -23,6 +26,7 @@ export class AspectAuthorizationService {
     private aspectService: AspectService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private commentsAuthorizationService: CommentsAuthorizationService,
+    private communityPolicyService: CommunityPolicyService,
     private cardProfileAuthorizationService: CardProfileAuthorizationService,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>
@@ -30,13 +34,15 @@ export class AspectAuthorizationService {
 
   async applyAuthorizationPolicy(
     aspect: IAspect,
-    parentAuthorization: IAuthorizationPolicy | undefined
+    parentAuthorization: IAuthorizationPolicy | undefined,
+    communityPolicy: ICommunityPolicy
   ): Promise<IAspect> {
     aspect.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         aspect.authorization,
         parentAuthorization
       );
+
     aspect.authorization = this.appendPrivilegeRules(aspect.authorization);
 
     // Inherit for comments before extending so that the creating user does not
@@ -50,7 +56,7 @@ export class AspectAuthorizationService {
     }
 
     // Extend to give the user creating the aspect more rights
-    aspect.authorization = this.appendCredentialRules(aspect);
+    aspect.authorization = this.appendCredentialRules(aspect, communityPolicy);
 
     // cascade
     if (aspect.banner) {
@@ -78,7 +84,10 @@ export class AspectAuthorizationService {
     return await this.aspectRepository.save(aspect);
   }
 
-  private appendCredentialRules(aspect: IAspect): IAuthorizationPolicy {
+  private appendCredentialRules(
+    aspect: IAspect,
+    communityPolicy: ICommunityPolicy
+  ): IAuthorizationPolicy {
     const authorization = aspect.authorization;
     if (!authorization)
       throw new EntityNotInitializedException(
@@ -86,7 +95,7 @@ export class AspectAuthorizationService {
         LogContext.COLLABORATION
       );
 
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     const manageCreatedAspectPolicy = new AuthorizationPolicyRuleCredential(
       [
@@ -99,6 +108,25 @@ export class AspectAuthorizationService {
       aspect.createdBy
     );
     newRules.push(manageCreatedAspectPolicy);
+
+    // Allow hub admins to move card
+    const credentials =
+      this.communityPolicyService.getAdminCredentials(communityPolicy);
+    credentials.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN,
+      resourceID: '',
+    });
+    credentials.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+      resourceID: '',
+    });
+    const adminsMoveCardRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.MOVE_CARD],
+        credentials
+      );
+    adminsMoveCardRule.inheritable = false;
+    newRules.push(adminsMoveCardRule);
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(

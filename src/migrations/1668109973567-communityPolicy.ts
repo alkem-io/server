@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
+import { AuthorizationCredential } from '@common/enums';
 
 export class communityPolicy1668109973567 implements MigrationInterface {
   name = 'communityPolicy1668109973567';
@@ -13,13 +14,21 @@ export class communityPolicy1668109973567 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`community\` ADD \`policyId\` varchar(36) NOT NULL`
+      `ALTER TABLE \`community\` ADD \`policyId\` varchar(36) NULL`
     );
 
-    const communities: { id: string; policy: string }[] =
-      await queryRunner.query(`SELECT id, policy FROM community`);
+    const communities: { id: string; policy: string; type: string }[] =
+      await queryRunner.query(`SELECT id, policy, type FROM community`);
     for (const community of communities) {
-      const policyStr = community.policy;
+      if (!community.policy && !community.type) {
+        // we cant migrate non existing policy
+        // and we cant set a default one, because the type does not exist
+        continue;
+      }
+
+      const policyStr =
+        community.policy ??
+        communityPolicyToCommunityTypeMapping[community.type];
       const policy: oldCommunityPolicy = JSON.parse(policyStr);
       const newMemberPolicy: newCommunityRolePolicy = {
         ...policy.member,
@@ -89,7 +98,7 @@ export class communityPolicy1668109973567 implements MigrationInterface {
       'ALTER TABLE `community` ADD UNIQUE INDEX `IDX_c9ff67519d26140f98265a542e` (`policyId`)'
     );
     await queryRunner.query(
-      `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_35533901817dd09d5906537e088\` FOREIGN KEY (\`policyId\`) REFERENCES \`community_policy\`(\`id\`) ON UPDATE NO ACTION`
+      `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_35533901817dd09d5906537e088\` FOREIGN KEY (\`policyId\`) REFERENCES \`community_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
   }
 
@@ -193,4 +202,79 @@ type newCommunityRolePolicy = {
   maxUser: number;
   minOrg: number;
   maxOrg: number;
+};
+
+const hubCommunityPolicy: oldCommunityPolicy = {
+  member: {
+    credential: {
+      type: AuthorizationCredential.HUB_MEMBER,
+      resourceID: '',
+    },
+    minOrg: 0,
+    maxOrg: -1,
+    minUser: 0,
+    maxUser: -1,
+  },
+  lead: {
+    credential: {
+      type: AuthorizationCredential.HUB_HOST,
+      resourceID: '',
+    },
+    minOrg: 0,
+    maxOrg: 1,
+    minUser: 0,
+    maxUser: 2,
+  },
+};
+
+const challengeCommunityPolicy: oldCommunityPolicy = {
+  member: {
+    credential: {
+      type: AuthorizationCredential.CHALLENGE_MEMBER,
+      resourceID: '',
+    },
+    minOrg: 0,
+    maxOrg: -1,
+    minUser: 0,
+    maxUser: -1,
+  },
+  lead: {
+    credential: {
+      type: AuthorizationCredential.CHALLENGE_LEAD,
+      resourceID: '',
+    },
+    minOrg: 0,
+    maxOrg: 9,
+    minUser: 0,
+    maxUser: 2,
+  },
+};
+
+const opportunityCommunityPolicy: oldCommunityPolicy = {
+  member: {
+    credential: {
+      type: AuthorizationCredential.OPPORTUNITY_MEMBER,
+      resourceID: '',
+    },
+    minOrg: 0,
+    maxOrg: -1,
+    minUser: 0,
+    maxUser: -1,
+  },
+  lead: {
+    credential: {
+      type: AuthorizationCredential.OPPORTUNITY_LEAD,
+      resourceID: '',
+    },
+    minOrg: 0,
+    maxOrg: 9,
+    minUser: 0,
+    maxUser: 2,
+  },
+};
+
+const communityPolicyToCommunityTypeMapping: Record<string, string> = {
+  hub: JSON.stringify(hubCommunityPolicy),
+  challenge: JSON.stringify(challengeCommunityPolicy),
+  opportunity: JSON.stringify(opportunityCommunityPolicy),
 };

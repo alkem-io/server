@@ -9,6 +9,7 @@ import { Hub } from '@domain/challenge/hub/hub.entity';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Community } from '@domain/community/community/community.entity';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { Community } from '@domain/community/community/community.entity';
     TypeOrmModule.forFeature([Canvas]),
     TypeOrmModule.forFeature([Hub]),
     TypeOrmModule.forFeature([Callout]),
+    TypeOrmModule.forFeature([Collaboration]),
     TypeOrmModule.forFeature([Community]),
   ],
   providers: [NamingService],

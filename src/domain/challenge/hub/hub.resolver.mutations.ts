@@ -200,13 +200,10 @@ export class HubResolverMutations {
     const hub = await this.hubService.getHubOrFail(
       this.challengeService.getHubID(challenge)
     );
-    const hubCommunityCredential =
-      await this.hubService.getCommunityMembershipCredential(hub);
     // As the preferences may update the authorization, the authorization policy will need to be reset
     await this.challengeAuthorizationService.applyAuthorizationPolicy(
       challenge,
-      hub.authorization,
-      hubCommunityCredential
+      hub.authorization
     );
     return preferenceUpdated;
   }
@@ -255,13 +252,9 @@ export class HubResolverMutations {
       challenge: challenge,
     });
 
-    const hubCommunityCredential =
-      await this.hubService.getCommunityMembershipCredential(hub);
-
     await this.challengeAuthorizationService.applyAuthorizationPolicy(
       challenge,
-      hub.authorization,
-      hubCommunityCredential
+      hub.authorization
     );
 
     const challengeCreatedEvent: ChallengeCreatedPayload = {

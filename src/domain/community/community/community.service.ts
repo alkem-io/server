@@ -227,8 +227,7 @@ export class CommunityService {
         this.getCommunityPolicy(parentCommunity),
         this.getCommunityPolicy(community)
       );
-    await this.communityRepository.save(community);
-    return community;
+    return await this.communityRepository.save(community);
   }
 
   async getUsersWithRole(
