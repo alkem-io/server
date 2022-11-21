@@ -113,7 +113,8 @@ export class ChallengeAuthorizationService {
       for (const opportunity of challenge.opportunities) {
         await this.opportunityAuthorizationService.applyAuthorizationPolicy(
           opportunity,
-          challenge.authorization
+          challenge.authorization,
+          communityPolicy
         );
       }
     }

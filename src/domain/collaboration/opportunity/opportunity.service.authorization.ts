@@ -14,6 +14,7 @@ import { OpportunityService } from './opportunity.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 
 @Injectable()
 export class OpportunityAuthorizationService {
@@ -28,11 +29,15 @@ export class OpportunityAuthorizationService {
 
   async applyAuthorizationPolicy(
     opportunity: IOpportunity,
-    challengeAuthorization: IAuthorizationPolicy | undefined
+    challengeAuthorization: IAuthorizationPolicy | undefined,
+    challengeCommunityPolicy: ICommunityPolicy
   ): Promise<IOpportunity> {
     const communityPolicy = await this.opportunityService.getCommunityPolicy(
       opportunity.id
     );
+
+    this.setCommunityPolicyFlags(communityPolicy, challengeCommunityPolicy);
+
     // Start with parent authorization
     opportunity.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -63,6 +68,22 @@ export class OpportunityAuthorizationService {
     return await this.opportunityRepository.save(opportunity);
   }
 
+  private setCommunityPolicyFlags(
+    policy: ICommunityPolicy,
+    challengeCommunityPolicy: ICommunityPolicy
+  ) {
+    // Anonymouse Read access
+    const challengeContributors = this.communityPolicyService.getFlag(
+      challengeCommunityPolicy,
+      CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+    );
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT,
+      challengeContributors
+    );
+  }
+
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
     policy: ICommunityPolicy
@@ -72,6 +93,29 @@ export class OpportunityAuthorizationService {
         `Authorization definition not found for: ${policy}`,
         LogContext.OPPORTUNITY
       );
+
+    const rules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Who is able to contribute
+    const contributors = [
+      this.communityPolicyService.getMembershipCredential(policy),
+    ];
+    if (
+      this.communityPolicyService.getFlag(
+        policy,
+        CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+      )
+    ) {
+      contributors.push(
+        this.communityPolicyService.getParentMembershipCredential(policy)
+      );
+    }
+    const contributorsRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.CONTRIBUTE],
+        contributors
+      );
+    rules.push(contributorsRule);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,

@@ -102,9 +102,12 @@ export class ChallengeResolverMutations {
       challengeId: opportunityData.challengeID,
     });
 
+    const challengeCommunityPolicy =
+      await this.challengeService.getCommunityPolicy(challenge.id);
     await this.opportunityAuthorizationService.applyAuthorizationPolicy(
       opportunity,
-      challenge.authorization
+      challenge.authorization,
+      challengeCommunityPolicy
     );
 
     const opportunityCreatedEvent: OpportunityCreatedPayload = {
