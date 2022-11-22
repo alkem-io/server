@@ -1,0 +1,11 @@
+mutation deleteFile($deleteData: DeleteFileInput!) {
+  deleteFile(deleteData: $deleteData)
+}
+
+Variables:
+{
+  "deleteData":
+  {
+    "CID": "Qmde6CnXDGGe7Dynz1pnxgNARtdVBme9YBwNbo4HJiRy2W"
+  }
+}

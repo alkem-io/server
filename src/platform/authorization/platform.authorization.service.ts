@@ -95,7 +95,10 @@ export class PlatformAuthorizationService {
 
     const createOrg =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.CREATE_ORGANIZATION],
+        [
+          AuthorizationPrivilege.CREATE_ORGANIZATION,
+          AuthorizationPrivilege.FILE_UPLOAD,
+        ],
         [
           AuthorizationCredential.HUB_ADMIN,
           AuthorizationCredential.CHALLENGE_ADMIN,
@@ -130,10 +133,17 @@ export class PlatformAuthorizationService {
       [
         AuthorizationPrivilege.CREATE_HUB,
         AuthorizationPrivilege.CREATE_ORGANIZATION,
+        AuthorizationPrivilege.FILE_UPLOAD,
       ],
       AuthorizationPrivilege.CREATE
     );
     privilegeRules.push(createPrivilege);
+
+    const deletePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.FILE_DELETE],
+      AuthorizationPrivilege.DELETE
+    );
+    privilegeRules.push(deletePrivilege);
 
     return privilegeRules;
   }

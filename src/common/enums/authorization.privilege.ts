@@ -17,6 +17,8 @@ export enum AuthorizationPrivilege {
   CONTRIBUTE = 'contribute',
   CREATE_HUB = 'create-hub',
   CREATE_ORGANIZATION = 'create-organization',
+  FILE_UPLOAD = 'file-upload',
+  FILE_DELETE = 'file-delete',
   READ_USERS = 'read-users',
   UPDATE_CANVAS = 'update-canvas',
   UPDATE_INNOVATION_FLOW = 'update-lifecycle',
