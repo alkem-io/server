@@ -50,6 +50,7 @@ import { MessageModule } from '@domain/communication/message/message.module';
 import { LibraryModule } from '@library/library/library.module';
 import { AspectMoveModule } from '@domain/collaboration/aspect/aspect.move.module';
 import { FileManagerModule } from '@domain/common/file-manager/file.manager.module';
+import { GeoLocationModule } from '@services/geo-location';
 
 @Module({
   imports: [
@@ -205,6 +206,7 @@ import { FileManagerModule } from '@domain/common/file-manager/file.manager.modu
     LibraryModule,
     AspectMoveModule,
     FileManagerModule,
+    GeoLocationModule,
   ],
   controllers: [AppController],
   providers: [

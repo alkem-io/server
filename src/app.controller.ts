@@ -1,10 +1,29 @@
 import { RestEndpoint } from '@common/enums/rest.endpoint';
-import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  LoggerService,
+  Param,
+  Post,
+  Req,
+} from '@nestjs/common';
+import { Request } from 'express';
+import { GeoInformation, GeoLocationService } from '@services/geo-location';
 import { AppService } from './app.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { BaseException } from '@common/exceptions/base.exception';
 
 @Controller('/rest')
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private readonly appService: AppService,
+    private readonly geoLocationService: GeoLocationService
+  ) {}
 
   @Get()
   getHello(): string {
@@ -45,5 +64,38 @@ export class AppController {
       payload.token
     );
     //TODO Once this completes publish the credential share complete with the interaction id to the client
+  }
+
+  @Get(RestEndpoint.GEO_LOCATION)
+  public async getGeo(
+    @Req() req: Request
+  ): Promise<GeoInformation | undefined> {
+    const forwardedFor = req.headers['x-forwarded-for'];
+
+    if (!forwardedFor) {
+      this.logger.error('X-Forwarded-For header not set');
+      return undefined;
+    }
+
+    const ip = String(forwardedFor).split(',')?.[0];
+
+    if (!ip) {
+      this.logger.error('Unable to get IP for header');
+      return undefined;
+    }
+
+    let geo: GeoInformation | undefined;
+
+    try {
+      geo = await this.geoLocationService.getGeo(ip);
+    } catch (error) {
+      this.logger.error(
+        `Unable to fetch geo location for IP: ${ip} :: ${
+          (error as BaseException)?.message
+        }`
+      );
+    }
+
+    return geo;
   }
 }
