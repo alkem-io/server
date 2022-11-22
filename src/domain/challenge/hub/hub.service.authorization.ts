@@ -25,6 +25,7 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -433,10 +434,7 @@ export class HubAuthorizationService {
     const rules: IAuthorizationPolicyRuleCredential[] = [];
 
     // Who is able to contribute
-    const contributors = [
-      this.communityPolicyService.getMembershipCredential(policy),
-    ];
-
+    const contributors = this.getContributorCredentials(policy);
     const contributorsRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.CONTRIBUTE],
@@ -450,6 +448,25 @@ export class HubAuthorizationService {
     );
 
     return authorization;
+  }
+
+  private getContributorCredentials(
+    policy: ICommunityPolicy
+  ): ICredentialDefinition[] {
+    // add challenge members
+    const contributors = [
+      this.communityPolicyService.getMembershipCredential(policy),
+    ];
+
+    contributors.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN,
+      resourceID: '',
+    });
+    contributors.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+      resourceID: '',
+    });
+    return contributors;
   }
 
   appendVerifiedCredentialRules(

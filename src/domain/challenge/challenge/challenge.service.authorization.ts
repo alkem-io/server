@@ -25,6 +25,7 @@ import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -392,19 +393,7 @@ export class ChallengeAuthorizationService {
     const rules: IAuthorizationPolicyRuleCredential[] = [];
 
     // Who is able to contribute
-    const contributors = [
-      this.communityPolicyService.getMembershipCredential(policy),
-    ];
-    if (
-      this.communityPolicyService.getFlag(
-        policy,
-        CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
-      )
-    ) {
-      contributors.push(
-        this.communityPolicyService.getParentMembershipCredential(policy)
-      );
-    }
+    const contributors = this.getContributorCredentials(policy);
     const contributorsRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.CONTRIBUTE],
@@ -418,6 +407,35 @@ export class ChallengeAuthorizationService {
     );
 
     return authorization;
+  }
+
+  private getContributorCredentials(
+    policy: ICommunityPolicy
+  ): ICredentialDefinition[] {
+    // add challenge members
+    const contributors = [
+      this.communityPolicyService.getMembershipCredential(policy),
+    ];
+    // optionally add hub members
+    if (
+      this.communityPolicyService.getFlag(
+        policy,
+        CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+      )
+    ) {
+      contributors.push(
+        this.communityPolicyService.getParentMembershipCredential(policy)
+      );
+    }
+    contributors.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN,
+      resourceID: '',
+    });
+    contributors.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+      resourceID: '',
+    });
+    return contributors;
   }
 
   private appendPrivilegeRules(
