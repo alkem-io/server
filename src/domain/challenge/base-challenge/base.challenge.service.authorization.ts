@@ -1,7 +1,6 @@
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
-import { CommunityService } from '@domain/community/community/community.service';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { Injectable } from '@nestjs/common';
@@ -17,21 +16,19 @@ export class BaseChallengeAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private contextAuthorizationService: ContextAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
-    private communityAuthorizationService: CommunityAuthorizationService,
-    private communityService: CommunityService,
-    private communityPolicyService: CommunityPolicyService
+    private communityAuthorizationService: CommunityAuthorizationService
   ) {}
 
   public async applyAuthorizationPolicy(
     baseChallenge: IBaseChallenge,
-    repository: Repository<BaseChallenge>
+    repository: Repository<BaseChallenge>,
+    communityPolicy: ICommunityPolicy
   ): Promise<IBaseChallenge> {
     // propagate authorization rules for child entitie
     const community = await this.baseChallengeService.getCommunity(
       baseChallenge.id,
       repository
     );
-    const communityPolicy = this.communityService.getCommunityPolicy(community);
 
     if (community.authorization) {
       baseChallenge.community =

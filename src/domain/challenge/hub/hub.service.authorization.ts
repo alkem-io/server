@@ -25,7 +25,6 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -86,7 +85,10 @@ export class HubAuthorizationService {
     }
 
     // Cascade down
-    const hubSaved = await this.propagateAuthorizationToChildEntities(hub);
+    const hubSaved = await this.propagateAuthorizationToChildEntities(
+      hub,
+      hubPolicy
+    );
 
     // Finally update the child community directly after propagation
     switch (hubVisibility) {
@@ -103,11 +105,6 @@ export class HubAuthorizationService {
         hubSaved.collaboration = await this.hubService.getCollaboration(
           hubSaved
         );
-        hubSaved.collaboration.authorization =
-          this.extendCollaborationAuthorizationPolicy(
-            hubSaved.collaboration.authorization,
-            hubPolicy
-          );
         break;
       case HubVisibility.ARCHIVED:
         break;
@@ -179,15 +176,24 @@ export class HubAuthorizationService {
       CommunityPolicyFlag.ALLOW_MEMBERS_TO_CREATE_CHALLENGES,
       allowMembersToCreateChallengesPref
     );
+
+    // Allow hub members to contribute
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE,
+      true
+    );
   }
 
   private async propagateAuthorizationToChildEntities(
-    hubBase: IHub
+    hubBase: IHub,
+    policy: ICommunityPolicy
   ): Promise<IHub> {
     const hub: IHub =
       await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
         hubBase,
-        this.hubRepository
+        this.hubRepository,
+        policy
       );
 
     hub.challenges = await this.hubService.getChallenges(hub);
@@ -419,54 +425,6 @@ export class HubAuthorizationService {
     );
 
     return communityAuthorization;
-  }
-
-  private extendCollaborationAuthorizationPolicy(
-    authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
-  ): IAuthorizationPolicy {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        'Authorization definition not found',
-        LogContext.CHALLENGES
-      );
-
-    const rules: IAuthorizationPolicyRuleCredential[] = [];
-
-    // Who is able to contribute
-    const contributors = this.getContributorCredentials(policy);
-    const contributorsRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.CONTRIBUTE],
-        contributors
-      );
-    rules.push(contributorsRule);
-
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
-      rules
-    );
-
-    return authorization;
-  }
-
-  private getContributorCredentials(
-    policy: ICommunityPolicy
-  ): ICredentialDefinition[] {
-    // add challenge members
-    const contributors = [
-      this.communityPolicyService.getMembershipCredential(policy),
-    ];
-
-    contributors.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
-    contributors.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-      resourceID: '',
-    });
-    return contributors;
   }
 
   appendVerifiedCredentialRules(

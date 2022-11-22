@@ -15,7 +15,6 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class OpportunityAuthorizationService {
@@ -54,7 +53,8 @@ export class OpportunityAuthorizationService {
     // propagate authorization rules for child entities
     await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
       opportunity,
-      this.opportunityRepository
+      this.opportunityRepository,
+      communityPolicy
     );
     if (opportunity.projects) {
       for (const project of opportunity.projects) {
@@ -65,16 +65,6 @@ export class OpportunityAuthorizationService {
           );
       }
     }
-
-    // update the collaboration policy re contribute
-    opportunity.collaboration = await this.opportunityService.getCollaboration(
-      opportunity
-    );
-    opportunity.collaboration.authorization =
-      this.extendCollaborationAuthorizationPolicy(
-        opportunity.collaboration.authorization,
-        communityPolicy
-      );
 
     return await this.opportunityRepository.save(opportunity);
   }
@@ -109,64 +99,6 @@ export class OpportunityAuthorizationService {
       authorization,
       this.createCredentialRules(policy)
     );
-  }
-
-  private getContributorCredentials(
-    policy: ICommunityPolicy
-  ): ICredentialDefinition[] {
-    // add challenge members
-    const contributors = [
-      this.communityPolicyService.getMembershipCredential(policy),
-    ];
-    // optionally add hub members
-    if (
-      this.communityPolicyService.getFlag(
-        policy,
-        CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
-      )
-    ) {
-      contributors.push(
-        this.communityPolicyService.getParentMembershipCredential(policy)
-      );
-    }
-    contributors.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
-    contributors.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-      resourceID: '',
-    });
-    return contributors;
-  }
-
-  private extendCollaborationAuthorizationPolicy(
-    authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
-  ): IAuthorizationPolicy {
-    if (!authorization)
-      throw new EntityNotInitializedException(
-        'Authorization definition not found',
-        LogContext.CHALLENGES
-      );
-
-    const rules: IAuthorizationPolicyRuleCredential[] = [];
-
-    // Who is able to contribute
-    const contributors = this.getContributorCredentials(policy);
-    const contributorsRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.CONTRIBUTE],
-        contributors
-      );
-    rules.push(contributorsRule);
-
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      authorization,
-      rules
-    );
-
-    return authorization;
   }
 
   private createCredentialRules(
