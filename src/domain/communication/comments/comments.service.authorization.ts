@@ -42,6 +42,12 @@ export class CommentsAuthorizationService {
     );
     privilegeRules.push(createPrivilege);
 
+    const contributePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE_COMMENT],
+      AuthorizationPrivilege.CONTRIBUTE
+    );
+    privilegeRules.push(contributePrivilege);
+
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,
       privilegeRules
