@@ -127,7 +127,7 @@ export class CommunityPolicyService {
         };
       case AuthorizationCredential.OPPORTUNITY_LEAD:
         return {
-          type: AuthorizationCredential.OPPORTUNITY_LEAD,
+          type: AuthorizationCredential.OPPORTUNITY_ADMIN,
           resourceID,
         };
     }
