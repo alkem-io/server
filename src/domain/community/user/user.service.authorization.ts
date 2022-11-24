@@ -182,14 +182,14 @@ export class UserAuthorizationService {
           resourceID: credential.resourceID,
         });
       }
+    }
 
-      if (readCredentials.length > 0) {
-        const readRule = this.authorizationPolicyService.createCredentialRule(
-          [AuthorizationPrivilege.READ],
-          readCredentials
-        );
-        newRules.push(readRule);
-      }
+    if (readCredentials.length > 0) {
+      const readRule = this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.READ],
+        readCredentials
+      );
+      newRules.push(readRule);
     }
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
