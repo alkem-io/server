@@ -28,4 +28,5 @@ export enum LogContext {
   TEMPLATES = 'templates',
   LIBRARY = 'library',
   FILE_MANAGER = 'file-manager',
+  GEO = 'geo',
 }

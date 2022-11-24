@@ -18,6 +18,9 @@ export class KonfigService {
     const apmConfig = this.configService.get(
       ConfigurationTypes.MONITORING
     )?.apm;
+    const geoConfig = this.configService.get(
+      ConfigurationTypes.INTEGRATIONS
+    )?.geo;
     return {
       template: await this.getTemplate(),
       authentication: {
@@ -83,6 +86,9 @@ export class KonfigService {
       apm: {
         rumEnabled: apmConfig?.rumEnabled,
         endpoint: apmConfig?.endpoint,
+      },
+      geo: {
+        endpoint: geoConfig?.rest_endpoint,
       },
     };
   }

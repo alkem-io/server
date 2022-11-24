@@ -11,7 +11,10 @@ import {
   Req,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { GeoInformation, GeoLocationService } from '@services/geo-location';
+import {
+  GeoInformation,
+  GeoLocationService,
+} from '@services/external/geo-location';
 import { AppService } from './app.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseException } from '@common/exceptions/base.exception';

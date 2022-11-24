@@ -1,32 +1,39 @@
 import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
 import { AxiosError } from 'axios';
 import { Cache } from 'cache-manager';
-import { GeoLocationCacheMetadata } from '@services/geo-location/geo.location.cache.metadata';
+import { GeoLocationCacheMetadata } from '@services/external/geo-location/geo.location.cache.metadata';
 import {
   GeoServiceErrorException,
-  GeoServiceLimitReachedException,
+  GeoServiceRequestLimitExceededException,
   GeoServiceNotAvailableException,
 } from '@common/exceptions/geo';
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { GeoInformation } from './geo.information';
 import { GeoPluginResponse } from './geo.plugin.response';
 
-const endpoint = 'http://www.geoplugin.net/json.gp?ip=';
-const cacheEntryTtl = 14400; // 4 hours
 const geoServiceCallsKey = 'geo-service-call-limit';
-// https://www.geoplugin.com/faq#i_stopped_getting_responses_from_geoplugin.net
-// the free lookup limit of 120 requests per minute.
-const allowedCallsToService = 120;
-const allowedCallsToServiceWindow = 60;
 
 @Injectable()
 export class GeoLocationService {
+  private readonly endpoint: string;
+  private readonly allowedCallsToService: number;
+  private readonly allowedCallsToServiceWindow: number;
+  private readonly cacheEntryTtl: number;
+
   constructor(
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
-    private readonly httpService: HttpService
-  ) {}
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService
+  ) {
+    const config = configService.get(ConfigurationTypes.INTEGRATIONS)?.geo;
+    this.endpoint = config.service_endpoint;
+    this.allowedCallsToService = config.allowed_calls_to_service;
+    this.allowedCallsToServiceWindow = config.allowed_calls_to_service_window;
+    this.cacheEntryTtl = config.cache_entry_ttl;
+  }
 
   public async getGeo(ip: string): Promise<GeoInformation | undefined> {
     const userGeoCached = await this.cacheManager.get<GeoInformation>(ip);
@@ -36,14 +43,14 @@ export class GeoLocationService {
     }
 
     if (!(await this.canCallService())) {
-      throw new GeoServiceLimitReachedException(
-        `3rd party service limit of ${allowedCallsToService} calls per ${allowedCallsToServiceWindow} seconds reached`,
-        LogContext.UNSPECIFIED
+      throw new GeoServiceRequestLimitExceededException(
+        `3rd party service limit of ${this.allowedCallsToService} calls per ${this.allowedCallsToServiceWindow} seconds reached`,
+        LogContext.GEO
       );
     }
 
     const response = await this.httpService
-      .get<GeoPluginResponse>(`${endpoint}${ip}`)
+      .get<GeoPluginResponse>(`${this.endpoint}${ip}`)
       .toPromise()
       .catch((err: AxiosError) => {
         return err;
@@ -51,15 +58,15 @@ export class GeoLocationService {
 
     if (!response) {
       throw new GeoServiceNotAvailableException(
-        `3rd party service at (${endpoint}) not available`,
-        LogContext.UNSPECIFIED
+        `3rd party service at (${this.endpoint}) not available`,
+        LogContext.GEO
       );
     }
 
     if (response instanceof Error) {
       throw new GeoServiceErrorException(
         `3rd party service returned an error: ${response.message}`,
-        LogContext.UNSPECIFIED
+        LogContext.GEO
       );
     }
 
@@ -69,7 +76,7 @@ export class GeoLocationService {
     };
 
     this.cacheManager.set<GeoInformation>(ip, userGeo, {
-      ttl: cacheEntryTtl,
+      ttl: this.cacheEntryTtl,
     });
 
     return userGeo;
@@ -82,7 +89,7 @@ export class GeoLocationService {
 
     if (
       !cacheMetadata ||
-      Date.now() - cacheMetadata.start > allowedCallsToServiceWindow * 1000
+      Date.now() - cacheMetadata.start > this.allowedCallsToServiceWindow * 1000
     ) {
       this.cacheManager.set<GeoLocationCacheMetadata>(
         geoServiceCallsKey,
@@ -90,14 +97,14 @@ export class GeoLocationService {
           start: Date.now(),
           calls: 1,
         },
-        { ttl: allowedCallsToServiceWindow }
+        { ttl: this.allowedCallsToServiceWindow }
       );
       return true;
     }
 
     const { calls, start } = cacheMetadata;
 
-    if (calls === allowedCallsToService) {
+    if (calls === this.allowedCallsToService) {
       return false;
     }
 
@@ -107,7 +114,7 @@ export class GeoLocationService {
         start,
         calls: calls + 1,
       },
-      { ttl: allowedCallsToServiceWindow }
+      { ttl: this.allowedCallsToServiceWindow }
     );
 
     return true;

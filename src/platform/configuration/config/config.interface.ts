@@ -4,6 +4,7 @@ import { IPlatformConfig } from './platform';
 import { ISentryConfig } from './sentry';
 import { Template, ITemplate } from './template';
 import { IApmConfig } from './apm';
+import { IGeoConfig } from './integrations';
 
 @ObjectType('Config')
 export abstract class IConfig {
@@ -37,4 +38,10 @@ export abstract class IConfig {
       'Elastic APM (RUM & performance monitoring) related configuration.',
   })
   apm?: IApmConfig;
+
+  @Field(() => IGeoConfig, {
+    nullable: false,
+    description: 'Integration with a 3rd party Geo information service',
+  })
+  geo?: IGeoConfig;
 }
