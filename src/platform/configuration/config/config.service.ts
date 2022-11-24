@@ -43,6 +43,7 @@ export class KonfigService {
           ?.community,
         newuser: this.configService.get(ConfigurationTypes.PLATFORM)?.newuser,
         tips: this.configService.get(ConfigurationTypes.PLATFORM)?.tips,
+        aup: this.configService.get(ConfigurationTypes.PLATFORM)?.aup,
         featureFlags: [
           {
             name: 'ssi',
