@@ -1,11 +1,11 @@
 import { ApolloError } from 'apollo-server-express';
 import { LogContext, AlkemioErrorStatus } from '@common/enums';
 
-export class IpfsUploadFailedException extends ApolloError {
+export class IpfsDeleteFailedException extends ApolloError {
   private context: LogContext;
 
-  constructor(message = 'User not registered.') {
-    super(message, AlkemioErrorStatus.IPFS_UPLOAD_FAILED);
+  constructor(message = 'Ipfs delete file failed!') {
+    super(message, AlkemioErrorStatus.IPFS_DELETE_FAILED);
     this.context = LogContext.IPFS;
   }
 
