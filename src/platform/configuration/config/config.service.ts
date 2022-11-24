@@ -46,6 +46,7 @@ export class KonfigService {
           ?.community,
         newuser: this.configService.get(ConfigurationTypes.PLATFORM)?.newuser,
         tips: this.configService.get(ConfigurationTypes.PLATFORM)?.tips,
+        aup: this.configService.get(ConfigurationTypes.PLATFORM)?.aup,
         featureFlags: [
           {
             name: 'ssi',
@@ -89,6 +90,15 @@ export class KonfigService {
       },
       geo: {
         endpoint: geoConfig?.rest_endpoint,
+      },
+      storage: {
+        file: {
+          maxFileSize: this.configService.get(ConfigurationTypes.STORAGE)?.file
+            ?.max_file_size,
+          mimeTypes: this.configService
+            .get(ConfigurationTypes.STORAGE)
+            ?.file.mime_types.split(','),
+        },
       },
     };
   }

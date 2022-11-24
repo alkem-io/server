@@ -11,7 +11,7 @@ import {
 } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { Relation } from './relation.entity';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class RelationAuthorizationService {
@@ -32,18 +32,23 @@ export class RelationAuthorizationService {
         collaborationAuthorizationPolicy
       );
 
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // Allow users to update their own created relation
-    const selfCreatedRelation = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.USER_SELF_MANAGEMENT,
-      userID
-    );
+    const selfCreatedRelation =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [
+          {
+            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+            resourceID: userID,
+          },
+        ]
+      );
     newRules.push(selfCreatedRelation);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
@@ -61,14 +66,15 @@ export class RelationAuthorizationService {
         'Authorization definition not found',
         LogContext.COLLABORATION
       );
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // Allow global registered users to create
     const globalRegisteredCreateRelation =
-      new AuthorizationPolicyRuleCredential(
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE],
-        AuthorizationCredential.GLOBAL_REGISTERED
+        [AuthorizationCredential.GLOBAL_REGISTERED]
       );
+
     newRules.push(globalRegisteredCreateRelation);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(

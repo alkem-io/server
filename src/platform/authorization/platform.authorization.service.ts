@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
@@ -64,10 +63,11 @@ export class PlatformAuthorizationService {
     credentialRules.push(globalAdmins);
 
     // Allow global admins to manage global privileges, access Platform mgmt
-    const globalAdminNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
-      AuthorizationCredential.GLOBAL_ADMIN
-    );
+    const globalAdminNotInherited =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
+        [AuthorizationCredential.GLOBAL_ADMIN]
+      );
     globalAdminNotInherited.inheritable = false;
     credentialRules.push(globalAdminNotInherited);
 
@@ -85,10 +85,11 @@ export class PlatformAuthorizationService {
     credentialRules.push(platformAdmin);
 
     // Allow all registered users to query non-protected user information
-    const userNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.READ_USERS],
-      AuthorizationCredential.GLOBAL_REGISTERED
-    );
+    const userNotInherited =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ_USERS],
+        [AuthorizationCredential.GLOBAL_REGISTERED]
+      );
     userNotInherited.inheritable = false;
     credentialRules.push(userNotInherited);
 

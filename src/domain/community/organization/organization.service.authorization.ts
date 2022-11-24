@@ -11,9 +11,9 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { OrganizationService } from './organization.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { OrganizationVerificationAuthorizationService } from '../organization-verification/organization.verification.service.authorization';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class OrganizationAuthorizationService {
@@ -106,88 +106,88 @@ export class OrganizationAuthorizationService {
         LogContext.COMMUNITY
       );
 
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // Allow global admins to reset authorization
-    const globalAdminNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.AUTHORIZATION_RESET],
-      AuthorizationCredential.GLOBAL_ADMIN
-    );
+    const globalAdminNotInherited =
+      this.authorizationPolicy.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.AUTHORIZATION_RESET],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+        ]
+      );
     globalAdminNotInherited.inheritable = false;
     newRules.push(globalAdminNotInherited);
 
-    // Allow global admin hubs to reset authorization
-    const globalAdminHubsNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.AUTHORIZATION_RESET],
-      AuthorizationCredential.GLOBAL_ADMIN_HUBS
-    );
-    globalAdminHubsNotInherited.inheritable = false;
-    newRules.push(globalAdminHubsNotInherited);
-
-    const communityAdmin = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
-    );
+    const communityAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [
+          AuthorizationPrivilege.GRANT,
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY]
+      );
     newRules.push(communityAdmin);
 
     // Allow Global admins + Global Hub Admins to manage access to Hubs + contents
-    const globalAdmin = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.GRANT],
-      AuthorizationCredential.GLOBAL_ADMIN
-    );
+    const globalAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.GRANT],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+        ]
+      );
     newRules.push(globalAdmin);
-    const globalHubsAdmin = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.GRANT],
-      AuthorizationCredential.GLOBAL_ADMIN_HUBS
-    );
-    newRules.push(globalHubsAdmin);
 
-    const organizationAdmin = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.ORGANIZATION_ADMIN,
-      organizationID
-    );
+    const organizationAdmin =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.GRANT,
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [
+          {
+            type: AuthorizationCredential.ORGANIZATION_ADMIN,
+            resourceID: organizationID,
+          },
+          {
+            type: AuthorizationCredential.ORGANIZATION_OWNER,
+            resourceID: organizationID,
+          },
+        ]
+      );
 
     newRules.push(organizationAdmin);
 
-    const organizationOwner = new AuthorizationPolicyRuleCredential(
+    const readPrivilege = this.authorizationPolicyService.createCredentialRule(
+      [AuthorizationPrivilege.READ],
       [
-        AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.ORGANIZATION_OWNER,
-      organizationID
+        {
+          type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+          resourceID: organizationID,
+        },
+        {
+          type: AuthorizationCredential.ORGANIZATION_ADMIN,
+          resourceID: organizationID,
+        },
+        {
+          type: AuthorizationCredential.ORGANIZATION_OWNER,
+          resourceID: organizationID,
+        },
+        {
+          type: AuthorizationCredential.GLOBAL_REGISTERED,
+          resourceID: '',
+        },
+      ]
     );
-    newRules.push(organizationOwner);
-
-    const organizationMember = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.READ],
-      AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-      organizationID
-    );
-    newRules.push(organizationMember);
-
-    const registeredUser = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.READ],
-      AuthorizationCredential.GLOBAL_REGISTERED
-    );
-
-    newRules.push(registeredUser);
+    newRules.push(readPrivilege);
 
     const updatedAuthorization =
       this.authorizationPolicy.appendCredentialAuthorizationRules(

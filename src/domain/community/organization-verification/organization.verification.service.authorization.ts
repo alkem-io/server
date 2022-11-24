@@ -8,7 +8,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { EntityNotInitializedException } from '@common/exceptions';
 import { IOrganizationVerification } from './organization.verification.interface';
 import { OrganizationVerification } from './organization.verification.entity';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class OrganizationVerificationAuthorizationService {
@@ -49,57 +49,39 @@ export class OrganizationVerificationAuthorizationService {
         LogContext.COMMUNITY
       );
 
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const globalAdmin = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.GLOBAL_ADMIN
-    );
+    const globalAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.GRANT,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+          AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
+        ]
+      );
     newRules.push(globalAdmin);
 
-    const hubsAdmin = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.GLOBAL_ADMIN_HUBS
-    );
-    newRules.push(hubsAdmin);
-
-    const communityAdmin = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
-    );
-    newRules.push(communityAdmin);
-
-    const orgAdmin = new AuthorizationPolicyRuleCredential(
+    const orgAdmin = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.READ, AuthorizationPrivilege.UPDATE],
-      AuthorizationCredential.ORGANIZATION_ADMIN,
-      organizationID
+      [
+        {
+          type: AuthorizationCredential.ORGANIZATION_ADMIN,
+          resourceID: organizationID,
+        },
+        {
+          type: AuthorizationCredential.ORGANIZATION_OWNER,
+          resourceID: organizationID,
+        },
+      ]
     );
     newRules.push(orgAdmin);
-
-    const orgOwner = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.READ, AuthorizationPrivilege.UPDATE],
-      AuthorizationCredential.ORGANIZATION_OWNER,
-      organizationID
-    );
-    newRules.push(orgOwner);
 
     const updatedAuthorization =
       this.authorizationPolicy.appendCredentialAuthorizationRules(

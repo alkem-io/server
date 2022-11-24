@@ -2,24 +2,26 @@ import { Injectable } from '@nestjs/common';
 import { ICommunication } from '@domain/communication/communication';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { CommunicationService } from './communication.service';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class CommunicationAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private communicationService: CommunicationService,
+    private communityPolicyService: CommunityPolicyService,
     private discussionAuthorizationService: DiscussionAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
     communication: ICommunication,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    membershipCredential: CredentialDefinition
+    policy: ICommunityPolicy
   ): Promise<ICommunication> {
     communication.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -29,7 +31,7 @@ export class CommunicationAuthorizationService {
 
     communication.authorization = this.extendAuthorizationPolicy(
       communication.authorization,
-      membershipCredential
+      policy
     );
 
     communication.discussions = await this.communicationService.getDiscussions(
@@ -54,16 +56,16 @@ export class CommunicationAuthorizationService {
 
   private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    communityCredential: CredentialDefinition
+    policy: ICommunityPolicy
   ): IAuthorizationPolicy {
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // Allow any member of this community to create discussions, and to send messages to the discussion
-    const communityMember = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.READ, AuthorizationPrivilege.CREATE],
-      communityCredential.type,
-      communityCredential.resourceID
-    );
+    const communityMember =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.READ, AuthorizationPrivilege.CREATE],
+        [this.communityPolicyService.getMembershipCredential(policy)]
+      );
     newRules.push(communityMember);
 
     //
