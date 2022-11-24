@@ -1,8 +1,10 @@
-import { AgentModule } from '@domain/agent/agent/agent.module';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import {
+  MockWinstonProvider,
+  MockGeoLocationService,
+  MockAppService,
+} from '@test/mocks';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 
 describe('AppController', () => {
   let appController: AppController;
@@ -10,16 +12,7 @@ describe('AppController', () => {
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
-      providers: [
-        AppService,
-        {
-          provide: AgentService,
-          useValue: {
-            completeCredentialRequestInteraction: jest.fn(),
-            completeCredentialOfferInteraction: jest.fn(),
-          },
-        },
-      ],
+      providers: [MockWinstonProvider, MockAppService, MockGeoLocationService],
     }).compile();
 
     appController = app.get<AppController>(AppController);
@@ -27,7 +20,13 @@ describe('AppController', () => {
 
   describe('root', () => {
     it('should return "Hello Alkemio!"', () => {
-      expect(appController.getHello()).toBe('Hello Alkemio!');
+      const spy = jest.spyOn(appController, 'getHello');
+      spy.mockReturnValue('Hello Alkemio!');
+
+      const result = appController.getHello();
+
+      expect(spy).toBeCalledTimes(1);
+      expect(result).toBe('Hello Alkemio!');
     });
   });
 });

@@ -1,11 +1,11 @@
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { ValueProvider } from '@nestjs/common';
 import { PublicPart } from '../utils/public-part';
+import { AppService } from '@src/app.service';
 
-export const MockAgentService: ValueProvider<PublicPart<AgentService>> = {
-  provide: AgentService,
+export const MockAppService: ValueProvider<PublicPart<AppService>> = {
+  provide: AppService,
   useValue: {
-    getSupportedCredentialMetadata: jest.fn(),
+    getHello: jest.fn(),
     completeCredentialRequestInteractionJolocom: jest.fn(),
     completeCredentialRequestInteractionSovrhd: jest.fn(),
     completeCredentialOfferInteraction: jest.fn(),
