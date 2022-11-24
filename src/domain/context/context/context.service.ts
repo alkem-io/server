@@ -35,13 +35,24 @@ export class ContextService {
 
   async createContext(contextData: CreateContextInput): Promise<IContext> {
     const context: IContext = Context.create(contextData);
+
+    // Manually create the references to ensure child entities like authorization are created
+    context.references = [];
+    if (contextData?.references) {
+      for (const referenceData of contextData.references) {
+        const reference = await this.referenceService.createReference(
+          referenceData
+        );
+        context.references.push(reference);
+      }
+    }
     context.ecosystemModel =
       await this.ecosystemModelService.createEcosystemModel({});
     context.authorization = new AuthorizationPolicy();
     context.location = await this.locationService.createLocation(
       contextData?.location
     );
-    if (!context.references) context.references = [];
+
     context.visuals = [];
     context.visuals.push(await this.visualService.createVisualBanner());
     context.visuals.push(await this.visualService.createVisualBannerNarrow());
