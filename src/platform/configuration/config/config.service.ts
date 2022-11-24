@@ -84,6 +84,15 @@ export class KonfigService {
         rumEnabled: apmConfig?.rumEnabled,
         endpoint: apmConfig?.endpoint,
       },
+      storage: {
+        file: {
+          maxFileSize: this.configService.get(ConfigurationTypes.STORAGE)?.file
+            ?.max_file_size,
+          mimeTypes: this.configService
+            .get(ConfigurationTypes.STORAGE)
+            ?.file.mime_types.split(','),
+        },
+      },
     };
   }
 
