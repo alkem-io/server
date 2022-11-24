@@ -4,6 +4,7 @@ import { IPlatformConfig } from './platform';
 import { ISentryConfig } from './sentry';
 import { Template, ITemplate } from './template';
 import { IApmConfig } from './apm';
+import { IStorageConfig } from './storage';
 
 @ObjectType('Config')
 export abstract class IConfig {
@@ -37,4 +38,10 @@ export abstract class IConfig {
       'Elastic APM (RUM & performance monitoring) related configuration.',
   })
   apm?: IApmConfig;
+
+  @Field(() => IStorageConfig, {
+    nullable: false,
+    description: 'Configuration for storage providers, e.g. file',
+  })
+  storage?: IStorageConfig;
 }

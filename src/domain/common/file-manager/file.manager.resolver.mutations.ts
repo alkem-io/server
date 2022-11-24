@@ -7,7 +7,6 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationService } from '@platform/authorization/platform.authorization.service';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
-import { CID } from '../scalars/scalar.cid';
 import { DeleteFileInput } from './file.manager.dto.delete';
 import { FileManagerService } from './file.manager.service';
 
@@ -49,8 +48,6 @@ export class FileManagerResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
       name: 'deleteData',
-      description:
-        'IPFS Content Identifier (CID) of the file, e.g. Qmde6CnXDGGe7Dynz1pnxgNARtdVBme9YBwNbo4HJiRy2W',
     })
     deleteData: DeleteFileInput
   ): Promise<boolean> {
