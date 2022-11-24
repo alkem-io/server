@@ -3,13 +3,13 @@ import { AuthorizationCredential, LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { CanvasService } from './canvas.service';
 import { ICanvas } from './canvas.interface';
 import { CanvasCheckoutAuthorizationService } from '../canvas-checkout/canvas.checkout.service.authorization';
 import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class CanvasAuthorizationService {
@@ -59,18 +59,23 @@ export class CanvasAuthorizationService {
         LogContext.COLLABORATION
       );
 
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const manageCanvasCreatedByPolicy = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.USER_SELF_MANAGEMENT,
-      canvas.createdBy
-    );
+    const manageCanvasCreatedByPolicy =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [
+          {
+            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+            resourceID: canvas.createdBy,
+          },
+        ]
+      );
     newRules.push(manageCanvasCreatedByPolicy);
 
     const updatedAuthorization =
@@ -85,13 +90,17 @@ export class CanvasAuthorizationService {
   private extendAuthorizationPolicyForCheckoutOwner(
     checkout: ICanvasCheckout
   ): IAuthorizationPolicy {
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     if (checkout.lockedBy && checkout.lockedBy.length > 0) {
-      const lockedBy = new AuthorizationPolicyRuleCredential(
+      const lockedBy = this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.UPDATE],
-        AuthorizationCredential.USER_SELF_MANAGEMENT,
-        checkout.lockedBy
+        [
+          {
+            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+            resourceID: checkout.lockedBy,
+          },
+        ]
       );
 
       newRules.push(lockedBy);
@@ -116,6 +125,12 @@ export class CanvasAuthorizationService {
       AuthorizationPrivilege.UPDATE
     );
     privilegeRules.push(createPrivilege);
+
+    const contributePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.UPDATE_CANVAS],
+      AuthorizationPrivilege.CONTRIBUTE
+    );
+    privilegeRules.push(contributePrivilege);
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,

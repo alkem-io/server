@@ -10,12 +10,12 @@ import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service
 import { AspectAuthorizationService } from '@domain/collaboration/aspect/aspect.service.authorization';
 import { LogContext, AuthorizationPrivilege } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 import { AspectTemplateAuthorizationService } from '@domain/template/aspect-template/aspect.template.service.authorization';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
+import { CalloutType } from '@common/enums/callout.type';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -42,11 +42,13 @@ export class CalloutAuthorizationService {
         parentAuthorization
       );
 
-    callout.authorization = this.appendPrivilegeRules(callout.authorization);
+    callout.authorization = this.appendPrivilegeRules(
+      callout.authorization,
+      callout.type
+    );
 
     callout.authorization = this.appendCredentialRules(
       callout.authorization,
-      callout.id,
       communityPolicy
     );
 
@@ -96,75 +98,54 @@ export class CalloutAuthorizationService {
 
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    calloutId: string,
     policy: ICommunityPolicy
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for Context: ${calloutId}`,
+        `Authorization definition not found for Context: ${policy}`,
         LogContext.COLLABORATION
       );
 
-    const membershipCredential =
-      this.communityPolicyService.getMembershipCredential(policy);
-
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
-
-    const communityMemberNotInherited = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE_ASPECT,
-        AuthorizationPrivilege.CREATE_CANVAS,
-      ],
-      membershipCredential.type,
-      membershipCredential.resourceID
-    );
-    communityMemberNotInherited.inheritable = false;
-    newRules.push(communityMemberNotInherited);
-
-    const communityMemberInherited = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.UPDATE_CANVAS,
-        AuthorizationPrivilege.CREATE_COMMENT,
-      ],
-      membershipCredential.type,
-      membershipCredential.resourceID
-    );
-    communityMemberInherited.inheritable = true;
-    newRules.push(communityMemberInherited);
-
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        authorization,
-        newRules
-      );
-
-    return updatedAuthorization;
+    return authorization;
   }
 
   private appendPrivilegeRules(
-    authorization: IAuthorizationPolicy
+    authorization: IAuthorizationPolicy,
+    calloutType: CalloutType
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
-    const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [
-        AuthorizationPrivilege.CREATE_ASPECT,
-        AuthorizationPrivilege.CREATE_CANVAS,
-        AuthorizationPrivilege.CREATE_COMMENT,
-      ],
-      AuthorizationPrivilege.CREATE
-    );
-    privilegeRules.push(createPrivilege);
+    const privilegeToGrant = this.getPrivilegeForCalloutType(calloutType);
+    if (privilegeToGrant) {
+      const createPrivilege = new AuthorizationPolicyRulePrivilege(
+        [privilegeToGrant],
+        AuthorizationPrivilege.CREATE
+      );
+      privilegeRules.push(createPrivilege);
 
-    const updatePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.UPDATE_CANVAS],
-      AuthorizationPrivilege.UPDATE
-    );
-    privilegeRules.push(updatePrivilege);
+      const contributorsPrivilege = new AuthorizationPolicyRulePrivilege(
+        [privilegeToGrant],
+        AuthorizationPrivilege.CONTRIBUTE
+      );
+      privilegeRules.push(contributorsPrivilege);
+    }
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,
       privilegeRules
     );
+  }
+
+  private getPrivilegeForCalloutType(
+    calloutType: CalloutType
+  ): AuthorizationPrivilege | undefined {
+    switch (calloutType) {
+      case CalloutType.CANVAS:
+        return AuthorizationPrivilege.CREATE_CANVAS;
+      case CalloutType.CARD:
+        return AuthorizationPrivilege.CREATE_ASPECT;
+      case CalloutType.COMMENTS:
+        return undefined;
+    }
   }
 }
