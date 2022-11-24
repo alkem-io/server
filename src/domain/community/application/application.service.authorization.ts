@@ -5,9 +5,9 @@ import { ApplicationService } from './application.service';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { Application } from './application.entity';
 import { IApplication } from './application.interface';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class ApplicationAuthorizationService {
@@ -38,21 +38,26 @@ export class ApplicationAuthorizationService {
   private async extendAuthorizationPolicy(
     application: IApplication
   ): Promise<IAuthorizationPolicy> {
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // get the user
     const user = await this.applicationService.getUser(application.id);
 
     // also grant the user privileges to manage their own application
-    const userApplicationRule = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.USER_SELF_MANAGEMENT,
-      user.id
-    );
+    const userApplicationRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [
+          {
+            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+            resourceID: user.id,
+          },
+        ]
+      );
     newRules.push(userApplicationRule);
 
     //

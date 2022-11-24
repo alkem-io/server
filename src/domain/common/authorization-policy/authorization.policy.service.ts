@@ -20,7 +20,6 @@ import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { IAuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential.interface';
@@ -215,7 +214,7 @@ export class AuthorizationPolicyService {
 
   appendPrivilegeAuthorizationRules(
     authorization: IAuthorizationPolicy | undefined,
-    privilegeRules: AuthorizationPolicyRulePrivilege[]
+    privilegeRules: IAuthorizationPolicyRulePrivilege[]
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
     const existingRules = this.authorizationService.convertPrivilegeRulesStr(
@@ -298,9 +297,10 @@ export class AuthorizationPolicyService {
   getCredentialRules(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicyRuleCredential[] {
-    return this.authorizationService.convertCredentialRulesStr(
+    const rules = this.authorizationService.convertCredentialRulesStr(
       authorization.credentialRules
     );
+    return rules;
   }
 
   getVerifiedCredentialRules(
