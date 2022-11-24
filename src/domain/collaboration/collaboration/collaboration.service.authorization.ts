@@ -90,11 +90,9 @@ export class CollaborationAuthorizationService {
         CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
       )
     ) {
-      const parentCredential =
-        this.communityPolicyService.getParentMembershipCredential(policy);
-      if (parentCredential) {
-        contributors.push(parentCredential);
-      }
+      const parentCredentials =
+        this.communityPolicyService.getParentMembershipCredentials(policy);
+      contributors.push(...parentCredentials);
     }
 
     contributors.push({

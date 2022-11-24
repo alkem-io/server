@@ -73,7 +73,7 @@ export class OpportunityAuthorizationService {
     policy: ICommunityPolicy,
     challengeCommunityPolicy: ICommunityPolicy
   ) {
-    // Anonymouse Read access
+    // propagate the value of the parent community policy into the opportunity community policy
     const challengeContributors = this.communityPolicyService.getFlag(
       challengeCommunityPolicy,
       CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE

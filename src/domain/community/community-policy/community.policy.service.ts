@@ -81,9 +81,20 @@ export class CommunityPolicyService {
       CommunityRole.MEMBER
     );
 
-    // todo: not entirely safe...
+    // First entry is the immediate parent
     const parentCommunityCredential = memberRolePolicy.parentCredentials[0];
     return parentCommunityCredential;
+  }
+
+  getParentMembershipCredentials(
+    policy: ICommunityPolicy
+  ): ICredentialDefinition[] {
+    const memberRolePolicy = this.getCommunityRolePolicy(
+      policy,
+      CommunityRole.MEMBER
+    );
+
+    return memberRolePolicy.parentCredentials;
   }
 
   getLeadCredentials(policy: ICommunityPolicy): ICredentialDefinition[] {
