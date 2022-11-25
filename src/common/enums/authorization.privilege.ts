@@ -14,8 +14,11 @@ export enum AuthorizationPrivilege {
   CREATE_CHALLENGE = 'create-challenge',
   CREATE_ASPECT = 'create-aspect',
   CREATE_COMMENT = 'create-comment',
+  CONTRIBUTE = 'contribute',
   CREATE_HUB = 'create-hub',
   CREATE_ORGANIZATION = 'create-organization',
+  FILE_UPLOAD = 'file-upload',
+  FILE_DELETE = 'file-delete',
   READ_USERS = 'read-users',
   UPDATE_CANVAS = 'update-canvas',
   UPDATE_INNOVATION_FLOW = 'update-lifecycle',
@@ -24,6 +27,7 @@ export enum AuthorizationPrivilege {
   COMMUNITY_CONTEXT_REVIEW = 'community-context-review',
   CREATE_CALLOUT = 'create-callout',
   CREATE_RELATION = 'create-relation',
+  CREATE_OPPORTUNITY = 'create-opportunity',
   MOVE_CARD = 'move-card',
 }
 

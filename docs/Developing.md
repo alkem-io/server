@@ -60,22 +60,30 @@ sudo apt-get install jq
 Login with demo auth provider and extract the access token:
 
 ```bash
-token=$( curl \
-  --header "Content-Type: application/json" \
-  --request POST \
-  --data  '{"username":"admin@alkem.io", "password":"alkemio"}' \
-  http://localhost:3003/auth/login \
-  | jq -r .access_token )
+actionUrl=$(\
+    curl -s -X GET -H "Accept: application/json" \
+    "http://localhost:3000/identity/ory/kratos/public/self-service/login/api" \
+    | jq -r '.ui.action'\
+    )
+sessionToken=$(\
+curl -s -X POST -H  "Accept: application/json" -H "Content-Type: application/json" \
+    -d '{"password_identifier": "admin@alkem.io", "password": "your_password", "method": "password"}' \
+    "$actionUrl" | jq -r '.session_token' \
+    )
 ```
 
-You can test (assuming default endpoint configuration) with the following CURL request:
+
+
+You can test (assuming default endpoint configuration) creating a file and then uploading it with the following CURL request:
 
 ```bash
-curl localhost:4000/graphql \
- -H "Authorization: Bearer $token" \
+touch hello-alkemio.pdf
+
+curl http://localhost:3000/api/private/non-interactive/graphql \
+ -H "Authorization: Bearer $sessionToken" \
  -F operations='{"query":"mutation UploadFile($file:Upload!) {uploadFile(file:$file)}", "variables": { "file": null }}' \
  -F map='{ "0": ["variables.file"] }' \
- -F 0=@"./uploads/hello-alkemio.txt"
+ -F 0=@"hello-alkemio.pdf"
 ```
 
 You should get a response: {"data":{"uploadFile":"https://ipfs.io/ipfs/QmYt9ypyGsR1BKdaCGPdwdBgAiuXK5AYN2bGSNZov7YXuk"}}.

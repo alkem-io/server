@@ -6,5 +6,8 @@ export const MockAgentService: ValueProvider<PublicPart<AgentService>> = {
   provide: AgentService,
   useValue: {
     getSupportedCredentialMetadata: jest.fn(),
+    completeCredentialRequestInteractionJolocom: jest.fn(),
+    completeCredentialRequestInteractionSovrhd: jest.fn(),
+    completeCredentialOfferInteraction: jest.fn(),
   },
 };

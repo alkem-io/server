@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { streamToBuffer } from '@common/utils';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -6,24 +5,26 @@ import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import { ReadStream } from 'fs';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-const { create } = require('ipfs-http-client');
+import { CID, create, IPFSHTTPClient } from 'ipfs-http-client';
+import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
+import { IpfsGCFailedException } from '@common/exceptions/ipfs/ipfs.gc.exception';
 
 @Injectable()
 export class IpfsService {
-  private ipfsEndpoint = '';
-  private ipfsClientEndpoint = '';
+  private readonly ipfsClient: IPFSHTTPClient;
+  private readonly ipfsClientEndpoint;
 
   constructor(
     private configService: ConfigService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    this.ipfsEndpoint = this.configService.get(
-      ConfigurationTypes.STORAGE
-    )?.ipfs?.endpoint;
+    const ipfsEndpoint = this.configService.get(ConfigurationTypes.STORAGE)
+      ?.ipfs?.endpoint;
     this.ipfsClientEndpoint = this.configService.get(
       ConfigurationTypes.STORAGE
     )?.ipfs?.client_endpoint;
+    this.ipfsClient = create({ url: ipfsEndpoint });
   }
 
   public async uploadFile(filePath: string): Promise<string> {
@@ -41,13 +42,47 @@ export class IpfsService {
   }
 
   public async uploadFileFromBuffer(buffer: Buffer): Promise<string> {
-    const ipfsClient = create(new URL(this.ipfsEndpoint));
-
-    const res = await ipfsClient.add(buffer, { pin: true });
+    const res = await this.ipfsClient.add(buffer, { pin: true });
     this.logger.verbose?.(
-      `Uploaded filewith CID: ${res.path}`,
+      `Uploaded file with CID: ${res.path}`,
       LogContext.IPFS
     );
     return `${this.ipfsClientEndpoint}/${res.path}`;
+  }
+
+  public async unpinFile(CID: string): Promise<CID> {
+    this.logger.verbose?.(`Unpinning file from CID: ${CID}`, LogContext.IPFS);
+
+    try {
+      return this.ipfsClient.pin.rm(CID);
+    } catch (error: any) {
+      this.logger.error('Unpinning failed', LogContext.IPFS);
+      throw new IpfsDeleteFailedException(`Unpinning failed ${error.message}`);
+    }
+  }
+
+  public async garbageCollect(): Promise<boolean> {
+    this.logger.verbose?.('Garbage collection started!', LogContext.IPFS);
+    try {
+      for await (const gcFile of this.ipfsClient.repo.gc()) {
+        this.logger.verbose?.(
+          `Garbage collected ${gcFile.cid}`,
+          LogContext.IPFS
+        );
+
+        if (gcFile.err) {
+          this.logger.error(
+            `Error in collection ${gcFile.err}`,
+            LogContext.IPFS
+          );
+        }
+      }
+    } catch (error: any) {
+      this.logger.error('Garbage collection failed', LogContext.IPFS);
+      throw new IpfsGCFailedException(
+        `Garbage collection failed ${error.message}`
+      );
+    }
+    return true;
   }
 }

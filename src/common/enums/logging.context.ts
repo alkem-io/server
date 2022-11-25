@@ -27,4 +27,6 @@ export enum LogContext {
   ROLES = 'roles',
   TEMPLATES = 'templates',
   LIBRARY = 'library',
+  FILE_MANAGER = 'file-manager',
+  GEO = 'geo',
 }

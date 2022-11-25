@@ -28,9 +28,10 @@ import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { CommunityType } from '@common/enums/community.type';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 
 @Injectable()
 export class BaseChallengeService {
@@ -51,7 +52,7 @@ export class BaseChallengeService {
     baseChallengeData: CreateBaseChallengeInput,
     hubID: string,
     communityType: CommunityType,
-    communityPolicy: ICommunityPolicy
+    communityPolicy: ICommunityPolicyDefinition
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
     await this.isNameAvailableOrFail(baseChallengeData.nameID, hubID);
@@ -218,15 +219,12 @@ export class BaseChallengeService {
     return community;
   }
 
-  public async getCommunityMembershipCredential(
+  public async getCommunityPolicy(
     baseChallengeId: string,
     repository: Repository<BaseChallenge>
-  ): Promise<CredentialDefinition> {
+  ): Promise<ICommunityPolicy> {
     const community = await this.getCommunity(baseChallengeId, repository);
-    return this.communityService.getCredentialDefinitionForRole(
-      community,
-      CommunityRole.MEMBER
-    );
+    return this.communityService.getCommunityPolicy(community);
   }
 
   public async getCommunityLeadershipCredential(

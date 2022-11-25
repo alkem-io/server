@@ -1,11 +1,10 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { ICommunityPolicyRole } from './community.policy.role.interface';
+import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
+import { IBaseAlkemio } from '@domain/common/entity/base-entity';
+import { ObjectType } from '@nestjs/graphql';
 
 @ObjectType('CommunityPolicy')
-export abstract class ICommunityPolicy {
-  @Field(() => ICommunityPolicyRole)
-  member!: ICommunityPolicyRole;
-
-  @Field(() => ICommunityPolicyRole)
-  lead!: ICommunityPolicyRole;
+export abstract class ICommunityPolicy extends IBaseAlkemio {
+  member!: string;
+  lead!: string;
+  flags!: Map<CommunityPolicyFlag, boolean>;
 }

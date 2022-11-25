@@ -41,6 +41,7 @@ import { LifecycleType } from '@common/enums/lifecycle.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 
 @Injectable()
 export class OpportunityService {
@@ -105,8 +106,8 @@ export class OpportunityService {
     // set immediate community parent
     if (opportunity.community) {
       opportunity.community.parentID = opportunity.id;
-      opportunity.community =
-        this.communityService.updateCommunityPolicyResourceID(
+      opportunity.community.policy =
+        await this.communityService.updateCommunityPolicyResourceID(
           opportunity.community,
           opportunity.id
         );
@@ -482,5 +483,12 @@ export class OpportunityService {
         community: { id: communityID },
       },
     });
+  }
+
+  async getCommunityPolicy(opportunityID: string): Promise<ICommunityPolicy> {
+    return await this.baseChallengeService.getCommunityPolicy(
+      opportunityID,
+      this.opportunityRepository
+    );
   }
 }

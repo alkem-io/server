@@ -29,7 +29,7 @@ hosting:
   #
   path_api_public_rest: ${PATH_API_PUBLIC_REST}:/api/public/rest
 
-  # Support for subscriptions enabled or not. These require WebSocket connectioins
+  # Support for subscriptions enabled or not. These require a WebSocket connection
   subscriptions:
     enabled: ${SUBSCRIPTIONS_ENABLED}:false
 
@@ -267,6 +267,12 @@ communications:
 ## storage ##
 # Alkemio uses multiple types of persistent storage, including SQL database and IPFS.
 storage:
+  file:
+    # Max file size of files that will be uploaded to IPFS (in bytes).
+    max_file_size: 5242880
+
+    # Supported mime types
+    mime_types: ${IPFS_MIME_TYPES}:image/bmp,image/jpeg,image/x-png,image/png,image/gif,application/pdf
   # MySQL database configuration for usage by the Alkemio Server.
   # The authentication method used by Alkemio Server is MySQL Native Password.
   # Note: both schema / database name are used for configuration and they need to have the same value.
@@ -303,9 +309,6 @@ storage:
     # IPFS http proxy endpoint. Exposed through traefik (or any ingress / reverse proxy of choice).
     client_endpoint: ${IPFS_CLIENT_ENDPOINT}:http://localhost:3000/ipfs
 
-    # Max file size of files that will be uploaded to IPFS (in bytes).
-    max_file_size: 1048576
-
   # Redis configuration
   redis:
     # Redis host
@@ -328,6 +331,20 @@ microservices:
 
       # RabbitMQ password
       password: ${RABBITMQ_PASSWORD}:alkemio!
+
+# integrations with 3rd party services
+integrations:
+  # Different types of geo information like lat, lan, city, country, etc...
+  geo:
+    rest_endpoint: ${GEO_REST_ENDPOINT}:http://localhost:3000/api/public/rest/geo
+    # https://www.geoplugin.com/faq#i_stopped_getting_responses_from_geoplugin.net
+    service_endpoint: ${GEO_SERVICE_ENDPOINT}:http://www.geoplugin.net/json.gp?ip=
+    # How long (in seconds) the cache entry for a certain ip's geo will be held
+    cache_entry_ttl: ${GEO_CACHE_TTL}:14400
+    # Allowed amount of calls per time window
+    allowed_calls_to_service: ${GEO_SERVICE_CALL_LIMIT}:120
+    # Time window (in seconds) in which a certain amount of calls are allowed
+    allowed_calls_to_service_window: ${GEO_SERVICE_CALL_WINDOW}:60
 
 notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true
@@ -379,6 +396,9 @@ platform:
 
   # Help Dialog - tips
   tips: ${PLATFORM_TIPS}:https://alkemio.foundation/post/
+
+  # Acceptable Usage Policy
+  aup: ${PLATFORM_AUP}:https://www.alkemio.foundation/legal/hub/#aup
 ssi:
   # Jolocom SDK is used for providing SSI capabilities on the platform.
   # Note: NOT FOR PRODUCTION USAGE, experimental functionality,

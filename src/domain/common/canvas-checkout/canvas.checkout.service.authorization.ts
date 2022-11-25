@@ -4,7 +4,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ICanvasCheckout } from './canvas.checkout.interface';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class CanvasCheckoutAuthorizationService {
@@ -27,14 +27,18 @@ export class CanvasCheckoutAuthorizationService {
   private extendAuthorizationPolicyForCheckoutOwner(
     checkout: ICanvasCheckout
   ): IAuthorizationPolicy {
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // Allow any member of this community to create messages on the discussion
     if (checkout.lockedBy && checkout.lockedBy.length > 0) {
-      const lockedBy = new AuthorizationPolicyRuleCredential(
+      const lockedBy = this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.UPDATE],
-        AuthorizationCredential.USER_SELF_MANAGEMENT,
-        checkout.lockedBy
+        [
+          {
+            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+            resourceID: checkout.lockedBy,
+          },
+        ]
       );
 
       newRules.push(lockedBy);

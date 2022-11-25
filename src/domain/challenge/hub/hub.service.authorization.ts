@@ -11,7 +11,6 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IHub } from './hub.interface';
 import { Hub } from './hub.entity';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { HubPreferenceType } from '@common/enums/hub.preference.type';
 import { IOrganization } from '@domain/community';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
@@ -22,6 +21,10 @@ import { TemplatesSetAuthorizationService } from '@domain/template/templates-set
 import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
+import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -33,6 +36,7 @@ export class HubAuthorizationService {
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationService,
+    private communityPolicyService: CommunityPolicyService,
     private hubService: HubService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>
@@ -40,6 +44,8 @@ export class HubAuthorizationService {
 
   async applyAuthorizationPolicy(hub: IHub): Promise<IHub> {
     const preferenceSet = await this.hubService.getPreferenceSetOrFail(hub.id);
+    const hubPolicy = await this.hubService.getCommunityPolicy(hub);
+    this.setCommunityPolicyFlags(hubPolicy, preferenceSet);
 
     const hubVisibility = this.hubService.getVisibility(hub);
     const hostOrg = await this.hubService.getHost(hub.id);
@@ -66,7 +72,7 @@ export class HubAuthorizationService {
         hub.authorization = this.extendAuthorizationPolicyLocal(
           hub.authorization,
           hub.id,
-          preferenceSet
+          hubPolicy
         );
         hub.authorization = this.appendVerifiedCredentialRules(
           hub.authorization
@@ -79,7 +85,10 @@ export class HubAuthorizationService {
     }
 
     // Cascade down
-    const hubSaved = await this.propagateAuthorizationToChildEntities(hub);
+    const hubSaved = await this.propagateAuthorizationToChildEntities(
+      hub,
+      hubPolicy
+    );
 
     // Finally update the child community directly after propagation
     switch (hubVisibility) {
@@ -89,10 +98,13 @@ export class HubAuthorizationService {
         hubSaved.community.authorization =
           this.extendCommunityAuthorizationPolicy(
             hubSaved.community.authorization,
-            hubSaved.id,
-            preferenceSet,
+            hubPolicy,
             hostOrg
           );
+
+        hubSaved.collaboration = await this.hubService.getCollaboration(
+          hubSaved
+        );
         break;
       case HubVisibility.ARCHIVED:
         break;
@@ -101,23 +113,94 @@ export class HubAuthorizationService {
     return await this.hubRepository.save(hubSaved);
   }
 
+  private setCommunityPolicyFlags(
+    policy: ICommunityPolicy,
+    preferenceSet: IPreferenceSet
+  ) {
+    // Anonymouse Read access
+    const anonReadAccess = this.preferenceSetService.getPreferenceValue(
+      preferenceSet,
+      HubPreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
+    );
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.ALLOW_ANONYMOUS_READ_ACCESS,
+      anonReadAccess
+    );
+
+    // Allow applications from anyone
+    const allowAnyRegisteredUserToApply =
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
+        HubPreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE
+      );
+
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.MEMBERSHIP_APPLICATIONS_FROM_ANYONE,
+      allowAnyRegisteredUserToApply
+    );
+
+    //
+    const allowAnyRegisteredUserToJoin =
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
+        HubPreferenceType.MEMBERSHIP_JOIN_HUB_FROM_ANYONE
+      );
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.MEMBERSHIP_JOIN_HUB_FROM_ANYONE,
+      allowAnyRegisteredUserToJoin
+    );
+
+    //
+    const allowHostOrganizationMemberToJoin =
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
+        HubPreferenceType.MEMBERSHIP_JOIN_HUB_FROM_HOST_ORGANIZATION_MEMBERS
+      );
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.MEMBERSHIP_JOIN_HUB_FROM_HOST_ORGANIZATION_MEMBERS,
+      allowHostOrganizationMemberToJoin
+    );
+
+    //
+    const allowMembersToCreateChallengesPref =
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
+        HubPreferenceType.ALLOW_MEMBERS_TO_CREATE_CHALLENGES
+      );
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.ALLOW_MEMBERS_TO_CREATE_CHALLENGES,
+      allowMembersToCreateChallengesPref
+    );
+
+    // Allow hub members to contribute
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE,
+      true
+    );
+  }
+
   private async propagateAuthorizationToChildEntities(
-    hubBase: IHub
+    hubBase: IHub,
+    policy: ICommunityPolicy
   ): Promise<IHub> {
     const hub: IHub =
       await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
         hubBase,
-        this.hubRepository
+        this.hubRepository,
+        policy
       );
-    // propagate authorization rules for child entities
-    const hubCommunityCredential =
-      await this.hubService.getCommunityMembershipCredential(hub);
+
     hub.challenges = await this.hubService.getChallenges(hub);
     for (const challenge of hub.challenges) {
       await this.challengeAuthorizationService.applyAuthorizationPolicy(
         challenge,
-        hub.authorization,
-        hubCommunityCredential
+        hub.authorization
       );
       challenge.authorization =
         await this.authorizationPolicyService.appendCredentialAuthorizationRule(
@@ -155,43 +238,39 @@ export class HubAuthorizationService {
         `Authorization definition not found for: ${hubID}`,
         LogContext.CHALLENGES
       );
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
     // By default it is world visible
     authorization.anonymousReadAccess = true;
 
     // Allow global admins to reset authorization
-    const globalAdminNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.AUTHORIZATION_RESET],
-      AuthorizationCredential.GLOBAL_ADMIN
-    );
-    globalAdminNotInherited.inheritable = false;
-    newRules.push(globalAdminNotInherited);
+    const authorizationReset =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.AUTHORIZATION_RESET],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+        ]
+      );
+    authorizationReset.inheritable = false;
+    newRules.push(authorizationReset);
 
-    // Allow global admin hubs to reset authorization
-    const globalAdminHubsNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.AUTHORIZATION_RESET],
-      AuthorizationCredential.GLOBAL_ADMIN_HUBS
-    );
-    globalAdminHubsNotInherited.inheritable = false;
-    newRules.push(globalAdminHubsNotInherited);
-
-    const communityAdmin = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.READ],
-      AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY
-    );
+    const communityAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ],
+        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY]
+      );
     newRules.push(communityAdmin);
 
     // Allow Global admins + Global Hub Admins to manage access to Hubs + contents
-    const globalAdmin = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.GRANT],
-      AuthorizationCredential.GLOBAL_ADMIN
-    );
+    const globalAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.GRANT],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+        ]
+      );
     newRules.push(globalAdmin);
-    const globalHubsAdmin = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.GRANT],
-      AuthorizationCredential.GLOBAL_ADMIN_HUBS
-    );
-    newRules.push(globalHubsAdmin);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
@@ -214,22 +293,21 @@ export class HubAuthorizationService {
   private extendAuthorizationPolicyLocal(
     authorization: IAuthorizationPolicy | undefined,
     hubID: string,
-    preferenceSet: IPreferenceSet
+    policy: ICommunityPolicy
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for: ${hubID}`,
         LogContext.CHALLENGES
       );
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    authorization.anonymousReadAccess =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        HubPreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
-      );
+    authorization.anonymousReadAccess = this.communityPolicyService.getFlag(
+      policy,
+      CommunityPolicyFlag.AUTHORIZATION_ANONYMOUS_READ_ACCESS
+    );
 
-    const hubAdmin = new AuthorizationPolicyRuleCredential(
+    const hubAdmin = this.authorizationPolicyService.createCredentialRule(
       [
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.READ,
@@ -237,33 +315,31 @@ export class HubAuthorizationService {
         AuthorizationPrivilege.DELETE,
         AuthorizationPrivilege.GRANT,
       ],
-      AuthorizationCredential.HUB_ADMIN,
-      hubID
+      [this.communityPolicyService.getAdminCredential(policy)]
     );
     newRules.push(hubAdmin);
 
-    // Grant members privileges depending on the preferences
+    // Members allowed to create challenges?
     const allowMembersToCreateChallengesPref =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        HubPreferenceType.ALLOW_MEMBERS_TO_CREATE_CHALLENGES
+      this.communityPolicyService.getFlag(
+        policy,
+        CommunityPolicyFlag.ALLOW_MEMBERS_TO_CREATE_CHALLENGES
       );
-
     if (allowMembersToCreateChallengesPref) {
-      const hubMember = new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.READ, AuthorizationPrivilege.CREATE_CHALLENGE],
-        AuthorizationCredential.HUB_MEMBER,
-        hubID
-      );
-      newRules.push(hubMember);
-    } else {
-      const hubMember = new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.READ],
-        AuthorizationCredential.HUB_MEMBER,
-        hubID
-      );
-      newRules.push(hubMember);
+      const memberChallenge =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.CREATE_CHALLENGE],
+          [this.communityPolicyService.getMembershipCredential(policy)]
+        );
+      memberChallenge.inheritable = false;
+      newRules.push(memberChallenge);
     }
+
+    const hubMember = this.authorizationPolicyService.createCredentialRule(
+      [AuthorizationPrivilege.READ],
+      [this.communityPolicyService.getMembershipCredential(policy)]
+    );
+    newRules.push(hubMember);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
@@ -275,53 +351,53 @@ export class HubAuthorizationService {
 
   private extendCommunityAuthorizationPolicy(
     communityAuthorization: IAuthorizationPolicy | undefined,
-    hubID: string,
-    preferenceSet: IPreferenceSet,
+    policy: ICommunityPolicy,
     hostOrg?: IOrganization
   ): IAuthorizationPolicy {
     if (!communityAuthorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${hubID}`,
+        `Authorization definition not found for: ${JSON.stringify(policy)}`,
         LogContext.CHALLENGES
       );
 
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // Any registered user can apply
-    const allowAnyRegisteredUserToApply =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        HubPreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE
-      );
+    const allowAnyRegisteredUserToApply = this.communityPolicyService.getFlag(
+      policy,
+      CommunityPolicyFlag.MEMBERSHIP_APPLICATIONS_FROM_ANYONE
+    );
+
     if (allowAnyRegisteredUserToApply) {
-      const anyUserCanApply = new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.COMMUNITY_APPLY],
-        AuthorizationCredential.GLOBAL_REGISTERED
-      );
+      const anyUserCanApply =
+        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+          [AuthorizationPrivilege.COMMUNITY_APPLY],
+          [AuthorizationCredential.GLOBAL_REGISTERED]
+        );
       anyUserCanApply.inheritable = false;
       newRules.push(anyUserCanApply);
     }
 
     // Any registered user can join
-    const allowAnyRegisteredUserToJoin =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        HubPreferenceType.MEMBERSHIP_JOIN_HUB_FROM_ANYONE
-      );
+    const allowAnyRegisteredUserToJoin = this.communityPolicyService.getFlag(
+      policy,
+      CommunityPolicyFlag.MEMBERSHIP_JOIN_HUB_FROM_ANYONE
+    );
     if (allowAnyRegisteredUserToJoin) {
-      const anyUserCanJoin = new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.COMMUNITY_JOIN],
-        AuthorizationCredential.GLOBAL_REGISTERED
-      );
+      const anyUserCanJoin =
+        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+          [AuthorizationPrivilege.COMMUNITY_JOIN],
+          [AuthorizationCredential.GLOBAL_REGISTERED]
+        );
       anyUserCanJoin.inheritable = false;
       newRules.push(anyUserCanJoin);
     }
 
     // Host Org members to join
     const allowHostOrganizationMemberToJoin =
-      this.preferenceSetService.getPreferenceValue(
-        preferenceSet,
-        HubPreferenceType.MEMBERSHIP_JOIN_HUB_FROM_HOST_ORGANIZATION_MEMBERS
+      this.communityPolicyService.getFlag(
+        policy,
+        CommunityPolicyFlag.MEMBERSHIP_JOIN_HUB_FROM_HOST_ORGANIZATION_MEMBERS
       );
     if (allowHostOrganizationMemberToJoin) {
       if (!hostOrg)
@@ -329,11 +405,16 @@ export class HubAuthorizationService {
           'Not able to extend to allowing membership for host org that is not specified',
           LogContext.CHALLENGES
         );
-      const hostOrgMembersCanJoin = new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.COMMUNITY_JOIN],
-        AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-        hostOrg.id
-      );
+      const hostOrgMembersCanJoin =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.COMMUNITY_JOIN],
+          [
+            {
+              type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+              resourceID: hostOrg.id,
+            },
+          ]
+        );
       hostOrgMembersCanJoin.inheritable = false;
       newRules.push(hostOrgMembersCanJoin);
     }

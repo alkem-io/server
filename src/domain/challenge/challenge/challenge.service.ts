@@ -58,6 +58,7 @@ import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 
 @Injectable()
 export class ChallengeService {
@@ -126,8 +127,8 @@ export class ChallengeService {
     // set immediate community parent + resourceID
     if (challenge.community) {
       challenge.community.parentID = challenge.id;
-      challenge.community =
-        this.communityService.updateCommunityPolicyResourceID(
+      challenge.community.policy =
+        await this.communityService.updateCommunityPolicyResourceID(
           challenge.community,
           challenge.id
         );
@@ -396,10 +397,8 @@ export class ChallengeService {
     );
   }
 
-  async getCommunityMembershipCredential(
-    challengeId: string
-  ): Promise<CredentialDefinition> {
-    return await this.baseChallengeService.getCommunityMembershipCredential(
+  async getCommunityPolicy(challengeId: string): Promise<ICommunityPolicy> {
+    return await this.baseChallengeService.getCommunityPolicy(
       challengeId,
       this.challengeRepository
     );
@@ -755,6 +754,12 @@ export class ChallengeService {
       PreferenceType.MEMBERSHIP_FEEDBACK_ON_CHALLENGE_CONTEXT,
       'false'
     );
+    defaults.set(
+      PreferenceType.ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES,
+      'false'
+    );
+    defaults.set(PreferenceType.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE, 'true');
+    defaults.set(PreferenceType.ALLOW_NON_MEMBERS_READ_ACCESS, 'true');
 
     return defaults;
   }

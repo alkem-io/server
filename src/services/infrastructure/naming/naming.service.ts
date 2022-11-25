@@ -13,10 +13,13 @@ import { LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Community } from '@domain/community/community';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { EntityNotInitializedException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+} from '@common/exceptions';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { Collaboration } from '@domain/collaboration';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -36,6 +39,8 @@ export class NamingService {
     private projectRepository: Repository<Project>,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>,
+    @InjectRepository(Collaboration)
+    private collaborationRepository: Repository<Collaboration>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -136,6 +141,24 @@ export class NamingService {
     }
 
     return true;
+  }
+
+  private async getCollaborationIdForCallout(
+    calloutID: string
+  ): Promise<string> {
+    const collaboration = await this.collaborationRepository
+      .createQueryBuilder('collaboration')
+      .innerJoinAndSelect('collaboration.callouts', 'callout')
+      .where('callout.id = :id')
+      .setParameters({ id: `${calloutID}` })
+      .getOne();
+    if (!collaboration) {
+      throw new EntityNotFoundException(
+        `Unable to identify Collaboration for Callout with ID: ${calloutID}`,
+        LogContext.ACTIVITY
+      );
+    }
+    return collaboration.id;
   }
 
   isValidNameID(nameID: string): boolean {
@@ -266,26 +289,51 @@ export class NamingService {
       .slice(0, 25);
   }
 
-  async getMembershipCredentialForCollaboration(
+  async getCommunityPolicyForCollaboration(
     collaborationID: string
-  ): Promise<ICredentialDefinition> {
+  ): Promise<ICommunityPolicy> {
     const communityID = await this.getCommunityIdFromCollaborationId(
       collaborationID
     );
 
-    const community = await this.communityRepository.findOne({
-      id: communityID,
-    });
+    const community = await this.communityRepository
+      .createQueryBuilder('community')
+      .leftJoinAndSelect('community.policy', 'policy')
+      .where('community.id = :id')
+      .setParameters({ id: `${communityID}` })
+      .getOne();
 
-    if (!community)
+    if (!community || !community.policy)
       throw new EntityNotInitializedException(
-        `Community for collaboration ${collaborationID} not initialized!`,
+        `Unable to load policy for community ${communityID} not initialized!`,
         LogContext.COMMUNITY
       );
 
-    const communityPolicy: ICommunityPolicy = JSON.parse(community.policy);
+    return community.policy;
+  }
 
-    return communityPolicy.member.credential;
+  async getCommunityPolicyForCallout(
+    calloutID: string
+  ): Promise<ICommunityPolicy> {
+    const collaborationID = await this.getCollaborationIdForCallout(calloutID);
+    const communityID = await this.getCommunityIdFromCollaborationId(
+      collaborationID
+    );
+
+    const community = await this.communityRepository
+      .createQueryBuilder('community')
+      .leftJoinAndSelect('community.policy', 'policy')
+      .where('community.id = :id')
+      .setParameters({ id: `${communityID}` })
+      .getOne();
+
+    if (!community || !community.policy)
+      throw new EntityNotInitializedException(
+        `Unable to load policy for community ${communityID} not initialized!`,
+        LogContext.COMMUNITY
+      );
+
+    return community.policy;
   }
 
   async getAspectForComments(commentsID: string): Promise<IAspect | undefined> {
