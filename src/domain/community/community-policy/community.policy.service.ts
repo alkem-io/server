@@ -1,6 +1,10 @@
+import { AuthorizationCredential } from '@common/enums';
+import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { CommunityRole } from '@common/enums/community.role';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -52,6 +56,98 @@ export class CommunityPolicyService {
           LogContext.COMMUNITY
         );
     }
+  }
+
+  setFlag(policy: ICommunityPolicy, flag: CommunityPolicyFlag, value: boolean) {
+    policy.flags.set(flag, value);
+  }
+
+  getFlag(policy: ICommunityPolicy, flag: CommunityPolicyFlag): boolean {
+    const result = policy.flags.get(flag);
+    if (result === undefined) {
+      throw new EntityNotInitializedException(
+        `Unable to locate flag for community policy: ${policy.id}, flag: ${flag}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return result;
+  }
+
+  getParentMembershipCredential(
+    policy: ICommunityPolicy
+  ): ICredentialDefinition {
+    const memberRolePolicy = this.getCommunityRolePolicy(
+      policy,
+      CommunityRole.MEMBER
+    );
+
+    // First entry is the immediate parent
+    const parentCommunityCredential = memberRolePolicy.parentCredentials[0];
+    return parentCommunityCredential;
+  }
+
+  getParentMembershipCredentials(
+    policy: ICommunityPolicy
+  ): ICredentialDefinition[] {
+    const memberRolePolicy = this.getCommunityRolePolicy(
+      policy,
+      CommunityRole.MEMBER
+    );
+
+    return memberRolePolicy.parentCredentials;
+  }
+
+  getLeadCredentials(policy: ICommunityPolicy): ICredentialDefinition[] {
+    const leadRolePolicy = this.getCommunityRolePolicy(
+      policy,
+      CommunityRole.LEAD
+    );
+    return [leadRolePolicy.credential, ...leadRolePolicy.parentCredentials];
+  }
+
+  // Todo: this is a bit of a hack...
+  getAdminCredentials(policy: ICommunityPolicy): ICredentialDefinition[] {
+    const leadCredentials = this.getLeadCredentials(policy);
+    const adminCredentials: ICredentialDefinition[] = [];
+    for (const leadCredential of leadCredentials) {
+      const adminCredential = this.convertLeadToAdminCredential(leadCredential);
+      adminCredentials.push(adminCredential);
+    }
+    return adminCredentials;
+  }
+
+  getAdminCredential(policy: ICommunityPolicy): ICredentialDefinition {
+    const leadCredential = this.getLeadCredential(policy);
+    return this.convertLeadToAdminCredential(leadCredential);
+  }
+
+  private convertLeadToAdminCredential(
+    leadCredential: ICredentialDefinition
+  ): ICredentialDefinition {
+    const resourceID = leadCredential.resourceID;
+    switch (leadCredential.type) {
+      case AuthorizationCredential.HUB_HOST:
+        return {
+          type: AuthorizationCredential.HUB_ADMIN,
+          resourceID,
+        };
+      case AuthorizationCredential.CHALLENGE_LEAD:
+        return {
+          type: AuthorizationCredential.CHALLENGE_ADMIN,
+          resourceID,
+        };
+      case AuthorizationCredential.OPPORTUNITY_LEAD:
+        return {
+          type: AuthorizationCredential.OPPORTUNITY_ADMIN,
+          resourceID,
+        };
+    }
+    throw new EntityNotInitializedException(
+      `Unable to convert Lead to admin credential: ${JSON.stringify(
+        leadCredential
+      )}`,
+      LogContext.COMMUNITY
+    );
   }
 
   // Update the Community policy to have the right resource ID
@@ -115,5 +211,18 @@ export class CommunityPolicyService {
 
   private serializeRolePolicy(rolePolicy: ICommunityRolePolicy): string {
     return JSON.stringify(rolePolicy);
+  }
+
+  getMembershipCredential(policy: ICommunityPolicy): CredentialDefinition {
+    const rolePolicy = this.getCommunityRolePolicy(
+      policy,
+      CommunityRole.MEMBER
+    );
+    return rolePolicy.credential;
+  }
+
+  getLeadCredential(policy: ICommunityPolicy): CredentialDefinition {
+    const rolePolicy = this.getCommunityRolePolicy(policy, CommunityRole.LEAD);
+    return rolePolicy.credential;
   }
 }

@@ -12,12 +12,14 @@ import { AspectAuthorizationService } from './aspect.service.authorization';
 import { AspectResolverSubscriptions } from './aspect.resolver.subscriptions';
 import { UserModule } from '@domain/community/user/user.module';
 import { CardProfileModule } from '../card-profile/card.profile.module';
+import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
     CommentsModule,
+    CommunityPolicyModule,
     VisualModule,
     UserModule,
     CardProfileModule,

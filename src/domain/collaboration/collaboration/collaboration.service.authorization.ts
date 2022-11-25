@@ -6,19 +6,23 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 import { AuthorizationCredential } from '@common/enums';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
+import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 
 @Injectable()
 export class CollaborationAuthorizationService {
   constructor(
     private collaborationService: CollaborationService,
+    private communityPolicyService: CommunityPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private calloutAuthorizationService: CalloutAuthorizationService,
     @InjectRepository(Collaboration)
@@ -28,7 +32,7 @@ export class CollaborationAuthorizationService {
   public async applyAuthorizationPolicy(
     collaboration: ICollaboration,
     parentAuthorization: IAuthorizationPolicy | undefined,
-    communityCredential: CredentialDefinition
+    communityPolicy: ICommunityPolicy
   ): Promise<ICollaboration> {
     collaboration.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -38,7 +42,7 @@ export class CollaborationAuthorizationService {
 
     collaboration.authorization = this.appendCredentialRules(
       collaboration.authorization,
-      collaboration.id
+      communityPolicy
     );
 
     collaboration.authorization = this.appendPrivilegeRules(
@@ -51,7 +55,7 @@ export class CollaborationAuthorizationService {
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         callout,
         collaboration.authorization,
-        communityCredential
+        communityPolicy
       );
     }
 
@@ -72,32 +76,71 @@ export class CollaborationAuthorizationService {
     return await this.collaborationRepository.save(collaboration);
   }
 
+  private getContributorCredentials(
+    policy: ICommunityPolicy
+  ): ICredentialDefinition[] {
+    // add challenge members
+    const contributors = [
+      this.communityPolicyService.getMembershipCredential(policy),
+    ];
+    // optionally add hub members
+    if (
+      this.communityPolicyService.getFlag(
+        policy,
+        CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+      )
+    ) {
+      const parentCredentials =
+        this.communityPolicyService.getParentMembershipCredentials(policy);
+      contributors.push(...parentCredentials);
+    }
+
+    contributors.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN,
+      resourceID: '',
+    });
+    contributors.push({
+      type: AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+      resourceID: '',
+    });
+    return contributors;
+  }
+
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    collaborationID: string
+    policy: ICommunityPolicy
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for Context: ${collaborationID}`,
+        `Authorization definition not found for Context: ${JSON.stringify(
+          policy
+        )}`,
         LogContext.COLLABORATION
       );
 
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const communityMemberNotInherited = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.CREATE_RELATION],
-      AuthorizationCredential.USER_SELF_MANAGEMENT
-    );
+    const communityMemberNotInherited =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.CREATE_RELATION],
+        [AuthorizationCredential.USER_SELF_MANAGEMENT]
+      );
     communityMemberNotInherited.inheritable = false;
     newRules.push(communityMemberNotInherited);
 
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        authorization,
-        newRules
+    // Who is able to contribute
+    const contributors = this.getContributorCredentials(policy);
+    const contributorsRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.CONTRIBUTE],
+        contributors
       );
+    newRules.push(contributorsRule);
 
-    return updatedAuthorization;
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
   }
 
   private appendPrivilegeRules(

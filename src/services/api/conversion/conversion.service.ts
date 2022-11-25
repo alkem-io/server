@@ -262,9 +262,7 @@ export class ConversionService {
     );
 
     // Add the new challenge to the hub
-    await this.hubService.addChallengeToHub(hubID, challenge);
-
-    return challenge;
+    return await this.hubService.addChallengeToHub(hubID, challenge);
   }
 
   private async swapCommunication(

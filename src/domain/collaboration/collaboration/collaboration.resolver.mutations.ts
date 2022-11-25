@@ -135,14 +135,15 @@ export class CollaborationResolverMutations {
     const callout =
       await this.collaborationService.createCalloutOnCollaboration(calloutData);
 
-    const membershipCredential =
-      await this.collaborationService.getMembershipCredential(collaboration.id);
+    const communityPolicy = await this.collaborationService.getCommunityPolicy(
+      collaboration.id
+    );
 
     const calloutAuthorized =
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         callout,
         collaboration.authorization,
-        membershipCredential
+        communityPolicy
       );
 
     if (calloutAuthorized.visibility === CalloutVisibility.PUBLISHED) {

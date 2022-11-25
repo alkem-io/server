@@ -100,4 +100,10 @@ export abstract class IPlatformConfig {
     description: 'URL where users can get tips and tricks',
   })
   tips!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'URL where users can get tips and tricks',
+  })
+  aup!: string;
 }

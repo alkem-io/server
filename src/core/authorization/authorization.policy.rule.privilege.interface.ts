@@ -3,8 +3,8 @@ import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('AuthorizationPolicyRulePrivilege')
 export abstract class IAuthorizationPolicyRulePrivilege {
-  @Field(() => String)
-  sourcePrivilege!: string;
+  @Field(() => AuthorizationPrivilege)
+  sourcePrivilege!: AuthorizationPrivilege;
   @Field(() => [AuthorizationPrivilege])
   grantedPrivileges!: AuthorizationPrivilege[];
 }

@@ -60,6 +60,7 @@ import { CreateAspectTemplateOnTemplatesSetInput } from '@domain/template/templa
 import { CreateCanvasTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/canvas.template.dto.create.on.templates.set';
 import { UpdateAspectTemplateInput } from '@domain/template/aspect-template/dto/aspect.template.dto.update';
 import { UpdateCanvasTemplateInput } from '@domain/template/canvas-template/dto/canvas.template.dto.update';
+import { DeleteFileInput } from '@domain/common/file-manager/file.manager.dto.delete';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -112,6 +113,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateEcosystemModelInput,
       CommunityApplyInput,
       CommunicationCreateDiscussionInput,
+      DeleteFileInput,
     ];
 
     if (types.includes(metatype)) {

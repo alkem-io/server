@@ -17,6 +17,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { LifecycleTemplateModule } from '@domain/template/lifecycle-template/lifecycle.template.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
     LifecycleTemplateModule,
     UserModule,
     AgentModule,
+    CommunityPolicyModule,
     NamingModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],

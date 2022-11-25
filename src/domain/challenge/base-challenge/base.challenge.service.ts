@@ -31,6 +31,7 @@ import { CommunityRole } from '@common/enums/community.role';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 
 @Injectable()
 export class BaseChallengeService {
@@ -218,15 +219,12 @@ export class BaseChallengeService {
     return community;
   }
 
-  public async getCommunityMembershipCredential(
+  public async getCommunityPolicy(
     baseChallengeId: string,
     repository: Repository<BaseChallenge>
-  ): Promise<CredentialDefinition> {
+  ): Promise<ICommunityPolicy> {
     const community = await this.getCommunity(baseChallengeId, repository);
-    return this.communityService.getCredentialDefinitionForRole(
-      community,
-      CommunityRole.MEMBER
-    );
+    return this.communityService.getCommunityPolicy(community);
   }
 
   public async getCommunityLeadershipCredential(
