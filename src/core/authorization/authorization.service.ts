@@ -11,6 +11,7 @@ import { IVerifiedCredential } from '@domain/agent/verified-credential/verified.
 import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicyRuleVerifiedCredential } from './authorization.policy.rule.verified.credential.interface';
 import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception copy';
+import { IAuthorizationPolicyRulePrivilege } from './authorization.policy.rule.privilege.interface';
 
 @Injectable()
 export class AuthorizationService {
@@ -135,8 +136,9 @@ export class AuthorizationService {
       }
     }
 
-    const privilegeRules: AuthorizationPolicyRulePrivilege[] =
-      this.convertPrivilegeRulesStr(authorization.privilegeRules);
+    const privilegeRules = this.convertPrivilegeRulesStr(
+      authorization.privilegeRules
+    );
     for (const rule of privilegeRules) {
       if (grantedPrivileges.includes(rule.sourcePrivilege)) {
         if (rule.grantedPrivileges.includes(privilegeRequired)) return true;
@@ -182,8 +184,9 @@ export class AuthorizationService {
       }
     }
 
-    const privilegeRules: AuthorizationPolicyRulePrivilege[] =
-      this.convertPrivilegeRulesStr(authorization.privilegeRules);
+    const privilegeRules = this.convertPrivilegeRulesStr(
+      authorization.privilegeRules
+    );
     for (const rule of privilegeRules) {
       if (grantedPrivileges.includes(rule.sourcePrivilege)) {
         grantedPrivileges.push(...rule.grantedPrivileges);
@@ -270,7 +273,7 @@ export class AuthorizationService {
 
   convertPrivilegeRulesStr(
     rulesStr: string
-  ): AuthorizationPolicyRulePrivilege[] {
+  ): IAuthorizationPolicyRulePrivilege[] {
     if (!rulesStr || rulesStr.length == 0) return [];
     try {
       const rules: AuthorizationPolicyRulePrivilege[] = JSON.parse(rulesStr);

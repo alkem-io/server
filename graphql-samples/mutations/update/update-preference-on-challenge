@@ -9,7 +9,7 @@ mutation updatePreferenceOnChallenge($preferenceData: UpdateChallengePreferenceI
 query variables:
 {
   "preferenceData": {
-    "challengeID": "UUID_NAMEID",
+    "challengeID": "UUID",
     "type": "",
     "value": ""
   }

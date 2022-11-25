@@ -10,21 +10,34 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { OpportunityService } from './opportunity.service';
+import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 
 @Injectable()
 export class OpportunityAuthorizationService {
   constructor(
     private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private opportunityService: OpportunityService,
+    private communityPolicyService: CommunityPolicyService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>
   ) {}
 
   async applyAuthorizationPolicy(
     opportunity: IOpportunity,
-    challengeAuthorization: IAuthorizationPolicy | undefined
+    challengeAuthorization: IAuthorizationPolicy | undefined,
+    challengeCommunityPolicy: ICommunityPolicy
   ): Promise<IOpportunity> {
+    const communityPolicy = await this.opportunityService.getCommunityPolicy(
+      opportunity.id
+    );
+
+    this.setCommunityPolicyFlags(communityPolicy, challengeCommunityPolicy);
+
     // Start with parent authorization
     opportunity.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -34,13 +47,14 @@ export class OpportunityAuthorizationService {
     // Add in opportunity specified policy rules
     opportunity.authorization = this.appendCredentialRules(
       opportunity.authorization,
-      opportunity.id
+      communityPolicy
     );
 
     // propagate authorization rules for child entities
     await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
       opportunity,
-      this.opportunityRepository
+      this.opportunityRepository,
+      communityPolicy
     );
     if (opportunity.projects) {
       for (const project of opportunity.projects) {
@@ -55,63 +69,73 @@ export class OpportunityAuthorizationService {
     return await this.opportunityRepository.save(opportunity);
   }
 
+  private setCommunityPolicyFlags(
+    policy: ICommunityPolicy,
+    challengeCommunityPolicy: ICommunityPolicy
+  ) {
+    // propagate the value of the parent community policy into the opportunity community policy
+    const challengeContributors = this.communityPolicyService.getFlag(
+      challengeCommunityPolicy,
+      CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+    );
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE,
+      challengeContributors
+    );
+  }
+
   private appendCredentialRules(
     authorization: IAuthorizationPolicy | undefined,
-    opportunityID: string
+    policy: ICommunityPolicy
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${opportunityID}`,
+        `Authorization definition not found for: ${policy}`,
         LogContext.OPPORTUNITY
       );
 
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
-      this.createCredentialRules(opportunityID)
+      this.createCredentialRules(policy)
     );
-
-    return authorization;
   }
 
   private createCredentialRules(
-    opportunityID: string
-  ): AuthorizationPolicyRuleCredential[] {
-    const rules: AuthorizationPolicyRuleCredential[] = [];
+    policy: ICommunityPolicy
+  ): IAuthorizationPolicyRuleCredential[] {
+    const rules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const opportunityAdmin = new AuthorizationPolicyRuleCredential(
-      [
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.DELETE,
-      ],
-      AuthorizationCredential.OPPORTUNITY_ADMIN,
-      opportunityID
-    );
+    const opportunityAdmin =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.GRANT,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [this.communityPolicyService.getAdminCredential(policy)]
+      );
     rules.push(opportunityAdmin);
 
-    const opportunityMember = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.READ],
-      AuthorizationCredential.OPPORTUNITY_MEMBER,
-      opportunityID
-    );
+    const opportunityMember =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.READ],
+        [this.communityPolicyService.getMembershipCredential(policy)]
+      );
     rules.push(opportunityMember);
 
-    const updateInnovationFlowRule = new AuthorizationPolicyRuleCredential(
-      [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
-      AuthorizationCredential.GLOBAL_ADMIN
-    );
+    const updateInnovationFlowRule =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+        ]
+      );
     updateInnovationFlowRule.inheritable = false;
     rules.push(updateInnovationFlowRule);
-
-    const updateInnovationFlowRuleGlobalHubs =
-      new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
-        AuthorizationCredential.GLOBAL_ADMIN_HUBS
-      );
-    updateInnovationFlowRuleGlobalHubs.inheritable = false;
-    rules.push(updateInnovationFlowRuleGlobalHubs);
 
     return rules;
   }

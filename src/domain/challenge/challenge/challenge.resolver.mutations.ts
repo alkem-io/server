@@ -88,7 +88,7 @@ export class ChallengeResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       challenge.authorization,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.CREATE_OPPORTUNITY,
       `opportunityCreate: ${challenge.nameID}`
     );
     const opportunity = await this.challengeService.createOpportunity(
@@ -102,9 +102,14 @@ export class ChallengeResolverMutations {
       challengeId: opportunityData.challengeID,
     });
 
+    const challengeCommunityPolicy =
+      await this.challengeAuthorizationService.setCommunityPolicyFlags(
+        challenge
+      );
     await this.opportunityAuthorizationService.applyAuthorizationPolicy(
       opportunity,
-      challenge.authorization
+      challenge.authorization,
+      challengeCommunityPolicy
     );
 
     const opportunityCreatedEvent: OpportunityCreatedPayload = {

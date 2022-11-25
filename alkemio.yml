@@ -396,6 +396,9 @@ platform:
 
   # Help Dialog - tips
   tips: ${PLATFORM_TIPS}:https://alkemio.foundation/post/
+
+  # Acceptable Usage Policy
+  aup: ${PLATFORM_AUP}:https://www.alkemio.foundation/legal/hub/#aup
 ssi:
   # Jolocom SDK is used for providing SSI capabilities on the platform.
   # Note: NOT FOR PRODUCTION USAGE, experimental functionality,

@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { IDiscussion } from './discussion.interface';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { DiscussionService } from './discussion.service';
 import { AuthorizationCredential } from '@common/enums';
 import { RoomService } from '../room/room.service';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class DiscussionAuthorizationService {
@@ -42,7 +42,7 @@ export class DiscussionAuthorizationService {
   private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
@@ -57,7 +57,7 @@ export class DiscussionAuthorizationService {
     discussion: IDiscussion,
     messageID: string
   ): Promise<IAuthorizationPolicy> {
-    const newRules: AuthorizationPolicyRuleCredential[] = [];
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     const senderUserID = await this.roomService.getUserIdForMessage(
       discussion,
@@ -66,11 +66,16 @@ export class DiscussionAuthorizationService {
 
     // Allow any member of this community to create messages on the discussion
     if (senderUserID !== '') {
-      const messageSender = new AuthorizationPolicyRuleCredential(
-        [AuthorizationPrivilege.UPDATE, AuthorizationPrivilege.DELETE],
-        AuthorizationCredential.USER_SELF_MANAGEMENT,
-        senderUserID
-      );
+      const messageSender =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.UPDATE, AuthorizationPrivilege.DELETE],
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: senderUserID,
+            },
+          ]
+        );
       newRules.push(messageSender);
     }
 
