@@ -4,8 +4,8 @@ import { IPlatformConfig } from './platform';
 import { ISentryConfig } from './sentry';
 import { Template, ITemplate } from './template';
 import { IApmConfig } from './apm';
-import { IStorageConfig } from './storage';
 import { IGeoConfig } from './integrations';
+import { IStorageConfig } from './storage';
 
 @ObjectType('Config')
 export abstract class IConfig {

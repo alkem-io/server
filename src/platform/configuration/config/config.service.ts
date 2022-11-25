@@ -88,6 +88,9 @@ export class KonfigService {
         rumEnabled: apmConfig?.rumEnabled,
         endpoint: apmConfig?.endpoint,
       },
+      geo: {
+        endpoint: geoConfig?.rest_endpoint,
+      },
       storage: {
         file: {
           maxFileSize: this.configService.get(ConfigurationTypes.STORAGE)?.file
@@ -96,9 +99,6 @@ export class KonfigService {
             .get(ConfigurationTypes.STORAGE)
             ?.file.mime_types.split(','),
         },
-      },
-      geo: {
-        endpoint: geoConfig?.rest_endpoint,
       },
     };
   }
