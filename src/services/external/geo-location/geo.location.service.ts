@@ -12,6 +12,7 @@ import {
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { GeoInformation } from './geo.information';
 import { GeoPluginResponse } from './geo.plugin.response';
+import { isLimitExceeded } from './utils/is.limit.exceeded';
 
 const geoServiceCallsKey = 'geo-service-call-limit';
 
@@ -42,12 +43,17 @@ export class GeoLocationService {
       return userGeoCached;
     }
 
-    if (!(await this.canCallService())) {
+    const cacheMetadata =
+      (await this.getCacheMetadata()) ?? (await this.setCacheMedata());
+
+    if (isLimitExceeded(cacheMetadata, this.allowedCallsToService)) {
       throw new GeoServiceRequestLimitExceededException(
         `3rd party service limit of ${this.allowedCallsToService} calls per ${this.allowedCallsToServiceWindow} seconds reached`,
         LogContext.GEO
       );
     }
+
+    this.incrementCacheMetadata(cacheMetadata);
 
     const response = await this.httpService
       .get<GeoPluginResponse>(`${this.endpoint}${ip}`)
@@ -82,33 +88,23 @@ export class GeoLocationService {
     return userGeo;
   }
 
-  private async canCallService(): Promise<boolean> {
-    const cacheMetadata = await this.cacheManager.get<GeoLocationCacheMetadata>(
-      geoServiceCallsKey
+  public getCacheMetadata() {
+    return this.cacheManager.get<GeoLocationCacheMetadata>(geoServiceCallsKey);
+  }
+
+  private setCacheMedata() {
+    return this.cacheManager.set<GeoLocationCacheMetadata>(
+      geoServiceCallsKey,
+      {
+        start: Date.now(),
+        calls: 1,
+      },
+      { ttl: this.allowedCallsToServiceWindow }
     );
+  }
 
-    if (
-      !cacheMetadata ||
-      Date.now() - cacheMetadata.start > this.allowedCallsToServiceWindow * 1000
-    ) {
-      this.cacheManager.set<GeoLocationCacheMetadata>(
-        geoServiceCallsKey,
-        {
-          start: Date.now(),
-          calls: 1,
-        },
-        { ttl: this.allowedCallsToServiceWindow }
-      );
-      return true;
-    }
-
-    const { calls, start } = cacheMetadata;
-
-    if (calls === this.allowedCallsToService) {
-      return false;
-    }
-
-    this.cacheManager.set<GeoLocationCacheMetadata>(
+  private incrementCacheMetadata({ calls, start }: GeoLocationCacheMetadata) {
+    return this.cacheManager.set<GeoLocationCacheMetadata>(
       geoServiceCallsKey,
       {
         start,
@@ -116,7 +112,5 @@ export class GeoLocationService {
       },
       { ttl: this.allowedCallsToServiceWindow }
     );
-
-    return true;
   }
 }
