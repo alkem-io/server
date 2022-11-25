@@ -1,4 +1,9 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import {
+  CACHE_MANAGER,
+  Inject,
+  Injectable,
+  LoggerService,
+} from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { AxiosError } from 'axios';
@@ -12,6 +17,7 @@ import {
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { GeoInformation } from './geo.information';
 import { GeoPluginResponse } from './geo.plugin.response';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 const geoServiceCallsKey = 'geo-service-call-limit';
 
@@ -26,7 +32,8 @@ export class GeoLocationService {
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
     private readonly httpService: HttpService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     const config = configService.get(ConfigurationTypes.INTEGRATIONS)?.geo;
     this.endpoint = config.service_endpoint;
@@ -49,6 +56,7 @@ export class GeoLocationService {
       );
     }
 
+    this.logger.verbose?.(`Getting coordinates for ip: ${ip}`);
     const response = await this.httpService
       .get<GeoPluginResponse>(`${this.endpoint}${ip}`)
       .toPromise()
@@ -74,6 +82,10 @@ export class GeoLocationService {
       latitude: Number(response.data.geoplugin_latitude),
       longitude: Number(response.data.geoplugin_longitude),
     };
+
+    this.logger.verbose?.(
+      `Coordinates for ip: ${ip}: longitude: ${userGeo.longitude} latitude: ${userGeo.latitude}`
+    );
 
     this.cacheManager.set<GeoInformation>(ip, userGeo, {
       ttl: this.cacheEntryTtl,
