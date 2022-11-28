@@ -1,4 +1,9 @@
 module.exports = {
+  // Default: false
+  // Automatically clear mock calls, instances, contexts and results before every test.
+  // Equivalent to calling jest.clearAllMocks() before each test.
+  // This does not remove any mock implementation that may have been provided.
+  clearMocks: true,
   moduleNameMapper: {
     '^@interfaces/(.*)': '<rootDir>/src/common/interfaces/$1',
     '^@domain/(.*)': '<rootDir>/src/domain/$1',
