@@ -17,7 +17,6 @@ import { AuthorizationPolicyService } from '../authorization-policy/authorizatio
 import { AgentInfo } from '@core/authentication';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { IVisual } from '@src/domain/common/visual/visual.interface';
-import { deflateSync } from 'zlib';
 
 @Injectable()
 export class CanvasService {
@@ -91,29 +90,19 @@ export class CanvasService {
     agentInfo: AgentInfo
   ): Promise<ICanvas> {
     const checkout = await this.getCanvasCheckout(canvas);
-
-    const compressedNewValue = updateCanvasData.value
-      ? deflateSync(updateCanvasData.value)
-      : undefined;
-    console.log(
-      '\n\n\n\n=========== Compressed Value =============\n',
-      compressedNewValue?.toString(),
-      '\n========================\n\n\n\n'
-    );
-
+    // Save decompressed value to return it back
+    const canvasDecompressedValue = updateCanvasData.value;
     // Before updating the canvas contents check the user doing it has it checked out
-    if (
-      updateCanvasData.value &&
-      compressedNewValue?.toString() !== canvas.value
-    ) {
+    if (updateCanvasData.value && updateCanvasData.value !== canvas.value) {
       await this.canvasCheckoutService.isUpdateAllowedOrFail(
         checkout,
         agentInfo
       );
-      updateCanvasData.value = compressedNewValue?.toString();
     }
     const updatedCanvas = this.updateCanvasEntity(canvas, updateCanvasData);
-    return await this.save(updatedCanvas);
+    const savedCanvas = await this.save(updatedCanvas);
+    savedCanvas.value = canvasDecompressedValue;
+    return savedCanvas;
   }
 
   updateCanvasEntity(

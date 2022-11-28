@@ -1,5 +1,7 @@
 import {
   AfterLoad,
+  BeforeInsert,
+  BeforeUpdate,
   Column,
   Entity,
   JoinColumn,
@@ -11,9 +13,7 @@ import { Visual } from '@domain/common/visual/visual.entity';
 import { CanvasCheckout } from '../canvas-checkout/canvas.checkout.entity';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { deflateSync, inflateSync } from 'zlib';
-import { Buffer } from 'buffer';
-import { promisify } from 'util';
+import CompressionUtil from '@common/utils/compression.util';
 
 @Entity()
 export class Canvas extends NameableEntity implements ICanvas {
@@ -23,36 +23,21 @@ export class Canvas extends NameableEntity implements ICanvas {
     this.value = value || '';
   }
 
+  @BeforeInsert()
+  @BeforeUpdate()
+  async compressValue() {
+    if (this.value !== '') {
+      const compression = new CompressionUtil();
+      this.value = await compression.compress(this.value);
+    }
+  }
+
   @AfterLoad()
   async decompressValue() {
-    if (this.value) {
-      // console.log(
-      //   '\n\n\n============= Canvas Value in DB ===========\n',
-      //   this.value,
-      //   '\n========================\n\n\n'
-      // );
-      // const decompressedValue = inflateSync(this.value);
-      // // const decompressedValue = inflateSync(
-      // //   Buffer.from(this.value, 'base64').toString()
-      // // );
-      // console.log(
-      //   '\n\n\n============ Decompressed Value ============\n',
-      //   decompressedValue.toString().slice(0, 100),
-      //   '\n========================\n\n\n'
-      // );
-      // this.value = decompressedValue.toString();
-      const input = 'GeeksforGeeks';
-      // Calling deflateSync method
-      const deflated = deflateSync(input);
-
-      // Calling inflateSync method
-      const inflated = inflateSync(deflated.toString());
-
-      console.log(
-        '\n\n\n============ Inflated ============\n',
-        inflated,
-        '\n========================\n\n\n'
-      );
+    if (this.value !== '') {
+      const compression = new CompressionUtil();
+      const decompressedValue = await compression.uncompress(this.value);
+      this.value = decompressedValue;
     }
   }
 
