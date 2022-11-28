@@ -1,4 +1,9 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import {
+  CACHE_MANAGER,
+  Inject,
+  Injectable,
+  LoggerService,
+} from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { AxiosError } from 'axios';
@@ -12,6 +17,8 @@ import {
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { GeoInformation } from './geo.information';
 import { GeoPluginResponse } from './geo.plugin.response';
+import { isLimitExceeded } from './utils/is.limit.exceeded';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 const geoServiceCallsKey = 'geo-service-call-limit';
 
@@ -26,7 +33,8 @@ export class GeoLocationService {
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
     private readonly httpService: HttpService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
     const config = configService.get(ConfigurationTypes.INTEGRATIONS)?.geo;
     this.endpoint = config.service_endpoint;
@@ -42,13 +50,19 @@ export class GeoLocationService {
       return userGeoCached;
     }
 
-    if (!(await this.canCallService())) {
+    const cacheMetadata =
+      (await this.getCacheMetadata()) ?? (await this.setCacheMedata());
+
+    if (isLimitExceeded(cacheMetadata, this.allowedCallsToService)) {
       throw new GeoServiceRequestLimitExceededException(
         `3rd party service limit of ${this.allowedCallsToService} calls per ${this.allowedCallsToServiceWindow} seconds reached`,
         LogContext.GEO
       );
     }
 
+    this.incrementCacheMetadata(cacheMetadata);
+
+    this.logger.verbose?.(`Getting coordinates for ip: ${ip}`);
     const response = await this.httpService
       .get<GeoPluginResponse>(`${this.endpoint}${ip}`)
       .toPromise()
@@ -75,6 +89,10 @@ export class GeoLocationService {
       longitude: Number(response.data.geoplugin_longitude),
     };
 
+    this.logger.verbose?.(
+      `Coordinates for ip: ${ip}: longitude: ${userGeo.longitude} latitude: ${userGeo.latitude}`
+    );
+
     this.cacheManager.set<GeoInformation>(ip, userGeo, {
       ttl: this.cacheEntryTtl,
     });
@@ -82,33 +100,23 @@ export class GeoLocationService {
     return userGeo;
   }
 
-  private async canCallService(): Promise<boolean> {
-    const cacheMetadata = await this.cacheManager.get<GeoLocationCacheMetadata>(
-      geoServiceCallsKey
+  public getCacheMetadata() {
+    return this.cacheManager.get<GeoLocationCacheMetadata>(geoServiceCallsKey);
+  }
+
+  private setCacheMedata() {
+    return this.cacheManager.set<GeoLocationCacheMetadata>(
+      geoServiceCallsKey,
+      {
+        start: Date.now(),
+        calls: 1,
+      },
+      { ttl: this.allowedCallsToServiceWindow }
     );
+  }
 
-    if (
-      !cacheMetadata ||
-      Date.now() - cacheMetadata.start > this.allowedCallsToServiceWindow * 1000
-    ) {
-      this.cacheManager.set<GeoLocationCacheMetadata>(
-        geoServiceCallsKey,
-        {
-          start: Date.now(),
-          calls: 1,
-        },
-        { ttl: this.allowedCallsToServiceWindow }
-      );
-      return true;
-    }
-
-    const { calls, start } = cacheMetadata;
-
-    if (calls === this.allowedCallsToService) {
-      return false;
-    }
-
-    this.cacheManager.set<GeoLocationCacheMetadata>(
+  private incrementCacheMetadata({ calls, start }: GeoLocationCacheMetadata) {
+    return this.cacheManager.set<GeoLocationCacheMetadata>(
       geoServiceCallsKey,
       {
         start,
@@ -116,7 +124,5 @@ export class GeoLocationService {
       },
       { ttl: this.allowedCallsToServiceWindow }
     );
-
-    return true;
   }
 }
