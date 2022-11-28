@@ -190,7 +190,7 @@ export class HubResolverMutations {
       agentInfo,
       preference.authorization,
       AuthorizationPrivilege.UPDATE,
-      `organization preference update: ${preference.id}`
+      `challenge preference update: ${preference.id}`
     );
     const preferenceUpdated = await this.preferenceService.updatePreference(
       preference,
