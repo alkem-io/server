@@ -3,6 +3,7 @@ import {
   MockCacheManager,
   MockConfigService,
   MockHttpService,
+  MockWinstonProvider,
 } from '@test/mocks';
 import { GeoLocationService } from '@services/external/geo-location';
 
@@ -25,6 +26,7 @@ describe('GeoLocationService', () => {
         MockCacheManager,
         MockHttpService,
         MockConfigService,
+        MockWinstonProvider,
       ],
     }).compile();
 
