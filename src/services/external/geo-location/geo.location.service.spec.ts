@@ -6,6 +6,7 @@ import {
   MockCacheManager,
   MockConfigService,
   MockHttpService,
+  MockWinstonProvider,
 } from '@test/mocks';
 import { CACHE_MANAGER } from '@nestjs/common';
 import { asyncToThrow } from '@test/utils';
@@ -41,6 +42,7 @@ describe('GeoLocationService', () => {
         MockCacheManager,
         MockHttpService,
         MockConfigService,
+        MockWinstonProvider,
       ],
     }).compile();
 

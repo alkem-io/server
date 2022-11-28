@@ -107,7 +107,7 @@ export class ChallengeAuthorizationService {
       }
     }
 
-    if (challenge.preferenceSet) {
+    if (preferenceSet) {
       challenge.preferenceSet =
         await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
           preferenceSet,
