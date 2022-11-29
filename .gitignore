@@ -44,9 +44,6 @@ subscriptions.log
 .env
 .env.test
 
-# Snowpack dependency directory (https://snowpack.dev/)
-web_modules/
-
 # TypeScript cache
 *.tsbuildinfo
 
@@ -55,12 +52,6 @@ web_modules/
 
 # Optional eslint cache
 .eslintcache
-
-# GraphQL
-*.gql
-
-# Jolocom tmp db
-*.sqlite[3]
 
 # Ignores homeserver.db file
 **/*.db
