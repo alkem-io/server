@@ -13,6 +13,7 @@ import { TypedSubscription } from '@common/decorators/typed.subscription/typed.s
 import { LogContext } from '@common/enums/logging.context';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ActivityLogService } from '@services/api/activity-log/activity.log.service';
 
 @Resolver()
 export class ActivityLogResolverSubscriptions {
@@ -21,7 +22,8 @@ export class ActivityLogResolverSubscriptions {
     private readonly logger: LoggerService,
     private readonly subscriptionReadService: SubscriptionReadService,
     private readonly collaborationService: CollaborationService,
-    private readonly authorizationService: AuthorizationService
+    private readonly authorizationService: AuthorizationService,
+    private readonly activityLogService: ActivityLogService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -42,11 +44,15 @@ export class ActivityLogResolverSubscriptions {
         LogContext.SUBSCRIPTIONS
       );
 
-      return {
-        activity: {
+      const activityLogEntry =
+        await this.activityLogService.convertRawActivityToResult({
           ...payload.activity,
+          // something is not able to serialize the date
           createdDate: new Date(payload.activity.createdDate),
-        },
+        });
+
+      return {
+        activity: activityLogEntry,
       };
     },
     filter(
