@@ -66,7 +66,7 @@ export class ActivityLogService {
     return results;
   }
 
-  private async convertRawActivityToResult(
+  public async convertRawActivityToResult(
     rawActivity: IActivity
   ): Promise<IActivityLogEntry | undefined> {
     try {

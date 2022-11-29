@@ -82,6 +82,8 @@ export class AppController {
 
     const ip = String(forwardedFor).split(',')?.[0];
 
+    this.logger.verbose?.(`X-Forwarded-For header: ${forwardedFor}`);
+
     if (!ip) {
       this.logger.error('Unable to get IP for header');
       return undefined;
