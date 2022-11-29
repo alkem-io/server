@@ -9,15 +9,10 @@ export class canvasValueCompression1669704943113 implements MigrationInterface {
 
     for (const canvas of canvases) {
       const compressedValue = await compressText(canvas.value);
-      await queryRunner.query(
-        `UPDATE canvas SET value = '${compressedValue}' WHERE id = '${canvas.id}'`
-      );
-      //   await queryRunner.query(
-      //     String.raw`
-      //       UPDATE canvas SET value = ' +
-      //         ${String.raw`${compressedValue}`} +
-      //          WHERE id = '${canvas.id}'`
-      //   );
+      await queryRunner.query('UPDATE canvas SET value = ? WHERE id = ?', [
+        compressedValue,
+        canvas.id,
+      ]);
     }
   }
 
@@ -28,9 +23,10 @@ export class canvasValueCompression1669704943113 implements MigrationInterface {
 
     for (const canvas of canvases) {
       const decompressedValue = await decompressText(canvas.value);
-      await queryRunner.query(
-        `UPDATE canvas SET value = '${decompressedValue}' WHERE id = '${canvas.id}'`
-      );
+      await queryRunner.query('UPDATE canvas SET value = ? WHERE id = ?', [
+        decompressedValue,
+        canvas.id,
+      ]);
     }
   }
 }
