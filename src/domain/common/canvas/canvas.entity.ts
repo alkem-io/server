@@ -13,7 +13,7 @@ import { Visual } from '@domain/common/visual/visual.entity';
 import { CanvasCheckout } from '../canvas-checkout/canvas.checkout.entity';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
-import CompressionUtil from '@common/utils/compression.util';
+import { compressText, decompressText } from '@common/utils/compression.util';
 
 @Entity()
 export class Canvas extends NameableEntity implements ICanvas {
@@ -27,16 +27,14 @@ export class Canvas extends NameableEntity implements ICanvas {
   @BeforeUpdate()
   async compressValue() {
     if (this.value !== '') {
-      const compression = new CompressionUtil();
-      this.value = await compression.compress(this.value);
+      this.value = await compressText(this.value);
     }
   }
 
   @AfterLoad()
   async decompressValue() {
     if (this.value !== '') {
-      const compression = new CompressionUtil();
-      const decompressedValue = await compression.uncompress(this.value);
+      const decompressedValue = await decompressText(this.value);
       this.value = decompressedValue;
     }
   }
