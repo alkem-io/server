@@ -34,8 +34,7 @@ export class Canvas extends NameableEntity implements ICanvas {
   @AfterLoad()
   async decompressValue() {
     if (this.value !== '') {
-      const decompressedValue = await decompressText(this.value);
-      this.value = decompressedValue;
+      this.value = await decompressText(this.value);
     }
   }
 
