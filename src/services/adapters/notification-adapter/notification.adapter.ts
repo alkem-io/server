@@ -7,7 +7,7 @@ import { NotificationInputAspectComment } from './dto/notification.dto.input.asp
 import { NotificationPayloadBuilder } from './notification.payload.builder';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { ClientProxy } from '@nestjs/microservices';
-import { NotificationEventType } from '@common/enums/notification.event.type';
+import { NotificationEventType } from '@alkemio/notifications-lib';
 import { NotificationInputCollaborationInterest } from './dto/notification.dto.input.collaboration.interest';
 import { NotificationInputUpdateSent } from './dto/notification.dto.input.update.sent';
 import { NotificationInputDiscussionCreated } from './dto/notification.dto.input.discussion.created';
