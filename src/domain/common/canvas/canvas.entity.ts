@@ -1,9 +1,19 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import {
+  AfterLoad,
+  BeforeInsert,
+  BeforeUpdate,
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+} from 'typeorm';
 import { ICanvas } from './canvas.interface';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { CanvasCheckout } from '../canvas-checkout/canvas.checkout.entity';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { compressText, decompressText } from '@common/utils/compression.util';
 
 @Entity()
 export class Canvas extends NameableEntity implements ICanvas {
@@ -11,6 +21,21 @@ export class Canvas extends NameableEntity implements ICanvas {
     super();
     this.displayName = name || '';
     this.value = value || '';
+  }
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  async compressValue() {
+    if (this.value !== '') {
+      this.value = await compressText(this.value);
+    }
+  }
+
+  @AfterLoad()
+  async decompressValue() {
+    if (this.value !== '') {
+      this.value = await decompressText(this.value);
+    }
   }
 
   @Column('longtext', { nullable: false })
