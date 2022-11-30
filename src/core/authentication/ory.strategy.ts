@@ -13,6 +13,8 @@ import { passportJwtSecret } from 'jwks-rsa';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 import { KratosPayload } from './kratos.payload';
+import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
+import { AgentInfo } from './agent-info';
 
 @Injectable()
 export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
@@ -36,26 +38,26 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
     });
   }
 
-  async validate(payload: KratosPayload) {
+  async validate(payload: KratosPayload): Promise<AgentInfo> {
     this.logger.verbose?.('Ory Strategy: Kratos payload', LogContext.AUTH);
     this.logger.verbose?.(payload, LogContext.AUTH);
 
-    if (checkIfTokenHasExpired(payload.exp))
+    if (!payload.session) {
+      this.logger.verbose?.('No Ory Kratos session', LogContext.AUTH);
+      return this.authService.createAgentInfo();
+    }
+
+    if (checkIfTokenHasExpired(payload.exp)) {
       throw new TokenException(
         'Access token has expired!',
         AlkemioErrorStatus.TOKEN_EXPIRED
       );
-
-    let oryIdentity: OryDefaultIdentitySchema | undefined = undefined;
-    const session = payload.session;
-
-    if (session) {
-      oryIdentity = session.identity as OryDefaultIdentitySchema;
-    } else {
-      this.logger.verbose?.('No Ory Kratos session', LogContext.AUTH);
     }
 
-    return await this.authService.createAgentInfo(oryIdentity);
+    const session = verifyIdentityIfOidcAuth(payload.session);
+    const oryIdentity = session.identity as OryDefaultIdentitySchema;
+
+    return this.authService.createAgentInfo(oryIdentity);
   }
 }
 
