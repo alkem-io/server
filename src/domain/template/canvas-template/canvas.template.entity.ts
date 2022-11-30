@@ -13,12 +13,10 @@ import { compressText, decompressText } from '@common/utils/compression.util';
 
 @Entity()
 export class CanvasTemplate extends TemplateBase implements ICanvasTemplate {
-  @ManyToOne(() => TemplatesSet, templatesSet => templatesSet.canvasTemplates, {
-    eager: false,
-    cascade: false,
-    onDelete: 'NO ACTION',
-  })
-  templatesSet?: TemplatesSet;
+  constructor() {
+    super();
+    this.value = '';
+  }
 
   @BeforeInsert()
   @BeforeUpdate()
@@ -35,11 +33,13 @@ export class CanvasTemplate extends TemplateBase implements ICanvasTemplate {
     }
   }
 
+  @ManyToOne(() => TemplatesSet, templatesSet => templatesSet.canvasTemplates, {
+    eager: false,
+    cascade: false,
+    onDelete: 'NO ACTION',
+  })
+  templatesSet?: TemplatesSet;
+
   @Column('longtext', { nullable: false })
   value!: string;
-
-  constructor() {
-    super();
-    this.value = '';
-  }
 }
