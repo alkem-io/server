@@ -29,9 +29,7 @@ export class Canvas extends NameableEntity implements ICanvas {
   @BeforeUpdate()
   async compressValue() {
     if (this.value !== '') {
-      const parsedJSONvalue = JSON.parse(this.value);
-      const valueString = JSON.stringify(parsedJSONvalue);
-      this.value = await compressText(valueString);
+      this.value = await compressText(this.value);
     }
   }
   @AfterInsert()
