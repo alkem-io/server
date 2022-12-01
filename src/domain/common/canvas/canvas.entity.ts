@@ -1,5 +1,7 @@
 import {
+  AfterInsert,
   AfterLoad,
+  AfterUpdate,
   BeforeInsert,
   BeforeUpdate,
   Column,
@@ -27,10 +29,13 @@ export class Canvas extends NameableEntity implements ICanvas {
   @BeforeUpdate()
   async compressValue() {
     if (this.value !== '') {
-      this.value = await compressText(this.value);
+      const parsedJSONvalue = JSON.parse(this.value);
+      const valueString = JSON.stringify(parsedJSONvalue);
+      this.value = await compressText(valueString);
     }
   }
-
+  @AfterInsert()
+  @AfterUpdate()
   @AfterLoad()
   async decompressValue() {
     if (this.value !== '') {
