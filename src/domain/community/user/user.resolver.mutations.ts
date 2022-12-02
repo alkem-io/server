@@ -24,6 +24,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
 import { NotificationInputUserRegistered } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.registered';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { NotificationInputUserRemoved } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.removed';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -65,7 +66,8 @@ export class UserResolverMutations {
 
     // Send the notification
     const notificationInput: NotificationInputUserRegistered = {
-      triggeredBy: user.id,
+      triggeredBy: agentInfo.userID,
+      userID: savedUser.id,
     };
     await this.notificationAdapter.userRegistered(notificationInput);
 
@@ -131,13 +133,21 @@ export class UserResolverMutations {
     @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
     const user = await this.userService.getUserOrFail(deleteData.ID);
+    const userID = user.id;
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       user.authorization,
       AuthorizationPrivilege.DELETE,
       `user delete: ${user.nameID}`
     );
-    return await this.userService.deleteUser(deleteData);
+    const userDeleted = await this.userService.deleteUser(deleteData);
+    // Send the notification
+    const notificationInput: NotificationInputUserRemoved = {
+      triggeredBy: agentInfo.userID,
+      userID,
+    };
+    await this.notificationAdapter.userRemoved(notificationInput);
+    return userDeleted;
   }
 
   @UseGuards(GraphqlGuard)

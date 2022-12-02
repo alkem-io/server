@@ -16,17 +16,20 @@ import { Repository } from 'typeorm';
 import { CreateNVPInput } from '@src/domain/common/nvp/nvp.dto.create';
 import { Aspect } from '@src/domain/collaboration/aspect/aspect.entity';
 import {
-  AspectCreatedEventPayload,
-  AspectCommentCreatedEventPayload,
-  CommunityCollaborationInterestPayload,
-  CalloutPublishedEventPayload,
-  HubPayload,
+  CollaborationCardCreatedEventPayload,
+  CollaborationCardCommentEventPayload,
+  CollaborationInterestPayload,
+  CollaborationCalloutPublishedEventPayload,
+  JourneyPayload,
+  PlatformUserRegistrationEventPayload,
+  PlatformUserRemovedEventPayload,
 } from '@alkemio/notifications-lib';
 
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IMessage } from '@domain/communication/message/message.interface';
+import { IAspect } from '@domain/collaboration';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -48,7 +51,7 @@ export class NotificationPayloadBuilder {
     applicantID: string,
     community: ICommunity
   ) {
-    const hubPayload = await this.buildHubPayload(community);
+    const hubPayload = await this.buildJourneyPayload(community);
     const payload: any = {
       applicationCreatorID,
       applicantID,
@@ -62,19 +65,20 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  async buildAspectCreatedPayload(aspectId: string) {
-    const aspect = await this.aspectRepository.findOne(
+  async buildCardCreatedPayload(aspectId: string) {
+    const card = await this.aspectRepository.findOne(
       { id: aspectId },
       { relations: ['callout'] }
     );
-    if (!aspect) {
+    if (!card) {
       throw new NotificationEventException(
         `Could not acquire aspect from id: ${aspectId}`,
         LogContext.NOTIFICATIONS
       );
     }
 
-    if (!aspect.callout) {
+    const callout = card.callout;
+    if (!callout) {
       throw new NotificationEventException(
         `Could not acquire callout from aspect with id: ${aspectId}`,
         LogContext.NOTIFICATIONS
@@ -83,22 +87,24 @@ export class NotificationPayloadBuilder {
 
     const community =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
-        aspect.callout.id
+        callout.id
       );
 
-    const hubPayload = await this.buildHubPayload(community);
-    const payload: AspectCreatedEventPayload = {
-      aspect: {
+    const journeyPayload = await this.buildJourneyPayload(community);
+    const payload: CollaborationCardCreatedEventPayload = {
+      triggeredBy: card.createdBy,
+      callout: {
+        displayName: callout.displayName,
+        nameID: callout.nameID,
+      },
+      card: {
         id: aspectId,
-        createdBy: aspect.createdBy,
-        displayName: aspect.displayName,
-        type: aspect.type,
+        createdBy: card.createdBy,
+        displayName: card.displayName,
+        nameID: card.nameID,
+        type: card.type,
       },
-      community: {
-        name: community.displayName,
-        type: community.type,
-      },
-      hub: hubPayload,
+      journey: journeyPayload,
     };
 
     return payload;
@@ -107,34 +113,30 @@ export class NotificationPayloadBuilder {
   public async buildCalloutPublishedPayload(
     userId: string,
     callout: ICallout
-  ): Promise<CalloutPublishedEventPayload> {
+  ): Promise<CollaborationCalloutPublishedEventPayload> {
     const community =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
         callout.id
       );
 
-    const hubPayload = await this.buildHubPayload(community);
-    const payload: CalloutPublishedEventPayload = {
-      userID: userId,
+    const journeyPayload = await this.buildJourneyPayload(community);
+    const payload: CollaborationCalloutPublishedEventPayload = {
+      triggeredBy: userId,
       callout: {
         id: callout.id,
         displayName: callout.displayName,
         description: callout.description,
+        nameID: callout.nameID,
         type: callout.type,
       },
-      community: {
-        name: community.displayName,
-        type: community.type,
-      },
-      hub: hubPayload,
+      journey: journeyPayload,
     };
 
     return payload;
   }
 
-  async buildCommentCreatedOnAspectPayload(
-    aspectName: string,
-    aspectCreatedBy: string,
+  async buildCommentCreatedOnCardPayload(
+    card: IAspect,
     commentsId: string,
     messageResult: IMessage
   ) {
@@ -149,29 +151,38 @@ export class NotificationPayloadBuilder {
         LogContext.NOTIFICATIONS
       );
     }
+    const callout = card.callout;
+    if (!callout) {
+      throw new NotificationEventException(
+        `Could not acquire callout from card with id: ${card.id}`,
+        LogContext.NOTIFICATIONS
+      );
+    }
 
-    const hubPayload = await this.buildHubPayload(community);
-    const payload: AspectCommentCreatedEventPayload = {
-      aspect: {
-        displayName: aspectName,
-        createdBy: aspectCreatedBy,
+    const journeyPayload = await this.buildJourneyPayload(community);
+    const payload: CollaborationCardCommentEventPayload = {
+      triggeredBy: card.createdBy,
+      callout: {
+        displayName: callout.displayName,
+        nameID: callout.nameID,
+      },
+      card: {
+        displayName: card.displayName,
+        createdBy: card.createdBy,
+        nameID: card.nameID,
       },
       comment: {
         message: messageResult.message,
         createdBy: messageResult.sender,
       },
-      community: {
-        name: community.displayName,
-        type: community.type,
-      },
-      hub: hubPayload,
+      journey: journeyPayload,
     };
 
     return payload;
   }
 
   async buildCommunityNewMemberPayload(userID: string, community: ICommunity) {
-    const hubPayload = await this.buildHubPayload(community);
+    const hubPayload = await this.buildJourneyPayload(community);
     const payload = {
       userID,
       community: {
@@ -188,23 +199,19 @@ export class NotificationPayloadBuilder {
     userID: string,
     collaboration: ICollaboration,
     relation: IRelation
-  ): Promise<CommunityCollaborationInterestPayload> {
+  ): Promise<CollaborationInterestPayload> {
     const community =
       await this.communityResolverService.getCommunityFromCollaborationOrFail(
         collaboration.id
       );
-    const hubPayload = await this.buildHubPayload(community);
-    const payload: CommunityCollaborationInterestPayload = {
-      userID,
-      community: {
-        name: community.displayName,
-        type: community.type,
-      },
+    const journeyPayload = await this.buildJourneyPayload(community);
+    const payload: CollaborationInterestPayload = {
+      triggeredBy: userID,
       relation: {
         role: relation.actorRole || '',
         description: relation.description || '',
       },
-      hub: hubPayload,
+      journey: journeyPayload,
     };
 
     return payload;
@@ -219,7 +226,7 @@ export class NotificationPayloadBuilder {
         updates.id
       );
 
-    const hubPayload = await this.buildHubPayload(community);
+    const hubPayload = await this.buildJourneyPayload(community);
     const payload: any = {
       update: {
         id: updates.id,
@@ -235,8 +242,26 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  async buildUserRegisteredNotificationPayload(userID: string) {
-    return { userID: userID };
+  async buildUserRegisteredNotificationPayload(
+    triggeredBy: string,
+    userID: string
+  ) {
+    const result: PlatformUserRegistrationEventPayload = {
+      triggeredBy: triggeredBy,
+      userID: userID,
+    };
+    return result;
+  }
+
+  async buildUserRemovedNotificationPayload(
+    triggeredBy: string,
+    userID: string
+  ) {
+    const result: PlatformUserRemovedEventPayload = {
+      triggeredBy: triggeredBy,
+      userID: userID,
+    };
+    return result;
   }
 
   async buildCommunityContextReviewSubmittedNotificationPayload(
@@ -273,7 +298,7 @@ export class NotificationPayloadBuilder {
         discussion.id
       );
 
-    const hubPayload = await this.buildHubPayload(community);
+    const hubPayload = await this.buildJourneyPayload(community);
     const payload: any = {
       discussion: {
         id: discussion.id,
@@ -291,10 +316,14 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  private async buildHubPayload(community: ICommunity): Promise<HubPayload> {
-    const result: HubPayload = {
-      id: community.hubID,
-      nameID: await this.getHubNameIdOrFail(community.hubID),
+  private async buildJourneyPayload(
+    community: ICommunity
+  ): Promise<JourneyPayload> {
+    const result: JourneyPayload = {
+      hubID: community.hubID,
+      hubNameID: await this.getHubNameIdOrFail(community.hubID),
+      displayName: community.displayName,
+      type: community.type,
     };
     if (community.type === CommunityType.CHALLENGE) {
       result.challenge = {
