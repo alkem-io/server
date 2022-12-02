@@ -40,6 +40,16 @@ jobs:
           container-registry-password: ${{ secrets.REGISTRY_PASSWORD }}
           secret-name: alkemio-server-secret
 
+      - uses: azure/setup-kubectl@v3
+          with:
+            version: "v1.22.0" # default is latest stable, fixing it to a compatible version
+          id: install
+
+      - name: Migrate database
+        run: |
+          kubectl delete job alkemio-server-migration
+          kubectl create job --from=cronjob/alkemio-server-migration alkemio-server-migration-job
+
       - uses: Azure/k8s-deploy@v1
         with:
           manifests: |
