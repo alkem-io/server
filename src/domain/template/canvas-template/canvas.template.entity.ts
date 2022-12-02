@@ -1,5 +1,7 @@
 import {
+  AfterInsert,
   AfterLoad,
+  AfterUpdate,
   BeforeInsert,
   BeforeUpdate,
   Column,
@@ -26,6 +28,8 @@ export class CanvasTemplate extends TemplateBase implements ICanvasTemplate {
     }
   }
 
+  @AfterInsert()
+  @AfterUpdate()
   @AfterLoad()
   async decompressValue() {
     if (this.value !== '') {
