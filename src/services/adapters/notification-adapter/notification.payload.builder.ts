@@ -137,10 +137,14 @@ export class NotificationPayloadBuilder {
   }
 
   async buildCommentCreatedOnCardPayload(
-    card: IAspect,
+    aspect: IAspect,
     commentsId: string,
     messageResult: IMessage
   ) {
+    const card = await this.aspectRepository.findOne(
+      { id: aspect.id },
+      { relations: ['callout'] }
+    );
     const community =
       await this.communityResolverService.getCommunityFromCommentsOrFail(
         commentsId
@@ -152,10 +156,10 @@ export class NotificationPayloadBuilder {
         LogContext.NOTIFICATIONS
       );
     }
-    const callout = card.callout;
+    const callout = card?.callout;
     if (!callout) {
       throw new NotificationEventException(
-        `Could not acquire callout from card with id: ${card.id}`,
+        `Could not acquire callout from card with id: ${card?.id}`,
         LogContext.NOTIFICATIONS
       );
     }
