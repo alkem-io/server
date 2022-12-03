@@ -30,6 +30,7 @@ import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { IAspect } from '@domain/collaboration';
+import { IUser } from '@domain/community/user/user.interface';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -242,10 +243,10 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  async buildUserRegisteredNotificationPayload(
+  buildUserRegisteredNotificationPayload(
     triggeredBy: string,
     userID: string
-  ) {
+  ): PlatformUserRegistrationEventPayload {
     const result: PlatformUserRegistrationEventPayload = {
       triggeredBy: triggeredBy,
       userID: userID,
@@ -253,13 +254,16 @@ export class NotificationPayloadBuilder {
     return result;
   }
 
-  async buildUserRemovedNotificationPayload(
+  buildUserRemovedNotificationPayload(
     triggeredBy: string,
-    userID: string
-  ) {
+    user: IUser
+  ): PlatformUserRemovedEventPayload {
     const result: PlatformUserRemovedEventPayload = {
       triggeredBy: triggeredBy,
-      userID: userID,
+      user: {
+        displayName: user.displayName,
+        email: user.email,
+      },
     };
     return result;
   }

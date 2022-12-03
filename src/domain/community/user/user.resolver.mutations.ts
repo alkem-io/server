@@ -133,7 +133,6 @@ export class UserResolverMutations {
     @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
     const user = await this.userService.getUserOrFail(deleteData.ID);
-    const userID = user.id;
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       user.authorization,
@@ -144,7 +143,7 @@ export class UserResolverMutations {
     // Send the notification
     const notificationInput: NotificationInputUserRemoved = {
       triggeredBy: agentInfo.userID,
-      userID,
+      user,
     };
     await this.notificationAdapter.userRemoved(notificationInput);
     return userDeleted;

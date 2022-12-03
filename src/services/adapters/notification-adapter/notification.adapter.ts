@@ -235,9 +235,9 @@ export class NotificationAdapter {
     );
 
     const payload =
-      await this.notificationPayloadBuilder.buildUserRemovedNotificationPayload(
+      this.notificationPayloadBuilder.buildUserRemovedNotificationPayload(
         eventData.triggeredBy,
-        eventData.userID
+        eventData.user
       );
 
     this.notificationsClient.emit<number>(
