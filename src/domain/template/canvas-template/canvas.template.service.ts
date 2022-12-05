@@ -75,11 +75,12 @@ export class CanvasTemplateService {
   async deleteCanvasTemplate(
     canvasTemplate: ICanvasTemplate
   ): Promise<ICanvasTemplate> {
+    const canvasID = canvasTemplate.id;
     await this.templateBaseService.deleteEntities(canvasTemplate);
     const result = await this.canvasTemplateRepository.remove(
       canvasTemplate as CanvasTemplate
     );
-    result.id = canvasTemplate.id;
+    result.id = canvasID;
     return result;
   }
 
