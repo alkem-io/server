@@ -60,11 +60,14 @@ export class CalloutService {
       calloutData.sortOrder = 10;
     }
     // Save the card template data for creation via service
-    // Note: do NOT go through normal ORM creation flow + then save, as otherwise
-    // get a cardTemplate created without any child entities
+    // Note: do NOT save the callout card template that is created through ORM creation flow,
+    // as otherwise get a cardTemplate created without any child entities (auth etc)
     const cardTemplateData = calloutData.cardTemplate;
-    calloutData.cardTemplate = undefined;
     const callout: ICallout = Callout.create(calloutData);
+    if (calloutData.type == CalloutType.CARD && cardTemplateData) {
+      callout.cardTemplate =
+        await this.aspectTemplateService.createAspectTemplate(cardTemplateData);
+    }
 
     callout.authorization = new AuthorizationPolicy();
 
@@ -77,11 +80,6 @@ export class CalloutService {
         `callout-comments-${savedCallout.displayName}`
       );
       return await this.calloutRepository.save(savedCallout);
-    }
-
-    if (calloutData.type == CalloutType.CARD && cardTemplateData) {
-      callout.cardTemplate =
-        await this.aspectTemplateService.createAspectTemplate(cardTemplateData);
     }
 
     return savedCallout;
