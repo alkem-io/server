@@ -157,7 +157,7 @@ export class CollaborationResolverMutations {
         triggeredBy: agentInfo.userID,
         callout: callout,
       };
-      await this.activityAdapter.calloutPublished(activityLogInput);
+      this.activityAdapter.calloutPublished(activityLogInput);
     }
 
     return calloutAuthorized;

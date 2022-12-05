@@ -35,7 +35,6 @@ import { CalloutType } from '@common/enums/callout.type';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputAspectCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.aspect.created';
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
-import { ActivityInputCanvasCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.canvas.created';
 import { CalloutMessageReceivedPayload } from './dto/callout.message.received.payload';
 import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
@@ -149,7 +148,7 @@ export class CalloutResolverMutations {
       callout: callout,
       message: data.message,
     };
-    await this.activityAdapter.calloutCommentCreated(activityLogInput);
+    this.activityAdapter.calloutCommentCreated(activityLogInput);
 
     return commentSent;
   }
@@ -210,7 +209,7 @@ export class CalloutResolverMutations {
         triggeredBy: agentInfo.userID,
         callout: callout,
       };
-      await this.activityAdapter.calloutPublished(activityLogInput);
+      this.activityAdapter.calloutPublished(activityLogInput);
     }
 
     return result;
@@ -274,7 +273,7 @@ export class CalloutResolverMutations {
       aspect: aspect,
       callout: callout,
     };
-    await this.activityAdapter.aspectCreated(activityLogInput);
+    this.activityAdapter.aspectCreated(activityLogInput);
 
     return aspect;
   }
@@ -308,16 +307,19 @@ export class CalloutResolverMutations {
       canvasData,
       agentInfo.userID
     );
-    const activityLogInput: ActivityInputCanvasCreated = {
-      triggeredBy: agentInfo.userID,
-      canvas: canvas,
-      callout: callout,
-    };
-    await this.activityAdapter.canvasCreated(activityLogInput);
 
-    return await this.canvasAuthorizationService.applyAuthorizationPolicy(
-      canvas,
-      callout.authorization
-    );
+    const authorizedCanvas =
+      await this.canvasAuthorizationService.applyAuthorizationPolicy(
+        canvas,
+        callout.authorization
+      );
+
+    this.activityAdapter.canvasCreated({
+      triggeredBy: agentInfo.userID,
+      canvas: authorizedCanvas,
+      callout: callout,
+    });
+
+    return authorizedCanvas;
   }
 }

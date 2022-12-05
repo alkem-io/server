@@ -90,7 +90,7 @@ export class UpdatesResolverMutations {
       updates: updates,
       message: updateSent.message,
     };
-    await this.activityAdapter.updateSent(activityLogInput);
+    this.activityAdapter.updateSent(activityLogInput);
 
     return updateSent;
   }
