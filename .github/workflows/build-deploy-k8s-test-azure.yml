@@ -40,9 +40,9 @@ jobs:
           secret-name: alkemio-server-secret
 
       - uses: azure/setup-kubectl@v3
-          with:
-            version: "v1.22.0" # default is latest stable, fixing it to a compatible version
-          id: install
+        with:
+          version: "v1.22.0" # default is latest stable, fixing it to a compatible version
+        id: install
 
       - name: Migrate database
         run: |
