@@ -6,6 +6,7 @@ on:
 
 jobs:
   build:
+    runs-on: ubuntu-latest
     steps:
       - name: 'Checkout GitHub Action'
         uses: actions/checkout@master
@@ -25,6 +26,7 @@ jobs:
             docker build -f Dockerfile . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }} -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:latest
             docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
   migrate:
+    runs-on: ubuntu-latest
     steps:
       - uses: Azure/aks-set-context@v1
         with:
@@ -59,6 +61,7 @@ jobs:
           kubectl create job --from=cronjob/alkemio-server-migration alkemio-server-migration-job
 
   deploy:
+    runs-on: ubuntu-latest
     steps:
       - uses: Azure/aks-set-context@v1
         with:
