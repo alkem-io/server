@@ -2,7 +2,7 @@ name: Build, Migrate & Deploy to Dev
 
 on:
   push:
-    branches: [server-1848]
+    branches: [develop]
 
 jobs:
   build:

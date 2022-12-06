@@ -1,8 +1,7 @@
 name: Build, Migrate & Deploy to Test on Azure
 
 on:
-  push:
-    branches: [server-1848]
+  workflow_dispatch:
 
 jobs:
   build:
