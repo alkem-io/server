@@ -10,6 +10,27 @@ env:
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Apply server migration"
+        uses: actions/checkout@v3.0.2
+
+      - uses: azure/k8s-set-context@v1
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_DATA_DEMO }}
+
+      - uses: azure/setup-kubectl@v3
+        with:
+          version: "v1.22.0" # default is latest stable, fixing it to a compatible version
+        id: install
+
+      - name: Migrate database
+        run: |
+          kubectl delete job alkemio-server-migration
+          kubectl create job --from=cronjob/alkemio-server-migration alkemio-server-migration-job
+
   deploy:
     name: deploy to cluster
     runs-on: ubuntu-latest
