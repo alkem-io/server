@@ -61,9 +61,13 @@ jobs:
           imagepullsecrets: |
             alkemio-server-secret
 
-      - name: Migrate database
+      - name: Delete old job
+        continue-on-error: true
         run: |
           kubectl delete job alkemio-server-migration
+
+      - name: Create migration job
+        run: |
           kubectl create job --from=cronjob/alkemio-server-migration alkemio-server-migration-job
 
   deploy:
