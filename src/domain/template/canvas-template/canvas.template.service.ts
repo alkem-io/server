@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -44,11 +44,13 @@ export class CanvasTemplateService {
   }
 
   async getCanvasTemplateOrFail(
-    canvasTemplateID: string
+    canvasTemplateID: string,
+    options?: FindOneOptions<CanvasTemplate>
   ): Promise<ICanvasTemplate> {
-    const canvasTemplate = await this.canvasTemplateRepository.findOne({
-      id: canvasTemplateID,
-    });
+    const canvasTemplate = await this.canvasTemplateRepository.findOne(
+      canvasTemplateID,
+      options
+    );
     if (!canvasTemplate)
       throw new EntityNotFoundException(
         `Not able to locate CanvasTemplate with the specified ID: ${canvasTemplateID}`,

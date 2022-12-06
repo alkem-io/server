@@ -137,16 +137,37 @@ export class TemplatesSetService {
     return templatesSetPopulated.aspectTemplates;
   }
 
-  public getAspectTemplate(templateId: string): Promise<IAspectTemplate> {
-    return this.aspectTemplateService.getAspectTemplateOrFail(templateId);
+  public getAspectTemplate(
+    templateId: string,
+    templatesSetId: string
+  ): Promise<IAspectTemplate> {
+    return this.aspectTemplateService.getAspectTemplateOrFail(templateId, {
+      relations: ['templatesSet'],
+      where: { templatesSet: { id: templatesSetId } },
+    });
   }
 
-  public getCanvasTemplate(templateId: string): Promise<ICanvasTemplate> {
-    return this.canvasTemplateService.getCanvasTemplateOrFail(templateId);
+  public getCanvasTemplate(
+    templateId: string,
+    templatesSetId: string
+  ): Promise<ICanvasTemplate> {
+    return this.canvasTemplateService.getCanvasTemplateOrFail(templateId, {
+      relations: ['templatesSet'],
+      where: { templatesSet: { id: templatesSetId } },
+    });
   }
 
-  public getLifecycleTemplate(templateId: string): Promise<ILifecycleTemplate> {
-    return this.lifecycleTemplateService.getLifecycleTemplateOrFail(templateId);
+  public getLifecycleTemplate(
+    templateId: string,
+    templatesSetId: string
+  ): Promise<ILifecycleTemplate> {
+    return this.lifecycleTemplateService.getLifecycleTemplateOrFail(
+      templateId,
+      {
+        relations: ['templatesSet'],
+        where: { templatesSet: { id: templatesSetId } },
+      }
+    );
   }
 
   async createAspectTemplate(
