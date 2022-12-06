@@ -1,4 +1,4 @@
-name: Build & Deploy to Dev
+name: Build, Migrate & Deploy to Dev
 
 on:
   push:
@@ -74,6 +74,9 @@ jobs:
     needs: migrate
     runs-on: ubuntu-latest
     steps:
+      - name: 'Checkout GitHub Action'
+        uses: actions/checkout@master
+
       - uses: Azure/aks-set-context@v1
         with:
           creds: ${{ secrets.AZURE_CRED_K8S_NEW }}
