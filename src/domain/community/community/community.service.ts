@@ -332,7 +332,7 @@ export class CommunityService {
         community: community,
         user: user,
       };
-      await this.activityAdapter.memberJoined(activityLogInput);
+      this.activityAdapter.memberJoined(activityLogInput);
     }
 
     return community;

@@ -247,15 +247,15 @@ export class HubResolverMutations {
       agentInfo
     );
 
-    this.activityAdapter.challengeCreated({
-      triggeredBy: agentInfo.userID,
-      challenge: challenge,
-    });
-
     await this.challengeAuthorizationService.applyAuthorizationPolicy(
       challenge,
       hub.authorization
     );
+
+    this.activityAdapter.challengeCreated({
+      triggeredBy: agentInfo.userID,
+      challenge: challenge,
+    });
 
     const challengeCreatedEvent: ChallengeCreatedPayload = {
       eventID: `hub-challenge-created-${Math.round(Math.random() * 100)}`,
