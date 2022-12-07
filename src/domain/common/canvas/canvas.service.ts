@@ -90,7 +90,6 @@ export class CanvasService {
     agentInfo: AgentInfo
   ): Promise<ICanvas> {
     const checkout = await this.getCanvasCheckout(canvas);
-
     // Before updating the canvas contents check the user doing it has it checked out
     if (updateCanvasData.value && updateCanvasData.value !== canvas.value) {
       await this.canvasCheckoutService.isUpdateAllowedOrFail(

@@ -18,12 +18,13 @@ import { Aspect } from '@src/domain/collaboration/aspect/aspect.entity';
 import {
   AspectCreatedEventPayload,
   AspectCommentCreatedEventPayload,
-  CommunityCollaborationInterestEventPayload,
+  CommunityCollaborationInterestPayload,
   CalloutPublishedEventPayload,
-} from './event-payloads';
+  HubPayload,
+} from '@alkemio/notifications-lib';
+
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { HubPayload } from './event-payloads/hub.payload';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IMessage } from '@domain/communication/message/message.interface';
 
@@ -187,16 +188,15 @@ export class NotificationPayloadBuilder {
     userID: string,
     collaboration: ICollaboration,
     relation: IRelation
-  ): Promise<CommunityCollaborationInterestEventPayload> {
+  ): Promise<CommunityCollaborationInterestPayload> {
     const community =
       await this.communityResolverService.getCommunityFromCollaborationOrFail(
         collaboration.id
       );
     const hubPayload = await this.buildHubPayload(community);
-    const payload: CommunityCollaborationInterestEventPayload = {
+    const payload: CommunityCollaborationInterestPayload = {
       userID,
       community: {
-        id: community.id,
         name: community.displayName,
         type: community.type,
       },

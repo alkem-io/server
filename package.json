@@ -24,8 +24,8 @@
     "lint": "tsc --noEmit && eslint src/**/*.ts{,x}",
     "lint:prod": "tsc --noEmit && cross-env NODE_ENV=production eslint src/**/*.ts{,x}",
     "lint:fix": "tsc --noEmit && eslint src/**/*.ts{,x} --fix",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "jest --config ./test/config/jest.config.js",
+    "test:watch": "jest --watch --config ./test/config/jest.config.js",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:ci": "jest --forceExit --config ./test/config/jest.config.ci.js && cat ./coverage-ci/lcov.info | coveralls",
@@ -39,6 +39,7 @@
     "migration:show": "npm run typeorm migration:show"
   },
   "dependencies": {
+    "@alkemio/notifications-lib": "^0.1.7",
     "@nestjs/apollo": "^10.0.6",
     "@nestjs/axios": "^0.0.3",
     "@nestjs/common": "^8.0.5",

@@ -9,6 +9,7 @@ import { ITemplatesSet } from './templates.set.interface';
 import { ICanvasTemplate } from '../canvas-template/canvas.template.interface';
 import { ILifecycleTemplate } from '../lifecycle-template/lifecycle.template.interface';
 import { ITemplatesSetPolicy } from '../templates-set-policy/templates.set.policy.interface';
+import { TemplatesSet } from './templates.set.entity';
 
 @Resolver(() => ITemplatesSet)
 export class TemplatesSetResolverFields {
@@ -33,6 +34,7 @@ export class TemplatesSetResolverFields {
   })
   @Profiling.api
   public aspectTemplate(
+    @Parent() templatesSet: TemplatesSet,
     @Args({
       name: 'ID',
       nullable: false,
@@ -41,7 +43,7 @@ export class TemplatesSetResolverFields {
     })
     ID: string
   ): Promise<IAspectTemplate> {
-    return this.templatesSetService.getAspectTemplate(ID);
+    return this.templatesSetService.getAspectTemplate(ID, templatesSet.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -59,10 +61,11 @@ export class TemplatesSetResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('canvasTemplate', () => ICanvasTemplate, {
     nullable: true,
-    description: 'A single AspectTemplate',
+    description: 'A single CanvasTemplate',
   })
   @Profiling.api
   public canvasTemplate(
+    @Parent() templatesSet: TemplatesSet,
     @Args({
       name: 'ID',
       nullable: false,
@@ -71,7 +74,7 @@ export class TemplatesSetResolverFields {
     })
     ID: string
   ): Promise<ICanvasTemplate> {
-    return this.templatesSetService.getCanvasTemplate(ID);
+    return this.templatesSetService.getCanvasTemplate(ID, templatesSet.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -91,10 +94,11 @@ export class TemplatesSetResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('lifecycleTemplate', () => ILifecycleTemplate, {
     nullable: true,
-    description: 'A single AspectTemplate',
+    description: 'A single LifecycleTemplate',
   })
   @Profiling.api
   public lifecycleTemplate(
+    @Parent() templatesSet: TemplatesSet,
     @Args({
       name: 'ID',
       nullable: false,
@@ -103,7 +107,7 @@ export class TemplatesSetResolverFields {
     })
     ID: string
   ): Promise<ILifecycleTemplate> {
-    return this.templatesSetService.getLifecycleTemplate(ID);
+    return this.templatesSetService.getLifecycleTemplate(ID, templatesSet.id);
   }
 
   @UseGuards(GraphqlGuard)
