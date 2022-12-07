@@ -74,7 +74,10 @@ export class TemplateInfoService {
     return templateInfo;
   }
 
-  async delete(templateInfo: ITemplateInfo): Promise<ITemplateInfo> {
+  async delete(templateInfoID: string): Promise<ITemplateInfo> {
+    const templateInfo = await this.getTemplateInfoOrFail(templateInfoID, {
+      relations: ['visual'],
+    });
     if (templateInfo.visual) {
       await this.visualService.deleteVisual({
         ID: templateInfo.visual.id,
