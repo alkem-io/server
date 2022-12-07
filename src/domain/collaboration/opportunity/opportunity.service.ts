@@ -250,15 +250,13 @@ export class OpportunityService {
       );
     }
 
-    // Note need to load it in with all contained entities so can remove fully
-    const baseOpportunity = await this.getOpportunityOrFail(opportunityID, {
-      relations: ['community', 'context', 'lifecycle', 'agent'],
-    });
-
-    await this.baseChallengeService.deleteEntities(baseOpportunity);
+    await this.baseChallengeService.deleteEntities(
+      opportunity.id,
+      this.opportunityRepository
+    );
 
     const result = await this.opportunityRepository.remove(
-      baseOpportunity as Opportunity
+      opportunity as Opportunity
     );
     result.id = opportunityID;
     return result;

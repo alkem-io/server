@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: alkemio-server-migration
+  generateName: alkemio-server-migration-
+spec:
+  schedule: "@yearly"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: alkemio-server
+              image: alkemio/server:latest
+              command: ["npm",  "run", "migration:run"]
+
+              envFrom:
+                - secretRef:
+                    name: alkemio-secrets
+                - configMapRef:
+                    name: alkemio-config
