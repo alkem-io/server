@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformAuthorizationModule } from '@platform/authorization/platform.authorization.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { Library } from './library.entity';
+import { LibraryResolverFields } from './library.resolver.fields';
 import { LibraryResolverMutations } from './library.resolver.mutations';
 import { LibraryResolverQueries } from './library.resolver.queries';
 import { LibraryService } from './library.service';
@@ -23,6 +24,7 @@ import { LibraryAuthorizationService } from './library.service.authorization';
   providers: [
     LibraryResolverQueries,
     LibraryResolverMutations,
+    LibraryResolverFields,
     LibraryService,
     LibraryAuthorizationService,
   ],
