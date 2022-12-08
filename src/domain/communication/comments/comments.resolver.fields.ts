@@ -22,4 +22,16 @@ export class CommentsResolverFields {
     const commentsRoom = await this.commentsService.getCommentsRoom(comments);
     return commentsRoom.messages;
   }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('messageCount', () => Number, {
+    nullable: true,
+    description: 'Number of messages in this Comments.',
+  })
+  @Profiling.api
+  async messageCount(@Parent() comments: IComments): Promise<number> {
+    const commentsRoom = await this.commentsService.getCommentsRoom(comments);
+    return commentsRoom.messages.length;
+  }
 }
