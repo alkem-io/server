@@ -167,6 +167,9 @@ export class CommunityService {
       }
     }
 
+    // Remove all credentials issued for admins
+    await this.removeCommunityUserAdmins(community);
+
     if (community.authorization)
       await this.authorizationPolicyService.delete(community.authorization);
 
@@ -329,7 +332,7 @@ export class CommunityService {
         community: community,
         user: user,
       };
-      await this.activityAdapter.memberJoined(activityLogInput);
+      this.activityAdapter.memberJoined(activityLogInput);
     }
 
     return community;
@@ -368,17 +371,6 @@ export class CommunityService {
       return isParentMember;
     }
     return true;
-  }
-
-  private async grantCommunityRole(
-    agent: IAgent,
-    roleCredential: CredentialDefinition
-  ): Promise<IAgent> {
-    return await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: roleCredential.type,
-      resourceID: roleCredential.resourceID,
-    });
   }
 
   public getCommunityPolicy(community: ICommunity): ICommunityPolicy {
@@ -578,6 +570,25 @@ export class CommunityService {
       type: communityPolicyRole.credential.type,
       resourceID: communityPolicyRole.credential.resourceID,
     });
+  }
+
+  private async removeCommunityUserAdmins(
+    community: ICommunity
+  ): Promise<void> {
+    const adminCredential = this.communityPolicyService.getAdminCredential(
+      community.policy
+    );
+    const agents = await this.agentService.findAgentsWithMatchingCredentials(
+      adminCredential
+    );
+
+    for (const agent of agents) {
+      await this.agentService.revokeCredential({
+        agentID: agent.id,
+        type: adminCredential.type,
+        resourceID: adminCredential.resourceID,
+      });
+    }
   }
 
   private async removeContributorFromRole(

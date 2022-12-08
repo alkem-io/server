@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -34,11 +34,13 @@ export class AspectTemplateService {
   }
 
   async getAspectTemplateOrFail(
-    aspectTemplateID: string
+    aspectTemplateID: string,
+    options?: FindOneOptions<AspectTemplate>
   ): Promise<IAspectTemplate> {
-    const aspectTemplate = await this.aspectTemplateRepository.findOne({
-      id: aspectTemplateID,
-    });
+    const aspectTemplate = await this.aspectTemplateRepository.findOne(
+      aspectTemplateID,
+      options
+    );
     if (!aspectTemplate)
       throw new EntityNotFoundException(
         `Not able to locate AspectTemplate with the specified ID: ${aspectTemplateID}`,

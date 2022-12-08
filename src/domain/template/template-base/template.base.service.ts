@@ -52,7 +52,7 @@ export class TemplateBaseService {
 
   async deleteEntities(baseTemplate: ITemplateBase) {
     if (baseTemplate.templateInfo) {
-      await this.templateInfoService.delete(baseTemplate.templateInfo);
+      await this.templateInfoService.delete(baseTemplate.templateInfo.id);
     }
   }
 }

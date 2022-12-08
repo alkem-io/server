@@ -41,9 +41,7 @@ export class LifecycleTemplateService {
     options?: FindOneOptions<LifecycleTemplate>
   ): Promise<ILifecycleTemplate> {
     const lifecycleTemplate = await this.lifecycleTemplateRepository.findOne(
-      {
-        id: lifecycleTemplateID,
-      },
+      lifecycleTemplateID,
       options
     );
 

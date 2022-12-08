@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -44,11 +44,13 @@ export class CanvasTemplateService {
   }
 
   async getCanvasTemplateOrFail(
-    canvasTemplateID: string
+    canvasTemplateID: string,
+    options?: FindOneOptions<CanvasTemplate>
   ): Promise<ICanvasTemplate> {
-    const canvasTemplate = await this.canvasTemplateRepository.findOne({
-      id: canvasTemplateID,
-    });
+    const canvasTemplate = await this.canvasTemplateRepository.findOne(
+      canvasTemplateID,
+      options
+    );
     if (!canvasTemplate)
       throw new EntityNotFoundException(
         `Not able to locate CanvasTemplate with the specified ID: ${canvasTemplateID}`,
@@ -75,11 +77,12 @@ export class CanvasTemplateService {
   async deleteCanvasTemplate(
     canvasTemplate: ICanvasTemplate
   ): Promise<ICanvasTemplate> {
+    const canvasID = canvasTemplate.id;
     await this.templateBaseService.deleteEntities(canvasTemplate);
     const result = await this.canvasTemplateRepository.remove(
       canvasTemplate as CanvasTemplate
     );
-    result.id = canvasTemplate.id;
+    result.id = canvasID;
     return result;
   }
 

@@ -3,6 +3,7 @@ mutation deleteCanvasTemplate($deleteData: DeleteCanvasTemplateInput!) {
     info {
       title
     }
+    id
   }
 }
 
