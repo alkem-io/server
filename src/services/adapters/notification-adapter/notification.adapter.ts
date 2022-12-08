@@ -177,6 +177,7 @@ export class NotificationAdapter {
     const payload =
       await this.notificationPayloadBuilder.buildCommunityNewMemberPayload(
         eventData.triggeredBy,
+        eventData.userID,
         eventData.community
       );
     this.notificationsClient.emit(

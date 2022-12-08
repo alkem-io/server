@@ -23,6 +23,11 @@ import {
   JourneyPayload,
   PlatformUserRegistrationEventPayload,
   PlatformUserRemovedEventPayload,
+  CommunityNewMemberPayload,
+  CommunicationUpdateEventPayload,
+  CollaborationContextReviewSubmittedPayload,
+  CommunicationDiscussionCreatedEventPayload,
+  CommunityApplicationCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
@@ -51,22 +56,20 @@ export class NotificationPayloadBuilder {
     applicationCreatorID: string,
     applicantID: string,
     community: ICommunity
-  ) {
-    const hubPayload = await this.buildJourneyPayload(community);
-    const payload: any = {
-      applicationCreatorID,
+  ): Promise<CommunityApplicationCreatedEventPayload> {
+    const journeyPayload = await this.buildJourneyPayload(community);
+    const payload: CommunityApplicationCreatedEventPayload = {
+      triggeredBy: applicationCreatorID,
       applicantID,
-      community: {
-        name: community.displayName,
-        type: community.type,
-      },
-      hub: hubPayload,
+      journey: journeyPayload,
     };
 
     return payload;
   }
 
-  async buildCardCreatedPayload(aspectId: string) {
+  async buildCardCreatedPayload(
+    aspectId: string
+  ): Promise<CollaborationCardCreatedEventPayload> {
     const card = await this.aspectRepository.findOne(
       { id: aspectId },
       { relations: ['callout'] }
@@ -140,7 +143,7 @@ export class NotificationPayloadBuilder {
     aspect: IAspect,
     commentsId: string,
     messageResult: IMessage
-  ) {
+  ): Promise<CollaborationCardCommentEventPayload> {
     const card = await this.aspectRepository.findOne(
       { id: aspect.id },
       { relations: ['callout'] }
@@ -186,15 +189,16 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  async buildCommunityNewMemberPayload(userID: string, community: ICommunity) {
-    const hubPayload = await this.buildJourneyPayload(community);
-    const payload = {
+  async buildCommunityNewMemberPayload(
+    triggeredBy: string,
+    userID: string,
+    community: ICommunity
+  ): Promise<CommunityNewMemberPayload> {
+    const journeyPayload = await this.buildJourneyPayload(community);
+    const payload: CommunityNewMemberPayload = {
+      triggeredBy,
       userID,
-      community: {
-        name: community.displayName,
-        type: community.type,
-      },
-      hub: hubPayload,
+      journey: journeyPayload,
     };
 
     return payload;
@@ -225,23 +229,20 @@ export class NotificationPayloadBuilder {
   async buildCommunicationUpdateSentNotificationPayload(
     updateCreatorId: string,
     updates: IUpdates
-  ) {
+  ): Promise<CommunicationUpdateEventPayload> {
     const community =
       await this.communityResolverService.getCommunityFromUpdatesOrFail(
         updates.id
       );
 
-    const hubPayload = await this.buildJourneyPayload(community);
-    const payload: any = {
+    const journeyPayload = await this.buildJourneyPayload(community);
+    const payload: CommunicationUpdateEventPayload = {
+      triggeredBy: updateCreatorId,
       update: {
         id: updates.id,
         createdBy: updateCreatorId,
       },
-      community: {
-        name: community.displayName,
-        type: community.type,
-      },
-      hub: hubPayload,
+      journey: journeyPayload,
     };
 
     return payload;
@@ -277,7 +278,7 @@ export class NotificationPayloadBuilder {
     communityId: string,
     challengeId: string,
     questions: CreateNVPInput[]
-  ) {
+  ): Promise<CollaborationContextReviewSubmittedPayload> {
     const community = await this.communityResolverService.getCommunity(
       communityId
     );
@@ -288,37 +289,33 @@ export class NotificationPayloadBuilder {
       );
     }
 
+    const journeyPayload = await this.buildJourneyPayload(community);
+
     return {
-      userId,
-      challengeId,
-      community: {
-        name: community.displayName,
-      },
+      triggeredBy: userId,
+      journey: journeyPayload,
       questions,
     };
   }
 
   async buildCommunicationDiscussionCreatedNotificationPayload(
     discussion: IDiscussion
-  ) {
+  ): Promise<CommunicationDiscussionCreatedEventPayload> {
     const community =
       await this.communityResolverService.getCommunityFromDiscussionOrFail(
         discussion.id
       );
 
-    const hubPayload = await this.buildJourneyPayload(community);
-    const payload: any = {
+    const journeyPayload = await this.buildJourneyPayload(community);
+    const payload: CommunicationDiscussionCreatedEventPayload = {
+      triggeredBy: discussion.createdBy,
       discussion: {
         id: discussion.id,
         createdBy: discussion.createdBy,
         title: discussion.title,
         description: discussion.description,
       },
-      community: {
-        name: community.displayName,
-        type: community.type,
-      },
-      hub: hubPayload,
+      journey: journeyPayload,
     };
 
     return payload;
