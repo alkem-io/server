@@ -84,7 +84,8 @@ selfservice:
       lifespan: 10m
       ui_url: http://localhost:3000/identity/registration
       after:
-        default_browser_return_url: http://localhost:3000/identity/registration/success
+        password:
+          default_browser_return_url: http://localhost:3000/identity/registration/success
         oidc:
           hooks:
             - hook: session
