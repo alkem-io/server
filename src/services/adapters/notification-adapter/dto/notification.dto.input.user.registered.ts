@@ -1,3 +1,5 @@
 import { NotificationInputBase } from './notification.dto.input.base';
 
-export type NotificationInputUserRegistered = NotificationInputBase;
+export interface NotificationInputUserRegistered extends NotificationInputBase {
+  userID: string;
+}
