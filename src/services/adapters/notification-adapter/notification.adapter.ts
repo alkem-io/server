@@ -16,6 +16,8 @@ import { NotificationInputCommunityNewMember } from './dto/notification.dto.inpu
 import { NotificationInputCommunityContextReview } from './dto/notification.dto.input.community.context.review';
 import { NotificationInputUserRegistered } from './dto/notification.dto.input.user.registered';
 import { NotificationInputUserRemoved } from './dto/notification.dto.input.user.removed';
+import { NotificationInputCanvasCreated } from './dto/notification.dto.input.canvas.created';
+import { NotificationInputDiscussionComment } from './dto/notification.dto.input.discussion.comment';
 
 @Injectable()
 export class NotificationAdapter {
@@ -65,6 +67,25 @@ export class NotificationAdapter {
     );
   }
 
+  public async canvasCreated(
+    eventData: NotificationInputCanvasCreated
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `Event received: ${JSON.stringify(eventData)}`,
+      LogContext.NOTIFICATIONS
+    );
+
+    const payload =
+      await this.notificationPayloadBuilder.buildCanvasCreatedPayload(
+        eventData.canvas.id
+      );
+
+    this.notificationsClient.emit<number>(
+      NotificationEventType.COLLABORATION_CANVAS_CREATED,
+      payload
+    );
+  }
+
   public async collaborationInterest(
     eventData: NotificationInputCollaborationInterest
   ): Promise<void> {
@@ -103,6 +124,28 @@ export class NotificationAdapter {
     // send notification event
     this.notificationsClient.emit<number>(
       NotificationEventType.COLLABORATION_CARD_COMMENT,
+      payload
+    );
+  }
+
+  public async discussionComment(
+    eventData: NotificationInputDiscussionComment
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `Event received: ${JSON.stringify(eventData)}`,
+      LogContext.NOTIFICATIONS
+    );
+
+    // build notification payload
+    const payload =
+      await this.notificationPayloadBuilder.buildCommentCreatedOnDiscussionPayload(
+        eventData.callout,
+        eventData.comments.id,
+        eventData.commentSent
+      );
+    // send notification event
+    this.notificationsClient.emit<number>(
+      NotificationEventType.COLLABORATION_DISCUSSION_COMMENT,
       payload
     );
   }

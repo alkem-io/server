@@ -46,6 +46,8 @@ import { CalloutClosedException } from '@common/exceptions/callout/callout.close
 import { IMessage } from '@domain/communication/message/message.interface';
 import { getRandomId } from '@common/utils/random.id.generator.util';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { NotificationInputCanvasCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.canvas.created';
+import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -149,6 +151,14 @@ export class CalloutResolverMutations {
       message: data.message,
     };
     this.activityAdapter.calloutCommentCreated(activityLogInput);
+
+    const notificationInput: NotificationInputDiscussionComment = {
+      callout: callout,
+      triggeredBy: agentInfo.userID,
+      comments,
+      commentSent,
+    };
+    await this.notificationAdapter.discussionComment(notificationInput);
 
     return commentSent;
   }
@@ -319,6 +329,12 @@ export class CalloutResolverMutations {
       canvas: authorizedCanvas,
       callout: callout,
     });
+
+    const notificationInput: NotificationInputCanvasCreated = {
+      canvas: canvas,
+      triggeredBy: agentInfo.userID,
+    };
+    await this.notificationAdapter.canvasCreated(notificationInput);
 
     return authorizedCanvas;
   }
