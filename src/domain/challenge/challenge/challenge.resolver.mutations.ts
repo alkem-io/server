@@ -96,12 +96,6 @@ export class ChallengeResolverMutations {
       agentInfo
     );
 
-    this.activityAdapter.opportunityCreated({
-      opportunity,
-      triggeredBy: agentInfo.userID,
-      challengeId: opportunityData.challengeID,
-    });
-
     const challengeCommunityPolicy =
       await this.challengeAuthorizationService.setCommunityPolicyFlags(
         challenge
@@ -111,6 +105,12 @@ export class ChallengeResolverMutations {
       challenge.authorization,
       challengeCommunityPolicy
     );
+
+    this.activityAdapter.opportunityCreated({
+      opportunity,
+      triggeredBy: agentInfo.userID,
+      challengeId: opportunityData.challengeID,
+    });
 
     const opportunityCreatedEvent: OpportunityCreatedPayload = {
       eventID: `opportunity-created-${Math.round(Math.random() * 100)}`,

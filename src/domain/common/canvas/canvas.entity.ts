@@ -1,5 +1,7 @@
 import {
+  AfterInsert,
   AfterLoad,
+  AfterUpdate,
   BeforeInsert,
   BeforeUpdate,
   Column,
@@ -30,7 +32,8 @@ export class Canvas extends NameableEntity implements ICanvas {
       this.value = await compressText(this.value);
     }
   }
-
+  @AfterInsert()
+  @AfterUpdate()
   @AfterLoad()
   async decompressValue() {
     if (this.value !== '') {

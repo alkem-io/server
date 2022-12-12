@@ -8,8 +8,8 @@ export const MockNotificationsPayloadBuilder: ValueProvider<
   provide: NotificationPayloadBuilder,
   useValue: {
     buildApplicationCreatedNotificationPayload: jest.fn(),
-    buildAspectCreatedPayload: jest.fn(),
-    buildCommentCreatedOnAspectPayload: jest.fn(),
+    buildCardCreatedPayload: jest.fn(),
+    buildCommentCreatedOnCardPayload: jest.fn(),
     buildCommunicationDiscussionCreatedNotificationPayload: jest.fn(),
     buildCommunicationUpdateSentNotificationPayload: jest.fn(),
     buildCommunityContextReviewSubmittedNotificationPayload: jest.fn(),

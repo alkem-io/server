@@ -272,10 +272,10 @@ export class ChallengeService {
       );
     }
 
-    const baseChallenge = await this.getChallengeOrFail(challengeID, {
-      relations: ['community', 'context', 'lifecycle', 'agent'],
-    });
-    await this.baseChallengeService.deleteEntities(baseChallenge);
+    await this.baseChallengeService.deleteEntities(
+      challengeID,
+      this.challengeRepository
+    );
 
     const result = await this.challengeRepository.remove(
       challenge as Challenge

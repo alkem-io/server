@@ -79,7 +79,7 @@ export class CommentsResolverMutations {
         aspect: aspect,
         message: commentSent.message,
       };
-      await this.activityAdapter.aspectComment(activityLogInput);
+      this.activityAdapter.aspectComment(activityLogInput);
     }
 
     return commentSent;

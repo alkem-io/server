@@ -133,7 +133,23 @@ export class BaseChallengeService {
     return await repository.save(baseChallenge);
   }
 
-  public async deleteEntities(baseChallenge: IBaseChallenge) {
+  public async deleteEntities(
+    baseChallengeID: string,
+    repository: Repository<BaseChallenge>
+  ) {
+    const baseChallenge = await this.getBaseChallengeOrFail(
+      baseChallengeID,
+      repository,
+      {
+        relations: [
+          'collaboration',
+          'community',
+          'context',
+          'lifecycle',
+          'agent',
+        ],
+      }
+    );
     if (baseChallenge.context) {
       await this.contextService.removeContext(baseChallenge.context.id);
     }

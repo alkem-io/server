@@ -90,8 +90,6 @@ export class CanvasService {
     agentInfo: AgentInfo
   ): Promise<ICanvas> {
     const checkout = await this.getCanvasCheckout(canvas);
-    // Save decompressed value to return it back
-    const canvasDecompressedValue = updateCanvasData.value;
     // Before updating the canvas contents check the user doing it has it checked out
     if (updateCanvasData.value && updateCanvasData.value !== canvas.value) {
       await this.canvasCheckoutService.isUpdateAllowedOrFail(
@@ -100,9 +98,7 @@ export class CanvasService {
       );
     }
     const updatedCanvas = this.updateCanvasEntity(canvas, updateCanvasData);
-    const savedCanvas = await this.save(updatedCanvas);
-    savedCanvas.value = canvasDecompressedValue;
-    return savedCanvas;
+    return await this.save(updatedCanvas);
   }
 
   updateCanvasEntity(

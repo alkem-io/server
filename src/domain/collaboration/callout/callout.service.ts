@@ -59,7 +59,16 @@ export class CalloutService {
     if (!calloutData.sortOrder) {
       calloutData.sortOrder = 10;
     }
+    // Save the card template data for creation via service
+    // Note: do NOT save the callout card template that is created through ORM creation flow,
+    // as otherwise get a cardTemplate created without any child entities (auth etc)
+    const cardTemplateData = calloutData.cardTemplate;
     const callout: ICallout = Callout.create(calloutData);
+    if (calloutData.type == CalloutType.CARD && cardTemplateData) {
+      callout.cardTemplate =
+        await this.aspectTemplateService.createAspectTemplate(cardTemplateData);
+    }
+
     callout.authorization = new AuthorizationPolicy();
 
     const savedCallout: ICallout = await this.calloutRepository.save(callout);
@@ -71,13 +80,6 @@ export class CalloutService {
         `callout-comments-${savedCallout.displayName}`
       );
       return await this.calloutRepository.save(savedCallout);
-    }
-
-    if (calloutData.type == CalloutType.CARD && calloutData.cardTemplate) {
-      callout.cardTemplate =
-        await this.aspectTemplateService.createAspectTemplate(
-          calloutData.cardTemplate
-        );
     }
 
     return savedCallout;
@@ -155,7 +157,7 @@ export class CalloutService {
 
   public async deleteCallout(calloutID: string): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['aspects', 'canvases', 'comments'],
+      relations: ['aspects', 'canvases', 'comments', 'cardTemplate'],
     });
 
     if (callout.canvases) {
@@ -172,6 +174,12 @@ export class CalloutService {
 
     if (callout.comments) {
       await this.commentsService.deleteComments(callout.comments);
+    }
+
+    if (callout.cardTemplate) {
+      await this.aspectTemplateService.deleteAspectTemplate(
+        callout.cardTemplate
+      );
     }
 
     if (callout.authorization)

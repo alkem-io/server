@@ -376,6 +376,7 @@ export class CommunityResolverMutations {
 
     // Send the notification
     const notificationInput: NotificationInputCommunityNewMember = {
+      userID: agentInfo.userID,
       triggeredBy: agentInfo.userID,
       community: community,
     };
