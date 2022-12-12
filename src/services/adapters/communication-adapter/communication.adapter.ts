@@ -1,9 +1,5 @@
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import {
-  MatrixEntityNotFoundException,
-  NotSupportedException,
-  ValidationException,
-} from '@common/exceptions';
+import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { NotEnabledException } from '@common/exceptions/not.enabled.exception';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communication.room.direct.result';
@@ -434,22 +430,6 @@ export class CommunicationAdapter {
       matrixAgentElevated.matrixClient,
       matrixRoom
     );
-  }
-
-  public async getCommunityRoomMessageCount(roomId: string): Promise<number> {
-    // If not enabled just return 0
-    if (!this.enabled) {
-      return 0;
-    }
-    const matrixAgentElevated = await this.getMatrixManagementAgentElevated();
-    const matrixRoom = await this.matrixAgentService.getRoom(
-      matrixAgentElevated,
-      roomId
-    );
-
-    // toDo get it somehow from matrix... efficiently
-    // const roomSummary = matrixRoom.getMembers;
-    return 0;
   }
 
   async removeUserFromRooms(
