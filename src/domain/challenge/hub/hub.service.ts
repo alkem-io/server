@@ -220,10 +220,7 @@ export class HubService {
         LogContext.CHALLENGES
       );
 
-    const baseChallenge = await this.getHubOrFail(deleteData.ID, {
-      relations: ['community', 'context', 'lifecycle', 'agent'],
-    });
-    await this.baseChallengeService.deleteEntities(baseChallenge);
+    await this.baseChallengeService.deleteEntities(hub.id, this.hubRepository);
 
     // Remove any host credentials
     const hostOrg = await this.getHost(hub.id);

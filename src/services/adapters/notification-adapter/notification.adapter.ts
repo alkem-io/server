@@ -15,6 +15,7 @@ import { NotificationInputCommunityApplication } from './dto/notification.dto.in
 import { NotificationInputCommunityNewMember } from './dto/notification.dto.input.community.new.member';
 import { NotificationInputCommunityContextReview } from './dto/notification.dto.input.community.context.review';
 import { NotificationInputUserRegistered } from './dto/notification.dto.input.user.registered';
+import { NotificationInputUserRemoved } from './dto/notification.dto.input.user.removed';
 
 @Injectable()
 export class NotificationAdapter {
@@ -40,7 +41,7 @@ export class NotificationAdapter {
       );
 
     this.notificationsClient.emit<number>(
-      NotificationEventType.CALLOUT_PUBLISHED,
+      NotificationEventType.COLLABORATION_CALLOUT_PUBLISHED,
       payload
     );
   }
@@ -54,12 +55,12 @@ export class NotificationAdapter {
     );
 
     const payload =
-      await this.notificationPayloadBuilder.buildAspectCreatedPayload(
+      await this.notificationPayloadBuilder.buildCardCreatedPayload(
         eventData.aspect.id
       );
 
     this.notificationsClient.emit<number>(
-      NotificationEventType.ASPECT_CREATED,
+      NotificationEventType.COLLABORATION_CARD_CREATED,
       payload
     );
   }
@@ -79,7 +80,7 @@ export class NotificationAdapter {
         eventData.relation
       );
     this.notificationsClient.emit(
-      NotificationEventType.COMMUNITY_COLLABORATION_INTEREST,
+      NotificationEventType.COLLABORATION_INTEREST,
       payload
     );
   }
@@ -94,15 +95,14 @@ export class NotificationAdapter {
 
     // build notification payload
     const payload =
-      await this.notificationPayloadBuilder.buildCommentCreatedOnAspectPayload(
-        eventData.aspect.displayName,
-        eventData.aspect.createdBy,
+      await this.notificationPayloadBuilder.buildCommentCreatedOnCardPayload(
+        eventData.aspect,
         eventData.comments.id,
         eventData.commentSent
       );
     // send notification event
     this.notificationsClient.emit<number>(
-      NotificationEventType.COMMENT_CREATED_ON_ASPECT,
+      NotificationEventType.COLLABORATION_CARD_COMMENT,
       payload
     );
   }
@@ -177,6 +177,7 @@ export class NotificationAdapter {
     const payload =
       await this.notificationPayloadBuilder.buildCommunityNewMemberPayload(
         eventData.triggeredBy,
+        eventData.userID,
         eventData.community
       );
     this.notificationsClient.emit(
@@ -201,7 +202,7 @@ export class NotificationAdapter {
         eventData.questions
       );
     this.notificationsClient.emit(
-      NotificationEventType.COMMUNITY_CONTEXT_REVIEW_SUBMITTED,
+      NotificationEventType.COLLABORATION_CONTEXT_REVIEW_SUBMITTED,
       payload
     );
   }
@@ -216,11 +217,32 @@ export class NotificationAdapter {
 
     const payload =
       await this.notificationPayloadBuilder.buildUserRegisteredNotificationPayload(
-        eventData.triggeredBy
+        eventData.triggeredBy,
+        eventData.userID
       );
 
     this.notificationsClient.emit<number>(
-      NotificationEventType.USER_REGISTERED,
+      NotificationEventType.PLATFORM_USER_REGISTERED,
+      payload
+    );
+  }
+
+  public async userRemoved(
+    eventData: NotificationInputUserRemoved
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `Event received: ${JSON.stringify(eventData)}`,
+      LogContext.NOTIFICATIONS
+    );
+
+    const payload =
+      this.notificationPayloadBuilder.buildUserRemovedNotificationPayload(
+        eventData.triggeredBy,
+        eventData.user
+      );
+
+    this.notificationsClient.emit<number>(
+      NotificationEventType.PLATFORM_USER_REMOVED,
       payload
     );
   }
