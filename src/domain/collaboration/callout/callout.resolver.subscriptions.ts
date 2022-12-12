@@ -54,7 +54,14 @@ export class CalloutResolverSubscriptions {
           `${logMsgPrefix} sending out event for Aspects on Callout: ${payload.calloutID} `,
           LogContext.SUBSCRIPTIONS
         );
-        return payload;
+
+        return {
+          ...payload,
+          aspect: {
+            ...payload.aspect,
+            createdDate: new Date(payload.aspect.createdDate),
+          },
+        };
       },
       filter(this: CalloutResolverSubscriptions, payload, variables, context) {
         const agentInfo = context.req.user;
