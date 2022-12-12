@@ -63,6 +63,10 @@ export class CommentsService {
     return await this.roomService.getCommunicationRoom(comments);
   }
 
+  async getMessageCount(comments: IComments): Promise<number> {
+    return await this.roomService.getRoomMessageCount(comments);
+  }
+
   async sendCommentsMessage(
     comments: IComments,
     communicationUserID: string,

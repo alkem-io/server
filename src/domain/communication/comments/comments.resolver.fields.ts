@@ -31,7 +31,6 @@ export class CommentsResolverFields {
   })
   @Profiling.api
   async messageCount(@Parent() comments: IComments): Promise<number> {
-    const commentsRoom = await this.commentsService.getCommentsRoom(comments);
-    return commentsRoom.messages.length;
+    return this.commentsService.getMessageCount(comments);
   }
 }

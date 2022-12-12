@@ -80,6 +80,12 @@ export class RoomService {
     return room;
   }
 
+  async getRoomMessageCount(roomable: IRoomable): Promise<number> {
+    return await this.communicationAdapter.getCommunityRoomMessageCount(
+      roomable.communicationRoomID
+    );
+  }
+
   async sendMessage(
     roomable: IRoomable,
     communicationUserID: string,
