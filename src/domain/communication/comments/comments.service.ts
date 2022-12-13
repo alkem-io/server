@@ -32,6 +32,7 @@ export class CommentsService {
     comments.authorization = new AuthorizationPolicy();
     comments.communicationRoomID =
       await this.roomService.initializeCommunicationRoom(comments);
+    comments.commentsCount = 0;
     return await this.commentsRepository.save(comments);
   }
 
@@ -60,7 +61,19 @@ export class CommentsService {
   }
 
   async getCommentsRoom(comments: IComments): Promise<CommunicationRoomResult> {
-    return await this.roomService.getCommunicationRoom(comments);
+    const communicationRoom = await this.roomService.getCommunicationRoom(
+      comments
+    );
+    const commentsCount = communicationRoom.messages.length;
+    if (commentsCount != comments.commentsCount) {
+      this.logger.warn(
+        `Comments (${comments.displayName}) had a comment count of ${comments.commentsCount} that is not synced with the messages count of ${commentsCount}`,
+        LogContext.COMMUNICATION
+      );
+      comments.commentsCount = commentsCount;
+      await this.save(comments);
+    }
+    return communicationRoom;
   }
 
   async sendCommentsMessage(
@@ -68,11 +81,14 @@ export class CommentsService {
     communicationUserID: string,
     messageData: RoomSendMessageInput
   ): Promise<IMessage> {
-    return await this.roomService.sendMessage(
+    const message = await this.roomService.sendMessage(
       comments,
       communicationUserID,
       messageData
     );
+    comments.commentsCount = comments.commentsCount + 1;
+    await this.save(comments);
+    return message;
   }
 
   async removeCommentsMessage(
@@ -85,6 +101,7 @@ export class CommentsService {
       communicationUserID,
       messageData
     );
+    comments.commentsCount = comments.commentsCount - 1;
     return messageData.messageID;
   }
 }
