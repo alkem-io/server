@@ -39,7 +39,8 @@ export class RegistrationResolverMutations {
 
     // Send the notification
     const notificationInput: NotificationInputUserRegistered = {
-      triggeredBy: savedUser.id,
+      triggeredBy: agentInfo.userID,
+      userID: savedUser.id,
     };
     await this.notificationAdapter.userRegistered(notificationInput);
 

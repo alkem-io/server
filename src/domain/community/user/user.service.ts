@@ -84,6 +84,7 @@ export class UserService {
   private getUserCommunicationIdCacheKey(communicationId: string): string {
     return `@user:communicationId:${communicationId}`;
   }
+
   private async setUserCache(user: IUser) {
     await this.cacheManager.set(
       this.getUserCommunicationIdCacheKey(user.email),
@@ -216,6 +217,7 @@ export class UserService {
     defaults.set(UserPreferenceType.NOTIFICATION_APPLICATION_RECEIVED, 'true');
     defaults.set(UserPreferenceType.NOTIFICATION_APPLICATION_SUBMITTED, 'true');
 
+    defaults.set(UserPreferenceType.NOTIFICATION_CANVAS_CREATED, 'true');
     defaults.set(UserPreferenceType.NOTIFICATION_ASPECT_CREATED, 'true');
     defaults.set(UserPreferenceType.NOTIFICATION_ASPECT_CREATED_ADMIN, 'true');
     defaults.set(

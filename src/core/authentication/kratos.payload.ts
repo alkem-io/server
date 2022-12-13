@@ -7,5 +7,5 @@ export interface KratosPayload {
   jti: string;
   nbf: number;
   sub: string;
-  session: Session;
+  session: Session | null;
 }
