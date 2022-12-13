@@ -57,7 +57,7 @@ services:
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
-    image: vyanakiev/kratos:linkedin_v0.6
+    image: vyanakiev/kratos:linkedin_v0.7
     depends_on:
       - mariadb
     environment:
@@ -73,7 +73,7 @@ services:
 
   kratos:
     container_name: alkemio_dev_kratos
-    image: vyanakiev/kratos:linkedin_v0.6
+    image: vyanakiev/kratos:linkedin_v0.7
     depends_on:
       - kratos-migrate
     ports:
