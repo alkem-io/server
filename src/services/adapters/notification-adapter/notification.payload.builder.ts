@@ -28,6 +28,8 @@ import {
   CollaborationContextReviewSubmittedPayload,
   CommunicationDiscussionCreatedEventPayload,
   CommunityApplicationCreatedEventPayload,
+  CollaborationDiscussionCommentEventPayload,
+  CollaborationCanvasCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
@@ -36,6 +38,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { IMessage } from '@domain/communication/message/message.interface';
 import { IAspect } from '@domain/collaboration';
 import { IUser } from '@domain/community/user/user.interface';
+import { Canvas } from '@domain/common/canvas/canvas.entity';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -49,6 +52,8 @@ export class NotificationPayloadBuilder {
     private communityResolverService: CommunityResolverService,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>,
+    @InjectRepository(Canvas)
+    private canvasRepository: Repository<Canvas>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -107,6 +112,52 @@ export class NotificationPayloadBuilder {
         displayName: card.displayName,
         nameID: card.nameID,
         type: card.type,
+      },
+      journey: journeyPayload,
+    };
+
+    return payload;
+  }
+
+  async buildCanvasCreatedPayload(
+    canvasId: string
+  ): Promise<CollaborationCanvasCreatedEventPayload> {
+    const canvas = await this.canvasRepository.findOne(
+      { id: canvasId },
+      { relations: ['callout'] }
+    );
+    if (!canvas) {
+      throw new NotificationEventException(
+        `Could not acquire canvas from id: ${canvasId}`,
+        LogContext.NOTIFICATIONS
+      );
+    }
+
+    const callout = canvas.callout;
+    if (!callout) {
+      throw new NotificationEventException(
+        `Could not acquire callout from canvas with id: ${canvasId}`,
+        LogContext.NOTIFICATIONS
+      );
+    }
+
+    const community =
+      await this.communityResolverService.getCommunityFromCalloutOrFail(
+        callout.id
+      );
+
+    const journeyPayload = await this.buildJourneyPayload(community);
+    const payload: CollaborationCanvasCreatedEventPayload = {
+      triggeredBy: canvas.createdBy,
+      callout: {
+        displayName: callout.displayName,
+        nameID: callout.nameID,
+      },
+      canvas: {
+        id: canvasId,
+        createdBy: canvas.createdBy,
+        displayName: canvas.displayName,
+        nameID: canvas.nameID,
       },
       journey: journeyPayload,
     };
@@ -179,6 +230,41 @@ export class NotificationPayloadBuilder {
         createdBy: card.createdBy,
         nameID: card.nameID,
       },
+      comment: {
+        message: messageResult.message,
+        createdBy: messageResult.sender,
+      },
+      journey: journeyPayload,
+    };
+
+    return payload;
+  }
+
+  async buildCommentCreatedOnDiscussionPayload(
+    callout: ICallout,
+    commentsId: string,
+    messageResult: IMessage
+  ): Promise<CollaborationDiscussionCommentEventPayload> {
+    const community =
+      await this.communityResolverService.getCommunityFromCalloutOrFail(
+        callout.id
+      );
+
+    if (!community) {
+      throw new NotificationEventException(
+        `Could not acquire community from comments with id: ${commentsId}`,
+        LogContext.NOTIFICATIONS
+      );
+    }
+
+    const journeyPayload = await this.buildJourneyPayload(community);
+    const payload: CollaborationDiscussionCommentEventPayload = {
+      triggeredBy: messageResult.sender,
+      callout: {
+        displayName: callout.displayName,
+        nameID: callout.nameID,
+      },
+
       comment: {
         message: messageResult.message,
         createdBy: messageResult.sender,
