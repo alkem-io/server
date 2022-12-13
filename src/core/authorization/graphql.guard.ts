@@ -58,7 +58,7 @@ export class GraphqlGuard extends AuthGuard([
     _status?: any
   ) {
     if (err) {
-      this.logger.verbose?.(`error: ${err}`, LogContext.AUTH);
+      this.logger.error(`error: ${err}`, LogContext.AUTH);
       throw new AuthenticationException(err);
     }
 

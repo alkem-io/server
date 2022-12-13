@@ -57,7 +57,7 @@ services:
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
-    image: oryd/kratos:v0.10.1
+    image: vyanakiev/kratos:linkedin_v0.7
     depends_on:
       - mariadb
     environment:
@@ -73,7 +73,7 @@ services:
 
   kratos:
     container_name: alkemio_dev_kratos
-    image: oryd/kratos:v0.10.1
+    image: vyanakiev/kratos:linkedin_v0.7
     depends_on:
       - kratos-migrate
     ports:
@@ -92,6 +92,9 @@ services:
       - type: bind
         source: ./.build/ory/kratos/courier-templates
         target: /etc/config/kratos/courier-templates
+      - type: bind
+        source: ./.build/ory/kratos/oidc
+        target: /etc/config/kratos/oidc
     command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
 
   oathkeeper:
