@@ -3,10 +3,15 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Strategy } from 'passport-custom';
-import { AuthenticationService } from './authentication.service';
 import { Configuration, V0alpha2Api } from '@ory/kratos-client';
 import { ConfigurationTypes, LogContext } from '@common/enums';
+import {
+  ApiRestrictedAccessException,
+  BearerTokenNotFoundException,
+} from '@common/exceptions/auth';
+import { AuthenticationService } from './authentication.service';
 import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
+import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
 
 @Injectable()
 export class OryApiStrategy extends PassportStrategy(
@@ -35,19 +40,30 @@ export class OryApiStrategy extends PassportStrategy(
       })
     );
 
-    let oryIdentity: OryDefaultIdentitySchema | undefined = undefined;
-    const authorizationHeader = payload.headers.authorization;
-
-    if (apiAccessEnabled && authorizationHeader) {
-      const bearerToken = authorizationHeader.split(' ')[1];
-      const { data: session } = await kratos.toSession(bearerToken);
-
-      this.logger.verbose?.(session.identity, LogContext.AUTH);
-
-      if (session) {
-        oryIdentity = session.identity as OryDefaultIdentitySchema;
-      }
+    if (!apiAccessEnabled) {
+      throw new ApiRestrictedAccessException('API access is restricted!');
     }
-    return await this.authService.createAgentInfo(oryIdentity);
+
+    const authorizationHeader: string | undefined =
+      payload.headers.authorization;
+
+    const bearerToken = authorizationHeader?.split(' ')[1];
+
+    if (!bearerToken) {
+      throw new BearerTokenNotFoundException('Bearer token is not provided!');
+    }
+
+    const { data } = await kratos.toSession(bearerToken);
+
+    if (!data) {
+      this.logger.verbose?.('No Ory Kratos API session', LogContext.AUTH);
+      return this.authService.createAgentInfo();
+    }
+
+    const session = verifyIdentityIfOidcAuth(data);
+    this.logger.verbose?.(session.identity, LogContext.AUTH);
+
+    const oryIdentity = session.identity as OryDefaultIdentitySchema;
+    return this.authService.createAgentInfo(oryIdentity);
   }
 }

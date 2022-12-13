@@ -22,6 +22,12 @@ export class RegistrationService {
   ) {}
 
   async registerNewUser(agentInfo: AgentInfo): Promise<IUser> {
+    if (!agentInfo.emailVerified) {
+      throw new UserNotVerifiedException(
+        `User '${agentInfo.email}' not verified`,
+        LogContext.COMMUNITY
+      );
+    }
     // If a user has a valid session, and hence email / names etc set, then they can create a User profile
     let user = await this.userService.createUserFromAgentInfo(agentInfo);
     user = await this.userAuthorizationService.grantCredentials(user);
@@ -34,13 +40,6 @@ export class RegistrationService {
     agentInfo: AgentInfo,
     user: IUser
   ): Promise<boolean> {
-    if (!agentInfo.emailVerified) {
-      throw new UserNotVerifiedException(
-        `User '${user.nameID}' not verified`,
-        LogContext.COMMUNITY
-      );
-    }
-
     const userEmailDomain = getEmailDomain(user.email);
 
     const org = await this.organizationService.getOrganizationByDomain(

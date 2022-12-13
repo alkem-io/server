@@ -22,17 +22,28 @@ selfservice:
       enabled: true
       # to enable & configure read https://hackmd.io/yXMYkiK9QHq4sJGWcGlwQA
     oidc:
-      enabled: false
-      # config:
-      #   providers:
-      #     - id: linkedin
-      #       provider: linkedin
-      #       client_id: 77tjjnhvonojf4
-      #       client_secret: s66LUXd3nj2jxB4G
-      #       mapper_url: file:///etc/config/kratos/oidc.linkedin.jsonnet
-      #       scope:
-      #         - r_emailaddress
-      #         - r_liteprofile
+      enabled: true
+      config:
+        providers:
+          - id: linkedin
+            provider: linkedin
+            client_id: 77tjjnhvonojf4
+            client_secret: s66LUXd3nj2jxB4G
+            mapper_url: file:///etc/config/kratos/oidc/oidc.linkedin.jsonnet
+            scope:
+              - r_emailaddress
+              - r_liteprofile
+          - id: microsoft # this is `<provider-id>` in the Authorization callback URL. DO NOT CHANGE IT ONCE SET!
+            provider: microsoft
+            client_id: 1045418f-c674-44d5-808c-060922be5a4a # This is the the Application (client) ID from the App Registration
+            client_secret: yKv8Q~m6jFjd8jD.pmkdySek7tvbvmk9msr-CdxX # This is the generated Secret value from the App Registration
+            microsoft_tenant: d7cd650f-6063-4276-8982-07e68da3c582 # This allows you to select the tenant.
+            mapper_url: file:///etc/config/kratos/oidc/oidc.microsoft.jsonnet
+            # Alternatively, use an URL:
+            # mapper_url: https://storage.googleapis.com/abc-cde-prd/9cac9717f007808bf17f22ce7f4295c739604b183f05ac4afb4
+            scope:
+              - profile
+              - email
 
   flows:
     error:
@@ -73,7 +84,11 @@ selfservice:
       lifespan: 10m
       ui_url: http://localhost:3000/identity/registration
       after:
-        default_browser_return_url: http://localhost:3000/identity/registration/success
+        password:
+          default_browser_return_url: http://localhost:3000/identity/registration/success
+        oidc:
+          hooks:
+            - hook: session
 
 session:
   lifespan: 48h
