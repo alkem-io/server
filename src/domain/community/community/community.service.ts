@@ -437,7 +437,7 @@ export class CommunityService {
         .removeUserFromCommunications(communication, user)
         .catch(error =>
           this.logger.error?.(
-            `Unable to add remove user from community messaging (${community.displayName}): ${error}`,
+            `Unable remove user from community messaging (${community.displayName}): ${error}`,
             LogContext.COMMUNICATION
           )
         );
