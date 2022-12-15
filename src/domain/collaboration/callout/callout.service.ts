@@ -191,6 +191,21 @@ export class CalloutService {
     return result;
   }
 
+  public async getActivityCount(callout: ICallout): Promise<number> {
+    const result = 0;
+    if (callout.type === CalloutType.CARD) {
+      return await this.aspectService.getCardsInCalloutCount(callout.id);
+    } else if (callout.type === CalloutType.CANVAS) {
+      return await this.canvasService.getCanvasesInCalloutCount(callout.id);
+    } else {
+      const comments = await this.getCommentsFromCallout(callout.id);
+      if (comments) {
+        return comments.commentsCount;
+      }
+    }
+    return result;
+  }
+
   private async setNameIdOnAspectData(
     aspectData: CreateAspectOnCalloutInput,
     callout: ICallout

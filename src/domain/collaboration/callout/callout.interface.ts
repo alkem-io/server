@@ -60,4 +60,6 @@ export abstract class ICallout extends INameable {
     description: 'The sorting order for this Callout.',
   })
   sortOrder!: number;
+
+  activity!: number;
 }

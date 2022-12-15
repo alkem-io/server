@@ -24,6 +24,7 @@ import { collaborationDefaults } from './collaboration.defaults';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CommunityType } from '@common/enums/community.type';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
 
 @Injectable()
 export class CollaborationService {
@@ -171,9 +172,7 @@ export class CollaborationService {
 
   public async getCalloutsFromCollaboration(
     collaboration: ICollaboration,
-    calloutIDs?: string[],
-    limit?: number,
-    shuffle?: boolean
+    args: CollaborationArgsCallouts
   ): Promise<ICallout[]> {
     const collaborationLoaded = await this.getCollaborationOrFail(
       collaboration.id,
@@ -187,24 +186,44 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
 
-    if (!calloutIDs) {
-      if (shuffle) {
-        return limitAndShuffle(collaborationLoaded.callouts, limit, shuffle);
+    if (!args.ids) {
+      if (args.shuffle) {
+        return limitAndShuffle(
+          collaborationLoaded.callouts,
+          args.limit,
+          args.shuffle
+        );
       }
       let results = collaborationLoaded.callouts;
-      if (limit) {
-        results = limitAndShuffle(collaborationLoaded.callouts, limit, false);
+      if (args.limit) {
+        results = limitAndShuffle(
+          collaborationLoaded.callouts,
+          args.limit,
+          false
+        );
       }
 
       // Sort according to order
-      const sortedCallouts = results.sort((a, b) =>
-        a.sortOrder > b.sortOrder ? 1 : -1
-      );
-      return sortedCallouts;
+      if (args.sortByActivity) {
+        for (const callout of results) {
+          callout.activity = await this.calloutService.getActivityCount(
+            callout
+          );
+        }
+        const sortedCallouts = results.sort((a, b) =>
+          a.activity < b.activity ? 1 : -1
+        );
+        return sortedCallouts;
+      } else {
+        const sortedCallouts = results.sort((a, b) =>
+          a.sortOrder > b.sortOrder ? 1 : -1
+        );
+        return sortedCallouts;
+      }
     }
     const results: ICallout[] = [];
 
-    for (const calloutID of calloutIDs) {
+    for (const calloutID of args.ids) {
       let callout;
       if (calloutID.length === UUID_LENGTH)
         callout = collaborationLoaded.callouts.find(
