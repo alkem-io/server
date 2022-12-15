@@ -38,7 +38,6 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';
 import { NotificationInputCommunityContextReview } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.context.review';
-import { RemoveCommunityMemberSelfInput } from './dto/community.dto.remove.member.self';
 import { CommunityAuthorizationService } from './community.service.authorization';
 
 @Resolver()
@@ -214,10 +213,13 @@ export class CommunityResolverMutations {
       membershipData.communityID
     );
 
+    // Extend the authorization policy with a credential rule to assign the GRANT privilege
+    // to the user specified in the incoming mutation. Then if it is the same user as is logged
+    // in then the user will have the GRANT privilege + so can carry out the mutation
     const extendedAuthorization =
       await this.communityAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
         community,
-        agentInfo.userID
+        membershipData.userID
       );
 
     await this.authorizationService.grantAccessOrFail(
@@ -239,37 +241,6 @@ export class CommunityResolverMutations {
     return community;
   }
 
-  // @UseGuards(GraphqlGuard)
-  // @Mutation(() => Boolean, {
-  //   description: 'Removes Self as a Member of the specified Community.',
-  // })
-  // @Profiling.api
-  // async removeSelfAsCommunityMember(
-  //   @CurrentUser() agentInfo: AgentInfo,
-  //   @Args('membershipData') membershipData: RemoveCommunityMemberSelfInput
-  // ): Promise<boolean> {
-  //   const community = await this.communityService.getCommunityOrFail(
-  //     membershipData.communityID
-  //   );
-  //   await this.authorizationService.grantAccessOrFail(
-  //     agentInfo,
-  //     community.authorization,
-  //     AuthorizationPrivilege.READ,
-  //     `remove self from community: ${community.displayName}`
-  //   );
-
-  //   await this.communityService.removeUserFromRole(
-  //     community,
-  //     agentInfo.userID,
-  //     CommunityRole.MEMBER
-  //   );
-  //   // reset the user authorization policy so that their profile is not visible
-  //   // to other community members
-  //   const user = await this.userService.getUserOrFail(agentInfo.userID);
-  //   await this.userAuthorizationService.applyAuthorizationPolicy(user);
-  //   return true;
-  // }
-
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICommunity, {
     description: 'Removes a User as a Lead of the specified Community.',
@@ -286,7 +257,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.GRANT,
-      `remove user from community: ${community.displayName}`
+      `remove user from community lead: ${community.displayName}`
     );
 
     return await this.communityService.removeUserFromRole(

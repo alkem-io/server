@@ -157,7 +157,7 @@ export class CommunityAuthorizationService {
 
   async extendAuthorizationPolicyForSelfRemoval(
     community: ICommunity,
-    userID: string
+    userToBeRemovedID: string
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
@@ -167,7 +167,7 @@ export class CommunityAuthorizationService {
         [
           {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-            resourceID: userID,
+            resourceID: userToBeRemovedID,
           },
         ]
       );
