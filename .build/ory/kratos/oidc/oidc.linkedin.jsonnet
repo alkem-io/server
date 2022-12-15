@@ -1,6 +1,6 @@
 local claims =
 {
-  email_verified: false
+  email_verified: true
 } + std.extVar('claims');
 {
   identity:
