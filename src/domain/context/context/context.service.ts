@@ -7,7 +7,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { IReference } from '@domain/common/reference';
+import { CreateReferenceInput, IReference } from '@domain/common/reference';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { IContext, Context, CreateContextInput } from '@domain/context/context';
 import { IEcosystemModel } from '@domain/context/ecosystem-model';
@@ -45,6 +45,14 @@ export class ContextService {
         );
         context.references.push(reference);
       }
+    }
+    context.recommendations = [];
+    for (let i = 1; i <= 3; i++) {
+      const input: CreateReferenceInput = {
+        name: `recommendation${i}`,
+      };
+      const recommendation = await this.referenceService.createReference(input);
+      context.recommendations.push(recommendation);
     }
     context.ecosystemModel =
       await this.ecosystemModelService.createEcosystemModel({});
@@ -119,13 +127,27 @@ export class ContextService {
   async removeContext(contextID: string): Promise<IContext> {
     // Note need to load it in with all contained entities so can remove fully
     const context = await this.getContextOrFail(contextID, {
-      relations: ['references', 'ecosystemModel', 'visuals', 'location'],
+      relations: [
+        'references',
+        'recommendations',
+        'ecosystemModel',
+        'visuals',
+        'location',
+      ],
     });
 
     if (context.references) {
       for (const reference of context.references) {
         await this.referenceService.deleteReference({
           ID: reference.id,
+        });
+      }
+    }
+
+    if (context.recommendations) {
+      for (const recommendation of context.recommendations) {
+        await this.referenceService.deleteReference({
+          ID: recommendation.id,
         });
       }
     }
@@ -210,6 +232,19 @@ export class ContextService {
       );
 
     return contextLoaded.references;
+  }
+
+  async getRecommendations(context: IContext): Promise<IReference[]> {
+    const contextLoaded = await this.getContextOrFail(context.id, {
+      relations: ['recommendations'],
+    });
+    if (!contextLoaded.recommendations)
+      throw new EntityNotFoundException(
+        `Context not initialised: ${context.id}`,
+        LogContext.CONTEXT
+      );
+
+    return contextLoaded.recommendations;
   }
 
   async getEcosystemModel(context: IContext): Promise<IEcosystemModel> {

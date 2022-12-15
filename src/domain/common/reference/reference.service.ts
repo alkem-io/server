@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { createQueryBuilder, FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import {
@@ -89,10 +89,14 @@ export class ReferenceService {
     return references;
   }
 
-  async getReferenceOrFail(referenceID: string): Promise<IReference> {
-    const reference = await this.referenceRepository.findOne({
-      id: referenceID,
-    });
+  async getReferenceOrFail(
+    referenceID: string,
+    options?: FindOneOptions<Reference>
+  ): Promise<IReference> {
+    const reference = await this.referenceRepository.findOne(
+      { id: referenceID },
+      options
+    );
     if (!reference)
       throw new EntityNotFoundException(
         `Not able to locate reference with the specified ID: ${referenceID}`,
@@ -120,5 +124,16 @@ export class ReferenceService {
 
   async saveReference(reference: IReference): Promise<IReference> {
     return await this.referenceRepository.save(reference);
+  }
+
+  public async isRecommendation(reference: IReference): Promise<boolean> {
+    const referenceEntry = await createQueryBuilder('reference')
+      .select(['contextRecommendationId'])
+      .where('id = :id', { id: `${reference.id}` })
+      .getRawOne();
+    if (referenceEntry.contextRecommendationId) {
+      return true;
+    }
+    return false;
   }
 }

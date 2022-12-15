@@ -54,4 +54,15 @@ export class ContextResolverFields {
   async references(@Parent() context: Context) {
     return await this.contextService.getReferences(context);
   }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('recommendations', () => [IReference], {
+    nullable: true,
+    description: 'The Recommendations for this Context.',
+  })
+  @Profiling.api
+  async recommendations(@Parent() context: Context) {
+    return await this.contextService.getRecommendations(context);
+  }
 }

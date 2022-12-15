@@ -23,6 +23,13 @@ export class Reference extends AuthorizableEntity implements IReference {
   })
   context?: Context;
 
+  @ManyToOne(() => Context, context => context.recommendations, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
+  contextRecommendation?: Context;
+
   @ManyToOne(() => CardProfile, profile => profile.references, {
     eager: false,
     cascade: false,
