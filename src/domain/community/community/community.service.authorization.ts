@@ -154,4 +154,31 @@ export class CommunityAuthorizationService {
       verifiedCredentialRules
     );
   }
+
+  public extendAuthorizationPolicyForSelfRemoval(
+    community: ICommunity,
+    userToBeRemovedID: string
+  ): IAuthorizationPolicy {
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    const userSelfRemovalRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.GRANT],
+        [
+          {
+            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+            resourceID: userToBeRemovedID,
+          },
+        ]
+      );
+    newRules.push(userSelfRemovalRule);
+
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
+        community.authorization,
+        newRules
+      );
+
+    return updatedAuthorization;
+  }
 }
