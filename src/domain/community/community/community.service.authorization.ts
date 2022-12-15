@@ -155,7 +155,7 @@ export class CommunityAuthorizationService {
     );
   }
 
-  extendAuthorizationPolicyForSelfRemoval(
+  public extendAuthorizationPolicyForSelfRemoval(
     community: ICommunity,
     userToBeRemovedID: string
   ): IAuthorizationPolicy {
