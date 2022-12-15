@@ -155,10 +155,10 @@ export class CommunityAuthorizationService {
     );
   }
 
-  async extendAuthorizationPolicyForSelfRemoval(
+  extendAuthorizationPolicyForSelfRemoval(
     community: ICommunity,
     userToBeRemovedID: string
-  ): Promise<IAuthorizationPolicy> {
+  ): IAuthorizationPolicy {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     const userSelfRemovalRule =

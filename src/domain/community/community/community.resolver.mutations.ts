@@ -217,7 +217,7 @@ export class CommunityResolverMutations {
     // to the user specified in the incoming mutation. Then if it is the same user as is logged
     // in then the user will have the GRANT privilege + so can carry out the mutation
     const extendedAuthorization =
-      await this.communityAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
+      this.communityAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
         community,
         membershipData.userID
       );
