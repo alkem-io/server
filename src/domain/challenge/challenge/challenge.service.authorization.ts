@@ -25,6 +25,7 @@ import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
+import { PlatformAuthorizationService } from '@platform/authorization/platform.authorization.service';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -35,6 +36,7 @@ export class ChallengeAuthorizationService {
     private opportunityAuthorizationService: OpportunityAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
+    private platformAuthorizationService: PlatformAuthorizationService,
     private preferenceSetService: PreferenceSetService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
@@ -45,15 +47,25 @@ export class ChallengeAuthorizationService {
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IChallenge> {
     const communityPolicy = await this.setCommunityPolicyFlags(challenge);
-    const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
-      challenge.id
-    );
 
-    challenge.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+    // private challenge or not?
+    // If it is a private challenge then cannot inherit from Hub
+    const privateChallenge = !this.communityPolicyService.getFlag(
+      communityPolicy,
+      CommunityPolicyFlag.ALLOW_NON_MEMBERS_READ_ACCESS
+    );
+    if (!privateChallenge) {
+      challenge.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          challenge.authorization,
+          parentAuthorization
+        );
+    } else {
+      challenge.authorization = this.initializeAuthorizationPrivateChallenge(
         challenge.authorization,
-        parentAuthorization
+        communityPolicy
       );
+    }
     challenge.authorization = this.appendCredentialRules(
       challenge.authorization,
       communityPolicy
@@ -107,6 +119,9 @@ export class ChallengeAuthorizationService {
       }
     }
 
+    const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
+      challenge.id
+    );
     if (preferenceSet) {
       challenge.preferenceSet =
         await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
@@ -194,6 +209,54 @@ export class ChallengeAuthorizationService {
       allowNonMembersReadAccess
     );
     return policy;
+  }
+
+  private initializeAuthorizationPrivateChallenge(
+    authorization: IAuthorizationPolicy | undefined,
+    policy: ICommunityPolicy
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${JSON.stringify(policy)}`,
+        LogContext.CHALLENGES
+      );
+
+    authorization = this.authorizationPolicyService.reset(authorization);
+    authorization.anonymousReadAccess = false;
+    authorization =
+      this.platformAuthorizationService.inheritPlatformAuthorization(
+        authorization
+      );
+
+    const rules = this.createPrivateChallengeBaseCredentialRules(policy);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      rules
+    );
+
+    return authorization;
+  }
+
+  private createPrivateChallengeBaseCredentialRules(
+    policy: ICommunityPolicy
+  ): IAuthorizationPolicyRuleCredential[] {
+    const rules: IAuthorizationPolicyRuleCredential[] = [];
+
+    const challengeHubAdmins =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.GRANT,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [...this.communityPolicyService.getAdminCredentials(policy)]
+      );
+    rules.push(challengeHubAdmins);
+
+    return rules;
   }
 
   private appendCredentialRules(
