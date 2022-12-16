@@ -1,4 +1,4 @@
-import { UseGuards, Inject } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import {} from '@domain/context/actor-group';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -21,8 +21,6 @@ import {
   UpdateOpportunityInput,
 } from './dto';
 import { UpdateOpportunityInnovationFlowInput } from './dto/opportunity.dto.update.innovation.flow';
-import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
-import { ClientProxy } from '@nestjs/microservices';
 
 @Resolver()
 export class OpportunityResolverMutations {
@@ -31,8 +29,7 @@ export class OpportunityResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private opportunityService: OpportunityService,
-    private opportunityLifecycleOptionsProvider: OpportunityLifecycleOptionsProvider,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
+    private opportunityLifecycleOptionsProvider: OpportunityLifecycleOptionsProvider
   ) {}
 
   @UseGuards(GraphqlGuard)

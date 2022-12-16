@@ -71,7 +71,7 @@ export class RoomService {
   async getCommunicationRoom(
     roomable: IRoomable
   ): Promise<CommunicationRoomResult> {
-    const room = await this.communicationAdapter.getCommunityRoom(
+    const room = await this.communicationAdapter.getCommunityRoomR(
       roomable.communicationRoomID
     );
 

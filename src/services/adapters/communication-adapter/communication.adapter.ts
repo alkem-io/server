@@ -20,6 +20,12 @@ import { CommunicationEditMessageInput } from './dto/communication.dto.message.e
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
 import { CommunicationSendMessageUserInput } from './dto/communication.dto.message.send.user';
 import { IMessage } from '@domain/communication/message/message.interface';
+import { MATRIX_ADAPTER_SERVICE } from '@common/constants';
+import { ClientProxy } from '@nestjs/microservices';
+import { MatrixAdapterEventType } from '@alkemio/matrix-adapter-lib';
+import { RoomDetailsPayload } from '@alkemio/matrix-adapter-lib';
+import { RoomDetailsResponsePayload } from '@alkemio/matrix-adapter-lib';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class CommunicationAdapter {
@@ -39,7 +45,8 @@ export class CommunicationAdapter {
     private matrixUserManagementService: MatrixUserManagementService,
     private matrixUserAdapter: MatrixUserAdapter,
     private matrixRoomAdapter: MatrixRoomAdapter,
-    private matrixGroupAdapter: MatrixGroupAdapter
+    private matrixGroupAdapter: MatrixGroupAdapter,
+    @Inject(MATRIX_ADAPTER_SERVICE) private matrixAdapterClient: ClientProxy
   ) {
     this.adminEmail = this.configService.get(
       ConfigurationTypes.COMMUNICATIONS
@@ -105,6 +112,39 @@ export class CommunicationAdapter {
       sender: sendMessageData.senderCommunicationsID,
       timestamp: timestamp,
     };
+  }
+
+  async getCommunityRoomR(roomId: string): Promise<CommunicationRoomResult> {
+    // If not enabled just return an empty room
+    if (!this.enabled) {
+      return {
+        id: 'communications-not-enabled',
+        messages: [],
+        displayName: '',
+        members: [],
+      };
+    }
+
+    const inputPayload: RoomDetailsPayload = {
+      triggeredBy: '',
+      roomID: roomId,
+    };
+    const response = this.matrixAdapterClient.send(
+      { cmd: MatrixAdapterEventType.ROOM_DETAILS },
+      inputPayload
+    );
+
+    try {
+      const responseData = await firstValueFrom<RoomDetailsResponsePayload>(
+        response
+      );
+      return responseData.room;
+    } catch (err: any) {
+      throw new MatrixEntityNotFoundException(
+        `Failed to obtain room: ${err.message}`,
+        LogContext.COMMUNICATION
+      );
+    }
   }
 
   async editMessage(

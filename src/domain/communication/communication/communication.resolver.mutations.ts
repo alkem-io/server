@@ -11,11 +11,7 @@ import { IDiscussion } from '../discussion/discussion.interface';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
 import { DiscussionService } from '../discussion/discussion.service';
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
-import { ClientProxy } from '@nestjs/microservices';
-import {
-  NOTIFICATIONS_SERVICE,
-  SUBSCRIPTION_DISCUSSION_UPDATED,
-} from '@common/constants/providers';
+import { SUBSCRIPTION_DISCUSSION_UPDATED } from '@common/constants/providers';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { CommunicationDiscussionUpdated } from './dto/communication.dto.event.discussion.updated';
 import { SubscriptionType } from '@common/enums/subscription.type';
@@ -31,7 +27,6 @@ export class CommunicationResolverMutations {
     private communicationService: CommunicationService,
     private discussionAuthorizationService: DiscussionAuthorizationService,
     private discussionService: DiscussionService,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
     @Inject(SUBSCRIPTION_DISCUSSION_UPDATED)
     private readonly subscriptionDiscussionMessage: PubSubEngine,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
