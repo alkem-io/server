@@ -114,7 +114,7 @@ export class CommunicationAdapter {
     };
   }
 
-  async getCommunityRoomR(roomId: string): Promise<CommunicationRoomResult> {
+  async getCommunityRoom(roomId: string): Promise<CommunicationRoomResult> {
     // If not enabled just return an empty room
     if (!this.enabled) {
       return {
@@ -449,27 +449,6 @@ export class CommunicationAdapter {
     }
 
     return rooms;
-  }
-
-  async getCommunityRoom(roomId: string): Promise<CommunicationRoomResult> {
-    // If not enabled just return an empty room
-    if (!this.enabled) {
-      return {
-        id: 'communications-not-enabled',
-        messages: [],
-        displayName: '',
-        members: [],
-      };
-    }
-    const matrixAgentElevated = await this.getMatrixManagementAgentElevated();
-    const matrixRoom = await this.matrixAgentService.getRoom(
-      matrixAgentElevated,
-      roomId
-    );
-    return await this.matrixRoomAdapter.convertMatrixRoomToCommunityRoom(
-      matrixAgentElevated.matrixClient,
-      matrixRoom
-    );
   }
 
   async removeUserFromRooms(
