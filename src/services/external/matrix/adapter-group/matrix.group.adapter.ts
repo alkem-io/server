@@ -1,4 +1,4 @@
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -32,14 +32,6 @@ export class MatrixGroupAdapter {
     }
 
     return roomMap;
-  }
-
-  convertMatrixLocalGroupIdToMatrixID(groupID: string) {
-    const homeserverName = this.configService.get(
-      ConfigurationTypes.COMMUNICATIONS
-    )?.matrix?.homeserver_name;
-
-    return `+${groupID}:${homeserverName}`;
   }
 
   public async createGroup(
