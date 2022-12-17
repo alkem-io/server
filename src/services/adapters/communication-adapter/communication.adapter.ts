@@ -145,7 +145,7 @@ export class CommunicationAdapter {
       senderID: deleteMessageData.senderCommunicationsID,
     };
     const response = this.matrixAdapterClient.send(
-      { cmd: MatrixAdapterEventType.ROOM_DETAILS },
+      { cmd: MatrixAdapterEventType.ROOM_DELETE_MESSAGE },
       inputPayload
     );
 
@@ -194,7 +194,7 @@ export class CommunicationAdapter {
       messageID: messageID,
     };
     const response = this.matrixAdapterClient.send(
-      { cmd: MatrixAdapterEventType.ROOM_DETAILS },
+      { cmd: MatrixAdapterEventType.ROOM_MESSAGE_SENDER },
       inputPayload
     );
 
