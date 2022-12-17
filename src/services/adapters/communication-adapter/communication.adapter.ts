@@ -22,7 +22,11 @@ import { CommunicationSendMessageUserInput } from './dto/communication.dto.messa
 import { IMessage } from '@domain/communication/message/message.interface';
 import { MATRIX_ADAPTER_SERVICE } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
-import { MatrixAdapterEventType } from '@alkemio/matrix-adapter-lib';
+import {
+  MatrixAdapterEventType,
+  RoomSendMessagePayload,
+  RoomSendMessageResponsePayload,
+} from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsPayload } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { firstValueFrom } from 'rxjs';
@@ -68,50 +72,33 @@ export class CommunicationAdapter {
   async sendMessage(
     sendMessageData: CommunicationSendMessageInput
   ): Promise<IMessage> {
-    // Todo: replace with proper data validation
-    const message = sendMessageData.message;
-
-    const senderCommunicationID = sendMessageData.senderCommunicationsID;
-    const matrixAgent = await this.acquireMatrixAgent(senderCommunicationID);
-
-    await this.matrixUserAdapter.verifyRoomMembershipOrFail(
-      matrixAgent.matrixClient,
-      sendMessageData.roomID
+    const inputPayload: RoomSendMessagePayload = {
+      triggeredBy: '',
+      roomID: sendMessageData.roomID,
+      message: sendMessageData.message,
+      senderID: sendMessageData.senderCommunicationsID,
+    };
+    const response = this.matrixAdapterClient.send(
+      { cmd: MatrixAdapterEventType.ROOM_SEND_MESSAGE },
+      inputPayload
     );
-    this.logger.verbose?.(
-      `[Message sending] Sending message to room: ${sendMessageData.roomID}`,
-      LogContext.COMMUNICATION
-    );
-    let messageId = '';
+
     try {
-      messageId = await this.matrixAgentService.sendMessage(
-        matrixAgent,
-        sendMessageData.roomID,
-        {
-          text: sendMessageData.message,
-        }
+      const responseData = await firstValueFrom<RoomSendMessageResponsePayload>(
+        response
       );
-    } catch (error: any) {
-      this.logger.error(
-        `[Message sending] Unable to send message for user (${senderCommunicationID}): ${error}`,
+      const message = responseData.message;
+      this.logger.verbose?.(
+        `...message sent to room: ${sendMessageData.roomID}`,
         LogContext.COMMUNICATION
       );
-      throw error;
+      return message;
+    } catch (err: any) {
+      throw new MatrixEntityNotFoundException(
+        `Failed to send message to room: ${err.message}`,
+        LogContext.COMMUNICATION
+      );
     }
-    this.logger.verbose?.(
-      `...message sent to room: ${sendMessageData.roomID}`,
-      LogContext.COMMUNICATION
-    );
-
-    // Create the 'equivalent' message. Note that this can have a very minor timestamp offset
-    // from the actual message.
-    const timestamp = new Date().getTime();
-    return {
-      id: messageId,
-      message: message,
-      sender: sendMessageData.senderCommunicationsID,
-      timestamp: timestamp,
-    };
   }
 
   async getCommunityRoom(roomId: string): Promise<CommunicationRoomResult> {
