@@ -34,6 +34,7 @@ import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibilit
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { AspectTemplateService } from '@domain/template/aspect-template/aspect.template.service';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
+import { UserService } from '@domain/community/user/user.service';
 
 @Injectable()
 export class CalloutService {
@@ -44,6 +45,7 @@ export class CalloutService {
     private canvasService: CanvasService,
     private namingService: NamingService,
     private commentsService: CommentsService,
+    private userService: UserService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -118,6 +120,22 @@ export class CalloutService {
 
     if (calloutUpdateData.visibility)
       callout.visibility = calloutUpdateData.visibility;
+
+    return await this.calloutRepository.save(callout);
+  }
+
+  public async updateCalloutPublishInfo(
+    callout: ICallout,
+    publisherID: string,
+    publishedTimestamp?: number
+  ): Promise<ICallout> {
+    const publisher = await this.userService.getUserOrFail(publisherID);
+    callout.publishedBy = publisher.id;
+
+    if (publishedTimestamp) {
+      const date = new Date(publishedTimestamp);
+      callout.publishedDate = date;
+    }
 
     return await this.calloutRepository.save(callout);
   }

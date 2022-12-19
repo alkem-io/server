@@ -1,0 +1,13 @@
+mutation updateCalloutPublisher($calloutData: UpdateCalloutPublishernput!) {
+  updateCalloutPublisher(calloutData: $calloutData) {
+    id
+  }
+}
+
+Variables:
+{
+  "calloutData": {
+    "calloutID": "uuid",
+    "publisherID": "uuid_nameid"
+  }
+}
