@@ -254,7 +254,7 @@ export class CalloutResolverMutations {
     return await this.calloutService.updateCalloutPublishInfo(
       callout,
       calloutData.publisherID,
-      calloutData.publishDate || Date.now()
+      calloutData.publishDate
     );
   }
 
