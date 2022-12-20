@@ -126,11 +126,13 @@ export class CalloutService {
 
   public async updateCalloutPublishInfo(
     callout: ICallout,
-    publisherID: string,
+    publisherID?: string,
     publishedTimestamp?: number
   ): Promise<ICallout> {
-    const publisher = await this.userService.getUserOrFail(publisherID);
-    callout.publishedBy = publisher.id;
+    if (publisherID) {
+      const publisher = await this.userService.getUserOrFail(publisherID);
+      callout.publishedBy = publisher.id;
+    }
 
     if (publishedTimestamp) {
       const date = new Date(publishedTimestamp);

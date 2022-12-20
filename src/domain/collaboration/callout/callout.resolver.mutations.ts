@@ -48,7 +48,7 @@ import { getRandomId } from '@common/utils/random.id.generator.util';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { NotificationInputCanvasCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.canvas.created';
 import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
-import { UpdateCalloutPublisherInput } from './dto/callout.dto.update.publisher';
+import { UpdateCalloutPublisherInput as UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publisher';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -235,12 +235,13 @@ export class CalloutResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICallout, {
-    description: 'Update the visibility of the specified Callout.',
+    description:
+      'Update the information describing the publishing of the specified Callout.',
   })
   @Profiling.api
-  async updateCalloutPublisher(
+  async updateCalloutPublishInfo(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('calloutData') calloutData: UpdateCalloutPublisherInput
+    @Args('calloutData') calloutData: UpdateCalloutPublishInfoInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutData.calloutID
