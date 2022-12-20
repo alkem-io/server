@@ -2,7 +2,7 @@ import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class UpdateCalloutPublisherInput {
+export class UpdateCalloutPublishInfoInput {
   @Field(() => String, {
     nullable: false,
     description:
@@ -11,7 +11,7 @@ export class UpdateCalloutPublisherInput {
   calloutID!: string;
 
   @Field(() => UUID_NAMEID_EMAIL, {
-    nullable: false,
+    nullable: true,
     description: 'The identifier of the publisher of the Callout.',
   })
   publisherID!: string;

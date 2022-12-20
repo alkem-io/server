@@ -48,7 +48,7 @@ import { getRandomId } from '@common/utils/random.id.generator.util';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { NotificationInputCanvasCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.canvas.created';
 import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
-import { UpdateCalloutPublisherInput as UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publisher';
+import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
 
 @Resolver()
 export class CalloutResolverMutations {
