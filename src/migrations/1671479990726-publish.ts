@@ -11,13 +11,13 @@ export class publish1671479990726 implements MigrationInterface {
       `ALTER TABLE \`callout\` ADD \`publishedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`
     );
 
-    const callouts: { id: string; createdDate: number }[] =
-      await queryRunner.query(`SELECT id, createdDate FROM callout`);
+    const callouts: { id: string }[] = await queryRunner.query(
+      `SELECT id FROM callout`
+    );
     for (const callout of callouts) {
-      // const date  = new Date(callout.createdDate);
-      // await queryRunner.query(
-      //     `UPDATE callout SET publishedDate = '${callout.createdDate}' WHERE id = '${callout.id}'`
-      //   );
+      await queryRunner.query(
+        `UPDATE callout SET publishedDate = createdDate WHERE id = '${callout.id}'`
+      );
     }
   }
 
