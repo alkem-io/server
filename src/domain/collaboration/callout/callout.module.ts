@@ -17,6 +17,7 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
 import { AspectTemplateModule } from '@domain/template/aspect-template/aspect.template.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
+import { UserModule } from '@domain/community/user/user.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
     CommentsModule,
     CommunityPolicyModule,
     EntityResolverModule,
+    UserModule,
     NamingModule,
     AspectTemplateModule,
     TypeOrmModule.forFeature([Callout]),

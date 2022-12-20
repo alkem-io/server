@@ -48,6 +48,7 @@ import { getRandomId } from '@common/utils/random.id.generator.util';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { NotificationInputCanvasCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.canvas.created';
 import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
+import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -209,6 +210,13 @@ export class CalloutResolverMutations {
       oldVisibility === CalloutVisibility.DRAFT &&
       result.visibility === CalloutVisibility.PUBLISHED
     ) {
+      // Save published info
+      await this.calloutService.updateCalloutPublishInfo(
+        callout,
+        agentInfo.userID,
+        Date.now()
+      );
+
       const notificationInput: NotificationInputCalloutPublished = {
         triggeredBy: agentInfo.userID,
         callout: callout,
@@ -223,6 +231,32 @@ export class CalloutResolverMutations {
     }
 
     return result;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICallout, {
+    description:
+      'Update the information describing the publishing of the specified Callout.',
+  })
+  @Profiling.api
+  async updateCalloutPublishInfo(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('calloutData') calloutData: UpdateCalloutPublishInfoInput
+  ): Promise<ICallout> {
+    const callout = await this.calloutService.getCalloutOrFail(
+      calloutData.calloutID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      callout.authorization,
+      AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER,
+      `update publisher information on callout: ${callout.id}`
+    );
+    return await this.calloutService.updateCalloutPublishInfo(
+      callout,
+      calloutData.publisherID,
+      calloutData.publishDate
+    );
   }
 
   @UseGuards(GraphqlGuard)
