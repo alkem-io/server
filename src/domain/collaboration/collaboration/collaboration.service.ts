@@ -186,62 +186,70 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
 
-    if (!args.ids) {
-      if (args.shuffle) {
-        return limitAndShuffle(
-          collaborationLoaded.callouts,
-          args.limit,
-          args.shuffle
-        );
-      }
-      let results = collaborationLoaded.callouts;
-      if (args.limit) {
-        results = limitAndShuffle(
-          collaborationLoaded.callouts,
-          args.limit,
-          false
-        );
-      }
-
-      // Sort according to order
-      if (args.sortByActivity) {
-        for (const callout of results) {
-          callout.activity = await this.calloutService.getActivityCount(
-            callout
+    // parameter order: (a) by IDs (b) by activity (c) shuffle (d) sort order
+    // (a) by IDs, results in order specified by IDs
+    if (args.ids) {
+      const results: ICallout[] = [];
+      for (const calloutID of args.ids) {
+        let callout;
+        if (calloutID.length === UUID_LENGTH)
+          callout = collaborationLoaded.callouts.find(
+            callout => callout.id === calloutID
           );
-        }
-        const sortedCallouts = results.sort((a, b) =>
-          a.activity < b.activity ? 1 : -1
-        );
-        return sortedCallouts;
-      } else {
-        const sortedCallouts = results.sort((a, b) =>
-          a.sortOrder > b.sortOrder ? 1 : -1
-        );
-        return sortedCallouts;
+        else
+          callout = collaborationLoaded.callouts.find(
+            callout => callout.nameID === calloutID
+          );
+
+        if (!callout)
+          throw new EntityNotFoundException(
+            `Callout with requested ID (${calloutID}) not located within current Collaboration: : ${collaboration.id}`,
+            LogContext.COLLABORATION
+          );
+        results.push(callout);
       }
+      return results;
     }
-    const results: ICallout[] = [];
 
-    for (const calloutID of args.ids) {
-      let callout;
-      if (calloutID.length === UUID_LENGTH)
-        callout = collaborationLoaded.callouts.find(
-          callout => callout.id === calloutID
-        );
-      else
-        callout = collaborationLoaded.callouts.find(
-          callout => callout.nameID === calloutID
-        );
-
-      if (!callout)
-        throw new EntityNotFoundException(
-          `Callout with requested ID (${calloutID}) not located within current Collaboration: : ${collaboration.id}`,
-          LogContext.COLLABORATION
-        );
-      results.push(callout);
+    // (b) by activity. First get the activity for all callouts + sort by it; shuffle does not make sense.
+    if (args.sortByActivity) {
+      const callouts = collaborationLoaded.callouts;
+      for (const callout of callouts) {
+        callout.activity = await this.calloutService.getActivityCount(callout);
+      }
+      const sortedCallouts = callouts.sort((a, b) =>
+        a.activity < b.activity ? 1 : -1
+      );
+      if (args.limit) {
+        return sortedCallouts.slice(0, args.limit);
+      }
+      return sortedCallouts;
     }
-    return results;
+
+    // (c) shuffle
+    if (args.shuffle) {
+      // No need to sort
+      return limitAndShuffle(
+        collaborationLoaded.callouts,
+        args.limit,
+        args.shuffle
+      );
+    }
+
+    // (d) by sort order
+    let results = collaborationLoaded.callouts;
+    if (args.limit) {
+      results = limitAndShuffle(
+        collaborationLoaded.callouts,
+        args.limit,
+        false
+      );
+    }
+
+    const sortedCallouts = results.sort((a, b) =>
+      a.sortOrder > b.sortOrder ? 1 : -1
+    );
+    return sortedCallouts;
   }
 
   public async getCalloutsOnCollaboration(
