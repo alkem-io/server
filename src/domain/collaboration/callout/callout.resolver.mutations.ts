@@ -152,13 +152,15 @@ export class CalloutResolverMutations {
     };
     this.activityAdapter.calloutCommentCreated(activityLogInput);
 
-    const notificationInput: NotificationInputDiscussionComment = {
-      callout: callout,
-      triggeredBy: agentInfo.userID,
-      comments,
-      commentSent,
-    };
-    await this.notificationAdapter.discussionComment(notificationInput);
+    if (callout.visibility === CalloutVisibility.PUBLISHED) {
+      const notificationInput: NotificationInputDiscussionComment = {
+        callout: callout,
+        triggeredBy: agentInfo.userID,
+        comments,
+        commentSent,
+      };
+      await this.notificationAdapter.discussionComment(notificationInput);
+    }
 
     return commentSent;
   }
@@ -272,11 +274,13 @@ export class CalloutResolverMutations {
       aspectCreatedEvent
     );
 
-    const notificationInput: NotificationInputAspectCreated = {
-      aspect: aspect,
-      triggeredBy: agentInfo.userID,
-    };
-    await this.notificationAdapter.aspectCreated(notificationInput);
+    if (callout.visibility === CalloutVisibility.PUBLISHED) {
+      const notificationInput: NotificationInputAspectCreated = {
+        aspect: aspect,
+        triggeredBy: agentInfo.userID,
+      };
+      await this.notificationAdapter.aspectCreated(notificationInput);
+    }
 
     const activityLogInput: ActivityInputAspectCreated = {
       triggeredBy: agentInfo.userID,
@@ -330,11 +334,13 @@ export class CalloutResolverMutations {
       callout: callout,
     });
 
-    const notificationInput: NotificationInputCanvasCreated = {
-      canvas: canvas,
-      triggeredBy: agentInfo.userID,
-    };
-    await this.notificationAdapter.canvasCreated(notificationInput);
+    if (callout.visibility === CalloutVisibility.PUBLISHED) {
+      const notificationInput: NotificationInputCanvasCreated = {
+        canvas: canvas,
+        triggeredBy: agentInfo.userID,
+      };
+      await this.notificationAdapter.canvasCreated(notificationInput);
+    }
 
     return authorizedCanvas;
   }
