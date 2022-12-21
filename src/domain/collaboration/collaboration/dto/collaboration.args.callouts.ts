@@ -1,9 +1,9 @@
-import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { UUID_NAMEID } from '@domain/common/scalars';
 import { ArgsType, Field, Float } from '@nestjs/graphql';
 
 @ArgsType()
 export class CollaborationArgsCallouts {
-  @Field(() => [UUID], {
+  @Field(() => [UUID_NAMEID], {
     name: 'IDs',
     description: 'The IDs of the callouts to return',
     nullable: true,

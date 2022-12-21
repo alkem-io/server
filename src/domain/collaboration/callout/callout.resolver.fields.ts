@@ -8,7 +8,7 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
-import { UUID } from '@domain/common/scalars';
+import { UUID, UUID_NAMEID } from '@domain/common/scalars';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 import { IUser } from '@domain/community/user/user.interface';
@@ -32,8 +32,8 @@ export class CalloutResolverFields {
     @Parent() callout: Callout,
     @Args({
       name: 'IDs',
-      type: () => [UUID],
-      description: 'The IDs of the Aspects to return',
+      type: () => [UUID_NAMEID],
+      description: 'The IDs (either UUID or nameID) of the Aspects to return',
       nullable: true,
     })
     ids: string[],
@@ -133,7 +133,7 @@ export class CalloutResolverFields {
   async activity(@Parent() callout: ICallout): Promise<number> {
     return await this.calloutService.getActivityCount(callout);
   }
-  
+
   @ResolveField('publishedBy', () => IUser, {
     nullable: true,
     description: 'The user that published this Callout',
