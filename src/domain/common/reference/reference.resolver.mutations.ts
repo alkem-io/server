@@ -8,6 +8,8 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ReferenceService } from './reference.service';
+import { LogContext } from '@common/enums';
+import { NotSupportedException } from '@common/exceptions/not.supported.exception';
 
 @Resolver()
 export class ReferenceResolverMutations {
@@ -27,6 +29,15 @@ export class ReferenceResolverMutations {
     const reference = await this.referenceService.getReferenceOrFail(
       deleteData.ID
     );
+    const isRecommendation = await this.referenceService.isRecommendation(
+      reference
+    );
+    if (isRecommendation) {
+      throw new NotSupportedException(
+        `Deletion of Recommendations is not allowed: ${deleteData.ID}`,
+        LogContext.CONTEXT
+      );
+    }
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       reference.authorization,
