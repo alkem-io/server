@@ -1,6 +1,6 @@
 local claims =
 {
-  email_verified: false
+  email_verified: true
 } + std.extVar('claims');
 {
   identity:
@@ -11,7 +11,7 @@ local claims =
       picture: claims.picture,
       name:
       {
-        first: claims.name,
+        first: claims.given_name,
         last: claims.last_name,
       }
     },
