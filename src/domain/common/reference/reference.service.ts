@@ -69,7 +69,7 @@ export class ReferenceService {
   ): IReference[] {
     if (!references)
       throw new EntityNotFoundException(
-        'Not able to locate refernces',
+        'Not able to locate references',
         LogContext.CHALLENGES
       );
     if (referencesData) {
