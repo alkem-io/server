@@ -46,6 +46,8 @@ export abstract class IContext extends IAuthorizable {
 
   references?: IReference[];
 
+  recommendations?: IReference[];
+
   ecosystemModel?: IEcosystemModel;
 
   visuals?: IVisual[];
