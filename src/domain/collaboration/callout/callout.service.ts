@@ -35,6 +35,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { AspectTemplateService } from '@domain/template/aspect-template/aspect.template.service';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 import { UserService } from '@domain/community/user/user.service';
+import { UUID } from '@domain/common/scalars';
 
 @Injectable()
 export class CalloutService {
@@ -211,6 +212,21 @@ export class CalloutService {
     return result;
   }
 
+  public async getActivityCount(callout: ICallout): Promise<number> {
+    const result = 0;
+    if (callout.type === CalloutType.CARD) {
+      return await this.aspectService.getCardsInCalloutCount(callout.id);
+    } else if (callout.type === CalloutType.CANVAS) {
+      return await this.canvasService.getCanvasesInCalloutCount(callout.id);
+    } else {
+      const comments = await this.getCommentsFromCallout(callout.id);
+      if (comments) {
+        return comments.commentsCount;
+      }
+    }
+    return result;
+  }
+
   private async setNameIdOnAspectData(
     aspectData: CreateAspectOnCalloutInput,
     callout: ICallout
@@ -353,11 +369,15 @@ export class CalloutService {
       const canvas = calloutLoaded.canvases.find(
         canvas => canvas.id === canvasID
       );
-      if (!canvas)
-        throw new EntityNotFoundException(
-          `Canvas with requested ID (${canvasID}) not located within current Callout: : ${callout.id}`,
-          LogContext.COLLABORATION
-        );
+      if (!canvas) continue;
+      // toDo - in order to have this flow as 'exceptional' the client need to query only aspects in callouts the aspects
+      // are. Currently, with the latest set of changes, callouts can be a list and without specifying the correct one in the query,
+      // errors will be thrown.
+
+      // throw new EntityNotFoundException(
+      //   `Canvas with requested ID (${canvasID}) not located within current Callout: : ${callout.id}`,
+      //   LogContext.COLLABORATION
+      // );
       results.push(canvas);
     }
     return results;
@@ -420,11 +440,15 @@ export class CalloutService {
         aspect =>
           aspect.id === aspectID || aspect.nameID === aspectID.toLowerCase()
       );
-      if (!aspect)
-        throw new EntityNotFoundException(
-          `Aspect with requested ID (${aspectID}) not located within current Callout: ${callout.id}`,
-          LogContext.COLLABORATION
-        );
+      if (!aspect) continue;
+      // toDo - in order to have this flow as 'exceptional' the client need to query only aspects in callouts the aspects
+      // are. Currently, with the latest set of changes, callouts can be a list and without specifying the correct one in the query,
+      // errors will be thrown.
+
+      // throw new EntityNotFoundException(
+      //   `Aspect with requested ID (${aspectID}) not located within current Callout: ${callout.id}`,
+      //   LogContext.COLLABORATION
+      // );
       results.push(aspect);
     }
 

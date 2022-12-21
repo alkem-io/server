@@ -8,7 +8,7 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
-import { UUID_NAMEID, UUID } from '@domain/common/scalars';
+import { UUID, UUID_NAMEID } from '@domain/common/scalars';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 import { IUser } from '@domain/community/user/user.interface';
@@ -120,11 +120,18 @@ export class CalloutResolverFields {
     nullable: true,
     description: 'The card template for this Callout.',
   })
-  @Profiling.api
   async cardTemplate(
     @Parent() callout: ICallout
   ): Promise<IAspectTemplate | undefined> {
     return await this.calloutService.getCardTemplateFromCallout(callout.id);
+  }
+
+  @ResolveField('activity', () => Number, {
+    nullable: false,
+    description: 'The activity for this Callout.',
+  })
+  async activity(@Parent() callout: ICallout): Promise<number> {
+    return await this.calloutService.getActivityCount(callout);
   }
 
   @ResolveField('publishedBy', () => IUser, {
