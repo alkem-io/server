@@ -4,10 +4,7 @@ import { Repository } from 'typeorm';
 import { ContextService } from './context.service';
 import { Context, IContext } from '@domain/context/context';
 import { EcosystemModelAuthorizationService } from '@domain/context/ecosystem-model/ecosystem-model.service.authorization';
-import {
-  AuthorizationPolicy,
-  IAuthorizationPolicy,
-} from '@domain/common/authorization-policy';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 @Injectable()
 export class ContextAuthorizationService {
@@ -54,12 +51,20 @@ export class ContextAuthorizationService {
 
     context.references = await this.contextService.getReferences(context);
     for (const reference of context.references) {
-      if (!reference.authorization) {
-        reference.authorization = new AuthorizationPolicy();
-      }
       reference.authorization =
-        await this.authorizationPolicyService.inheritParentAuthorization(
+        this.authorizationPolicyService.inheritParentAuthorization(
           reference.authorization,
+          context.authorization
+        );
+    }
+
+    context.recommendations = await this.contextService.getRecommendations(
+      context
+    );
+    for (const recommendation of context.recommendations) {
+      recommendation.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          recommendation.authorization,
           context.authorization
         );
     }

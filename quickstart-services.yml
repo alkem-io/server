@@ -67,7 +67,7 @@ services:
       - alkemio_dev_net
     volumes:
       - type: bind
-        source: ./.build/ory/kratos/email-password
+        source: ./.build/ory/kratos
         target: /etc/config/kratos
     command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
 
@@ -87,14 +87,8 @@ services:
       - alkemio_dev_net
     volumes:
       - type: bind
-        source: ./.build/ory/kratos/email-password
+        source: ./.build/ory/kratos
         target: /etc/config/kratos
-      - type: bind
-        source: ./.build/ory/kratos/courier-templates
-        target: /etc/config/kratos/courier-templates
-      - type: bind
-        source: ./.build/ory/kratos/oidc
-        target: /etc/config/kratos/oidc
     command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
 
   oathkeeper:

@@ -34,6 +34,8 @@ import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibilit
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { AspectTemplateService } from '@domain/template/aspect-template/aspect.template.service';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
+import { UserService } from '@domain/community/user/user.service';
+import { UUID } from '@domain/common/scalars';
 
 @Injectable()
 export class CalloutService {
@@ -44,6 +46,7 @@ export class CalloutService {
     private canvasService: CanvasService,
     private namingService: NamingService,
     private commentsService: CommentsService,
+    private userService: UserService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -122,6 +125,24 @@ export class CalloutService {
     return await this.calloutRepository.save(callout);
   }
 
+  public async updateCalloutPublishInfo(
+    callout: ICallout,
+    publisherID?: string,
+    publishedTimestamp?: number
+  ): Promise<ICallout> {
+    if (publisherID) {
+      const publisher = await this.userService.getUserOrFail(publisherID);
+      callout.publishedBy = publisher.id;
+    }
+
+    if (publishedTimestamp) {
+      const date = new Date(publishedTimestamp);
+      callout.publishedDate = date;
+    }
+
+    return await this.calloutRepository.save(callout);
+  }
+
   public async updateCallout(
     calloutUpdateData: UpdateCalloutInput
   ): Promise<ICallout> {
@@ -188,6 +209,21 @@ export class CalloutService {
     const result = await this.calloutRepository.remove(callout as Callout);
     result.id = calloutID;
 
+    return result;
+  }
+
+  public async getActivityCount(callout: ICallout): Promise<number> {
+    const result = 0;
+    if (callout.type === CalloutType.CARD) {
+      return await this.aspectService.getCardsInCalloutCount(callout.id);
+    } else if (callout.type === CalloutType.CANVAS) {
+      return await this.canvasService.getCanvasesInCalloutCount(callout.id);
+    } else {
+      const comments = await this.getCommentsFromCallout(callout.id);
+      if (comments) {
+        return comments.commentsCount;
+      }
+    }
     return result;
   }
 
@@ -333,11 +369,15 @@ export class CalloutService {
       const canvas = calloutLoaded.canvases.find(
         canvas => canvas.id === canvasID
       );
-      if (!canvas)
-        throw new EntityNotFoundException(
-          `Canvas with requested ID (${canvasID}) not located within current Callout: : ${callout.id}`,
-          LogContext.COLLABORATION
-        );
+      if (!canvas) continue;
+      // toDo - in order to have this flow as 'exceptional' the client need to query only aspects in callouts the aspects
+      // are. Currently, with the latest set of changes, callouts can be a list and without specifying the correct one in the query,
+      // errors will be thrown.
+
+      // throw new EntityNotFoundException(
+      //   `Canvas with requested ID (${canvasID}) not located within current Callout: : ${callout.id}`,
+      //   LogContext.COLLABORATION
+      // );
       results.push(canvas);
     }
     return results;
@@ -400,11 +440,15 @@ export class CalloutService {
         aspect =>
           aspect.id === aspectID || aspect.nameID === aspectID.toLowerCase()
       );
-      if (!aspect)
-        throw new EntityNotFoundException(
-          `Aspect with requested ID (${aspectID}) not located within current Callout: ${callout.id}`,
-          LogContext.COLLABORATION
-        );
+      if (!aspect) continue;
+      // toDo - in order to have this flow as 'exceptional' the client need to query only aspects in callouts the aspects
+      // are. Currently, with the latest set of changes, callouts can be a list and without specifying the correct one in the query,
+      // errors will be thrown.
+
+      // throw new EntityNotFoundException(
+      //   `Aspect with requested ID (${aspectID}) not located within current Callout: ${callout.id}`,
+      //   LogContext.COLLABORATION
+      // );
       results.push(aspect);
     }
 

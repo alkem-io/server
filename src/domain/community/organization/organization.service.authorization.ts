@@ -197,4 +197,31 @@ export class OrganizationAuthorizationService {
 
     return updatedAuthorization;
   }
+
+  public extendAuthorizationPolicyForSelfRemoval(
+    organization: IOrganization,
+    userToBeRemovedID: string
+  ): IAuthorizationPolicy {
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    const userSelfRemovalRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.GRANT],
+        [
+          {
+            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+            resourceID: userToBeRemovedID,
+          },
+        ]
+      );
+    newRules.push(userSelfRemovalRule);
+
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
+        organization.authorization,
+        newRules
+      );
+
+    return updatedAuthorization;
+  }
 }

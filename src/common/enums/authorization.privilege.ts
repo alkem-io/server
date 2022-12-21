@@ -26,6 +26,7 @@ export enum AuthorizationPrivilege {
   COMMUNITY_APPLY = 'community-apply',
   COMMUNITY_CONTEXT_REVIEW = 'community-context-review',
   CREATE_CALLOUT = 'create-callout',
+  UPDATE_CALLOUT_PUBLISHER = 'update-callout-publisher',
   CREATE_RELATION = 'create-relation',
   CREATE_OPPORTUNITY = 'create-opportunity',
   MOVE_CARD = 'move-card',

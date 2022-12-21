@@ -38,6 +38,7 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';
 import { NotificationInputCommunityContextReview } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.context.review';
+import { CommunityAuthorizationService } from './community.service.authorization';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -52,7 +53,8 @@ export class CommunityResolverMutations {
     private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
     private applicationService: ApplicationService,
     private agentService: AgentService,
-    private applicationAuthorizationService: ApplicationAuthorizationService
+    private applicationAuthorizationService: ApplicationAuthorizationService,
+    private communityAuthorizationService: CommunityAuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -210,11 +212,21 @@ export class CommunityResolverMutations {
     const community = await this.communityService.getCommunityOrFail(
       membershipData.communityID
     );
+
+    // Extend the authorization policy with a credential rule to assign the GRANT privilege
+    // to the user specified in the incoming mutation. Then if it is the same user as is logged
+    // in then the user will have the GRANT privilege + so can carry out the mutation
+    const extendedAuthorization =
+      this.communityAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
+        community,
+        membershipData.userID
+      );
+
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      community.authorization,
+      extendedAuthorization,
       AuthorizationPrivilege.GRANT,
-      `remove user community: ${community.displayName}`
+      `remove user from community: ${community.displayName}`
     );
 
     await this.communityService.removeUserFromRole(
@@ -231,7 +243,7 @@ export class CommunityResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICommunity, {
-    description: 'Removes a User as a member of the specified Community.',
+    description: 'Removes a User as a Lead of the specified Community.',
   })
   @Profiling.api
   async removeUserAsCommunityLead(
@@ -245,7 +257,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.GRANT,
-      `remove user community: ${community.displayName}`
+      `remove user from community lead: ${community.displayName}`
     );
 
     return await this.communityService.removeUserFromRole(

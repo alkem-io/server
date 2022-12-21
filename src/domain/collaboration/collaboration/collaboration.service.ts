@@ -24,6 +24,7 @@ import { collaborationDefaults } from './collaboration.defaults';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CommunityType } from '@common/enums/community.type';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
 
 @Injectable()
 export class CollaborationService {
@@ -171,9 +172,7 @@ export class CollaborationService {
 
   public async getCalloutsFromCollaboration(
     collaboration: ICollaboration,
-    calloutIDs?: string[],
-    limit?: number,
-    shuffle?: boolean
+    args: CollaborationArgsCallouts
   ): Promise<ICallout[]> {
     const collaborationLoaded = await this.getCollaborationOrFail(
       collaboration.id,
@@ -187,42 +186,70 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
 
-    if (!calloutIDs) {
-      if (shuffle) {
-        return limitAndShuffle(collaborationLoaded.callouts, limit, shuffle);
-      }
-      let results = collaborationLoaded.callouts;
-      if (limit) {
-        results = limitAndShuffle(collaborationLoaded.callouts, limit, false);
-      }
+    // parameter order: (a) by IDs (b) by activity (c) shuffle (d) sort order
+    // (a) by IDs, results in order specified by IDs
+    if (args.ids) {
+      const results: ICallout[] = [];
+      for (const calloutID of args.ids) {
+        let callout;
+        if (calloutID.length === UUID_LENGTH)
+          callout = collaborationLoaded.callouts.find(
+            callout => callout.id === calloutID
+          );
+        else
+          callout = collaborationLoaded.callouts.find(
+            callout => callout.nameID === calloutID
+          );
 
-      // Sort according to order
-      const sortedCallouts = results.sort((a, b) =>
-        a.sortOrder > b.sortOrder ? 1 : -1
+        if (!callout)
+          throw new EntityNotFoundException(
+            `Callout with requested ID (${calloutID}) not located within current Collaboration: : ${collaboration.id}`,
+            LogContext.COLLABORATION
+          );
+        results.push(callout);
+      }
+      return results;
+    }
+
+    // (b) by activity. First get the activity for all callouts + sort by it; shuffle does not make sense.
+    if (args.sortByActivity) {
+      const callouts = collaborationLoaded.callouts;
+      for (const callout of callouts) {
+        callout.activity = await this.calloutService.getActivityCount(callout);
+      }
+      const sortedCallouts = callouts.sort((a, b) =>
+        a.activity < b.activity ? 1 : -1
       );
+      if (args.limit) {
+        return sortedCallouts.slice(0, args.limit);
+      }
       return sortedCallouts;
     }
-    const results: ICallout[] = [];
 
-    for (const calloutID of calloutIDs) {
-      let callout;
-      if (calloutID.length === UUID_LENGTH)
-        callout = collaborationLoaded.callouts.find(
-          callout => callout.id === calloutID
-        );
-      else
-        callout = collaborationLoaded.callouts.find(
-          callout => callout.nameID === calloutID
-        );
-
-      if (!callout)
-        throw new EntityNotFoundException(
-          `Callout with requested ID (${calloutID}) not located within current Collaboration: : ${collaboration.id}`,
-          LogContext.COLLABORATION
-        );
-      results.push(callout);
+    // (c) shuffle
+    if (args.shuffle) {
+      // No need to sort
+      return limitAndShuffle(
+        collaborationLoaded.callouts,
+        args.limit,
+        args.shuffle
+      );
     }
-    return results;
+
+    // (d) by sort order
+    let results = collaborationLoaded.callouts;
+    if (args.limit) {
+      results = limitAndShuffle(
+        collaborationLoaded.callouts,
+        args.limit,
+        false
+      );
+    }
+
+    const sortedCallouts = results.sort((a, b) =>
+      a.sortOrder > b.sortOrder ? 1 : -1
+    );
+    return sortedCallouts;
   }
 
   public async getCalloutsOnCollaboration(

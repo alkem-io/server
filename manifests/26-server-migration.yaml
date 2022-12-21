@@ -14,7 +14,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: alkemio-server
-              image: alkemio/server:latest
+              image: alkemio.azurecr.io/alkemio-server:latest
               command: ["npm",  "run", "migration:run"]
 
               envFrom:
