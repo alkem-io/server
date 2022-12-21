@@ -4,7 +4,7 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 @ObjectType('Reference')
 export abstract class IReference extends IAuthorizable {
   @Field(() => String, {
-    nullable: true,
+    nullable: false,
     description: 'Name of the reference, e.g. Linkedin, Twitter etc.',
   })
   name!: string;
