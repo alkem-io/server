@@ -27,8 +27,8 @@ export class recommendations1671129430163 implements MigrationInterface {
           `INSERT INTO authorization_policy VALUES ('${authID}', NOW(), NOW(), 1, '', '', 0, '')`
         );
         await queryRunner.query(
-          `INSERT INTO reference (id, createdDate, updatedDate, version, authorizationId, contextRecommendationId, name)
-             VALUES ('${recommendationID}', NOW(), NOW(), 1, '${authID}', '${context.id}', 'recommendation${i}')`
+          `INSERT INTO reference (id, createdDate, updatedDate, version, authorizationId, contextRecommendationId, name, uri)
+             VALUES ('${recommendationID}', NOW(), NOW(), 1, '${authID}', '${context.id}', 'recommendation${i}', '')`
         );
       }
     }
