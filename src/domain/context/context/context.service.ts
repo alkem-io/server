@@ -121,6 +121,13 @@ export class ContextService {
       );
     }
 
+    if (contextUpdateData.recommendations) {
+      context.references = await this.referenceService.updateReferences(
+        context.recommendations,
+        contextUpdateData.recommendations
+      );
+    }
+
     return await this.contextRepository.save(context);
   }
 

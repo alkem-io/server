@@ -45,6 +45,14 @@ export class UpdateContextInput {
   @Type(() => UpdateReferenceInput)
   references?: UpdateReferenceInput[];
 
+  @Field(() => [UpdateReferenceInput], {
+    nullable: true,
+    description: 'Update the set of Recommendations for the Context.',
+  })
+  @ValidateNested({ each: true })
+  @Type(() => UpdateReferenceInput)
+  recommendations?: UpdateReferenceInput[];
+
   @Field(() => UpdateLocationInput, { nullable: true })
   @IsOptional()
   @ValidateNested()
