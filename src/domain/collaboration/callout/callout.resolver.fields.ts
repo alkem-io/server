@@ -11,10 +11,15 @@ import { IComments } from '@domain/communication/comments/comments.interface';
 import { UUID } from '@domain/common/scalars';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
+import { IUser } from '@domain/community/user/user.interface';
+import { UserService } from '@domain/community/user/user.service';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
-  constructor(private calloutService: CalloutService) {}
+  constructor(
+    private calloutService: CalloutService,
+    private userService: UserService
+  ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
@@ -127,5 +132,27 @@ export class CalloutResolverFields {
   })
   async activity(@Parent() callout: ICallout): Promise<number> {
     return await this.calloutService.getActivityCount(callout);
+  }
+  
+  @ResolveField('publishedBy', () => IUser, {
+    nullable: true,
+    description: 'The user that published this Callout',
+  })
+  async publishedBy(@Parent() callout: ICallout): Promise<IUser | undefined> {
+    const publishedBy = callout.publishedBy;
+    if (!publishedBy) {
+      return undefined;
+    }
+    return await this.userService.getUserOrFail(publishedBy);
+  }
+
+  @ResolveField('publishedDate', () => Number, {
+    nullable: true,
+    description: 'The timestamp for the publishing of this Callout.',
+  })
+  async publishedDate(@Parent() callout: ICallout): Promise<number> {
+    const createdDate = callout.publishedDate;
+    const date = new Date(createdDate);
+    return date.getTime();
   }
 }

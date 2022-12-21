@@ -62,4 +62,8 @@ export abstract class ICallout extends INameable {
   sortOrder!: number;
 
   activity!: number;
+
+  publishedBy!: string;
+  publishedDate!: Date;
+
 }

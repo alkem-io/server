@@ -8,7 +8,11 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
 import { AspectAuthorizationService } from '@domain/collaboration/aspect/aspect.service.authorization';
-import { LogContext, AuthorizationPrivilege } from '@common/enums';
+import {
+  LogContext,
+  AuthorizationPrivilege,
+  AuthorizationCredential,
+} from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
@@ -16,6 +20,7 @@ import { AspectTemplateAuthorizationService } from '@domain/template/aspect-temp
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { CalloutType } from '@common/enums/callout.type';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -102,11 +107,26 @@ export class CalloutAuthorizationService {
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for Context: ${policy}`,
+        `Authorization definition not found for Callout: ${policy}`,
         LogContext.COLLABORATION
       );
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    return authorization;
+    const calloutPublishUpdate =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+        ]
+      );
+    calloutPublishUpdate.inheritable = false;
+    newRules.push(calloutPublishUpdate);
+
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
   }
 
   private appendPrivilegeRules(
