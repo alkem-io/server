@@ -158,11 +158,11 @@ export class VisualService {
     return await this.createVisual(
       {
         name: 'bannerNarrow',
-        minWidth: 192,
-        maxWidth: 384,
-        minHeight: 32,
-        maxHeight: 128,
-        aspectRatio: 3,
+        maxHeight: 256,
+        maxWidth: 410,
+        minHeight: 192,
+        minWidth: 307,
+        aspectRatio: 1.6,
       },
       uri
     );
