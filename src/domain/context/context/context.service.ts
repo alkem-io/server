@@ -89,7 +89,7 @@ export class ContextService {
     contextUpdateData: UpdateContextInput
   ): Promise<IContext> {
     const context = await this.getContextOrFail(contextInput.id, {
-      relations: ['references', 'location'],
+      relations: ['references', 'recommendations', 'location'],
     });
     if (contextUpdateData.tagline) {
       context.tagline = contextUpdateData.tagline;
