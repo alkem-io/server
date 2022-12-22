@@ -197,7 +197,7 @@ export class CalloutResolverMutations {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutData.calloutID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
       AuthorizationPrivilege.UPDATE,
@@ -208,28 +208,27 @@ export class CalloutResolverMutations {
       calloutData
     );
 
-    if (
-      oldVisibility === CalloutVisibility.DRAFT &&
-      callout.visibility === CalloutVisibility.PUBLISHED
-    ) {
-      // Save published info
-      await this.calloutService.updateCalloutPublishInfo(
-        savedCallout,
-        agentInfo.userID,
-        Date.now()
-      );
+    if (callout.visibility !== oldVisibility) {
+      if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        // Save published info
+        await this.calloutService.updateCalloutPublishInfo(
+          savedCallout,
+          agentInfo.userID,
+          Date.now()
+        );
 
-      const notificationInput: NotificationInputCalloutPublished = {
-        triggeredBy: agentInfo.userID,
-        callout: savedCallout,
-      };
-      await this.notificationAdapter.calloutPublished(notificationInput);
+        const notificationInput: NotificationInputCalloutPublished = {
+          triggeredBy: agentInfo.userID,
+          callout: savedCallout,
+        };
+        await this.notificationAdapter.calloutPublished(notificationInput);
 
-      const activityLogInput: ActivityInputCalloutPublished = {
-        triggeredBy: agentInfo.userID,
-        callout: callout,
-      };
-      this.activityAdapter.calloutPublished(activityLogInput);
+        const activityLogInput: ActivityInputCalloutPublished = {
+          triggeredBy: agentInfo.userID,
+          callout: callout,
+        };
+        this.activityAdapter.calloutPublished(activityLogInput);
+      }
     }
 
     return savedCallout;

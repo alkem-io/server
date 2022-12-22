@@ -52,10 +52,7 @@ export class CalloutAuthorizationService {
       callout.type
     );
 
-    callout.authorization = this.appendCredentialRules(
-      callout.authorization,
-      communityPolicy
-    );
+    callout.authorization = this.appendCredentialRules(callout.authorization);
 
     callout.aspects = await this.calloutService.getAspectsFromCallout(callout);
     for (const aspect of callout.aspects) {
@@ -102,12 +99,11 @@ export class CalloutAuthorizationService {
   }
 
   private appendCredentialRules(
-    authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
+    authorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
     if (!authorization)
       throw new EntityNotInitializedException(
-        `Authorization definition not found for Callout: ${policy}`,
+        'Authorization definition not found for Callout',
         LogContext.COLLABORATION
       );
     const newRules: IAuthorizationPolicyRuleCredential[] = [];

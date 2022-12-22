@@ -65,5 +65,4 @@ export abstract class ICallout extends INameable {
 
   publishedBy!: string;
   publishedDate!: Date;
-
 }
