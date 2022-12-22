@@ -122,7 +122,7 @@ export class ContextService {
     }
 
     if (contextUpdateData.recommendations) {
-      context.references = await this.referenceService.updateReferences(
+      context.recommendations = await this.referenceService.updateReferences(
         context.recommendations,
         contextUpdateData.recommendations
       );
