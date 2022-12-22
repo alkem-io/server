@@ -204,24 +204,24 @@ export class CalloutResolverMutations {
       `update visibility on callout: ${callout.id}`
     );
     const oldVisibility = callout.visibility;
-    const result = await this.calloutService.updateCalloutVisibility(
+    const savedCallout = await this.calloutService.updateCalloutVisibility(
       calloutData
     );
 
     if (
       oldVisibility === CalloutVisibility.DRAFT &&
-      result.visibility === CalloutVisibility.PUBLISHED
+      callout.visibility === CalloutVisibility.PUBLISHED
     ) {
       // Save published info
       await this.calloutService.updateCalloutPublishInfo(
-        callout,
+        savedCallout,
         agentInfo.userID,
         Date.now()
       );
 
       const notificationInput: NotificationInputCalloutPublished = {
         triggeredBy: agentInfo.userID,
-        callout: callout,
+        callout: savedCallout,
       };
       await this.notificationAdapter.calloutPublished(notificationInput);
 
@@ -232,7 +232,7 @@ export class CalloutResolverMutations {
       this.activityAdapter.calloutPublished(activityLogInput);
     }
 
-    return result;
+    return savedCallout;
   }
 
   @UseGuards(GraphqlGuard)
