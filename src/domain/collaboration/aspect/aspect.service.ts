@@ -165,4 +165,11 @@ export class AspectService {
       where: { callout: { id: calloutId } },
     });
   }
+
+  public async getCardsInCalloutCount(calloutID: string): Promise<number> {
+    const count = await this.aspectRepository.count({
+      where: { callout: calloutID },
+    });
+    return count;
+  }
 }

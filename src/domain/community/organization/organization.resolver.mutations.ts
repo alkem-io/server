@@ -197,11 +197,21 @@ export class OrganizationResolverMutations {
     const organization = await this.organizationService.getOrganizationOrFail(
       membershipData.organizationID
     );
+
+    // Extend the authorization policy with a credential rule to assign the GRANT privilege
+    // to the user specified in the incoming mutation. Then if it is the same user as is logged
+    // in then the user will have the GRANT privilege + so can carry out the mutation
+    const extendedAuthorization =
+      this.organizationAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
+        organization,
+        membershipData.userID
+      );
+
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      organization.authorization,
+      extendedAuthorization,
       AuthorizationPrivilege.GRANT,
-      `remove user organization: ${organization.displayName}`
+      `remove user from organization: ${organization.displayName}`
     );
     return await this.organizationService.removeAssociate(membershipData);
   }

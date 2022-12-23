@@ -48,6 +48,7 @@ import { getRandomId } from '@common/utils/random.id.generator.util';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { NotificationInputCanvasCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.canvas.created';
 import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
+import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -144,21 +145,23 @@ export class CalloutResolverMutations {
       SubscriptionType.CALLOUT_MESSAGE_CREATED,
       subscriptionPayload
     );
-    // Register the activity
-    const activityLogInput: ActivityInputCalloutDiscussionComment = {
-      triggeredBy: agentInfo.userID,
-      callout: callout,
-      message: data.message,
-    };
-    this.activityAdapter.calloutCommentCreated(activityLogInput);
+    if (callout.visibility === CalloutVisibility.PUBLISHED) {
+      // Register the activity
+      const activityLogInput: ActivityInputCalloutDiscussionComment = {
+        triggeredBy: agentInfo.userID,
+        callout: callout,
+        message: data.message,
+      };
+      this.activityAdapter.calloutCommentCreated(activityLogInput);
 
-    const notificationInput: NotificationInputDiscussionComment = {
-      callout: callout,
-      triggeredBy: agentInfo.userID,
-      comments,
-      commentSent,
-    };
-    await this.notificationAdapter.discussionComment(notificationInput);
+      const notificationInput: NotificationInputDiscussionComment = {
+        callout: callout,
+        triggeredBy: agentInfo.userID,
+        comments,
+        commentSent,
+      };
+      await this.notificationAdapter.discussionComment(notificationInput);
+    }
 
     return commentSent;
   }
@@ -194,35 +197,67 @@ export class CalloutResolverMutations {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutData.calloutID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
       AuthorizationPrivilege.UPDATE,
       `update visibility on callout: ${callout.id}`
     );
     const oldVisibility = callout.visibility;
-    const result = await this.calloutService.updateCalloutVisibility(
+    const savedCallout = await this.calloutService.updateCalloutVisibility(
       calloutData
     );
 
-    if (
-      oldVisibility === CalloutVisibility.DRAFT &&
-      result.visibility === CalloutVisibility.PUBLISHED
-    ) {
-      const notificationInput: NotificationInputCalloutPublished = {
-        triggeredBy: agentInfo.userID,
-        callout: callout,
-      };
-      await this.notificationAdapter.calloutPublished(notificationInput);
+    if (callout.visibility !== oldVisibility) {
+      if (callout.visibility === CalloutVisibility.PUBLISHED) {
+        // Save published info
+        await this.calloutService.updateCalloutPublishInfo(
+          savedCallout,
+          agentInfo.userID,
+          Date.now()
+        );
 
-      const activityLogInput: ActivityInputCalloutPublished = {
-        triggeredBy: agentInfo.userID,
-        callout: callout,
-      };
-      this.activityAdapter.calloutPublished(activityLogInput);
+        const notificationInput: NotificationInputCalloutPublished = {
+          triggeredBy: agentInfo.userID,
+          callout: savedCallout,
+        };
+        await this.notificationAdapter.calloutPublished(notificationInput);
+
+        const activityLogInput: ActivityInputCalloutPublished = {
+          triggeredBy: agentInfo.userID,
+          callout: callout,
+        };
+        this.activityAdapter.calloutPublished(activityLogInput);
+      }
     }
 
-    return result;
+    return savedCallout;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICallout, {
+    description:
+      'Update the information describing the publishing of the specified Callout.',
+  })
+  @Profiling.api
+  async updateCalloutPublishInfo(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('calloutData') calloutData: UpdateCalloutPublishInfoInput
+  ): Promise<ICallout> {
+    const callout = await this.calloutService.getCalloutOrFail(
+      calloutData.calloutID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      callout.authorization,
+      AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER,
+      `update publisher information on callout: ${callout.id}`
+    );
+    return await this.calloutService.updateCalloutPublishInfo(
+      callout,
+      calloutData.publisherID,
+      calloutData.publishDate
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -237,7 +272,7 @@ export class CalloutResolverMutations {
     const callout = await this.calloutService.getCalloutOrFail(
       aspectData.calloutID
     );
-    await this.authorizationService.grantAccessOrFail(
+    this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
       AuthorizationPrivilege.CREATE_ASPECT,
@@ -272,18 +307,20 @@ export class CalloutResolverMutations {
       aspectCreatedEvent
     );
 
-    const notificationInput: NotificationInputAspectCreated = {
-      aspect: aspect,
-      triggeredBy: agentInfo.userID,
-    };
-    await this.notificationAdapter.aspectCreated(notificationInput);
+    if (callout.visibility === CalloutVisibility.PUBLISHED) {
+      const notificationInput: NotificationInputAspectCreated = {
+        aspect: aspect,
+        triggeredBy: agentInfo.userID,
+      };
+      await this.notificationAdapter.aspectCreated(notificationInput);
 
-    const activityLogInput: ActivityInputAspectCreated = {
-      triggeredBy: agentInfo.userID,
-      aspect: aspect,
-      callout: callout,
-    };
-    this.activityAdapter.aspectCreated(activityLogInput);
+      const activityLogInput: ActivityInputAspectCreated = {
+        triggeredBy: agentInfo.userID,
+        aspect: aspect,
+        callout: callout,
+      };
+      this.activityAdapter.aspectCreated(activityLogInput);
+    }
 
     return aspect;
   }
@@ -324,17 +361,19 @@ export class CalloutResolverMutations {
         callout.authorization
       );
 
-    this.activityAdapter.canvasCreated({
-      triggeredBy: agentInfo.userID,
-      canvas: authorizedCanvas,
-      callout: callout,
-    });
+    if (callout.visibility === CalloutVisibility.PUBLISHED) {
+      const notificationInput: NotificationInputCanvasCreated = {
+        canvas: canvas,
+        triggeredBy: agentInfo.userID,
+      };
+      await this.notificationAdapter.canvasCreated(notificationInput);
 
-    const notificationInput: NotificationInputCanvasCreated = {
-      canvas: canvas,
-      triggeredBy: agentInfo.userID,
-    };
-    await this.notificationAdapter.canvasCreated(notificationInput);
+      this.activityAdapter.canvasCreated({
+        triggeredBy: agentInfo.userID,
+        canvas: authorizedCanvas,
+        callout: callout,
+      });
+    }
 
     return authorizedCanvas;
   }
