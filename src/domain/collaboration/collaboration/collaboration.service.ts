@@ -6,7 +6,7 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
@@ -24,10 +24,14 @@ import { collaborationDefaults } from './collaboration.defaults';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CommunityType } from '@common/enums/community.type';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
+import { AgentInfo } from '@core/authentication/agent-info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 @Injectable()
 export class CollaborationService {
   constructor(
+    private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private calloutService: CalloutService,
     private namingService: NamingService,
@@ -171,9 +175,8 @@ export class CollaborationService {
 
   public async getCalloutsFromCollaboration(
     collaboration: ICollaboration,
-    calloutIDs?: string[],
-    limit?: number,
-    shuffle?: boolean
+    args: CollaborationArgsCallouts,
+    agentInfo: AgentInfo
   ): Promise<ICallout[]> {
     const collaborationLoaded = await this.getCollaborationOrFail(
       collaboration.id,
@@ -181,48 +184,91 @@ export class CollaborationService {
         relations: ['callouts'],
       }
     );
-    if (!collaborationLoaded.callouts)
+    const allCallouts = collaborationLoaded.callouts;
+    if (!allCallouts)
       throw new EntityNotFoundException(
         `Callout not initialised, no canvases: ${collaboration.id}`,
         LogContext.COLLABORATION
       );
 
-    if (!calloutIDs) {
-      if (shuffle) {
-        return limitAndShuffle(collaborationLoaded.callouts, limit, shuffle);
-      }
-      let results = collaborationLoaded.callouts;
-      if (limit) {
-        results = limitAndShuffle(collaborationLoaded.callouts, limit, false);
-      }
+    // First filter the callouts the current user has READ privilege to
+    const readableCallouts = allCallouts.filter(c =>
+      this.hasAgentAccessToCallout(c, agentInfo)
+    );
 
-      // Sort according to order
-      const sortedCallouts = results.sort((a, b) =>
-        a.sortOrder > b.sortOrder ? 1 : -1
+    // parameter order: (a) by IDs (b) by activity (c) shuffle (d) sort order
+    // (a) by IDs, results in order specified by IDs
+    if (args.ids) {
+      const results: ICallout[] = [];
+      for (const calloutID of args.ids) {
+        let callout;
+        if (calloutID.length === UUID_LENGTH)
+          callout = readableCallouts.find(callout => callout.id === calloutID);
+        else
+          callout = readableCallouts.find(
+            callout => callout.nameID === calloutID
+          );
+
+        if (!callout)
+          throw new EntityNotFoundException(
+            `Callout with requested ID (${calloutID}) not located within current Collaboration: : ${collaboration.id}`,
+            LogContext.COLLABORATION
+          );
+        results.push(callout);
+      }
+      return results;
+    }
+
+    // (b) by activity. First get the activity for all callouts + sort by it; shuffle does not make sense.
+    if (args.sortByActivity) {
+      for (const callout of readableCallouts) {
+        callout.activity = await this.calloutService.getActivityCount(callout);
+      }
+      const sortedCallouts = readableCallouts.sort((a, b) =>
+        a.activity < b.activity ? 1 : -1
       );
+      if (args.limit) {
+        return sortedCallouts.slice(0, args.limit);
+      }
       return sortedCallouts;
     }
-    const results: ICallout[] = [];
 
-    for (const calloutID of calloutIDs) {
-      let callout;
-      if (calloutID.length === UUID_LENGTH)
-        callout = collaborationLoaded.callouts.find(
-          callout => callout.id === calloutID
-        );
-      else
-        callout = collaborationLoaded.callouts.find(
-          callout => callout.nameID === calloutID
-        );
-
-      if (!callout)
-        throw new EntityNotFoundException(
-          `Callout with requested ID (${calloutID}) not located within current Collaboration: : ${collaboration.id}`,
-          LogContext.COLLABORATION
-        );
-      results.push(callout);
+    // (c) shuffle
+    if (args.shuffle) {
+      // No need to sort
+      return limitAndShuffle(readableCallouts, args.limit, args.shuffle);
     }
-    return results;
+
+    // (d) by sort order
+    let results = readableCallouts;
+    if (args.limit) {
+      results = limitAndShuffle(readableCallouts, args.limit, false);
+    }
+
+    const sortedCallouts = results.sort((a, b) =>
+      a.sortOrder > b.sortOrder ? 1 : -1
+    );
+    return sortedCallouts;
+  }
+
+  private hasAgentAccessToCallout(
+    callout: ICallout,
+    agentInfo: AgentInfo
+  ): boolean {
+    switch (callout.visibility) {
+      case CalloutVisibility.PUBLISHED:
+        return this.authorizationService.isAccessGranted(
+          agentInfo,
+          callout.authorization,
+          AuthorizationPrivilege.READ
+        );
+      case CalloutVisibility.DRAFT:
+        return this.authorizationService.isAccessGranted(
+          agentInfo,
+          callout.authorization,
+          AuthorizationPrivilege.UPDATE
+        );
+    }
   }
 
   public async getCalloutsOnCollaboration(

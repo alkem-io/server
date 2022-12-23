@@ -28,6 +28,12 @@ export class Context extends AuthorizableEntity implements IContext {
   })
   references?: Reference[];
 
+  @OneToMany(() => Reference, reference => reference.contextRecommendation, {
+    eager: false,
+    cascade: true,
+  })
+  recommendations?: Reference[];
+
   @OneToOne(() => Location, {
     eager: false,
     cascade: true,

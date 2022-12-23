@@ -8,13 +8,18 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
-import { UUID_NAMEID, UUID } from '@domain/common/scalars';
+import { UUID, UUID_NAMEID } from '@domain/common/scalars';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
+import { IUser } from '@domain/community/user/user.interface';
+import { UserService } from '@domain/community/user/user.service';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
-  constructor(private calloutService: CalloutService) {}
+  constructor(
+    private calloutService: CalloutService,
+    private userService: UserService
+  ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
@@ -115,10 +120,39 @@ export class CalloutResolverFields {
     nullable: true,
     description: 'The card template for this Callout.',
   })
-  @Profiling.api
   async cardTemplate(
     @Parent() callout: ICallout
   ): Promise<IAspectTemplate | undefined> {
     return await this.calloutService.getCardTemplateFromCallout(callout.id);
+  }
+
+  @ResolveField('activity', () => Number, {
+    nullable: false,
+    description: 'The activity for this Callout.',
+  })
+  async activity(@Parent() callout: ICallout): Promise<number> {
+    return await this.calloutService.getActivityCount(callout);
+  }
+
+  @ResolveField('publishedBy', () => IUser, {
+    nullable: true,
+    description: 'The user that published this Callout',
+  })
+  async publishedBy(@Parent() callout: ICallout): Promise<IUser | undefined> {
+    const publishedBy = callout.publishedBy;
+    if (!publishedBy) {
+      return undefined;
+    }
+    return await this.userService.getUserOrFail(publishedBy);
+  }
+
+  @ResolveField('publishedDate', () => Number, {
+    nullable: true,
+    description: 'The timestamp for the publishing of this Callout.',
+  })
+  async publishedDate(@Parent() callout: ICallout): Promise<number> {
+    const createdDate = callout.publishedDate;
+    const date = new Date(createdDate);
+    return date.getTime();
   }
 }
