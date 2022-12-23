@@ -6,7 +6,7 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
@@ -25,10 +25,13 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CommunityType } from '@common/enums/community.type';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
+import { AgentInfo } from '@core/authentication/agent-info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 @Injectable()
 export class CollaborationService {
   constructor(
+    private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private calloutService: CalloutService,
     private namingService: NamingService,
@@ -172,7 +175,8 @@ export class CollaborationService {
 
   public async getCalloutsFromCollaboration(
     collaboration: ICollaboration,
-    args: CollaborationArgsCallouts
+    args: CollaborationArgsCallouts,
+    agentInfo: AgentInfo
   ): Promise<ICallout[]> {
     const collaborationLoaded = await this.getCollaborationOrFail(
       collaboration.id,
@@ -180,11 +184,17 @@ export class CollaborationService {
         relations: ['callouts'],
       }
     );
-    if (!collaborationLoaded.callouts)
+    const allCallouts = collaborationLoaded.callouts;
+    if (!allCallouts)
       throw new EntityNotFoundException(
         `Callout not initialised, no canvases: ${collaboration.id}`,
         LogContext.COLLABORATION
       );
+
+    // First filter the callouts the current user has READ privilege to
+    const readableCallouts = allCallouts.filter(c =>
+      this.hasAgentAccessToCallout(c, agentInfo)
+    );
 
     // parameter order: (a) by IDs (b) by activity (c) shuffle (d) sort order
     // (a) by IDs, results in order specified by IDs
@@ -193,11 +203,9 @@ export class CollaborationService {
       for (const calloutID of args.ids) {
         let callout;
         if (calloutID.length === UUID_LENGTH)
-          callout = collaborationLoaded.callouts.find(
-            callout => callout.id === calloutID
-          );
+          callout = readableCallouts.find(callout => callout.id === calloutID);
         else
-          callout = collaborationLoaded.callouts.find(
+          callout = readableCallouts.find(
             callout => callout.nameID === calloutID
           );
 
@@ -213,11 +221,10 @@ export class CollaborationService {
 
     // (b) by activity. First get the activity for all callouts + sort by it; shuffle does not make sense.
     if (args.sortByActivity) {
-      const callouts = collaborationLoaded.callouts;
-      for (const callout of callouts) {
+      for (const callout of readableCallouts) {
         callout.activity = await this.calloutService.getActivityCount(callout);
       }
-      const sortedCallouts = callouts.sort((a, b) =>
+      const sortedCallouts = readableCallouts.sort((a, b) =>
         a.activity < b.activity ? 1 : -1
       );
       if (args.limit) {
@@ -229,27 +236,39 @@ export class CollaborationService {
     // (c) shuffle
     if (args.shuffle) {
       // No need to sort
-      return limitAndShuffle(
-        collaborationLoaded.callouts,
-        args.limit,
-        args.shuffle
-      );
+      return limitAndShuffle(readableCallouts, args.limit, args.shuffle);
     }
 
     // (d) by sort order
-    let results = collaborationLoaded.callouts;
+    let results = readableCallouts;
     if (args.limit) {
-      results = limitAndShuffle(
-        collaborationLoaded.callouts,
-        args.limit,
-        false
-      );
+      results = limitAndShuffle(readableCallouts, args.limit, false);
     }
 
     const sortedCallouts = results.sort((a, b) =>
       a.sortOrder > b.sortOrder ? 1 : -1
     );
     return sortedCallouts;
+  }
+
+  private hasAgentAccessToCallout(
+    callout: ICallout,
+    agentInfo: AgentInfo
+  ): boolean {
+    switch (callout.visibility) {
+      case CalloutVisibility.PUBLISHED:
+        return this.authorizationService.isAccessGranted(
+          agentInfo,
+          callout.authorization,
+          AuthorizationPrivilege.READ
+        );
+      case CalloutVisibility.DRAFT:
+        return this.authorizationService.isAccessGranted(
+          agentInfo,
+          callout.authorization,
+          AuthorizationPrivilege.UPDATE
+        );
+    }
   }
 
   public async getCalloutsOnCollaboration(

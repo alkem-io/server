@@ -1,5 +1,9 @@
 import { Args, Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import {
+  AuthorizationAgentPrivilege,
+  CurrentUser,
+  Profiling,
+} from '@src/common/decorators';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
@@ -9,6 +13,7 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICallout } from '../callout/callout.interface';
 import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
+import { AgentInfo } from '@core/authentication/agent-info';
 
 @Resolver(() => ICollaboration)
 export class CollaborationResolverFields {
@@ -37,11 +42,13 @@ export class CollaborationResolverFields {
   @Profiling.api
   async callouts(
     @Parent() collaboration: Collaboration,
+    @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) args: CollaborationArgsCallouts
   ) {
     return await this.collaborationService.getCalloutsFromCollaboration(
       collaboration,
-      args
+      args,
+      agentInfo
     );
   }
 }
