@@ -215,9 +215,9 @@ monitoring:
     context_to_file:
       enabled: ${LOGGING_CONTEXT_ENABLED}:false
       # The file name to use
-      filename: ${LOGGING_CONTEXT_FILENAME}:subscriptions.log
+      filename: ${LOGGING_CONTEXT_FILENAME}:communication-events.log
       # The context to actually log
-      context: ${LOGGING_CONTEXT_ID}:subscriptions
+      context: ${LOGGING_CONTEXT_ID}:communication_events
 
   # Sentry (client) logging configuration
   sentry:
