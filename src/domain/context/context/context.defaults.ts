@@ -7,7 +7,7 @@ export const contextDefaults: any = {
       uri: './contribute',
     },
     {
-      name: 'About this ommunity',
+      name: 'About this community',
       description:
         'Click here to find out more about the background of this community and where it is going.',
       uri: './about',
