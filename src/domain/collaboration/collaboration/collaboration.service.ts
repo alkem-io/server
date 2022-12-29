@@ -192,15 +192,15 @@ export class CollaborationService {
       );
 
     // First filter the callouts the current user has READ privilege to
-    const readableCallouts = allCallouts.filter(c =>
-      this.hasAgentAccessToCallout(c, agentInfo)
+    const readableCallouts = allCallouts.filter(callout =>
+      this.hasAgentAccessToCallout(callout, agentInfo)
     );
 
     // parameter order: (a) by IDs (b) by activity (c) shuffle (d) sort order
     // (a) by IDs, results in order specified by IDs
-    if (args.ids) {
+    if (args.IDs) {
       const results: ICallout[] = [];
-      for (const calloutID of args.ids) {
+      for (const calloutID of args.IDs) {
         let callout;
         if (calloutID.length === UUID_LENGTH)
           callout = readableCallouts.find(callout => callout.id === calloutID);
@@ -211,7 +211,7 @@ export class CollaborationService {
 
         if (!callout)
           throw new EntityNotFoundException(
-            `Callout with requested ID (${calloutID}) not located within current Collaboration: : ${collaboration.id}`,
+            `Callout with requested ID (${calloutID}) not located within current Collaboration: ${collaboration.id}`,
             LogContext.COLLABORATION
           );
         results.push(callout);

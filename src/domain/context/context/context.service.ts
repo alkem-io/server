@@ -20,6 +20,7 @@ import { VisualService } from '@domain/common/visual/visual.service';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { ILocation } from '@domain/common/location/location.interface';
 import { LocationService } from '@domain/common/location';
+import { contextDefaults } from './context.defaults';
 
 @Injectable()
 export class ContextService {
@@ -47,11 +48,18 @@ export class ContextService {
       }
     }
     context.recommendations = [];
-    for (let i = 1; i <= 3; i++) {
-      const input: CreateReferenceInput = {
-        name: `recommendation${i}`,
-      };
-      const recommendation = await this.referenceService.createReference(input);
+    const defaultRecommendations: CreateReferenceInput[] =
+      contextDefaults.recommendations;
+    if (defaultRecommendations.length != 3) {
+      throw new EntityNotFoundException(
+        `Invalid default for Context recommendations found: ${contextDefaults}`,
+        LogContext.CONTEXT
+      );
+    }
+    for (const defaultRecommendation of defaultRecommendations) {
+      const recommendation = await this.referenceService.createReference(
+        defaultRecommendation
+      );
       context.recommendations.push(recommendation);
     }
     context.ecosystemModel =
