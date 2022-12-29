@@ -19,7 +19,4 @@ So that <some business value>
 
 ## Additional Context
 
-## Design
-
-Figma file:
-_Comments are highly appreciated. When commenting in Figma, please also leave a note in the comments box below this issue to notify us_
+Screen shots / UX designs / data that are relevant.
