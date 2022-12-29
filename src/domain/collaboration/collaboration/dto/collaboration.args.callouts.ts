@@ -8,7 +8,7 @@ export class CollaborationArgsCallouts {
     description: 'The IDs of the callouts to return',
     nullable: true,
   })
-  ids?: string[];
+  IDs?: string[];
 
   @Field(() => Float, {
     name: 'limit',
