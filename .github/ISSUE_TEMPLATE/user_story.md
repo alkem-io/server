@@ -4,10 +4,10 @@ about: A valuable increment of functionality, testable by the users
 title: ''
 labels: 'user story, server'
 assignees: ''
-
 ---
 
 ## Description
+
 As a <persona or stakeholder type>
 I want <some software feature>
 So that <some business value>
@@ -19,4 +19,7 @@ So that <some business value>
 
 ## Additional Context
 
+## Design
 
+Figma file:
+_Comments are highly appreciated. When commenting in Figma, please also leave a note in the comments box below this issue to notify us_
