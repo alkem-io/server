@@ -67,11 +67,10 @@ export class ChallengeResolverFields {
     return await this.challengeService.getOpportunities(challenge.id, args);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('lifecycle', () => ILifecycle, {
     nullable: true,
-    description: 'The lifeycle for the Challenge.',
+    description: 'The lifecycle for the Challenge.',
   })
   @Profiling.api
   async lifecycle(@Parent() challenge: Challenge) {
