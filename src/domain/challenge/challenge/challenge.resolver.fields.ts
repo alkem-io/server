@@ -33,13 +33,11 @@ export class ChallengeResolverFields {
     return await this.challengeService.getCommunity(challenge.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the challenge.',
   })
-  @Profiling.api
   async context(@Parent() challenge: Challenge) {
     return await this.challengeService.getContext(challenge.id);
   }
