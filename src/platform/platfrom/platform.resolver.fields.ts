@@ -1,15 +1,16 @@
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { ILibrary } from '@library/library/library.interface';
-import { LibraryService } from '@library/library/library.service';
 import { ResolveField, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IPlatform } from './platform.interface';
+import { PlatformService } from './platform.service';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
   constructor(
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
-    private libraryService: LibraryService
+    private platformService: PlatformService
   ) {}
 
   @ResolveField('authorization', () => IAuthorizationPolicy, {
@@ -25,7 +26,16 @@ export class PlatformResolverFields {
     description: 'The Innovation Library for the platform',
   })
   async library(): Promise<ILibrary> {
-    const result = await this.libraryService.getLibraryOrFail();
+    const result = await this.platformService.getLibraryOrFail();
+    return result;
+  }
+
+  @ResolveField('communication', () => ICommunication, {
+    nullable: false,
+    description: 'The Communications for the platform',
+  })
+  async communication(): Promise<ICommunication> {
+    const result = await this.platformService.getCommunicationOrFail();
     return result;
   }
 }

@@ -1,6 +1,0 @@
-mutation authorizationPolicyResetOnLibrary {
-  authorizationPolicyResetOnLibrary {
-    id
-  }
-}
-

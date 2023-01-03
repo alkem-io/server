@@ -1,0 +1,6 @@
+mutation authorizationPolicyResetOnPlatform {
+  authorizationPolicyResetOnPlatform {
+    id
+  }
+}
+

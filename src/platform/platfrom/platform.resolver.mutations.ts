@@ -35,9 +35,6 @@ export class PlatformResolverMutations {
       AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
       `reset authorization on platform: ${agentInfo.email}`
     );
-    const platform = await this.platformService.getPlatformOrFail();
-    return await this.platformAuthorizationService.applyAuthorizationPolicy(
-      platform
-    );
+    return await this.platformAuthorizationService.applyAuthorizationPolicy();
   }
 }

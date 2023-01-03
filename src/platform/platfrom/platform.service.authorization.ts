@@ -21,7 +21,11 @@ export class PlatformAuthorizationService {
     private platformRepository: Repository<Platform>
   ) {}
 
-  async applyAuthorizationPolicy(platform: IPlatform): Promise<IPlatform> {
+  async applyAuthorizationPolicy(): Promise<IPlatform> {
+    const platform = await this.platformService.getPlatformOrFail({
+      relations: ['library', 'communication'],
+    });
+
     // Ensure always applying from a clean state
     platform.authorization = this.authorizationPolicyService.reset(
       platform.authorization
@@ -33,28 +37,28 @@ export class PlatformAuthorizationService {
     platform.authorization.anonymousReadAccess = true;
 
     // Cascade down
-    const platformPropagated =
-      await this.propagateAuthorizationToChildEntities();
+    const platformPropagated = await this.propagateAuthorizationToChildEntities(
+      platform
+    );
 
     return await this.platformRepository.save(platformPropagated);
   }
 
-  private async propagateAuthorizationToChildEntities(): Promise<IPlatform> {
-    const platformPropagated = await this.platformService.getPlatformOrFail({
-      relations: ['library', 'communication'],
-    });
-    if (platformPropagated.library) {
+  private async propagateAuthorizationToChildEntities(
+    platform: IPlatform
+  ): Promise<IPlatform> {
+    if (platform.library) {
       await this.libraryAuthorizationService.applyAuthorizationPolicy(
-        platformPropagated.library
+        platform.library
       );
     }
 
-    if (platformPropagated.communication) {
+    if (platform.communication) {
       await this.communicationAuthorizationService.applyAuthorizationPolicy(
-        platformPropagated.communication,
-        platformPropagated.communication.authorization
+        platform.communication,
+        platform.authorization
       );
     }
-    return platformPropagated;
+    return platform;
   }
 }
