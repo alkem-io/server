@@ -8,7 +8,6 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { Library } from './library.entity';
 import { LibraryResolverFields } from './library.resolver.fields';
 import { LibraryResolverMutations } from './library.resolver.mutations';
-import { LibraryResolverQueries } from './library.resolver.queries';
 import { LibraryService } from './library.service';
 import { LibraryAuthorizationService } from './library.service.authorization';
 
@@ -22,12 +21,11 @@ import { LibraryAuthorizationService } from './library.service.authorization';
     TypeOrmModule.forFeature([Library]),
   ],
   providers: [
-    LibraryResolverQueries,
     LibraryResolverMutations,
     LibraryResolverFields,
     LibraryService,
     LibraryAuthorizationService,
   ],
-  exports: [LibraryService],
+  exports: [LibraryService, LibraryAuthorizationService],
 })
 export class LibraryModule {}

@@ -5,12 +5,16 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IPlatform } from './platform.interface';
 import { Platform } from './platform.entity';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
+import { PlatformService } from './platform.service';
 
 @Injectable()
 export class PlatformAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
+    private libraryAuthorizationService: LibraryAuthorizationService,
+    private platformService: PlatformService,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>
   ) {}
@@ -37,6 +41,8 @@ export class PlatformAuthorizationService {
   private async propagateAuthorizationToChildEntities(
     platform: IPlatform
   ): Promise<IPlatform> {
+    const library = await this.platformService.getLibraryOrFail();
+    await this.libraryAuthorizationService.applyAuthorizationPolicy(library);
     return platform;
   }
 }
