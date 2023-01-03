@@ -8,6 +8,14 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
 import { PlatformService } from './platform.service';
 import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -54,11 +62,41 @@ export class PlatformAuthorizationService {
     }
 
     if (platform.communication) {
+      // Extend the platform authoization policy for communication only
+      const extendedAuthPolicy = await this.appendCredentialRulesCommunication(
+        platform.authorization
+      );
       await this.communicationAuthorizationService.applyAuthorizationPolicy(
         platform.communication,
-        platform.authorization
+        extendedAuthPolicy
       );
     }
     return platform;
+  }
+
+  private async appendCredentialRulesCommunication(
+    authorization: IAuthorizationPolicy | undefined
+  ): Promise<IAuthorizationPolicy> {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        'Authorization definition not found for Platform Communication',
+        LogContext.PLATFORM
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    const communicationRules =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.READ, AuthorizationPrivilege.CONTRIBUTE],
+        [AuthorizationCredential.GLOBAL_REGISTERED]
+      );
+    newRules.push(communicationRules);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
+
+    return authorization;
   }
 }
