@@ -5,23 +5,20 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { CommunicationService } from './communication.service';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class CommunicationAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private communicationService: CommunicationService,
-    private communityPolicyService: CommunityPolicyService,
     private discussionAuthorizationService: DiscussionAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
     communication: ICommunication,
-    parentAuthorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<ICommunication> {
     communication.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -29,9 +26,12 @@ export class CommunicationAuthorizationService {
         parentAuthorization
       );
 
+    communication.authorization = this.appendPrivilegeRules(
+      communication.authorization
+    );
+
     communication.authorization = this.extendAuthorizationPolicy(
-      communication.authorization,
-      policy
+      communication.authorization
     );
 
     communication.discussions = await this.communicationService.getDiscussions(
@@ -54,19 +54,28 @@ export class CommunicationAuthorizationService {
     return await this.communicationService.save(communication);
   }
 
+  private appendPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    // Allow any contributor to this community to create discussions, and to send messages to the discussion
+    const createPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE],
+      AuthorizationPrivilege.CONTRIBUTE
+    );
+    privilegeRules.push(createPrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
+  }
+
   private extendAuthorizationPolicy(
-    authorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
+    authorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    // Allow any member of this community to create discussions, and to send messages to the discussion
-    const communityMember =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.READ, AuthorizationPrivilege.CREATE],
-        [this.communityPolicyService.getMembershipCredential(policy)]
-      );
-    newRules.push(communityMember);
 
     //
     const updatedAuthorization =

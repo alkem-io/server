@@ -7,6 +7,7 @@ import { Platform } from './platform.entity';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { LibraryAuthorizationService } from '@library/library/library.service.authorization';
 import { PlatformService } from './platform.service';
+import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -14,6 +15,7 @@ export class PlatformAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
     private libraryAuthorizationService: LibraryAuthorizationService,
+    private communicationAuthorizationService: CommunicationAuthorizationService,
     private platformService: PlatformService,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>
@@ -31,18 +33,28 @@ export class PlatformAuthorizationService {
     platform.authorization.anonymousReadAccess = true;
 
     // Cascade down
-    const platformPropagated = await this.propagateAuthorizationToChildEntities(
-      platform
-    );
+    const platformPropagated =
+      await this.propagateAuthorizationToChildEntities();
 
     return await this.platformRepository.save(platformPropagated);
   }
 
-  private async propagateAuthorizationToChildEntities(
-    platform: IPlatform
-  ): Promise<IPlatform> {
-    const library = await this.platformService.getLibraryOrFail();
-    await this.libraryAuthorizationService.applyAuthorizationPolicy(library);
-    return platform;
+  private async propagateAuthorizationToChildEntities(): Promise<IPlatform> {
+    const platformPropagated = await this.platformService.getPlatformOrFail({
+      relations: ['library', 'communication'],
+    });
+    if (platformPropagated.library) {
+      await this.libraryAuthorizationService.applyAuthorizationPolicy(
+        platformPropagated.library
+      );
+    }
+
+    if (platformPropagated.communication) {
+      await this.communicationAuthorizationService.applyAuthorizationPolicy(
+        platformPropagated.communication,
+        platformPropagated.communication.authorization
+      );
+    }
+    return platformPropagated;
   }
 }

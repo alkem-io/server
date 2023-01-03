@@ -8,13 +8,15 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { PlatformService } from './platform.service';
 import { IPlatform } from './platform.interface';
 import { PlatformAuthorizationService } from './platform.service.authorization';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 
 @Resolver()
 export class PlatformResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private platformService: PlatformService,
-    private platformAuthorizationService: PlatformAuthorizationService
+    private platformAuthorizationService: PlatformAuthorizationService,
+    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -25,13 +27,15 @@ export class PlatformResolverMutations {
   async authorizationPolicyResetOnPlatform(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IPlatform> {
-    const platform = await this.platformService.getPlatformOrFail();
+    const platformPolicy =
+      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      platform.authorization,
+      platformPolicy,
       AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
       `reset authorization on platform: ${agentInfo.email}`
     );
+    const platform = await this.platformService.getPlatformOrFail();
     return await this.platformAuthorizationService.applyAuthorizationPolicy(
       platform
     );
