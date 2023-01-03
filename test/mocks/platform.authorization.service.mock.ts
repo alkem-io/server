@@ -1,10 +1,10 @@
 import { ValueProvider } from '@nestjs/common';
 import { PublicPart } from '@test/utils';
-import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 
 export const MockPlatformAuthorizationService: ValueProvider<
-  PublicPart<PlatformAuthorizationService>
+  PublicPart<PlatformAuthorizationPolicyService>
 > = {
-  provide: PlatformAuthorizationService,
+  provide: PlatformAuthorizationPolicyService,
   useValue: {},
 };

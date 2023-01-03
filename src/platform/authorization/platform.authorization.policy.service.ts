@@ -7,7 +7,7 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 
 @Injectable()
-export class PlatformAuthorizationService {
+export class PlatformAuthorizationPolicyService {
   private readonly platformAuthorizationPolicy: IAuthorizationPolicy;
 
   constructor(private authorizationPolicyService: AuthorizationPolicyService) {
@@ -18,7 +18,7 @@ export class PlatformAuthorizationService {
     return this.platformAuthorizationPolicy;
   }
 
-  public inheritPlatformAuthorization(
+  public inheritPlatformAuthorizationPolicy(
     childAuthorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
     return this.authorizationPolicyService.inheritParentAuthorization(

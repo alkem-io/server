@@ -51,6 +51,7 @@ import { LibraryModule } from '@library/library/library.module';
 import { AspectMoveModule } from '@domain/collaboration/aspect/aspect.move.module';
 import { FileManagerModule } from '@domain/common/file-manager/file.manager.module';
 import { GeoLocationModule } from '@services/external/geo-location';
+import { PlatformModule } from '@platform/platfrom/platform.module';
 
 @Module({
   imports: [
@@ -204,6 +205,7 @@ import { GeoLocationModule } from '@services/external/geo-location';
     RedisLockModule,
     ConversionModule,
     LibraryModule,
+    PlatformModule,
     AspectMoveModule,
     FileManagerModule,
     GeoLocationModule,

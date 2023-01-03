@@ -19,7 +19,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { UserDataloaderService } from './user.dataloader.service';
-import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
+import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
@@ -35,7 +35,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     EntityResolverModule,
     RoomModule,
     MicroservicesModule,
-    PlatformAuthorizationModule,
+    PlatformAuthorizationPolicyModule,
     PreferenceModule,
     PreferenceSetModule,
     KonfigModule,

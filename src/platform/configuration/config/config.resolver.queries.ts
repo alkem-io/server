@@ -2,7 +2,7 @@ import { KonfigService } from './config.service';
 import { Query, Resolver } from '@nestjs/graphql';
 import { IConfig } from './config.interface';
 @Resolver()
-export class ConfigResolver {
+export class ConfigResolverQueries {
   constructor(private configService: KonfigService) {}
 
   @Query(() => IConfig, {

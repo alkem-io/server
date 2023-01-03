@@ -5,12 +5,12 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { Library } from './library.entity';
-import { LibraryResolverFields } from './library.resolver.fields';
-import { LibraryResolverMutations } from './library.resolver.mutations';
-import { LibraryResolverQueries } from './library.resolver.queries';
-import { LibraryService } from './library.service';
-import { LibraryAuthorizationService } from './library.service.authorization';
+import { Platform } from './platform.entity';
+import { PlatformResolverFields } from './platform.resolver.fields';
+import { PlatformResolverMutations } from './platform.resolver.mutations';
+import { PlatformResolverQueries } from './platform.resolver.queries';
+import { PlatformService } from './platform.service';
+import { PlatformAuthorizationService } from './platform.service.authorization';
 
 @Module({
   imports: [
@@ -19,15 +19,15 @@ import { LibraryAuthorizationService } from './library.service.authorization';
     AuthorizationModule,
     AuthorizationPolicyModule,
     PlatformAuthorizationPolicyModule,
-    TypeOrmModule.forFeature([Library]),
+    TypeOrmModule.forFeature([Platform]),
   ],
   providers: [
-    LibraryResolverQueries,
-    LibraryResolverMutations,
-    LibraryResolverFields,
-    LibraryService,
-    LibraryAuthorizationService,
+    PlatformResolverQueries,
+    PlatformResolverMutations,
+    PlatformResolverFields,
+    PlatformService,
+    PlatformAuthorizationService,
   ],
-  exports: [LibraryService],
+  exports: [PlatformService],
 })
-export class LibraryModule {}
+export class PlatformModule {}

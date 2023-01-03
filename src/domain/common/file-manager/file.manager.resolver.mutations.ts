@@ -5,7 +5,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { PlatformAuthorizationService } from '@platform/authorization/platform.authorization.service';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { DeleteFileInput } from './file.manager.dto.delete';
 import { FileManagerService } from './file.manager.service';
@@ -15,7 +15,7 @@ export class FileManagerResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private fileManagerService: FileManagerService,
-    private platformAuthorizationService: PlatformAuthorizationService
+    private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
   @UseGuards(GraphqlGuard)

@@ -12,7 +12,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
-import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
@@ -21,7 +21,7 @@ export class UserAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private agentService: AgentService,
     private userService: UserService
@@ -33,7 +33,7 @@ export class UserAuthorizationService {
       user.authorization
     );
     user.authorization =
-      this.platformAuthorizationService.inheritPlatformAuthorization(
+      this.platformAuthorizationService.inheritPlatformAuthorizationPolicy(
         user.authorization
       );
 
