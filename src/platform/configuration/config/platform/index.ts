@@ -1,1 +1,1 @@
-export * from './platform.config.interface';
+export * from './platform.locations.interface';

@@ -52,7 +52,7 @@ export class CommunicationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       communication.authorization,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.CREATE_DISCUSSION,
       `create discussion on communication: ${communication.id}`
     );
 

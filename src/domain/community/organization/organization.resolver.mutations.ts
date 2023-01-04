@@ -27,7 +27,7 @@ import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set
 import { UpdateOrganizationPreferenceInput } from '@domain/community/organization/dto/organization.dto.update.preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { CreateUserGroupInput } from '../user-group/dto';
-import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IOrganization } from './organization.interface';
 
 @Resolver(() => IOrganization)
@@ -39,7 +39,7 @@ export class OrganizationResolverMutations {
     private authorizationService: AuthorizationService,
     private preferenceService: PreferenceService,
     private preferenceSetService: PreferenceSetService,
-    private platformAuthorizationService: PlatformAuthorizationService
+    private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
   @UseGuards(GraphqlGuard)
