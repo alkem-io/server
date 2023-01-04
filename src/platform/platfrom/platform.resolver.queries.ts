@@ -19,6 +19,9 @@ export class PlatformResolverQueries {
     return await this.platformService.getPlatformOrFail();
   }
 
+  // Todo: there is some additional tidy up needed related to platform level authorization + how
+  // it is accessed. This query should likely go, as should some of the top level configuration
+  // queries.
   @Query(() => IAuthorizationPolicy, {
     nullable: false,
     description: 'The authorization policy for the platform',
