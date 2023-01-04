@@ -3,7 +3,6 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { ILibrary } from '@library/library/library.interface';
-import { LibraryService } from '@library/library/library.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -14,7 +13,6 @@ import { IPlatform } from './platform.interface';
 @Injectable()
 export class PlatformService {
   constructor(
-    private libraryService: LibraryService,
     private communicationService: CommunicationService,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>,
