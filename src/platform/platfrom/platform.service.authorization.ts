@@ -34,14 +34,8 @@ export class PlatformAuthorizationService {
       relations: ['library', 'communication'],
     });
 
-    // Ensure always applying from a clean state
-    platform.authorization = this.authorizationPolicyService.reset(
-      platform.authorization
-    );
     platform.authorization =
-      this.platformAuthorizationPolicyService.inheritPlatformAuthorizationPolicy(
-        platform.authorization
-      );
+      this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     platform.authorization.anonymousReadAccess = true;
 
     // Cascade down
