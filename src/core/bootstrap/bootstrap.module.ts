@@ -8,6 +8,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AdminAuthorizationModule } from '@platform/admin/authorization/admin.authorization.module';
 import { BootstrapService } from './bootstrap.service';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
+import { PlatformModule } from '@platform/platfrom/platform.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { CommunicationModule } from '@domain/communication/communication/communi
     HubModule,
     UserModule,
     AdminAuthorizationModule,
+    PlatformModule,
     CommunicationModule,
     OrganizationModule,
     TypeOrmModule.forFeature([Hub]),

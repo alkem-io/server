@@ -25,7 +25,7 @@ import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
-import { PlatformAuthorizationService } from '@platform/authorization/platform.authorization.service';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -36,7 +36,7 @@ export class ChallengeAuthorizationService {
     private opportunityAuthorizationService: OpportunityAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
-    private platformAuthorizationService: PlatformAuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private preferenceSetService: PreferenceSetService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
@@ -224,7 +224,7 @@ export class ChallengeAuthorizationService {
     authorization = this.authorizationPolicyService.reset(authorization);
     authorization.anonymousReadAccess = false;
     authorization =
-      this.platformAuthorizationService.inheritPlatformAuthorization(
+      this.platformAuthorizationService.inheritPlatformAuthorizationPolicy(
         authorization
       );
 

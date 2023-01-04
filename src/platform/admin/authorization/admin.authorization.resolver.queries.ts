@@ -9,14 +9,14 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AdminAuthorizationService } from './admin.authorization.service';
 import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.users.with.credential';
-import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 
 @Resolver()
 export class AdminAuthorizationResolverQueries {
   constructor(
     private authorizationService: AuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationService
+    private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
   @Query(() => [IUser], {

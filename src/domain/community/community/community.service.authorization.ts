@@ -58,8 +58,7 @@ export class CommunityAuthorizationService {
     );
     await this.communicationAuthorizationService.applyAuthorizationPolicy(
       community.communication,
-      community.authorization,
-      community.policy
+      community.authorization
     );
 
     // cascade

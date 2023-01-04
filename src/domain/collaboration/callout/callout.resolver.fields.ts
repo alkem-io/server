@@ -8,7 +8,7 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
-import { UUID, UUID_NAMEID } from '@domain/common/scalars';
+import { UUID_NAMEID } from '@domain/common/scalars';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 import { IUser } from '@domain/community/user/user.interface';
@@ -73,7 +73,7 @@ export class CalloutResolverFields {
     @Parent() callout: Callout,
     @Args({
       name: 'IDs',
-      type: () => [UUID],
+      type: () => [UUID_NAMEID],
       description: 'The IDs of the canvases to return',
       nullable: true,
     })

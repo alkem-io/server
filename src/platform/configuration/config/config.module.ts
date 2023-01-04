@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { KonfigService } from './config.service';
-import { ConfigResolver } from './config.resolver';
+import { ConfigResolverQueries } from './config.resolver.queries';
 
 @Module({
-  providers: [KonfigService, ConfigResolver],
+  providers: [KonfigService, ConfigResolverQueries],
   exports: [KonfigService],
 })
 export class KonfigModule {}

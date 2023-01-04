@@ -18,7 +18,7 @@ import { PreferenceSetAuthorizationService } from '@domain/common/preference-set
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
-import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
@@ -35,7 +35,7 @@ export class HubAuthorizationService {
     private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private preferenceSetService: PreferenceSetService,
-    private platformAuthorizationService: PlatformAuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private communityPolicyService: CommunityPolicyService,
     private hubService: HubService,
     @InjectRepository(Hub)
@@ -56,7 +56,7 @@ export class HubAuthorizationService {
     );
     hub.authorization.anonymousReadAccess = false;
     hub.authorization =
-      this.platformAuthorizationService.inheritPlatformAuthorization(
+      this.platformAuthorizationService.inheritPlatformAuthorizationPolicy(
         hub.authorization
       );
 

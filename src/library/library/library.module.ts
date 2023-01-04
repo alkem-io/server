@@ -3,12 +3,11 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { PlatformAuthorizationModule } from '@platform/authorization/platform.authorization.module';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { Library } from './library.entity';
 import { LibraryResolverFields } from './library.resolver.fields';
 import { LibraryResolverMutations } from './library.resolver.mutations';
-import { LibraryResolverQueries } from './library.resolver.queries';
 import { LibraryService } from './library.service';
 import { LibraryAuthorizationService } from './library.service.authorization';
 
@@ -18,16 +17,15 @@ import { LibraryAuthorizationService } from './library.service.authorization';
     NamingModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
-    PlatformAuthorizationModule,
+    PlatformAuthorizationPolicyModule,
     TypeOrmModule.forFeature([Library]),
   ],
   providers: [
-    LibraryResolverQueries,
     LibraryResolverMutations,
     LibraryResolverFields,
     LibraryService,
     LibraryAuthorizationService,
   ],
-  exports: [LibraryService],
+  exports: [LibraryService, LibraryAuthorizationService],
 })
 export class LibraryModule {}
