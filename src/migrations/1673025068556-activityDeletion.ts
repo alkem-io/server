@@ -8,7 +8,7 @@ export class activityDeletion1673025068556 implements MigrationInterface {
       `ALTER TABLE \`activity\` ADD \`messageID\` char(44) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`activity\` ADD \`hidden\` boolean DEFAULT FALSE `
+      `ALTER TABLE \`activity\` ADD \`visibility\` boolean DEFAULT TRUE `
     );
   }
 
@@ -16,6 +16,8 @@ export class activityDeletion1673025068556 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`activity\` DROP COLUMN \`messageID\``
     );
-    await queryRunner.query(`ALTER TABLE \`activity\` DROP COLUMN \`hidden\``);
+    await queryRunner.query(
+      `ALTER TABLE \`activity\` DROP COLUMN \`visibility\``
+    );
   }
 }
