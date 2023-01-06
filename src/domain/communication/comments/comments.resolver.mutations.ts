@@ -1,7 +1,6 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
-import { ClientProxy } from '@nestjs/microservices';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
@@ -14,10 +13,7 @@ import { MessageID } from '@domain/common/scalars';
 import { IMessage } from '../message/message.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import {
-  NOTIFICATIONS_SERVICE,
-  SUBSCRIPTION_ASPECT_COMMENT,
-} from '@common/constants/providers';
+import { SUBSCRIPTION_ASPECT_COMMENT } from '@common/constants/providers';
 import { CommentsAuthorizationService } from './comments.service.authorization';
 import { IComments } from './comments.interface';
 import { getRandomId } from '@src/common/utils';
@@ -40,8 +36,7 @@ export class CommentsResolverMutations {
     private namingService: NamingService,
     private commentsAuthorizationService: CommentsAuthorizationService,
     @Inject(SUBSCRIPTION_ASPECT_COMMENT)
-    private readonly subscriptionAspectComments: PubSubEngine,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
+    private readonly subscriptionAspectComments: PubSubEngine
   ) {}
 
   // todo should be removed to serve per entity e.g. send aspect comment
