@@ -18,6 +18,7 @@ import { NotificationInputUserRegistered } from './dto/notification.dto.input.us
 import { NotificationInputUserRemoved } from './dto/notification.dto.input.user.removed';
 import { NotificationInputCanvasCreated } from './dto/notification.dto.input.canvas.created';
 import { NotificationInputDiscussionComment } from './dto/notification.dto.input.discussion.comment';
+import { NotificationInputBase } from './dto/notification.dto.input.base';
 
 @Injectable()
 export class NotificationAdapter {
@@ -31,10 +32,7 @@ export class NotificationAdapter {
   public async calloutPublished(
     eventData: NotificationInputCalloutPublished
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    this.logEventTriggered(eventData);
 
     const payload =
       await this.notificationPayloadBuilder.buildCalloutPublishedPayload(
@@ -51,10 +49,7 @@ export class NotificationAdapter {
   public async aspectCreated(
     eventData: NotificationInputAspectCreated
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    this.logEventTriggered(eventData);
 
     const payload =
       await this.notificationPayloadBuilder.buildCardCreatedPayload(
@@ -70,10 +65,7 @@ export class NotificationAdapter {
   public async canvasCreated(
     eventData: NotificationInputCanvasCreated
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    this.logEventTriggered(eventData);
 
     const payload =
       await this.notificationPayloadBuilder.buildCanvasCreatedPayload(
@@ -89,10 +81,7 @@ export class NotificationAdapter {
   public async collaborationInterest(
     eventData: NotificationInputCollaborationInterest
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    this.logEventTriggered(eventData);
 
     const payload =
       await this.notificationPayloadBuilder.buildCollaborationInterestPayload(
@@ -109,10 +98,7 @@ export class NotificationAdapter {
   public async aspectComment(
     eventData: NotificationInputAspectComment
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    this.logEventTriggered(eventData);
 
     // build notification payload
     const payload =
@@ -131,10 +117,7 @@ export class NotificationAdapter {
   public async discussionComment(
     eventData: NotificationInputDiscussionComment
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    this.logEventTriggered(eventData);
 
     // build notification payload
     const payload =
@@ -153,10 +136,7 @@ export class NotificationAdapter {
   public async updateSent(
     eventData: NotificationInputUpdateSent
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    this.logEventTriggered(eventData);
 
     // Send the notifications event
     const notificationsPayload =
@@ -173,10 +153,7 @@ export class NotificationAdapter {
   public async discussionCreated(
     eventData: NotificationInputDiscussionCreated
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    this.logEventTriggered(eventData);
     // Emit the events to notify others
     const payload =
       await this.notificationPayloadBuilder.buildCommunicationDiscussionCreatedNotificationPayload(
@@ -191,10 +168,7 @@ export class NotificationAdapter {
   public async applicationCreated(
     eventData: NotificationInputCommunityApplication
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    this.logEventTriggered(eventData);
 
     const payload =
       await this.notificationPayloadBuilder.buildApplicationCreatedNotificationPayload(
@@ -212,10 +186,7 @@ export class NotificationAdapter {
   public async communityNewMember(
     eventData: NotificationInputCommunityNewMember
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    this.logEventTriggered(eventData);
 
     const payload =
       await this.notificationPayloadBuilder.buildCommunityNewMemberPayload(
@@ -232,10 +203,7 @@ export class NotificationAdapter {
   public async communityContextReview(
     eventData: NotificationInputCommunityContextReview
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    this.logEventTriggered(eventData);
 
     const payload =
       await this.notificationPayloadBuilder.buildCommunityContextReviewSubmittedNotificationPayload(
@@ -253,10 +221,7 @@ export class NotificationAdapter {
   public async userRegistered(
     eventData: NotificationInputUserRegistered
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    this.logEventTriggered(eventData);
 
     const payload =
       await this.notificationPayloadBuilder.buildUserRegisteredNotificationPayload(
@@ -273,10 +238,7 @@ export class NotificationAdapter {
   public async userRemoved(
     eventData: NotificationInputUserRemoved
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    this.logEventTriggered(eventData);
 
     const payload =
       this.notificationPayloadBuilder.buildUserRemovedNotificationPayload(
@@ -287,6 +249,14 @@ export class NotificationAdapter {
     this.notificationsClient.emit<number>(
       NotificationEventType.PLATFORM_USER_REMOVED,
       payload
+    );
+  }
+
+  private logEventTriggered(eventData: NotificationInputBase) {
+    const loggedData = JSON.stringify(eventData);
+    this.logger.verbose?.(
+      `Event received: ${loggedData}`,
+      LogContext.NOTIFICATIONS
     );
   }
 }
