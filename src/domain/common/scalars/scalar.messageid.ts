@@ -1,3 +1,4 @@
+import { MESSAGEID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { Scalar, CustomScalar } from '@nestjs/graphql';
@@ -7,6 +8,8 @@ import { Kind, ValueNode } from 'graphql';
 
 @Scalar('MessageID')
 export class MessageID implements CustomScalar<string, string> {
+  static MIN_LENGTH = MESSAGEID_LENGTH;
+  static MAX_LENGTH = MESSAGEID_LENGTH;
   description =
     'An identifier that originates from the underlying messaging platform.';
 
@@ -33,25 +36,18 @@ export class MessageID implements CustomScalar<string, string> {
       );
     }
 
-    if (value.length < 40)
+    if (!MessageID.isValidFormat(value))
       throw new ValidationException(
-        `Message type has a minimum length of 10 characters: ${value}`,
+        `MessageID value format is not valid: ${value}`,
         LogContext.API
       );
-
-    if (value.length > 50)
-      throw new ValidationException(
-        `Message type maximum length of 200: ${value}`,
-        LogContext.API
-      );
-
-    // const expression = /^did:[a-zA-Z0-9.\-_]+:[a-zA-Z0-9.\-_]+$/;
-    // if (!expression.test(value))
-    //   throw new ValidationException(
-    //     `DID is not in the expected format: ${value}`,
-    //     LogContext.API
-    //   );
 
     return value;
+  };
+
+  static isValidFormat = (value: any) => {
+    if (value.length < MessageID.MIN_LENGTH) return false;
+    if (value.length > MessageID.MAX_LENGTH) return false;
+    return true;
   };
 }
