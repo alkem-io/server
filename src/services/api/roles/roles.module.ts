@@ -14,7 +14,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
+import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { HubFilterModule } from '@services/infrastructure/hub-filter/hub.filter.module';
 
 @Module({
@@ -29,7 +29,7 @@ import { HubFilterModule } from '@services/infrastructure/hub-filter/hub.filter.
     CommunityModule,
     OrganizationModule,
     HubModule,
-    PlatformAuthorizationModule,
+    PlatformAuthorizationPolicyModule,
     HubFilterModule,
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([Opportunity]),

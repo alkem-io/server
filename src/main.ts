@@ -23,7 +23,7 @@ const bootstrap = async () => {
   app.useGlobalFilters(new HttpExceptionsFilter(logger));
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
-  await bootstrapService.bootstrapHub();
+  await bootstrapService.bootstrap();
   const corsEnabled = configService.get(ConfigurationTypes.SECURITY).cors
     .enabled;
   if (corsEnabled) {

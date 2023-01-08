@@ -18,6 +18,7 @@ import { SubscriptionType } from '@common/enums/subscription.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputDiscussionCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.created';
+import { COMMUNICATION_PLATFORM_HUBID } from '@common/constants';
 
 @Resolver()
 export class CommunicationResolverMutations {
@@ -47,7 +48,7 @@ export class CommunicationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       communication.authorization,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.CREATE_DISCUSSION,
       `create discussion on communication: ${communication.id}`
     );
 
@@ -63,12 +64,14 @@ export class CommunicationResolverMutations {
       communication.authorization
     );
 
-    // Send the notification
-    const notificationInput: NotificationInputDiscussionCreated = {
-      triggeredBy: agentInfo.userID,
-      discussion: discussion,
-    };
-    await this.notificationAdapter.discussionCreated(notificationInput);
+    if (communication.hubID !== COMMUNICATION_PLATFORM_HUBID) {
+      // Send the notification
+      const notificationInput: NotificationInputDiscussionCreated = {
+        triggeredBy: agentInfo.userID,
+        discussion: discussion,
+      };
+      await this.notificationAdapter.discussionCreated(notificationInput);
+    }
 
     // Send out the subscription event
     const eventID = `discussion-message-updated-${Math.floor(

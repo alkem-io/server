@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { Library } from './library.entity';
 import { LibraryService } from './library.service';
 import { ILibrary } from './library.interface';
@@ -12,7 +12,7 @@ import { InnovationPackAuthorizationService } from '@library/innovation-pack/inn
 export class LibraryAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private platformAuthorizationService: PlatformAuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
     private libraryService: LibraryService,
     @InjectRepository(Library)
@@ -25,7 +25,7 @@ export class LibraryAuthorizationService {
       library.authorization
     );
     library.authorization =
-      this.platformAuthorizationService.inheritPlatformAuthorization(
+      this.platformAuthorizationService.inheritPlatformAuthorizationPolicy(
         library.authorization
       );
     library.authorization.anonymousReadAccess = true;

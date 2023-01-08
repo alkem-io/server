@@ -17,6 +17,7 @@ import { Community } from './community.entity';
 import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
 import { CommunityResolverFields } from './community.resolver.fields';
 import { CommunityResolverMutations } from './community.resolver.mutations';
+import { CommunityResolverQueries } from './community.resolver.queries';
 import { CommunityService } from './community.service';
 import { CommunityAuthorizationService } from './community.service.authorization';
 
@@ -42,6 +43,7 @@ import { CommunityAuthorizationService } from './community.service.authorization
     CommunityService,
     CommunityAuthorizationService,
     CommunityResolverMutations,
+    CommunityResolverQueries,
     CommunityResolverFields,
     CommunityLifecycleOptionsProvider,
   ],

@@ -12,6 +12,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { LocationModule } from '@domain/common/location';
+import { ContextResolverQueries } from './context.resolver.queries';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { LocationModule } from '@domain/common/location';
   ],
   providers: [
     ContextResolverMutations,
+    ContextResolverQueries,
     ContextResolverFields,
     ContextService,
     ContextAuthorizationService,

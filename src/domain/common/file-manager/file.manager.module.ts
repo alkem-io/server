@@ -4,13 +4,13 @@ import { AuthorizationPolicyModule } from '../authorization-policy/authorization
 import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
 import { FileManagerService } from './file.manager.service';
 import { FileManagerResolverMutations } from './file.manager.resolver.mutations';
-import { PlatformAuthorizationModule } from '@platform/authorization/platform.authorization.module';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
-    PlatformAuthorizationModule,
+    PlatformAuthorizationPolicyModule,
     IpfsModule,
   ],
   providers: [FileManagerResolverMutations, FileManagerService],

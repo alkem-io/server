@@ -33,13 +33,11 @@ export class ChallengeResolverFields {
     return await this.challengeService.getCommunity(challenge.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('context', () => IContext, {
     nullable: true,
     description: 'The context for the challenge.',
   })
-  @Profiling.api
   async context(@Parent() challenge: Challenge) {
     return await this.challengeService.getContext(challenge.id);
   }
@@ -69,11 +67,10 @@ export class ChallengeResolverFields {
     return await this.challengeService.getOpportunities(challenge.id, args);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('lifecycle', () => ILifecycle, {
     nullable: true,
-    description: 'The lifeycle for the Challenge.',
+    description: 'The lifecycle for the Challenge.',
   })
   @Profiling.api
   async lifecycle(@Parent() challenge: Challenge) {

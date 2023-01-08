@@ -24,6 +24,7 @@ import { OrganizationAuthorizationService } from '@domain/community/organization
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@platform/admin/authorization/admin.authorization.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
+import { PlatformService } from '@platform/platfrom/platform.service';
 
 @Injectable()
 export class BootstrapService {
@@ -36,6 +37,7 @@ export class BootstrapService {
     private adminAuthorizationService: AdminAuthorizationService,
     private configService: ConfigService,
     private organizationService: OrganizationService,
+    private platformService: PlatformService,
     private communicationService: CommunicationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
     @InjectRepository(Hub)
@@ -44,9 +46,9 @@ export class BootstrapService {
     private readonly logger: LoggerService
   ) {}
 
-  async bootstrapHub() {
+  async bootstrap() {
     try {
-      this.logger.verbose?.('Bootstrapping Hub...', LogContext.BOOTSTRAP);
+      this.logger.verbose?.('Bootstrapping...', LogContext.BOOTSTRAP);
       this.logConfiguration();
 
       Profiling.logger = this.logger;
@@ -59,6 +61,7 @@ export class BootstrapService {
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
       await this.ensureCommunicationRoomsCreated();
+      await this.platformService.ensureCommunicationCreated();
     } catch (error: any) {
       throw new BootstrapException(error.message);
     }

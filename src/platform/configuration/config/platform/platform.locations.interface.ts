@@ -1,8 +1,8 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { FeatureFlag } from './platform.dto.feature.flag';
 
-@ObjectType('Platform')
-export abstract class IPlatformConfig {
+@ObjectType('PlatformLocations')
+export abstract class IPlatformLocations {
   @Field(() => String, {
     nullable: false,
     description: 'Name of the environment',
