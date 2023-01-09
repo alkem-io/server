@@ -208,8 +208,8 @@ export class CalloutResolverMutations {
       calloutData
     );
 
-    if (callout.visibility !== oldVisibility) {
-      if (callout.visibility === CalloutVisibility.PUBLISHED) {
+    if (savedCallout.visibility !== oldVisibility) {
+      if (savedCallout.visibility === CalloutVisibility.PUBLISHED) {
         // Save published info
         await this.calloutService.updateCalloutPublishInfo(
           savedCallout,
