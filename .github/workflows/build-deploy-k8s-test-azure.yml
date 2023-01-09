@@ -1,7 +1,8 @@
 name: Build, Migrate & Deploy to Test on Azure
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [pipeline-test]
 
 jobs:
   build:
