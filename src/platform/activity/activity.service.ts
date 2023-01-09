@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
@@ -8,12 +8,14 @@ import { IActivity } from './activity.interface';
 import { CreateActivityInput } from './dto/activity.dto.create';
 import { ensureMaxLength } from '@common/utils';
 import { SMALL_TEXT_LENGTH } from '@common/constants';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class ActivityService {
   constructor(
     @InjectRepository(Activity)
-    private activityRepository: Repository<Activity>
+    private activityRepository: Repository<Activity>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createActivity(activityData: CreateActivityInput): Promise<IActivity> {
@@ -47,15 +49,26 @@ export class ActivityService {
     return await this.activityRepository.save(activity as Activity);
   }
 
+  async updateActivityVisibility(
+    activity: IActivity,
+    visibility: boolean
+  ): Promise<IActivity> {
+    activity.visibility = visibility;
+    return await this.save(activity);
+  }
+
   async getActivityForCollaboration(
     collaborationID: string,
-    limit?: number
+    limit?: number,
+    visibility = true
   ): Promise<IActivity[]> {
     const entries: IActivity[] = await this.activityRepository
       .createQueryBuilder('activity')
       .where('collaborationID = :collaborationID')
+      .where('visibility = :visibility')
       .setParameters({
         collaborationID: collaborationID,
+        visibility: visibility,
       })
       .orderBy('createdDate', 'DESC')
       .getMany();
@@ -65,5 +78,26 @@ export class ActivityService {
     }
 
     return entries;
+  }
+
+  async getActivityForMessage(
+    messageID: string
+  ): Promise<IActivity | undefined> {
+    const entry: IActivity | undefined = await this.activityRepository
+      .createQueryBuilder('activity')
+      .where('messageID = :messageID')
+      .setParameters({
+        messageID: messageID,
+      })
+      .getOne();
+
+    if (!entry) {
+      this.logger.warn(
+        `Unable to find activity entry for message: ${messageID}`,
+        LogContext.ACTIVITY
+      );
+    }
+
+    return entry;
   }
 }

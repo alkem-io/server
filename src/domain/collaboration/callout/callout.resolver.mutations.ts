@@ -150,7 +150,7 @@ export class CalloutResolverMutations {
       const activityLogInput: ActivityInputCalloutDiscussionComment = {
         triggeredBy: agentInfo.userID,
         callout: callout,
-        message: data.message,
+        message: commentSent,
       };
       this.activityAdapter.calloutCommentCreated(activityLogInput);
 

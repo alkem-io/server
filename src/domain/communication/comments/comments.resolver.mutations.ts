@@ -1,7 +1,6 @@
 import { Inject, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
-import { ClientProxy } from '@nestjs/microservices';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
@@ -14,10 +13,7 @@ import { MessageID } from '@domain/common/scalars';
 import { IMessage } from '../message/message.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import {
-  NOTIFICATIONS_SERVICE,
-  SUBSCRIPTION_ASPECT_COMMENT,
-} from '@common/constants/providers';
+import { SUBSCRIPTION_ASPECT_COMMENT } from '@common/constants/providers';
 import { CommentsAuthorizationService } from './comments.service.authorization';
 import { IComments } from './comments.interface';
 import { getRandomId } from '@src/common/utils';
@@ -28,6 +24,7 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { NotificationInputAspectComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.aspect.comment';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';
 
 @Resolver()
 export class CommentsResolverMutations {
@@ -39,8 +36,7 @@ export class CommentsResolverMutations {
     private namingService: NamingService,
     private commentsAuthorizationService: CommentsAuthorizationService,
     @Inject(SUBSCRIPTION_ASPECT_COMMENT)
-    private readonly subscriptionAspectComments: PubSubEngine,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy
+    private readonly subscriptionAspectComments: PubSubEngine
   ) {}
 
   // todo should be removed to serve per entity e.g. send aspect comment
@@ -77,7 +73,7 @@ export class CommentsResolverMutations {
       const activityLogInput: ActivityInputAspectComment = {
         triggeredBy: agentInfo.userID,
         aspect: aspect,
-        message: commentSent.message,
+        message: commentSent,
       };
       this.activityAdapter.aspectComment(activityLogInput);
     }
@@ -111,11 +107,17 @@ export class CommentsResolverMutations {
       AuthorizationPrivilege.DELETE,
       `comments remove message: ${comments.displayName}`
     );
-    return await this.commentsService.removeCommentsMessage(
+    const messageID = await this.commentsService.removeCommentsMessage(
       comments,
       agentInfo.communicationID,
       messageData
     );
+    const activityMessageRemoved: ActivityInputMessageRemoved = {
+      triggeredBy: agentInfo.userID,
+      messageID: messageID,
+    };
+    await this.activityAdapter.messageRemoved(activityMessageRemoved);
+    return messageID;
   }
 
   private async processAspectCommentEvents(
