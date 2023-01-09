@@ -1,3 +1,4 @@
+import { NAMEID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { Scalar, CustomScalar } from '@nestjs/graphql';
@@ -7,7 +8,7 @@ import { Kind, ValueNode } from 'graphql';
 @Scalar('NameID')
 export class NameID implements CustomScalar<string, string> {
   static MIN_LENGTH = 3;
-  static MAX_LENGTH = 25;
+  static MAX_LENGTH = NAMEID_LENGTH;
   static REGEX = /^[a-zA-Z0-9\-]+$/;
   description =
     'A human readable identifier, 3 <= length <= 25. Used for URL paths in clients. Characters allowed: a-z,A-Z,0-9.';
