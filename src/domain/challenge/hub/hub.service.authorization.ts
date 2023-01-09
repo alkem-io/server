@@ -177,6 +177,18 @@ export class HubAuthorizationService {
       allowMembersToCreateChallengesPref
     );
 
+    //
+    const allowMembersToCreateCalloutsPref =
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
+        HubPreferenceType.ALLOW_MEMBERS_TO_CREATE_CALLOUTS
+      );
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.ALLOW_MEMBERS_TO_CREATE_CALLOUTS,
+      allowMembersToCreateCalloutsPref
+    );
+
     // Allow hub members to contribute
     this.communityPolicyService.setFlag(
       policy,

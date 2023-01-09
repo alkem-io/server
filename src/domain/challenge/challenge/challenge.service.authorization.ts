@@ -186,7 +186,7 @@ export class ChallengeAuthorizationService {
     );
 
     //
-    const allowMembersToCreateOpportunities =
+    const allowContributorsToCreateOpportunities =
       this.preferenceSetService.getPreferenceValue(
         preferenceSet,
         ChallengePreferenceType.ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES
@@ -194,9 +194,20 @@ export class ChallengeAuthorizationService {
     this.communityPolicyService.setFlag(
       policy,
       CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES,
-      allowMembersToCreateOpportunities
+      allowContributorsToCreateOpportunities
     );
 
+    //
+    const allowContributorsToCreateCallouts =
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
+        ChallengePreferenceType.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS
+      );
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS,
+      allowContributorsToCreateCallouts
+    );
     //
     const allowNonMembersReadAccess =
       this.preferenceSetService.getPreferenceValue(
@@ -318,19 +329,7 @@ export class ChallengeAuthorizationService {
         CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES
       )
     ) {
-      const criteria = [
-        this.communityPolicyService.getMembershipCredential(policy),
-      ];
-      if (
-        this.communityPolicyService.getFlag(
-          policy,
-          CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
-        )
-      ) {
-        criteria.push(
-          this.communityPolicyService.getParentMembershipCredential(policy)
-        );
-      }
+      const criteria = this.getContributorCriteria(policy);
       const createOpportunityRule =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.CREATE_OPPORTUNITY],
@@ -340,7 +339,40 @@ export class ChallengeAuthorizationService {
       rules.push(createOpportunityRule);
     }
 
+    if (
+      this.communityPolicyService.getFlag(
+        policy,
+        CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS
+      )
+    ) {
+      const criteria = this.getContributorCriteria(policy);
+      const createOpportunityRule =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.CREATE_CALLOUT],
+          criteria
+        );
+      createOpportunityRule.inheritable = false;
+      rules.push(createOpportunityRule);
+    }
+
     return rules;
+  }
+
+  private getContributorCriteria(policy: ICommunityPolicy) {
+    const criteria = [
+      this.communityPolicyService.getMembershipCredential(policy),
+    ];
+    if (
+      this.communityPolicyService.getFlag(
+        policy,
+        CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+      )
+    ) {
+      criteria.push(
+        this.communityPolicyService.getParentMembershipCredential(policy)
+      );
+    }
+    return criteria;
   }
 
   private appendVerifiedCredentialRules(
