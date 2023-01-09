@@ -339,22 +339,6 @@ export class ChallengeAuthorizationService {
       rules.push(createOpportunityRule);
     }
 
-    if (
-      this.communityPolicyService.getFlag(
-        policy,
-        CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS
-      )
-    ) {
-      const criteria = this.getContributorCriteria(policy);
-      const createOpportunityRule =
-        this.authorizationPolicyService.createCredentialRule(
-          [AuthorizationPrivilege.CREATE_CALLOUT],
-          criteria
-        );
-      createOpportunityRule.inheritable = false;
-      rules.push(createOpportunityRule);
-    }
-
     return rules;
   }
 

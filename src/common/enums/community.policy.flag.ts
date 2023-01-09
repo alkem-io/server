@@ -5,7 +5,6 @@ export enum CommunityPolicyFlag {
   MEMBERSHIP_APPLICATIONS_FROM_ANYONE = 'MembershipApplicationsFromAnyone',
   AUTHORIZATION_ANONYMOUS_READ_ACCESS = 'AuthorizationAnonymousReadAccess',
   ALLOW_MEMBERS_TO_CREATE_CHALLENGES = 'AllowMembersToCreateChallenges',
-  ALLOW_MEMBERS_TO_CREATE_CALLOUTS = 'AllowMembersToCreateCallouts',
 
   MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS = 'MembershipJoinChallengeFromHubMembers',
   MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS = 'MembershipApplyChallengeFromHubMembers',
