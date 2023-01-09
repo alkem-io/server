@@ -1,4 +1,7 @@
-import { MID_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
+import {
+  MID_TEXT_LENGTH,
+  UUID_LENGTH,
+} from '@common/constants/entity.field.length.constants';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { Field, InputType } from '@nestjs/graphql';
@@ -10,6 +13,7 @@ export class CommentsSendMessageInput extends RoomSendMessageInput {
     nullable: false,
     description: 'The Comments the message is being sent to',
   })
+  @MaxLength(UUID_LENGTH)
   commentsID!: string;
 
   @Field(() => String, {

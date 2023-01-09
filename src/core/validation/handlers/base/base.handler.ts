@@ -61,6 +61,8 @@ import { CreateCanvasTemplateOnTemplatesSetInput } from '@domain/template/templa
 import { UpdateAspectTemplateInput } from '@domain/template/aspect-template/dto/aspect.template.dto.update';
 import { UpdateCanvasTemplateInput } from '@domain/template/canvas-template/dto/canvas.template.dto.update';
 import { DeleteFileInput } from '@domain/common/file-manager/file.manager.dto.delete';
+import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
+import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -114,6 +116,8 @@ export class BaseHandler extends AbstractHandler {
       CommunityApplyInput,
       CommunicationCreateDiscussionInput,
       DeleteFileInput,
+      SendMessageOnCalloutInput,
+      CreateCalloutOnCollaborationInput,
     ];
 
     if (types.includes(metatype)) {

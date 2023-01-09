@@ -5,12 +5,15 @@ import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CreateAspectTemplateInput } from '@domain/template/aspect-template/dto/aspect.template.dto.create';
+import { LONG_TEXT_LENGTH, NAMEID_LENGTH } from '@common/constants';
+import { MaxLength } from 'class-validator';
 
 @InputType()
 export class CreateCalloutInput extends CreateNameableInput {
   @Field(() => Markdown, {
     description: 'Callout description.',
   })
+  @MaxLength(LONG_TEXT_LENGTH)
   description!: string;
 
   @Field(() => CalloutType, {
@@ -28,6 +31,7 @@ export class CreateCalloutInput extends CreateNameableInput {
     nullable: true,
     description: 'A readable identifier, unique within the containing scope.',
   })
+  @MaxLength(NAMEID_LENGTH)
   nameID!: string;
 
   @Field(() => Number, {

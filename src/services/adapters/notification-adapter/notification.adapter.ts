@@ -18,6 +18,8 @@ import { NotificationInputUserRegistered } from './dto/notification.dto.input.us
 import { NotificationInputUserRemoved } from './dto/notification.dto.input.user.removed';
 import { NotificationInputCanvasCreated } from './dto/notification.dto.input.canvas.created';
 import { NotificationInputDiscussionComment } from './dto/notification.dto.input.discussion.comment';
+import { NotificationInputBase } from './dto/notification.dto.input.base';
+import { stringifyWithoutAuthorization } from '@common/utils';
 
 @Injectable()
 export class NotificationAdapter {
@@ -31,10 +33,8 @@ export class NotificationAdapter {
   public async calloutPublished(
     eventData: NotificationInputCalloutPublished
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    const event = NotificationEventType.COLLABORATION_CALLOUT_PUBLISHED;
+    this.logEventTriggered(eventData, event);
 
     const payload =
       await this.notificationPayloadBuilder.buildCalloutPublishedPayload(
@@ -42,57 +42,42 @@ export class NotificationAdapter {
         eventData.callout
       );
 
-    this.notificationsClient.emit<number>(
-      NotificationEventType.COLLABORATION_CALLOUT_PUBLISHED,
-      payload
-    );
+    this.notificationsClient.emit<number>(event, payload);
   }
 
   public async aspectCreated(
     eventData: NotificationInputAspectCreated
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    const event = NotificationEventType.COLLABORATION_CARD_CREATED;
+    this.logEventTriggered(eventData, event);
 
     const payload =
       await this.notificationPayloadBuilder.buildCardCreatedPayload(
         eventData.aspect.id
       );
 
-    this.notificationsClient.emit<number>(
-      NotificationEventType.COLLABORATION_CARD_CREATED,
-      payload
-    );
+    this.notificationsClient.emit<number>(event, payload);
   }
 
   public async canvasCreated(
     eventData: NotificationInputCanvasCreated
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    const event = NotificationEventType.COLLABORATION_CANVAS_CREATED;
+    this.logEventTriggered(eventData, event);
 
     const payload =
       await this.notificationPayloadBuilder.buildCanvasCreatedPayload(
         eventData.canvas.id
       );
 
-    this.notificationsClient.emit<number>(
-      NotificationEventType.COLLABORATION_CANVAS_CREATED,
-      payload
-    );
+    this.notificationsClient.emit<number>(event, payload);
   }
 
   public async collaborationInterest(
     eventData: NotificationInputCollaborationInterest
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    const event = NotificationEventType.COLLABORATION_INTEREST;
+    this.logEventTriggered(eventData, event);
 
     const payload =
       await this.notificationPayloadBuilder.buildCollaborationInterestPayload(
@@ -100,20 +85,14 @@ export class NotificationAdapter {
         eventData.collaboration,
         eventData.relation
       );
-    this.notificationsClient.emit(
-      NotificationEventType.COLLABORATION_INTEREST,
-      payload
-    );
+    this.notificationsClient.emit(event, payload);
   }
 
   public async aspectComment(
     eventData: NotificationInputAspectComment
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
-
+    const event = NotificationEventType.COLLABORATION_CARD_COMMENT;
+    this.logEventTriggered(eventData, event);
     // build notification payload
     const payload =
       await this.notificationPayloadBuilder.buildCommentCreatedOnCardPayload(
@@ -122,19 +101,14 @@ export class NotificationAdapter {
         eventData.commentSent
       );
     // send notification event
-    this.notificationsClient.emit<number>(
-      NotificationEventType.COLLABORATION_CARD_COMMENT,
-      payload
-    );
+    this.notificationsClient.emit<number>(event, payload);
   }
 
   public async discussionComment(
     eventData: NotificationInputDiscussionComment
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    const event = NotificationEventType.COLLABORATION_DISCUSSION_COMMENT;
+    this.logEventTriggered(eventData, event);
 
     // build notification payload
     const payload =
@@ -144,19 +118,14 @@ export class NotificationAdapter {
         eventData.commentSent
       );
     // send notification event
-    this.notificationsClient.emit<number>(
-      NotificationEventType.COLLABORATION_DISCUSSION_COMMENT,
-      payload
-    );
+    this.notificationsClient.emit<number>(event, payload);
   }
 
   public async updateSent(
     eventData: NotificationInputUpdateSent
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    const event = NotificationEventType.COMMUNICATION_UPDATE_SENT;
+    this.logEventTriggered(eventData, event);
 
     // Send the notifications event
     const notificationsPayload =
@@ -164,37 +133,27 @@ export class NotificationAdapter {
         eventData.triggeredBy,
         eventData.updates
       );
-    this.notificationsClient.emit<number>(
-      NotificationEventType.COMMUNICATION_UPDATE_SENT,
-      notificationsPayload
-    );
+    this.notificationsClient.emit<number>(event, notificationsPayload);
   }
 
   public async discussionCreated(
     eventData: NotificationInputDiscussionCreated
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    const event = NotificationEventType.COMMUNICATION_DISCUSSION_CREATED;
+    this.logEventTriggered(eventData, event);
     // Emit the events to notify others
     const payload =
       await this.notificationPayloadBuilder.buildCommunicationDiscussionCreatedNotificationPayload(
         eventData.discussion
       );
-    this.notificationsClient.emit<number>(
-      NotificationEventType.COMMUNICATION_DISCUSSION_CREATED,
-      payload
-    );
+    this.notificationsClient.emit<number>(event, payload);
   }
 
   public async applicationCreated(
     eventData: NotificationInputCommunityApplication
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    const event = NotificationEventType.COMMUNITY_APPLICATION_CREATED;
+    this.logEventTriggered(eventData, event);
 
     const payload =
       await this.notificationPayloadBuilder.buildApplicationCreatedNotificationPayload(
@@ -203,19 +162,14 @@ export class NotificationAdapter {
         eventData.community
       );
 
-    this.notificationsClient.emit<number>(
-      NotificationEventType.COMMUNITY_APPLICATION_CREATED,
-      payload
-    );
+    this.notificationsClient.emit<number>(event, payload);
   }
 
   public async communityNewMember(
     eventData: NotificationInputCommunityNewMember
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    const event = NotificationEventType.COMMUNITY_NEW_MEMBER;
+    this.logEventTriggered(eventData, event);
 
     const payload =
       await this.notificationPayloadBuilder.buildCommunityNewMemberPayload(
@@ -223,19 +177,14 @@ export class NotificationAdapter {
         eventData.userID,
         eventData.community
       );
-    this.notificationsClient.emit(
-      NotificationEventType.COMMUNITY_NEW_MEMBER,
-      payload
-    );
+    this.notificationsClient.emit(event, payload);
   }
 
   public async communityContextReview(
     eventData: NotificationInputCommunityContextReview
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    const event = NotificationEventType.COLLABORATION_CONTEXT_REVIEW_SUBMITTED;
+    this.logEventTriggered(eventData, event);
 
     const payload =
       await this.notificationPayloadBuilder.buildCommunityContextReviewSubmittedNotificationPayload(
@@ -244,19 +193,14 @@ export class NotificationAdapter {
         eventData.community.parentID,
         eventData.questions
       );
-    this.notificationsClient.emit(
-      NotificationEventType.COLLABORATION_CONTEXT_REVIEW_SUBMITTED,
-      payload
-    );
+    this.notificationsClient.emit(event, payload);
   }
 
   public async userRegistered(
     eventData: NotificationInputUserRegistered
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    const event = NotificationEventType.PLATFORM_USER_REGISTERED;
+    this.logEventTriggered(eventData, event);
 
     const payload =
       await this.notificationPayloadBuilder.buildUserRegisteredNotificationPayload(
@@ -264,19 +208,14 @@ export class NotificationAdapter {
         eventData.userID
       );
 
-    this.notificationsClient.emit<number>(
-      NotificationEventType.PLATFORM_USER_REGISTERED,
-      payload
-    );
+    this.notificationsClient.emit<number>(event, payload);
   }
 
   public async userRemoved(
     eventData: NotificationInputUserRemoved
   ): Promise<void> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.NOTIFICATIONS
-    );
+    const event = NotificationEventType.PLATFORM_USER_REMOVED;
+    this.logEventTriggered(eventData, event);
 
     const payload =
       this.notificationPayloadBuilder.buildUserRemovedNotificationPayload(
@@ -284,9 +223,18 @@ export class NotificationAdapter {
         eventData.user
       );
 
-    this.notificationsClient.emit<number>(
-      NotificationEventType.PLATFORM_USER_REMOVED,
-      payload
+    this.notificationsClient.emit<number>(event, payload);
+  }
+
+  private logEventTriggered(
+    eventData: NotificationInputBase,
+    eventType: NotificationEventType
+  ) {
+    // Stringify without authorization information
+    const loggedData = stringifyWithoutAuthorization(eventData);
+    this.logger.verbose?.(
+      `[${eventType}] - received: ${loggedData}`,
+      LogContext.NOTIFICATIONS
     );
   }
 }

@@ -30,7 +30,7 @@ import {
   NotSupportedException,
 } from '@src/common/exceptions';
 import { CommentsService } from '@domain/communication/comments/comments.service';
-import { SendMessageOnCalloutInput } from './dto/callout.args.message.created';
+import { SendMessageOnCalloutInput } from './dto/callout.dto.message.created';
 import { CalloutType } from '@common/enums/callout.type';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputAspectCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.aspect.created';
@@ -208,8 +208,8 @@ export class CalloutResolverMutations {
       calloutData
     );
 
-    if (callout.visibility !== oldVisibility) {
-      if (callout.visibility === CalloutVisibility.PUBLISHED) {
+    if (savedCallout.visibility !== oldVisibility) {
+      if (savedCallout.visibility === CalloutVisibility.PUBLISHED) {
         // Save published info
         await this.calloutService.updateCalloutPublishInfo(
           savedCallout,

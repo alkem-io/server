@@ -13,7 +13,7 @@ import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { DiscussionAuthorizationService } from './discussion.service.authorization';
-import { MessageID } from '@domain/common/scalars/scalar.message';
+import { MessageID } from '@domain/common/scalars/scalar.messageid';
 import { IMessage } from '../message/message.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
