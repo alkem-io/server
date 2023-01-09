@@ -22,6 +22,7 @@ import { ActivityInputChallengeCreated } from './dto/activity.dto.input.challeng
 import { ActivityInputOpportunityCreated } from './dto/activity.dto.input.opportunity.created';
 import { ActivityInputUpdateSent } from './dto/activity.dto.input.update.sent';
 import { Community } from '@domain/community/community/community.entity';
+import { ActivityInputMessageRemoved } from './dto/activity.dto.input.message.removed';
 
 @Injectable()
 export class ActivityAdapter {
@@ -168,8 +169,9 @@ export class ActivityAdapter {
       collaborationID,
       resourceID: aspectID,
       parentID: calloutID,
-      description: eventData.message,
+      description: eventData.message.message,
       type: ActivityEventType.CARD_COMMENT,
+      messageID: eventData.message.id,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -219,8 +221,9 @@ export class ActivityAdapter {
       collaborationID,
       resourceID: eventData.callout.id,
       parentID: collaborationID,
-      description: eventData.message,
+      description: eventData.message.message,
       type: ActivityEventType.DISCUSSION_COMMENT,
+      messageID: eventData.message.id,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -254,6 +257,26 @@ export class ActivityAdapter {
     return true;
   }
 
+  public async messageRemoved(
+    eventData: ActivityInputMessageRemoved
+  ): Promise<boolean> {
+    this.logger.verbose?.(
+      `Event received: ${JSON.stringify(eventData)}`,
+      LogContext.ACTIVITY
+    );
+    const activity = await this.activityService.getActivityForMessage(
+      eventData.messageID
+    );
+    if (activity) {
+      // todo: log another activity entry to record the removal or not?
+      await this.activityService.updateActivityVisibility(activity, false);
+      // todo: trigger a subscription to update other clients?
+      //this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+    }
+
+    return true;
+  }
+
   public async updateSent(
     eventData: ActivityInputUpdateSent
   ): Promise<boolean> {
@@ -272,8 +295,9 @@ export class ActivityAdapter {
       collaborationID,
       resourceID: updates.id,
       parentID: communityID,
-      description: eventData.message,
+      description: eventData.message.message,
       type: ActivityEventType.UPDATE_SENT,
+      messageID: eventData.message.id,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);

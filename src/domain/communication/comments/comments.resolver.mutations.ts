@@ -24,6 +24,7 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { NotificationInputAspectComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.aspect.comment';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';
 
 @Resolver()
 export class CommentsResolverMutations {
@@ -72,7 +73,7 @@ export class CommentsResolverMutations {
       const activityLogInput: ActivityInputAspectComment = {
         triggeredBy: agentInfo.userID,
         aspect: aspect,
-        message: commentSent.message,
+        message: commentSent,
       };
       this.activityAdapter.aspectComment(activityLogInput);
     }
@@ -106,11 +107,17 @@ export class CommentsResolverMutations {
       AuthorizationPrivilege.DELETE,
       `comments remove message: ${comments.displayName}`
     );
-    return await this.commentsService.removeCommentsMessage(
+    const messageID = await this.commentsService.removeCommentsMessage(
       comments,
       agentInfo.communicationID,
       messageData
     );
+    const activityMessageRemoved: ActivityInputMessageRemoved = {
+      triggeredBy: agentInfo.userID,
+      messageID: messageID,
+    };
+    await this.activityAdapter.messageRemoved(activityMessageRemoved);
+    return messageID;
   }
 
   private async processAspectCommentEvents(
