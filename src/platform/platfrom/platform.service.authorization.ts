@@ -56,9 +56,12 @@ export class PlatformAuthorizationService {
     }
 
     if (platform.communication) {
+      const copyPlatformAuthorization: IAuthorizationPolicy = JSON.parse(
+        JSON.stringify(platform.authorization)
+      );
       // Extend the platform authoization policy for communication only
       const extendedAuthPolicy = await this.appendCredentialRulesCommunication(
-        platform.authorization
+        copyPlatformAuthorization
       );
       await this.communicationAuthorizationService.applyAuthorizationPolicy(
         platform.communication,
