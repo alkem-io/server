@@ -14,7 +14,7 @@ export abstract class IContext extends IAuthorizable {
   })
   tagline?: string;
 
-  @Field(() => String, {
+  @Field(() => Markdown, {
     nullable: true,
     description: 'A detailed description of the current situation',
   })
@@ -32,7 +32,7 @@ export abstract class IContext extends IAuthorizable {
   })
   impact?: string;
 
-  @Field(() => String, {
+  @Field(() => Markdown, {
     nullable: true,
     description: 'Who should get involved in this challenge',
   })
