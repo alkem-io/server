@@ -3,6 +3,7 @@ export enum LogContext {
   CONTEXT = 'context',
   COMMUNITY = 'community',
   COMMUNICATION = 'communication',
+  COMMUNICATION_EVENTS = 'communication_events',
   COLLABORATION = 'collaboration',
   AGENT = 'agent',
   ACTIVITY = 'activity',

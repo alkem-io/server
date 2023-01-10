@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import {
   SUBSCRIPTION_ASPECT_COMMENT,
   NOTIFICATIONS_SERVICE,
+  MATRIX_ADAPTER_SERVICE,
   SUBSCRIPTION_DISCUSSION_MESSAGE,
   SUBSCRIPTION_UPDATE_MESSAGE,
   SUBSCRIPTION_CANVAS_CONTENT,
@@ -21,6 +22,7 @@ import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common/constants';
 import { subscriptionFactoryProvider } from './subscription.factory.provider';
 import { notificationsServiceFactory } from './notifications.service.factory';
 import { walletManagerServiceFactory } from './wallet-manager.service.factory';
+import { matrixAdapterServiceFactory } from './matrix.adapter.service.factory';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -87,6 +89,11 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
+      provide: MATRIX_ADAPTER_SERVICE,
+      useFactory: matrixAdapterServiceFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
       provide: WALLET_MANAGEMENT_SERVICE,
       useFactory: walletManagerServiceFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
@@ -96,7 +103,7 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     ...subscriptionConfig.map(x => x.provide),
     NOTIFICATIONS_SERVICE,
     WALLET_MANAGEMENT_SERVICE,
-    NOTIFICATIONS_SERVICE,
+    MATRIX_ADAPTER_SERVICE,
   ],
 })
 export class MicroservicesModule {}
