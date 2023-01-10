@@ -131,22 +131,9 @@ export class CollaborationService {
         LogContext.CONTEXT
       );
 
-    if (calloutData.nameID && calloutData.nameID.length > 0) {
-      const nameAvailable =
-        await this.namingService.isCalloutNameIdAvailableInCollaboration(
-          calloutData.nameID,
-          collaboration.id
-        );
-      if (!nameAvailable)
-        throw new ValidationException(
-          `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
-          LogContext.CHALLENGES
-        );
-    } else {
-      calloutData.nameID = this.namingService.createNameID(
-        `${calloutData.displayName}`
-      );
-    }
+    const calloutNameID = this.namingService.createNameID(
+      `${calloutData.displayName}`
+    );
 
     const displayNameAvailable =
       await this.namingService.isCalloutDisplayNameAvailableInCollaboration(
@@ -164,7 +151,7 @@ export class CollaborationService {
         collaboration.id
       );
     const callout = await this.calloutService.createCallout(
-      calloutData,
+      { ...calloutData, nameID: calloutNameID },
       communicationGroupID
     );
     collaboration.callouts.push(callout);

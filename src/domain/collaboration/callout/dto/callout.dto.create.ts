@@ -6,7 +6,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CreateAspectTemplateInput } from '@domain/template/aspect-template/dto/aspect.template.dto.create';
 import { LONG_TEXT_LENGTH, NAMEID_LENGTH } from '@common/constants';
-import { IsOptional, MaxLength } from 'class-validator';
+import { MaxLength } from 'class-validator';
 
 @InputType()
 export class CreateCalloutInput extends CreateNameableInput {
@@ -31,7 +31,6 @@ export class CreateCalloutInput extends CreateNameableInput {
     nullable: true,
     description: 'A readable identifier, unique within the containing scope.',
   })
-  @IsOptional()
   @MaxLength(NAMEID_LENGTH)
   nameID!: string;
 
