@@ -131,10 +131,6 @@ export class CollaborationService {
         LogContext.CONTEXT
       );
 
-    const calloutNameID = this.namingService.createNameID(
-      `${calloutData.displayName}`
-    );
-
     const displayNameAvailable =
       await this.namingService.isCalloutDisplayNameAvailableInCollaboration(
         calloutData.displayName,
@@ -151,7 +147,7 @@ export class CollaborationService {
         collaboration.id
       );
     const callout = await this.calloutService.createCallout(
-      { ...calloutData, nameID: calloutNameID },
+      calloutData,
       communicationGroupID
     );
     collaboration.callouts.push(callout);
