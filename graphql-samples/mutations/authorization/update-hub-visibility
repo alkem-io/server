@@ -1,29 +1,15 @@
-mutation UpdateHub($hubData: UpdateHubInput!) {
-  updateHub(hubData: $hubData) {
+mutation updateHubVisibility($visibilityData: UpdateHubVisibilityInput!) {
+  updateHubVisibility(visibilityData: $visibilityData) {
     id
-    authorization {
-      anonymousReadAccess
-    }
-    community {
-      authorization {
-        anonymousReadAccess
-      }
-    }
-    context {
-      authorization {
-        anonymousReadAccess
-      }
-    }
+    visibility
   }
 }
 
 
+
 {
-  "hubData":
-		{
-      "ID": "uuid",
-      "authorizationPolicy": {
-        "anonymousReadAccess": false
-      }
-		}
+  "visibilityData": {
+    "hubID": "uuid",
+    "visibility": "ARCHIVED"
+  }
 }

@@ -5,3 +5,4 @@ export * from './random.util';
 export * from './email.util';
 export * from './string.util';
 export * from './random.id.generator.util';
+export * from './stringify.util';

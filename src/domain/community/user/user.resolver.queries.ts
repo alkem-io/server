@@ -15,14 +15,14 @@ import { PaginationArgs, PaginatedUsers } from '@core/pagination';
 import { UserService } from './user.service';
 import { IUser } from './';
 import { UserFilterInput } from '@core/filtering';
-import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
   constructor(
     private authorizationService: AuthorizationService,
-    private platformAuthorizationService: PlatformAuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private userService: UserService,
     private agentService: AgentService
   ) {}

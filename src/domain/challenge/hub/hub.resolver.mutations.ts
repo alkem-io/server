@@ -27,7 +27,7 @@ import { UpdateHubPreferenceInput } from './dto/hub.dto.update.preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { UpdateChallengePreferenceInput } from '@domain/challenge/challenge/dto/challenge.dto.update.preference';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
 import { ChallengeCreatedPayload } from './dto/hub.challenge.created.payload';
 import { SubscriptionType } from '@common/enums/subscription.type';
@@ -46,7 +46,7 @@ export class HubResolverMutations {
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private preferenceService: PreferenceService,
     private preferenceSetService: PreferenceSetService,
-    private platformAuthorizationService: PlatformAuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @Inject(SUBSCRIPTION_CHALLENGE_CREATED)
     private challengeCreatedSubscription: PubSubEngine
   ) {}

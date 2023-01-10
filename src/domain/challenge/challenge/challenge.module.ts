@@ -25,6 +25,7 @@ import { LifecycleTemplateModule } from '@domain/template/lifecycle-template/lif
 import { ChallengeResolverSubscriptions } from './challenge.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
     NamingModule,
     LifecycleModule,
     LifecycleTemplateModule,
+    PlatformAuthorizationPolicyModule,
     ProjectModule,
     UserModule,
     PreferenceModule,

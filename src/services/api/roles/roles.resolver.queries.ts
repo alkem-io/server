@@ -9,14 +9,14 @@ import { RolesOrganizationInput } from './dto/roles.dto.input.organization';
 import { RolesService } from './roles.service';
 import { RolesUserInput } from './dto/roles.dto.input.user';
 import { ContributorRoles } from './dto/roles.dto.result.contributor';
-import { PlatformAuthorizationService } from '@src/platform/authorization/platform.authorization.service';
+import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 
 @Resolver()
 export class RolesResolverQueries {
   constructor(
     private authorizationService: AuthorizationService,
     private rolesServices: RolesService,
-    private platformAuthorizationService: PlatformAuthorizationService
+    private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
   @UseGuards(GraphqlGuard)

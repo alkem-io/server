@@ -25,7 +25,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
-import { PlatformAuthorizationModule } from '@src/platform/authorization/platform.authorization.module';
+import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { HubFilterModule } from '@services/infrastructure/hub-filter/hub.filter.module';
 import { HubResolverSubscriptions } from './hub.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
@@ -44,7 +44,7 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
     BaseChallengeModule,
     LifecycleModule,
     OpportunityModule,
-    PlatformAuthorizationModule,
+    PlatformAuthorizationPolicyModule,
     ProjectModule,
     OrganizationModule,
     TagsetModule,

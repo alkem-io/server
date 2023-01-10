@@ -35,7 +35,6 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { AspectTemplateService } from '@domain/template/aspect-template/aspect.template.service';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 import { UserService } from '@domain/community/user/user.service';
-import { UUID } from '@domain/common/scalars';
 
 @Injectable()
 export class CalloutService {
@@ -66,7 +65,12 @@ export class CalloutService {
     // Note: do NOT save the callout card template that is created through ORM creation flow,
     // as otherwise get a cardTemplate created without any child entities (auth etc)
     const cardTemplateData = calloutData.cardTemplate;
-    const callout: ICallout = Callout.create(calloutData);
+
+    const calloutNameID = this.namingService.createNameID(
+      `${calloutData.displayName}`
+    );
+    const calloutCreationData = { ...calloutData, nameID: calloutNameID };
+    const callout: ICallout = Callout.create(calloutCreationData);
     if (calloutData.type == CalloutType.CARD && cardTemplateData) {
       callout.cardTemplate =
         await this.aspectTemplateService.createAspectTemplate(cardTemplateData);
@@ -367,17 +371,9 @@ export class CalloutService {
     const results: ICanvas[] = [];
     for (const canvasID of canvasIDs) {
       const canvas = calloutLoaded.canvases.find(
-        canvas => canvas.id === canvasID
+        canvas => canvas.id === canvasID || canvas.nameID === canvasID
       );
       if (!canvas) continue;
-      // toDo - in order to have this flow as 'exceptional' the client need to query only aspects in callouts the aspects
-      // are. Currently, with the latest set of changes, callouts can be a list and without specifying the correct one in the query,
-      // errors will be thrown.
-
-      // throw new EntityNotFoundException(
-      //   `Canvas with requested ID (${canvasID}) not located within current Callout: : ${callout.id}`,
-      //   LogContext.COLLABORATION
-      // );
       results.push(canvas);
     }
     return results;

@@ -11,17 +11,14 @@ import { IDiscussion } from '../discussion/discussion.interface';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
 import { DiscussionService } from '../discussion/discussion.service';
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
-import { ClientProxy } from '@nestjs/microservices';
-import {
-  NOTIFICATIONS_SERVICE,
-  SUBSCRIPTION_DISCUSSION_UPDATED,
-} from '@common/constants/providers';
+import { SUBSCRIPTION_DISCUSSION_UPDATED } from '@common/constants/providers';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { CommunicationDiscussionUpdated } from './dto/communication.dto.event.discussion.updated';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputDiscussionCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.created';
+import { COMMUNICATION_PLATFORM_HUBID } from '@common/constants';
 
 @Resolver()
 export class CommunicationResolverMutations {
@@ -31,7 +28,6 @@ export class CommunicationResolverMutations {
     private communicationService: CommunicationService,
     private discussionAuthorizationService: DiscussionAuthorizationService,
     private discussionService: DiscussionService,
-    @Inject(NOTIFICATIONS_SERVICE) private notificationsClient: ClientProxy,
     @Inject(SUBSCRIPTION_DISCUSSION_UPDATED)
     private readonly subscriptionDiscussionMessage: PubSubEngine,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -52,7 +48,7 @@ export class CommunicationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       communication.authorization,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.CREATE_DISCUSSION,
       `create discussion on communication: ${communication.id}`
     );
 
@@ -68,12 +64,14 @@ export class CommunicationResolverMutations {
       communication.authorization
     );
 
-    // Send the notification
-    const notificationInput: NotificationInputDiscussionCreated = {
-      triggeredBy: agentInfo.userID,
-      discussion: discussion,
-    };
-    await this.notificationAdapter.discussionCreated(notificationInput);
+    if (communication.hubID !== COMMUNICATION_PLATFORM_HUBID) {
+      // Send the notification
+      const notificationInput: NotificationInputDiscussionCreated = {
+        triggeredBy: agentInfo.userID,
+        discussion: discussion,
+      };
+      await this.notificationAdapter.discussionCreated(notificationInput);
+    }
 
     // Send out the subscription event
     const eventID = `discussion-message-updated-${Math.floor(
