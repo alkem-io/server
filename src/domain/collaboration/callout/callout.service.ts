@@ -73,8 +73,11 @@ export class CalloutService {
     // as otherwise get a cardTemplate created without any child entities (auth etc)
     const cardTemplateData = calloutData.cardTemplate;
     const canvasTemplateData = calloutData.canvasTemplate;
-
-    const callout: ICallout = Callout.create(calloutData);
+    const calloutNameID = this.namingService.createNameID(
+      `${calloutData.displayName}`
+    );
+    const calloutCreationData = { ...calloutData, nameID: calloutNameID };
+    const callout: ICallout = Callout.create(calloutCreationData);
     if (calloutData.type == CalloutType.CARD && cardTemplateData) {
       callout.cardTemplate =
         await this.aspectTemplateService.createAspectTemplate(cardTemplateData);

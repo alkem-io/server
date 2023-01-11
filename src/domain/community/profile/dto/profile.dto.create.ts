@@ -5,10 +5,11 @@ import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
 import { CreateReferenceInput } from '@domain/common/reference';
 import { CreateLocationInput } from '@domain/common/location/dto';
 import { Type } from 'class-transformer';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 
 @InputType()
 export class CreateProfileInput {
-  @Field({ nullable: true })
+  @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
   description?: string;
