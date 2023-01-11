@@ -1,5 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { removePreferences } from './utils/preferences';
+import {
+  removePreferences,
+  removePreferencesForLoop,
+} from './utils/preferences';
 import {
   addPreferenceDefinitionsWithDefault,
   DefinitionInsertTypeWithDefault,
@@ -69,8 +72,10 @@ export class calloutCreation1673290534613 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await removePreferences(queryRunner, [ALLOW_MEMBERS_TO_CREATE_CALLOUTS]);
-    await removePreferences(queryRunner, [
+    await removePreferencesForLoop(queryRunner, [
+      ALLOW_MEMBERS_TO_CREATE_CALLOUTS,
+    ]);
+    await removePreferencesForLoop(queryRunner, [
       ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS,
     ]);
   }
