@@ -57,6 +57,17 @@ export class singleCanvasTypeCallouts1673421162298
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    const canvasCallouts: { canvasTemplateId: string }[] =
+      await queryRunner.query(
+        `SELECT canvasTemplateId FROM callout WHERE type = 'canvas' AND canvasTemplateId IS NOT NULL`
+      );
+
+    for (const callout of canvasCallouts) {
+      await queryRunner.query(
+        `DELETE FROM canvas_template WHERE id = '${callout.canvasTemplateId}'`
+      );
+    }
+
     await queryRunner.query(
       `ALTER TABLE \`callout\`  DROP FOREIGN KEY \`FK_c506eee0b7d06523b2953d07337\``
     );
