@@ -1,15 +1,13 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { CreateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.create';
-import { NameID } from '@domain/common/scalars';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CreateAspectTemplateInput } from '@domain/template/aspect-template/dto/aspect.template.dto.create';
-import { LONG_TEXT_LENGTH, NAMEID_LENGTH } from '@common/constants';
-import { MaxLength } from 'class-validator';
+import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import { MaxLength, MinLength } from 'class-validator';
 
 @InputType()
-export class CreateCalloutInput extends CreateNameableInput {
+export class CreateCalloutInput {
   @Field(() => Markdown, {
     description: 'Callout description.',
   })
@@ -27,12 +25,10 @@ export class CreateCalloutInput extends CreateNameableInput {
   })
   state!: CalloutState;
 
-  @Field(() => NameID, {
-    nullable: true,
-    description: 'A readable identifier, unique within the containing scope.',
-  })
-  @MaxLength(NAMEID_LENGTH)
-  nameID!: string;
+  @Field({ nullable: false, description: 'The display name for the entity.' })
+  @MinLength(3)
+  @MaxLength(SMALL_TEXT_LENGTH)
+  displayName!: string;
 
   @Field(() => Number, {
     nullable: true,

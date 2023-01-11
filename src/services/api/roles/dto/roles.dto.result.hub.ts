@@ -1,5 +1,6 @@
 import { IHub } from '@domain/challenge/hub/hub.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { HubVisibility } from '@common/enums/hub.visibility';
 import { RolesResultCommunity } from './roles.dto.result.community';
 
 @ObjectType()
@@ -21,9 +22,16 @@ export class RolesResultHub extends RolesResultCommunity {
   })
   opportunities: RolesResultCommunity[] = [];
 
+  @Field(() => HubVisibility, {
+    nullable: false,
+    description: 'Visibility of the Hub.',
+  })
+  visibility!: HubVisibility;
+
   constructor(hub: IHub) {
     super(hub.nameID, hub.id, hub.displayName);
     this.hubID = hub.id;
     this.hub = hub;
+    this.visibility = hub.visibility ?? HubVisibility.ACTIVE;
   }
 }
