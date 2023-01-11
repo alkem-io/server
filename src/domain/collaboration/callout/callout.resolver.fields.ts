@@ -13,6 +13,7 @@ import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
+import { ICanvasTemplate } from '@domain/template/canvas-template/canvas.template.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -132,6 +133,18 @@ export class CalloutResolverFields {
   })
   async activity(@Parent() callout: ICallout): Promise<number> {
     return await this.calloutService.getActivityCount(callout);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('canvasTemplate', () => ICanvasTemplate, {
+    nullable: true,
+    description: 'The canvas template for this Callout.',
+  })
+  async canvasTemplate(
+    @Parent() callout: ICallout
+  ): Promise<ICanvasTemplate | undefined> {
+    return await this.calloutService.getCanvasTemplateFromCallout(callout.id);
   }
 
   @ResolveField('publishedBy', () => IUser, {

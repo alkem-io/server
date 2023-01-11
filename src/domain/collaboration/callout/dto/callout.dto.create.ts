@@ -7,6 +7,7 @@ import { CalloutState } from '@common/enums/callout.state';
 import { CreateAspectTemplateInput } from '@domain/template/aspect-template/dto/aspect.template.dto.create';
 import { LONG_TEXT_LENGTH, NAMEID_LENGTH } from '@common/constants';
 import { MaxLength } from 'class-validator';
+import { CreateCanvasTemplateInput } from '@domain/template/canvas-template/dto/canvas.template.dto.create';
 
 @InputType()
 export class CreateCalloutInput extends CreateNameableInput {
@@ -45,4 +46,10 @@ export class CreateCalloutInput extends CreateNameableInput {
     description: 'CardTemplate data for Card Callouts.',
   })
   cardTemplate?: CreateAspectTemplateInput;
+
+  @Field(() => CreateCanvasTemplateInput, {
+    nullable: true,
+    description: 'CardTemplate data for Card Callouts.',
+  })
+  canvasTemplate?: CreateCanvasTemplateInput;
 }

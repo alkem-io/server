@@ -18,19 +18,19 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 import { AspectTemplateAuthorizationService } from '@domain/template/aspect-template/aspect.template.service.authorization';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { CalloutType } from '@common/enums/callout.type';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { CanvasTemplateAuthorizationService } from '@domain/template/canvas-template/canvas.template.service.authorization';
 
 @Injectable()
 export class CalloutAuthorizationService {
   constructor(
     private calloutService: CalloutService,
-    private communityPolicyService: CommunityPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
     private aspectTemplateAuthorizationService: AspectTemplateAuthorizationService,
+    private canvasTemplateAuthorizationService: CanvasTemplateAuthorizationService,
     private commentsAuthorizationService: CommentsAuthorizationService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
@@ -91,6 +91,16 @@ export class CalloutAuthorizationService {
       callout.cardTemplate =
         await this.aspectTemplateAuthorizationService.applyAuthorizationPolicy(
           callout.cardTemplate,
+          callout.authorization
+        );
+    }
+
+    callout.canvasTemplate =
+      await this.calloutService.getCanvasTemplateFromCallout(callout.id);
+    if (callout.canvasTemplate) {
+      callout.canvasTemplate =
+        await this.canvasTemplateAuthorizationService.applyAuthorizationPolicy(
+          callout.canvasTemplate,
           callout.authorization
         );
     }
