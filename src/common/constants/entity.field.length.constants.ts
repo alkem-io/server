@@ -4,5 +4,7 @@ export const MID_TEXT_LENGTH = 512;
 export const LONG_TEXT_LENGTH = 2048;
 export const VERY_LONG_TEXT_LENGTH = 8196;
 export const UUID_LENGTH = 36;
+export const NAMEID_LENGTH = 25;
+export const MESSAGEID_LENGTH = 44;
 export const CANVAS_VALUE_LENGTH = 8388608;
 export const LIFECYCLE_DEFINITION_LENGTH = 8388608;

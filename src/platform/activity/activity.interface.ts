@@ -49,4 +49,7 @@ export abstract class IActivity extends IBaseAlkemio {
     description: 'The event type for this Activity.',
   })
   type!: string;
+
+  messageID?: string;
+  visibility!: boolean;
 }

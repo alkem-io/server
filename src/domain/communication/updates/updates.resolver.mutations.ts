@@ -22,6 +22,7 @@ import { NotificationInputUpdateSent } from '@services/adapters/notification-ada
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { ActivityInputUpdateSent } from '@services/adapters/activity-adapter/dto/activity.dto.input.update.sent';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';
 
 @Resolver()
 export class UpdatesResolverMutations {
@@ -88,7 +89,7 @@ export class UpdatesResolverMutations {
     const activityLogInput: ActivityInputUpdateSent = {
       triggeredBy: agentInfo.userID,
       updates: updates,
-      message: updateSent.message,
+      message: updateSent,
     };
     this.activityAdapter.updateSent(activityLogInput);
 
@@ -113,10 +114,16 @@ export class UpdatesResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `communication send message: ${updates.displayName}`
     );
-    return await this.updatesService.removeUpdateMessage(
+    const messageID = await this.updatesService.removeUpdateMessage(
       updates,
       agentInfo.communicationID,
       messageData
     );
+    const activityMessageRemoved: ActivityInputMessageRemoved = {
+      triggeredBy: agentInfo.userID,
+      messageID: messageID,
+    };
+    await this.activityAdapter.messageRemoved(activityMessageRemoved);
+    return messageID;
   }
 }

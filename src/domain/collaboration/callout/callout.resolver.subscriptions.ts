@@ -16,9 +16,9 @@ import {
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { UUID } from '@domain/common/scalars';
 import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
-import { CalloutMessageReceivedArgs } from './dto/callout.message.received.args';
+import { CalloutMessageReceivedArgs } from './dto/callout.args.message.received';
 import { CalloutMessageReceived } from './dto/callout.dto.event.message.received';
-import { CalloutAspectCreatedArgs } from './dto/callout.aspect.created.args';
+import { CalloutAspectCreatedArgs } from './dto/callout.args.aspect.created';
 import { CalloutAspectCreated, CalloutAspectCreatedPayload } from './dto';
 import {
   EntityNotInitializedException,

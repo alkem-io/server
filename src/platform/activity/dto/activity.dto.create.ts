@@ -7,4 +7,6 @@ export class CreateActivityInput extends ActivityInputBase {
   collaborationID!: string;
   parentID!: string;
   type!: ActivityEventType;
+  messageID?: string;
+  visibility? = true;
 }
