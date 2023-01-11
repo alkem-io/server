@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
+import { compressText } from '@common/utils/compression.util';
 
 export class singleCanvasTypeCallouts1673421162298
   implements MigrationInterface
@@ -20,21 +21,39 @@ export class singleCanvasTypeCallouts1673421162298
       `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_c506eee0b7d06523b2953d07337\` FOREIGN KEY (\`canvasTemplateId\`) REFERENCES \`canvas_template\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
-    // const canvasCallouts: { id: string }[] = await queryRunner.query(
-    //   `SELECT id FROM callout WHERE type === 'canvas`
-    // );
+    const canvasCallouts: { id: string }[] = await queryRunner.query(
+      `SELECT id FROM callout WHERE type = 'canvas'`
+    );
 
-    // for (const callout of canvasCallouts) {
-    //   const canvasTemplateId = randomUUID();
-    //   await queryRunner.query(`
-    //     INSERT INTO canvas_template (id, version, )
-    //     VALUES ('${canvasTemplateId}', 1, )
-    // `);
-    //   await queryRunner.query(`
-    //     UPDATE callout SET cardTemplateId = '${canvasTemplateId}'
-    //     WHERE callout.id = '${callout.id}'
-    // `);
-    // }
+    const compressedEmptyValue = await compressText(emptyCanvasValue);
+
+    for (const callout of canvasCallouts) {
+      const tagsetId = randomUUID();
+      await queryRunner.query(`
+        INSERT INTO tagset (id, version, tags)
+        VALUES ('${tagsetId}', 1, '')
+    `);
+
+      const templateInfoId = randomUUID();
+      await queryRunner.query(`
+        INSERT INTO template_info (id, version, title, description, tagsetId)
+        VALUES ('${templateInfoId}', 1, '', '', '${tagsetId}')
+    `);
+
+      const canvasTemplateId = randomUUID();
+      await queryRunner.query(
+        `
+        INSERT INTO canvas_template (id, version, templateInfoId, value)
+        VALUES ('${canvasTemplateId}', 1, '${templateInfoId}', ?)
+    `,
+        [compressedEmptyValue]
+      );
+
+      await queryRunner.query(`
+        UPDATE callout SET canvasTemplateId = '${canvasTemplateId}'
+        WHERE callout.id = '${callout.id}'
+    `);
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -52,3 +71,5 @@ export class singleCanvasTypeCallouts1673421162298
     );
   }
 }
+
+const emptyCanvasValue = `{\n  \"type\": \"excalidraw\",\n  \"version\": 2,\n  \"source\": \"\",\n  \"elements\": [],\n  \"appState\": {\n    \"gridSize\": 20,\n    \"viewBackgroundColor\": \"#ffffff\"\n  },\n  \"files\": {}\n}`;
