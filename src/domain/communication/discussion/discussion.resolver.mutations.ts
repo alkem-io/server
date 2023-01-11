@@ -47,7 +47,7 @@ export class DiscussionResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       discussion.authorization,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.CREATE_COMMENT,
       `discussion send message: ${discussion.title}`
     );
     const discussionMessage =
