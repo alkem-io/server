@@ -83,6 +83,17 @@ export class OpportunityAuthorizationService {
       CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE,
       challengeContributors
     );
+
+    // Propagate the callout flag from challenge community policy also
+    const challengeCalloutCreation = this.communityPolicyService.getFlag(
+      challengeCommunityPolicy,
+      CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS
+    );
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS,
+      challengeCalloutCreation
+    );
   }
 
   private appendCredentialRules(
