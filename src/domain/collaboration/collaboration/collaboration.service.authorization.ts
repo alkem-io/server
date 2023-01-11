@@ -46,7 +46,8 @@ export class CollaborationAuthorizationService {
     );
 
     collaboration.authorization = this.appendPrivilegeRules(
-      collaboration.authorization
+      collaboration.authorization,
+      communityPolicy
     );
 
     collaboration.callouts =
@@ -144,7 +145,8 @@ export class CollaborationAuthorizationService {
   }
 
   private appendPrivilegeRules(
-    authorization: IAuthorizationPolicy
+    authorization: IAuthorizationPolicy,
+    policy: ICommunityPolicy
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
@@ -156,6 +158,19 @@ export class CollaborationAuthorizationService {
       AuthorizationPrivilege.CREATE
     );
     privilegeRules.push(createPrivilege);
+
+    if (
+      this.communityPolicyService.getFlag(
+        policy,
+        CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS
+      )
+    ) {
+      const createCalloutPrivilege = new AuthorizationPolicyRulePrivilege(
+        [AuthorizationPrivilege.CREATE_CALLOUT],
+        AuthorizationPrivilege.CONTRIBUTE
+      );
+      privilegeRules.push(createCalloutPrivilege);
+    }
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,
