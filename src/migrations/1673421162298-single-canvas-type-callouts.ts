@@ -62,11 +62,13 @@ export class singleCanvasTypeCallouts1673421162298
         `SELECT canvasTemplateId FROM callout WHERE type = 'canvas' AND canvasTemplateId IS NOT NULL`
       );
 
-    for (const callout of canvasCallouts) {
-      await queryRunner.query(
-        `DELETE FROM canvas_template WHERE id = '${callout.canvasTemplateId}'`
-      );
-    }
+    const canvasTemplatesIds = canvasCallouts
+      .map(x => `'${x.canvasTemplateId}'`)
+      .join(',');
+
+    await queryRunner.query(
+      `DELETE FROM canvas_template WHERE id in (${canvasTemplatesIds})`
+    );
 
     await queryRunner.query(
       `ALTER TABLE \`callout\`  DROP FOREIGN KEY \`FK_c506eee0b7d06523b2953d07337\``
