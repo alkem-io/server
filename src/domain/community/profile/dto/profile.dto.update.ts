@@ -6,9 +6,10 @@ import { UpdateTagsetInput } from '@domain/common/tagset/tagset.dto.update';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
 import { UpdateLocationInput } from '@domain/common/location/dto/location.dto.update';
 import { Type } from 'class-transformer';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 @InputType()
 export class UpdateProfileInput extends UpdateBaseAlkemioInput {
-  @Field({ nullable: true })
+  @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(LONG_TEXT_LENGTH)
   description?: string;

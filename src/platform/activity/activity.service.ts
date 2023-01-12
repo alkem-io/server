@@ -65,7 +65,7 @@ export class ActivityService {
     const entries: IActivity[] = await this.activityRepository
       .createQueryBuilder('activity')
       .where('collaborationID = :collaborationID')
-      .where('visibility = :visibility')
+      .andWhere('visibility = :visibility')
       .setParameters({
         collaborationID: collaborationID,
         visibility: visibility,

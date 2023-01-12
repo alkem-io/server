@@ -1,6 +1,7 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ILocation } from '@domain/common/location';
 import { IReference } from '@domain/common/reference/reference.interface';
+import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
@@ -14,7 +15,7 @@ export abstract class IProfile extends IAuthorizable {
 
   location?: ILocation;
 
-  @Field(() => String, {
+  @Field(() => Markdown, {
     nullable: true,
     description:
       'A short description of the entity associated with this profile.',

@@ -8,9 +8,9 @@ mutation createDiscussion($createData: CommunicationCreateDiscussionInput!) {
 Variables:
 {
   "createData": {
-      "title": "uuid",
+      "communicationID": "uuid",
+      "title": "some title",
       "description": "text",
       "category": "GENERAL",
-      "communicationID": "uuid"
   }
 }
