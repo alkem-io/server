@@ -52,7 +52,8 @@ export class CalloutService {
 
   public async createCallout(
     calloutData: CreateCalloutInput,
-    communicationGroupID: string
+    communicationGroupID: string,
+    userID?: string
   ): Promise<ICallout> {
     if (calloutData.type == CalloutType.CARD && !calloutData.cardTemplate) {
       throw new Error('Please provide a card template');
@@ -77,6 +78,7 @@ export class CalloutService {
     }
 
     callout.authorization = new AuthorizationPolicy();
+    callout.createdBy = userID ?? undefined;
 
     const savedCallout: ICallout = await this.calloutRepository.save(callout);
     savedCallout.visibility = CalloutVisibility.DRAFT;
