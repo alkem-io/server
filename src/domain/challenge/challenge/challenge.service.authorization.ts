@@ -233,11 +233,11 @@ export class ChallengeAuthorizationService {
       );
 
     authorization = this.authorizationPolicyService.reset(authorization);
-    authorization.anonymousReadAccess = false;
     authorization =
       this.platformAuthorizationService.inheritPlatformAuthorizationPolicy(
         authorization
       );
+    authorization.anonymousReadAccess = false;
 
     const rules = this.createPrivateChallengeBaseCredentialRules(policy);
 
