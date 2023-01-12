@@ -119,7 +119,8 @@ export class CollaborationService {
   }
 
   public async createCalloutOnCollaboration(
-    calloutData: CreateCalloutOnCollaborationInput
+    calloutData: CreateCalloutOnCollaborationInput,
+    userID: string
   ): Promise<ICallout> {
     const collaborationID = calloutData.collaborationID;
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
@@ -148,7 +149,8 @@ export class CollaborationService {
       );
     const callout = await this.calloutService.createCallout(
       calloutData,
-      communicationGroupID
+      communicationGroupID,
+      userID
     );
     collaboration.callouts.push(callout);
     await this.collaborationRepository.save(collaboration);

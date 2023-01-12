@@ -133,7 +133,10 @@ export class CollaborationResolverMutations {
     );
 
     const callout =
-      await this.collaborationService.createCalloutOnCollaboration(calloutData);
+      await this.collaborationService.createCalloutOnCollaboration(
+        calloutData,
+        agentInfo.userID
+      );
 
     const communityPolicy = await this.collaborationService.getCommunityPolicy(
       collaboration.id
