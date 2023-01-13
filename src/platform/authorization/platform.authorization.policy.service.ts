@@ -9,8 +9,10 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 @Injectable()
 export class PlatformAuthorizationPolicyService {
   private readonly platformAuthorizationPolicy: IAuthorizationPolicy;
+  private readonly rootAuthorizationPolicy: IAuthorizationPolicy;
 
   constructor(private authorizationPolicyService: AuthorizationPolicyService) {
+    this.rootAuthorizationPolicy = this.createRootAuthorizationPolicy();
     this.platformAuthorizationPolicy = this.createPlatformAuthorizationPolicy();
   }
 
@@ -18,17 +20,22 @@ export class PlatformAuthorizationPolicyService {
     return this.platformAuthorizationPolicy;
   }
 
-  public inheritPlatformAuthorizationPolicy(
+  public inheritRootAuthorizationPolicy(
     childAuthorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
     return this.authorizationPolicyService.inheritParentAuthorization(
       childAuthorization,
-      this.platformAuthorizationPolicy
+      this.rootAuthorizationPolicy
     );
   }
 
   private createPlatformAuthorizationPolicy(): IAuthorizationPolicy {
-    const platformAuthorization = new AuthorizationPolicy();
+    let platformAuthorization: IAuthorizationPolicy = new AuthorizationPolicy();
+    platformAuthorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        platformAuthorization,
+        this.rootAuthorizationPolicy
+      );
 
     const credentialRules = this.createPlatformCredentialRules();
 
@@ -38,14 +45,32 @@ export class PlatformAuthorizationPolicyService {
         credentialRules
       );
 
-    const privilegeRules = this.createPrivilegeRules();
+    const privilegeRules = this.createRootPrivilegeRules();
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       platformAuthCredRules,
       privilegeRules
     );
   }
 
-  private createPlatformCredentialRules(): IAuthorizationPolicyRuleCredential[] {
+  private createRootAuthorizationPolicy(): IAuthorizationPolicy {
+    const rootAuthorization = new AuthorizationPolicy();
+
+    const credentialRules = this.createRootCredentialRules();
+
+    const platformAuthCredRules =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
+        rootAuthorization,
+        credentialRules
+      );
+
+    const privilegeRules = this.createRootPrivilegeRules();
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      platformAuthCredRules,
+      privilegeRules
+    );
+  }
+
+  private createRootCredentialRules(): IAuthorizationPolicyRuleCredential[] {
     const credentialRules: IAuthorizationPolicyRuleCredential[] = [];
     const globalAdmins =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
@@ -61,6 +86,12 @@ export class PlatformAuthorizationPolicyService {
         ]
       );
     credentialRules.push(globalAdmins);
+
+    return credentialRules;
+  }
+
+  private createPlatformCredentialRules(): IAuthorizationPolicyRuleCredential[] {
+    const credentialRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // Allow global admins to manage global privileges, access Platform mgmt
     const globalAdminNotInherited =
@@ -126,7 +157,7 @@ export class PlatformAuthorizationPolicyService {
     return credentialRules;
   }
 
-  private createPrivilegeRules(): AuthorizationPolicyRulePrivilege[] {
+  private createRootPrivilegeRules(): AuthorizationPolicyRulePrivilege[] {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
