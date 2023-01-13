@@ -29,6 +29,17 @@ export class PlatformAuthorizationPolicyService {
     );
   }
 
+  private createRootAuthorizationPolicy(): IAuthorizationPolicy {
+    const rootAuthorization = new AuthorizationPolicy();
+
+    const credentialRules = this.createRootCredentialRules();
+
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      rootAuthorization,
+      credentialRules
+    );
+  }
+
   private createPlatformAuthorizationPolicy(): IAuthorizationPolicy {
     let platformAuthorization: IAuthorizationPolicy = new AuthorizationPolicy();
     platformAuthorization =
@@ -45,25 +56,7 @@ export class PlatformAuthorizationPolicyService {
         credentialRules
       );
 
-    const privilegeRules = this.createRootPrivilegeRules();
-    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      platformAuthCredRules,
-      privilegeRules
-    );
-  }
-
-  private createRootAuthorizationPolicy(): IAuthorizationPolicy {
-    const rootAuthorization = new AuthorizationPolicy();
-
-    const credentialRules = this.createRootCredentialRules();
-
-    const platformAuthCredRules =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        rootAuthorization,
-        credentialRules
-      );
-
-    const privilegeRules = this.createRootPrivilegeRules();
+    const privilegeRules = this.createPlatformPrivilegeRules();
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       platformAuthCredRules,
       privilegeRules
@@ -157,7 +150,7 @@ export class PlatformAuthorizationPolicyService {
     return credentialRules;
   }
 
-  private createRootPrivilegeRules(): AuthorizationPolicyRulePrivilege[] {
+  private createPlatformPrivilegeRules(): AuthorizationPolicyRulePrivilege[] {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
