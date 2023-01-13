@@ -7,6 +7,7 @@ import { DiscussionService } from './discussion.service';
 import { AuthorizationCredential } from '@common/enums';
 import { RoomService } from '../room/room.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class DiscussionAuthorizationService {
@@ -36,6 +37,10 @@ export class DiscussionAuthorizationService {
       discussion.authorization
     );
 
+    discussion.authorization = this.appendPrivilegeRules(
+      discussion.authorization
+    );
+
     return await this.discussionService.save(discussion);
   }
 
@@ -51,6 +56,24 @@ export class DiscussionAuthorizationService {
       );
 
     return updatedAuthorization;
+  }
+
+  private appendPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    // Allow any contributor to this community to create discussions, and to send messages to the discussion
+    const createPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE_COMMENT],
+      AuthorizationPrivilege.CONTRIBUTE
+    );
+    privilegeRules.push(createPrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
   }
 
   async extendAuthorizationPolicyForMessageSender(

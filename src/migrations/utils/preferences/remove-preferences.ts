@@ -28,3 +28,33 @@ export const removePreferences = async (
     `DELETE FROM authorization_policy WHERE id in (${prefAuthIds})`
   );
 };
+
+export const removePreferencesForLoop = async (
+  queryRunner: QueryRunner,
+  definitionType: string[]
+) => {
+  const types = definitionType.map(x => `'${x}'`).join(',');
+  const prefDefs: { id: string }[] = await queryRunner.query(
+    `SELECT id FROM preference_definition WHERE type in (${types})`
+  );
+  for (const prefDef of prefDefs) {
+    const prefAuths: { authorizationId: string }[] = await queryRunner.query(
+      `SELECT authorizationId FROM preference WHERE preferenceDefinitionId = '${prefDef.id}'`
+    );
+
+    for (const prefAuth of prefAuths) {
+      const authId = prefAuth.authorizationId;
+
+      await queryRunner.query(
+        `DELETE FROM preference WHERE preferenceDefinitionId = '${prefDef.id}'`
+      );
+
+      await queryRunner.query(
+        `DELETE FROM authorization_policy WHERE id = '${authId}'`
+      );
+    }
+    await queryRunner.query(
+      `DELETE FROM preference_definition WHERE id = '${prefDef.id}'`
+    );
+  }
+};

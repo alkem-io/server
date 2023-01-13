@@ -70,6 +70,7 @@ export abstract class ICallout extends INameable {
 
   activity!: number;
 
+  createdBy?: string;
   publishedBy!: string;
   publishedDate!: Date;
 }

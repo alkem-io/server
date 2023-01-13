@@ -1,7 +1,7 @@
 import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
@@ -14,6 +14,7 @@ import { IAspectTemplate } from '@domain/template/aspect-template/aspect.templat
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { ICanvasTemplate } from '@domain/template/canvas-template/canvas.template.interface';
+import { EntityNotInitializedException } from '@common/exceptions';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -167,5 +168,20 @@ export class CalloutResolverFields {
     const createdDate = callout.publishedDate;
     const date = new Date(createdDate);
     return date.getTime();
+  }
+
+  @ResolveField('createdBy', () => IUser, {
+    nullable: false,
+    description: 'The user that created this Callout',
+  })
+  async createdBy(@Parent() callout: ICallout): Promise<IUser> {
+    const createdBy = callout.createdBy;
+    if (!createdBy) {
+      throw new EntityNotInitializedException(
+        'CreatedBy not set on Callout',
+        LogContext.COLLABORATION
+      );
+    }
+    return await this.userService.getUserOrFail(createdBy);
   }
 }

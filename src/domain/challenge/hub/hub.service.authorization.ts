@@ -177,6 +177,19 @@ export class HubAuthorizationService {
       allowMembersToCreateChallengesPref
     );
 
+    //
+    const allowMembersToCreateCalloutsPref =
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
+        HubPreferenceType.ALLOW_MEMBERS_TO_CREATE_CALLOUTS
+      );
+    // Set the flag that is understood by Collaboration entity
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.ALLOW_CONTRIBUTORS_TO_CREATE_CALLOUTS,
+      allowMembersToCreateCalloutsPref
+    );
+
     // Allow hub members to contribute
     this.communityPolicyService.setFlag(
       policy,
