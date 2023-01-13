@@ -23,6 +23,8 @@ import { ActivityInputOpportunityCreated } from './dto/activity.dto.input.opport
 import { ActivityInputUpdateSent } from './dto/activity.dto.input.update.sent';
 import { Community } from '@domain/community/community/community.entity';
 import { ActivityInputMessageRemoved } from './dto/activity.dto.input.message.removed';
+import { ActivityInputBase } from './dto/activity.dto.input.base';
+import { stringifyWithoutAuthorization } from '@common/utils/stringify.util';
 
 @Injectable()
 export class ActivityAdapter {
@@ -42,10 +44,8 @@ export class ActivityAdapter {
   public async challengeCreated(
     eventData: ActivityInputChallengeCreated
   ): Promise<boolean> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.ACTIVITY
-    );
+    const eventType = ActivityEventType.CHALLENGE_CREATED;
+    this.logEventTriggered(eventData, eventType);
 
     const challenge = eventData.challenge;
 
@@ -67,7 +67,7 @@ export class ActivityAdapter {
       resourceID: challenge.id,
       parentID: challenge.hubID,
       description,
-      type: ActivityEventType.CHALLENGE_CREATED,
+      type: eventType,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -78,10 +78,8 @@ export class ActivityAdapter {
   public async opportunityCreated(
     eventData: ActivityInputOpportunityCreated
   ): Promise<boolean> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.ACTIVITY
-    );
+    const eventType = ActivityEventType.OPPORTUNITY_CREATED;
+    this.logEventTriggered(eventData, eventType);
 
     const opportunity = eventData.opportunity;
 
@@ -96,7 +94,7 @@ export class ActivityAdapter {
       resourceID: opportunity.id,
       parentID: eventData.challengeId,
       description,
-      type: ActivityEventType.OPPORTUNITY_CREATED,
+      type: eventType,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -107,10 +105,9 @@ export class ActivityAdapter {
   public async calloutPublished(
     eventData: ActivityInputCalloutPublished
   ): Promise<boolean> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.ACTIVITY
-    );
+    const eventType = ActivityEventType.CALLOUT_PUBLISHED;
+    this.logEventTriggered(eventData, eventType);
+
     const callout = eventData.callout;
     const collaborationID = await this.getCollaborationIdForCallout(callout.id);
     const description = `[${callout.displayName}] - ${callout.description}`;
@@ -120,7 +117,7 @@ export class ActivityAdapter {
       resourceID: callout.id,
       parentID: collaborationID,
       description: description,
-      type: ActivityEventType.CALLOUT_PUBLISHED,
+      type: eventType,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -131,10 +128,8 @@ export class ActivityAdapter {
   public async aspectCreated(
     eventData: ActivityInputAspectCreated
   ): Promise<boolean> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.ACTIVITY
-    );
+    const eventType = ActivityEventType.CARD_CREATED;
+    this.logEventTriggered(eventData, eventType);
 
     const aspect = eventData.aspect;
     const description = `[${aspect.displayName}] - ${aspect.profile?.description}`;
@@ -145,7 +140,7 @@ export class ActivityAdapter {
       resourceID: aspect.id,
       parentID: eventData.callout.id,
       description: description,
-      type: ActivityEventType.CARD_CREATED,
+      type: eventType,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -156,10 +151,8 @@ export class ActivityAdapter {
   public async aspectComment(
     eventData: ActivityInputAspectComment
   ): Promise<boolean> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.ACTIVITY
-    );
+    const eventType = ActivityEventType.CARD_COMMENT;
+    this.logEventTriggered(eventData, eventType);
 
     const aspectID = eventData.aspect.id;
     const calloutID = await this.getCalloutIdForAspect(aspectID);
@@ -170,7 +163,7 @@ export class ActivityAdapter {
       resourceID: aspectID,
       parentID: calloutID,
       description: eventData.message.message,
-      type: ActivityEventType.CARD_COMMENT,
+      type: eventType,
       messageID: eventData.message.id,
     });
 
@@ -182,10 +175,9 @@ export class ActivityAdapter {
   public async canvasCreated(
     eventData: ActivityInputCanvasCreated
   ): Promise<boolean> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.ACTIVITY
-    );
+    const eventType = ActivityEventType.CANVAS_CREATED;
+    this.logEventTriggered(eventData, eventType);
+
     const canvas = eventData.canvas;
     const collaborationID = await this.getCollaborationIdForCanvas(canvas.id);
 
@@ -196,7 +188,7 @@ export class ActivityAdapter {
       resourceID: canvas.id,
       parentID: eventData.callout.id,
       description: description,
-      type: ActivityEventType.CANVAS_CREATED,
+      type: eventType,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -207,10 +199,8 @@ export class ActivityAdapter {
   public async calloutCommentCreated(
     eventData: ActivityInputCalloutDiscussionComment
   ): Promise<boolean> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.ACTIVITY
-    );
+    const eventType = ActivityEventType.DISCUSSION_COMMENT;
+    this.logEventTriggered(eventData, eventType);
 
     const collaborationID = await this.getCollaborationIdForCallout(
       eventData.callout.id
@@ -222,7 +212,7 @@ export class ActivityAdapter {
       resourceID: eventData.callout.id,
       parentID: collaborationID,
       description: eventData.message.message,
-      type: ActivityEventType.DISCUSSION_COMMENT,
+      type: eventType,
       messageID: eventData.message.id,
     });
 
@@ -234,10 +224,9 @@ export class ActivityAdapter {
   public async memberJoined(
     eventData: ActivityInputMemberJoined
   ): Promise<boolean> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.ACTIVITY
-    );
+    const eventType = ActivityEventType.MEMBER_JOINED;
+    this.logEventTriggered(eventData, eventType);
+
     const community = eventData.community;
     const collaborationID = await this.getCollaborationIdFromCommunity(
       community.id
@@ -249,7 +238,7 @@ export class ActivityAdapter {
       resourceID: eventData.user.id, // the user that joined
       parentID: community.id, // the community that was joined
       description: description,
-      type: ActivityEventType.MEMBER_JOINED,
+      type: eventType,
     });
 
     this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
@@ -260,10 +249,9 @@ export class ActivityAdapter {
   public async messageRemoved(
     eventData: ActivityInputMessageRemoved
   ): Promise<boolean> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.ACTIVITY
-    );
+    const eventType = ActivityEventType.CHALLENGE_CREATED;
+    this.logEventTriggered(eventData, eventType);
+
     const activity = await this.activityService.getActivityForMessage(
       eventData.messageID
     );
@@ -280,10 +268,9 @@ export class ActivityAdapter {
   public async updateSent(
     eventData: ActivityInputUpdateSent
   ): Promise<boolean> {
-    this.logger.verbose?.(
-      `Event received: ${JSON.stringify(eventData)}`,
-      LogContext.ACTIVITY
-    );
+    const eventType = ActivityEventType.UPDATE_SENT;
+    this.logEventTriggered(eventData, eventType);
+
     const updates = eventData.updates;
     const communityID = await this.getCommunityIdFromUpdates(updates.id);
     const collaborationID = await this.getCollaborationIdFromCommunity(
@@ -296,7 +283,7 @@ export class ActivityAdapter {
       resourceID: updates.id,
       parentID: communityID,
       description: eventData.message.message,
-      type: ActivityEventType.UPDATE_SENT,
+      type: eventType,
       messageID: eventData.message.id,
     });
 
@@ -456,5 +443,17 @@ export class ActivityAdapter {
       return '';
     }
     return community.id;
+  }
+
+  private logEventTriggered(
+    eventData: ActivityInputBase,
+    eventType: ActivityEventType
+  ) {
+    // Stringify without authorization information
+    const loggedData = stringifyWithoutAuthorization(eventData);
+    this.logger.verbose?.(
+      `[${eventType}] - received: ${loggedData}`,
+      LogContext.ACTIVITY
+    );
   }
 }
