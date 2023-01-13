@@ -25,6 +25,9 @@ export class Callout extends NameableEntity implements ICallout {
   @Column('text', { nullable: false })
   type!: CalloutType;
 
+  @Column('char', { length: 36, nullable: true })
+  createdBy!: string;
+
   @Column('text', { nullable: false, default: CalloutState.OPEN })
   state!: CalloutState;
 
@@ -68,7 +71,6 @@ export class Callout extends NameableEntity implements ICallout {
 
   @Column('int', { default: 10 })
   sortOrder!: number;
-
 
   activity!: number;
 

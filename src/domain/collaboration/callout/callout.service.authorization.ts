@@ -52,7 +52,7 @@ export class CalloutAuthorizationService {
       callout.type
     );
 
-    callout.authorization = this.appendCredentialRules(callout.authorization);
+    callout.authorization = this.appendCredentialRules(callout);
 
     callout.aspects = await this.calloutService.getAspectsFromCallout(callout);
     for (const aspect of callout.aspects) {
@@ -98,15 +98,33 @@ export class CalloutAuthorizationService {
     return await this.calloutRepository.save(callout);
   }
 
-  private appendCredentialRules(
-    authorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
+  private appendCredentialRules(callout: ICallout): IAuthorizationPolicy {
+    const authorization = callout.authorization;
     if (!authorization)
       throw new EntityNotInitializedException(
         'Authorization definition not found for Callout',
         LogContext.COLLABORATION
       );
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    if (callout.createdBy) {
+      const manageCreatedCalloutPolicy =
+        this.authorizationPolicyService.createCredentialRule(
+          [
+            AuthorizationPrivilege.CREATE,
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.DELETE,
+          ],
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: callout.createdBy,
+            },
+          ]
+        );
+      newRules.push(manageCreatedCalloutPolicy);
+    }
 
     const calloutPublishUpdate =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
