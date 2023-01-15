@@ -33,7 +33,7 @@ export class UserAuthorizationService {
       user.authorization
     );
     user.authorization =
-      this.platformAuthorizationService.inheritPlatformAuthorizationPolicy(
+      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         user.authorization
       );
 

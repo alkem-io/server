@@ -2,33 +2,35 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { Library } from './library.entity';
 import { LibraryService } from './library.service';
 import { ILibrary } from './library.interface';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()
 export class LibraryAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
     private libraryService: LibraryService,
     @InjectRepository(Library)
     private libraryRepository: Repository<Library>
   ) {}
 
-  async applyAuthorizationPolicy(library: ILibrary): Promise<ILibrary> {
+  async applyAuthorizationPolicy(
+    library: ILibrary,
+    parentAuthorization: IAuthorizationPolicy | undefined
+  ): Promise<ILibrary> {
     // Ensure always applying from a clean state
     library.authorization = this.authorizationPolicyService.reset(
       library.authorization
     );
     library.authorization =
-      this.platformAuthorizationService.inheritPlatformAuthorizationPolicy(
-        library.authorization
+      this.authorizationPolicyService.inheritParentAuthorization(
+        library.authorization,
+        parentAuthorization
       );
-    library.authorization.anonymousReadAccess = true;
 
     // Cascade down
     const libraryPropagated = await this.propagateAuthorizationToChildEntities(
