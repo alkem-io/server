@@ -37,7 +37,7 @@ export class OrganizationAuthorizationService {
       organization.authorization
     );
     organization.authorization =
-      this.platformAuthorizationService.inheritPlatformAuthorizationPolicy(
+      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         organization.authorization
       );
     organization.authorization = this.appendCredentialRules(
