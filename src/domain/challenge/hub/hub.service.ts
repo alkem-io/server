@@ -62,6 +62,7 @@ import { HubVisibility } from '@common/enums/hub.visibility';
 import { HubFilterService } from '@services/infrastructure/hub-filter/hub.filter.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 
 @Injectable()
 export class HubService {
@@ -399,6 +400,22 @@ export class HubService {
     }
 
     return templatesSet;
+  }
+
+  async getTimelineOrFail(hubId: string): Promise<ITimeline> {
+    const hubWithTimeline = await this.getHubOrFail(hubId, {
+      relations: ['timeline'],
+    });
+    const timeline = hubWithTimeline.timeline;
+
+    if (!timeline) {
+      throw new EntityNotFoundException(
+        `Unable to find timeline for hub with nameID: ${hubWithTimeline.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return timeline;
   }
 
   async getPreferenceSetOrFail(hubId: string): Promise<IPreferenceSet> {

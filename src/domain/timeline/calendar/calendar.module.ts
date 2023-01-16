@@ -1,0 +1,29 @@
+import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { CalendarEventModule } from '../event/event.module';
+import { Calendar } from './calendar.entity';
+import { CalendarResolverFields } from './calendar.resolver.fields';
+import { CalendarResolverMutations } from './calendar.resolver.mutations';
+import { CalendarService } from './calendar.service';
+import { CalendarAuthorizationService } from './calendar.service.authorization';
+
+@Module({
+  imports: [
+    CalendarEventModule,
+    NamingModule,
+    AuthorizationModule,
+    AuthorizationPolicyModule,
+    TypeOrmModule.forFeature([Calendar]),
+  ],
+  providers: [
+    CalendarResolverMutations,
+    CalendarResolverFields,
+    CalendarService,
+    CalendarAuthorizationService,
+  ],
+  exports: [CalendarService, CalendarAuthorizationService],
+})
+export class CalendarModule {}
