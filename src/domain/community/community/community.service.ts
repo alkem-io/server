@@ -235,16 +235,20 @@ export class CommunityService {
 
   async getUsersWithRole(
     community: ICommunity,
-    role: CommunityRole
+    role: CommunityRole,
+    limit?: number
   ): Promise<IUser[]> {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
       role
     );
-    return await this.userService.usersWithCredentials({
-      type: membershipCredential.type,
-      resourceID: membershipCredential.resourceID,
-    });
+    return await this.userService.usersWithCredentials(
+      {
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      },
+      limit
+    );
   }
 
   async getOrganizationsWithRole(
