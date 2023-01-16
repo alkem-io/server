@@ -106,12 +106,241 @@ export class schemaReview1673621525114 implements MigrationInterface {
       // await queryRunner.query(
       //   'ALTER TABLE `user` DROP FOREIGN KEY `FK_09f909622aa177a097256b7cc22`'
       // );
-      await queryRunner.query(
-        'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_178fa41e46fd331f3501a62f6bf`'
-      );
+      // await queryRunner.query(
+      //   'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_178fa41e46fd331f3501a62f6bf`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `hub` DROP FOREIGN KEY `FK_17a161eef37c9f07186532ab758`'
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`innovation_pack\` DROP FOREIGN KEY \`FK_22222901817dd09d5906537e088\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`card_profile\` DROP FOREIGN KEY \`FK_22223901817dd09d5906537e088\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`collaboration\` DROP FOREIGN KEY \`FK_262ecf3f5d70b82a48336184251\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`library\` DROP FOREIGN KEY \`FK_33333901817dd09d5906537e088\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`canvas_checkout\` DROP FOREIGN KEY \`FK_353b042af56f01ce222f08abf49\``
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `organization_verification` DROP FOREIGN KEY `FK_3795f9dd15ef3ef2dd1d27e309c`'
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`visual\` DROP FOREIGN KEY \`FK_439d0b187986492b58178a82c3f\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`platform\` DROP FOREIGN KEY \`FK_44333901817dd09d5906537e088\``
+      // );
+
+      //dropping this key was missing in the original down migration
+      // await queryRunner.query(
+      //   `ALTER TABLE \`aspect_template\` DROP FOREIGN KEY \`FK_44446901817dd09d5906537e088\``
+      // );
+      //dropping this key was missing in the original down migration
+      // await queryRunner.query(
+      //   `ALTER TABLE \`canvas_template\` DROP FOREIGN KEY \`FK_45556901817dd09d5906537e088\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`discussion\` DROP FOREIGN KEY \`FK_4555dccdda9ba57d8e3a634cd0d\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`preference\` DROP FOREIGN KEY \`FK_49030bc57aa0f319cee7996fca1\``
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `relation` DROP FOREIGN KEY `FK_53fccd56207915b969b91834e04`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `context` DROP FOREIGN KEY `FK_5f0dbc3b097ef297bd5f4ddb1a9`'
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`callout\` DROP FOREIGN KEY \`FK_6289dee12effb51320051c6f1fc\``
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `ecosystem_model` DROP FOREIGN KEY `FK_658580aea4e1a892227e27db902`'
+      // );
+      //dropping this key was missing in the original down migration
+      // await queryRunner.query(
+      //   'ALTER TABLE `templates_set` DROP FOREIGN KEY `FK_66666901817dd09d5906537e088`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `community` DROP FOREIGN KEY `FK_6e7584bfb417bd0f8e8696ab585`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `reference` DROP FOREIGN KEY `FK_73e8ae665a49366ca7e2866a45d`'
+      // );
+      //dropping this key was missing in the original down migration
+      // await queryRunner.query(
+      //   'ALTER TABLE `lifecycle_template` DROP FOREIGN KEY `FK_76546901817dd09d5906537e088`'
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`updates\` DROP FOREIGN KEY \`FK_77775901817dd09d5906537e087\``
+      // );
+      //dropping this key was missing in the original down migration
+      // await queryRunner.query(
+      //   `ALTER TABLE \`preference_set\` DROP FOREIGN KEY \`FK_88885901817dd09d5906537e088\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`communication\` DROP FOREIGN KEY \`FK_a20c5901817dd09d5906537e087\``
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_a344b754f33792cbbc58e41e898`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `profile` DROP FOREIGN KEY `FK_a96475631aba7dce41db03cc8b2`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `organization` DROP FOREIGN KEY `FK_badc07674ce4e44801e5a5f36ce`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `user_group` DROP FOREIGN KEY `FK_e8e32f1e59c349b406a4752e545`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `tagset` DROP FOREIGN KEY `FK_eb59b98ee6ef26c993d0d75c83c`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `project` DROP FOREIGN KEY `FK_fac8673f44e6b295e30d1c1739a`'
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`canvas\` DROP FOREIGN KEY \`FK_fcabc1f3aa38aca70df4f66e938\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`callout\` DROP FOREIGN KEY \`FK_9b1c5ee044611ac78249194ec35\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`callout\`  DROP FOREIGN KEY \`FK_c506eee0b7d06523b2953d07337\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`card_profile\` DROP FOREIGN KEY \`FK_44443901817dd09d5906537e088\``
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_0e2c355dbb2950851dbc17a4490`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_7d2b222d54b900071b0959f03ef`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_1deebaabfc620e881858333b0d0`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_aa9668dd2340c2d794b414577b6`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_3c535130cde781b69259eec7d85`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_6b1bcaf365212806d8cc1f87b54`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_494b27cb13b59128fb24b365ca6`'
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`challenge\` DROP FOREIGN KEY \`FK_d4551f18fed106ae2e20c70f7cb\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`hub\` DROP FOREIGN KEY \`FK_6325f4ef25c4e07e723a96ed37c\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`relation\` DROP FOREIGN KEY \`FK_701a6f8e3e1da76354571767c3f\``
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_1c7744df92f39ab567084fd8c09`'
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`opportunity\` DROP FOREIGN KEY \`FK_fa617e79d6b2926edc7b4a3878f\``
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `user_group` DROP FOREIGN KEY `FK_9fcc131f256e969d773327f07cb`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `hub` DROP FOREIGN KEY `FK_f5ad15bcb06a95c2a109fbcce2a`'
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`community\` DROP FOREIGN KEY \`FK_35533901817dd09d5906537e088\``
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `reference` DROP FOREIGN KEY `FK_07dbf4b02a078a59c216691f5eb`'
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`reference\` DROP FOREIGN KEY \`FK_299938434c7198a323ea6f475fb\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`visual\` DROP FOREIGN KEY \`FK_63de1450cf75dc486700ca034c6\``
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `hub` DROP FOREIGN KEY `FK_6db8627abbf00b1b986e359054f`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_9c169eb500e2d3823154c7b603d`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `context` DROP FOREIGN KEY `FK_a03169c3f86480ba3863924f4d7`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `hub` DROP FOREIGN KEY `FK_ec1a68698d32f610a5fc1880c7f`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `hub` DROP FOREIGN KEY `FK_3a69b0a6c67ead7617634009903`'
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`innovation_pack\` DROP FOREIGN KEY \`FK_77777450cf75dc486700ca034c6\``
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`innovation_pack\` DROP FOREIGN KEY \`FK_55555901817dd09d5906537e088\``
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `organization_verification` DROP FOREIGN KEY `FK_22be0d440df7972d9b3a94aa6d5`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_6860f1e3ae5509245bdb5c401f3`'
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`canvas_checkout\` DROP FOREIGN KEY \`FK_bd3c7c6c2dbc2a8daf4b1500a69\``
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `project` DROP FOREIGN KEY `FK_f425931bb61a95ef6f6d89c9a85`'
+      // )
+      // await queryRunner.query(
+      //   'ALTER TABLE `project` DROP FOREIGN KEY `FK_35e34564793a27bb3c209a15245`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_7d23d17ce61f11c92ff1ea0ed1a`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `user_group` DROP FOREIGN KEY `FK_2b8381df8c3a1680f50e4bc2351`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `organization` DROP FOREIGN KEY `FK_037ba4b170844c039e74aa22ecd`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `reference` DROP FOREIGN KEY `FK_2f46c698fc4c19a8cc233c5f255`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `tagset` DROP FOREIGN KEY `FK_81fc213b2d9ad0cddeab1a9ce64`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `user` DROP FOREIGN KEY `FK_9466682df91534dd95e4dbaa616`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `user_group` DROP FOREIGN KEY `FK_9912e4cfc1e09848a392a651514`'
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `project` DROP FOREIGN KEY `FK_d07535c59062f86e887de8f0a57`'
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`reference\` DROP FOREIGN KEY \`FK_282838434c7198a323ea6f475fb\``
+      // );
+      //dropping this key was missing in the original down migration
+      // await queryRunner.query(
+      //   `ALTER TABLE \`template_info\` DROP FOREIGN KEY \`FK_77777901817dd09d5906537e088\``
+      // );
       //THEN UPDATE GUID FIELD TYPE
       await queryRunner.query(
-        `ALTER TABLE \`activity\` CHANGE COLUMN \`id\` \`id\` CHAR(36) NOT NULL;`
+        `ALTER TABLE \`templates_set\` CHANGE COLUMN \`id\` \`id\` CHAR(36) NOT NULL;`
       );
       await queryRunner.query(
         `ALTER TABLE \`activity\` CHANGE COLUMN \`parentID\` \`parentID\` CHAR(36) NULL;`
@@ -539,42 +768,48 @@ export class schemaReview1673621525114 implements MigrationInterface {
 
 
       //RE-ADD CONSTRAINTS
-      await queryRunner.query(
-        'ALTER TABLE `actor` ADD CONSTRAINT `FK_a2afa3851ea733de932251b3a1f` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_definition`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
-      );
-      await queryRunner.query(
-        `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_22a2ec1b5bca6c54678ffb19eb0\` FOREIGN KEY (\`cardTemplateId\`) REFERENCES \`aspect_template\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-      );
-      await queryRunner.query(
-        `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_66666450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
-      );
-      await queryRunner.query(
-        `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_66667901817dd09d5906537e088\` FOREIGN KEY (\`templateInfoId\`) REFERENCES \`template_info\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-      );
-      await queryRunner.query(
-        `ALTER TABLE \`canvas\` ADD CONSTRAINT \`FK_1dc9521a013c92854e92e099335\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-      );
-      await queryRunner.query(
-        `ALTER TABLE \`canvas\` ADD CONSTRAINT \`FK_08d1ccc94b008dbda894a3cfa20\` FOREIGN KEY (\`checkoutId\`) REFERENCES \`canvas_checkout\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-      );
-      await queryRunner.query(
-        'ALTER TABLE `callout` ADD CONSTRAINT `FK_62ed316cda7b75735b20307b47e` FOREIGN KEY (`commentsId`) REFERENCES `comments`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION;'
-      );
-      await queryRunner.query(
-        `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_c4fb636888fc391cf1d7406e891\` FOREIGN KEY (\`commentsId\`) REFERENCES \`comments\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-      );
-      await queryRunner.query(
-        `ALTER TABLE \`comments\` ADD CONSTRAINT \`FK_77775901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-      );
-      await queryRunner.query(
-        `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_7fbe50fa78a37776ad962cb7643\` FOREIGN KEY (\`communicationId\`) REFERENCES \`communication\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-      );
+      // await queryRunner.query(
+      //   'ALTER TABLE `actor` ADD CONSTRAINT `FK_a2afa3851ea733de932251b3a1f` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_policy`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_22a2ec1b5bca6c54678ffb19eb0\` FOREIGN KEY (\`cardTemplateId\`) REFERENCES \`aspect_template\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_66666450cf75dc486700ca034c6\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`aspect_template\` ADD CONSTRAINT \`FK_66667901817dd09d5906537e088\` FOREIGN KEY (\`templateInfoId\`) REFERENCES \`template_info\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`canvas\` ADD CONSTRAINT \`FK_1dc9521a013c92854e92e099335\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`canvas\` ADD CONSTRAINT \`FK_08d1ccc94b008dbda894a3cfa20\` FOREIGN KEY (\`checkoutId\`) REFERENCES \`canvas_checkout\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `callout` ADD CONSTRAINT `FK_62ed316cda7b75735b20307b47e` FOREIGN KEY (`commentsId`) REFERENCES `comments`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION;'
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_c4fb636888fc391cf1d7406e891\` FOREIGN KEY (\`commentsId\`) REFERENCES \`comments\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`comments\` ADD CONSTRAINT \`FK_77775901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_7fbe50fa78a37776ad962cb7643\` FOREIGN KEY (\`communicationId\`) REFERENCES \`communication\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      // );      // await queryRunner.query(
+      //   `ALTER TABLE \`comments\` ADD CONSTRAINT \`FK_77775901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      // );
+      // await queryRunner.query(
+      //   `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_7fbe50fa78a37776ad962cb7643\` FOREIGN KEY (\`communicationId\`) REFERENCES \`communication\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      // );
+      // await queryRunner.query(
+      //   'ALTER TABLE `actor` ADD CONSTRAINT `FK_0f9d41ee193d631a5439bb4f404` FOREIGN KEY (`actorGroupId`) REFERENCES `actor_group`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+      // );
       await queryRunner.query(
         'ALTER TABLE `community` ADD CONSTRAINT `FK_8e8283bdacc9e770918fe689333` FOREIGN KEY (`parentCommunityId`) REFERENCES `community`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
       );
-      await queryRunner.query(
-        'ALTER TABLE `actor` ADD CONSTRAINT `FK_0f9d41ee193d631a5439bb4f404` FOREIGN KEY (`actorGroupId`) REFERENCES `actor_group`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
-      );
+
 
       // CHANGE COLUMN column types
       await queryRunner.query(
