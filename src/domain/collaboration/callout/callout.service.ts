@@ -63,7 +63,7 @@ export class CalloutService {
     }
 
     if (calloutData.type == CalloutType.CANVAS && !calloutData.canvasTemplate) {
-      throw new Error('Please provide a card template');
+      throw new Error('Please provide a canvas template');
     }
 
     if (!calloutData.sortOrder) {

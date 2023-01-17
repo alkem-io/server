@@ -65,6 +65,13 @@ export const collaborationDefaults: any = {
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 10,
+      canvasTemplate: {
+        value: '',
+        info: {
+          title: 'blank canvas',
+          description: 'A blank canvas to be worked further.',
+        },
+      },
     },
   ],
 };
