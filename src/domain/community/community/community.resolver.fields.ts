@@ -1,6 +1,6 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
-import { Parent, ResolveField, Resolver, Args } from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver, Args, Float } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from './community.service';
@@ -12,9 +12,11 @@ import { ICommunication } from '@domain/communication/communication/communicatio
 import { IOrganization } from '../organization';
 import { CommunityRole } from '@common/enums/community.role';
 import { PaginationArgs, PaginatedUsers } from '@core/pagination';
+import { PaginationInputOutOfBoundException } from '@common/exceptions';
 import { UserService } from '../user/user.service';
 import { UserFilterInput } from '@core/filtering';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
+
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
   constructor(
@@ -40,10 +42,27 @@ export class CommunityResolverFields {
     description: 'All users that are contributing to this Community.',
   })
   @Profiling.api
-  async memberUsers(@Parent() community: Community) {
+  async memberUsers(
+    @Parent() community: Community,
+    @Args({
+      name: 'limit',
+      type: () => Float,
+      description:
+        'The positive number of member users to return; if omitted returns all member users.',
+      nullable: true,
+    })
+    limit?: number
+  ) {
+    if (limit && limit < 0) {
+      throw new PaginationInputOutOfBoundException(
+        `Limit expects a positive amount: ${limit} provided instead`
+      );
+    }
+
     return await this.communityService.getUsersWithRole(
       community,
-      CommunityRole.MEMBER
+      CommunityRole.MEMBER,
+      limit
     );
   }
 
