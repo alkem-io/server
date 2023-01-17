@@ -1,4 +1,5 @@
 import { COMMUNICATION_PLATFORM_HUBID } from '@common/constants';
+import { DiscussionCategoryPlatform } from '@common/enums/communication.discussion.category.platform';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
@@ -73,7 +74,8 @@ export class PlatformService {
       platform.communication =
         await this.communicationService.createCommunication(
           'platform',
-          COMMUNICATION_PLATFORM_HUBID
+          COMMUNICATION_PLATFORM_HUBID,
+          Object.values(DiscussionCategoryPlatform)
         );
       await this.savePlatform(platform);
       return platform.communication;

@@ -20,6 +20,7 @@ import { CommunicationService } from '@domain/communication/communication/commun
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { LifecycleType } from '@common/enums/lifecycle.type';
+import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
 
 export class ConversionService {
   constructor(
@@ -278,7 +279,8 @@ export class ConversionService {
     const tmpCommunication =
       await this.communicationService.createCommunication(
         'temp',
-        parentCommunity.hubID
+        parentCommunity.hubID,
+        Object.values(DiscussionCategoryCommunity)
       );
     childCommunity.communication = tmpCommunication;
     // Need to save with temp communication to avoid db validation error re duplicate usage

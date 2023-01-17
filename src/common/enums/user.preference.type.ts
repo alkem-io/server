@@ -22,6 +22,10 @@ export enum UserPreferenceType {
   NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_USER = 'NotificationCommunityCollaborationInterestUser',
   NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_ADMIN = 'NotificationCommunityCollaborationInterestAdmin',
   NOTIFICATION_CALLOUT_PUBLISHED = 'NotificationCalloutPublished',
+  NOTIFICATION_COMMUNICATION_MENTION = 'NotificationCommunicationMention',
+  NOTIFICATION_COMMUNICATION_MESSAGE = 'NotificationCommunicationMessage',
+  NOTIFICATION_ORGANIZATION_MENTION = 'NotificationOrganizationMention',
+  NOTIFICATION_ORGANIZATION_MESSAGE = 'NotificationOrganizationMessage',
 }
 
 registerEnumType(UserPreferenceType, {
