@@ -1,3 +1,4 @@
+import { ChallengeResolverFields } from "@domain/challenge/challenge/challenge.resolver.fields";
 import {MigrationInterface, QueryRunner} from "typeorm";
 
 export class schemaReview1673621525114 implements MigrationInterface {
@@ -5,6 +6,8 @@ export class schemaReview1673621525114 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
 
       // Make guids CHAR(36)
+
+
 
       //FIRST DROP CONSTRAINTS
       await queryRunner.query(
@@ -761,6 +764,27 @@ export class schemaReview1673621525114 implements MigrationInterface {
       );
       await queryRunner.query(
         `ALTER TABLE \`user_group\` CHANGE COLUMN \`communityId\` \`communityId\` CHAR(36) NOT NULL;`
+      );
+      await queryRunner.query(
+        `ALTER TABLE \`activity\` CHANGE COLUMN \`id\` \`id\` CHAR(36) NOT NULL;`
+      );
+      await queryRunner.query(
+        `ALTER TABLE \`opportunity\` CHANGE COLUMN \`challengeId\` \`challengeId\` CHAR(36) NULL;`
+      );
+      await queryRunner.query(
+        `ALTER TABLE \`aspect_template\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` CHAR(36) NULL;`
+      );
+
+      //MAKE DATE TYPES CONSISTENT
+      await queryRunner.query(
+        `ALTER TABLE \`aspect\` CHANGE COLUMN \`type\` \`type\` VARCHAR(128) NOT NULL;`
+      );
+      await queryRunner.query(
+        `ALTER TABLE \`callout\` CHANGE COLUMN \`nameID\` \`nameID\` VARCHAR(36) NOT NULL;`
+      );
+
+      await queryRunner.query(
+        `ALTER TABLE \`lifecycle_template\` CHANGE COLUMN \`type\` \`type\` VARCHAR(128) NOT NULL;`
       );
 
 
@@ -1918,6 +1942,27 @@ export class schemaReview1673621525114 implements MigrationInterface {
       );
       await queryRunner.query(
         `ALTER TABLE \`user_group\` CHANGE COLUMN \`communityId\` \`communityId\` VARCHAR(36) NOT NULL;`
+      );
+      await queryRunner.query(
+        `ALTER TABLE \`activity\` CHANGE COLUMN \`id\` \`id\` VARCHAR(36) NOT NULL;`
+      );
+      await queryRunner.query(
+        `ALTER TABLE \`opportunity\` CHANGE COLUMN \`challengeId\` \`challengeId\` VARCHAR(36) NULL;`
+      );
+      await queryRunner.query(
+        `ALTER TABLE \`aspect_template\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` VARCHAR(36) NULL;`
+      );
+
+      //MAKE DATE TYPES CONSISTENT
+      await queryRunner.query(
+        `ALTER TABLE \`aspect\` CHANGE COLUMN \`type\` \`type\` CHAR(255) NOT NULL;`
+      );
+      await queryRunner.query(
+        `ALTER TABLE \`callout\` CHANGE COLUMN \`nameID\` \`nameID\` VARCHAR(255) NOT NULL;`
+      );
+
+      await queryRunner.query(
+        `ALTER TABLE \`lifecycle_template\` CHANGE COLUMN \`type\` \`type\` CHAR(128) NOT NULL;`
       );
 
       //RE-ADD CONSTRAINTS
