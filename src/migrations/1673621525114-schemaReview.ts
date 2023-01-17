@@ -6,9 +6,6 @@ export class schemaReview1673621525114 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
 
       // Make guids CHAR(36)
-
-
-
       //FIRST DROP CONSTRAINTS
       await queryRunner.query(
         'ALTER TABLE `community` DROP FOREIGN KEY `FK_8e8283bdacc9e770918fe689333`'
@@ -568,7 +565,7 @@ export class schemaReview1673621525114 implements MigrationInterface {
         `ALTER TABLE \`credential\` CHANGE COLUMN \`resourceID\` \`resourceID\` CHAR(36) NOT NULL;`
       );
       await queryRunner.query(
-        `ALTER TABLE \`credential\` CHANGE COLUMN \`agentId\` \`agentId\` CHAR(36) NOT NULL;`
+        `ALTER TABLE \`credential\` CHANGE COLUMN \`agentId\` \`agentId\` CHAR(36) NULL;`
       );
       await queryRunner.query(
         `ALTER TABLE \`ecosystem_model\` CHANGE COLUMN \`id\` \`id\` CHAR(36) NOT NULL;`
@@ -1746,7 +1743,7 @@ export class schemaReview1673621525114 implements MigrationInterface {
         `ALTER TABLE \`credential\` CHANGE COLUMN \`resourceID\` \`resourceID\` VARCHAR(36) NOT NULL;`
       );
       await queryRunner.query(
-        `ALTER TABLE \`credential\` CHANGE COLUMN \`agentId\` \`agentId\` VARCHAR(36) NOT NULL;`
+        `ALTER TABLE \`credential\` CHANGE COLUMN \`agentId\` \`agentId\` VARCHAR(36) NULL;`
       );
       await queryRunner.query(
         `ALTER TABLE \`ecosystem_model\` CHANGE COLUMN \`id\` \`id\` VARCHAR(36) NOT NULL;`
