@@ -234,6 +234,11 @@ export class UserService {
       'true'
     );
     defaults.set(UserPreferenceType.NOTIFICATION_CALLOUT_PUBLISHED, 'true');
+    // messaging & mentions
+    defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_MENTION, 'true');
+    defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_MESSAGE, 'true');
+    defaults.set(UserPreferenceType.NOTIFICATION_ORGANIZATION_MENTION, 'true');
+    defaults.set(UserPreferenceType.NOTIFICATION_ORGANIZATION_MESSAGE, 'true');
 
     return defaults;
   }
