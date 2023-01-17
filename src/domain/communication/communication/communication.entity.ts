@@ -18,6 +18,9 @@ export class Communication
   })
   discussions?: Discussion[];
 
+  @Column('simple-array')
+  discussionCategories: string[];
+
   @OneToOne(() => Updates, {
     eager: true,
     cascade: true,
@@ -37,5 +40,6 @@ export class Communication
     this.hubID = '';
     this.communicationGroupID = '';
     this.displayName = displayName || '';
+    this.discussionCategories = [];
   }
 }

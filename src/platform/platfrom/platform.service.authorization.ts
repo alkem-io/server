@@ -51,7 +51,8 @@ export class PlatformAuthorizationService {
   ): Promise<IPlatform> {
     if (platform.library) {
       await this.libraryAuthorizationService.applyAuthorizationPolicy(
-        platform.library
+        platform.library,
+        platform.authorization
       );
     }
 
