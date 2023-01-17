@@ -130,7 +130,10 @@ export class CommunicationService {
           );
         return communicationGroupID;
       } catch (error: any) {
-        if (error.message === 'Group already exists') {
+        if (
+          error.message ===
+          'Failed to create group: Error when creating group: M_UNKNOWN: Group already exists'
+        ) {
           const existingGroupID =
             await this.communicationAdapter.convertMatrixLocalGroupIdToMatrixID(
               communication.id
