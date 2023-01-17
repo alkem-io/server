@@ -11,6 +11,6 @@ Variables:
       "communicationID": "uuid",
       "title": "some title",
       "description": "text",
-      "category": "GENERAL",
+      "category": "GENERAL"
   }
 }
