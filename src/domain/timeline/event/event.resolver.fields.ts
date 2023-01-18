@@ -63,4 +63,14 @@ export class CalendarEventResolverFields {
     }
     return calendarEvent.comments;
   }
+
+  @ResolveField('startDate', () => Number, {
+    nullable: true,
+    description: 'The start time for this CalendarEvent.',
+  })
+  async startDate(@Parent() event: ICalendarEvent): Promise<number> {
+    const createdDate = event.startDate;
+    const date = new Date(createdDate);
+    return date.getTime();
+  }
 }

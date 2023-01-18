@@ -13,12 +13,12 @@ export class CalendarResolverFields {
   constructor(private calendarEventService: CalendarEventService) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('calendarEvent', () => ICalendarEvent, {
+  @ResolveField('event', () => ICalendarEvent, {
     nullable: true,
     description: 'A single CalendarEvent',
   })
   @UseGuards(GraphqlGuard)
-  async calendarEvent(
+  async event(
     @Args({
       name: 'ID',
       nullable: false,

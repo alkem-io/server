@@ -22,4 +22,29 @@ export abstract class ICalendarEvent extends INameable {
   createdBy!: string;
 
   comments?: IComments;
+
+  // The scheduling related fields
+  startDate!: Date;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Flag to indicate if this event is for a whole day.',
+  })
+  wholeDay!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Flag to indicate if this event is for multiple days.',
+  })
+  multipleDays!: boolean;
+
+  @Field(() => Number, {
+    description: 'The length of the event in minutes.',
+  })
+  durationMinutes!: number;
+
+  @Field(() => Number, {
+    description: 'The length of the event in days.',
+  })
+  durationDays!: number;
 }
