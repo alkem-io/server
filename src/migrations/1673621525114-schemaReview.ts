@@ -343,6 +343,15 @@ export class schemaReview1673621525114 implements MigrationInterface {
         `ALTER TABLE \`activity\` CHANGE COLUMN \`parentID\` \`parentID\` CHAR(36) NULL;`
       );
       await queryRunner.query(
+        `ALTER TABLE \`activity\` CHANGE COLUMN \`triggeredBy\` \`triggeredBy\` CHAR(36) NULL;`
+      );
+      await queryRunner.query(
+        `ALTER TABLE \`activity\` CHANGE COLUMN \`resourceID\` \`resourceID\` CHAR(36) NULL;`
+      );
+      await queryRunner.query(
+        `ALTER TABLE \`activity\` CHANGE COLUMN \`collaborationID\` \`collaborationID\` CHAR(36) NULL;`
+      );
+      await queryRunner.query(
         `ALTER TABLE \`actor\` CHANGE COLUMN \`id\` \`id\` CHAR(36) NOT NULL;`
       );
       await queryRunner.query(
@@ -1520,6 +1529,15 @@ export class schemaReview1673621525114 implements MigrationInterface {
       await queryRunner.query(
         `ALTER TABLE \`activity\` CHANGE COLUMN \`parentID\` \`parentID\` VARCHAR(36) NULL;`
       );
+      await queryRunner.query(
+        `ALTER TABLE \`activity\` CHANGE COLUMN \`triggeredBy\` \`triggeredBy\` VARCHAR(36) NULL;`
+      );
+      await queryRunner.query(
+        `ALTER TABLE \`activity\` CHANGE COLUMN \`resourceID\` \`resourceID\` VARCHAR(36) NULL;`
+      );
+      await queryRunner.query(
+        `ALTER TABLE \`activity\` CHANGE COLUMN \`collaborationID\` \`collaborationID\` VARCHAR(36) NULL;`
+        );
       await queryRunner.query(
         `ALTER TABLE \`actor\` CHANGE COLUMN \`id\` \`id\` VARCHAR(36) NOT NULL;`
       );
