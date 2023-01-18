@@ -76,8 +76,8 @@ export class CalendarService {
     const events = calendar.events;
     if (!events)
       throw new EntityNotFoundException(
-        `Undefined innovation packs found: ${calendar.id}`,
-        LogContext.LIBRARY
+        `Undefined calendar events found: ${calendar.id}`,
+        LogContext.CALENDAR
       );
 
     return events;
@@ -91,7 +91,7 @@ export class CalendarService {
     if (!calendar.events)
       throw new EntityNotInitializedException(
         `Calendar (${calendar}) not initialised`,
-        LogContext.CONTEXT
+        LogContext.CALENDAR
       );
 
     if (calendarEventData.nameID && calendarEventData.nameID.length > 0) {
@@ -99,7 +99,7 @@ export class CalendarService {
       if (!nameAvailable)
         throw new ValidationException(
           `Unable to create CalendarEvent: the provided nameID is already taken: ${calendarEventData.nameID}`,
-          LogContext.LIBRARY
+          LogContext.CALENDAR
         );
     } else {
       calendarEventData.nameID = this.namingService.createNameID(

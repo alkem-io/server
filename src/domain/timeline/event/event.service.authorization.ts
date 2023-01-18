@@ -69,7 +69,7 @@ export class CalendarEventAuthorizationService {
     if (!authorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for CalendarEvent: ${calendarEvent.id}`,
-        LogContext.COLLABORATION
+        LogContext.CALENDAR
       );
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];

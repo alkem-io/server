@@ -84,7 +84,7 @@ export class CalendarEventService {
     if (!calendarEvent)
       throw new EntityNotFoundException(
         `Not able to locate calendarEvent with the specified ID: ${calendarEventID}`,
-        LogContext.CHALLENGES
+        LogContext.CALENDAR
       );
     return calendarEvent;
   }
@@ -107,7 +107,7 @@ export class CalendarEventService {
       if (!calendarEvent.profile) {
         throw new EntityNotFoundException(
           `CalendarEvent not initialised: ${calendarEvent.id}`,
-          LogContext.COLLABORATION
+          LogContext.CALENDAR
         );
       }
       calendarEvent.profile = await this.cardProfileService.updateCardProfile(
@@ -142,7 +142,7 @@ export class CalendarEventService {
     if (!calendarEventLoaded.profile)
       throw new EntityNotFoundException(
         `Card profile not initialised for calendarEvent: ${calendarEvent.id}`,
-        LogContext.COLLABORATION
+        LogContext.CALENDAR
       );
 
     return calendarEventLoaded.profile;
@@ -158,7 +158,7 @@ export class CalendarEventService {
     if (!commentsId) {
       throw new EntityNotFoundException(
         `Comments not found on calendarEvent: ${calendarEventID}`,
-        LogContext.COLLABORATION
+        LogContext.CALENDAR
       );
     }
 

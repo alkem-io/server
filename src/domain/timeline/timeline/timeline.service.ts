@@ -55,7 +55,7 @@ export class TimelineService {
     if (!timeline)
       throw new EntityNotFoundException(
         `Timeline not found: ${timelineID}`,
-        LogContext.PLATFORM
+        LogContext.CALENDAR
       );
     return timeline;
   }
@@ -71,8 +71,8 @@ export class TimelineService {
     const calendar = timeline.calendar;
     if (!calendar) {
       throw new EntityNotFoundException(
-        'No Timeline Library found!',
-        LogContext.PLATFORM
+        `No calendar found on timeline: ${timelineInput.id}`,
+        LogContext.CALENDAR
       );
     }
     return calendar;

@@ -29,7 +29,7 @@ export class CalendarEventResolverFields {
     if (!createdBy) {
       throw new EntityNotInitializedException(
         'CreatedBy not set on CalendarEvent',
-        LogContext.COLLABORATION
+        LogContext.CALENDAR
       );
     }
     return await this.userService.getUserOrFail(createdBy);
@@ -58,7 +58,7 @@ export class CalendarEventResolverFields {
     if (!calendarEvent.comments) {
       throw new EntityNotInitializedException(
         'CalendarEvent comments not defined',
-        LogContext.COLLABORATION
+        LogContext.CALENDAR
       );
     }
     return calendarEvent.comments;
