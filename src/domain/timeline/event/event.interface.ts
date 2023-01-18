@@ -39,11 +39,13 @@ export abstract class ICalendarEvent extends INameable {
   multipleDays!: boolean;
 
   @Field(() => Number, {
+    nullable: false,
     description: 'The length of the event in minutes.',
   })
   durationMinutes!: number;
 
   @Field(() => Number, {
+    nullable: true,
     description: 'The length of the event in days.',
   })
   durationDays!: number;

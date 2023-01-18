@@ -20,4 +20,34 @@ export class UpdateCalendarEventInput extends UpdateNameableInput {
   @ValidateNested()
   @Type(() => UpdateCardProfileInput)
   profileData?: UpdateCardProfileInput;
+
+  @Field(() => Date, {
+    nullable: false,
+    description: 'The state date for the event.',
+  })
+  startDate!: Date;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Flag to indicate if this event is for a whole day.',
+  })
+  wholeDay!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Flag to indicate if this event is for multiple days.',
+  })
+  multipleDays!: boolean;
+
+  @Field(() => Number, {
+    nullable: false,
+    description: 'The length of the event in minutes.',
+  })
+  durationMinutes!: number;
+
+  @Field(() => Number, {
+    nullable: true,
+    description: 'The length of the event in days.',
+  })
+  durationDays!: number;
 }

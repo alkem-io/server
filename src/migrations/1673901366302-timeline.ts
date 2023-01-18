@@ -38,24 +38,27 @@ export class timeline1673901366302 implements MigrationInterface {
       `CREATE TABLE \`calendar_event\` (\`id\` char(36) NOT NULL,
                    \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                    \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+                   \`createdBy\` char(36) NULL,
+                   \`commentsId\` char(36) NULL,
                    \`startDate\` datetime(6) NULL,
                     \`wholeDay\` tinyint NULL,
                     \`multipleDays\` tinyint NULL,
                     \`durationMinutes\` int NULL,
                    \`durationDays\` int NULL,
-                   \`version\` int NOT NULL,
+                   \`type\` varchar(255) NOT NULL,
+                    \`version\` int NOT NULL,
                     \`authorizationId\` char(36) NULL,
                     \`nameID\` varchar(36) NOT NULL,
                     \`displayName\` varchar(255) NOT NULL,
                     \`calendarId\` char(36) NULL,
-                    \`cardProfileId\` char(36) NULL,
+                    \`profileId\` char(36) NULL,
                       UNIQUE INDEX \`REL_22222ccdda9ba57d8e3a634cd8\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
       `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_22255901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_111838434c7198a323ea6f475fb\` FOREIGN KEY (\`cardProfileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+      `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_111838434c7198a323ea6f475fb\` FOREIGN KEY (\`profileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
     // Link calendar_event to calendar

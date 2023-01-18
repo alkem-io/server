@@ -23,11 +23,13 @@ export class CalendarResolverMutations {
     description: 'Create a new CalendarEvent on the Calendar.',
   })
   @Profiling.api
-  async createCalendarEventOnCalendar(
+  async createEventOnCalendar(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('packData') eventData: CreateCalendarEventOnCalendarInput
+    @Args('eventData') eventData: CreateCalendarEventOnCalendarInput
   ): Promise<ICalendarEvent> {
-    const calendar = await this.calendarService.getCalendarOrFail();
+    const calendar = await this.calendarService.getCalendarOrFail(
+      eventData.calendarID
+    );
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -40,14 +42,11 @@ export class CalendarResolverMutations {
       eventData,
       agentInfo.userID
     );
-    const communityPolicy = await this.calendarService.getCommunityPolicy(
-      calendar.id
-    );
+
     const calendarEventAuthorized =
       await this.calendarEventAuthorizationService.applyAuthorizationPolicy(
         calendarEvent,
-        calendar.authorization,
-        communityPolicy
+        calendar.authorization
       );
     return calendarEventAuthorized;
   }

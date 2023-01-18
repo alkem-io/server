@@ -5,7 +5,6 @@ import { ITimeline } from './timeline.interface';
 import { Timeline } from './timeline.entity';
 import { TimelineService } from './timeline.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CalendarAuthorizationService } from '../calendar/calendar.service.authorization';
 
@@ -21,8 +20,7 @@ export class TimelineAuthorizationService {
 
   async applyAuthorizationPolicy(
     timelineInput: ITimeline,
-    parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<ITimeline> {
     const timeline = await this.timelineService.getTimelineOrFail(
       timelineInput.id,
@@ -39,22 +37,19 @@ export class TimelineAuthorizationService {
 
     // Cascade down
     const timelinePropagated = await this.propagateAuthorizationToChildEntities(
-      timeline,
-      communityPolicy
+      timeline
     );
 
     return await this.timelineRepository.save(timelinePropagated);
   }
 
   private async propagateAuthorizationToChildEntities(
-    timeline: ITimeline,
-    communityPolicy: ICommunityPolicy
+    timeline: ITimeline
   ): Promise<ITimeline> {
     if (timeline.calendar) {
       await this.calendarAuthorizationService.applyAuthorizationPolicy(
         timeline.calendar,
-        timeline.authorization,
-        communityPolicy
+        timeline.authorization
       );
     }
 

@@ -20,6 +20,6 @@ import { TimelineAuthorizationService } from './timeline.service.authorization';
     TimelineService,
     TimelineAuthorizationService,
   ],
-  exports: [TimelineService],
+  exports: [TimelineService, TimelineAuthorizationService],
 })
 export class TimelineModule {}

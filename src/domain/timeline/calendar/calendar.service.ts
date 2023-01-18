@@ -2,12 +2,14 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { ICalendarEvent } from '../event/event.interface';
 import { CalendarEventService } from '../event/event.service';
 import { Calendar } from './calendar.entity';
@@ -18,18 +20,52 @@ import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.ev
 export class CalendarService {
   constructor(
     private calendarEventService: CalendarEventService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private namingService: NamingService,
     @InjectRepository(Calendar)
     private calendarRepository: Repository<Calendar>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async getCalendarOrFail(): Promise<ICalendar> {
-    const calendar = await this.calendarRepository.findOne();
+  public async createCalendar(): Promise<ICalendar> {
+    const calendar: ICalendar = new Calendar();
+    calendar.authorization = new AuthorizationPolicy();
+    calendar.events = [];
+
+    return await this.calendarRepository.save(calendar);
+  }
+
+  async deleteCalendar(calendarID: string): Promise<ICalendar> {
+    const calendar = await this.getCalendarOrFail(calendarID, {
+      relations: ['events'],
+    });
+
+    if (calendar.authorization)
+      await this.authorizationPolicyService.delete(calendar.authorization);
+
+    if (calendar.events) {
+      for (const event of calendar.events) {
+        await this.calendarEventService.deleteCalendarEvent({
+          ID: event.id,
+        });
+      }
+    }
+
+    return await this.calendarRepository.remove(calendar as Calendar);
+  }
+
+  async getCalendarOrFail(
+    calendarID: string,
+    options?: FindOneOptions<Calendar>
+  ): Promise<ICalendar> {
+    const calendar = await this.calendarRepository.findOne(
+      { id: calendarID },
+      options
+    );
     if (!calendar)
       throw new EntityNotFoundException(
-        'No Calendar found!',
-        LogContext.LIBRARY
+        `Calendar not found: ${calendarID}`,
+        LogContext.CALENDAR
       );
     return calendar;
   }
@@ -51,7 +87,7 @@ export class CalendarService {
     calendarEventData: CreateCalendarEventOnCalendarInput,
     userID: string
   ): Promise<ICalendarEvent> {
-    const calendar = await this.getCalendarOrFail();
+    const calendar = await this.getCalendarOrFail(calendarEventData.calendarID);
     if (!calendar.events)
       throw new EntityNotInitializedException(
         `Calendar (${calendar}) not initialised`,

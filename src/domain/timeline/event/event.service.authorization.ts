@@ -13,8 +13,6 @@ import {
 } from '@common/enums';
 import { CalendarEventService } from './event.service';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CardProfileAuthorizationService } from '@domain/collaboration/card-profile/card.profile.service.authorization';
 
@@ -24,7 +22,6 @@ export class CalendarEventAuthorizationService {
     private calendarEventService: CalendarEventService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private commentsAuthorizationService: CommentsAuthorizationService,
-    private communityPolicyService: CommunityPolicyService,
     private cardProfileAuthorizationService: CardProfileAuthorizationService,
     @InjectRepository(CalendarEvent)
     private calendarEventRepository: Repository<CalendarEvent>
@@ -32,8 +29,7 @@ export class CalendarEventAuthorizationService {
 
   async applyAuthorizationPolicy(
     calendarEvent: ICalendarEvent,
-    parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<ICalendarEvent> {
     calendarEvent.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -52,10 +48,7 @@ export class CalendarEventAuthorizationService {
     }
 
     // Extend to give the user creating the calendarEvent more rights
-    calendarEvent.authorization = this.appendCredentialRules(
-      calendarEvent,
-      communityPolicy
-    );
+    calendarEvent.authorization = this.appendCredentialRules(calendarEvent);
 
     calendarEvent.profile = await this.calendarEventService.getCardProfile(
       calendarEvent
@@ -70,8 +63,7 @@ export class CalendarEventAuthorizationService {
   }
 
   private appendCredentialRules(
-    calendarEvent: ICalendarEvent,
-    communityPolicy: ICommunityPolicy
+    calendarEvent: ICalendarEvent
   ): IAuthorizationPolicy {
     const authorization = calendarEvent.authorization;
     if (!authorization)
@@ -98,25 +90,6 @@ export class CalendarEventAuthorizationService {
         ]
       );
     newRules.push(manageCreatedCalendarEventPolicy);
-
-    // Allow hub admins to move card
-    const credentials =
-      this.communityPolicyService.getAdminCredentials(communityPolicy);
-    credentials.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
-    credentials.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-      resourceID: '',
-    });
-    const adminsMoveCardRule =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.MOVE_CARD],
-        credentials
-      );
-    adminsMoveCardRule.inheritable = false;
-    newRules.push(adminsMoveCardRule);
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(

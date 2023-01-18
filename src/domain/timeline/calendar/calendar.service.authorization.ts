@@ -7,7 +7,6 @@ import { CalendarService } from './calendar.service';
 import { ICalendar } from './calendar.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CalendarEventAuthorizationService } from '../event/event.service.authorization';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 
 @Injectable()
 export class CalendarAuthorizationService {
@@ -21,8 +20,7 @@ export class CalendarAuthorizationService {
 
   async applyAuthorizationPolicy(
     calendar: ICalendar,
-    parentAuthorization: IAuthorizationPolicy | undefined,
-    communityPolicy: ICommunityPolicy
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<ICalendar> {
     // Ensure always applying from a clean state
     calendar.authorization = this.authorizationPolicyService.reset(
@@ -36,23 +34,20 @@ export class CalendarAuthorizationService {
 
     // Cascade down
     const calendarPropagated = await this.propagateAuthorizationToChildEntities(
-      calendar,
-      communityPolicy
+      calendar
     );
 
     return await this.calendarRepository.save(calendarPropagated);
   }
 
   private async propagateAuthorizationToChildEntities(
-    calendar: ICalendar,
-    communityPolicy: ICommunityPolicy
+    calendar: ICalendar
   ): Promise<ICalendar> {
     calendar.events = await this.calendar.getCalendarEvents(calendar);
     for (const event of calendar.events) {
       await this.calendarEventAuthorizationService.applyAuthorizationPolicy(
         event,
-        calendar.authorization,
-        communityPolicy
+        calendar.authorization
       );
     }
 
