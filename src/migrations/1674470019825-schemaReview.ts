@@ -750,9 +750,6 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`user\` CHANGE COLUMN \`agentId\` \`agentId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`user\` CHANGE COLUMN \`communicationID\` \`communicationID\` CHAR(36) NOT NULL;`
-    );
-    await queryRunner.query(
       `ALTER TABLE \`user_group\` CHANGE COLUMN \`id\` \`id\` CHAR(36) NOT NULL;`
     );
     await queryRunner.query(
@@ -1740,7 +1737,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`community\` CHANGE COLUMN \`communicationId\` \`communicationId\` VARCHAR(36) NULL;`
-    );
+      );
     await queryRunner.query(
       `ALTER TABLE \`community_policy\` CHANGE COLUMN \`id\` \`id\` VARCHAR(36) NOT NULL;`
     );
@@ -1936,9 +1933,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`user\` CHANGE COLUMN \`agentId\` \`agentId\` VARCHAR(36) NULL;`
     );
-    await queryRunner.query(
-      `ALTER TABLE \`user\` CHANGE COLUMN \`communicationID\` \`communicationID\` VARCHAR(36) NOT NULL;`
-    );
+
     await queryRunner.query(
       `ALTER TABLE \`user_group\` CHANGE COLUMN \`id\` \`id\` VARCHAR(36) NOT NULL;`
     );
