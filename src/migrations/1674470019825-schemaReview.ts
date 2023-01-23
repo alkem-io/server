@@ -762,10 +762,10 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`user_group\` CHANGE COLUMN \`hubID\` \`hubID\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`user_group\` CHANGE COLUMN \`organizationId\` \`organizationId\` CHAR(36) NOT NULL;`
+      `ALTER TABLE \`user_group\` CHANGE COLUMN \`organizationId\` \`organizationId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`user_group\` CHANGE COLUMN \`communityId\` \`communityId\` CHAR(36) NOT NULL;`
+      `ALTER TABLE \`user_group\` CHANGE COLUMN \`communityId\` \`communityId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`activity\` CHANGE COLUMN \`id\` \`id\` CHAR(36) NOT NULL;`
@@ -1947,10 +1947,10 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`user_group\` CHANGE COLUMN \`hubID\` \`hubID\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`user_group\` CHANGE COLUMN \`organizationId\` \`organizationId\` VARCHAR(36) NOT NULL;`
+      `ALTER TABLE \`user_group\` CHANGE COLUMN \`organizationId\` \`organizationId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`user_group\` CHANGE COLUMN \`communityId\` \`communityId\` VARCHAR(36) NOT NULL;`
+      `ALTER TABLE \`user_group\` CHANGE COLUMN \`communityId\` \`communityId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`activity\` CHANGE COLUMN \`id\` \`id\` VARCHAR(36) NOT NULL;`
