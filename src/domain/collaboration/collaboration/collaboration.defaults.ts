@@ -3,6 +3,9 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CommunityType } from '@common/enums/community.type';
 
+const emptyCanvasValue =
+  '{\n  "type": "excalidraw",\n  "version": 2,\n  "source": "",\n  "elements": [],\n  "appState": {\n    "gridSize": 20,\n    "viewBackgroundColor": "#ffffff"\n  },\n  "files": {}\n}';
+
 export const collaborationDefaults: any = {
   callouts: [
     {
@@ -66,7 +69,7 @@ export const collaborationDefaults: any = {
       state: CalloutState.OPEN,
       sortOrder: 10,
       canvasTemplate: {
-        value: '',
+        value: emptyCanvasValue,
         info: {
           title: 'blank canvas',
           description: 'A blank canvas to be worked further.',
