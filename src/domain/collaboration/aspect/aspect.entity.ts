@@ -11,7 +11,7 @@ export class Aspect extends NameableEntity implements IAspect {
   @Column('text')
   type: string;
 
-  @Column('varchar', { length: 36, nullable: true })
+  @Column('char', { length: 36, nullable: true })
   createdBy!: string;
 
   @OneToOne(() => Visual, {

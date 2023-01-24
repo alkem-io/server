@@ -4,6 +4,7 @@ import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/namea
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
+import { UpdateCalloutCanvasTemplateInput } from './callout.dto.update.canvasTemplate';
 import { UpdateCalloutCardTemplateInput } from './callout.dto.update.cardTemplate';
 
 @InputType()
@@ -30,7 +31,13 @@ export class UpdateCalloutInput extends UpdateNameableInput {
 
   @Field(() => UpdateCalloutCardTemplateInput, {
     nullable: true,
-    description: 'CardTemplate data for this Card Callout.',
+    description: 'CardTemplate data for this Callout.',
   })
   cardTemplate?: UpdateCalloutCardTemplateInput;
+
+  @Field(() => UpdateCalloutCanvasTemplateInput, {
+    nullable: true,
+    description: 'CanvasTemplate data for this Callout.',
+  })
+  canvasTemplate?: UpdateCalloutCanvasTemplateInput;
 }
