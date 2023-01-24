@@ -21,6 +21,8 @@ import { CommunicationCreateDiscussionInput } from './dto/communication.dto.crea
 import { UpdatesService } from '../updates/updates.service';
 import { IUpdates } from '../updates/updates.interface';
 import { RoomService } from '../room/room.service';
+import { DiscussionCategory } from '@common/enums/communication.discussion.category';
+import { CommunicationDiscussionCategoryException } from '@common/exceptions/communication.discussion.category.exception';
 
 @Injectable()
 export class CommunicationService {
@@ -44,13 +46,15 @@ export class CommunicationService {
 
   async createCommunication(
     displayName: string,
-    hubID: string
+    hubID: string,
+    discussionCategories: DiscussionCategory[]
   ): Promise<ICommunication> {
     const communication: ICommunication = new Communication(displayName);
     communication.authorization = new AuthorizationPolicy();
     communication.hubID = hubID;
 
     communication.discussions = [];
+    communication.discussionCategories = discussionCategories;
 
     // save to get the id assigned
     await this.save(communication);
@@ -78,7 +82,7 @@ export class CommunicationService {
       .setParameters({ id: '' })
       .getMany();
 
-    for (const communicationWithoutGroup of communicationsWithoutGroups) {
+    communicationsWithoutGroups.forEach(async communicationWithoutGroup => {
       // Load through normal mechanism to pick up eager loading, discussions
       const communication = await this.getCommunicationOrFail(
         communicationWithoutGroup.id,
@@ -107,7 +111,7 @@ export class CommunicationService {
         await this.roomService.initializeCommunicationRoom(discussion);
       }
       await this.save(communication);
-    }
+    });
   }
 
   async initializeCommunicationsGroup(
@@ -126,7 +130,7 @@ export class CommunicationService {
           );
         return communicationGroupID;
       } catch (error: any) {
-        if (error.message === 'Group already exists') {
+        if (error?.message?.includes('Group already exists')) {
           const existingGroupID =
             await this.communicationAdapter.convertMatrixLocalGroupIdToMatrixID(
               communication.id
@@ -167,6 +171,13 @@ export class CommunicationService {
     const communication = await this.getCommunicationOrFail(communicationID, {
       relations: ['discussions'],
     });
+
+    if (!communication.discussionCategories.includes(discussionData.category)) {
+      throw new CommunicationDiscussionCategoryException(
+        `Invalid discussion category supplied ('${discussionData.category}'), allowed categories: ${communication.discussionCategories}`,
+        LogContext.COMMUNICATION
+      );
+    }
 
     const discussion = await this.discussionService.createDiscussion(
       discussionData,

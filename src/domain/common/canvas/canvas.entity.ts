@@ -44,7 +44,7 @@ export class Canvas extends NameableEntity implements ICanvas {
   @Column('longtext', { nullable: false })
   value!: string;
 
-  @Column('varchar', { length: 36, nullable: true })
+  @Column('char', { length: 36, nullable: true })
   createdBy!: string;
 
   @ManyToOne(() => Callout, callout => callout.canvases, {

@@ -41,6 +41,7 @@ import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.ad
 import { AgentInfo } from '@core/authentication';
 import { CommunityPolicyService } from '../community-policy/community.policy.service';
 import { ICommunityPolicyDefinition } from '../community-policy/community.policy.definition';
+import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
 
 @Injectable()
 export class CommunityService {
@@ -77,7 +78,8 @@ export class CommunityService {
     community.communication =
       await this.communicationService.createCommunication(
         community.displayName,
-        hubID
+        hubID,
+        Object.values(DiscussionCategoryCommunity)
       );
     return await this.communityRepository.save(community);
   }
@@ -235,16 +237,20 @@ export class CommunityService {
 
   async getUsersWithRole(
     community: ICommunity,
-    role: CommunityRole
+    role: CommunityRole,
+    limit?: number
   ): Promise<IUser[]> {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
       role
     );
-    return await this.userService.usersWithCredentials({
-      type: membershipCredential.type,
-      resourceID: membershipCredential.resourceID,
-    });
+    return await this.userService.usersWithCredentials(
+      {
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      },
+      limit
+    );
   }
 
   async getOrganizationsWithRole(

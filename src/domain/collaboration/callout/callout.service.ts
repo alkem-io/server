@@ -63,7 +63,7 @@ export class CalloutService {
     }
 
     if (calloutData.type == CalloutType.CANVAS && !calloutData.canvasTemplate) {
-      throw new Error('Please provide a card template');
+      throw new Error('Please provide a canvas template');
     }
 
     if (!calloutData.sortOrder) {
@@ -166,7 +166,7 @@ export class CalloutService {
     calloutUpdateData: UpdateCalloutInput
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
-      relations: ['cardTemplate'],
+      relations: ['cardTemplate', 'canvasTemplate'],
     });
 
     if (calloutUpdateData.description)
@@ -189,6 +189,18 @@ export class CalloutService {
         await this.aspectTemplateService.updateAspectTemplate(
           callout.cardTemplate,
           { ID: callout.cardTemplate.id, ...calloutUpdateData.cardTemplate }
+        );
+    }
+
+    if (
+      callout.type == CalloutType.CANVAS &&
+      callout.canvasTemplate &&
+      calloutUpdateData.canvasTemplate
+    ) {
+      callout.canvasTemplate =
+        await this.canvasTemplateService.updateCanvasTemplate(
+          callout.canvasTemplate,
+          { ID: callout.canvasTemplate.id, ...calloutUpdateData.canvasTemplate }
         );
     }
 

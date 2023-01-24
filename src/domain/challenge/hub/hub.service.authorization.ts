@@ -56,7 +56,7 @@ export class HubAuthorizationService {
     );
     hub.authorization.anonymousReadAccess = false;
     hub.authorization =
-      this.platformAuthorizationService.inheritPlatformAuthorizationPolicy(
+      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         hub.authorization
       );
 
