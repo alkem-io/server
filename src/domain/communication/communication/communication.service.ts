@@ -82,7 +82,7 @@ export class CommunicationService {
       .setParameters({ id: '' })
       .getMany();
 
-    for (const communicationWithoutGroup of communicationsWithoutGroups) {
+    communicationsWithoutGroups.forEach(async communicationWithoutGroup => {
       // Load through normal mechanism to pick up eager loading, discussions
       const communication = await this.getCommunicationOrFail(
         communicationWithoutGroup.id,
@@ -111,7 +111,7 @@ export class CommunicationService {
         await this.roomService.initializeCommunicationRoom(discussion);
       }
       await this.save(communication);
-    }
+    });
   }
 
   async initializeCommunicationsGroup(
@@ -130,7 +130,7 @@ export class CommunicationService {
           );
         return communicationGroupID;
       } catch (error: any) {
-        if (error.message === 'Group already exists') {
+        if (error?.message?.includes('Group already exists')) {
           const existingGroupID =
             await this.communicationAdapter.convertMatrixLocalGroupIdToMatrixID(
               communication.id

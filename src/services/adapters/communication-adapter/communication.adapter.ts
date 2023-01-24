@@ -1,3 +1,5 @@
+import { firstValueFrom, TimeoutError, Observable } from 'rxjs';
+import { catchError, retry, timeout } from 'rxjs/operators';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
@@ -17,7 +19,6 @@ import {
 } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsPayload } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsResponsePayload } from '@alkemio/matrix-adapter-lib';
-import { firstValueFrom } from 'rxjs';
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
 import { RoomDeleteMessagePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomDeleteMessageResponsePayload } from '@alkemio/matrix-adapter-lib';
@@ -57,10 +58,13 @@ import { BaseMatrixAdapterEventPayload } from '@alkemio/matrix-adapter-lib';
 import { BaseMatrixAdapterEventResponsePayload } from '@alkemio/matrix-adapter-lib/dist/dto/base.event.response.payload';
 import { getRandomId } from '@common/utils/random.id.generator.util';
 import { stringifyWithoutAuthorization } from '@common/utils/stringify.util';
+import { CommunicationTimedOutException } from '@common/exceptions/communication';
 
 @Injectable()
 export class CommunicationAdapter {
-  private enabled = false;
+  private readonly enabled = false;
+  private readonly timeout: number;
+  private readonly retries: number;
 
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -68,10 +72,12 @@ export class CommunicationAdapter {
     private configService: ConfigService,
     @Inject(MATRIX_ADAPTER_SERVICE) private matrixAdapterClient: ClientProxy
   ) {
-    // need both to be true
-    this.enabled = this.configService.get(
+    const communications = this.configService.get(
       ConfigurationTypes.COMMUNICATIONS
-    )?.enabled;
+    );
+    this.enabled = communications?.enabled;
+    this.timeout = +communications?.matrix?.connection_timeout * 1000;
+    this.retries = +communications?.matrix?.connection_retries;
   }
 
   async sendMessage(
@@ -274,7 +280,7 @@ export class CommunicationAdapter {
     return `+${groupID}:${homeserverName}`;
   }
 
-  async createCommunityGroup(
+  public async createCommunityGroup(
     communityId: string,
     communityName: string
   ): Promise<string> {
@@ -296,28 +302,21 @@ export class CommunicationAdapter {
       communityDisplayName: communityName,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
-    const response = this.matrixAdapterClient.send(
+
+    const input$ = this.matrixAdapterClient.send<CreateGroupResponsePayload>(
       { cmd: eventType },
       inputPayload
     );
-
-    try {
-      const responseData = await firstValueFrom<CreateGroupResponsePayload>(
-        response
-      );
-      this.logResponsePayload(eventType, responseData, eventID);
-      this.logger.verbose?.(
-        `Created group using communityID '${communityId}', communityName '${communityName}'`,
-        LogContext.COMMUNICATION
-      );
-      return responseData.groupID;
-    } catch (err: any) {
-      this.logInteractionError(eventType, err, eventID);
-      throw new MatrixEntityNotFoundException(
-        `Failed to create group: ${err.message}`,
-        LogContext.COMMUNICATION
-      );
-    }
+    return this.makeRetryableAndPromisify(input$, result => result.groupID, {
+      logging: {
+        timeoutMessage: `Creation of group for community ${communityId} failed with a timeout`,
+        retryMessage: `Retrying failed creation of group for community ${communityId}`,
+        errorMessage: 'Failed to create group: ',
+        successMessage: `Created group using communityID '${communityId}', communityName '${communityName}'`,
+        eventType,
+        eventID,
+      },
+    });
   }
 
   async createCommunityRoom(
@@ -725,7 +724,7 @@ export class CommunicationAdapter {
   }
 
   private logInputPayload(
-    event: MatrixAdapterEventType,
+    event: MatrixAdapterEventType | undefined,
     payload: BaseMatrixAdapterEventPayload
   ): number {
     const randomID = getRandomId();
@@ -738,9 +737,9 @@ export class CommunicationAdapter {
   }
 
   private logResponsePayload(
-    event: MatrixAdapterEventType,
+    event: MatrixAdapterEventType | undefined,
     payload: BaseMatrixAdapterEventResponsePayload,
-    eventID: number
+    eventID: number | undefined
   ) {
     const loggedData = stringifyWithoutAuthorization(payload);
     this.logger.verbose?.(
@@ -750,13 +749,91 @@ export class CommunicationAdapter {
   }
 
   private logInteractionError(
-    event: MatrixAdapterEventType,
+    event: MatrixAdapterEventType | undefined,
     error: any,
-    eventID: number
+    eventID: number | undefined
   ) {
     this.logger.warn?.(
       `...[${event}-${eventID}] - Error: ${JSON.stringify(error)}`,
       LogContext.COMMUNICATION_EVENTS
     );
+  }
+
+  private makeRetryableAndPromisify<T, TReturnType>(
+    input$: Observable<T>,
+    resultSelector: (result: T) => TReturnType,
+    options?: {
+      logging?: {
+        eventType?: MatrixAdapterEventType;
+        eventID?: number;
+        timeoutMessage?: string;
+        retryMessage?: string;
+        successMessage?: string;
+        errorMessage?: string;
+      };
+    }
+  ): Promise<TReturnType> {
+    const { logging } = options ?? {};
+    const {
+      timeoutMessage,
+      retryMessage,
+      successMessage,
+      errorMessage,
+      eventType,
+      eventID,
+    } = logging ?? {};
+
+    let retries = 1;
+
+    const newInput$ = input$.pipe(
+      // wait N ms for a response before failing
+      timeout(this.timeout),
+      // handle the timeout error
+      catchError(err => {
+        if (err instanceof TimeoutError) {
+          if (timeoutMessage) {
+            this.logger.error(timeoutMessage);
+          }
+
+          if (retries <= this.retries) {
+            if (retryMessage) {
+              this.logger.warn(
+                `${retryMessage} [${retries}/${this.retries}]...`
+              );
+            }
+            retries++;
+          }
+
+          throw new CommunicationTimedOutException();
+        }
+        throw err;
+      }),
+      // retry N times
+      retry(this.retries)
+    );
+
+    return new Promise((res, rej) => {
+      newInput$.subscribe({
+        next: x => {
+          this.logResponsePayload(eventType, x, eventID);
+          if (successMessage) {
+            this.logger.verbose?.(successMessage, LogContext.COMMUNICATION);
+          }
+          res(resultSelector(x));
+        },
+        error: (err: any) => {
+          this.logInteractionError(eventType, err, eventID);
+          rej(
+            new MatrixEntityNotFoundException(
+              `${errorMessage}: ${err.message}`,
+              LogContext.COMMUNICATION
+            )
+          );
+        },
+        complete: () => {
+          rej('Subscription completed');
+        },
+      });
+    });
   }
 }
