@@ -4,6 +4,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { UUID } from '@domain/common/scalars';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CreateAspectTemplateInput } from '@domain/template/aspect-template/dto/aspect.template.dto.create';
+import { CreateCanvasTemplateInput } from '@domain/template/canvas-template/dto/canvas.template.dto.create';
 import { InputType, Field } from '@nestjs/graphql';
 import { MaxLength, MinLength } from 'class-validator';
 
@@ -45,4 +46,10 @@ export class CreateCalloutOnCollaborationInput {
     description: 'CardTemplate data for Card Callouts.',
   })
   cardTemplate?: CreateAspectTemplateInput;
+
+  @Field(() => CreateCanvasTemplateInput, {
+    nullable: true,
+    description: 'CanvasTemplate data for Canvas Callouts.',
+  })
+  canvasTemplate?: CreateCanvasTemplateInput;
 }

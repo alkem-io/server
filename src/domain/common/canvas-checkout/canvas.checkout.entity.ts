@@ -8,11 +8,11 @@ export class CanvasCheckout
   extends AuthorizableEntity
   implements ICanvasCheckout
 {
-  @Column('varchar', { length: 36, nullable: false })
+  @Column('char', { length: 36, nullable: false })
   canvasID!: string;
 
   // ID of the user that has the checkout
-  @Column('varchar', { length: 36, nullable: false })
+  @Column('char', { length: 36, nullable: false })
   lockedBy!: string;
 
   @OneToOne(() => Lifecycle, {

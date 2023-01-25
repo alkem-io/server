@@ -83,7 +83,7 @@ export class Callout extends NameableEntity implements ICallout {
 
   activity!: number;
 
-  @Column('varchar', { length: 36, nullable: true })
+  @Column('char', { length: 36, nullable: true })
   publishedBy!: string;
 
   @Column('datetime')

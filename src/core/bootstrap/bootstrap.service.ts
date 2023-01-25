@@ -60,8 +60,8 @@ export class BootstrapService {
       await this.ensureHubSingleton();
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
-      await this.ensureCommunicationRoomsCreated();
-      await this.platformService.ensureCommunicationCreated();
+      this.ensureCommunicationRoomsCreated();
+      this.platformService.ensureCommunicationCreated();
     } catch (error: any) {
       throw new BootstrapException(error.message);
     }
@@ -199,12 +199,12 @@ export class BootstrapService {
     }
   }
 
-  async ensureCommunicationRoomsCreated() {
+  ensureCommunicationRoomsCreated() {
     const communicationsEnabled = this.configService.get(
       ConfigurationTypes.COMMUNICATIONS
     ).enabled;
     if (communicationsEnabled) {
-      await this.communicationService.ensureCommunicationRoomsCreated();
+      this.communicationService.ensureCommunicationRoomsCreated();
     }
   }
 
