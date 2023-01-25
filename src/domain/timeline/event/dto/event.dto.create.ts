@@ -19,6 +19,7 @@ export class CreateCalendarEventInput extends CreateNameableInput {
     description: 'A readable identifier, unique within the containing scope.',
   })
   @MaxLength(NAMEID_LENGTH)
+  @IsOptional()
   nameID!: string;
 
   @Field(() => CreateCardProfileInput, { nullable: true })
@@ -56,5 +57,6 @@ export class CreateCalendarEventInput extends CreateNameableInput {
     nullable: true,
     description: 'The length of the event in days.',
   })
+  @IsOptional()
   durationDays!: number;
 }
