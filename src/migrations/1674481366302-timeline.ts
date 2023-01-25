@@ -15,7 +15,9 @@ export class timeline1674481366302 implements MigrationInterface {
                       \`version\` int NOT NULL,
                       \`authorizationId\` char(36) NULL,
                       \`calendarId\` char(36) NULL,
-                        UNIQUE INDEX \`REL_33333ccdda9ba57d8e3a634cd8\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+                        UNIQUE INDEX \`REL_e6203bc09ec8b93debeb3a44cb9\` (\`authorizationId\`),
+                        UNIQUE INDEX \`REL_10ed346b16ca044cd84fb1c4034\` (\`calendarId\`),
+                        PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
       `ALTER TABLE \`timeline\` ADD CONSTRAINT \`FK_22443901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -27,7 +29,8 @@ export class timeline1674481366302 implements MigrationInterface {
                \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                 \`version\` int NOT NULL,
                 \`authorizationId\` char(36) NULL,
-                  UNIQUE INDEX \`REL_33333ccdda9ba57d8e3a634cd8\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+                  UNIQUE INDEX \`REL_94994efc5eb5936ed70f2c55903\` (\`authorizationId\`),
+                  PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
       `ALTER TABLE \`calendar\` ADD CONSTRAINT \`FK_33355901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -55,7 +58,10 @@ export class timeline1674481366302 implements MigrationInterface {
                     \`displayName\` varchar(255) NOT NULL,
                     \`calendarId\` char(36) NULL,
                     \`profileId\` char(36) NULL,
-                      UNIQUE INDEX \`REL_22222ccdda9ba57d8e3a634cd8\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+                      UNIQUE INDEX \`REL_22222ccdda9ba57d8e3a634cd8\` (\`authorizationId\`),
+                      UNIQUE INDEX \`REL_222adf666c59b9eb5ce394714cf\` (\`commentsId\`),
+                      UNIQUE INDEX \`REL_a3693e1d3472c5ef8b00e51acfd\` (\`profileId\`),
+                      PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
       `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_22255901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -104,6 +110,21 @@ export class timeline1674481366302 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      'DROP INDEX `REL_e6203bc09ec8b93debeb3a44cb9` ON `timeline`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_10ed346b16ca044cd84fb1c4034` ON `timeline`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_94994efc5eb5936ed70f2c55903` ON `calendar`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_222adf666c59b9eb5ce394714cf` ON `calendar_event`'
+    );
+    await queryRunner.query(
+      'DROP INDEX `REL_a3693e1d3472c5ef8b00e51acfd` ON `calendar_event`'
+    );
     await queryRunner.query(
       `ALTER TABLE \`timeline\` DROP FOREIGN KEY \`FK_22443901817dd09d5906537e088\``
     );

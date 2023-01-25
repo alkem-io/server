@@ -63,7 +63,6 @@ export class CalendarEventResolverFields {
     description: 'The start time for this CalendarEvent.',
   })
   startDate(@Parent() event: ICalendarEvent): Date {
-    const createdDate = event.startDate;
-    return new Date(createdDate);
+    return event.startDate;
   }
 }
