@@ -55,13 +55,7 @@ export class CalendarEventResolverFields {
   })
   @Profiling.api
   async comments(@Parent() calendarEvent: ICalendarEvent): Promise<IComments> {
-    if (!calendarEvent.comments) {
-      throw new EntityNotInitializedException(
-        'CalendarEvent comments not defined',
-        LogContext.CALENDAR
-      );
-    }
-    return calendarEvent.comments;
+    return this.calendarEventService.getComments(calendarEvent.id);
   }
 
   @ResolveField('startDate', () => Date, {

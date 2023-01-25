@@ -8,7 +8,6 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DeleteCalendarEventInput } from './dto/event.dto.delete';
 import { UpdateCalendarEventInput } from './dto/event.dto.update';
-import { VisualService } from '@domain/common/visual/visual.service';
 import { CommentsService } from '@domain/communication/comments/comments.service';
 import { CreateCalendarEventInput } from './dto/event.dto.create';
 import { CardProfileService } from '@domain/collaboration/card-profile/card.profile.service';
@@ -20,7 +19,6 @@ import { ICalendarEvent } from './event.interface';
 export class CalendarEventService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private visualService: VisualService,
     private commentsService: CommentsService,
     private cardProfileService: CardProfileService,
     @InjectRepository(CalendarEvent)
@@ -159,20 +157,21 @@ export class CalendarEventService {
   }
 
   public async getComments(calendarEventID: string) {
-    const { commentsId } = await this.calendarEventRepository
-      .createQueryBuilder('calendarEvent')
-      .select('calendarEvent.commentsId', 'commentsId')
-      .where({ id: calendarEventID })
-      .getRawOne();
+    const calendarEventLoaded = await this.getCalendarEventOrFail(
+      calendarEventID,
+      {
+        relations: ['comments'],
+      }
+    );
 
-    if (!commentsId) {
+    if (!calendarEventLoaded.comments) {
       throw new EntityNotFoundException(
         `Comments not found on calendarEvent: ${calendarEventID}`,
         LogContext.CALENDAR
       );
     }
 
-    return this.commentsService.getCommentsOrFail(commentsId);
+    return calendarEventLoaded.comments;
   }
 
   public async getCalendarEventsInCalloutCount(calloutId: string) {
