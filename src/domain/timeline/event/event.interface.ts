@@ -3,10 +3,11 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { INameable } from '@domain/common/entity/nameable-entity';
 import { ICardProfile } from '@domain/collaboration/card-profile/card.profile.interface';
 import { ICalendar } from '../calendar/calendar.interface';
+import { CalendarEventType } from '@common/enums/calendar.event.type';
 
 @ObjectType('CalendarEvent')
 export abstract class ICalendarEvent extends INameable {
-  @Field(() => String, {
+  @Field(() => CalendarEventType, {
     description: 'The event type, e.g. webinar, meetup etc.',
   })
   type!: string;

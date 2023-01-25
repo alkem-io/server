@@ -9,7 +9,7 @@ Variables:
   "data": {
     "ID": "uuid",
     "displayName": "test event2",
-    "type": "bla",
+    "type": "EVENT",
     "profileData": {
       "description": "this is a very good event"
     } ,

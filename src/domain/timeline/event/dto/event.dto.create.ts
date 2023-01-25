@@ -5,10 +5,11 @@ import { CreateNameableInput } from '@domain/common/entity/nameable-entity/namea
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { CreateCardProfileInput } from '@domain/collaboration/card-profile/dto';
 import { Type } from 'class-transformer';
+import { CalendarEventType } from '@common/enums/calendar.event.type';
 
 @InputType()
 export class CreateCalendarEventInput extends CreateNameableInput {
-  @Field({ nullable: false })
+  @Field(() => CalendarEventType, { nullable: false })
   @MaxLength(MID_TEXT_LENGTH)
   type!: string;
 

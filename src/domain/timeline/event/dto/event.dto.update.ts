@@ -1,3 +1,4 @@
+import { CalendarEventType } from '@common/enums/calendar.event.type';
 import { UpdateCardProfileInput } from '@domain/collaboration/card-profile/dto';
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.update';
 import { InputType, Field } from '@nestjs/graphql';
@@ -7,7 +8,7 @@ import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateCalendarEventInput extends UpdateNameableInput {
-  @Field({ nullable: true })
+  @Field(() => CalendarEventType, { nullable: true })
   @IsOptional()
   @MaxLength(MID_TEXT_LENGTH)
   type?: string;
