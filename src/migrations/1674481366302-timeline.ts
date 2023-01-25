@@ -32,6 +32,9 @@ export class timeline1674481366302 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`calendar\` ADD CONSTRAINT \`FK_33355901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
+    await queryRunner.query(
+      `ALTER TABLE \`timeline\` ADD CONSTRAINT \`FK_66355901817dd09d5906537e088\` FOREIGN KEY (\`calendarId\`) REFERENCES \`calendar\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
 
     // Create calendar_events
     await queryRunner.query(
@@ -97,6 +100,9 @@ export class timeline1674481366302 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `ALTER TABLE \`timeline\` DROP FOREIGN KEY \`FK_22443901817dd09d5906537e088\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`timeline\` DROP FOREIGN KEY \`FK_66355901817dd09d5906537e088\``
     );
     await queryRunner.query(
       `ALTER TABLE \`calendar\` DROP FOREIGN KEY \`FK_33355901817dd09d5906537e088\``
