@@ -54,7 +54,7 @@ export class CalendarEventService {
   ): Promise<ICalendarEvent> {
     const calendarEventID = deleteData.ID;
     const calendarEvent = await this.getCalendarEventOrFail(calendarEventID, {
-      relations: ['profile'],
+      relations: ['profile', 'comments'],
     });
     if (calendarEvent.authorization) {
       await this.authorizationPolicyService.delete(calendarEvent.authorization);
@@ -115,6 +115,16 @@ export class CalendarEventService {
         calendarEventData.profileData
       );
     }
+    if (calendarEventData.durationDays) {
+      calendarEvent.durationDays = calendarEventData.durationDays;
+    }
+    if (calendarEventData.durationMinutes) {
+      calendarEvent.durationMinutes = calendarEventData.durationMinutes;
+    }
+    calendarEvent.wholeDay = calendarEventData.wholeDay;
+    calendarEvent.multipleDays = calendarEventData.multipleDays;
+    calendarEvent.startDate = calendarEventData.startDate;
+
     if (calendarEventData.type) {
       calendarEvent.type = calendarEventData.type;
     }

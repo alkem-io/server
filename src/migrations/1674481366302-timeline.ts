@@ -1,8 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
-export class timeline1673901366302 implements MigrationInterface {
-  name = 'timeline1673901366302';
+export class timeline1674481366302 implements MigrationInterface {
+  name = 'timeline16734481366302';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -13,8 +13,8 @@ export class timeline1673901366302 implements MigrationInterface {
       `CREATE TABLE \`timeline\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                      \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                       \`version\` int NOT NULL,
-                      \`authorizationId\` varchar(36) NULL,
-                      \`calendarId\` varchar(36) NULL,
+                      \`authorizationId\` char(36) NULL,
+                      \`calendarId\` char(36) NULL,
                         UNIQUE INDEX \`REL_33333ccdda9ba57d8e3a634cd8\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
@@ -26,7 +26,7 @@ export class timeline1673901366302 implements MigrationInterface {
       `CREATE TABLE \`calendar\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                 \`version\` int NOT NULL,
-                \`authorizationId\` varchar(36) NULL,
+                \`authorizationId\` char(36) NULL,
                   UNIQUE INDEX \`REL_33333ccdda9ba57d8e3a634cd8\` (\`authorizationId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(

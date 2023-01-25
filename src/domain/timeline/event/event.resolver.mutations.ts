@@ -44,20 +44,16 @@ export class CalendarEventResolverMutations {
   })
   async updateCalendarEvent(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('calendarEventData') calendarEventData: UpdateCalendarEventInput
+    @Args('eventData') eventData: UpdateCalendarEventInput
   ): Promise<ICalendarEvent> {
     const calendarEvent =
-      await this.calendarEventService.getCalendarEventOrFail(
-        calendarEventData.ID
-      );
+      await this.calendarEventService.getCalendarEventOrFail(eventData.ID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       calendarEvent.authorization,
       AuthorizationPrivilege.UPDATE,
       `update calendarEvent: ${calendarEvent.nameID}`
     );
-    return await this.calendarEventService.updateCalendarEvent(
-      calendarEventData
-    );
+    return await this.calendarEventService.updateCalendarEvent(eventData);
   }
 }

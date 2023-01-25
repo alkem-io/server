@@ -14,7 +14,7 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   createdBy!: string;
 
   @OneToOne(() => Comments, {
-    eager: true,
+    eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
