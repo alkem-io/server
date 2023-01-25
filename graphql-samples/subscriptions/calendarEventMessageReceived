@@ -1,0 +1,9 @@
+subscription {
+  calendarEventCommentsMessageReceived(calendarEventID: "uuid") {
+    calendarEventID
+    message {
+      id,
+      message
+    }
+  }
+}
