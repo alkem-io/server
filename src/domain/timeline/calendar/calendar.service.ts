@@ -119,7 +119,11 @@ export class CalendarService {
         `${calendarEventData.displayName}`
       );
     }
-    const communicationGroupID = '';
+
+    const communicationGroupID =
+      await this.namingService.getCommunicationGroupIdForCalendarOrFail(
+        calendar.id
+      );
 
     const calendarEvent = await this.calendarEventService.createCalendarEvent(
       calendarEventData,

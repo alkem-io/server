@@ -198,6 +198,30 @@ export class NamingService {
     return result.communityId;
   }
 
+  public async getCommunicationGroupIdForCalendarOrFail(
+    calendarID: string
+  ): Promise<string> {
+    const hub = await this.hubRepository
+      .createQueryBuilder('hub')
+      .leftJoinAndSelect('hub.community', 'community')
+      .leftJoinAndSelect('community.communication', 'communication')
+      .leftJoinAndSelect('hub.timeline', 'timeline')
+      .leftJoinAndSelect('timeline.calendar', 'calendar')
+      .where('calendar.id = :calendarID')
+      .setParameters({
+        calendarID: `${calendarID}`,
+      })
+      .getOne();
+    const communication = hub?.community?.communication;
+    if (communication) {
+      return communication.communicationGroupID;
+    }
+    throw new EntityNotFoundException(
+      `Unable to find Communication for Calendar: ${calendarID}`,
+      LogContext.CALENDAR
+    );
+  }
+
   async getCommunicationGroupIdFromCommunityId(
     communicationID: string
   ): Promise<string> {
