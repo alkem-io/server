@@ -85,7 +85,7 @@ export class CalendarEventResolverSubscriptions {
     );
 
     return this.subscriptionCalendarEventComment.asyncIterator(
-      SubscriptionType.ASPECT_COMMENTS_MESSAGE_RECEIVED
+      SubscriptionType.CALENDAR_EVENT_COMMENTS_MESSAGE_RECEIVED
     );
   }
 }
