@@ -51,5 +51,6 @@ export class UpdateCalendarEventInput extends UpdateNameableInput {
     nullable: true,
     description: 'The length of the event in days.',
   })
+  @IsOptional()
   durationDays!: number;
 }

@@ -375,4 +375,19 @@ export class NamingService {
     );
     return aspect;
   }
+
+  async getCalendarEventIdForComments(
+    commentsID: string
+  ): Promise<string | undefined> {
+    // check if this is a comment related to an calendar
+    const [calendarEvent]: {
+      id: string;
+    }[] = await getConnection().query(
+      `SELECT id FROM calendar_event WHERE commentsId = '${commentsID}'`
+    );
+    if (calendarEvent) {
+      return calendarEvent.id;
+    }
+    return undefined;
+  }
 }

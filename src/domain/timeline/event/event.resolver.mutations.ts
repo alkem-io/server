@@ -6,7 +6,6 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ICalendarEvent } from './event.interface';
 import { DeleteCalendarEventInput } from './dto/event.dto.delete';
 import { UpdateCalendarEventInput } from './dto/event.dto.update';
@@ -15,8 +14,7 @@ import { UpdateCalendarEventInput } from './dto/event.dto.update';
 export class CalendarEventResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private calendarEventService: CalendarEventService,
-    private authorizationPolicyService: AuthorizationPolicyService
+    private calendarEventService: CalendarEventService
   ) {}
 
   @UseGuards(GraphqlGuard)
