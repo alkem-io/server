@@ -93,7 +93,12 @@ export class CalendarService {
     calendarEventData: CreateCalendarEventOnCalendarInput,
     userID: string
   ): Promise<ICalendarEvent> {
-    const calendar = await this.getCalendarOrFail(calendarEventData.calendarID);
+    const calendar = await this.getCalendarOrFail(
+      calendarEventData.calendarID,
+      {
+        relations: ['events'],
+      }
+    );
     if (!calendar.events)
       throw new EntityNotInitializedException(
         `Calendar (${calendar}) not initialised`,
@@ -101,8 +106,10 @@ export class CalendarService {
       );
 
     if (calendarEventData.nameID && calendarEventData.nameID.length > 0) {
-      const nameAvailable = true; //await this.namingService.isNameIdAvailable(calendarEventData.nameID);
-      if (!nameAvailable)
+      const eventWithNameID = calendar.events.find(
+        e => e.nameID === calendarEventData.nameID
+      );
+      if (eventWithNameID)
         throw new ValidationException(
           `Unable to create CalendarEvent: the provided nameID is already taken: ${calendarEventData.nameID}`,
           LogContext.CALENDAR
