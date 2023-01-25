@@ -1,6 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { MID_TEXT_LENGTH, NAMEID_LENGTH } from '@src/common/constants';
-import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
+import { IsDate, IsOptional, MaxLength, ValidateNested } from 'class-validator';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { CreateCardProfileInput } from '@domain/collaboration/card-profile/dto';
@@ -29,8 +29,9 @@ export class CreateCalendarEventInput extends CreateNameableInput {
 
   @Field(() => Date, {
     nullable: false,
-    description: 'The state date for the event.',
+    description: 'The start date for the event.',
   })
+  @IsDate()
   startDate!: Date;
 
   @Field(() => Boolean, {

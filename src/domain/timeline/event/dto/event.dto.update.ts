@@ -4,7 +4,7 @@ import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/namea
 import { InputType, Field } from '@nestjs/graphql';
 import { MID_TEXT_LENGTH } from '@src/common/constants';
 import { Type } from 'class-transformer';
-import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
+import { IsDate, IsOptional, MaxLength, ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateCalendarEventInput extends UpdateNameableInput {
@@ -26,6 +26,7 @@ export class UpdateCalendarEventInput extends UpdateNameableInput {
     nullable: false,
     description: 'The state date for the event.',
   })
+  @IsDate()
   startDate!: Date;
 
   @Field(() => Boolean, {
