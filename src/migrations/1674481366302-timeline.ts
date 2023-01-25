@@ -63,6 +63,12 @@ export class timeline1674481366302 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_111838434c7198a323ea6f475fb\` FOREIGN KEY (\`profileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
+    await queryRunner.query(
+      `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_157de0ce487e25bb69437e80b13\` FOREIGN KEY (\`commentsId\`) REFERENCES \`comments\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_6a30f26ca267009fcf514e0e726\` FOREIGN KEY (\`createdBy\`) REFERENCES \`user\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
 
     // Link calendar_event to calendar
     await queryRunner.query(
@@ -113,6 +119,16 @@ export class timeline1674481366302 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`calendar_event\` DROP FOREIGN KEY \`FK_77755450cf75dc486700ca034c6\``
     );
+    await queryRunner.query(
+      `ALTER TABLE \`calendar_event\` DROP FOREIGN KEY \`FK_111838434c7198a323ea6f475fb\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`calendar_event\` DROP FOREIGN KEY \`FK_157de0ce487e25bb69437e80b13\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`calendar_event\` DROP FOREIGN KEY \`FK_6a30f26ca267009fcf514e0e726\``
+    );
+
 
     await queryRunner.query('DROP TABLE `calendar_event`');
     await queryRunner.query('DROP TABLE `calendar`');
