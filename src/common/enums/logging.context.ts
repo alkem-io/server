@@ -30,4 +30,5 @@ export enum LogContext {
   LIBRARY = 'library',
   FILE_MANAGER = 'file-manager',
   GEO = 'geo',
+  CALENDAR = 'calendar',
 }

@@ -3,6 +3,7 @@ export enum SubscriptionType {
   COMMUNICATION_DISCUSSION_MESSAGE_RECEIVED = 'communicationDiscussionMessageReceived',
   COMMUNICATION_DISCUSSION_UPDATED = 'communicationDiscussionUpdated',
   ASPECT_COMMENTS_MESSAGE_RECEIVED = 'communicationCommentsMessageReceived',
+  CALENDAR_EVENT_COMMENTS_MESSAGE_RECEIVED = 'communicationCalendarEventCommentsMessageReceived',
   CANVAS_CONTENT_UPDATED = 'canvasContentUpdated',
   PROFILE_VERIFIED_CREDENTIAL = 'profileVerifiedCredential',
   CALLOUT_ASPECT_CREATED = 'calloutAspectCreated',
