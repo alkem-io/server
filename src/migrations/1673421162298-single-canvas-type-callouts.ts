@@ -2,6 +2,17 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { compressText } from '@common/utils/compression.util';
 
+const templateVisual = {
+  name: 'bannerNarrow',
+  minWidth: 384,
+  maxWidth: 768,
+  minHeight: 128,
+  maxHeight: 256,
+  aspectRatio: 3,
+};
+
+const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+
 export class singleCanvasTypeCallouts1673421162298
   implements MigrationInterface
 {
@@ -29,30 +40,42 @@ export class singleCanvasTypeCallouts1673421162298
 
     for (const callout of canvasCallouts) {
       const tagsetId = randomUUID();
+      const visualId = randomUUID();
+      const visualAuthID = randomUUID();
+      const templateInfoId = randomUUID();
+      const canvasTemplateId = randomUUID();
+
       await queryRunner.query(`
         INSERT INTO tagset (id, version, tags)
         VALUES ('${tagsetId}', 1, '')
-    `);
+      `);
 
-      const templateInfoId = randomUUID();
+      await queryRunner.query(
+        `INSERT INTO authorization_policy VALUES ('${visualAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
+      );
+
+      await queryRunner.query(
+        `INSERT INTO visual (id, createdDate, updatedDate, version, authorizationId, name, uri, minWidth, maxWidth, minHeight, maxHeight, aspectRatio, allowedTypes)
+        VALUES ('${visualId}', NOW(), NOW(), 1, '${visualAuthID}', '${templateVisual.name}', '', '${templateVisual.minWidth}', '${templateVisual.maxWidth}', '${templateVisual.minHeight}', '${templateVisual.maxHeight}', '${templateVisual.aspectRatio}', '${allowedTypes}')`
+      );
+
       await queryRunner.query(`
-        INSERT INTO template_info (id, version, title, description, tagsetId)
-        VALUES ('${templateInfoId}', 1, '', '', '${tagsetId}')
-    `);
+        INSERT INTO template_info (id, version, title, description, tagsetId, visualId)
+        VALUES ('${templateInfoId}', 1, '', '', '${tagsetId}', '${visualId}')
+      `);
 
-      const canvasTemplateId = randomUUID();
       await queryRunner.query(
         `
         INSERT INTO canvas_template (id, version, templateInfoId, value)
         VALUES ('${canvasTemplateId}', 1, '${templateInfoId}', ?)
-    `,
+       `,
         [compressedEmptyValue]
       );
 
       await queryRunner.query(`
         UPDATE callout SET canvasTemplateId = '${canvasTemplateId}'
         WHERE callout.id = '${callout.id}'
-    `);
+       `);
     }
   }
 
