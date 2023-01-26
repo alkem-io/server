@@ -25,6 +25,7 @@ import { NotificationInputAspectComment } from '@services/adapters/notification-
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';
+import { CalendarEventCommentsMessageReceived } from '@domain/timeline/event/dto/event.dto.event.message.received';
 
 @Resolver()
 export class CommentsResolverMutations {
@@ -76,6 +77,13 @@ export class CommentsResolverMutations {
         message: commentSent,
       };
       this.activityAdapter.aspectComment(activityLogInput);
+    }
+
+    const calendarID = await this.namingService.getCalendarEventIdForComments(
+      messageData.commentsID
+    );
+    if (calendarID) {
+      this.processCalendarEventCommentEvents(calendarID, commentSent);
     }
 
     return commentSent;
@@ -147,5 +155,23 @@ export class CommentsResolverMutations {
       commentSent: commentSent,
     };
     await this.notificationAdapter.aspectComment(notificationInput);
+  }
+
+  private async processCalendarEventCommentEvents(
+    calendarID: string,
+    commentSent: IMessage
+  ) {
+    // build subscription payload
+    const eventID = `comment-msg-${getRandomId()}`;
+    const subscriptionPayload: CalendarEventCommentsMessageReceived = {
+      eventID: eventID,
+      message: commentSent,
+      calendarEventID: calendarID,
+    };
+    // send the subscriptions event
+    this.subscriptionAspectComments.publish(
+      SubscriptionType.CALENDAR_EVENT_COMMENTS_MESSAGE_RECEIVED,
+      subscriptionPayload
+    );
   }
 }
