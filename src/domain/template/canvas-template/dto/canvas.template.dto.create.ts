@@ -19,7 +19,7 @@ export class CreateCanvasTemplateInput extends CreateTemplateBaseInput {
   @Field(() => UUID, {
     nullable: true,
     description:
-      'Use the specified Canvas as the initial value for this CanvasTempplate',
+      'Use the specified Canvas as the initial value for this CanvasTemplate',
   })
   @IsOptional()
   @MaxLength(UUID_LENGTH)

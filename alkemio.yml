@@ -241,6 +241,9 @@ monitoring:
 # Section defining all configuration parameters / endpoints required for communication between different actors (user-user, community-user etc) in Alkemio.
 communications:
   enabled: ${COMMUNICATIONS_ENABLED}:true
+  matrix:
+    connection_retries: ${COMMUNICATIONS_MATRIX_CONNECTION_RETRIES}:5
+    connection_timeout: ${COMMUNICATIONS_MATRIX_CONNECTION_TIMEOUT}:30
   discussions:
     enabled: ${COMMUNICATIONS_DISCUSSIONS_ENABLED}:true
 

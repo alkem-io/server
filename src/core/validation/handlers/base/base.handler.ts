@@ -63,6 +63,8 @@ import { UpdateCanvasTemplateInput } from '@domain/template/canvas-template/dto/
 import { DeleteFileInput } from '@domain/common/file-manager/file.manager.dto.delete';
 import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
 import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
+import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';
+import { UpdateCalendarEventInput } from '@domain/timeline/event';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -98,6 +100,7 @@ export class BaseHandler extends AbstractHandler {
       CreateReferenceOnContextInput,
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,
+      CreateCalendarEventOnCalendarInput,
       UpdateActorInput,
       UpdateAspectInput,
       UpdateAspectTemplateInput,
@@ -105,6 +108,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateOrganizationInput,
       UpdateOpportunityInput,
       UpdateChallengeInput,
+      UpdateCalendarEventInput,
       UpdateUserGroupInput,
       UpdateUserInput,
       UpdateProfileInput,

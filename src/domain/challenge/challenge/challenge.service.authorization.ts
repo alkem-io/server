@@ -234,7 +234,7 @@ export class ChallengeAuthorizationService {
 
     authorization = this.authorizationPolicyService.reset(authorization);
     authorization =
-      this.platformAuthorizationService.inheritPlatformAuthorizationPolicy(
+      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         authorization
       );
     authorization.anonymousReadAccess = false;

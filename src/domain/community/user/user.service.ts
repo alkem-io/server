@@ -234,6 +234,11 @@ export class UserService {
       'true'
     );
     defaults.set(UserPreferenceType.NOTIFICATION_CALLOUT_PUBLISHED, 'true');
+    // messaging & mentions
+    defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_MENTION, 'true');
+    defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_MESSAGE, 'true');
+    defaults.set(UserPreferenceType.NOTIFICATION_ORGANIZATION_MENTION, 'true');
+    defaults.set(UserPreferenceType.NOTIFICATION_ORGANIZATION_MESSAGE, 'true');
 
     return defaults;
   }
@@ -717,10 +722,11 @@ export class UserService {
   }
 
   async usersWithCredentials(
-    credentialCriteria: CredentialsSearchInput
+    credentialCriteria: CredentialsSearchInput,
+    limit?: number
   ): Promise<IUser[]> {
     const credResourceID = credentialCriteria.resourceID || '';
-    const users = await this.userRepository
+    return this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.agent', 'agent')
       .leftJoinAndSelect('agent.credentials', 'credential')
@@ -730,9 +736,8 @@ export class UserService {
         type: `${credentialCriteria.type}`,
         resourceID: credResourceID,
       })
+      .take(limit)
       .getMany();
-
-    return users;
   }
 
   async countUsersWithCredentials(

@@ -64,9 +64,15 @@ export class DiscussionAuthorizationService {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
     // Allow any contributor to this community to create discussions, and to send messages to the discussion
-    const createPrivilege = new AuthorizationPolicyRulePrivilege(
+    const contributePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_COMMENT],
       AuthorizationPrivilege.CONTRIBUTE
+    );
+    privilegeRules.push(contributePrivilege);
+
+    const createPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE_COMMENT],
+      AuthorizationPrivilege.CREATE
     );
     privilegeRules.push(createPrivilege);
 

@@ -25,6 +25,7 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -33,6 +34,7 @@ export class HubAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
+    private timelineAuthorizationService: TimelineAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
@@ -56,7 +58,7 @@ export class HubAuthorizationService {
     );
     hub.authorization.anonymousReadAccess = false;
     hub.authorization =
-      this.platformAuthorizationService.inheritPlatformAuthorizationPolicy(
+      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         hub.authorization
       );
 
@@ -239,6 +241,12 @@ export class HubAuthorizationService {
         hub.authorization
       );
 
+    hub.timeline = await this.hubService.getTimelineOrFail(hub.id);
+    hub.timeline =
+      await this.timelineAuthorizationService.applyAuthorizationPolicy(
+        hub.timeline,
+        hub.authorization
+      );
     return await this.hubRepository.save(hub);
   }
 

@@ -3,7 +3,6 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { Library } from './library.entity';
 import { LibraryResolverFields } from './library.resolver.fields';
@@ -17,7 +16,6 @@ import { LibraryAuthorizationService } from './library.service.authorization';
     NamingModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
-    PlatformAuthorizationPolicyModule,
     TypeOrmModule.forFeature([Library]),
   ],
   providers: [

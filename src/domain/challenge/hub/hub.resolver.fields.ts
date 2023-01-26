@@ -31,6 +31,7 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
+import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -98,6 +99,16 @@ export class HubResolverFields {
   @UseGuards(GraphqlGuard)
   async templatesSet(@Parent() hub: Hub): Promise<ITemplatesSet> {
     return await this.hubService.getTemplatesSetOrFail(hub.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('timeline', () => ITimeline, {
+    nullable: true,
+    description: 'The timeline with events in use by this Hub',
+  })
+  @UseGuards(GraphqlGuard)
+  async timeline(@Parent() hub: Hub): Promise<ITimeline> {
+    return await this.hubService.getTimelineOrFail(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

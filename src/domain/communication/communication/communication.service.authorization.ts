@@ -60,12 +60,17 @@ export class CommunicationAuthorizationService {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
     // Allow any contributor to this community to create discussions, and to send messages to the discussion
-    const createPrivilege = new AuthorizationPolicyRulePrivilege(
+    const contributePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_DISCUSSION],
       AuthorizationPrivilege.CONTRIBUTE
     );
-    privilegeRules.push(createPrivilege);
+    privilegeRules.push(contributePrivilege);
 
+    const createPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE_DISCUSSION],
+      AuthorizationPrivilege.CREATE
+    );
+    privilegeRules.push(createPrivilege);
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,
       privilegeRules
