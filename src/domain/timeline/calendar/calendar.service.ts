@@ -168,7 +168,9 @@ export class CalendarService {
     if (args.IDs) {
       const results: ICalendarEvent[] = [];
       for (const eventID of args.IDs) {
-        const event = readableCallouts.find(e => e.id === eventID);
+        const event = readableCallouts.find(
+          e => e.id === eventID || e.nameID === eventID
+        );
 
         if (!event)
           throw new EntityNotFoundException(
