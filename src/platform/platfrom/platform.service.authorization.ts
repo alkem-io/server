@@ -86,7 +86,8 @@ export class PlatformAuthorizationService {
     const communicationRules =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ, AuthorizationPrivilege.CONTRIBUTE],
-        [AuthorizationCredential.GLOBAL_REGISTERED]
+        [AuthorizationCredential.GLOBAL_REGISTERED],
+        'platformReadContributeRegistered'
       );
     newRules.push(communicationRules);
 

@@ -270,7 +270,8 @@ export class HubAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-        ]
+        ],
+        'hubAuthorizationReset'
       );
     authorizationReset.inheritable = false;
     newRules.push(authorizationReset);
@@ -278,7 +279,8 @@ export class HubAuthorizationService {
     const communityAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ],
-        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY]
+        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
+        'hubGlobalAdminCommunityRead'
       );
     newRules.push(communityAdmin);
 
@@ -289,7 +291,8 @@ export class HubAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-        ]
+        ],
+        'hubAuthorizationGlobalAdminGrant'
       );
     newRules.push(globalAdmin);
 
@@ -393,7 +396,8 @@ export class HubAuthorizationService {
       const anyUserCanApply =
         this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
           [AuthorizationPrivilege.COMMUNITY_APPLY],
-          [AuthorizationCredential.GLOBAL_REGISTERED]
+          [AuthorizationCredential.GLOBAL_REGISTERED],
+          'hubCommunityApplyGlobalRegistered'
         );
       anyUserCanApply.inheritable = false;
       newRules.push(anyUserCanApply);
@@ -408,7 +412,8 @@ export class HubAuthorizationService {
       const anyUserCanJoin =
         this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
           [AuthorizationPrivilege.COMMUNITY_JOIN],
-          [AuthorizationCredential.GLOBAL_REGISTERED]
+          [AuthorizationCredential.GLOBAL_REGISTERED],
+          'hubCommunityJoinGlobalRegistered'
         );
       anyUserCanJoin.inheritable = false;
       newRules.push(anyUserCanJoin);

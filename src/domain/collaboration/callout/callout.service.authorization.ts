@@ -142,7 +142,8 @@ export class CalloutAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-        ]
+        ],
+        'calloutUpdatePublisherGlobalAdmins'
       );
     calloutPublishUpdate.inheritable = false;
     newRules.push(calloutPublishUpdate);

@@ -115,7 +115,8 @@ export class OrganizationAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-        ]
+        ],
+        'organizationAuthorizationReset'
       );
     globalAdminNotInherited.inheritable = false;
     newRules.push(globalAdminNotInherited);
@@ -129,7 +130,8 @@ export class OrganizationAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY]
+        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
+        'organizationGlobalAdminCommunity'
       );
     newRules.push(communityAdmin);
 
@@ -140,7 +142,8 @@ export class OrganizationAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-        ]
+        ],
+        'organizationGlobalAdmins'
       );
     newRules.push(globalAdmin);
 

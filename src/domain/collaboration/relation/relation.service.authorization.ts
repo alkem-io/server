@@ -72,7 +72,8 @@ export class RelationAuthorizationService {
     const globalRegisteredCreateRelation =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE],
-        [AuthorizationCredential.GLOBAL_REGISTERED]
+        [AuthorizationCredential.GLOBAL_REGISTERED],
+        'relationCreateGlobalRegistered'
       );
 
     newRules.push(globalRegisteredCreateRelation);

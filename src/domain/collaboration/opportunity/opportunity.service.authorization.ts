@@ -143,7 +143,8 @@ export class OpportunityAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-        ]
+        ],
+        'opportunityUpdateInnovationFLow'
       );
     updateInnovationFlowRule.inheritable = false;
     rules.push(updateInnovationFlowRule);

@@ -8,18 +8,16 @@ export class AuthorizationPolicyRuleCredential
   criterias: ICredentialDefinition[];
   grantedPrivileges: AuthorizationPrivilege[];
   inheritable: boolean;
+  name: string;
 
   constructor(
     grantedPrivileges: AuthorizationPrivilege[],
-    type: string,
-    resourceID?: string
+    criteria: ICredentialDefinition,
+    name?: string
   ) {
-    const criteria: ICredentialDefinition = {
-      type: type,
-      resourceID: resourceID || '',
-    };
     this.criterias = [criteria];
     this.grantedPrivileges = grantedPrivileges;
     this.inheritable = true;
+    this.name = name || '';
   }
 }

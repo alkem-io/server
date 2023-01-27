@@ -76,7 +76,8 @@ export class PlatformAuthorizationPolicyService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-        ]
+        ],
+        'platformGlobalAdmins'
       );
     credentialRules.push(globalAdmins);
 
@@ -90,7 +91,8 @@ export class PlatformAuthorizationPolicyService {
     const globalAdminNotInherited =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
-        [AuthorizationCredential.GLOBAL_ADMIN]
+        [AuthorizationCredential.GLOBAL_ADMIN],
+        'platformGrantGlobalAdmins'
       );
     globalAdminNotInherited.inheritable = false;
     credentialRules.push(globalAdminNotInherited);
@@ -103,7 +105,8 @@ export class PlatformAuthorizationPolicyService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
           AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-        ]
+        ],
+        'platformPlatformAdmins'
       );
     platformAdmin.inheritable = false;
     credentialRules.push(platformAdmin);
@@ -112,7 +115,8 @@ export class PlatformAuthorizationPolicyService {
     const userNotInherited =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ_USERS],
-        [AuthorizationCredential.GLOBAL_REGISTERED]
+        [AuthorizationCredential.GLOBAL_REGISTERED],
+        'platformReadRegistered'
       );
     userNotInherited.inheritable = false;
     credentialRules.push(userNotInherited);
@@ -126,7 +130,8 @@ export class PlatformAuthorizationPolicyService {
         [
           AuthorizationCredential.HUB_ADMIN,
           AuthorizationCredential.CHALLENGE_ADMIN,
-        ]
+        ],
+        'platformCreateOrgFileUpload'
       );
     createOrg.inheritable = false;
     credentialRules.push(createOrg);
@@ -142,7 +147,8 @@ export class PlatformAuthorizationPolicyService {
           AuthorizationCredential.CHALLENGE_ADMIN,
           AuthorizationCredential.OPPORTUNITY_ADMIN,
           AuthorizationCredential.ORGANIZATION_ADMIN,
-        ]
+        ],
+        'platformAnyAdmin'
       );
     admin.inheritable = false;
     credentialRules.push(admin);

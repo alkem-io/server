@@ -102,7 +102,8 @@ export class CommunityAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY]
+        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
+        'communityGlobalAdminCommunityAll'
       );
     newRules.push(globalCommunityAdmin);
 
@@ -110,7 +111,8 @@ export class CommunityAuthorizationService {
       const globalRegistered =
         this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
           [AuthorizationPrivilege.READ],
-          [AuthorizationCredential.GLOBAL_REGISTERED]
+          [AuthorizationCredential.GLOBAL_REGISTERED],
+          'communityReadGlobalRegistered'
         );
       newRules.push(globalRegistered);
     }

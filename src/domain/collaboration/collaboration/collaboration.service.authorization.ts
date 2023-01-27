@@ -124,7 +124,8 @@ export class CollaborationAuthorizationService {
     const communityMemberNotInherited =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE_RELATION],
-        [AuthorizationCredential.USER_SELF_MANAGEMENT]
+        [AuthorizationCredential.USER_SELF_MANAGEMENT],
+        'collaborationCreateRelationRegistered'
       );
     communityMemberNotInherited.inheritable = false;
     newRules.push(communityMemberNotInherited);

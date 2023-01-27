@@ -64,7 +64,8 @@ export class OrganizationVerificationAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
           AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-        ]
+        ],
+        'organizationGlobalAdminsAll'
       );
     newRules.push(globalAdmin);
 

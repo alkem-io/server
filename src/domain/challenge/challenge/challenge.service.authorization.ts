@@ -318,7 +318,8 @@ export class ChallengeAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-        ]
+        ],
+        'challengeInnovationFlow'
       );
     updateInnovationFlowRule.inheritable = false;
     rules.push(updateInnovationFlowRule);

@@ -48,7 +48,8 @@ export class AuthorizationPolicyService {
 
   createCredentialRuleUsingTypesOnly(
     grantedPrivileges: AuthorizationPrivilege[],
-    createntialTypes: AuthorizationCredential[]
+    createntialTypes: AuthorizationCredential[],
+    name: string
   ): IAuthorizationPolicyRuleCredential {
     const criterias: ICredentialDefinition[] = [];
 
@@ -65,6 +66,7 @@ export class AuthorizationPolicyService {
       grantedPrivileges,
       criterias,
       inheritable: true,
+      name,
     };
   }
 
@@ -185,11 +187,10 @@ export class AuthorizationPolicyService {
     const rules = this.authorizationService.convertCredentialRulesStr(
       auth.credentialRules
     );
-    const newRule = new AuthorizationPolicyRuleCredential(
-      grantedPrivileges,
-      credentialCriteria.type,
-      credentialCriteria.resourceID
-    );
+    const newRule = new AuthorizationPolicyRuleCredential(grantedPrivileges, {
+      type: credentialCriteria.type,
+      resourceID: credentialCriteria.resourceID || '',
+    });
     rules.push(newRule);
     auth.credentialRules = JSON.stringify(rules);
     return auth;
