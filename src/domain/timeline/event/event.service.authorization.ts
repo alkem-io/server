@@ -15,6 +15,7 @@ import { CalendarEventService } from './event.service';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CardProfileAuthorizationService } from '@domain/collaboration/card-profile/card.profile.service.authorization';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 
 @Injectable()
 export class CalendarEventAuthorizationService {
@@ -49,6 +50,9 @@ export class CalendarEventAuthorizationService {
 
     // Extend to give the user creating the calendarEvent more rights
     calendarEvent.authorization = this.appendCredentialRules(calendarEvent);
+    calendarEvent.authorization = this.appendPrivilegeRules(
+      calendarEvent.authorization
+    );
 
     calendarEvent.profile = await this.calendarEventService.getCardProfile(
       calendarEvent
@@ -98,5 +102,29 @@ export class CalendarEventAuthorizationService {
       );
 
     return updatedAuthorization;
+  }
+
+  private appendPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    // Allow any contributor to this community to create discussions, and to send messages to the discussion
+    const contributePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE_COMMENT],
+      AuthorizationPrivilege.CONTRIBUTE
+    );
+    privilegeRules.push(contributePrivilege);
+
+    const createPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE_COMMENT],
+      AuthorizationPrivilege.CREATE
+    );
+    privilegeRules.push(createPrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
   }
 }
