@@ -27,14 +27,13 @@ export class DiscussionResolverFields {
     return discussionRoom.messages;
   }
 
-  @ResolveField('timestamp', () => Number, {
+  @ResolveField('date', () => Date, {
     nullable: true,
-    description: 'The timestamp for the creation of this Discussion.',
+    description: 'The Date for the creation of this Discussion.',
   })
-  async timestamp(@Parent() discussion: IDiscussion): Promise<number> {
+  async date(@Parent() discussion: IDiscussion): Promise<Date> {
     const createdDate = (discussion as Discussion).createdDate;
-    const date = new Date(createdDate);
-    return date.getTime();
+    return createdDate;
   }
 
   @ResolveField('createdBy', () => UUID, {
