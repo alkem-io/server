@@ -60,12 +60,25 @@ export class UserResolverFields {
     return user.authorization;
   }
 
+  @UseGuards(GraphqlGuard)
   @ResolveField('preferences', () => [IPreference], {
     nullable: false,
     description: 'The preferences for this user',
   })
   @Profiling.api
-  async preferences(@Parent() user: User): Promise<IPreference[]> {
+  async preferences(
+    @Parent() user: User,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IPreference[]> {
+    if (
+      !(await this.isAccessGranted(
+        user,
+        agentInfo,
+        AuthorizationPrivilege.READ
+      ))
+    ) {
+      return [];
+    }
     const preferenceSet = await this.userService.getPreferenceSetOrFail(
       user.id
     );
@@ -76,7 +89,6 @@ export class UserResolverFields {
     nullable: true,
     description: 'The Community rooms this user is a member of',
   })
-  @Profiling.api
   async communityRooms(
     @Parent() user: User
   ): Promise<CommunicationRoomResult[]> {
