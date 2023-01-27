@@ -157,7 +157,8 @@ export class CollaborationAuthorizationService {
         AuthorizationPrivilege.CREATE_CALLOUT,
         AuthorizationPrivilege.CREATE_RELATION,
       ],
-      AuthorizationPrivilege.CREATE
+      AuthorizationPrivilege.CREATE,
+      'CollaborationCreate'
     );
     privilegeRules.push(createPrivilege);
 
@@ -169,7 +170,8 @@ export class CollaborationAuthorizationService {
     ) {
       const createCalloutPrivilege = new AuthorizationPolicyRulePrivilege(
         [AuthorizationPrivilege.CREATE_CALLOUT],
-        AuthorizationPrivilege.CONTRIBUTE
+        AuthorizationPrivilege.CONTRIBUTE,
+        'CalloutContribute'
       );
       privilegeRules.push(createCalloutPrivilege);
     }

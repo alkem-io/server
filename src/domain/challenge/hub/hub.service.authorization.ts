@@ -305,7 +305,8 @@ export class HubAuthorizationService {
     // Ensure that CREATE also allows CREATE_CHALLENGE
     const createChallengePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_CHALLENGE],
-      AuthorizationPrivilege.CREATE
+      AuthorizationPrivilege.CREATE,
+      'HubCreateChallenge'
     );
     this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,

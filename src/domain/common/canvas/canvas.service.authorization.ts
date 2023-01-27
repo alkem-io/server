@@ -124,13 +124,15 @@ export class CanvasAuthorizationService {
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.UPDATE_CANVAS],
-      AuthorizationPrivilege.UPDATE
+      AuthorizationPrivilege.UPDATE,
+      'CanvasUpdate'
     );
     privilegeRules.push(createPrivilege);
 
     const contributePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.UPDATE_CANVAS],
-      AuthorizationPrivilege.CONTRIBUTE
+      AuthorizationPrivilege.CONTRIBUTE,
+      'CanvasContribute'
     );
     privilegeRules.push(contributePrivilege);
 

@@ -470,7 +470,8 @@ export class ChallengeAuthorizationService {
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_OPPORTUNITY],
-      AuthorizationPrivilege.CREATE
+      AuthorizationPrivilege.CREATE,
+      'ChallengeCreateOpportunity'
     );
     privilegeRules.push(createPrivilege);
 

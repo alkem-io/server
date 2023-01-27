@@ -165,13 +165,15 @@ export class PlatformAuthorizationPolicyService {
         AuthorizationPrivilege.CREATE_ORGANIZATION,
         AuthorizationPrivilege.FILE_UPLOAD,
       ],
-      AuthorizationPrivilege.CREATE
+      AuthorizationPrivilege.CREATE,
+      'PlatformCreate'
     );
     privilegeRules.push(createPrivilege);
 
     const deletePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.FILE_DELETE],
-      AuthorizationPrivilege.DELETE
+      AuthorizationPrivilege.DELETE,
+      'PlatformDelete'
     );
     privilegeRules.push(deletePrivilege);
 

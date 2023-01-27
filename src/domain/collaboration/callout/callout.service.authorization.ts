@@ -165,13 +165,15 @@ export class CalloutAuthorizationService {
     if (privilegeToGrant) {
       const createPrivilege = new AuthorizationPolicyRulePrivilege(
         [privilegeToGrant],
-        AuthorizationPrivilege.CREATE
+        AuthorizationPrivilege.CREATE,
+        'CalloutCreate'
       );
       privilegeRules.push(createPrivilege);
 
       const contributorsPrivilege = new AuthorizationPolicyRulePrivilege(
         [privilegeToGrant],
-        AuthorizationPrivilege.CONTRIBUTE
+        AuthorizationPrivilege.CONTRIBUTE,
+        'CalloutContribute'
       );
       privilegeRules.push(contributorsPrivilege);
     }

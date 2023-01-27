@@ -38,13 +38,15 @@ export class CommentsAuthorizationService {
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_COMMENT],
-      AuthorizationPrivilege.CREATE
+      AuthorizationPrivilege.CREATE,
+      'CommentsCreate'
     );
     privilegeRules.push(createPrivilege);
 
     const contributePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_COMMENT],
-      AuthorizationPrivilege.CONTRIBUTE
+      AuthorizationPrivilege.CONTRIBUTE,
+      'CommentsContribute'
     );
     privilegeRules.push(contributePrivilege);
 
