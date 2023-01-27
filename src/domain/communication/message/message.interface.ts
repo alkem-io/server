@@ -21,9 +21,5 @@ export class IMessage {
 
   sender!: string;
 
-  @Field(() => Number, {
-    nullable: false,
-    description: 'The server timestamp in UTC',
-  })
   timestamp!: number;
 }

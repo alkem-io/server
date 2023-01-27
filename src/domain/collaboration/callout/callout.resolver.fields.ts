@@ -160,14 +160,13 @@ export class CalloutResolverFields {
     return await this.userService.getUserOrFail(publishedBy);
   }
 
-  @ResolveField('publishedDate', () => Number, {
+  @ResolveField('publishedDate', () => Date, {
     nullable: true,
     description: 'The timestamp for the publishing of this Callout.',
   })
-  async publishedDate(@Parent() callout: ICallout): Promise<number> {
+  async publishedDate(@Parent() callout: ICallout): Promise<Date> {
     const createdDate = callout.publishedDate;
-    const date = new Date(createdDate);
-    return date.getTime();
+    return new Date(createdDate);
   }
 
   @ResolveField('createdBy', () => IUser, {

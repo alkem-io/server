@@ -11,7 +11,7 @@ export class MessageResolverFields {
 
   @ResolveField('sender', () => IUser, {
     nullable: false,
-    description: 'The user that created this Aspect',
+    description: 'The user that created this Message',
   })
   async sender(@Parent() message: IMessage): Promise<IUser> {
     const sender = message.sender;
@@ -23,5 +23,21 @@ export class MessageResolverFields {
     }
     const user = await this.userService.getUserOrFail(sender);
     return user;
+  }
+
+  @ResolveField('date', () => Date, {
+    nullable: false,
+    description: 'The date that this message was sent',
+  })
+  async date(@Parent() message: IMessage): Promise<Date> {
+    const timestamp = message.timestamp;
+    if (!timestamp) {
+      throw new EntityNotInitializedException(
+        'Timestamp not defined on message',
+        LogContext.COMMUNITY
+      );
+    }
+    const date = new Date(timestamp);
+    return date;
   }
 }
