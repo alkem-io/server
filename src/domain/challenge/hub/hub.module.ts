@@ -30,6 +30,7 @@ import { HubFilterModule } from '@services/infrastructure/hub-filter/hub.filter.
 import { HubResolverSubscriptions } from './hub.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
+import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
     NamingModule,
     PreferenceModule,
     PreferenceSetModule,
+    TimelineModule,
     TemplatesSetModule,
     HubFilterModule,
     TypeOrmModule.forFeature([Hub]),

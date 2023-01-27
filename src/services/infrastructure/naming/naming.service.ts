@@ -198,6 +198,30 @@ export class NamingService {
     return result.communityId;
   }
 
+  public async getCommunicationGroupIdForCalendarOrFail(
+    calendarID: string
+  ): Promise<string> {
+    const hub = await this.hubRepository
+      .createQueryBuilder('hub')
+      .leftJoinAndSelect('hub.community', 'community')
+      .leftJoinAndSelect('community.communication', 'communication')
+      .leftJoinAndSelect('hub.timeline', 'timeline')
+      .leftJoinAndSelect('timeline.calendar', 'calendar')
+      .where('calendar.id = :calendarID')
+      .setParameters({
+        calendarID: `${calendarID}`,
+      })
+      .getOne();
+    const communication = hub?.community?.communication;
+    if (communication) {
+      return communication.communicationGroupID;
+    }
+    throw new EntityNotFoundException(
+      `Unable to find Communication for Calendar: ${calendarID}`,
+      LogContext.CALENDAR
+    );
+  }
+
   async getCommunicationGroupIdFromCommunityId(
     communicationID: string
   ): Promise<string> {
@@ -350,5 +374,20 @@ export class NamingService {
       `SELECT id, displayName, createdBy, createdDate, type, nameID FROM aspect WHERE commentsId = '${commentsID}'`
     );
     return aspect;
+  }
+
+  async getCalendarEventIdForComments(
+    commentsID: string
+  ): Promise<string | undefined> {
+    // check if this is a comment related to an calendar
+    const [calendarEvent]: {
+      id: string;
+    }[] = await getConnection().query(
+      `SELECT id FROM calendar_event WHERE commentsId = '${commentsID}'`
+    );
+    if (calendarEvent) {
+      return calendarEvent.id;
+    }
+    return undefined;
   }
 }

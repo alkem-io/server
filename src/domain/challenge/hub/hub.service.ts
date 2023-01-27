@@ -62,6 +62,8 @@ import { HubVisibility } from '@common/enums/hub.visibility';
 import { HubFilterService } from '@services/infrastructure/hub-filter/hub.filter.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
+import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 
 @Injectable()
 export class HubService {
@@ -78,6 +80,7 @@ export class HubService {
     private challengeService: ChallengeService,
     private preferenceSetService: PreferenceSetService,
     private hubsFilterService: HubFilterService,
+    private timelineService: TimelineService,
     private templatesSetService: TemplatesSetService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
@@ -133,6 +136,8 @@ export class HubService {
       machineConfig
     );
 
+    hub.timeline = await this.timelineService.createTimeline();
+
     // save before assigning host in case that fails
     const savedHub = await this.hubRepository.save(hub);
 
@@ -146,7 +151,6 @@ export class HubService {
         userID: agentInfo.userID,
       });
     }
-
     return savedHub;
   }
 
@@ -210,7 +214,7 @@ export class HubService {
 
   async deleteHub(deleteData: DeleteHubInput): Promise<IHub> {
     const hub = await this.getHubOrFail(deleteData.ID, {
-      relations: ['challenges', 'preferenceSet', 'templatesSet'],
+      relations: ['challenges', 'preferenceSet', 'templatesSet', 'timeline'],
     });
 
     // Do not remove an hub that has child challenges , require these to be individually first removed
@@ -240,6 +244,10 @@ export class HubService {
 
     if (hub.templatesSet) {
       await this.templatesSetService.deleteTemplatesSet(hub.templatesSet.id);
+    }
+
+    if (hub.timeline) {
+      await this.timelineService.deleteTimeline(hub.timeline.id);
     }
 
     const result = await this.hubRepository.remove(hub as Hub);
@@ -399,6 +407,22 @@ export class HubService {
     }
 
     return templatesSet;
+  }
+
+  async getTimelineOrFail(hubId: string): Promise<ITimeline> {
+    const hubWithTimeline = await this.getHubOrFail(hubId, {
+      relations: ['timeline'],
+    });
+    const timeline = hubWithTimeline.timeline;
+
+    if (!timeline) {
+      throw new EntityNotFoundException(
+        `Unable to find timeline for hub with nameID: ${hubWithTimeline.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return timeline;
   }
 
   async getPreferenceSetOrFail(hubId: string): Promise<IPreferenceSet> {

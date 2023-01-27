@@ -3,6 +3,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { HubVisibility } from '@common/enums/hub.visibility';
+import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 
 @ObjectType('Hub')
 export abstract class IHub extends IBaseChallenge {
@@ -15,4 +16,6 @@ export abstract class IHub extends IBaseChallenge {
   challenges?: IChallenge[];
 
   templatesSet?: ITemplatesSet;
+
+  timeline?: ITimeline;
 }

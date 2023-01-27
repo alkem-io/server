@@ -5,6 +5,7 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { HubVisibility } from '@common/enums/hub.visibility';
+import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 @Entity()
 export class Hub extends BaseChallenge implements IHub {
   @Column('varchar', {
@@ -35,6 +36,14 @@ export class Hub extends BaseChallenge implements IHub {
   })
   @JoinColumn()
   templatesSet?: TemplatesSet;
+
+  @OneToOne(() => Timeline, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  timeline?: Timeline;
 
   constructor() {
     super();
