@@ -105,7 +105,13 @@ export class AuthorizationService {
       for (const credential of agentInfo.credentials) {
         if (this.isCredentialMatch(credential, rule)) {
           for (const privilege of rule.grantedPrivileges) {
-            if (privilege === privilegeRequired) return true;
+            if (privilege === privilegeRequired) {
+              this.logger.verbose?.(
+                `Granted privilege '${privilegeRequired}' using rule '${rule.name}'`,
+                LogContext.AUTH
+              );
+              return true;
+            }
             grantedPrivileges.push(privilege);
           }
         }
