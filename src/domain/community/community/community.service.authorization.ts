@@ -170,7 +170,8 @@ export class CommunityAuthorizationService {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
             resourceID: userToBeRemovedID,
           },
-        ]
+        ],
+        'communitySelfRemoval'
       );
     newRules.push(userSelfRemovalRule);
 

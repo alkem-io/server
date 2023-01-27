@@ -74,7 +74,8 @@ export class CanvasAuthorizationService {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
             resourceID: canvas.createdBy,
           },
-        ]
+        ],
+        'canvasCreatedBy'
       );
     newRules.push(manageCanvasCreatedByPolicy);
 
@@ -100,7 +101,8 @@ export class CanvasAuthorizationService {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
             resourceID: checkout.lockedBy,
           },
-        ]
+        ],
+        'canvasLockedBy'
       );
 
       newRules.push(lockedBy);

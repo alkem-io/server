@@ -131,7 +131,8 @@ export class CalloutAuthorizationService {
               type: AuthorizationCredential.USER_SELF_MANAGEMENT,
               resourceID: callout.createdBy,
             },
-          ]
+          ],
+          'calloutCreatedBy'
         );
       newRules.push(manageCreatedCalloutPolicy);
     }

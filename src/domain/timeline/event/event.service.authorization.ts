@@ -87,7 +87,8 @@ export class CalendarEventAuthorizationService {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
             resourceID: calendarEvent.createdBy,
           },
-        ]
+        ],
+        'calendarEventCreatedBy'
       );
     newRules.push(manageCreatedCalendarEventPolicy);
 

@@ -80,7 +80,8 @@ export class OrganizationVerificationAuthorizationService {
           type: AuthorizationCredential.ORGANIZATION_OWNER,
           resourceID: organizationID,
         },
-      ]
+      ],
+      'organizationVerificationAdmin'
     );
     newRules.push(orgAdmin);
 

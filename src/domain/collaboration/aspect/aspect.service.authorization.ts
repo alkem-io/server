@@ -106,7 +106,8 @@ export class AspectAuthorizationService {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
             resourceID: aspect.createdBy,
           },
-        ]
+        ],
+        'aspectCreatedBy'
       );
     newRules.push(manageCreatedAspectPolicy);
 
@@ -124,7 +125,8 @@ export class AspectAuthorizationService {
     const adminsMoveCardRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.MOVE_CARD],
-        credentials
+        credentials,
+        'aspectAdminsMoveCard'
       );
     adminsMoveCardRule.inheritable = false;
     newRules.push(adminsMoveCardRule);

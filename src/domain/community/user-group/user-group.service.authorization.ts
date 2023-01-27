@@ -69,7 +69,8 @@ export class UserGroupAuthorizationService {
             type: AuthorizationCredential.USER_GROUP_MEMBER,
             resourceID: userGroupID,
           },
-        ]
+        ],
+        'userGroupRead'
       );
 
     newRules.push(userGroupMember);

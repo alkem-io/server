@@ -47,7 +47,8 @@ export class RelationAuthorizationService {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
             resourceID: userID,
           },
-        ]
+        ],
+        'relationCreatedBy'
       );
     newRules.push(selfCreatedRelation);
 

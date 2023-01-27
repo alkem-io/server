@@ -155,7 +155,8 @@ export class UserAuthorizationService {
           type: AuthorizationCredential.USER_SELF_MANAGEMENT,
           resourceID: user.id,
         },
-      ]
+      ],
+      'userSelfAdmin'
     );
     newRules.push(userSelfAdmin);
 
@@ -189,7 +190,8 @@ export class UserAuthorizationService {
     if (readCredentials.length > 0) {
       const readRule = this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.READ],
-        readCredentials
+        readCredentials,
+        'userRead'
       );
       newRules.push(readRule);
     }

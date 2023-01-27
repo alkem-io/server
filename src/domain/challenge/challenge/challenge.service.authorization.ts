@@ -263,7 +263,8 @@ export class ChallengeAuthorizationService {
           AuthorizationPrivilege.GRANT,
           AuthorizationPrivilege.DELETE,
         ],
-        [...this.communityPolicyService.getAdminCredentials(policy)]
+        [...this.communityPolicyService.getAdminCredentials(policy)],
+        'challengeHubAdmins'
       );
     rules.push(challengeHubAdmins);
 
@@ -301,14 +302,16 @@ export class ChallengeAuthorizationService {
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.DELETE,
       ],
-      [this.communityPolicyService.getAdminCredential(policy)]
+      [this.communityPolicyService.getAdminCredential(policy)],
+      'challengeAdmins'
     );
     rules.push(challengeAdmin);
 
     const challengeMember =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.READ],
-        [this.communityPolicyService.getMembershipCredential(policy)]
+        [this.communityPolicyService.getMembershipCredential(policy)],
+        'challengeMemberRead'
       );
     rules.push(challengeMember);
 
@@ -334,7 +337,8 @@ export class ChallengeAuthorizationService {
       const createOpportunityRule =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.CREATE_OPPORTUNITY],
-          criteria
+          criteria,
+          'challengeCreateOpportunity'
         );
       createOpportunityRule.inheritable = false;
       rules.push(createOpportunityRule);
@@ -422,7 +426,8 @@ export class ChallengeAuthorizationService {
       const hubMemberCanApply =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.COMMUNITY_APPLY],
-          [parentCommunityCredential]
+          [parentCommunityCredential],
+          'challengeHubMemberApply'
         );
       hubMemberCanApply.inheritable = false;
       newRules.push(hubMemberCanApply);
@@ -437,7 +442,8 @@ export class ChallengeAuthorizationService {
       const hubMemberCanJoin =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.COMMUNITY_JOIN],
-          [parentCommunityCredential]
+          [parentCommunityCredential],
+          'challengeHubMemberJoin'
         );
       hubMemberCanJoin.inheritable = false;
       newRules.push(hubMemberCanJoin);

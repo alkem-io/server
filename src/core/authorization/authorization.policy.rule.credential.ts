@@ -13,11 +13,11 @@ export class AuthorizationPolicyRuleCredential
   constructor(
     grantedPrivileges: AuthorizationPrivilege[],
     criteria: ICredentialDefinition,
-    name?: string
+    name: string
   ) {
     this.criterias = [criteria];
     this.grantedPrivileges = grantedPrivileges;
     this.inheritable = true;
-    this.name = name || '';
+    this.name = name;
   }
 }

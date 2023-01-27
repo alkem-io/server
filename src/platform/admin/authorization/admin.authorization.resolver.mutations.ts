@@ -32,7 +32,8 @@ export class AdminAuthorizationResolverMutations {
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.GLOBAL_ADMIN],
-        [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS]
+        [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
+        'adminAuthorizationGrantGlobalAdmin'
       );
   }
 

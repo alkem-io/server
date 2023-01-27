@@ -40,7 +40,8 @@ export class ConversionResolverMutations {
           AuthorizationRoleGlobal.GLOBAL_ADMIN,
           AuthorizationRoleGlobal.GLOBAL_ADMIN_HUBS,
         ],
-        [AuthorizationPrivilege.CREATE_HUB, AuthorizationPrivilege.CREATE]
+        [AuthorizationPrivilege.CREATE_HUB, AuthorizationPrivilege.CREATE],
+        'conversionGlobalAdmins'
       );
   }
 

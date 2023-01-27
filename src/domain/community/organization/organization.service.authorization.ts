@@ -164,7 +164,8 @@ export class OrganizationAuthorizationService {
             type: AuthorizationCredential.ORGANIZATION_OWNER,
             resourceID: organizationID,
           },
-        ]
+        ],
+        'organizationAdmin'
       );
 
     newRules.push(organizationAdmin);
@@ -188,7 +189,8 @@ export class OrganizationAuthorizationService {
           type: AuthorizationCredential.GLOBAL_REGISTERED,
           resourceID: '',
         },
-      ]
+      ],
+      'organizationRead'
     );
     newRules.push(readPrivilege);
 
@@ -215,7 +217,8 @@ export class OrganizationAuthorizationService {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
             resourceID: userToBeRemovedID,
           },
-        ]
+        ],
+        'organizationSelfRemoval'
       );
     newRules.push(userSelfRemovalRule);
 

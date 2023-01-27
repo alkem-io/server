@@ -56,7 +56,8 @@ export class ApplicationAuthorizationService {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
             resourceID: user.id,
           },
-        ]
+        ],
+        'applicationUserApplication'
       );
     newRules.push(userApplicationRule);
 

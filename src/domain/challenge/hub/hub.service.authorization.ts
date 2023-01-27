@@ -224,7 +224,8 @@ export class HubAuthorizationService {
             type: AuthorizationCredential.HUB_ADMIN,
             resourceID: hub.id,
           },
-          [AuthorizationPrivilege.DELETE]
+          [AuthorizationPrivilege.DELETE],
+          'challengeHubAdminDelete'
         );
     }
 
@@ -339,7 +340,8 @@ export class HubAuthorizationService {
         AuthorizationPrivilege.DELETE,
         AuthorizationPrivilege.GRANT,
       ],
-      [this.communityPolicyService.getAdminCredential(policy)]
+      [this.communityPolicyService.getAdminCredential(policy)],
+      'hubAdmins'
     );
     newRules.push(hubAdmin);
 
@@ -353,7 +355,8 @@ export class HubAuthorizationService {
       const memberChallenge =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.CREATE_CHALLENGE],
-          [this.communityPolicyService.getMembershipCredential(policy)]
+          [this.communityPolicyService.getMembershipCredential(policy)],
+          'hubMembersCreateChallenges'
         );
       memberChallenge.inheritable = false;
       newRules.push(memberChallenge);
@@ -361,7 +364,8 @@ export class HubAuthorizationService {
 
     const hubMember = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.READ],
-      [this.communityPolicyService.getMembershipCredential(policy)]
+      [this.communityPolicyService.getMembershipCredential(policy)],
+      'hubMembersRead'
     );
     newRules.push(hubMember);
 
@@ -439,7 +443,8 @@ export class HubAuthorizationService {
               type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
               resourceID: hostOrg.id,
             },
-          ]
+          ],
+          'hubHostAssociatesJoin'
         );
       hostOrgMembersCanJoin.inheritable = false;
       newRules.push(hostOrgMembersCanJoin);

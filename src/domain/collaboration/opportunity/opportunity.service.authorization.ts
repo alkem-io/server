@@ -126,14 +126,16 @@ export class OpportunityAuthorizationService {
           AuthorizationPrivilege.GRANT,
           AuthorizationPrivilege.DELETE,
         ],
-        [this.communityPolicyService.getAdminCredential(policy)]
+        [this.communityPolicyService.getAdminCredential(policy)],
+        'opportunityAdmin'
       );
     rules.push(opportunityAdmin);
 
     const opportunityMember =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.READ],
-        [this.communityPolicyService.getMembershipCredential(policy)]
+        [this.communityPolicyService.getMembershipCredential(policy)],
+        'opportunityMember'
       );
     rules.push(opportunityMember);
 

@@ -38,7 +38,8 @@ export class CanvasCheckoutAuthorizationService {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
             resourceID: checkout.lockedBy,
           },
-        ]
+        ],
+        'canvasCheckoutLockedBy'
       );
 
       newRules.push(lockedBy);

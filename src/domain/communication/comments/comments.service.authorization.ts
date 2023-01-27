@@ -74,7 +74,8 @@ export class CommentsAuthorizationService {
               type: AuthorizationCredential.USER_SELF_MANAGEMENT,
               resourceID: senderUserID,
             },
-          ]
+          ],
+          'commentsMessageSender'
         );
       newRules.push(messageSender);
     }

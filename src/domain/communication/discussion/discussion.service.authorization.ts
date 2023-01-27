@@ -103,7 +103,8 @@ export class DiscussionAuthorizationService {
               type: AuthorizationCredential.USER_SELF_MANAGEMENT,
               resourceID: senderUserID,
             },
-          ]
+          ],
+          'discussionMessageSender'
         );
       newRules.push(messageSender);
     }

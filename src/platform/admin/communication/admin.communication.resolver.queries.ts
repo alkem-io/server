@@ -24,7 +24,8 @@ export class AdminCommunicationResolverQueries {
     this.authorizationQueriesPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.GLOBAL_ADMIN],
-        [AuthorizationPrivilege.READ]
+        [AuthorizationPrivilege.READ],
+        'adminCommunicationRead'
       );
   }
 

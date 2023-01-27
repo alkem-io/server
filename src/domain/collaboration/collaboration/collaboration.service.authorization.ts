@@ -135,7 +135,8 @@ export class CollaborationAuthorizationService {
     const contributorsRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.CONTRIBUTE],
-        contributors
+        contributors,
+        'collaborationContributors'
       );
     newRules.push(contributorsRule);
 
