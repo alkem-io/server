@@ -1,6 +1,11 @@
 import { ConfigService } from '@nestjs/config';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { Configuration, Session, V0alpha2Api } from '@ory/kratos-client';
+import {
+  Configuration,
+  Session,
+  FrontendApi,
+  IdentityApi,
+} from '@ory/kratos-client';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserService } from '@domain/community/user/user.service';
@@ -152,18 +157,29 @@ export class AuthenticationService {
     sessionToBeExtended: Session,
     bearerToken: string
   ): Promise<Session | never> {
-    const kratos = new V0alpha2Api(
-      new Configuration({
-        basePath: this.kratosAdminUrlServer,
-      })
-    );
+    const kratosConfig = new Configuration({
+      basePath: this.kratosAdminUrlServer,
+      baseOptions: {
+        withCredentials: true, // Important for CORS
+        timeout: 30000, // 30 seconds
+      },
+    });
+    const ory = {
+      identity: new IdentityApi(kratosConfig),
+      frontend: new FrontendApi(kratosConfig),
+    };
 
     let newSession: Session;
 
     try {
-      const { data } = await kratos.adminExtendSession(sessionToBeExtended.id, {
-        headers: { authorization: `Bearer ${bearerToken}` },
-      });
+      const { data } = await ory.identity.extendSession(
+        {
+          id: sessionToBeExtended.id,
+        },
+        {
+          headers: { authorization: `Bearer ${bearerToken}` },
+        }
+      );
       newSession = data;
       this.logger?.verbose?.(
         `Session ${sessionToBeExtended.id} extended for identity ${sessionToBeExtended.identity.id}`

@@ -3,7 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Strategy } from 'passport-custom';
-import { Configuration, V0alpha2Api } from '@ory/kratos-client';
+import {
+  Configuration,
+  IdentityApi,
+  FrontendApi,
+  Session,
+} from '@ory/kratos-client';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import {
   ApiRestrictedAccessException,
@@ -34,11 +39,17 @@ export class OryApiStrategy extends PassportStrategy(
     const apiAccessEnabled = this.configService.get(ConfigurationTypes.IDENTITY)
       .authentication.api_access_enabled;
 
-    const kratos = new V0alpha2Api(
-      new Configuration({
-        basePath: kratosPublicBaseUrl,
-      })
-    );
+    const kratosConfig = new Configuration({
+      basePath: kratosPublicBaseUrl,
+      baseOptions: {
+        withCredentials: true, // Important for CORS
+        timeout: 30000, // 30 seconds
+      },
+    });
+    const ory = {
+      identity: new IdentityApi(kratosConfig),
+      frontend: new FrontendApi(kratosConfig),
+    };
 
     if (!apiAccessEnabled) {
       throw new ApiRestrictedAccessException('API access is restricted!');
@@ -53,14 +64,21 @@ export class OryApiStrategy extends PassportStrategy(
       throw new BearerTokenNotFoundException('Bearer token is not provided!');
     }
 
-    const { data } = await kratos.toSession(bearerToken);
+    const { data } = await ory.frontend.toSession({
+      xSessionToken: bearerToken,
+    });
+    const session: Session = await ory.frontend
+      .toSession({
+        xSessionToken: bearerToken,
+      })
+      .then(({ data: session }) => session);
 
     if (!data) {
       this.logger.verbose?.('No Ory Kratos API session', LogContext.AUTH);
       return this.authService.createAgentInfo();
     }
 
-    const session = verifyIdentityIfOidcAuth(data);
+    // const session = verifyIdentityIfOidcAuth(data);
     this.logger.verbose?.(session.identity, LogContext.AUTH);
 
     const oryIdentity = session.identity as OryDefaultIdentitySchema;

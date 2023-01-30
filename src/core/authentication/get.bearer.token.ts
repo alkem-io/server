@@ -1,4 +1,4 @@
-import { Configuration, V0alpha2Api } from '@ory/kratos-client';
+import { Configuration, FrontendApi, IdentityApi } from '@ory/kratos-client';
 import {
   LoginFlowInitializeException,
   LoginFlowException,
@@ -10,17 +10,22 @@ export const getBearerToken = async (
   password_identifier: string,
   password: string
 ): Promise<string> | never => {
-  const kratos = new V0alpha2Api(
-    new Configuration({
-      basePath: kratosPublicUrl,
-    })
-  );
+  const kratosConfig = new Configuration({
+    basePath: kratosPublicUrl,
+    baseOptions: {
+      withCredentials: true, // Important for CORS
+      timeout: 30000, // 30 seconds
+    },
+  });
+  const ory = {
+    identity: new IdentityApi(kratosConfig),
+    frontend: new FrontendApi(kratosConfig),
+  };
 
   let flowId: string;
 
   try {
-    const flowData =
-      await kratos.initializeSelfServiceLoginFlowWithoutBrowser();
+    const flowData = await ory.frontend.createNativeRegistrationFlow();
     flowId = flowData.data.id;
   } catch (e) {
     const err = e as Error;
@@ -33,13 +38,16 @@ export const getBearerToken = async (
   let sessionId: string | undefined;
 
   try {
-    const sessionData = await kratos.submitSelfServiceLoginFlow(flowId, {
-      method: 'password',
-      password_identifier,
-      password,
+    const sessionData = await ory.frontend.updateRegistrationFlow({
+      flow: flowId,
+      updateRegistrationFlowBody: {
+        method: 'password',
+        traits: { password_identifier },
+        password,
+      },
     });
     sessionToken = sessionData.data.session_token;
-    sessionId = sessionData.data.session.id;
+    sessionId = sessionData.data.session?.id;
   } catch (e) {
     const err = e as Error;
     throw new LoginFlowException(

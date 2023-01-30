@@ -26,6 +26,16 @@
             }
           }
         },
+        "username": {
+          "type": "string",
+          "ory.sh/kratos": {
+            "credentials": {
+              "password": {
+                "identifier": true
+              }
+            }
+          }
+        },
         "name": {
           "type": "object",
           "properties": {
