@@ -29,7 +29,7 @@ export class AspectResolverFields {
     const createdBy = aspect.createdBy;
     if (!createdBy) {
       throw new EntityNotInitializedException(
-        'CreatedBy not set on Aspect',
+        `CreatedBy not set on Aspect with id ${aspect.id}`,
         LogContext.COLLABORATION
       );
     }
