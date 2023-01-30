@@ -26,6 +26,7 @@ import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
+import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -39,6 +40,7 @@ export class HubAuthorizationService {
     private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private communityPolicyService: CommunityPolicyService,
+    private collaborationAuthorizationService: CollaborationAuthorizationService,
     private hubService: HubService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>
@@ -242,10 +244,19 @@ export class HubAuthorizationService {
       );
 
     hub.timeline = await this.hubService.getTimelineOrFail(hub.id);
+    // Extend with contributor rules + then send into apply
+    const clonedAuthorization: IAuthorizationPolicy = JSON.parse(
+      JSON.stringify(hub.authorization)
+    );
+    const extendedAuthorizationContributors =
+      this.collaborationAuthorizationService.appendCredentialRulesForContributors(
+        clonedAuthorization,
+        policy
+      );
     hub.timeline =
       await this.timelineAuthorizationService.applyAuthorizationPolicy(
         hub.timeline,
-        hub.authorization
+        extendedAuthorizationContributors
       );
     return await this.hubRepository.save(hub);
   }
