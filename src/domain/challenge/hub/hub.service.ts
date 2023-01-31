@@ -651,7 +651,7 @@ export class HubService {
 
   async createChallengeInHub(
     challengeData: CreateChallengeOnHubInput,
-    agentInfo?: AgentInfo
+    agentInfo: AgentInfo
   ): Promise<IChallenge> {
     const hub = await this.getHubOrFail(challengeData.hubID);
     await this.validateChallengeNameIdOrFail(challengeData.nameID, hub.id);
