@@ -59,6 +59,7 @@ import { HubVisibility } from '@common/enums/hub.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { ElasticsearchService } from '@services/external/elasticsearch';
 
 @Injectable()
 export class ChallengeService {
@@ -74,6 +75,7 @@ export class ChallengeService {
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
     private namingService: NamingService,
+    private elasticSearch: ElasticsearchService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -175,6 +177,8 @@ export class ChallengeService {
         challengeID: challenge.id,
       });
     }
+
+    this.elasticSearch.challengeCreated(savedChallenge, agentInfo.userID);
 
     return savedChallenge;
   }

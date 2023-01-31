@@ -26,6 +26,7 @@ import { ChallengeResolverSubscriptions } from './challenge.resolver.subscriptio
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
+import { ElasticsearchModule } from '@services/external/elasticsearch';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
     UserModule,
     PreferenceModule,
     PreferenceSetModule,
+    ElasticsearchModule,
     TypeOrmModule.forFeature([Challenge]),
   ],
   providers: [

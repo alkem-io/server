@@ -32,9 +32,6 @@ export class AppController {
 
   @Get()
   getHello(): string {
-    this.e.createChallenge({
-      id: '-1',
-    } as any);
     return this.appService.getHello();
   }
 
