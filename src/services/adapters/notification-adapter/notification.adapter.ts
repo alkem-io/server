@@ -22,6 +22,7 @@ import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { stringifyWithoutAuthorization } from '@common/utils';
 import { NotificationInputUserMessage } from './dto/notification.dto.input.user.message';
 import { NotificationInputOrganizationMessage } from './dto/notification.input.organization.message';
+import { NotificationInputCommunityLeadsMessage } from './dto/notification.dto.input.community.leads.message';
 
 @Injectable()
 export class NotificationAdapter {
@@ -177,6 +178,21 @@ export class NotificationAdapter {
         eventData.triggeredBy,
         eventData.message,
         eventData.organizationID
+      );
+    this.notificationsClient.emit<number>(event, payload);
+  }
+
+  public async sendCommunityLeadsMessage(
+    eventData: NotificationInputCommunityLeadsMessage
+  ): Promise<void> {
+    const event = NotificationEventType.COMMUNICATION_COMMUNITY_MESSAGE;
+    this.logEventTriggered(eventData, event);
+    // Emit the events to notify others
+    const payload =
+      await this.notificationPayloadBuilder.buildCommunicationCommunityLeadsMessageNotificationPayload(
+        eventData.triggeredBy,
+        eventData.message,
+        eventData.communityID
       );
     this.notificationsClient.emit<number>(event, payload);
   }

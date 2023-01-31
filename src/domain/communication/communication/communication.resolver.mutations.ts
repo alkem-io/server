@@ -24,6 +24,8 @@ import { CommunicationSendMessageToUserInput } from './dto/communication.dto.sen
 import { NotificationInputOrganizationMessage } from '@services/adapters/notification-adapter/dto/notification.input.organization.message';
 import { CommunicationSendMessageToOrganizationInput } from './dto/communication.dto.send.message.organization';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
+import { NotificationInputCommunityLeadsMessage } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.leads.message';
+import { CommunicationSendMessageToCommunityLeadsInput } from './dto/communication.dto.send.message.community.leads';
 
 @Resolver()
 export class CommunicationResolverMutations {
@@ -124,7 +126,7 @@ export class CommunicationResolverMutations {
   }
   @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
-    description: 'Send message to a User.',
+    description: 'Send message to an Organization.',
   })
   async sendMessageToOrganization(
     @CurrentUser() agentInfo: AgentInfo,
@@ -148,33 +150,32 @@ export class CommunicationResolverMutations {
     return true;
   }
 
-  // @UseGuards(GraphqlGuard)
-  // @Mutation(() => Boolean, {
-  //   description: 'Send message to a User.',
-  // })
-  // async sendMessageToCommunityLeads(
-  //   @CurrentUser() agentInfo: AgentInfo,
-  //   @Args('messageData') messageData: CommunicationSendMessageToUserInput
-  // ): Promise<boolean> {
-  // await this.communityService.getUsersWithRole(
-  //   community,
-  //   CommunityRole.LEAD
-  // );
-  //   const receivingUser = await this.userService.getUserOrFail(
-  //     messageData.receiverId
-  //   );
-  //   await this.authorizationService.grantAccessOrFail(
-  //     agentInfo,
-  //     receivingUser.authorization,
-  //     AuthorizationPrivilege.READ,
-  //     `user send message: ${receivingUser.nameID}`
-  //   );
-  //   const notificationInput: NotificationInputUserMessage = {
-  //     triggeredBy: agentInfo.userID,
-  //     receiverID: messageData.receiverId,
-  //     message: messageData.message,
-  //   };
-  //   await this.notificationAdapter.sendUserMessage(notificationInput);
-  //   return true;
-  // }
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => Boolean, {
+    description: 'Send message to Community Leads.',
+  })
+  async sendMessageToCommunityLeads(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('messageData')
+    messageData: CommunicationSendMessageToCommunityLeadsInput
+  ): Promise<boolean> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
+      `send message to community ${messageData.communityId} from: ${agentInfo.email}`
+    );
+
+    // const community = await this.communityService.getCommunityOrFail(
+    //   messageData.communityId
+    // );
+
+    const notificationInput: NotificationInputCommunityLeadsMessage = {
+      triggeredBy: agentInfo.userID,
+      communityID: messageData.communityId,
+      message: messageData.message,
+    };
+    await this.notificationAdapter.sendCommunityLeadsMessage(notificationInput);
+    return true;
+  }
 }

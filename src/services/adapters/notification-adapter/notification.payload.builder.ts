@@ -29,6 +29,7 @@ import {
   CommunicationDiscussionCreatedEventPayload,
   CommunicationUserMessageEventPayload,
   CommunicationOrganizationMessageEventPayload,
+  CommunicationCommunityLeadsMessageEventPayload,
   CommunityApplicationCreatedEventPayload,
   CollaborationDiscussionCommentEventPayload,
   CollaborationCanvasCreatedEventPayload,
@@ -43,6 +44,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
+import { Community } from '@domain/community/community/community.entity';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -62,6 +64,8 @@ export class NotificationPayloadBuilder {
     private userRepository: Repository<User>,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
+    @InjectRepository(Community)
+    private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -489,6 +493,25 @@ export class NotificationPayloadBuilder {
     return org.displayName;
   }
 
+  async buildCommunicationCommunityLeadsMessageNotificationPayload(
+    senderID: string,
+    message: string,
+    communityID: string
+  ): Promise<CommunicationCommunityLeadsMessageEventPayload> {
+    const community = await this.getCommunityOrFail(communityID);
+    const journeyPayload = await this.buildJourneyPayload(community);
+    const payload: CommunicationCommunityLeadsMessageEventPayload = {
+      triggeredBy: senderID,
+      messageSender: {
+        id: senderID,
+      },
+      message,
+      journey: journeyPayload,
+    };
+
+    return payload;
+  }
+
   private async buildJourneyPayload(
     community: ICommunity
   ): Promise<JourneyPayload> {
@@ -528,6 +551,22 @@ export class NotificationPayloadBuilder {
     }
 
     return result;
+  }
+
+  private async getCommunityOrFail(communityID: string): Promise<ICommunity> {
+    const community = await this.communityRepository
+      .createQueryBuilder('community')
+      .where('community.id = :id')
+      .setParameters({ id: `${communityID}` })
+      .getOne();
+
+    if (!community) {
+      throw new EntityNotFoundException(
+        `Unable to find Community with id: ${communityID}`,
+        LogContext.CHALLENGES
+      );
+    }
+    return community;
   }
 
   private async getHubNameIdOrFail(hubID: string): Promise<string> {
