@@ -27,6 +27,8 @@ import {
   CommunicationUpdateEventPayload,
   CollaborationContextReviewSubmittedPayload,
   CommunicationDiscussionCreatedEventPayload,
+  CommunicationUserMessageEventPayload,
+  CommunicationOrganizationMessageEventPayload,
   CommunityApplicationCreatedEventPayload,
   CollaborationDiscussionCommentEventPayload,
   CollaborationCanvasCreatedEventPayload,
@@ -39,6 +41,8 @@ import { IMessage } from '@domain/communication/message/message.interface';
 import { IAspect } from '@domain/collaboration';
 import { IUser } from '@domain/community/user/user.interface';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
+import { User } from '@domain/community/user/user.entity';
+import { Organization } from '@domain/community/organization/organization.entity';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -54,6 +58,10 @@ export class NotificationPayloadBuilder {
     private aspectRepository: Repository<Aspect>,
     @InjectRepository(Canvas)
     private canvasRepository: Repository<Canvas>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    @InjectRepository(Organization)
+    private organizationRepository: Repository<Organization>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -405,6 +413,80 @@ export class NotificationPayloadBuilder {
     };
 
     return payload;
+  }
+
+  async buildCommunicationUserMessageNotificationPayload(
+    senderID: string,
+    receiverID: string,
+    message: string
+  ): Promise<CommunicationUserMessageEventPayload> {
+    const receiverDisplayName = await this.getUserDisplayNameOrFail(receiverID);
+    const payload: CommunicationUserMessageEventPayload = {
+      triggeredBy: senderID,
+      messageSender: {
+        id: senderID,
+      },
+      messageReceiver: {
+        id: receiverID,
+        displayName: receiverDisplayName,
+      },
+      message,
+    };
+
+    return payload;
+  }
+
+  private async getUserDisplayNameOrFail(userId: string): Promise<string> {
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.id = :id')
+      .setParameters({ id: `${userId}` })
+      .getOne();
+
+    if (!user) {
+      throw new EntityNotFoundException(
+        `Unable to find User with id: ${userId}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return user.displayName;
+  }
+
+  async buildCommunicationOrganizationMessageNotificationPayload(
+    senderID: string,
+    message: string,
+    organizationID: string
+  ): Promise<CommunicationOrganizationMessageEventPayload> {
+    const orgDisplayName = await this.getOrgDisplayNameOrFail(organizationID);
+    const payload: CommunicationOrganizationMessageEventPayload = {
+      triggeredBy: senderID,
+      messageSender: {
+        id: senderID,
+      },
+      message,
+      organization: {
+        id: organizationID,
+        displayName: orgDisplayName,
+      },
+    };
+
+    return payload;
+  }
+
+  private async getOrgDisplayNameOrFail(orgId: string): Promise<string> {
+    const org = await this.organizationRepository
+      .createQueryBuilder('organization')
+      .where('organization.id = :id')
+      .setParameters({ id: `${orgId}` })
+      .getOne();
+
+    if (!org) {
+      throw new EntityNotFoundException(
+        `Unable to find User with id: ${orgId}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return org.displayName;
   }
 
   private async buildJourneyPayload(

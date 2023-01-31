@@ -14,6 +14,7 @@ import { CommunicationResolverSubscriptions } from './communication.resolver.sub
 import { RoomModule } from '../room/room.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     UpdatesModule,
     CommunicationAdapterModule,
     EntityResolverModule,
+    PlatformAuthorizationPolicyModule,
     TypeOrmModule.forFeature([Communication]),
   ],
   providers: [

@@ -19,6 +19,11 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputDiscussionCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.created';
 import { COMMUNICATION_PLATFORM_HUBID } from '@common/constants';
+import { NotificationInputUserMessage } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.message';
+import { CommunicationSendMessageToUserInput } from './dto/communication.dto.send.message.user';
+import { NotificationInputOrganizationMessage } from '@services/adapters/notification-adapter/dto/notification.input.organization.message';
+import { CommunicationSendMessageToOrganizationInput } from './dto/communication.dto.send.message.organization';
+import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 
 @Resolver()
 export class CommunicationResolverMutations {
@@ -28,6 +33,7 @@ export class CommunicationResolverMutations {
     private communicationService: CommunicationService,
     private discussionAuthorizationService: DiscussionAuthorizationService,
     private discussionService: DiscussionService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @Inject(SUBSCRIPTION_DISCUSSION_UPDATED)
     private readonly subscriptionDiscussionMessage: PubSubEngine,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -92,4 +98,83 @@ export class CommunicationResolverMutations {
 
     return savedDiscussion;
   }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => Boolean, {
+    description: 'Send message to a User.',
+  })
+  async sendMessageToUser(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('messageData') messageData: CommunicationSendMessageToUserInput
+  ): Promise<boolean> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
+      `send user message from: ${agentInfo.email}`
+    );
+
+    const notificationInput: NotificationInputUserMessage = {
+      triggeredBy: agentInfo.userID,
+      receiverID: messageData.receiverId,
+      message: messageData.message,
+    };
+    await this.notificationAdapter.sendUserMessage(notificationInput);
+    return true;
+  }
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => Boolean, {
+    description: 'Send message to a User.',
+  })
+  async sendMessageToOrganization(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('messageData')
+    messageData: CommunicationSendMessageToOrganizationInput
+  ): Promise<boolean> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
+      `send message to organization ${messageData.organizationId} from: ${agentInfo.email}`
+    );
+
+    const notificationInput: NotificationInputOrganizationMessage = {
+      triggeredBy: agentInfo.userID,
+      message: messageData.message,
+      organizationID: messageData.organizationId,
+    };
+    await this.notificationAdapter.sendOrganizationMessage(notificationInput);
+
+    return true;
+  }
+
+  // @UseGuards(GraphqlGuard)
+  // @Mutation(() => Boolean, {
+  //   description: 'Send message to a User.',
+  // })
+  // async sendMessageToCommunityLeads(
+  //   @CurrentUser() agentInfo: AgentInfo,
+  //   @Args('messageData') messageData: CommunicationSendMessageToUserInput
+  // ): Promise<boolean> {
+  // await this.communityService.getUsersWithRole(
+  //   community,
+  //   CommunityRole.LEAD
+  // );
+  //   const receivingUser = await this.userService.getUserOrFail(
+  //     messageData.receiverId
+  //   );
+  //   await this.authorizationService.grantAccessOrFail(
+  //     agentInfo,
+  //     receivingUser.authorization,
+  //     AuthorizationPrivilege.READ,
+  //     `user send message: ${receivingUser.nameID}`
+  //   );
+  //   const notificationInput: NotificationInputUserMessage = {
+  //     triggeredBy: agentInfo.userID,
+  //     receiverID: messageData.receiverId,
+  //     message: messageData.message,
+  //   };
+  //   await this.notificationAdapter.sendUserMessage(notificationInput);
+  //   return true;
+  // }
 }

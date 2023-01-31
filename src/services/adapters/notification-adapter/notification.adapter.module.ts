@@ -3,6 +3,8 @@ import { Hub } from '@domain/challenge/hub/hub.entity';
 import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Canvas } from '@domain/common/canvas';
+import { Organization } from '@domain/community/organization/organization.entity';
+import { User } from '@domain/community/user/user.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
@@ -14,7 +16,15 @@ import { NotificationPayloadBuilder } from './notification.payload.builder';
   imports: [
     ActivityModule,
     EntityResolverModule,
-    TypeOrmModule.forFeature([Hub, Challenge, Opportunity, Aspect, Canvas]),
+    TypeOrmModule.forFeature([
+      Hub,
+      Challenge,
+      Opportunity,
+      Aspect,
+      Canvas,
+      User,
+      Organization,
+    ]),
   ],
   providers: [NotificationAdapter, NotificationPayloadBuilder],
   exports: [NotificationAdapter],
