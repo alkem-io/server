@@ -26,7 +26,7 @@ export class CanvasResolverFields {
     const createdBy = canvas.createdBy;
     if (!createdBy) {
       throw new EntityNotInitializedException(
-        'CreatedBy not set on Aspect',
+        `CreatedBy not set on Canvas with id ${canvas.id}`,
         LogContext.COLLABORATION
       );
     }
