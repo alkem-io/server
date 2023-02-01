@@ -16,10 +16,10 @@ export class locationOnEvents1674841101938 implements MigrationInterface {
       `ALTER TABLE \`card_profile\` ADD CONSTRAINT \`FK_87777ca8ac212b8357637794d6f\` FOREIGN KEY (\`locationId\`) REFERENCES \`location\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`location\` ADD \`addressLine1\` varchar(255) NOT NULL DEFAULT '',
-                                ADD \`addressLine2\` varchar(255) NOT NULL DEFAULT '',
-                                ADD \`stateOrProvince\` varchar(255) NOT NULL DEFAULT '',
-                                ADD \`postalCode\` varchar(36) NOT NULL DEFAULT ''`
+      `ALTER TABLE \`location\` ADD \`addressLine1\` varchar(128) NOT NULL DEFAULT '',
+                                ADD \`addressLine2\` varchar(128) NOT NULL DEFAULT '',
+                                ADD \`stateOrProvince\` varchar(128) NOT NULL DEFAULT '',
+                                ADD \`postalCode\` varchar(128) NOT NULL DEFAULT ''`
     );
 
     const cardProfiles: any[] = await queryRunner.query(
