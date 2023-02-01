@@ -81,3 +81,31 @@ export const CREDENTIAL_RULE_ORGANIZATION_ADMIN = 'organizationAdmin';
 export const CREDENTIAL_RULE_ORGANIZATION_READ = 'organizationRead';
 export const CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL =
   'organizationSelfRemoval';
+export const CREDENTIAL_RULE_USER_GROUP_READ = 'userGroupRead';
+export const CREDENTIAL_RULE_USER_AUTHORIZATION_RESET =
+  'userAuthorizationReset';
+export const CREDENTIAL_RULE_USER_GLOBAL_ADMIN_COMMUNITY =
+  'userGlobalAdminCommunity';
+export const CREDENTIAL_RULE_USER_SELF_ADMIN = 'userSelfAdmin';
+export const CREDENTIAL_RULE_USER_READ = 'userRead';
+export const CREDENTIAL_RULE_CALENDAR_EVENT_CREATED_BY =
+  'calendarEventCreatedBy';
+export const CREDENTIAL_RULE_AUTHORIZATION_GRANT_GLOBAL_ADMIN =
+  'adminAuthorizationGrantGlobalAdmin';
+export const CREDENTIAL_RULE_ADMIN_COMMUNICATION_GRANT =
+  'adminCommunicationGrant';
+export const CREDENTIAL_RULE_ADMIN_COMMUNICATION_READ =
+  'adminCommunicationRead';
+export const CREDENTIAL_RULE_PLATFORM_GLOBAL_ADMINS = 'platformGlobalAdmins';
+export const CREDENTIAL_RULE_PLATFORM_GRANT_GLOBAL_ADMINS =
+  'platformGrantGlobalAdmins';
+export const CREDENTIAL_RULE_PLATFORM_ADMINS = 'platformPlatformAdmins';
+export const CREDENTIAL_RULE_PLATFORM_READ_REGISTERED =
+  'platformReadRegistered';
+export const CREDENTIAL_RULE_PLATFORM_CREATE_ORG_FILE_UPLOAD =
+  'platformCreateOrgFileUpload';
+export const CREDENTIAL_RULE_PLATFORM_ANY_ADMIN = 'platformAnyAdmin';
+export const CREDENTIAL_RULE_PLATFORM_CREATE = 'platformCreate';
+export const CREDENTIAL_RULE_PLATFORM_DELETE = 'platformDreate';
+export const CREDENTIAL_RULE_CONVERSION_GLOBAL_ADMINS =
+  'conversionGlobalAdmins';

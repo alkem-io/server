@@ -18,6 +18,7 @@ import { ConvertOpportunityToChallengeInput } from './dto/convert.dto.opportunit
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { HubService } from '@domain/challenge/hub/hub.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
+import { CREDENTIAL_RULE_CONVERSION_GLOBAL_ADMINS } from '@common/constants/authorization.constants';
 
 @Resolver()
 export class ConversionResolverMutations {
@@ -41,7 +42,7 @@ export class ConversionResolverMutations {
           AuthorizationRoleGlobal.GLOBAL_ADMIN_HUBS,
         ],
         [AuthorizationPrivilege.CREATE_HUB, AuthorizationPrivilege.CREATE],
-        'conversionGlobalAdmins'
+        CREDENTIAL_RULE_CONVERSION_GLOBAL_ADMINS
       );
   }
 
