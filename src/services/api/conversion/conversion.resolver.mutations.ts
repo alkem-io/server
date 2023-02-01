@@ -18,7 +18,7 @@ import { ConvertOpportunityToChallengeInput } from './dto/convert.dto.opportunit
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { HubService } from '@domain/challenge/hub/hub.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS } from '@common/constants/authorization/authorization.constants';
+import { GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS } from '@common/constants/authorization/global.policy.constants';
 
 @Resolver()
 export class ConversionResolverMutations {

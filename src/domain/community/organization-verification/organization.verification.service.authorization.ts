@@ -12,7 +12,7 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import {
   CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL,
   CREDENTIAL_RULE_ORGANIZATION_VERIFICATION_ADMIN,
-} from '@common/constants/authorization/authorization.constants';
+} from '@common/constants';
 
 @Injectable()
 export class OrganizationVerificationAuthorizationService {

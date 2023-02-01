@@ -19,7 +19,7 @@ import {
   CREDENTIAL_RULE_OPPORTUNITY_ADMIN,
   CREDENTIAL_RULE_OPPORTUNITY_MEMBER,
   CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW,
-} from '@common/constants/authorization/authorization.constants';
+} from '@common/constants';
 
 @Injectable()
 export class OpportunityAuthorizationService {

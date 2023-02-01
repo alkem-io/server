@@ -16,7 +16,7 @@ import {
   CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL,
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
-} from '@common/constants/authorization/authorization.constants';
+} from '@common/constants';
 
 @Injectable()
 export class CommunityAuthorizationService {

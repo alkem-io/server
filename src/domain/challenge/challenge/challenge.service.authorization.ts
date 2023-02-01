@@ -27,14 +27,14 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import {
-  CREDENTIAL_RULE_CHALLENGE_ADMINS,
-  CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY,
   CREDENTIAL_RULE_CHALLENGE_HUB_ADMINS,
+  CREDENTIAL_RULE_CHALLENGE_ADMINS,
+  CREDENTIAL_RULE_CHALLENGE_MEMBER_READ,
+  CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW,
+  CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY,
   CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_APPLY,
   CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_JOIN,
-  CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW,
-  CREDENTIAL_RULE_CHALLENGE_MEMBER_READ,
-} from '@common/constants/authorization/authorization.constants';
+} from '@common/constants';
 
 @Injectable()
 export class ChallengeAuthorizationService {

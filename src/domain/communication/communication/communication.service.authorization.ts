@@ -10,7 +10,7 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import {
   POLICY_RULE_COMMUNICATION_CONTRIBUTE,
   POLICY_RULE_COMMUNICATION_CREATE,
-} from '@common/constants/authorization/authorization.constants';
+} from '@common/constants';
 
 @Injectable()
 export class CommunicationAuthorizationService {

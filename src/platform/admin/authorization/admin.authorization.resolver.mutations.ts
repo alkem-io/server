@@ -19,7 +19,7 @@ import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.cred
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AssignGlobalHubsAdminInput } from './dto/authorization.dto.assign.global.hubs.admin';
 import { RemoveGlobalHubsAdminInput } from './dto/authorization.dto.remove.global.hubs.admin';
-import { GLOBAL_POLICY_AUTHORIZATION_GRANT_GLOBAL_ADMIN } from '@common/constants/authorization/authorization.constants';
+import { GLOBAL_POLICY_AUTHORIZATION_GRANT_GLOBAL_ADMIN } from '@common/constants/authorization/global.policy.constants';
 
 @Resolver()
 export class AdminAuthorizationResolverMutations {

@@ -15,7 +15,7 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import {
   CREDENTIAL_RULE_RELATION_CREATED_BY,
   CREDENTIAL_RULE_TYPES_RELATION_CREATED_GLOBAL_REGISTERED,
-} from '@common/constants/authorization/authorization.constants';
+} from '@common/constants';
 
 @Injectable()
 export class RelationAuthorizationService {

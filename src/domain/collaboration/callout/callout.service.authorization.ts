@@ -22,12 +22,11 @@ import { CalloutType } from '@common/enums/callout.type';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CanvasTemplateAuthorizationService } from '@domain/template/canvas-template/canvas.template.service.authorization';
 import {
-  POLICY_RULE_CALLOUT_CONTRIBUTE,
-  POLICY_RULE_CALLOUT_CREATE,
   CREDENTIAL_RULE_CALLOUT_CREATED_BY,
   CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS,
-} from '@common/constants/authorization/authorization.constants';
-
+  POLICY_RULE_CALLOUT_CREATE,
+  POLICY_RULE_CALLOUT_CONTRIBUTE,
+} from '@common/constants';
 @Injectable()
 export class CalloutAuthorizationService {
   constructor(

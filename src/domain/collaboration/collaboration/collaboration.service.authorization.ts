@@ -18,11 +18,11 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import {
-  POLICY_RULE_CALLOUT_CONTRIBUTE,
+  CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED,
   CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS,
   POLICY_RULE_COLLABORATION_CREATE,
-  CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED,
-} from '@common/constants/authorization/authorization.constants';
+  POLICY_RULE_CALLOUT_CONTRIBUTE,
+} from '@common/constants';
 
 @Injectable()
 export class CollaborationAuthorizationService {

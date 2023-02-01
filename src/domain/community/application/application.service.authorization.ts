@@ -8,7 +8,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { Application } from './application.entity';
 import { IApplication } from './application.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CREDENTIAL_RULE_APPLICATION_USER_APPLICATION } from '@common/constants/authorization/authorization.constants';
+import { CREDENTIAL_RULE_APPLICATION_USER_APPLICATION } from '@common/constants/authorization/credential.rule.constants';
 
 @Injectable()
 export class ApplicationAuthorizationService {

@@ -1,0 +1,14 @@
+export const POLICY_RULE_HUB_CREATE_CHALLENGE = 'hubCreateChallenge';
+export const POLICY_RULE_CANVAS_UPDATE = 'canvasUpdate';
+export const POLICY_RULE_CANVAS_CONTRIBUTE = 'canvasContribute';
+export const POLICY_RULE_COMMENTS_CONTRIBUTE = 'commentsContribute';
+export const POLICY_RULE_COMMENTS_CREATE = 'commentsCreate';
+export const POLICY_RULE_COMMUNICATION_CONTRIBUTE = 'communicateContribute';
+export const POLICY_RULE_COMMUNICATION_CREATE = 'communicationCreate';
+export const POLICY_RULE_DISCUSSION_CONTRIBUTE = 'discussionContribute';
+export const POLICY_RULE_DISCUSSION_CREATE = 'discussionCreate';
+export const POLICY_RULE_PLATFORM_CREATE = 'platformCreate';
+export const POLICY_RULE_PLATFORM_DELETE = 'platformDreate';
+export const POLICY_RULE_CALLOUT_CREATE = 'calloutCreate';
+export const POLICY_RULE_CALLOUT_CONTRIBUTE = 'calloutContribute';
+export const POLICY_RULE_COLLABORATION_CREATE = 'collaborationCreate';

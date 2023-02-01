@@ -18,9 +18,9 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD,
   CREDENTIAL_RULE_ASPECT_CREATED_BY,
-} from '@common/constants/authorization/authorization.constants';
+  CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD,
+} from '@common/constants';
 
 @Injectable()
 export class AspectAuthorizationService {

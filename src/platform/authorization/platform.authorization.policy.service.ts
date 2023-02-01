@@ -6,15 +6,15 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
-  CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN,
-  POLICY_RULE_PLATFORM_CREATE,
-  CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD,
-  POLICY_RULE_PLATFORM_DELETE,
   CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS,
+  CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
-} from '@common/constants/authorization/authorization.constants';
+  CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD,
+  CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN,
+  POLICY_RULE_PLATFORM_CREATE,
+  POLICY_RULE_PLATFORM_DELETE,
+} from '@common/constants';
 
 @Injectable()
 export class PlatformAuthorizationPolicyService {

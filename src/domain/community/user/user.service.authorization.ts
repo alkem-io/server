@@ -20,7 +20,7 @@ import {
   CREDENTIAL_RULE_TYPES_USER_GLOBAL_ADMIN_COMMUNITY,
   CREDENTIAL_RULE_USER_SELF_ADMIN,
   CREDENTIAL_RULE_USER_READ,
-} from '@common/constants/authorization/authorization.constants';
+} from '@common/constants';
 
 @Injectable()
 export class UserAuthorizationService {

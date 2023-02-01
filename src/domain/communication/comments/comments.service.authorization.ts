@@ -8,10 +8,10 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { RoomService } from '../room/room.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  POLICY_RULE_COMMENTS_CONTRIBUTE,
   POLICY_RULE_COMMENTS_CREATE,
+  POLICY_RULE_COMMENTS_CONTRIBUTE,
   CREDENTIAL_RULE_COMMENTS_MESSAGE_SENDER,
-} from '@common/constants/authorization/authorization.constants';
+} from '@common/constants';
 
 @Injectable()
 export class CommentsAuthorizationService {

@@ -5,7 +5,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ICanvasCheckout } from './canvas.checkout.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CREDENTIAL_RULE_CANVAS_CHECKOUT_LOCKED_BY } from '@common/constants/authorization/authorization.constants';
+import { CREDENTIAL_RULE_CANVAS_CHECKOUT_LOCKED_BY } from '@common/constants/authorization/credential.rule.constants';
 
 @Injectable()
 export class CanvasCheckoutAuthorizationService {

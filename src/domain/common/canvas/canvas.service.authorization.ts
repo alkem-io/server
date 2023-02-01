@@ -11,11 +11,11 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  POLICY_RULE_CANVAS_CONTRIBUTE,
   CREDENTIAL_RULE_CANVAS_CREATED_BY,
   CREDENTIAL_RULE_CANVAS_LOCKED_BY,
   POLICY_RULE_CANVAS_UPDATE,
-} from '@common/constants/authorization/authorization.constants';
+  POLICY_RULE_CANVAS_CONTRIBUTE,
+} from '@common/constants';
 
 @Injectable()
 export class CanvasAuthorizationService {

@@ -15,13 +15,13 @@ import { PreferenceSetAuthorizationService } from '@domain/common/preference-set
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_ORGANIZATION_ADMIN,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET,
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMIN_COMMUNITY,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS,
+  CREDENTIAL_RULE_ORGANIZATION_ADMIN,
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
-} from '@common/constants/authorization/authorization.constants';
+} from '@common/constants';
 
 @Injectable()
 export class OrganizationAuthorizationService {

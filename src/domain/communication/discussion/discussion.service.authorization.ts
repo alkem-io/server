@@ -12,7 +12,7 @@ import {
   POLICY_RULE_DISCUSSION_CONTRIBUTE,
   POLICY_RULE_DISCUSSION_CREATE,
   CREDENTIAL_RULE_DISCUSSION_MESSAGE_SENDER,
-} from '@common/constants/authorization/authorization.constants';
+} from '@common/constants';
 
 @Injectable()
 export class DiscussionAuthorizationService {
