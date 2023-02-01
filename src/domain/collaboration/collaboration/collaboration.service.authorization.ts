@@ -44,6 +44,10 @@ export class CollaborationAuthorizationService {
       collaboration.authorization,
       communityPolicy
     );
+    collaboration.authorization = this.appendCredentialRulesForContributors(
+      collaboration.authorization,
+      communityPolicy
+    );
 
     collaboration.authorization = this.appendPrivilegeRules(
       collaboration.authorization,
@@ -129,6 +133,26 @@ export class CollaborationAuthorizationService {
       );
     communityMemberNotInherited.inheritable = false;
     newRules.push(communityMemberNotInherited);
+
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
+  }
+
+  public appendCredentialRulesForContributors(
+    authorization: IAuthorizationPolicy | undefined,
+    policy: ICommunityPolicy
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for Context: ${JSON.stringify(
+          policy
+        )}`,
+        LogContext.COLLABORATION
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // Who is able to contribute
     const contributors = this.getContributorCredentials(policy);

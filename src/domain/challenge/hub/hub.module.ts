@@ -31,6 +31,7 @@ import { HubResolverSubscriptions } from './hub.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
+import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
     PreferenceSetModule,
     TimelineModule,
     TemplatesSetModule,
+    CollaborationModule,
     HubFilterModule,
     TypeOrmModule.forFeature([Hub]),
   ],
