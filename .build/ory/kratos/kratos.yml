@@ -1,4 +1,4 @@
-version: v0.10.1
+version: v0.11.1
 
 dsn: memory
 
@@ -16,6 +16,8 @@ selfservice:
     - http://localhost:3000
 
   methods:
+    code:
+      enabled: true
     link:
       enabled: true
     password:
