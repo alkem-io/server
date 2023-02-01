@@ -159,16 +159,18 @@ export class CalendarService {
         LogContext.CALENDAR
       );
 
-    // First filter the callouts the current user has READ privilege to
-    const readableCallouts = allEvents.filter(callout =>
-      this.hasAgentAccessToCallout(callout, agentInfo)
+    // First filter the events the current user has READ privilege to
+    const readableEvents = allEvents.filter(event =>
+      this.hasAgentAccessToEvent(event, agentInfo)
     );
 
     // (a) by IDs, results in order specified by IDs
     if (args.IDs) {
       const results: ICalendarEvent[] = [];
       for (const eventID of args.IDs) {
-        const event = readableCallouts.find(e => e.id === eventID);
+        const event = readableEvents.find(
+          e => e.id === eventID || e.nameID === eventID
+        );
 
         if (!event)
           throw new EntityNotFoundException(
@@ -182,13 +184,13 @@ export class CalendarService {
 
     // (b) limit number of results
     if (args.limit) {
-      return limitAndShuffle(readableCallouts, args.limit, false);
+      return limitAndShuffle(readableEvents, args.limit, false);
     }
 
-    return readableCallouts;
+    return readableEvents;
   }
 
-  private hasAgentAccessToCallout(
+  private hasAgentAccessToEvent(
     event: ICalendarEvent,
     agentInfo: AgentInfo
   ): boolean {
