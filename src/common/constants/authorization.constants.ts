@@ -26,3 +26,5 @@ export const CREDENTIAL_RULE_HUB_COMMUNITY_APPLY_GLOBAL_REGISTERED =
 export const CREDENTIAL_RULE_HUB_COMMUNITY_JOIN_GLOBAL_REGISTERED =
   'hubCommunityJoinGlobalRegistered';
 export const CREDENTIAL_RULE_HUB_HOST_ASSOCIATES_JOIN = 'hubHostAssociatesJoin';
+export const CREDENTIAL_RULE_ASPECT_CREATED_BY = 'aspectCreatedBy';
+export const CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD = 'aspectAdminsMoveCard';
