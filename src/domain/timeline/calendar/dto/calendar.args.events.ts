@@ -1,11 +1,11 @@
-import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { UUID_NAMEID } from '@domain/common/scalars';
 import { ArgsType, Field, Float } from '@nestjs/graphql';
 
 @ArgsType()
 export class CalendarArgsEvents {
-  @Field(() => [UUID], {
+  @Field(() => [UUID_NAMEID], {
     name: 'IDs',
-    description: 'The IDs of the CalendarEvents to return',
+    description: 'The IDs or NAMEIDS of the CalendarEvents to return',
     nullable: true,
   })
   IDs?: string[];
