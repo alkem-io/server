@@ -26,6 +26,15 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import {
+  CREDENTIAL_RULE_CHALLENGE_ADMINS,
+  CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY,
+  CREDENTIAL_RULE_CHALLENGE_HUB_ADMINS,
+  CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_APPLY,
+  CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_JOIN,
+  CREDENTIAL_RULE_CHALLENGE_INNOVATION_FLOW,
+  CREDENTIAL_RULE_CHALLENGE_MEMBER_READ,
+} from '@common/constants/authorization.constants';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -264,7 +273,7 @@ export class ChallengeAuthorizationService {
           AuthorizationPrivilege.DELETE,
         ],
         [...this.communityPolicyService.getAdminCredentials(policy)],
-        'challengeHubAdmins'
+        CREDENTIAL_RULE_CHALLENGE_HUB_ADMINS
       );
     rules.push(challengeHubAdmins);
 
@@ -303,7 +312,7 @@ export class ChallengeAuthorizationService {
         AuthorizationPrivilege.DELETE,
       ],
       [this.communityPolicyService.getAdminCredential(policy)],
-      'challengeAdmins'
+      CREDENTIAL_RULE_CHALLENGE_ADMINS
     );
     rules.push(challengeAdmin);
 
@@ -311,7 +320,7 @@ export class ChallengeAuthorizationService {
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.READ],
         [this.communityPolicyService.getMembershipCredential(policy)],
-        'challengeMemberRead'
+        CREDENTIAL_RULE_CHALLENGE_MEMBER_READ
       );
     rules.push(challengeMember);
 
@@ -322,7 +331,7 @@ export class ChallengeAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
         ],
-        'challengeInnovationFlow'
+        CREDENTIAL_RULE_CHALLENGE_INNOVATION_FLOW
       );
     updateInnovationFlowRule.inheritable = false;
     rules.push(updateInnovationFlowRule);
@@ -338,7 +347,7 @@ export class ChallengeAuthorizationService {
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.CREATE_OPPORTUNITY],
           criteria,
-          'challengeCreateOpportunity'
+          CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY
         );
       createOpportunityRule.inheritable = false;
       rules.push(createOpportunityRule);
@@ -427,7 +436,7 @@ export class ChallengeAuthorizationService {
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.COMMUNITY_APPLY],
           [parentCommunityCredential],
-          'challengeHubMemberApply'
+          CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_APPLY
         );
       hubMemberCanApply.inheritable = false;
       newRules.push(hubMemberCanApply);
@@ -443,7 +452,7 @@ export class ChallengeAuthorizationService {
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.COMMUNITY_JOIN],
           [parentCommunityCredential],
-          'challengeHubMemberJoin'
+          CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_JOIN
         );
       hubMemberCanJoin.inheritable = false;
       newRules.push(hubMemberCanJoin);
@@ -471,7 +480,7 @@ export class ChallengeAuthorizationService {
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_OPPORTUNITY],
       AuthorizationPrivilege.CREATE,
-      'ChallengeCreateOpportunity'
+      CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY
     );
     privilegeRules.push(createPrivilege);
 
