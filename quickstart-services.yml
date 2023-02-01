@@ -14,7 +14,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_traefik
-    image: traefik:v2.4.9
+    image: traefik:v2.9.6
     restart: always
     ports:
       - 8888:8080
