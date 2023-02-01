@@ -12,6 +12,11 @@ import { ApplicationAuthorizationService } from '../application/application.serv
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import {
+  CREDENTIAL_RULE_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL,
+  CREDENTIAL_RULE_COMMUNITY_READ_GLOBAL_REGISTERED,
+  CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
+} from '@common/constants/authorization.constants';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -103,7 +108,7 @@ export class CommunityAuthorizationService {
           AuthorizationPrivilege.DELETE,
         ],
         [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
-        'communityGlobalAdminCommunityAll'
+        CREDENTIAL_RULE_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL
       );
     newRules.push(globalCommunityAdmin);
 
@@ -112,7 +117,7 @@ export class CommunityAuthorizationService {
         this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
           [AuthorizationPrivilege.READ],
           [AuthorizationCredential.GLOBAL_REGISTERED],
-          'communityReadGlobalRegistered'
+          CREDENTIAL_RULE_COMMUNITY_READ_GLOBAL_REGISTERED
         );
       newRules.push(globalRegistered);
     }
@@ -171,7 +176,7 @@ export class CommunityAuthorizationService {
             resourceID: userToBeRemovedID,
           },
         ],
-        'communitySelfRemoval'
+        CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL
       );
     newRules.push(userSelfRemovalRule);
 

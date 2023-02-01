@@ -9,6 +9,10 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { IOrganizationVerification } from './organization.verification.interface';
 import { OrganizationVerification } from './organization.verification.entity';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import {
+  CREDENTIAL_RULE_ORGANIZATION_GLOBAL_ADMINS_ALL,
+  CREDENTIAL_RULE_ORGANIZATION_VERIFICATION_ADMIN,
+} from '@common/constants/authorization.constants';
 
 @Injectable()
 export class OrganizationVerificationAuthorizationService {
@@ -65,7 +69,7 @@ export class OrganizationVerificationAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
           AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
         ],
-        'organizationGlobalAdminsAll'
+        CREDENTIAL_RULE_ORGANIZATION_GLOBAL_ADMINS_ALL
       );
     newRules.push(globalAdmin);
 
@@ -81,7 +85,7 @@ export class OrganizationVerificationAuthorizationService {
           resourceID: organizationID,
         },
       ],
-      'organizationVerificationAdmin'
+      CREDENTIAL_RULE_ORGANIZATION_VERIFICATION_ADMIN
     );
     newRules.push(orgAdmin);
 

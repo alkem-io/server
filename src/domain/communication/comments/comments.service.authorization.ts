@@ -7,6 +7,11 @@ import { IComments } from './comments.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { RoomService } from '../room/room.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import {
+  CREDENTIAL_RULE_COMMENTS_CONTRIBUTE,
+  CREDENTIAL_RULE_COMMENTS_CREATE,
+  CREDENTIAL_RULE_COMMENTS_MESSAGE_SENDER,
+} from '@common/constants/authorization.constants';
 
 @Injectable()
 export class CommentsAuthorizationService {
@@ -39,14 +44,14 @@ export class CommentsAuthorizationService {
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_COMMENT],
       AuthorizationPrivilege.CREATE,
-      'CommentsCreate'
+      CREDENTIAL_RULE_COMMENTS_CREATE
     );
     privilegeRules.push(createPrivilege);
 
     const contributePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_COMMENT],
       AuthorizationPrivilege.CONTRIBUTE,
-      'CommentsContribute'
+      CREDENTIAL_RULE_COMMENTS_CONTRIBUTE
     );
     privilegeRules.push(contributePrivilege);
 
@@ -77,7 +82,7 @@ export class CommentsAuthorizationService {
               resourceID: senderUserID,
             },
           ],
-          'commentsMessageSender'
+          CREDENTIAL_RULE_COMMENTS_MESSAGE_SENDER
         );
       newRules.push(messageSender);
     }

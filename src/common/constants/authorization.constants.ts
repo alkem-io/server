@@ -45,3 +45,39 @@ export const CREDENTIAL_RULE_OPPORTUNITY_UPDATE_INNOVATION_FLOW =
 export const CREDENTIAL_RULE_RELATION_CREATED_BY = 'relationCreatedBy';
 export const CREDENTIAL_RULE_RELATION_CREATED_GLOBAL_REGISTERED =
   'relationCreateGlobalRegistered';
+export const CREDENTIAL_RULE_CANVAS_CHECKOUT_LOCKED_BY =
+  'canvasCheckoutLockedBy';
+export const CREDENTIAL_RULE_CANVAS_CREATED_BY = 'canvasCreatedBy';
+export const CREDENTIAL_RULE_CANVAS_LOCKED_BY = 'canvasLockedBy';
+export const CREDENTIAL_RULE_CANVAS_UPDATE = 'canvasUpdate';
+export const CREDENTIAL_RULE_CANVAS_CONTRIBUTE = 'canvasContribute';
+export const CREDENTIAL_RULE_COMMENTS_CONTRIBUTE = 'commentsContribute';
+export const CREDENTIAL_RULE_COMMENTS_CREATE = 'commentsCreate';
+export const CREDENTIAL_RULE_COMMENTS_MESSAGE_SENDER = 'commentsMessageSender';
+export const CREDENTIAL_RULE_COMMUNICATION_CONTRIBUTE = 'communicateContribute';
+export const CREDENTIAL_RULE_COMMUNICATION_CREATE = 'communicationCreate';
+export const CREDENTIAL_RULE_DISCUSSION_CONTRIBUTE = 'discussionContribute';
+export const CREDENTIAL_RULE_DISCUSSION_CREATE = 'discussionCreate';
+export const CREDENTIAL_RULE_DISCUSSION_MESSAGE_SENDER =
+  'discussionMessageSender';
+export const CREDENTIAL_RULE_APPLICATION_USER_APPLICATION =
+  'applicationUserApplication';
+export const CREDENTIAL_RULE_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL =
+  'communityGlobalAdminCommunityAll';
+export const CREDENTIAL_RULE_COMMUNITY_READ_GLOBAL_REGISTERED =
+  'communityReadGlobalRegistered';
+export const CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL = 'communitySelfRemoval';
+export const CREDENTIAL_RULE_ORGANIZATION_GLOBAL_ADMINS_ALL =
+  'organizationGlobalAdminsAll';
+export const CREDENTIAL_RULE_ORGANIZATION_VERIFICATION_ADMIN =
+  'organizationVerificationAdmin';
+export const CREDENTIAL_RULE_ORGANIZATION_AUTHORIZATION_RESET =
+  'organizationAuthorizationReset';
+export const CREDENTIAL_RULE_ORGANIZATION_GLOBAL_ADMIN_COMMUNITY =
+  'organizationGlobalAdminCommunity';
+export const CREDENTIAL_RULE_ORGANIZATION_GLOBAL_ADMINS =
+  'organizationGlobalAdmins';
+export const CREDENTIAL_RULE_ORGANIZATION_ADMIN = 'organizationAdmin';
+export const CREDENTIAL_RULE_ORGANIZATION_READ = 'organizationRead';
+export const CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL =
+  'organizationSelfRemoval';
