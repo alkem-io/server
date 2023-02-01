@@ -1,0 +1,11 @@
+mutation sendMessageToOrganization($messageData: CommunicationSendMessageToOrganizationInput!){
+  sendMessageToOrganization(messageData: $messageData)
+}
+
+Variables:
+{
+  "messageData": {
+    "message": "test",
+    "organizationId": "uuid_nameid"
+  }
+}
