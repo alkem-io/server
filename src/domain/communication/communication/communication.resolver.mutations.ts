@@ -166,10 +166,6 @@ export class CommunicationResolverMutations {
       `send message to community ${messageData.communityId} from: ${agentInfo.email}`
     );
 
-    // const community = await this.communityService.getCommunityOrFail(
-    //   messageData.communityId
-    // );
-
     const notificationInput: NotificationInputCommunityLeadsMessage = {
       triggeredBy: agentInfo.userID,
       communityID: messageData.communityId,

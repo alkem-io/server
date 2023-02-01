@@ -443,8 +443,9 @@ export class NotificationPayloadBuilder {
   private async getUserDisplayNameOrFail(userId: string): Promise<string> {
     const user = await this.userRepository
       .createQueryBuilder('user')
+      .select('user.displayName')
       .where('user.id = :id')
-      .setParameters({ id: `${userId}` })
+      .setParameters({ id: userId })
       .getOne();
 
     if (!user) {
@@ -480,8 +481,9 @@ export class NotificationPayloadBuilder {
   private async getOrgDisplayNameOrFail(orgId: string): Promise<string> {
     const org = await this.organizationRepository
       .createQueryBuilder('organization')
+      .select('organization.displayName')
       .where('organization.id = :id')
-      .setParameters({ id: `${orgId}` })
+      .setParameters({ id: orgId })
       .getOne();
 
     if (!org) {
@@ -557,7 +559,7 @@ export class NotificationPayloadBuilder {
     const community = await this.communityRepository
       .createQueryBuilder('community')
       .where('community.id = :id')
-      .setParameters({ id: `${communityID}` })
+      .setParameters({ id: communityID })
       .getOne();
 
     if (!community) {
