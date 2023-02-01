@@ -28,3 +28,8 @@ export const CREDENTIAL_RULE_HUB_COMMUNITY_JOIN_GLOBAL_REGISTERED =
 export const CREDENTIAL_RULE_HUB_HOST_ASSOCIATES_JOIN = 'hubHostAssociatesJoin';
 export const CREDENTIAL_RULE_ASPECT_CREATED_BY = 'aspectCreatedBy';
 export const CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD = 'aspectAdminsMoveCard';
+export const CREDENTIAL_RULE_CALLOUT_CREATED_BY = 'calloutCreatedBy';
+export const CREDENTIAL_RULE_CALLOUT_UPDATE_PUBLISHER_ADMINS =
+  'calloutUpdatePublisherGlobalAdmins';
+export const CREDENTIAL_RULE_CALLOUT_CREATE = 'calloutCreate';
+export const CREDENTIAL_RULE_CALLOUT_CONTRIBUTE = 'calloutContribute';
