@@ -427,9 +427,6 @@ export class NotificationPayloadBuilder {
     const receiverDisplayName = await this.getUserDisplayNameOrFail(receiverID);
     const payload: CommunicationUserMessageEventPayload = {
       triggeredBy: senderID,
-      messageSender: {
-        id: senderID,
-      },
       messageReceiver: {
         id: receiverID,
         displayName: receiverDisplayName,
@@ -465,9 +462,6 @@ export class NotificationPayloadBuilder {
     const orgDisplayName = await this.getOrgDisplayNameOrFail(organizationID);
     const payload: CommunicationOrganizationMessageEventPayload = {
       triggeredBy: senderID,
-      messageSender: {
-        id: senderID,
-      },
       message,
       organization: {
         id: organizationID,
@@ -504,9 +498,6 @@ export class NotificationPayloadBuilder {
     const journeyPayload = await this.buildJourneyPayload(community);
     const payload: CommunicationCommunityLeadsMessageEventPayload = {
       triggeredBy: senderID,
-      messageSender: {
-        id: senderID,
-      },
       message,
       journey: journeyPayload,
     };
