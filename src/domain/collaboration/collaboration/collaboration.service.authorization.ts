@@ -17,6 +17,12 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
+import {
+  CREDENTIAL_RULE_CALLOUT_CONTRIBUTE,
+  CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS,
+  CREDENTIAL_RULE_COLLABORATION_CREATE,
+  CREDENTIAL_RULE_COLLABORATION_CREATE_RELATION_REGISTERED,
+} from '@common/constants/authorization.constants';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -129,7 +135,7 @@ export class CollaborationAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE_RELATION],
         [AuthorizationCredential.USER_SELF_MANAGEMENT],
-        'collaborationCreateRelationRegistered'
+        CREDENTIAL_RULE_COLLABORATION_CREATE_RELATION_REGISTERED
       );
     communityMemberNotInherited.inheritable = false;
     newRules.push(communityMemberNotInherited);
@@ -160,7 +166,7 @@ export class CollaborationAuthorizationService {
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.CONTRIBUTE],
         contributors,
-        'collaborationContributors'
+        CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS
       );
     newRules.push(contributorsRule);
 
@@ -182,7 +188,7 @@ export class CollaborationAuthorizationService {
         AuthorizationPrivilege.CREATE_RELATION,
       ],
       AuthorizationPrivilege.CREATE,
-      'CollaborationCreate'
+      CREDENTIAL_RULE_COLLABORATION_CREATE
     );
     privilegeRules.push(createPrivilege);
 
@@ -195,7 +201,7 @@ export class CollaborationAuthorizationService {
       const createCalloutPrivilege = new AuthorizationPolicyRulePrivilege(
         [AuthorizationPrivilege.CREATE_CALLOUT],
         AuthorizationPrivilege.CONTRIBUTE,
-        'CalloutContribute'
+        CREDENTIAL_RULE_CALLOUT_CONTRIBUTE
       );
       privilegeRules.push(createCalloutPrivilege);
     }

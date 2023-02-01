@@ -33,3 +33,12 @@ export const CREDENTIAL_RULE_CALLOUT_UPDATE_PUBLISHER_ADMINS =
   'calloutUpdatePublisherGlobalAdmins';
 export const CREDENTIAL_RULE_CALLOUT_CREATE = 'calloutCreate';
 export const CREDENTIAL_RULE_CALLOUT_CONTRIBUTE = 'calloutContribute';
+export const CREDENTIAL_RULE_COLLABORATION_CREATE_RELATION_REGISTERED =
+  'collaborationCreateRelationRegistered';
+export const CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS =
+  'collaborationContributors';
+export const CREDENTIAL_RULE_COLLABORATION_CREATE = 'collaborationCreate';
+export const CREDENTIAL_RULE_OPPORTUNITY_ADMIN = 'opportunityAdmin';
+export const CREDENTIAL_RULE_OPPORTUNITY_MEMBER = 'opportunityMember';
+export const CREDENTIAL_RULE_OPPORTUNITY_UPDATE_INNOVATION_FLOW =
+  'opportunityUpdateInnovationFLow';
