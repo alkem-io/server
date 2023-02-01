@@ -14,7 +14,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_traefik
-    image: traefik:v2.4.9
+    image: traefik:v2.9.6
     restart: always
     ports:
       - 8888:8080
@@ -57,7 +57,7 @@ services:
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
-    image: vyanakiev/kratos:linkedin_v0.9
+    image: alkemio/kratos:linkedin_v1.2
     depends_on:
       - mariadb
     environment:
@@ -73,7 +73,7 @@ services:
 
   kratos:
     container_name: alkemio_dev_kratos
-    image: vyanakiev/kratos:linkedin_v0.9
+    image: alkemio/kratos:linkedin_v1.2
     depends_on:
       - kratos-migrate
     ports:

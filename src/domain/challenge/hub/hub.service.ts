@@ -214,7 +214,7 @@ export class HubService {
 
   async deleteHub(deleteData: DeleteHubInput): Promise<IHub> {
     const hub = await this.getHubOrFail(deleteData.ID, {
-      relations: ['challenges', 'preferenceSet', 'templatesSet'],
+      relations: ['challenges', 'preferenceSet', 'templatesSet', 'timeline'],
     });
 
     // Do not remove an hub that has child challenges , require these to be individually first removed

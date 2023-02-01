@@ -2,7 +2,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
 export class timeline1674481366302 implements MigrationInterface {
-  name = 'timeline16734481366302';
+  name = 'timeline1674481366302';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -149,7 +149,6 @@ export class timeline1674481366302 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`calendar_event\` DROP FOREIGN KEY \`FK_6a30f26ca267009fcf514e0e726\``
     );
-
 
     await queryRunner.query('DROP TABLE `calendar_event`');
     await queryRunner.query('DROP TABLE `calendar`');
