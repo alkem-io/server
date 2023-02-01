@@ -42,3 +42,6 @@ export const CREDENTIAL_RULE_OPPORTUNITY_ADMIN = 'opportunityAdmin';
 export const CREDENTIAL_RULE_OPPORTUNITY_MEMBER = 'opportunityMember';
 export const CREDENTIAL_RULE_OPPORTUNITY_UPDATE_INNOVATION_FLOW =
   'opportunityUpdateInnovationFLow';
+export const CREDENTIAL_RULE_RELATION_CREATED_BY = 'relationCreatedBy';
+export const CREDENTIAL_RULE_RELATION_CREATED_GLOBAL_REGISTERED =
+  'relationCreateGlobalRegistered';

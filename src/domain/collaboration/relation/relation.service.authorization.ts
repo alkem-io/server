@@ -12,6 +12,10 @@ import {
 import { EntityNotInitializedException } from '@common/exceptions';
 import { Relation } from './relation.entity';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import {
+  CREDENTIAL_RULE_RELATION_CREATED_BY,
+  CREDENTIAL_RULE_RELATION_CREATED_GLOBAL_REGISTERED,
+} from '@common/constants/authorization.constants';
 
 @Injectable()
 export class RelationAuthorizationService {
@@ -48,7 +52,7 @@ export class RelationAuthorizationService {
             resourceID: userID,
           },
         ],
-        'relationCreatedBy'
+        CREDENTIAL_RULE_RELATION_CREATED_BY
       );
     newRules.push(selfCreatedRelation);
 
@@ -74,7 +78,7 @@ export class RelationAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE],
         [AuthorizationCredential.GLOBAL_REGISTERED],
-        'relationCreateGlobalRegistered'
+        CREDENTIAL_RULE_RELATION_CREATED_GLOBAL_REGISTERED
       );
 
     newRules.push(globalRegisteredCreateRelation);
