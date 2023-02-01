@@ -15,7 +15,7 @@ import { CalendarEventService } from './event.service';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CardProfileAuthorizationService } from '@domain/collaboration/card-profile/card.profile.service.authorization';
-import { CREDENTIAL_RULE_CALENDAR_EVENT_CREATED_BY } from '@common/constants/authorization.constants';
+import { CREDENTIAL_RULE_CALENDAR_EVENT_CREATED_BY } from '@common/constants/authorization/authorization.constants';
 
 @Injectable()
 export class CalendarEventAuthorizationService {

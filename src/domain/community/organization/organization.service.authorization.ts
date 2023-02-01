@@ -16,12 +16,12 @@ import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_ORGANIZATION_ADMIN,
-  CREDENTIAL_RULE_ORGANIZATION_AUTHORIZATION_RESET,
-  CREDENTIAL_RULE_ORGANIZATION_GLOBAL_ADMINS,
-  CREDENTIAL_RULE_ORGANIZATION_GLOBAL_ADMIN_COMMUNITY,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMIN_COMMUNITY,
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
-} from '@common/constants/authorization.constants';
+} from '@common/constants/authorization/authorization.constants';
 
 @Injectable()
 export class OrganizationAuthorizationService {
@@ -124,7 +124,7 @@ export class OrganizationAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
         ],
-        CREDENTIAL_RULE_ORGANIZATION_AUTHORIZATION_RESET
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET
       );
     globalAdminNotInherited.inheritable = false;
     newRules.push(globalAdminNotInherited);
@@ -139,7 +139,7 @@ export class OrganizationAuthorizationService {
           AuthorizationPrivilege.DELETE,
         ],
         [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
-        CREDENTIAL_RULE_ORGANIZATION_GLOBAL_ADMIN_COMMUNITY
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMIN_COMMUNITY
       );
     newRules.push(communityAdmin);
 
@@ -151,7 +151,7 @@ export class OrganizationAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
         ],
-        CREDENTIAL_RULE_ORGANIZATION_GLOBAL_ADMINS
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS
       );
     newRules.push(globalAdmin);
 

@@ -20,7 +20,7 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import {
   CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD,
   CREDENTIAL_RULE_ASPECT_CREATED_BY,
-} from '@common/constants/authorization.constants';
+} from '@common/constants/authorization/authorization.constants';
 
 @Injectable()
 export class AspectAuthorizationService {

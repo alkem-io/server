@@ -11,7 +11,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AdminCommunicationService } from './admin.communication.service';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
 import { CommunicationAdminUpdateRoomsJoinRuleInput } from './dto/admin.communication.dto.update.rooms.joinrule';
-import { CREDENTIAL_RULE_ADMIN_COMMUNICATION_GRANT } from '@common/constants/authorization.constants';
+import { GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT } from '@common/constants/authorization/authorization.constants';
 
 @Resolver()
 export class AdminCommunicationResolverMutations {
@@ -26,7 +26,7 @@ export class AdminCommunicationResolverMutations {
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.GLOBAL_ADMIN],
         [AuthorizationPrivilege.GRANT],
-        CREDENTIAL_RULE_ADMIN_COMMUNICATION_GRANT
+        GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT
       );
   }
 

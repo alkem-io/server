@@ -14,8 +14,8 @@ import { Relation } from './relation.entity';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_RELATION_CREATED_BY,
-  CREDENTIAL_RULE_RELATION_CREATED_GLOBAL_REGISTERED,
-} from '@common/constants/authorization.constants';
+  CREDENTIAL_RULE_TYPES_RELATION_CREATED_GLOBAL_REGISTERED,
+} from '@common/constants/authorization/authorization.constants';
 
 @Injectable()
 export class RelationAuthorizationService {
@@ -78,7 +78,7 @@ export class RelationAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE],
         [AuthorizationCredential.GLOBAL_REGISTERED],
-        CREDENTIAL_RULE_RELATION_CREATED_GLOBAL_REGISTERED
+        CREDENTIAL_RULE_TYPES_RELATION_CREATED_GLOBAL_REGISTERED
       );
 
     newRules.push(globalRegisteredCreateRelation);

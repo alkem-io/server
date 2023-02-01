@@ -11,7 +11,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CommunicationAdminMembershipResult } from './dto/admin.communication.dto.membership.result';
 import { CommunicationAdminOrphanedUsageResult } from './dto/admin.communication.dto.orphaned.usage.result';
-import { CREDENTIAL_RULE_ADMIN_COMMUNICATION_READ } from '@common/constants/authorization.constants';
+import { GLOBAL_POLICY_ADMIN_COMMUNICATION_READ } from '@common/constants/authorization/authorization.constants';
 
 @Resolver()
 export class AdminCommunicationResolverQueries {
@@ -26,7 +26,7 @@ export class AdminCommunicationResolverQueries {
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.GLOBAL_ADMIN],
         [AuthorizationPrivilege.READ],
-        CREDENTIAL_RULE_ADMIN_COMMUNICATION_READ
+        GLOBAL_POLICY_ADMIN_COMMUNICATION_READ
       );
   }
 

@@ -11,11 +11,11 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_CANVAS_CONTRIBUTE,
+  POLICY_RULE_CANVAS_CONTRIBUTE,
   CREDENTIAL_RULE_CANVAS_CREATED_BY,
   CREDENTIAL_RULE_CANVAS_LOCKED_BY,
-  CREDENTIAL_RULE_CANVAS_UPDATE,
-} from '@common/constants/authorization.constants';
+  POLICY_RULE_CANVAS_UPDATE,
+} from '@common/constants/authorization/authorization.constants';
 
 @Injectable()
 export class CanvasAuthorizationService {
@@ -131,14 +131,14 @@ export class CanvasAuthorizationService {
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.UPDATE_CANVAS],
       AuthorizationPrivilege.UPDATE,
-      CREDENTIAL_RULE_CANVAS_UPDATE
+      POLICY_RULE_CANVAS_UPDATE
     );
     privilegeRules.push(createPrivilege);
 
     const contributePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.UPDATE_CANVAS],
       AuthorizationPrivilege.CONTRIBUTE,
-      CREDENTIAL_RULE_CANVAS_CONTRIBUTE
+      POLICY_RULE_CANVAS_CONTRIBUTE
     );
     privilegeRules.push(contributePrivilege);
 

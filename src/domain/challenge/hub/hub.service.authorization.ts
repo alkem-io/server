@@ -30,16 +30,16 @@ import { CollaborationAuthorizationService } from '@domain/collaboration/collabo
 import {
   CREDENTIAL_RULE_CHALLENGE_HUB_ADMIN_DELETE,
   CREDENTIAL_RULE_HUB_ADMINS,
-  CREDENTIAL_RULE_HUB_AUTHORIZATION_GLOBAL_ADMIN_GRANT,
-  CREDENTIAL_RULE_HUB_AUTHORIZATION_RESET,
-  CREDENTIAL_RULE_HUB_COMMUNITY_APPLY_GLOBAL_REGISTERED,
-  CREDENTIAL_RULE_HUB_COMMUNITY_JOIN_GLOBAL_REGISTERED,
-  CREDENTIAL_RULE_HUB_CREATE_CHALLENGE,
-  CREDENTIAL_RULE_HUB_GLOBAL_ADMIN_COMMUNITY_READ,
+  CREDENTIAL_RULE_TYPES_HUB_AUTHORIZATION_GLOBAL_ADMIN_GRANT,
+  CREDENTIAL_RULE_TYPES_HUB_AUTHORIZATION_RESET,
+  CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_APPLY_GLOBAL_REGISTERED,
+  CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_JOIN_GLOBAL_REGISTERED,
+  POLICY_RULE_HUB_CREATE_CHALLENGE,
+  CREDENTIAL_RULE_TYPES_HUB_GLOBAL_ADMIN_COMMUNITY_READ,
   CREDENTIAL_RULE_HUB_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_HUB_MEMBERS_CREATE_CHALLENGES,
   CREDENTIAL_RULE_HUB_MEMBERS_READ,
-} from '@common/constants/authorization.constants';
+} from '@common/constants/authorization/authorization.constants';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -296,7 +296,7 @@ export class HubAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
         ],
-        CREDENTIAL_RULE_HUB_AUTHORIZATION_RESET
+        CREDENTIAL_RULE_TYPES_HUB_AUTHORIZATION_RESET
       );
     authorizationReset.inheritable = false;
     newRules.push(authorizationReset);
@@ -305,7 +305,7 @@ export class HubAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ],
         [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
-        CREDENTIAL_RULE_HUB_GLOBAL_ADMIN_COMMUNITY_READ
+        CREDENTIAL_RULE_TYPES_HUB_GLOBAL_ADMIN_COMMUNITY_READ
       );
     newRules.push(communityAdmin);
 
@@ -317,7 +317,7 @@ export class HubAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
         ],
-        CREDENTIAL_RULE_HUB_AUTHORIZATION_GLOBAL_ADMIN_GRANT
+        CREDENTIAL_RULE_TYPES_HUB_AUTHORIZATION_GLOBAL_ADMIN_GRANT
       );
     newRules.push(globalAdmin);
 
@@ -330,7 +330,7 @@ export class HubAuthorizationService {
     const createChallengePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_CHALLENGE],
       AuthorizationPrivilege.CREATE,
-      CREDENTIAL_RULE_HUB_CREATE_CHALLENGE
+      POLICY_RULE_HUB_CREATE_CHALLENGE
     );
     this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,
@@ -426,7 +426,7 @@ export class HubAuthorizationService {
         this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
           [AuthorizationPrivilege.COMMUNITY_APPLY],
           [AuthorizationCredential.GLOBAL_REGISTERED],
-          CREDENTIAL_RULE_HUB_COMMUNITY_APPLY_GLOBAL_REGISTERED
+          CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_APPLY_GLOBAL_REGISTERED
         );
       anyUserCanApply.inheritable = false;
       newRules.push(anyUserCanApply);
@@ -442,7 +442,7 @@ export class HubAuthorizationService {
         this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
           [AuthorizationPrivilege.COMMUNITY_JOIN],
           [AuthorizationCredential.GLOBAL_REGISTERED],
-          CREDENTIAL_RULE_HUB_COMMUNITY_JOIN_GLOBAL_REGISTERED
+          CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_JOIN_GLOBAL_REGISTERED
         );
       anyUserCanJoin.inheritable = false;
       newRules.push(anyUserCanJoin);

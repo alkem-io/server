@@ -18,11 +18,11 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import {
-  CREDENTIAL_RULE_CALLOUT_CONTRIBUTE,
+  POLICY_RULE_CALLOUT_CONTRIBUTE,
   CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS,
-  CREDENTIAL_RULE_COLLABORATION_CREATE,
-  CREDENTIAL_RULE_COLLABORATION_CREATE_RELATION_REGISTERED,
-} from '@common/constants/authorization.constants';
+  POLICY_RULE_COLLABORATION_CREATE,
+  CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED,
+} from '@common/constants/authorization/authorization.constants';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -135,7 +135,7 @@ export class CollaborationAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE_RELATION],
         [AuthorizationCredential.USER_SELF_MANAGEMENT],
-        CREDENTIAL_RULE_COLLABORATION_CREATE_RELATION_REGISTERED
+        CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED
       );
     communityMemberNotInherited.inheritable = false;
     newRules.push(communityMemberNotInherited);
@@ -188,7 +188,7 @@ export class CollaborationAuthorizationService {
         AuthorizationPrivilege.CREATE_RELATION,
       ],
       AuthorizationPrivilege.CREATE,
-      CREDENTIAL_RULE_COLLABORATION_CREATE
+      POLICY_RULE_COLLABORATION_CREATE
     );
     privilegeRules.push(createPrivilege);
 
@@ -201,7 +201,7 @@ export class CollaborationAuthorizationService {
       const createCalloutPrivilege = new AuthorizationPolicyRulePrivilege(
         [AuthorizationPrivilege.CREATE_CALLOUT],
         AuthorizationPrivilege.CONTRIBUTE,
-        CREDENTIAL_RULE_CALLOUT_CONTRIBUTE
+        POLICY_RULE_CALLOUT_CONTRIBUTE
       );
       privilegeRules.push(createCalloutPrivilege);
     }

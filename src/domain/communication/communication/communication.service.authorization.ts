@@ -8,9 +8,9 @@ import { CommunicationService } from './communication.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import {
-  CREDENTIAL_RULE_COMMUNICATION_CONTRIBUTE,
-  CREDENTIAL_RULE_COMMUNICATION_CREATE,
-} from '@common/constants/authorization.constants';
+  POLICY_RULE_COMMUNICATION_CONTRIBUTE,
+  POLICY_RULE_COMMUNICATION_CREATE,
+} from '@common/constants/authorization/authorization.constants';
 
 @Injectable()
 export class CommunicationAuthorizationService {
@@ -67,14 +67,14 @@ export class CommunicationAuthorizationService {
     const contributePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_DISCUSSION],
       AuthorizationPrivilege.CONTRIBUTE,
-      CREDENTIAL_RULE_COMMUNICATION_CONTRIBUTE
+      POLICY_RULE_COMMUNICATION_CONTRIBUTE
     );
     privilegeRules.push(contributePrivilege);
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_DISCUSSION],
       AuthorizationPrivilege.CREATE,
-      CREDENTIAL_RULE_COMMUNICATION_CREATE
+      POLICY_RULE_COMMUNICATION_CREATE
     );
     privilegeRules.push(createPrivilege);
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(

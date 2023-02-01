@@ -9,10 +9,10 @@ import { RoomService } from '../room/room.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import {
-  CREDENTIAL_RULE_DISCUSSION_CONTRIBUTE,
-  CREDENTIAL_RULE_DISCUSSION_CREATE,
+  POLICY_RULE_DISCUSSION_CONTRIBUTE,
+  POLICY_RULE_DISCUSSION_CREATE,
   CREDENTIAL_RULE_DISCUSSION_MESSAGE_SENDER,
-} from '@common/constants/authorization.constants';
+} from '@common/constants/authorization/authorization.constants';
 
 @Injectable()
 export class DiscussionAuthorizationService {
@@ -72,14 +72,14 @@ export class DiscussionAuthorizationService {
     const contributePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_COMMENT],
       AuthorizationPrivilege.CONTRIBUTE,
-      CREDENTIAL_RULE_DISCUSSION_CONTRIBUTE
+      POLICY_RULE_DISCUSSION_CONTRIBUTE
     );
     privilegeRules.push(contributePrivilege);
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_COMMENT],
       AuthorizationPrivilege.CREATE,
-      CREDENTIAL_RULE_DISCUSSION_CREATE
+      POLICY_RULE_DISCUSSION_CREATE
     );
     privilegeRules.push(createPrivilege);
 

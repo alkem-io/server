@@ -22,11 +22,11 @@ import { CalloutType } from '@common/enums/callout.type';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CanvasTemplateAuthorizationService } from '@domain/template/canvas-template/canvas.template.service.authorization';
 import {
-  CREDENTIAL_RULE_CALLOUT_CONTRIBUTE,
-  CREDENTIAL_RULE_CALLOUT_CREATE,
+  POLICY_RULE_CALLOUT_CONTRIBUTE,
+  POLICY_RULE_CALLOUT_CREATE,
   CREDENTIAL_RULE_CALLOUT_CREATED_BY,
-  CREDENTIAL_RULE_CALLOUT_UPDATE_PUBLISHER_ADMINS,
-} from '@common/constants/authorization.constants';
+  CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS,
+} from '@common/constants/authorization/authorization.constants';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -150,7 +150,7 @@ export class CalloutAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
         ],
-        CREDENTIAL_RULE_CALLOUT_UPDATE_PUBLISHER_ADMINS
+        CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS
       );
     calloutPublishUpdate.inheritable = false;
     newRules.push(calloutPublishUpdate);
@@ -172,14 +172,14 @@ export class CalloutAuthorizationService {
       const createPrivilege = new AuthorizationPolicyRulePrivilege(
         [privilegeToGrant],
         AuthorizationPrivilege.CREATE,
-        CREDENTIAL_RULE_CALLOUT_CREATE
+        POLICY_RULE_CALLOUT_CREATE
       );
       privilegeRules.push(createPrivilege);
 
       const contributorsPrivilege = new AuthorizationPolicyRulePrivilege(
         [privilegeToGrant],
         AuthorizationPrivilege.CONTRIBUTE,
-        CREDENTIAL_RULE_CALLOUT_CONTRIBUTE
+        POLICY_RULE_CALLOUT_CONTRIBUTE
       );
       privilegeRules.push(contributorsPrivilege);
     }

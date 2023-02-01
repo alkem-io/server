@@ -18,8 +18,8 @@ import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import {
   CREDENTIAL_RULE_OPPORTUNITY_ADMIN,
   CREDENTIAL_RULE_OPPORTUNITY_MEMBER,
-  CREDENTIAL_RULE_OPPORTUNITY_UPDATE_INNOVATION_FLOW,
-} from '@common/constants/authorization.constants';
+  CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW,
+} from '@common/constants/authorization/authorization.constants';
 
 @Injectable()
 export class OpportunityAuthorizationService {
@@ -151,7 +151,7 @@ export class OpportunityAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
         ],
-        CREDENTIAL_RULE_OPPORTUNITY_UPDATE_INNOVATION_FLOW
+        CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW
       );
     updateInnovationFlowRule.inheritable = false;
     rules.push(updateInnovationFlowRule);

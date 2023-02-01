@@ -32,9 +32,9 @@ import {
   CREDENTIAL_RULE_CHALLENGE_HUB_ADMINS,
   CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_APPLY,
   CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_JOIN,
-  CREDENTIAL_RULE_CHALLENGE_INNOVATION_FLOW,
+  CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW,
   CREDENTIAL_RULE_CHALLENGE_MEMBER_READ,
-} from '@common/constants/authorization.constants';
+} from '@common/constants/authorization/authorization.constants';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -331,7 +331,7 @@ export class ChallengeAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
         ],
-        CREDENTIAL_RULE_CHALLENGE_INNOVATION_FLOW
+        CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW
       );
     updateInnovationFlowRule.inheritable = false;
     rules.push(updateInnovationFlowRule);

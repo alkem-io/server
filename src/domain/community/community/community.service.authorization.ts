@@ -13,10 +13,10 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL,
-  CREDENTIAL_RULE_COMMUNITY_READ_GLOBAL_REGISTERED,
+  CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL,
+  CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
-} from '@common/constants/authorization.constants';
+} from '@common/constants/authorization/authorization.constants';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -108,7 +108,7 @@ export class CommunityAuthorizationService {
           AuthorizationPrivilege.DELETE,
         ],
         [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
-        CREDENTIAL_RULE_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL
+        CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL
       );
     newRules.push(globalCommunityAdmin);
 
@@ -117,7 +117,7 @@ export class CommunityAuthorizationService {
         this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
           [AuthorizationPrivilege.READ],
           [AuthorizationCredential.GLOBAL_REGISTERED],
-          CREDENTIAL_RULE_COMMUNITY_READ_GLOBAL_REGISTERED
+          CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED
         );
       newRules.push(globalRegistered);
     }

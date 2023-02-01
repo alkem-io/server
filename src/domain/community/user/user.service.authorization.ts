@@ -16,11 +16,11 @@ import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import {
-  CREDENTIAL_RULE_USER_AUTHORIZATION_RESET,
-  CREDENTIAL_RULE_USER_GLOBAL_ADMIN_COMMUNITY,
+  CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET,
+  CREDENTIAL_RULE_TYPES_USER_GLOBAL_ADMIN_COMMUNITY,
   CREDENTIAL_RULE_USER_SELF_ADMIN,
   CREDENTIAL_RULE_USER_READ,
-} from '@common/constants/authorization.constants';
+} from '@common/constants/authorization/authorization.constants';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -106,7 +106,7 @@ export class UserAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
         ],
-        CREDENTIAL_RULE_USER_AUTHORIZATION_RESET
+        CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET
       );
     globalAdminNotInherited.inheritable = false;
     newRules.push(globalAdminNotInherited);
@@ -120,7 +120,7 @@ export class UserAuthorizationService {
           AuthorizationPrivilege.DELETE,
         ],
         [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
-        CREDENTIAL_RULE_USER_GLOBAL_ADMIN_COMMUNITY
+        CREDENTIAL_RULE_TYPES_USER_GLOBAL_ADMIN_COMMUNITY
       );
 
     newRules.push(communityAdmin);
