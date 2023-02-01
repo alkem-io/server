@@ -9,6 +9,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { CardProfileAuthorizationService } from './card.profile.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CardProfileResolverFields } from './card.profile.resolver.fields';
+import { LocationModule } from '@domain/common/location';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { CardProfileResolverFields } from './card.profile.resolver.fields';
     AuthorizationPolicyModule,
     TagsetModule,
     ReferenceModule,
+    LocationModule,
     TypeOrmModule.forFeature([CardProfile]),
   ],
   providers: [

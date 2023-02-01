@@ -52,7 +52,7 @@ export class CalendarResolverFields {
     nullable: true,
     description: 'The list of CalendarEvents for this Calendar.',
   })
-  async callouts(
+  async events(
     @Parent() calendar: ICalendar,
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) args: CalendarArgsEvents
