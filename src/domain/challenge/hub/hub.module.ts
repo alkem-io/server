@@ -32,6 +32,7 @@ import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activ
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
+import { ElasticsearchModule } from '@services/external/elasticsearch';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
     TemplatesSetModule,
     CollaborationModule,
     HubFilterModule,
+    ElasticsearchModule,
     TypeOrmModule.forFeature([Hub]),
   ],
   providers: [

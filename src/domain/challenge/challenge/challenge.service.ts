@@ -178,8 +178,6 @@ export class ChallengeService {
       });
     }
 
-    this.elasticSearch.challengeCreated(savedChallenge, agentInfo.userID);
-
     return savedChallenge;
   }
 
