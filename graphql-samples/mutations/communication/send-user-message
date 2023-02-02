@@ -6,6 +6,6 @@ Variables:
 {
   "messageData": {
     "message": "test",
-    "receiverId": "uuid_nameid"
+    "receiverIds": ["uuid_nameid"]
   }
 }
