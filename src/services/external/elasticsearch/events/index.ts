@@ -1,3 +1,5 @@
+export * from './base.contribution';
+
 export * from './journey/hub.joined';
 export * from './journey/hub.content.edited';
 //

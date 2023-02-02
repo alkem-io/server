@@ -5,5 +5,4 @@ export interface BaseContribution {
   name: string;
   author: string;
   type: ContributionType;
-  timestamp: Date;
 }
