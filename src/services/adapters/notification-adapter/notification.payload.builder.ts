@@ -27,6 +27,9 @@ import {
   CommunicationUpdateEventPayload,
   CollaborationContextReviewSubmittedPayload,
   CommunicationDiscussionCreatedEventPayload,
+  CommunicationUserMessageEventPayload,
+  CommunicationOrganizationMessageEventPayload,
+  CommunicationCommunityLeadsMessageEventPayload,
   CommunityApplicationCreatedEventPayload,
   CollaborationDiscussionCommentEventPayload,
   CollaborationCanvasCreatedEventPayload,
@@ -39,6 +42,9 @@ import { IMessage } from '@domain/communication/message/message.interface';
 import { IAspect } from '@domain/collaboration';
 import { IUser } from '@domain/community/user/user.interface';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
+import { User } from '@domain/community/user/user.entity';
+import { Organization } from '@domain/community/organization/organization.entity';
+import { Community } from '@domain/community/community/community.entity';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -54,6 +60,12 @@ export class NotificationPayloadBuilder {
     private aspectRepository: Repository<Aspect>,
     @InjectRepository(Canvas)
     private canvasRepository: Repository<Canvas>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    @InjectRepository(Organization)
+    private organizationRepository: Repository<Organization>,
+    @InjectRepository(Community)
+    private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -407,6 +419,92 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
+  async buildCommunicationUserMessageNotificationPayload(
+    senderID: string,
+    receiverID: string,
+    message: string
+  ): Promise<CommunicationUserMessageEventPayload> {
+    const receiverDisplayName = await this.getUserDisplayNameOrFail(receiverID);
+    const payload: CommunicationUserMessageEventPayload = {
+      triggeredBy: senderID,
+      messageReceiver: {
+        id: receiverID,
+        displayName: receiverDisplayName,
+      },
+      message,
+    };
+
+    return payload;
+  }
+
+  private async getUserDisplayNameOrFail(userId: string): Promise<string> {
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .select('user.displayName')
+      .where('user.id = :id')
+      .setParameters({ id: userId })
+      .getOne();
+
+    if (!user) {
+      throw new EntityNotFoundException(
+        `Unable to find User with id: ${userId}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return user.displayName;
+  }
+
+  async buildCommunicationOrganizationMessageNotificationPayload(
+    senderID: string,
+    message: string,
+    organizationID: string
+  ): Promise<CommunicationOrganizationMessageEventPayload> {
+    const orgDisplayName = await this.getOrgDisplayNameOrFail(organizationID);
+    const payload: CommunicationOrganizationMessageEventPayload = {
+      triggeredBy: senderID,
+      message,
+      organization: {
+        id: organizationID,
+        displayName: orgDisplayName,
+      },
+    };
+
+    return payload;
+  }
+
+  private async getOrgDisplayNameOrFail(orgId: string): Promise<string> {
+    const org = await this.organizationRepository
+      .createQueryBuilder('organization')
+      .select('organization.displayName')
+      .where('organization.id = :id')
+      .setParameters({ id: orgId })
+      .getOne();
+
+    if (!org) {
+      throw new EntityNotFoundException(
+        `Unable to find User with id: ${orgId}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return org.displayName;
+  }
+
+  async buildCommunicationCommunityLeadsMessageNotificationPayload(
+    senderID: string,
+    message: string,
+    communityID: string
+  ): Promise<CommunicationCommunityLeadsMessageEventPayload> {
+    const community = await this.getCommunityOrFail(communityID);
+    const journeyPayload = await this.buildJourneyPayload(community);
+    const payload: CommunicationCommunityLeadsMessageEventPayload = {
+      triggeredBy: senderID,
+      message,
+      journey: journeyPayload,
+    };
+
+    return payload;
+  }
+
   private async buildJourneyPayload(
     community: ICommunity
   ): Promise<JourneyPayload> {
@@ -446,6 +544,22 @@ export class NotificationPayloadBuilder {
     }
 
     return result;
+  }
+
+  private async getCommunityOrFail(communityID: string): Promise<ICommunity> {
+    const community = await this.communityRepository
+      .createQueryBuilder('community')
+      .where('community.id = :id')
+      .setParameters({ id: communityID })
+      .getOne();
+
+    if (!community) {
+      throw new EntityNotFoundException(
+        `Unable to find Community with id: ${communityID}`,
+        LogContext.CHALLENGES
+      );
+    }
+    return community;
   }
 
   private async getHubNameIdOrFail(hubID: string): Promise<string> {

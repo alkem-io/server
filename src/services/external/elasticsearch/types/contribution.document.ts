@@ -5,6 +5,6 @@ export type ContributionDocument = {
   name: string;
   author: string;
   type: ContributionType;
-  timestamp: Date;
+  '@timestamp': Date;
   alkemio: boolean;
 };

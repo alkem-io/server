@@ -18,6 +18,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { LifecycleTemplateModule } from '@domain/template/lifecycle-template/lifecycle.template.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
+import { ElasticsearchModule } from '@services/external/elasticsearch';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
     AgentModule,
     CommunityPolicyModule,
     NamingModule,
+    ElasticsearchModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],
   providers: [

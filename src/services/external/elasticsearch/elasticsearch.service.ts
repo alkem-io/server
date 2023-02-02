@@ -7,14 +7,16 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConfigurationTypes } from '@common/enums';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IHub } from '@domain/challenge/hub/hub.interface';
-import { IUpdates } from '@domain/communication/updates/updates.interface';
 import { IOpportunity } from '@src/domain';
 import { ICallout } from '@domain/collaboration/callout';
+import { IMessage } from '@domain/communication/message/message.interface';
 import { isElasticError, isElasticResponseError } from './utils';
-import { ContributionDocument } from './types';
+import {
+  AuthorDetails,
+  ContributionDetails,
+  ContributionDocument,
+} from './types';
 import { BaseContribution } from './events';
-
-type AuthorDetails = { id: string; email: string };
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
 
@@ -47,12 +49,15 @@ export class ElasticsearchService {
     this.activityIndexName = elasticsearch?.indices?.contribution;
   }
 
-  public hubJoined(hub: IHub, details: AuthorDetails): void {
+  public hubJoined(
+    contribution: ContributionDetails,
+    details: AuthorDetails
+  ): void {
     this.createDocument(
       {
         type: 'HUB_JOINED',
-        id: hub.id,
-        name: hub.displayName,
+        id: contribution.id,
+        name: contribution.name,
         author: details.id,
       },
       details
@@ -95,12 +100,15 @@ export class ElasticsearchService {
       details
     );
   }
-  public challengeJoined(challenge: IChallenge, details: AuthorDetails): void {
+  public challengeJoined(
+    contribution: ContributionDetails,
+    details: AuthorDetails
+  ): void {
     this.createDocument(
       {
         type: 'CHALLENGE_JOINED',
-        id: challenge.id,
-        name: challenge.displayName,
+        id: contribution.id,
+        name: contribution.name,
         author: details.id,
       },
       details
@@ -108,14 +116,14 @@ export class ElasticsearchService {
   }
   // ===================
   public opportunityJoined(
-    opportunity: IOpportunity,
+    contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
     this.createDocument(
       {
         type: 'OPPORTUNITY_JOINED',
-        id: opportunity.id,
-        name: opportunity.displayName,
+        id: contribution.id,
+        name: contribution.name,
         author: details.id,
       },
       details
@@ -186,49 +194,56 @@ export class ElasticsearchService {
       details
     );
   }
-  public calloutCanvasCreated(callout: ICallout, details: AuthorDetails): void {
+  // todo: callout is not available; do we need it
+  public calloutCanvasCreated(
+    contribution: ContributionDetails,
+    details: AuthorDetails
+  ): void {
     this.createDocument(
       {
         type: 'CALLOUT_CANVAS_CREATED',
-        id: callout.id,
-        name: callout.displayName,
+        id: contribution.id,
+        name: contribution.name,
         author: details.id,
       },
       details
     );
   }
   public calloutCardCommentCreated(
-    callout: ICallout,
+    contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
     this.createDocument(
       {
         type: 'CALLOUT_CARD_COMMENT_CREATED',
-        id: callout.id,
-        name: callout.displayName,
+        id: contribution.id,
+        name: contribution.name,
         author: details.id,
       },
       details
     );
   }
-  public calloutCanvasEdited(callout: ICallout, details: AuthorDetails): void {
+  public calloutCanvasEdited(
+    contribution: ContributionDetails,
+    details: AuthorDetails
+  ): void {
     this.createDocument(
       {
         type: 'CALLOUT_CANVAS_EDITED',
-        id: callout.id,
-        name: callout.displayName,
+        id: contribution.id,
+        name: contribution.name,
         author: details.id,
       },
       details
     );
   }
   // ===================
-  public updateCreated(update: IUpdates, details: AuthorDetails): void {
+  public updateCreated(message: IMessage, details: AuthorDetails): void {
     this.createDocument(
       {
         type: 'UPDATE_CREATED',
-        id: update.id,
-        name: update.displayName,
+        id: message.id,
+        name: '',
         author: details.id,
       },
       details
@@ -236,12 +251,12 @@ export class ElasticsearchService {
   }
   // todo: base method to require type, id, name, author, and additional data
   private async createDocument<TObject extends BaseContribution>(
-    object: TObject,
+    contribution: TObject,
     details: AuthorDetails
   ): Promise<WriteResponseBase | undefined> {
     const document: ContributionDocument = {
-      ...object,
-      timestamp: new Date(), // todo: is this UTC?
+      ...contribution,
+      '@timestamp': new Date(), // todo: is this UTC?
       alkemio: isFromAlkemioTeam(details.email),
     };
 
@@ -252,14 +267,14 @@ export class ElasticsearchService {
       });
 
       this.logger.verbose?.(
-        `Event '${object.type}' for object with id '(${object.id})' ingested to (${this.activityIndexName})`
+        `Event '${contribution.type}' for object with id '(${contribution.id})' ingested to (${this.activityIndexName})`
       );
 
       return result;
     } catch (e: unknown) {
       const errorId = this.handleError(e);
       this.logger.error(
-        `Event '${object.type}' for object with id '(${object.id})' FAILED to be ingested into (${this.activityIndexName})`,
+        `Event '${contribution.type}' for object with id '(${contribution.id})' FAILED to be ingested into (${this.activityIndexName})`,
         { uuid: errorId }
       );
     }

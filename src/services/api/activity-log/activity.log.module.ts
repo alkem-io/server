@@ -15,6 +15,7 @@ import { ActivityLogService } from './activity.log.service';
 import { ActivityLogResolverQueries } from './activity.log.resolver.queries';
 import { ActivityLogResolverSubscriptions } from './activity.log.resolver.subscriptions';
 import { UpdatesModule } from '@domain/communication/updates/updates.module';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { UpdatesModule } from '@domain/communication/updates/updates.module';
     OpportunityModule,
     UpdatesModule,
     SubscriptionPublishServiceModule,
+    PlatformAuthorizationPolicyModule,
   ],
   providers: [
     ActivityLogService,

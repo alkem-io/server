@@ -49,10 +49,12 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { NotificationInputCanvasCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.canvas.created';
 import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
+import { ElasticsearchService } from '@services/external/elasticsearch';
 
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
+    private elasticService: ElasticsearchService,
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
@@ -162,6 +164,10 @@ export class CalloutResolverMutations {
       };
       await this.notificationAdapter.discussionComment(notificationInput);
     }
+    this.elasticService.calloutCommentCreated(callout, {
+      id: agentInfo.userID,
+      email: agentInfo.email,
+    });
 
     return commentSent;
   }
@@ -320,6 +326,11 @@ export class CalloutResolverMutations {
         callout: callout,
       };
       this.activityAdapter.aspectCreated(activityLogInput);
+
+      this.elasticService.calloutCardCreated(callout, {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      });
     }
 
     return aspect;
@@ -373,6 +384,17 @@ export class CalloutResolverMutations {
         canvas: authorizedCanvas,
         callout: callout,
       });
+
+      this.elasticService.calloutCanvasCreated(
+        {
+          id: canvas.id,
+          name: canvas.displayName,
+        },
+        {
+          id: agentInfo.userID,
+          email: agentInfo.email,
+        }
+      );
     }
 
     return authorizedCanvas;

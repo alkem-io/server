@@ -30,10 +30,12 @@ import { UpdateChallengeInnovationFlowInput } from './dto/challenge.dto.update.i
 import { OpportunityCreatedPayload } from './dto/challenge.opportunity.created.payload';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_OPPORTUNITY_CREATED } from '@common/constants';
+import { ElasticsearchService } from '@services/external/elasticsearch';
 
 @Resolver()
 export class ChallengeResolverMutations {
   constructor(
+    private elasticService: ElasticsearchService,
     private activityAdapter: ActivityAdapter,
     private opportunityAuthorizationService: OpportunityAuthorizationService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
@@ -106,6 +108,11 @@ export class ChallengeResolverMutations {
       challengeCommunityPolicy
     );
 
+    this.elasticService.opportunityCreated(opportunity, {
+      id: agentInfo.userID,
+      email: agentInfo.email,
+    });
+
     this.activityAdapter.opportunityCreated({
       opportunity,
       triggeredBy: agentInfo.userID,
@@ -166,7 +173,16 @@ export class ChallengeResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `challenge update: ${challenge.nameID}`
     );
-    return await this.challengeService.updateChallenge(challengeData);
+    const updatedChallenge = await this.challengeService.updateChallenge(
+      challengeData
+    );
+
+    this.elasticService.challengeContentEdited(updatedChallenge, {
+      id: agentInfo.userID,
+      email: agentInfo.email,
+    });
+
+    return updatedChallenge;
   }
 
   @UseGuards(GraphqlGuard)
