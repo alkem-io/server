@@ -116,12 +116,15 @@ export class CommunicationResolverMutations {
       `send user message from: ${agentInfo.email}`
     );
 
-    const notificationInput: NotificationInputUserMessage = {
-      triggeredBy: agentInfo.userID,
-      receiverID: messageData.receiverId,
-      message: messageData.message,
-    };
-    await this.notificationAdapter.sendUserMessage(notificationInput);
+    for (const receiverId of messageData.receiverIds) {
+      const notificationInput: NotificationInputUserMessage = {
+        triggeredBy: agentInfo.userID,
+        receiverID: receiverId,
+        message: messageData.message,
+      };
+      await this.notificationAdapter.sendUserMessage(notificationInput);
+    }
+
     return true;
   }
   @UseGuards(GraphqlGuard)

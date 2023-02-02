@@ -6,11 +6,11 @@ import { MaxLength } from 'class-validator';
 
 @InputType()
 export class CommunicationSendMessageToUserInput {
-  @Field(() => UUID, {
+  @Field(() => [UUID], {
     nullable: false,
-    description: 'The User the message is being sent to',
+    description: 'All Users the message is being sent to',
   })
-  receiverId!: string;
+  receiverIds!: string[];
 
   @Field(() => String, {
     nullable: false,
