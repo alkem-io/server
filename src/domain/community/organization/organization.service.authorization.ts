@@ -14,6 +14,14 @@ import { OrganizationVerificationAuthorizationService } from '../organization-ve
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import {
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMIN_COMMUNITY,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS,
+  CREDENTIAL_RULE_ORGANIZATION_ADMIN,
+  CREDENTIAL_RULE_ORGANIZATION_READ,
+  CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
+} from '@common/constants';
 
 @Injectable()
 export class OrganizationAuthorizationService {
@@ -115,7 +123,8 @@ export class OrganizationAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-        ]
+        ],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET
       );
     globalAdminNotInherited.inheritable = false;
     newRules.push(globalAdminNotInherited);
@@ -129,7 +138,8 @@ export class OrganizationAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY]
+        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMIN_COMMUNITY
       );
     newRules.push(communityAdmin);
 
@@ -140,7 +150,8 @@ export class OrganizationAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-        ]
+        ],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS
       );
     newRules.push(globalAdmin);
 
@@ -161,7 +172,8 @@ export class OrganizationAuthorizationService {
             type: AuthorizationCredential.ORGANIZATION_OWNER,
             resourceID: organizationID,
           },
-        ]
+        ],
+        CREDENTIAL_RULE_ORGANIZATION_ADMIN
       );
 
     newRules.push(organizationAdmin);
@@ -185,7 +197,8 @@ export class OrganizationAuthorizationService {
           type: AuthorizationCredential.GLOBAL_REGISTERED,
           resourceID: '',
         },
-      ]
+      ],
+      CREDENTIAL_RULE_ORGANIZATION_READ
     );
     newRules.push(readPrivilege);
 
@@ -212,7 +225,8 @@ export class OrganizationAuthorizationService {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
             resourceID: userToBeRemovedID,
           },
-        ]
+        ],
+        CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL
       );
     newRules.push(userSelfRemovalRule);
 

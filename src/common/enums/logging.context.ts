@@ -9,6 +9,7 @@ export enum LogContext {
   ACTIVITY = 'activity',
   API = 'api',
   AUTH = 'auth',
+  AUTH_POLICY = 'auth_policy',
   AUTH_TOKEN = 'auth_token',
   BOOTSTRAP = 'bootstrap',
   DATA_MGMT = 'data-mgmt',

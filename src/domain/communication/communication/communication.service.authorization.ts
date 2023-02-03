@@ -7,6 +7,10 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { CommunicationService } from './communication.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import {
+  POLICY_RULE_COMMUNICATION_CONTRIBUTE,
+  POLICY_RULE_COMMUNICATION_CREATE,
+} from '@common/constants';
 
 @Injectable()
 export class CommunicationAuthorizationService {
@@ -62,13 +66,15 @@ export class CommunicationAuthorizationService {
     // Allow any contributor to this community to create discussions, and to send messages to the discussion
     const contributePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_DISCUSSION],
-      AuthorizationPrivilege.CONTRIBUTE
+      AuthorizationPrivilege.CONTRIBUTE,
+      POLICY_RULE_COMMUNICATION_CONTRIBUTE
     );
     privilegeRules.push(contributePrivilege);
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_DISCUSSION],
-      AuthorizationPrivilege.CREATE
+      AuthorizationPrivilege.CREATE,
+      POLICY_RULE_COMMUNICATION_CREATE
     );
     privilegeRules.push(createPrivilege);
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(

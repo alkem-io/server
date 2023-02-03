@@ -10,6 +10,12 @@ import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import {
+  CREDENTIAL_RULE_CANVAS_CREATED_BY,
+  CREDENTIAL_RULE_CANVAS_LOCKED_BY,
+  POLICY_RULE_CANVAS_UPDATE,
+  POLICY_RULE_CANVAS_CONTRIBUTE,
+} from '@common/constants';
 
 @Injectable()
 export class CanvasAuthorizationService {
@@ -74,7 +80,8 @@ export class CanvasAuthorizationService {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
             resourceID: canvas.createdBy,
           },
-        ]
+        ],
+        CREDENTIAL_RULE_CANVAS_CREATED_BY
       );
     newRules.push(manageCanvasCreatedByPolicy);
 
@@ -100,7 +107,8 @@ export class CanvasAuthorizationService {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
             resourceID: checkout.lockedBy,
           },
-        ]
+        ],
+        CREDENTIAL_RULE_CANVAS_LOCKED_BY
       );
 
       newRules.push(lockedBy);
@@ -122,13 +130,15 @@ export class CanvasAuthorizationService {
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.UPDATE_CANVAS],
-      AuthorizationPrivilege.UPDATE
+      AuthorizationPrivilege.UPDATE,
+      POLICY_RULE_CANVAS_UPDATE
     );
     privilegeRules.push(createPrivilege);
 
     const contributePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.UPDATE_CANVAS],
-      AuthorizationPrivilege.CONTRIBUTE
+      AuthorizationPrivilege.CONTRIBUTE,
+      POLICY_RULE_CANVAS_CONTRIBUTE
     );
     privilegeRules.push(contributePrivilege);
 

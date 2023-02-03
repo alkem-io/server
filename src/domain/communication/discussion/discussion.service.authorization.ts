@@ -8,6 +8,11 @@ import { AuthorizationCredential } from '@common/enums';
 import { RoomService } from '../room/room.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import {
+  POLICY_RULE_DISCUSSION_CONTRIBUTE,
+  POLICY_RULE_DISCUSSION_CREATE,
+  CREDENTIAL_RULE_DISCUSSION_MESSAGE_SENDER,
+} from '@common/constants';
 
 @Injectable()
 export class DiscussionAuthorizationService {
@@ -66,13 +71,15 @@ export class DiscussionAuthorizationService {
     // Allow any contributor to this community to create discussions, and to send messages to the discussion
     const contributePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_COMMENT],
-      AuthorizationPrivilege.CONTRIBUTE
+      AuthorizationPrivilege.CONTRIBUTE,
+      POLICY_RULE_DISCUSSION_CONTRIBUTE
     );
     privilegeRules.push(contributePrivilege);
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.CREATE_COMMENT],
-      AuthorizationPrivilege.CREATE
+      AuthorizationPrivilege.CREATE,
+      POLICY_RULE_DISCUSSION_CREATE
     );
     privilegeRules.push(createPrivilege);
 
@@ -103,7 +110,8 @@ export class DiscussionAuthorizationService {
               type: AuthorizationCredential.USER_SELF_MANAGEMENT,
               resourceID: senderUserID,
             },
-          ]
+          ],
+          CREDENTIAL_RULE_DISCUSSION_MESSAGE_SENDER
         );
       newRules.push(messageSender);
     }
