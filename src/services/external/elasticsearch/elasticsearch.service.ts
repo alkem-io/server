@@ -22,8 +22,9 @@ const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
 
 @Injectable()
 export class ElasticsearchService {
-  private readonly client: Client;
+  private readonly client: Client | undefined;
 
+  private readonly environment: string;
   private readonly activityIndexName: string;
 
   constructor(
@@ -35,7 +36,23 @@ export class ElasticsearchService {
       ConfigurationTypes.INTEGRATIONS
     )?.elasticsearch;
 
+    this.environment = this.configService.get(
+      ConfigurationTypes.HOSTING
+    )?.environment;
+
     const { host, retries, timeout, api_key } = elasticsearch;
+
+    this.activityIndexName = elasticsearch?.indices?.contribution;
+
+    if (!host) {
+      this.logger.warn('Elasticsearch host URL not provided!');
+      return;
+    }
+
+    if (!api_key) {
+      this.logger.error('Elasticsearch API key not provided!');
+      return;
+    }
 
     this.client = new Client({
       node: host,
@@ -45,8 +62,6 @@ export class ElasticsearchService {
       auth: { apiKey: api_key },
       tls: { rejectUnauthorized: false },
     });
-
-    this.activityIndexName = elasticsearch?.indices?.contribution;
   }
 
   public hubJoined(
@@ -254,6 +269,10 @@ export class ElasticsearchService {
     contribution: TObject,
     details: AuthorDetails
   ): Promise<WriteResponseBase | undefined> {
+    if (!this.client) {
+      return undefined;
+    }
+
     const document: ContributionDocument = {
       ...contribution,
       '@timestamp': new Date(), // todo: is this UTC?
