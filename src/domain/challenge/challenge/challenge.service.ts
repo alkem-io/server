@@ -84,7 +84,7 @@ export class ChallengeService {
   async createChallenge(
     challengeData: CreateChallengeInput,
     hubID: string,
-    agentInfo: AgentInfo
+    agentInfo?: AgentInfo
   ): Promise<IChallenge> {
     if (challengeData.innovationFlowTemplateID) {
       await this.lifecycleTemplateService.validateLifecycleDefinitionOrFail(
@@ -165,7 +165,7 @@ export class ChallengeService {
       );
     }
 
-    if (challenge.community) {
+    if (agentInfo && challenge.community) {
       await this.communityService.assignUserToRole(
         challenge.community,
         agentInfo.userID,
@@ -507,7 +507,7 @@ export class ChallengeService {
 
   async createChildChallenge(
     challengeData: CreateChallengeOnChallengeInput,
-    agentInfo: AgentInfo
+    agentInfo?: AgentInfo
   ): Promise<IChallenge> {
     this.logger.verbose?.(
       `Adding child Challenge to Challenge (${challengeData.challengeID})`,
