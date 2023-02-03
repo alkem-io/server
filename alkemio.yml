@@ -328,6 +328,13 @@ integrations:
     allowed_calls_to_service: ${GEO_SERVICE_CALL_LIMIT}:120
     # Time window (in seconds) in which a certain amount of calls are allowed
     allowed_calls_to_service_window: ${GEO_SERVICE_CALL_WINDOW}:60
+  elasticsearch:
+    host: ${ELASTICSEARCH_URL}
+    api_key: ${ELASTICSEARCH_API_KEY}
+    retries: ${ELASTICSEARCH_RETRIES}:3
+    timeout: ${ELASTICSEARCH_TIMEOUT}:30000
+    indices:
+      contribution: ${ELASTIC_INDEX_ACTIVITY_NAME}:contribution-events
 
 notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true

@@ -39,10 +39,13 @@ import { NotificationInputCommunityApplication } from '@services/adapters/notifi
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';
 import { NotificationInputCommunityContextReview } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.context.review';
 import { CommunityAuthorizationService } from './community.service.authorization';
+import { CommunityType } from '@common/enums/community.type';
+import { ElasticsearchService } from '@services/external/elasticsearch';
 
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
+    private elasticService: ElasticsearchService,
     private authorizationService: AuthorizationService,
     private notificationAdapter: NotificationAdapter,
     private userService: UserService,
@@ -400,6 +403,46 @@ export class CommunityResolverMutations {
       CommunityRole.MEMBER,
       agentInfo
     );
+
+    switch (community.type) {
+      case CommunityType.HUB:
+        this.elasticService.hubJoined(
+          {
+            id: community.parentID,
+            name: community.displayName,
+          },
+          {
+            id: agentInfo.userID,
+            email: agentInfo.email,
+          }
+        );
+        break;
+      case CommunityType.CHALLENGE:
+        this.elasticService.challengeJoined(
+          {
+            id: community.parentID,
+            name: community.displayName,
+          },
+          {
+            id: agentInfo.userID,
+            email: agentInfo.email,
+          }
+        );
+        break;
+      case CommunityType.OPPORTUNITY:
+        this.elasticService.opportunityJoined(
+          {
+            id: community.parentID,
+            name: community.displayName,
+          },
+          {
+            id: agentInfo.userID,
+            email: agentInfo.email,
+          }
+        );
+        break;
+    }
+
     return result;
   }
 

@@ -21,10 +21,12 @@ import { LogContext } from '@common/enums/logging.context';
 import { getRandomId } from '@src/common/utils';
 import { DeleteCanvasInput } from './dto/canvas.dto.delete';
 import { CanvasCheckoutService } from '../canvas-checkout/canvas.checkout.service';
+import { ElasticsearchService } from '@services/external/elasticsearch';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverMutations {
   constructor(
+    private elasticService: ElasticsearchService,
     private authorizationService: AuthorizationService,
     private canvasService: CanvasService,
     private canvasCheckoutService: CanvasCheckoutService,
@@ -77,6 +79,10 @@ export class CanvasResolverMutations {
       `update Canvas: ${canvas.displayName}`
     );
 
+    if (canvas.value === canvasData.value) {
+      return canvas;
+    }
+
     const updatedCanvas = await this.canvasService.updateCanvas(
       canvas,
       canvasData,
@@ -96,6 +102,17 @@ export class CanvasResolverMutations {
     this.subscriptionCanvasContent.publish(
       SubscriptionType.CANVAS_CONTENT_UPDATED,
       subscriptionPayload
+    );
+
+    this.elasticService.calloutCanvasEdited(
+      {
+        id: canvas.id,
+        name: canvas.displayName,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
     );
 
     return updatedCanvas;

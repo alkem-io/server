@@ -52,6 +52,7 @@ import { AspectMoveModule } from '@domain/collaboration/aspect/aspect.move.modul
 import { FileManagerModule } from '@domain/common/file-manager/file.manager.module';
 import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
+import { ElasticsearchModule } from '@services/external/elasticsearch';
 
 @Module({
   imports: [
@@ -209,6 +210,7 @@ import { PlatformModule } from '@platform/platfrom/platform.module';
     AspectMoveModule,
     FileManagerModule,
     GeoLocationModule,
+    ElasticsearchModule,
   ],
   controllers: [AppController],
   providers: [

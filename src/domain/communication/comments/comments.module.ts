@@ -12,9 +12,11 @@ import { CommentsResolverFields } from './comments.resolver.fields';
 import { CommentsResolverMutations } from './comments.resolver.mutations';
 import { CommentsService } from './comments.service';
 import { CommentsAuthorizationService } from './comments.service.authorization';
+import { ElasticsearchModule } from '@services/external/elasticsearch';
 
 @Module({
   imports: [
+    ElasticsearchModule,
     ActivityAdapterModule,
     NotificationAdapterModule,
     AuthorizationModule,
