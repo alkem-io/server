@@ -404,39 +404,43 @@ export class CommunityResolverMutations {
       agentInfo
     );
 
-    if (community.type === CommunityType.HUB) {
-      this.elasticService.hubJoined(
-        {
-          id: community.parentID,
-          name: community.displayName,
-        },
-        {
-          id: agentInfo.userID,
-          email: agentInfo.email,
-        }
-      );
-    } else if (community.type === CommunityType.CHALLENGE) {
-      this.elasticService.challengeJoined(
-        {
-          id: community.parentID,
-          name: community.displayName,
-        },
-        {
-          id: agentInfo.userID,
-          email: agentInfo.email,
-        }
-      );
-    } else if (community.type === CommunityType.OPPORTUNITY) {
-      this.elasticService.opportunityJoined(
-        {
-          id: community.parentID,
-          name: community.displayName,
-        },
-        {
-          id: agentInfo.userID,
-          email: agentInfo.email,
-        }
-      );
+    switch (community.type) {
+      case CommunityType.HUB:
+        this.elasticService.hubJoined(
+          {
+            id: community.parentID,
+            name: community.displayName,
+          },
+          {
+            id: agentInfo.userID,
+            email: agentInfo.email,
+          }
+        );
+        break;
+      case CommunityType.CHALLENGE:
+        this.elasticService.challengeJoined(
+          {
+            id: community.parentID,
+            name: community.displayName,
+          },
+          {
+            id: agentInfo.userID,
+            email: agentInfo.email,
+          }
+        );
+        break;
+      case CommunityType.OPPORTUNITY:
+        this.elasticService.opportunityJoined(
+          {
+            id: community.parentID,
+            name: community.displayName,
+          },
+          {
+            id: agentInfo.userID,
+            email: agentInfo.email,
+          }
+        );
+        break;
     }
 
     return result;

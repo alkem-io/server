@@ -277,6 +277,7 @@ export class ElasticsearchService {
       ...contribution,
       '@timestamp': new Date(), // todo: is this UTC?
       alkemio: isFromAlkemioTeam(details.email),
+      environment: this.environment,
     };
 
     try {

@@ -7,4 +7,5 @@ export type ContributionDocument = {
   type: ContributionType;
   '@timestamp': Date;
   alkemio: boolean;
+  environment: string;
 };

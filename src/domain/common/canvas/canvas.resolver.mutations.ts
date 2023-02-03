@@ -79,6 +79,10 @@ export class CanvasResolverMutations {
       `update Canvas: ${canvas.displayName}`
     );
 
+    if (canvas.value === canvasData.value) {
+      return canvas;
+    }
+
     const updatedCanvas = await this.canvasService.updateCanvas(
       canvas,
       canvasData,
