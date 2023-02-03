@@ -1,46 +1,48 @@
 export const CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW =
-  'challengeInnovationFlow';
+  'credentialRuleTypes-challengeInnovationFlow';
 export const CREDENTIAL_RULE_TYPES_HUB_AUTHORIZATION_RESET =
-  'hubAuthorizationReset';
+  'credentialRuleTypes-hubAuthorizationReset';
 export const CREDENTIAL_RULE_TYPES_HUB_GLOBAL_ADMIN_COMMUNITY_READ =
-  'hubGlobalAdminCommunityRead';
+  'credentialRuleTypes-hubGlobalAdminCommunityRead';
 export const CREDENTIAL_RULE_TYPES_HUB_AUTHORIZATION_GLOBAL_ADMIN_GRANT =
-  'hubAuthorizationGlobalAdminGrant';
+  'credentialRuleTypes-hubAuthorizationGlobalAdminGrant';
 export const CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_APPLY_GLOBAL_REGISTERED =
-  'hubCommunityApplyGlobalRegistered';
+  'credentialRuleTypes-hubCommunityApplyGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_JOIN_GLOBAL_REGISTERED =
-  'hubCommunityJoinGlobalRegistered';
+  'credentialRuleTypes-hubCommunityJoinGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS =
-  'calloutUpdatePublisherGlobalAdmins';
+  'credentialRuleTypes-calloutUpdatePublisherGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED =
-  'collaborationCreateRelationRegistered';
+  'credentialRuleTypes-collaborationCreateRelationRegistered';
 export const CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW =
-  'opportunityUpdateInnovationFLow';
+  'credentialRuleTypes-opportunityUpdateInnovationFLow';
 export const CREDENTIAL_RULE_TYPES_RELATION_CREATED_GLOBAL_REGISTERED =
-  'relationCreateGlobalRegistered';
+  'credentialRuleTypes-relationCreateGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL =
-  'communityGlobalAdminCommunityAll';
+  'credentialRuleTypes-communityGlobalAdminCommunityAll';
 export const CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED =
-  'communityReadGlobalRegistered';
+  'credentialRuleTypes-communityReadGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET =
-  'organizationAuthorizationReset';
+  'credentialRuleTypes-organizationAuthorizationReset';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMIN_COMMUNITY =
-  'organizationGlobalAdminCommunity';
+  'credentialRuleTypes-organizationGlobalAdminCommunity';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS =
-  'organizationGlobalAdmins';
+  'credentialRuleTypes-organizationGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL =
-  'organizationGlobalAdminsAll';
+  'credentialRuleTypes-organizationGlobalAdminsAll';
 export const CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET =
-  'userAuthorizationReset';
+  'credentialRuleTypes-userAuthorizationReset';
 export const CREDENTIAL_RULE_TYPES_USER_GLOBAL_ADMIN_COMMUNITY =
-  'userGlobalAdminCommunity';
+  'credentialRuleTypes-userGlobalAdminCommunity';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS =
-  'platformGlobalAdmins';
+  'credentialRuleTypes-platformGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS =
-  'platformGrantGlobalAdmins';
-export const CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS = 'platformPlatformAdmins';
+  'credentialRuleTypes-platformGrantGlobalAdmins';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS =
+  'credentialRuleTypes-platformPlatformAdmins';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED =
-  'platformReadRegistered';
+  'credentialRuleTypes-platformReadRegistered';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD =
-  'platformCreateOrgFileUpload';
-export const CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN = 'platformAnyAdmin';
+  'credentialRuleTypes-platformCreateOrgFileUpload';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN =
+  'credentialRuleTypes-platformAnyAdmin';
