@@ -18,4 +18,11 @@ export class UpdateCalloutVisibilityInput {
     description: 'Visibility of the Callout.',
   })
   visibility!: CalloutVisibility;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    defaultValue: true,
+    description: 'Send a notification on publishing.',
+  })
+  notification!: boolean;
 }

@@ -217,11 +217,15 @@ export class CalloutResolverMutations {
           Date.now()
         );
 
-        const notificationInput: NotificationInputCalloutPublished = {
-          triggeredBy: agentInfo.userID,
-          callout: savedCallout,
-        };
-        await this.notificationAdapter.calloutPublished(notificationInput);
+        // Optionally trigger a notification
+        const sendNotification = calloutData.notification;
+        if (sendNotification) {
+          const notificationInput: NotificationInputCalloutPublished = {
+            triggeredBy: agentInfo.userID,
+            callout: savedCallout,
+          };
+          await this.notificationAdapter.calloutPublished(notificationInput);
+        }
 
         const activityLogInput: ActivityInputCalloutPublished = {
           triggeredBy: agentInfo.userID,

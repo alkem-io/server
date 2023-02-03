@@ -8,6 +8,7 @@ Variables:
 {
   "calloutData": {
     "calloutID": "uuid",
-    "visibility": "published"
+    "visibility": "published",
+    "notification": true
   }
 }
