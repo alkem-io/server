@@ -217,9 +217,7 @@ export class CalloutResolverMutations {
           Date.now()
         );
 
-        // Optionally trigger a notification
-        const sendNotification = calloutData.notification;
-        if (sendNotification) {
+        if (calloutData.sendNotification) {
           const notificationInput: NotificationInputCalloutPublished = {
             triggeredBy: agentInfo.userID,
             callout: savedCallout,

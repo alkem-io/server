@@ -24,5 +24,5 @@ export class UpdateCalloutVisibilityInput {
     defaultValue: true,
     description: 'Send a notification on publishing.',
   })
-  notification!: boolean;
+  sendNotification!: boolean;
 }
