@@ -23,6 +23,7 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
 
 @Module({
   imports: [
+    EntityResolverModule,
     ElasticsearchModule,
     ActivityAdapterModule,
     NotificationAdapterModule,

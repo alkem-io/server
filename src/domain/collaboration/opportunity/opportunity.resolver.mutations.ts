@@ -57,10 +57,17 @@ export class OpportunityResolverMutations {
       opportunityData
     );
 
-    this.elasticService.opportunityContentEdited(updatedOpportunity, {
-      id: agentInfo.userID,
-      email: agentInfo.email,
-    });
+    this.elasticService.opportunityContentEdited(
+      {
+        id: updatedOpportunity.id,
+        name: updatedOpportunity.displayName,
+        hub: updatedOpportunity.hubID ?? '',
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
 
     return updatedOpportunity;
   }

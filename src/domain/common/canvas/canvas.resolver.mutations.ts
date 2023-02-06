@@ -106,10 +106,20 @@ export class CanvasResolverMutations {
       subscriptionPayload
     );
 
+    const callout = await this.canvasService.getCanvasOrFail(canvas.id, {
+      relations: ['callout'],
+    });
+
+    const { hubID } =
+      await this.communityResolverService.getCommunityFromCalloutOrFail(
+        callout.id
+      );
+
     this.elasticService.calloutCanvasEdited(
       {
         id: canvas.id,
         name: canvas.displayName,
+        hub: hubID,
       },
       {
         id: agentInfo.userID,
