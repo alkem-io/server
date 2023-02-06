@@ -15,6 +15,12 @@ import { PreferenceSetAuthorizationService } from '@domain/common/preference-set
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import {
+  CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET,
+  CREDENTIAL_RULE_TYPES_USER_GLOBAL_ADMIN_COMMUNITY,
+  CREDENTIAL_RULE_USER_SELF_ADMIN,
+  CREDENTIAL_RULE_USER_READ,
+} from '@common/constants';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -99,7 +105,8 @@ export class UserAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-        ]
+        ],
+        CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET
       );
     globalAdminNotInherited.inheritable = false;
     newRules.push(globalAdminNotInherited);
@@ -112,7 +119,8 @@ export class UserAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
         ],
-        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY]
+        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
+        CREDENTIAL_RULE_TYPES_USER_GLOBAL_ADMIN_COMMUNITY
       );
 
     newRules.push(communityAdmin);
@@ -153,7 +161,8 @@ export class UserAuthorizationService {
           type: AuthorizationCredential.USER_SELF_MANAGEMENT,
           resourceID: user.id,
         },
-      ]
+      ],
+      CREDENTIAL_RULE_USER_SELF_ADMIN
     );
     newRules.push(userSelfAdmin);
 
@@ -187,7 +196,8 @@ export class UserAuthorizationService {
     if (readCredentials.length > 0) {
       const readRule = this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.READ],
-        readCredentials
+        readCredentials,
+        CREDENTIAL_RULE_USER_READ
       );
       newRules.push(readRule);
     }

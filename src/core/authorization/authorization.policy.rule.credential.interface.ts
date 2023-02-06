@@ -12,4 +12,7 @@ export abstract class IAuthorizationPolicyRuleCredential {
 
   @Field(() => Boolean)
   inheritable!: boolean;
+
+  @Field(() => String, { nullable: true })
+  name!: string;
 }

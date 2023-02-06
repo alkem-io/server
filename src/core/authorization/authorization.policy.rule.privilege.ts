@@ -6,12 +6,15 @@ export class AuthorizationPolicyRulePrivilege
 {
   sourcePrivilege: AuthorizationPrivilege;
   grantedPrivileges: AuthorizationPrivilege[];
+  name: string;
 
   constructor(
     grantedPrivileges: AuthorizationPrivilege[],
-    sourcePrivilege: AuthorizationPrivilege
+    sourcePrivilege: AuthorizationPrivilege,
+    name: string
   ) {
     this.sourcePrivilege = sourcePrivilege;
     this.grantedPrivileges = grantedPrivileges;
+    this.name = name;
   }
 }
