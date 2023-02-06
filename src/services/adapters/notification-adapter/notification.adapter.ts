@@ -20,6 +20,9 @@ import { NotificationInputCanvasCreated } from './dto/notification.dto.input.can
 import { NotificationInputDiscussionComment } from './dto/notification.dto.input.discussion.comment';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { stringifyWithoutAuthorization } from '@common/utils';
+import { NotificationInputUserMessage } from './dto/notification.dto.input.user.message';
+import { NotificationInputOrganizationMessage } from './dto/notification.input.organization.message';
+import { NotificationInputCommunityLeadsMessage } from './dto/notification.dto.input.community.leads.message';
 
 @Injectable()
 export class NotificationAdapter {
@@ -145,6 +148,51 @@ export class NotificationAdapter {
     const payload =
       await this.notificationPayloadBuilder.buildCommunicationDiscussionCreatedNotificationPayload(
         eventData.discussion
+      );
+    this.notificationsClient.emit<number>(event, payload);
+  }
+
+  public async sendUserMessage(
+    eventData: NotificationInputUserMessage
+  ): Promise<void> {
+    const event = NotificationEventType.COMMUNICATION_USER_MESSAGE;
+    this.logEventTriggered(eventData, event);
+    // Emit the events to notify others
+    const payload =
+      await this.notificationPayloadBuilder.buildCommunicationUserMessageNotificationPayload(
+        eventData.triggeredBy,
+        eventData.receiverID,
+        eventData.message
+      );
+    this.notificationsClient.emit<number>(event, payload);
+  }
+
+  public async sendOrganizationMessage(
+    eventData: NotificationInputOrganizationMessage
+  ): Promise<void> {
+    const event = NotificationEventType.COMMUNICATION_ORGANIZATION_MESSAGE;
+    this.logEventTriggered(eventData, event);
+    // Emit the events to notify others
+    const payload =
+      await this.notificationPayloadBuilder.buildCommunicationOrganizationMessageNotificationPayload(
+        eventData.triggeredBy,
+        eventData.message,
+        eventData.organizationID
+      );
+    this.notificationsClient.emit<number>(event, payload);
+  }
+
+  public async sendCommunityLeadsMessage(
+    eventData: NotificationInputCommunityLeadsMessage
+  ): Promise<void> {
+    const event = NotificationEventType.COMMUNICATION_COMMUNITY_MESSAGE;
+    this.logEventTriggered(eventData, event);
+    // Emit the events to notify others
+    const payload =
+      await this.notificationPayloadBuilder.buildCommunicationCommunityLeadsMessageNotificationPayload(
+        eventData.triggeredBy,
+        eventData.message,
+        eventData.communityID
       );
     this.notificationsClient.emit<number>(event, payload);
   }

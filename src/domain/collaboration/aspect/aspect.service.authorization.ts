@@ -17,6 +17,10 @@ import { CardProfileAuthorizationService } from '../card-profile/card.profile.se
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import {
+  CREDENTIAL_RULE_ASPECT_CREATED_BY,
+  CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD,
+} from '@common/constants';
 
 @Injectable()
 export class AspectAuthorizationService {
@@ -106,7 +110,8 @@ export class AspectAuthorizationService {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
             resourceID: aspect.createdBy,
           },
-        ]
+        ],
+        CREDENTIAL_RULE_ASPECT_CREATED_BY
       );
     newRules.push(manageCreatedAspectPolicy);
 
@@ -124,7 +129,8 @@ export class AspectAuthorizationService {
     const adminsMoveCardRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.MOVE_CARD],
-        credentials
+        credentials,
+        CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD
       );
     adminsMoveCardRule.inheritable = false;
     newRules.push(adminsMoveCardRule);

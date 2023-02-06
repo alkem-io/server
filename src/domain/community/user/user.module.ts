@@ -22,6 +22,7 @@ import { UserDataloaderService } from './user.dataloader.service';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     PreferenceModule,
     PreferenceSetModule,
     KonfigModule,
+    MessagingModule,
     TypeOrmModule.forFeature([User]),
     ConfigModule,
   ],

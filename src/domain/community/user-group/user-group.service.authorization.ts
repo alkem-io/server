@@ -13,6 +13,7 @@ import { IUserGroup, UserGroup } from '@domain/community/user-group';
 import { UserGroupService } from './user-group.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { CREDENTIAL_RULE_USER_GROUP_READ } from '@common/constants/authorization/credential.rule.constants';
 
 @Injectable()
 export class UserGroupAuthorizationService {
@@ -69,7 +70,8 @@ export class UserGroupAuthorizationService {
             type: AuthorizationCredential.USER_GROUP_MEMBER,
             resourceID: userGroupID,
           },
-        ]
+        ],
+        CREDENTIAL_RULE_USER_GROUP_READ
       );
 
     newRules.push(userGroupMember);

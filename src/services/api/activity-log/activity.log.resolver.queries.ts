@@ -9,13 +9,15 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { IActivityLogEntry } from './dto/activity.log.entry.interface';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 
 @Resolver()
 export class ActivityLogResolverQueries {
   constructor(
     private activityLogService: ActivityLogService,
     private authorizationService: AuthorizationService,
-    private collaborationService: CollaborationService
+    private collaborationService: CollaborationService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -37,6 +39,13 @@ export class ActivityLogResolverQueries {
       agentInfo,
       collaboration.authorization,
       AuthorizationPrivilege.READ,
+      `Collaboration activity query: ${agentInfo.email}`
+    );
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
       `Collaboration activity query: ${agentInfo.email}`
     );
     return await this.activityLogService.activityLog(queryData, agentInfo);

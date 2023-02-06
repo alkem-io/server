@@ -39,6 +39,22 @@ export class LocationService {
     if (locationData.country || locationData.country === '') {
       location.country = locationData.country;
     }
+
+    if (locationData.addressLine1 || locationData.addressLine1 === '') {
+      location.addressLine1 = locationData.addressLine1;
+    }
+
+    if (locationData.addressLine2 || locationData.addressLine2 === '') {
+      location.addressLine2 = locationData.addressLine2;
+    }
+
+    if (locationData.postalCode || locationData.postalCode === '') {
+      location.postalCode = locationData.postalCode;
+    }
+
+    if (locationData.stateOrProvince || locationData.stateOrProvince === '') {
+      location.stateOrProvince = locationData.stateOrProvince;
+    }
   }
 
   async updateLocation(

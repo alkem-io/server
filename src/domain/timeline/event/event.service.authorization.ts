@@ -15,6 +15,7 @@ import { CalendarEventService } from './event.service';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CardProfileAuthorizationService } from '@domain/collaboration/card-profile/card.profile.service.authorization';
+import { CREDENTIAL_RULE_CALENDAR_EVENT_CREATED_BY } from '@common/constants/authorization/credential.rule.constants';
 
 @Injectable()
 export class CalendarEventAuthorizationService {
@@ -28,9 +29,16 @@ export class CalendarEventAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    calendarEvent: ICalendarEvent,
+    calendarEventInput: ICalendarEvent,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<ICalendarEvent> {
+    const calendarEvent =
+      await this.calendarEventService.getCalendarEventOrFail(
+        calendarEventInput.id,
+        {
+          relations: ['comments', 'profile'],
+        }
+      );
     calendarEvent.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         calendarEvent.authorization,
@@ -50,14 +58,13 @@ export class CalendarEventAuthorizationService {
     // Extend to give the user creating the calendarEvent more rights
     calendarEvent.authorization = this.appendCredentialRules(calendarEvent);
 
-    calendarEvent.profile = await this.calendarEventService.getCardProfile(
-      calendarEvent
-    );
-    calendarEvent.profile =
-      await this.cardProfileAuthorizationService.applyAuthorizationPolicy(
-        calendarEvent.profile,
-        calendarEvent.authorization
-      );
+    if (calendarEvent.profile) {
+      calendarEvent.profile =
+        await this.cardProfileAuthorizationService.applyAuthorizationPolicy(
+          calendarEvent.profile,
+          calendarEvent.authorization
+        );
+    }
 
     return await this.calendarEventRepository.save(calendarEvent);
   }
@@ -87,7 +94,8 @@ export class CalendarEventAuthorizationService {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,
             resourceID: calendarEvent.createdBy,
           },
-        ]
+        ],
+        CREDENTIAL_RULE_CALENDAR_EVENT_CREATED_BY
       );
     newRules.push(manageCreatedCalendarEventPolicy);
 
