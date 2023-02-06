@@ -22,6 +22,7 @@ import { getRandomId } from '@src/common/utils';
 import { DeleteCanvasInput } from './dto/canvas.dto.delete';
 import { CanvasCheckoutService } from '../canvas-checkout/canvas.checkout.service';
 import { ElasticsearchService } from '@services/external/elasticsearch';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverMutations {
@@ -32,6 +33,7 @@ export class CanvasResolverMutations {
     private canvasCheckoutService: CanvasCheckoutService,
     private canvasCheckoutAuthorizationService: CanvasCheckoutAuthorizationService,
     private canvasCheckoutLifecycleOptionsProvider: CanvasCheckoutLifecycleOptionsProvider,
+    private communityResolverService: CommunityResolverService,
     @Inject(SUBSCRIPTION_CANVAS_CONTENT)
     private readonly subscriptionCanvasContent: PubSubEngine,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService

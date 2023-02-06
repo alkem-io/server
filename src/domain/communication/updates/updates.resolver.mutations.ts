@@ -95,10 +95,17 @@ export class UpdatesResolverMutations {
     };
     this.activityAdapter.updateSent(activityLogInput);
 
-    this.elasticService.updateCreated(updateSent, {
-      id: agentInfo.userID,
-      email: agentInfo.email,
-    });
+    this.elasticService.updateCreated(
+      {
+        id: updateSent.id,
+        name: '',
+        hub: null,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
 
     return updateSent;
   }

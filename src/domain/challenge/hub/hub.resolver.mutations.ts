@@ -96,10 +96,17 @@ export class HubResolverMutations {
 
     const updatedHub = await this.hubService.update(hubData);
 
-    this.elasticService.hubContentEdited(updatedHub, {
-      id: agentInfo.userID,
-      email: agentInfo.email,
-    });
+    this.elasticService.hubContentEdited(
+      {
+        id: updatedHub.id,
+        name: updatedHub.displayName,
+        hub: updatedHub.id,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
 
     return updatedHub;
   }
@@ -266,10 +273,17 @@ export class HubResolverMutations {
       challenge: challenge,
     });
 
-    this.elasticService.challengeCreated(challenge, {
-      id: agentInfo.userID,
-      email: agentInfo.email,
-    });
+    this.elasticService.challengeCreated(
+      {
+        id: challenge.id,
+        name: challenge.displayName,
+        hub: challenge.hubID ?? '',
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
 
     const challengeCreatedEvent: ChallengeCreatedPayload = {
       eventID: `hub-challenge-created-${Math.round(Math.random() * 100)}`,

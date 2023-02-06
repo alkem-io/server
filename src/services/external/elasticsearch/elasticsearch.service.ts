@@ -13,10 +13,12 @@ import { IMessage } from '@domain/communication/message/message.interface';
 import { isElasticError, isElasticResponseError } from './utils';
 import {
   AuthorDetails,
+  CONTRIBUTION_TYPE,
   ContributionDetails,
   ContributionDocument,
 } from './types';
 import { BaseContribution } from './events';
+import { setTimeout } from 'timers';
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
 
@@ -64,6 +66,64 @@ export class ElasticsearchService {
     });
   }
 
+  private getRandomInt(max: number) {
+    return Math.floor(Math.random() * max);
+  }
+
+  public test() {
+    const authorsCount = 100;
+    const hubCount = 20;
+    const time = 20 * 5 * 1000;
+    const timeCount = 2000;
+    const startTimestamp = 1641038400000;
+    const oneHour = 3600000;
+
+    const timestamps = [];
+    timestamps.push(startTimestamp);
+    for (let i = 1; i < timeCount; i++) {
+      timestamps.push(
+        timestamps[i - 1] + getRandomArbitrary(oneHour, oneHour * 10)
+      );
+    }
+
+    // const timestamps = new Array(timeCount).fill(null).map((value, i) => {
+    //   return startTimestamp + i * this.getRandomInt(oneHour);
+    // });
+
+    const max = Object.values(CONTRIBUTION_TYPE).length;
+    const authors = new Array(authorsCount).fill(null).map(() => randomUUID());
+    const hubs = new Array(hubCount).fill(null).map(() => randomUUID());
+
+    for (const timestamp of timestamps) {
+      const events = getRandomArbitrary(1, 10);
+      const subAuth = authors.slice(0, this.getRandomInt(authors.length));
+      const subHub = hubs.slice(0, this.getRandomInt(authors.length));
+      for (let i = 0; i < events; i++) {
+        const author = subAuth[this.getRandomInt(subAuth.length)];
+        const hub = subHub[this.getRandomInt(subHub.length)];
+        setTimeout(() => {
+          const type = Object.values(CONTRIBUTION_TYPE)[this.getRandomInt(max)];
+          this.createDocumentTest(
+            {
+              type,
+              author,
+              id: randomUUID(),
+              name: 'test' + randomUUID(),
+              hub,
+            },
+            {
+              id: author,
+              email: 'admin@alkem.io',
+            },
+            timestamp
+          );
+        }, Math.floor(Math.random() * time));
+      }
+    }
+
+    return true;
+  }
+
   public hubJoined(
     contribution: ContributionDetails,
     details: AuthorDetails
@@ -74,43 +134,53 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
+        hub: contribution.id,
       },
       details
     );
   }
-  public hubContentEdited(hub: IHub, details: AuthorDetails): void {
+  public hubContentEdited(
+    contribution: ContributionDetails,
+    authorDetails: AuthorDetails
+  ): void {
     this.createDocument(
       {
         type: 'HUB_CONTENT_EDITED',
-        id: hub.id,
-        name: hub.displayName,
-        author: details.id,
+        id: contribution.id,
+        name: contribution.name,
+        author: authorDetails.id,
+        hub: contribution.hub,
       },
-      details
+      authorDetails
     );
   }
   // ===================
-  public challengeCreated(challenge: IChallenge, details: AuthorDetails): void {
+  public challengeCreated(
+    contribution: ContributionDetails,
+    details: AuthorDetails
+  ): void {
     this.createDocument(
       {
         type: 'CHALLENGE_CREATED',
-        id: challenge.id,
-        name: challenge.displayName,
+        id: contribution.id,
+        name: contribution.name,
         author: details.id,
+        hub: contribution.hub,
       },
       details
     );
   }
   public challengeContentEdited(
-    challenge: IChallenge,
+    contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
     this.createDocument(
       {
         type: 'CHALLENGE_CONTENT_EDITED',
-        id: challenge.id,
-        name: challenge.displayName,
+        id: contribution.id,
+        name: contribution.name,
         author: details.id,
+        hub: contribution.hub,
       },
       details
     );
@@ -125,6 +195,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
+        hub: contribution.hub,
       },
       details
     );
@@ -140,71 +211,83 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
+        hub: contribution.hub,
       },
       details
     );
   }
   public opportunityCreated(
-    opportunity: IOpportunity,
+    contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
     this.createDocument(
       {
         type: 'OPPORTUNITY_CREATED',
-        id: opportunity.id,
-        name: opportunity.displayName,
+        id: contribution.id,
+        name: contribution.name,
         author: details.id,
+        hub: contribution.hub,
       },
       details
     );
   }
   public opportunityContentEdited(
-    opportunity: IOpportunity,
+    contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
     this.createDocument(
       {
         type: 'OPPORTUNITY_CONTENT_EDITED',
-        id: opportunity.id,
-        name: opportunity.displayName,
+        id: contribution.id,
+        name: contribution.name,
         author: details.id,
+        hub: contribution.hub,
       },
       details
     );
   }
   // ===================
-  public calloutCreated(callout: ICallout, details: AuthorDetails): void {
+  public calloutCreated(
+    contribution: ContributionDetails,
+    details: AuthorDetails
+  ): void {
     this.createDocument(
       {
         type: 'CALLOUT_CREATED',
-        id: callout.id,
-        name: callout.displayName,
+        id: contribution.id,
+        name: contribution.name,
         author: details.id,
+        hub: contribution.hub,
       },
       details
     );
   }
   public calloutCommentCreated(
-    callout: ICallout,
+    contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
     this.createDocument(
       {
         type: 'CALLOUT_COMMENT_CREATED',
-        id: callout.id,
-        name: callout.displayName,
+        id: contribution.id,
+        name: contribution.name,
         author: details.id,
+        hub: contribution.hub,
       },
       details
     );
   }
-  public calloutCardCreated(callout: ICallout, details: AuthorDetails): void {
+  public calloutCardCreated(
+    contribution: ContributionDetails,
+    details: AuthorDetails
+  ): void {
     this.createDocument(
       {
         type: 'CALLOUT_CARD_CREATED',
-        id: callout.id,
-        name: callout.displayName,
+        id: contribution.id,
+        name: contribution.name,
         author: details.id,
+        hub: contribution.hub,
       },
       details
     );
@@ -220,6 +303,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
+        hub: contribution.hub,
       },
       details
     );
@@ -234,6 +318,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
+        hub: contribution.hub,
       },
       details
     );
@@ -248,22 +333,66 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
+        hub: contribution.hub,
       },
       details
     );
   }
   // ===================
-  public updateCreated(message: IMessage, details: AuthorDetails): void {
+  public updateCreated(
+    contribution: ContributionDetails,
+    details: AuthorDetails
+  ): void {
     this.createDocument(
       {
         type: 'UPDATE_CREATED',
-        id: message.id,
-        name: '',
+        id: contribution.id,
+        name: contribution.name,
         author: details.id,
+        hub: contribution.hub,
       },
       details
     );
   }
+
+  private async createDocumentTest<TObject extends BaseContribution>(
+    contribution: TObject,
+    details: AuthorDetails,
+    timestamp: number
+  ): Promise<WriteResponseBase | undefined> {
+    if (!this.client) {
+      return undefined;
+    }
+
+    const document: ContributionDocument = {
+      ...contribution,
+      '@timestamp': new Date(timestamp), // todo: is this UTC?
+      alkemio: isFromAlkemioTeam(details.email),
+      environment: this.environment,
+    };
+
+    try {
+      const result = await this.client.index({
+        index: this.activityIndexName,
+        document,
+      });
+
+      this.logger.verbose?.(
+        `Event '${contribution.type}' for object with id '(${contribution.id})' ingested to (${this.activityIndexName})`
+      );
+
+      return result;
+    } catch (e: unknown) {
+      const errorId = this.handleError(e);
+      this.logger.error(
+        `Event '${contribution.type}' for object with id '(${contribution.id})' FAILED to be ingested into (${this.activityIndexName})`,
+        { uuid: errorId }
+      );
+    }
+
+    return undefined;
+  }
+
   // todo: base method to require type, id, name, author, and additional data
   private async createDocument<TObject extends BaseContribution>(
     contribution: TObject,
@@ -330,4 +459,8 @@ export class ElasticsearchService {
 
     return errorId;
   }
+}
+
+function getRandomArbitrary(min: number, max: number) {
+  return Math.random() * (max - min) + min;
 }

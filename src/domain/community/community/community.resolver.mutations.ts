@@ -410,6 +410,7 @@ export class CommunityResolverMutations {
           {
             id: community.parentID,
             name: community.displayName,
+            hub: community.hubID,
           },
           {
             id: agentInfo.userID,
@@ -422,6 +423,7 @@ export class CommunityResolverMutations {
           {
             id: community.parentID,
             name: community.displayName,
+            hub: community.hubID,
           },
           {
             id: agentInfo.userID,
@@ -434,6 +436,7 @@ export class CommunityResolverMutations {
           {
             id: community.parentID,
             name: community.displayName,
+            hub: community.hubID,
           },
           {
             id: agentInfo.userID,

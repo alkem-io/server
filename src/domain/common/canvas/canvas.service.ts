@@ -51,7 +51,7 @@ export class CanvasService {
   async getCanvasOrFail(
     canvasID: string,
     options?: FindOneOptions<Canvas>
-  ): Promise<ICanvas> {
+  ): Promise<Canvas> {
     const canvas = await this.canvasRepository.findOne(
       {
         id: canvasID,

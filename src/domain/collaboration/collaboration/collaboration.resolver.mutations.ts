@@ -165,7 +165,13 @@ export class CollaborationResolverMutations {
       this.activityAdapter.calloutPublished(activityLogInput);
     }
 
-    this.elasticService.calloutCreated(calloutAuthorized, {
+    this.elasticService.calloutCreated(
+      {
+        id: callout.id,
+        name: callout.displayName,
+        hub: callout.
+      },
+      {
       id: agentInfo.userID,
       email: agentInfo.email,
     });
