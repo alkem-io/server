@@ -21,10 +21,4 @@ export class Location extends BaseAlkemioEntity implements ILocation {
 
   @Column('varchar', { length: 255, nullable: true })
   postalCode = '';
-
-  constructor(city?: string, country?: string) {
-    super();
-    this.city = city || '';
-    this.country = country || '';
-  }
 }
