@@ -16,6 +16,8 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { MessagingService } from '@domain/communication/messaging/messaging.service';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -23,6 +25,8 @@ export class UserResolverFields {
     private authorizationService: AuthorizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
+    private messagingService: MessagingService,
+    private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -142,6 +146,32 @@ export class UserResolverFields {
       return user.phone;
     }
     return 'not accessible';
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('isContactable', () => Boolean, {
+    nullable: false,
+    description: 'Can a message be sent to this User.',
+  })
+  @Profiling.api
+  async isContactable(
+    @Parent() user: User,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<boolean> {
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
+      `user: ${agentInfo.email} can contact user: ${user.email}`
+    );
+
+    const preferenceSet = await this.userService.getPreferenceSetOrFail(
+      user.id
+    );
+
+    return await this.messagingService.isContactableWithDirectMessage(
+      preferenceSet
+    );
   }
 
   private async isAccessGranted(
