@@ -1,6 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
-import { LONG_TEXT_LENGTH } from '@src/common/constants';
+import { VERY_LONG_TEXT_LENGTH } from '@src/common/constants';
 import { CreateReferenceInput } from '@domain/common/reference';
 import { Type } from 'class-transformer';
 import { CreateLocationInput } from '@domain/common/location/dto/location.dto.create';
@@ -9,7 +9,7 @@ import { CreateLocationInput } from '@domain/common/location/dto/location.dto.cr
 export class CreateCardProfileInput {
   @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(LONG_TEXT_LENGTH)
+  @MaxLength(VERY_LONG_TEXT_LENGTH)
   description?: string;
 
   @Field(() => [String], { nullable: true })
