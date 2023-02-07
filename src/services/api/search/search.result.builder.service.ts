@@ -16,6 +16,8 @@ import { UserGroupService } from '@domain/community/user-group/user-group.servic
 import { ISearchResultUserGroup } from './dto/search.result.dto.entry.user.group';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { AspectService } from '@domain/collaboration/aspect/aspect.service';
+import { ISearchResultCard } from './dto/search.result.dto.entry.card';
 
 export default class SearchResultBuilderService
   implements ISearchResultBuilder
@@ -27,7 +29,8 @@ export default class SearchResultBuilderService
     private readonly opportunityService: OpportunityService,
     private readonly userService: UserService,
     private readonly organizationService: OrganizationService,
-    private readonly userGroupService: UserGroupService
+    private readonly userGroupService: UserGroupService,
+    private readonly cardService: AspectService
   ) {}
 
   async [SearchResultType.HUB](rawSearchResult: ISearchResult) {
@@ -113,5 +116,16 @@ export default class SearchResultBuilderService
       userGroup,
     };
     return searchResultUserGroup;
+  }
+
+  async [SearchResultType.CARD](rawSearchResult: ISearchResult) {
+    const card = await this.cardService.getAspectOrFail(
+      rawSearchResult.result.id
+    );
+    const searchResultUser: ISearchResultCard = {
+      ...this.searchResultBase,
+      card,
+    };
+    return searchResultUser;
   }
 }

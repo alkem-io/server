@@ -23,6 +23,8 @@ import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import SearchResultBuilderService from './search.result.builder.service';
+import { AspectService } from '@domain/collaboration/aspect/aspect.service';
+import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -31,6 +33,7 @@ enum SearchEntityTypes {
   HUB = 'hub',
   CHALLENGE = 'challenge',
   OPPORTUNITY = 'opportunity',
+  CARD = 'card',
 }
 
 const SEARCH_ENTITIES: string[] = [
@@ -69,12 +72,15 @@ export class SearchService {
     private challengeRepository: Repository<Challenge>,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
+    @InjectRepository(Aspect)
+    private cardRepository: Repository<Aspect>,
     private hubService: HubService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
     private userService: UserService,
     private organizationService: OrganizationService,
     private userGroupService: UserGroupService,
+    private cardService: AspectService,
     private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -92,6 +98,7 @@ export class SearchService {
     const hubResults: Map<number, Match> = new Map();
     const challengeResults: Map<number, Match> = new Map();
     const opportunityResults: Map<number, Match> = new Map();
+    const cardResults: Map<number, Match> = new Map();
 
     const filteredTerms = this.validateSearchTerms(searchData.terms);
 
@@ -104,6 +111,7 @@ export class SearchService {
       searchHubs,
       searchChallenges,
       searchOpportunities,
+      searchCards,
     ] = await this.searchBy(agentInfo, entityTypesFilter);
 
     // Only support certain features for now
@@ -120,6 +128,7 @@ export class SearchService {
         userResults,
         groupResults,
         organizationResults,
+        cardResults,
         entityTypesFilter
       );
 
@@ -142,8 +151,11 @@ export class SearchService {
         opportunityResults,
         agentInfo
       );
+
+    if (searchCards)
+      await this.searchCardsByTerms(filteredTerms, cardResults, agentInfo);
     this.logger.verbose?.(
-      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organizationResults.size} organization results found; ${hubResults.size} hub results found; ${challengeResults.size} challenge results found; ${opportunityResults.size} opportunity results found`,
+      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organizationResults.size} organization results found; ${hubResults.size} hub results found; ${challengeResults.size} challenge results found; ${opportunityResults.size} opportunity results found; ${cardResults.size} card results found`,
       LogContext.API
     );
 
@@ -156,6 +168,7 @@ export class SearchService {
     results.push(...(await this.buildSearchResults(hubResults)));
     results.push(...(await this.buildSearchResults(challengeResults)));
     results.push(...(await this.buildSearchResults(opportunityResults)));
+    results.push(...(await this.buildSearchResults(cardResults)));
     this.ensureUniqueTermsPerResult(results);
     return results;
   }
@@ -185,13 +198,14 @@ export class SearchService {
   async searchBy(
     agentInfo: AgentInfo,
     entityTypesFilter?: string[]
-  ): Promise<[boolean, boolean, boolean, boolean, boolean, boolean]> {
+  ): Promise<[boolean, boolean, boolean, boolean, boolean, boolean, boolean]> {
     let searchUsers = true;
     let searchGroups = true;
     let searchOrganizations = true;
     let searchHubs = true;
     let searchChallenges = true;
     let searchOpportunities = true;
+    let searchCards = true;
 
     if (entityTypesFilter && entityTypesFilter.length > 0) {
       if (!entityTypesFilter.includes(SearchEntityTypes.USER))
@@ -206,6 +220,8 @@ export class SearchService {
         searchChallenges = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.OPPORTUNITY))
         searchOpportunities = false;
+      if (!entityTypesFilter.includes(SearchEntityTypes.CARD))
+        searchCards = false;
     }
 
     if (!agentInfo.email) {
@@ -219,6 +235,7 @@ export class SearchService {
       searchHubs,
       searchChallenges,
       searchOpportunities,
+      searchCards,
     ];
   }
 
@@ -232,6 +249,7 @@ export class SearchService {
         .orWhere('user.nameID like :term')
         .orWhere('user.lastName like :term')
         .orWhere('user.email like :term')
+        .orWhere('user.displayName like :term')
         .orWhere('location.country like :term')
         .orWhere('location.city like :term')
         .orWhere('profile.description like :term')
@@ -464,6 +482,44 @@ export class SearchService {
     }
   }
 
+  async searchCardsByTerms(
+    terms: string[],
+    cardResults: Map<number, Match>,
+    agentInfo: AgentInfo
+  ) {
+    for (const term of terms) {
+      const readableCardMatches: Aspect[] = [];
+      const cardMatches = await this.cardRepository
+        .createQueryBuilder('aspect')
+        .leftJoinAndSelect('aspect.profile', 'profile')
+        .leftJoinAndSelect('aspect.authorization', 'authorization')
+        .where('aspect.nameID like :term')
+        .orWhere('aspect.displayName like :term')
+        .orWhere('profile.description like :term')
+        .setParameters({ term: `%${term}%` })
+        .getMany();
+      // Only show cards that the current user has read access to
+      for (const card of cardMatches) {
+        if (
+          this.authorizationService.isAccessGranted(
+            agentInfo,
+            card.authorization,
+            AuthorizationPrivilege.READ
+          )
+        ) {
+          readableCardMatches.push(card);
+        }
+      }
+      // Create results for each match
+      await this.buildMatchingResults(
+        readableCardMatches,
+        cardResults,
+        term,
+        SearchResultType.CARD
+      );
+    }
+  }
+
   async searchTagsets(
     agentInfo: AgentInfo,
     tagsets: string[],
@@ -471,6 +527,7 @@ export class SearchService {
     userResults: Map<number, Match>,
     groupResults: Map<number, Match>,
     organizationResults: Map<number, Match>,
+    cardResults: Map<number, Match>,
     entityTypesFilter?: string[]
   ) {
     const [searchUsers, searchGroups, searchOrganizations] =
@@ -602,7 +659,8 @@ export class SearchService {
           this.opportunityService,
           this.userService,
           this.organizationService,
-          this.userGroupService
+          this.userGroupService,
+          this.cardService
         );
       const searchResultType = searchResultBase.type as SearchResultType;
       const searchResult = await searchResultBuilder[searchResultType](

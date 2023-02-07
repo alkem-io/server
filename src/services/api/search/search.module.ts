@@ -16,6 +16,8 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { HubModule } from '@domain/challenge/hub/hub.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
+import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
+import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
 
 @Module({
   imports: [
@@ -27,12 +29,14 @@ import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity
     ChallengeModule,
     HubModule,
     OpportunityModule,
+    AspectModule,
     TypeOrmModule.forFeature([User]),
     TypeOrmModule.forFeature([UserGroup]),
     TypeOrmModule.forFeature([Organization]),
     TypeOrmModule.forFeature([Hub]),
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([Opportunity]),
+    TypeOrmModule.forFeature([Aspect]),
   ],
   providers: [SearchService, SearchResolverQueries],
   exports: [SearchService],
