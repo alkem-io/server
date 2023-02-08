@@ -1,3 +1,4 @@
+import { UUID_NAMEID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
@@ -22,10 +23,10 @@ export class SearchInput {
   })
   typesFilter?: string[];
 
-  @Field(() => [Number], {
+  @Field(() => UUID_NAMEID, {
     nullable: true,
     description:
-      'Restrict the search to only the specified challenges. Default is all Challenges.',
+      'Restrict the search to only the specified Hub. Default is all Hubs.',
   })
-  challengesFilter?: number[];
+  searchInHubFilter?: string;
 }

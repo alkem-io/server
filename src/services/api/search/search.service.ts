@@ -1,7 +1,7 @@
-import { Inject, LoggerService, NotImplementedException } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SearchInput } from './dto/search.dto.input';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { User } from '@domain/community/user/user.entity';
@@ -25,6 +25,7 @@ import { UserGroupService } from '@domain/community/user-group/user-group.servic
 import SearchResultBuilderService from './search.result.builder.service';
 import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
+import { IHub } from '@domain/challenge/hub/hub.interface';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -102,6 +103,12 @@ export class SearchService {
     const cardResults: Map<number, Match> = new Map();
 
     const filteredTerms = this.validateSearchTerms(searchData.terms);
+    let searchInHub: IHub | undefined = undefined;
+    if (searchData.searchInHubFilter) {
+      searchInHub = await this.hubService.getHubOrFail(
+        searchData.searchInHubFilter
+      );
+    }
 
     // By default search all entity types
     const entityTypesFilter = searchData.typesFilter;
@@ -113,14 +120,8 @@ export class SearchService {
       searchChallenges,
       searchOpportunities,
       searchCards,
-    ] = await this.searchBy(agentInfo, entityTypesFilter);
+    ] = await this.searchBy(agentInfo, entityTypesFilter, searchInHub);
 
-    // Only support certain features for now
-    if (searchData.challengesFilter)
-      throw new NotImplementedException(
-        'Filtering by challenges not yet implemented',
-        LogContext.SEARCH
-      );
     if (searchData.tagsetNames)
       await this.searchTagsets(
         agentInfo,
@@ -129,7 +130,6 @@ export class SearchService {
         userResults,
         groupResults,
         organizationResults,
-        cardResults,
         entityTypesFilter
       );
 
@@ -144,7 +144,8 @@ export class SearchService {
       await this.searchChallengesByTerms(
         filteredTerms,
         challengeResults,
-        agentInfo
+        agentInfo,
+        searchInHub
       );
     if (searchOpportunities)
       await this.searchOpportunitiesByTerms(
@@ -198,7 +199,8 @@ export class SearchService {
 
   async searchBy(
     agentInfo: AgentInfo,
-    entityTypesFilter?: string[]
+    entityTypesFilter?: string[],
+    searchInHub?: IHub
   ): Promise<[boolean, boolean, boolean, boolean, boolean, boolean, boolean]> {
     let searchUsers = true;
     let searchGroups = true;
@@ -227,6 +229,10 @@ export class SearchService {
 
     if (!agentInfo.email) {
       searchUsers = false;
+    }
+
+    if (searchInHub) {
+      searchHubs = false;
     }
 
     return [
@@ -366,30 +372,44 @@ export class SearchService {
   async searchChallengesByTerms(
     terms: string[],
     challengeResults: Map<number, Match>,
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    searchInHub?: IHub
   ) {
     for (const term of terms) {
       const readableChallengeMatches: Challenge[] = [];
-      const challengeMatches = await this.challengeRepository
+      const challengeQuery = this.challengeRepository
         .createQueryBuilder('challenge')
         .leftJoinAndSelect('challenge.tagset', 'tagset')
         .leftJoinAndSelect('challenge.opportunities', 'opportunities')
         .leftJoinAndSelect('challenge.authorization', 'authorization')
         .leftJoinAndSelect('challenge.context', 'context')
         .leftJoinAndSelect('challenge.collaboration', 'collaboration')
-        .leftJoinAndSelect('context.location', 'location')
-        .where('challenge.nameID like :term')
-        .orWhere('challenge.displayName like :term')
-        .orWhere('tagset.tags like :term')
-        .orWhere('context.tagline like :term')
-        .orWhere('context.background like :term')
-        .orWhere('context.impact like :term')
-        .orWhere('context.vision like :term')
-        .orWhere('context.who like :term')
-        .orWhere('location.country like :term')
-        .orWhere('location.city like :term')
-        .setParameters({ term: `%${term}%` })
-        .getMany();
+        .leftJoinAndSelect('context.location', 'location');
+
+      // Optionally restrict to search in just one Hub
+      if (searchInHub) {
+        challengeQuery.where('challenge.hubID = :hubID');
+      }
+
+      // Note that brackets are needed to nest the and
+      challengeQuery
+        .andWhere(
+          new Brackets(qb => {
+            qb.where('challenge.nameID like :term')
+              .orWhere('challenge.displayName like :term')
+              .orWhere('tagset.tags like :term')
+              .orWhere('context.tagline like :term')
+              .orWhere('context.background like :term')
+              .orWhere('context.impact like :term')
+              .orWhere('context.vision like :term')
+              .orWhere('context.who like :term')
+              .orWhere('location.country like :term')
+              .orWhere('location.city like :term');
+          })
+        )
+        .setParameters({ term: `%${term}%`, hubID: `${searchInHub?.id}` });
+
+      const challengeMatches = await challengeQuery.getMany();
       // Only show challenges that the current user has read access to
       for (const challenge of challengeMatches) {
         if (
@@ -415,11 +435,12 @@ export class SearchService {
   async searchOpportunitiesByTerms(
     terms: string[],
     opportunityResults: Map<number, Match>,
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    searchInHub?: IHub
   ) {
     for (const term of terms) {
       const readableOpportunityMatches: Opportunity[] = [];
-      const opportunityMatches = await this.opportunityRepository
+      const opportunitiesQuery = this.opportunityRepository
         .createQueryBuilder('opportunity')
         .leftJoinAndSelect('opportunity.tagset', 'tagset')
         .leftJoinAndSelect('opportunity.projects', 'projects')
@@ -427,19 +448,30 @@ export class SearchService {
         .leftJoinAndSelect('opportunity.context', 'context')
         .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
         .leftJoinAndSelect('opportunity.challenge', 'challenge')
-        .leftJoinAndSelect('context.location', 'location')
-        .where('opportunity.nameID like :term')
-        .orWhere('opportunity.displayName like :term')
-        .orWhere('tagset.tags like :term')
-        .orWhere('context.tagline like :term')
-        .orWhere('context.background like :term')
-        .orWhere('context.impact like :term')
-        .orWhere('context.vision like :term')
-        .orWhere('context.who like :term')
-        .orWhere('location.country like :term')
-        .orWhere('location.city like :term')
-        .setParameters({ term: `%${term}%` })
-        .getMany();
+        .leftJoinAndSelect('context.location', 'location');
+      // Optionally restrict to search in just one Hub
+      if (searchInHub) {
+        opportunitiesQuery.where('opportunity.hubID = :hubID');
+      }
+      // Note that brackets are needed to nest the and
+      opportunitiesQuery
+        .andWhere(
+          new Brackets(qb => {
+            qb.where('opportunity.nameID like :term')
+              .orWhere('opportunity.displayName like :term')
+              .orWhere('tagset.tags like :term')
+              .orWhere('context.tagline like :term')
+              .orWhere('context.background like :term')
+              .orWhere('context.impact like :term')
+              .orWhere('context.vision like :term')
+              .orWhere('context.who like :term')
+              .orWhere('location.country like :term')
+              .orWhere('location.city like :term');
+          })
+        )
+        .setParameters({ term: `%${term}%`, hubID: `${searchInHub?.id}` });
+
+      const opportunityMatches = await opportunitiesQuery.getMany();
       // Only show challenges that the current user has read access to
       for (const opportunity of opportunityMatches) {
         if (
@@ -452,6 +484,7 @@ export class SearchService {
           readableOpportunityMatches.push(opportunity);
         }
       }
+
       // Create results for each match
       await this.buildMatchingResults(
         readableOpportunityMatches,
@@ -509,7 +542,6 @@ export class SearchService {
     userResults: Map<number, Match>,
     groupResults: Map<number, Match>,
     organizationResults: Map<number, Match>,
-    cardResults: Map<number, Match>,
     entityTypesFilter?: string[]
   ) {
     const [searchUsers, searchGroups, searchOrganizations] =
