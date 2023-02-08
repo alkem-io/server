@@ -50,10 +50,12 @@ import { NotificationInputCanvasCreated } from '@services/adapters/notification-
 import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
 import { ElasticsearchService } from '@services/external/elasticsearch';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
+    private communityResolverService: CommunityResolverService,
     private elasticService: ElasticsearchService,
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
@@ -164,10 +166,23 @@ export class CalloutResolverMutations {
       };
       await this.notificationAdapter.discussionComment(notificationInput);
     }
-    this.elasticService.calloutCommentCreated(callout, {
-      id: agentInfo.userID,
-      email: agentInfo.email,
-    });
+
+    const { hubID } =
+      await this.communityResolverService.getCommunityFromCalloutOrFail(
+        callout.id
+      );
+
+    this.elasticService.calloutCommentCreated(
+      {
+        id: callout.id,
+        name: callout.displayName,
+        hub: hubID,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
 
     return commentSent;
   }
@@ -329,10 +344,22 @@ export class CalloutResolverMutations {
       };
       this.activityAdapter.aspectCreated(activityLogInput);
 
-      this.elasticService.calloutCardCreated(callout, {
-        id: agentInfo.userID,
-        email: agentInfo.email,
-      });
+      const { hubID } =
+        await this.communityResolverService.getCommunityFromCalloutOrFail(
+          aspectData.calloutID
+        );
+
+      this.elasticService.calloutCardCreated(
+        {
+          id: aspect.id,
+          name: aspect.displayName,
+          hub: hubID,
+        },
+        {
+          id: agentInfo.userID,
+          email: agentInfo.email,
+        }
+      );
     }
 
     return aspect;
@@ -387,10 +414,16 @@ export class CalloutResolverMutations {
         callout: callout,
       });
 
+      const { hubID } =
+        await this.communityResolverService.getCommunityFromCalloutOrFail(
+          canvasData.calloutID
+        );
+
       this.elasticService.calloutCanvasCreated(
         {
           id: canvas.id,
           name: canvas.displayName,
+          hub: hubID,
         },
         {
           id: agentInfo.userID,

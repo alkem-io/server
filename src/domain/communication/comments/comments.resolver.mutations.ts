@@ -27,10 +27,12 @@ import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';
 import { CalendarEventCommentsMessageReceived } from '@domain/timeline/event/dto/event.dto.event.message.received';
 import { ElasticsearchService } from '@services/external/elasticsearch';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 @Resolver()
 export class CommentsResolverMutations {
   constructor(
+    private communityResolverService: CommunityResolverService,
     private elasticService: ElasticsearchService,
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
@@ -79,10 +81,17 @@ export class CommentsResolverMutations {
         message: commentSent,
       };
       this.activityAdapter.aspectComment(activityLogInput);
+
+      const { hubID } =
+        await this.communityResolverService.getCommunityFromCommentsOrFail(
+          messageData.commentsID
+        );
+
       this.elasticService.calloutCardCommentCreated(
         {
           id: aspect.id,
           name: aspect.displayName,
+          hub: hubID,
         },
         {
           id: agentInfo.userID,

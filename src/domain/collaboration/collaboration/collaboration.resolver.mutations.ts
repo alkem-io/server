@@ -22,10 +22,12 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { NotificationInputCollaborationInterest } from '@services/adapters/notification-adapter/dto/notification.dto.input.collaboration.interest';
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
 import { ElasticsearchService } from '@services/external/elasticsearch';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 @Resolver()
 export class CollaborationResolverMutations {
   constructor(
+    private communityResolverService: CommunityResolverService,
     private elasticService: ElasticsearchService,
     private relationAuthorizationService: RelationAuthorizationService,
     private calloutAuthorizationService: CalloutAuthorizationService,
@@ -165,10 +167,22 @@ export class CollaborationResolverMutations {
       this.activityAdapter.calloutPublished(activityLogInput);
     }
 
-    this.elasticService.calloutCreated(calloutAuthorized, {
-      id: agentInfo.userID,
-      email: agentInfo.email,
-    });
+    const { hubID } =
+      await this.communityResolverService.getCommunityFromCalloutOrFail(
+        callout.id
+      );
+
+    this.elasticService.calloutCreated(
+      {
+        id: callout.id,
+        name: callout.displayName,
+        hub: hubID,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
 
     return calloutAuthorized;
   }

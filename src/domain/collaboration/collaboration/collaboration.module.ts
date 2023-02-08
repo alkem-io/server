@@ -18,9 +18,11 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { CollaborationResolverQueries } from './collaboration.resolver.queries';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
   imports: [
+    EntityResolverModule,
     ElasticsearchModule,
     ActivityAdapterModule,
     NotificationAdapterModule,

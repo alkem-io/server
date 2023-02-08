@@ -108,10 +108,17 @@ export class ChallengeResolverMutations {
       challengeCommunityPolicy
     );
 
-    this.elasticService.opportunityCreated(opportunity, {
-      id: agentInfo.userID,
-      email: agentInfo.email,
-    });
+    this.elasticService.opportunityCreated(
+      {
+        id: opportunity.id,
+        name: opportunity.displayName,
+        hub: opportunity.hubID ?? '',
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
 
     this.activityAdapter.opportunityCreated({
       opportunity,
@@ -177,10 +184,17 @@ export class ChallengeResolverMutations {
       challengeData
     );
 
-    this.elasticService.challengeContentEdited(updatedChallenge, {
-      id: agentInfo.userID,
-      email: agentInfo.email,
-    });
+    this.elasticService.challengeContentEdited(
+      {
+        id: challenge.id,
+        name: challenge.displayName,
+        hub: challenge.hubID ?? '',
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
 
     return updatedChallenge;
   }
