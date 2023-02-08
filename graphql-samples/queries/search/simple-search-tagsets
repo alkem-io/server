@@ -29,6 +29,14 @@ query searchTagsets($searchData: SearchInput!){
         nameID
       }
     }
+    ... on SearchResultCard {
+      card {
+        nameID
+        profile {
+          description
+        }
+      }
+    }
   }
 }
 

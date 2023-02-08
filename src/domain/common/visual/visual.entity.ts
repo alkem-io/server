@@ -23,7 +23,7 @@ export class Visual extends AuthorizableEntity implements IVisual {
   @Column('int')
   maxHeight!: number;
 
-  @Column('int')
+  @Column({ type: 'decimal', precision: 2, scale: 1 })
   aspectRatio!: number;
 
   @Column('simple-array')
