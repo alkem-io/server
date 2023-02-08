@@ -43,6 +43,7 @@ const SEARCH_ENTITIES: string[] = [
   SearchEntityTypes.HUB,
   SearchEntityTypes.CHALLENGE,
   SearchEntityTypes.OPPORTUNITY,
+  SearchEntityTypes.CARD,
 ];
 
 const SEARCH_TERM_LIMIT = 10;
