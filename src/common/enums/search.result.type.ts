@@ -7,6 +7,7 @@ export enum SearchResultType {
   USER = 'user',
   ORGANIZATION = 'organization',
   USERGROUP = 'usergroup',
+  CARD = 'card',
 }
 
 registerEnumType(SearchResultType, {
