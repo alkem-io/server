@@ -18,7 +18,6 @@ import {
 import { AppService } from './app.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseException } from '@common/exceptions/base.exception';
-import { ElasticsearchService } from '@services/external/elasticsearch';
 
 @Controller('/rest')
 export class AppController {
@@ -26,18 +25,12 @@ export class AppController {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly appService: AppService,
-    private readonly geoLocationService: GeoLocationService,
-    private readonly elastic: ElasticsearchService
+    private readonly geoLocationService: GeoLocationService
   ) {}
 
   @Get()
   getHello(): string {
     return this.appService.getHello();
-  }
-
-  @Get('test')
-  test(): boolean {
-    return this.elastic.test();
   }
 
   @Post(

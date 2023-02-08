@@ -5,20 +5,13 @@ import { WriteResponseBase } from '@elastic/elasticsearch/lib/api/types';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConfigurationTypes } from '@common/enums';
-import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { IHub } from '@domain/challenge/hub/hub.interface';
-import { IOpportunity } from '@src/domain';
-import { ICallout } from '@domain/collaboration/callout';
-import { IMessage } from '@domain/communication/message/message.interface';
 import { isElasticError, isElasticResponseError } from './utils';
 import {
   AuthorDetails,
-  CONTRIBUTION_TYPE,
   ContributionDetails,
   ContributionDocument,
 } from './types';
 import { BaseContribution } from './events';
-import { setTimeout } from 'timers';
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
 
@@ -64,64 +57,6 @@ export class ElasticsearchService {
       auth: { apiKey: api_key },
       tls: { rejectUnauthorized: false },
     });
-  }
-
-  private getRandomInt(max: number) {
-    return Math.floor(Math.random() * max);
-  }
-
-  public test() {
-    const authorsCount = 100;
-    const hubCount = 20;
-    const time = 20 * 5 * 1000;
-    const timeCount = 2000;
-    const startTimestamp = 1641038400000;
-    const oneHour = 3600000;
-
-    const timestamps = [];
-    timestamps.push(startTimestamp);
-    for (let i = 1; i < timeCount; i++) {
-      timestamps.push(
-        timestamps[i - 1] + getRandomArbitrary(oneHour, oneHour * 10)
-      );
-    }
-
-    // const timestamps = new Array(timeCount).fill(null).map((value, i) => {
-    //   return startTimestamp + i * this.getRandomInt(oneHour);
-    // });
-
-    const max = Object.values(CONTRIBUTION_TYPE).length;
-    const authors = new Array(authorsCount).fill(null).map(() => randomUUID());
-    const hubs = new Array(hubCount).fill(null).map(() => randomUUID());
-
-    for (const timestamp of timestamps) {
-      const events = getRandomArbitrary(1, 10);
-      const subAuth = authors.slice(0, this.getRandomInt(authors.length));
-      const subHub = hubs.slice(0, this.getRandomInt(authors.length));
-      for (let i = 0; i < events; i++) {
-        const author = subAuth[this.getRandomInt(subAuth.length)];
-        const hub = subHub[this.getRandomInt(subHub.length)];
-        setTimeout(() => {
-          const type = Object.values(CONTRIBUTION_TYPE)[this.getRandomInt(max)];
-          this.createDocumentTest(
-            {
-              type,
-              author,
-              id: randomUUID(),
-              name: 'test' + randomUUID(),
-              hub,
-            },
-            {
-              id: author,
-              email: 'admin@alkem.io',
-            },
-            timestamp
-          );
-        }, Math.floor(Math.random() * time));
-      }
-    }
-
-    return true;
   }
 
   public hubJoined(
@@ -459,8 +394,4 @@ export class ElasticsearchService {
 
     return errorId;
   }
-}
-
-function getRandomArbitrary(min: number, max: number) {
-  return Math.random() * (max - min) + min;
 }
