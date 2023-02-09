@@ -1,33 +1,53 @@
-query search($searchData: SearchInput!){
+query search($searchData: SearchInput!) {
   search(searchData: $searchData) {
-    id
-    score
-    terms
-    type
-    ... on SearchResultHub {
-      hub {
-        nameID
+    contributorResults {
+      id
+      score
+      terms
+      type
+      ... on SearchResultUser {
+        user {
+          nameID
+        }
+      }
+      ... on SearchResultOrganization {
+        organization {
+          nameID
+        }
       }
     }
-    ... on SearchResultChallenge {
-      challenge {
-        nameID
+    journeyResults {
+      id
+      score
+      terms
+      type
+      ... on SearchResultHub {
+        hub {
+          nameID
+        }
+      }
+      ... on SearchResultChallenge {
+        challenge {
+          nameID
+        }
+      }
+      ... on SearchResultOpportunity {
+        opportunity {
+          nameID
+        }
       }
     }
-    ... on SearchResultOpportunity {
-      opportunity {
-        nameID
+    contributionResults {
+      id
+      score
+      terms
+      type
+      ... on SearchResultCard {
+        card {
+          nameID
+        }
       }
-    }
-    ... on SearchResultUser {
-      user {
-        nameID
-      }
-    }
-    ... on SearchResultOrganization {
-      organization {
-        nameID
-      }
+
     }
   }
 }

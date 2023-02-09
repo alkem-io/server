@@ -1,17 +1,20 @@
-query searchFiltered($searchData: SearchInput!){
+query search($searchData: SearchInput!) {
   search(searchData: $searchData) {
-    id
-    score
-    terms
-    type
-    ... on SearchResultUser {
-      user {
-        nameID
+    contributorResults {
+      id
+      score
+      terms
+      type
+      ... on SearchResultUser {
+        user {
+          nameID
+        }
       }
-    }
 
+    }
   }
 }
+
 
 {
   "searchData":
