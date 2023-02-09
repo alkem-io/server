@@ -107,12 +107,6 @@ http:
           - /jwks
         forceSlash: false
 
-    strip-homepage-prefix:
-      stripPrefix:
-        prefixes:
-          - /home
-        forceSlash: false
-
   routers:
     graphql:
       rule: 'PathPrefix(`/graphql`)'
@@ -224,11 +218,9 @@ http:
       entryPoints:
         - 'rabbitmq-management'
 
-    homepage:
+    homepage: # if basePath is changed in the nextjs app this path also will have to change
       rule: 'PathPrefix(`/home`)'
       service: 'homepage'
-      middlewares:
-        - strip-homepage-prefix
       entryPoints:
         - 'web'
 
