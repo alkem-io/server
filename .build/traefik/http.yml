@@ -65,6 +65,11 @@ http:
         servers:
           - url: 'http://synapse-admin:80/'
 
+    homepage:
+      loadBalancer:
+        servers:
+          - url: 'http://homepage:3000/'
+
   middlewares:
     strip-api-private-non-interactive-prefix:
       stripPrefix:
@@ -100,6 +105,12 @@ http:
       stripPrefix:
         prefixes:
           - /jwks
+        forceSlash: false
+
+    strip-homepage-prefix:
+      stripPrefix:
+        prefixes:
+          - /home
         forceSlash: false
 
   routers:
@@ -212,6 +223,14 @@ http:
       service: 'rabbitmq-management'
       entryPoints:
         - 'rabbitmq-management'
+
+    homepage:
+      rule: 'PathPrefix(`/home`)'
+      service: 'homepage'
+      middlewares:
+        - strip-homepage-prefix
+      entryPoints:
+        - 'web'
 
 tcp:
   services:
