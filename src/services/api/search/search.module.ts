@@ -18,6 +18,7 @@ import { HubModule } from '@domain/challenge/hub/hub.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
 import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
+import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
     ChallengeModule,
     HubModule,
     OpportunityModule,
+    CollaborationModule,
     AspectModule,
     TypeOrmModule.forFeature([User]),
     TypeOrmModule.forFeature([UserGroup]),

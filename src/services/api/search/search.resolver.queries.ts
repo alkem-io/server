@@ -13,7 +13,7 @@ export class SearchResolverQueries {
   @UseGuards(GraphqlGuard)
   @Query(() => [ISearchResult], {
     nullable: false,
-    description: 'Search the hub for terms supplied',
+    description: 'Search the platform for terms supplied',
   })
   @Profiling.api
   async search(
