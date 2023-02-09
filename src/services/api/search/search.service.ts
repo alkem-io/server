@@ -234,7 +234,7 @@ export class SearchService {
   }
 
   private processResults(results: ISearchResult[], limit: number) {
-    results.sort((a, b) => a.score - b.score);
+    results.sort((a, b) => b.score - a.score);
     results.splice(limit);
     this.ensureUniqueTermsPerResult(results);
   }
