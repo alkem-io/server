@@ -5,7 +5,11 @@ import { Brackets, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { User } from '@domain/community/user/user.entity';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { AgentInfo } from '@core/authentication/agent-info';
@@ -26,6 +30,8 @@ import SearchResultBuilderService from './search.result.builder.service';
 import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
 import { IHub } from '@domain/challenge/hub/hub.interface';
+import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
+import { IOpportunity } from '@domain/collaboration/opportunity';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -103,12 +109,14 @@ export class SearchService {
     const cardResults: Map<number, Match> = new Map();
 
     const filteredTerms = this.validateSearchTerms(searchData.terms);
-    let searchInHub: IHub | undefined = undefined;
-    if (searchData.searchInHubFilter) {
-      searchInHub = await this.hubService.getHubOrFail(
-        searchData.searchInHubFilter
-      );
-    }
+
+    const {
+      hubIDsFilter,
+      challengeIDsFilter,
+      opportunityIDsFilter,
+      userIDsFilter,
+      cardIDsFilter,
+    } = await this.getIDFilters(searchData.searchInHubFilter);
 
     // By default search all entity types
     const entityTypesFilter = searchData.typesFilter;
@@ -120,7 +128,7 @@ export class SearchService {
       searchChallenges,
       searchOpportunities,
       searchCards,
-    ] = await this.searchBy(agentInfo, entityTypesFilter, searchInHub);
+    ] = await this.searchBy(agentInfo, entityTypesFilter, hubIDsFilter);
 
     if (searchData.tagsetNames)
       await this.searchTagsets(
@@ -130,10 +138,12 @@ export class SearchService {
         userResults,
         groupResults,
         organizationResults,
+        userIDsFilter,
         entityTypesFilter
       );
 
-    if (searchUsers) await this.searchUsersByTerms(filteredTerms, userResults);
+    if (searchUsers)
+      await this.searchUsersByTerms(filteredTerms, userResults, userIDsFilter);
     if (searchGroups)
       await this.searchGroupsByTerms(filteredTerms, groupResults);
     if (searchOrganizations)
@@ -145,17 +155,23 @@ export class SearchService {
         filteredTerms,
         challengeResults,
         agentInfo,
-        searchInHub
+        challengeIDsFilter
       );
     if (searchOpportunities)
       await this.searchOpportunitiesByTerms(
         filteredTerms,
         opportunityResults,
-        agentInfo
+        agentInfo,
+        opportunityIDsFilter
       );
 
     if (searchCards)
-      await this.searchCardsByTerms(filteredTerms, cardResults, agentInfo);
+      await this.searchCardsByTerms(
+        filteredTerms,
+        cardResults,
+        agentInfo,
+        cardIDsFilter
+      );
     this.logger.verbose?.(
       `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organizationResults.size} organization results found; ${hubResults.size} hub results found; ${challengeResults.size} challenge results found; ${opportunityResults.size} opportunity results found; ${cardResults.size} card results found`,
       LogContext.API
@@ -200,7 +216,7 @@ export class SearchService {
   async searchBy(
     agentInfo: AgentInfo,
     entityTypesFilter?: string[],
-    searchInHub?: IHub
+    hubIDsFilter?: string[] | undefined
   ): Promise<[boolean, boolean, boolean, boolean, boolean, boolean, boolean]> {
     let searchUsers = true;
     let searchGroups = true;
@@ -231,8 +247,10 @@ export class SearchService {
       searchUsers = false;
     }
 
-    if (searchInHub) {
+    if (hubIDsFilter) {
       searchHubs = false;
+      // If searching in an org then interested in content and users
+      searchOrganizations = false;
     }
 
     return [
@@ -246,22 +264,44 @@ export class SearchService {
     ];
   }
 
-  async searchUsersByTerms(terms: string[], userResults: Map<number, Match>) {
+  async searchUsersByTerms(
+    terms: string[],
+    userResults: Map<number, Match>,
+    usersFilter: string[] | undefined
+  ) {
+    if (usersFilter && usersFilter.length === 0) {
+      // no searching needed
+      return;
+    }
     for (const term of terms) {
-      const userMatches = await this.userRepository
+      const userQuery = this.userRepository
         .createQueryBuilder('user')
         .leftJoinAndSelect('user.profile', 'profile')
-        .leftJoinAndSelect('profile.location', 'location')
-        .where('user.firstName like :term')
-        .orWhere('user.nameID like :term')
-        .orWhere('user.lastName like :term')
-        .orWhere('user.email like :term')
-        .orWhere('user.displayName like :term')
-        .orWhere('location.country like :term')
-        .orWhere('location.city like :term')
-        .orWhere('profile.description like :term')
-        .setParameters({ term: `%${term}%` })
-        .getMany();
+        .leftJoinAndSelect('profile.location', 'location');
+
+      // Optionally restrict to search in just one Hub
+      if (usersFilter) {
+        userQuery.where('user.id IN (:usersFilter)', {
+          usersFilter: usersFilter,
+        });
+      }
+      // Note that brackets are needed to nest the and
+      userQuery
+        .andWhere(
+          new Brackets(qb => {
+            qb.where('user.firstName like :term')
+              .orWhere('user.nameID like :term')
+              .orWhere('user.lastName like :term')
+              .orWhere('user.email like :term')
+              .orWhere('user.displayName like :term')
+              .orWhere('location.country like :term')
+              .orWhere('location.city like :term')
+              .orWhere('profile.description like :term');
+          })
+        )
+        .setParameter('term', `%${term}%`);
+
+      const userMatches = await userQuery.getMany();
 
       // Create results for each match
       await this.buildMatchingResults(
@@ -373,8 +413,12 @@ export class SearchService {
     terms: string[],
     challengeResults: Map<number, Match>,
     agentInfo: AgentInfo,
-    searchInHub?: IHub
+    challengeIDsFilter: string[] | undefined
   ) {
+    if (challengeIDsFilter && challengeIDsFilter.length === 0) {
+      // no searching needed
+      return;
+    }
     for (const term of terms) {
       const readableChallengeMatches: Challenge[] = [];
       const challengeQuery = this.challengeRepository
@@ -387,8 +431,10 @@ export class SearchService {
         .leftJoinAndSelect('context.location', 'location');
 
       // Optionally restrict to search in just one Hub
-      if (searchInHub) {
-        challengeQuery.where('challenge.hubID = :hubID');
+      if (challengeIDsFilter) {
+        challengeQuery.where('challenge.id IN (:challengesFilter)', {
+          challengesFilter: challengeIDsFilter,
+        });
       }
 
       // Note that brackets are needed to nest the and
@@ -407,7 +453,7 @@ export class SearchService {
               .orWhere('location.city like :term');
           })
         )
-        .setParameters({ term: `%${term}%`, hubID: `${searchInHub?.id}` });
+        .setParameters({ term: `%${term}%` });
 
       const challengeMatches = await challengeQuery.getMany();
       // Only show challenges that the current user has read access to
@@ -436,8 +482,12 @@ export class SearchService {
     terms: string[],
     opportunityResults: Map<number, Match>,
     agentInfo: AgentInfo,
-    searchInHub?: IHub
+    opportunityIDsFilter: string[] | undefined
   ) {
+    if (opportunityIDsFilter && opportunityIDsFilter.length === 0) {
+      // no searching needed
+      return;
+    }
     for (const term of terms) {
       const readableOpportunityMatches: Opportunity[] = [];
       const opportunitiesQuery = this.opportunityRepository
@@ -450,8 +500,10 @@ export class SearchService {
         .leftJoinAndSelect('opportunity.challenge', 'challenge')
         .leftJoinAndSelect('context.location', 'location');
       // Optionally restrict to search in just one Hub
-      if (searchInHub) {
-        opportunitiesQuery.where('opportunity.hubID = :hubID');
+      if (opportunityIDsFilter) {
+        opportunitiesQuery.where('opportunity.id IN (:opportunitiesFilter)', {
+          opportunitiesFilter: opportunityIDsFilter,
+        });
       }
       // Note that brackets are needed to nest the and
       opportunitiesQuery
@@ -469,7 +521,7 @@ export class SearchService {
               .orWhere('location.city like :term');
           })
         )
-        .setParameters({ term: `%${term}%`, hubID: `${searchInHub?.id}` });
+        .setParameters({ term: `%${term}%` });
 
       const opportunityMatches = await opportunitiesQuery.getMany();
       // Only show challenges that the current user has read access to
@@ -498,21 +550,40 @@ export class SearchService {
   async searchCardsByTerms(
     terms: string[],
     cardResults: Map<number, Match>,
-    agentInfo: AgentInfo
+    agentInfo: AgentInfo,
+    cardIDsFilter: string[] | undefined
   ) {
+    if (cardIDsFilter && cardIDsFilter.length === 0) {
+      // no searching needed
+      return;
+    }
     for (const term of terms) {
       const readableCardMatches: Aspect[] = [];
-      const cardMatches = await this.cardRepository
+      const cardQuery = this.cardRepository
         .createQueryBuilder('aspect')
         .leftJoinAndSelect('aspect.profile', 'profile')
         .leftJoinAndSelect('profile.tagset', 'tagset')
-        .leftJoinAndSelect('aspect.authorization', 'authorization')
-        .where('aspect.nameID like :term')
-        .orWhere('aspect.displayName like :term')
-        .orWhere('tagset.tags like :term')
-        .orWhere('profile.description like :term')
-        .setParameters({ term: `%${term}%` })
-        .getMany();
+        .leftJoinAndSelect('aspect.authorization', 'authorization');
+
+      // Optionally restrict to search in just one Hub
+      if (cardIDsFilter) {
+        cardQuery.where('aspect.id IN (:cardsFilter)', {
+          cardsFilter: cardIDsFilter,
+        });
+      }
+      // Note that brackets are needed to nest the and
+      cardQuery
+        .andWhere(
+          new Brackets(qb => {
+            qb.where('aspect.nameID like :term')
+              .orWhere('aspect.displayName like :term')
+              .orWhere('tagset.tags like :term')
+              .orWhere('profile.description like :term');
+          })
+        )
+        .setParameters({ term: `%${term}%` });
+
+      const cardMatches = await cardQuery.getMany();
       // Only show cards that the current user has read access to
       for (const card of cardMatches) {
         if (
@@ -542,13 +613,14 @@ export class SearchService {
     userResults: Map<number, Match>,
     groupResults: Map<number, Match>,
     organizationResults: Map<number, Match>,
+    usersFilter: string[] | undefined,
     entityTypesFilter?: string[]
   ) {
     const [searchUsers, searchGroups, searchOrganizations] =
       await this.searchBy(agentInfo, entityTypesFilter);
 
     if (searchUsers)
-      await this.searchUsersByTagsets(terms, tagsets, userResults);
+      await this.searchUsersByTagsets(terms, tagsets, userResults, usersFilter);
 
     if (searchGroups)
       await this.searchGroupsByTagsets(terms, tagsets, groupResults);
@@ -564,17 +636,30 @@ export class SearchService {
   async searchUsersByTagsets(
     terms: string[],
     tagsets: string[],
-    userResults: Map<number, Match>
+    userResults: Map<number, Match>,
+    userIDsFilter?: string[]
   ) {
+    if (userIDsFilter && userIDsFilter.length === 0) {
+      // no searching needed
+      return;
+    }
     for (const term of terms) {
-      const userMatches = await this.userRepository
+      const userQuery = this.userRepository
         .createQueryBuilder('user')
         .leftJoinAndSelect('user.profile', 'profile')
         .leftJoinAndSelect('profile.tagsets', 'tagset')
-        .where('tagset.name IN (:tagsets)', { tagsets: tagsets })
+        .where('tagset.name IN (:tagsets)', { tagsets: tagsets });
+
+      // Optionally restrict to search in just one Hub
+      if (userIDsFilter) {
+        userQuery.andWhere('user.id IN (:usersFilter)');
+      }
+
+      userQuery
         .andWhere('find_in_set(:term, tagset.tags)')
-        .setParameters({ term: `${term}` })
-        .getMany();
+        .setParameters({ term: `${term}`, usersFilter: userIDsFilter });
+
+      const userMatches = await userQuery.getMany();
 
       // Create results for each match
       await this.buildMatchingResults(
@@ -728,5 +813,121 @@ export class SearchService {
           );
       });
     }
+  }
+
+  private async getIDFilters(searchInHubID: string | undefined): Promise<{
+    hubIDsFilter: string[] | undefined;
+    challengeIDsFilter: string[] | undefined;
+    opportunityIDsFilter: string[] | undefined;
+    userIDsFilter: string[] | undefined;
+    cardIDsFilter: string[] | undefined;
+  }> {
+    let searchInHub: IHub | undefined = undefined;
+    let hubIDsFilter: string[] | undefined = undefined;
+    let challengeIDsFilter: string[] | undefined = undefined;
+    let opportunityIDsFilter: string[] | undefined = undefined;
+    let userIDsFilter: string[] | undefined = undefined;
+    let cardIDsFilter: string[] | undefined = undefined;
+    if (searchInHubID) {
+      searchInHub = await this.hubService.getHubOrFail(searchInHubID, {
+        relations: ['collaboration'],
+      });
+      hubIDsFilter = [searchInHub.id];
+
+      const challengesFilter = await this.getChallengesFilter(hubIDsFilter);
+      challengeIDsFilter = challengesFilter.map(challenge => challenge.id);
+      const opportunitiesFilter = await this.getOpportunitiesFilter(
+        hubIDsFilter
+      );
+      opportunityIDsFilter = opportunitiesFilter.map(opp => opp.id);
+      userIDsFilter = await this.getUsersFilter(searchInHub);
+      cardIDsFilter = await this.getCardsFilter(
+        searchInHub,
+        challengesFilter,
+        opportunitiesFilter
+      );
+    }
+    return {
+      hubIDsFilter,
+      challengeIDsFilter,
+      opportunityIDsFilter,
+      userIDsFilter,
+      cardIDsFilter,
+    };
+  }
+
+  private async getChallengesFilter(
+    hubFilter: string[]
+  ): Promise<IChallenge[]> {
+    const challengesQuery = this.challengeRepository
+      .createQueryBuilder('challenge')
+      .leftJoinAndSelect('challenge.collaboration', 'collaboration')
+      .where('challenge.hubID IN (:hubFilter)', {
+        hubFilter: hubFilter,
+      });
+
+    return await challengesQuery.getMany();
+  }
+
+  private async getOpportunitiesFilter(
+    hubFilter: string[]
+  ): Promise<IOpportunity[]> {
+    const opportunitiesQuery = this.opportunityRepository
+      .createQueryBuilder('opportunity')
+      .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
+      .where('opportunity.hubID IN (:hubFilter)', {
+        hubFilter: hubFilter,
+      });
+
+    return await opportunitiesQuery.getMany();
+  }
+
+  private async getUsersFilter(searchInHub: IHub): Promise<string[]> {
+    const usersFilter = [];
+    const membersInHub = await this.userService.usersWithCredentials({
+      type: AuthorizationCredential.HUB_MEMBER,
+      resourceID: searchInHub.id,
+    });
+    for (const user of membersInHub) {
+      usersFilter.push(user.id);
+    }
+    const adminsInHub = await this.userService.usersWithCredentials({
+      type: AuthorizationCredential.HUB_ADMIN,
+      resourceID: searchInHub.id,
+    });
+    for (const user of adminsInHub) {
+      usersFilter.push(user.id);
+    }
+    return usersFilter;
+  }
+
+  private async getCardsFilter(
+    hubFilter: IHub,
+    challengesFilter: IChallenge[],
+    opportunitiesFilter: IOpportunity[]
+  ): Promise<string[]> {
+    // Get all the relevant collaborations
+    const collaborationFilter = [hubFilter.collaboration?.id];
+    challengesFilter.forEach(c =>
+      collaborationFilter.push(c.collaboration?.id)
+    );
+    opportunitiesFilter.forEach(c =>
+      collaborationFilter.push(c.collaboration?.id)
+    );
+
+    // Get all the cards IDs in the Hub
+    const cardsFilter: string[] = [];
+    const cardQuery = this.cardRepository
+      .createQueryBuilder('card')
+      .leftJoinAndSelect('card.callout', 'callout')
+      .leftJoinAndSelect('callout.collaboration', 'collaboration')
+      .where('collaboration.id IN (:collaborationFilter)', {
+        collaborationFilter: collaborationFilter,
+      });
+
+    const cardMatches = await cardQuery.getMany();
+    cardMatches.forEach(match => cardsFilter.push(match.id));
+
+    return cardsFilter;
   }
 }
