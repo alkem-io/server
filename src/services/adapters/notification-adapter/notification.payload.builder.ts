@@ -469,6 +469,23 @@ export class NotificationPayloadBuilder {
     return { id: user.id, displayName: user.displayName };
   }
 
+  private async getUserData(
+    userId: string
+  ): Promise<{ id: string; displayName: string } | undefined> {
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .select(['user.id', 'user.displayName'])
+      .where('user.nameID = :id')
+      .orWhere('user.id = :id')
+      .setParameters({ id: userId })
+      .getOne();
+
+    if (!user) {
+      return undefined;
+    }
+    return { id: user.id, displayName: user.displayName };
+  }
+
   async buildCommunicationOrganizationMessageNotificationPayload(
     senderID: string,
     message: string,
@@ -509,6 +526,23 @@ export class NotificationPayloadBuilder {
     return { id: org.id, displayName: org.displayName };
   }
 
+  private async getOrgData(
+    orgId: string
+  ): Promise<{ id: string; displayName: string } | undefined> {
+    const org = await this.organizationRepository
+      .createQueryBuilder('organization')
+      .select(['organization.id', 'organization.displayName'])
+      .where('organization.id = :id')
+      .orWhere('organization.nameID = :id')
+      .setParameters({ id: orgId })
+      .getOne();
+
+    if (!org) {
+      return undefined;
+    }
+    return { id: org.id, displayName: org.displayName };
+  }
+
   async buildCommunicationCommunityLeadsMessageNotificationPayload(
     senderID: string,
     message: string,
@@ -534,9 +568,10 @@ export class NotificationPayloadBuilder {
     originEntityNameId: string,
     originEntityDisplayName: string,
     commentType: CommentType
-  ): Promise<CommunicationUserMentionEventPayload> {
-    const { displayName: mentionedUserDisplayName, id: mentionedUserID } =
-      await this.getUserDataOrFail(mentionedUserNameID);
+  ): Promise<CommunicationUserMentionEventPayload | undefined> {
+    const userData = await this.getUserData(mentionedUserNameID);
+
+    if (!userData) return undefined;
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
@@ -548,8 +583,8 @@ export class NotificationPayloadBuilder {
     const payload: CommunicationUserMentionEventPayload = {
       triggeredBy: senderID,
       mentionedUser: {
-        id: mentionedUserID,
-        displayName: mentionedUserDisplayName,
+        id: userData.id,
+        displayName: userData.displayName,
       },
       comment,
       commentOrigin: {
@@ -570,11 +605,10 @@ export class NotificationPayloadBuilder {
     originEntityNameId: string,
     originEntityDisplayName: string,
     commentType: CommentType
-  ): Promise<CommunicationOrganizationMentionEventPayload> {
-    const {
-      id: mentionedOrganizationID,
-      displayName: mentionedOrgDisplayName,
-    } = await this.getOrgDataOrFail(mentionedUserNameID);
+  ): Promise<CommunicationOrganizationMentionEventPayload | undefined> {
+    const orgData = await this.getOrgData(mentionedUserNameID);
+
+    if (!orgData) return undefined;
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
@@ -586,8 +620,8 @@ export class NotificationPayloadBuilder {
     const payload: CommunicationOrganizationMentionEventPayload = {
       triggeredBy: senderID,
       mentionedOrganization: {
-        id: mentionedOrganizationID,
-        displayName: mentionedOrgDisplayName,
+        id: orgData.id,
+        displayName: orgData.displayName,
       },
       comment,
       commentOrigin: {

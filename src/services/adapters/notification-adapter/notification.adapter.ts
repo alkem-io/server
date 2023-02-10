@@ -215,7 +215,10 @@ export class NotificationAdapter {
         eventData.originEntity.displayName,
         eventData.commentType
       );
-    this.notificationsClient.emit<number>(event, payload);
+
+    if (payload) {
+      this.notificationsClient.emit<number>(event, payload);
+    }
   }
 
   public async organizationMention(
@@ -235,7 +238,10 @@ export class NotificationAdapter {
         eventData.originEntity.displayName,
         eventData.commentType
       );
-    this.notificationsClient.emit<number>(event, payload);
+
+    if (payload) {
+      this.notificationsClient.emit<number>(event, payload);
+    }
   }
 
   public async applicationCreated(

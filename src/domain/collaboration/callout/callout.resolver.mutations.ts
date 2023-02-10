@@ -186,12 +186,10 @@ export class CalloutResolverMutations {
         };
 
         if (mention.userType == MentionedEntityType.USER) {
-          await this.notificationAdapter.userMention(
-            entityMentionNotificationInput
-          );
+          this.notificationAdapter.userMention(entityMentionNotificationInput);
         }
         if (mention.userType == MentionedEntityType.ORGANIZATION) {
-          await this.notificationAdapter.organizationMention(
+          this.notificationAdapter.organizationMention(
             entityMentionNotificationInput
           );
         }
