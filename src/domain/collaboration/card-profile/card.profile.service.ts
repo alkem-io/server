@@ -53,7 +53,7 @@ export class CardProfileService {
     }
 
     cardProfile.location = await this.locationService.createLocation(
-      cardProfile?.location
+      cardProfileData?.location
     );
 
     await this.cardProfileRepository.save(cardProfile);

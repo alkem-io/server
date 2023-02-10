@@ -45,7 +45,7 @@ import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IMessage } from '@domain/communication/message/message.interface';
-import { IAspect } from '@domain/collaboration';
+import { IAspect } from '@domain/collaboration/aspect';
 import { IUser } from '@domain/community/user/user.interface';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { User } from '@domain/community/user/user.entity';

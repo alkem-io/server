@@ -1,0 +1,41 @@
+query search($searchData: SearchInput!){
+  search(searchData: $searchData) {
+    id
+    score
+    terms
+    type
+    ... on SearchResultHub {
+      hub {
+        nameID
+      }
+    }
+    ... on SearchResultChallenge {
+      challenge {
+        nameID
+      }
+    }
+    ... on SearchResultOpportunity {
+      opportunity {
+        nameID
+      }
+    }
+    ... on SearchResultUser {
+      user {
+        nameID
+      }
+    }
+    ... on SearchResultOrganization {
+      organization {
+        nameID
+      }
+    }
+  }
+}
+
+{
+  "searchData":
+  {
+    "terms": ["Alisha"],
+    "searchInHubFilter": "eco1"
+  }
+}

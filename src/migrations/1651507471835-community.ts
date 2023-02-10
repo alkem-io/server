@@ -4,7 +4,7 @@ import {
   hubCommunityPolicy,
   challengeCommunityPolicy,
 } from '@domain/challenge';
-import { opportunityCommunityPolicy } from '@domain/collaboration';
+import { opportunityCommunityPolicy } from '@domain/collaboration/opportunity';
 import { AuthorizationCredential } from '@common/enums';
 import { CommunityPolicy } from './types/community.policy';
 

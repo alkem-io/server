@@ -30,10 +30,14 @@ import { MessagingService } from '../messaging/messaging.service';
 import { CommentType } from '@common/enums/comment.type';
 import { ICalendarEvent } from '@domain/timeline/event';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
+import { ElasticsearchService } from '@services/external/elasticsearch';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 @Resolver()
 export class CommentsResolverMutations {
   constructor(
+    private communityResolverService: CommunityResolverService,
+    private elasticService: ElasticsearchService,
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
@@ -82,6 +86,23 @@ export class CommentsResolverMutations {
         message: commentSent,
       };
       this.activityAdapter.aspectComment(activityLogInput);
+
+      const { hubID } =
+        await this.communityResolverService.getCommunityFromCardCommentsOrFail(
+          messageData.commentsID
+        );
+
+      this.elasticService.calloutCardCommentCreated(
+        {
+          id: aspect.id,
+          name: aspect.displayName,
+          hub: hubID,
+        },
+        {
+          id: agentInfo.userID,
+          email: agentInfo.email,
+        }
+      );
     }
 
     const calendar = await this.namingService.getCalendarEventForComments(

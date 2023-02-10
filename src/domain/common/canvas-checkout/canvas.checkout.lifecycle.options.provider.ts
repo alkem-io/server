@@ -38,15 +38,26 @@ export class CanvasCheckoutLifecycleOptionsProvider {
 
     this.logCheckoutStatus(eventName, canvasCheckout, 'event triggered');
 
-    await this.lifecycleService.event(
-      {
-        ID: canvasCheckout.lifecycle.id,
-        eventName: eventName,
-      },
-      this.CanvasCheckoutLifecycleMachineOptions,
-      agentInfo,
-      canvasCheckout.authorization
-    );
+    try {
+      await this.lifecycleService.event(
+        {
+          ID: canvasCheckout.lifecycle.id,
+          eventName: eventName,
+        },
+        this.CanvasCheckoutLifecycleMachineOptions,
+        agentInfo,
+        canvasCheckout.authorization
+      );
+    } catch (error) {
+      if (canvasCheckoutEventData.errorOnFailedTransition) {
+        throw error;
+      } else {
+        this.logger.warn(
+          `Transition failed on event '${eventName}': ${error}`,
+          LogContext.CONTEXT
+        );
+      }
+    }
 
     // Todo: there is likely a race condition related to lifecycles + events they trigger.
     // Events that are triggered by XState are fire and forget. So they above event will potentially return

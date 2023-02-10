@@ -19,8 +19,8 @@ import {
 } from '@common/exceptions';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { Collaboration } from '@domain/collaboration';
 import { ICalendarEvent } from '@domain/timeline/event';
+import { Collaboration } from '@domain/collaboration/collaboration';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');

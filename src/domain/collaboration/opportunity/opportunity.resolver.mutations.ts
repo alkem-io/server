@@ -21,10 +21,12 @@ import {
   UpdateOpportunityInput,
 } from './dto';
 import { UpdateOpportunityInnovationFlowInput } from './dto/opportunity.dto.update.innovation.flow';
+import { ElasticsearchService } from '@services/external/elasticsearch';
 
 @Resolver()
 export class OpportunityResolverMutations {
   constructor(
+    private elasticService: ElasticsearchService,
     private projectService: ProjectService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
@@ -50,7 +52,24 @@ export class OpportunityResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update opportunity: ${opportunity.nameID}`
     );
-    return await this.opportunityService.updateOpportunity(opportunityData);
+
+    const updatedOpportunity = await this.opportunityService.updateOpportunity(
+      opportunityData
+    );
+
+    this.elasticService.opportunityContentEdited(
+      {
+        id: updatedOpportunity.id,
+        name: updatedOpportunity.displayName,
+        hub: updatedOpportunity.hubID ?? '',
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
+
+    return updatedOpportunity;
   }
 
   @UseGuards(GraphqlGuard)
