@@ -11,9 +11,13 @@ import { CanvasAuthorizationService } from './canvas.service.authorization';
 import { CanvasResolverSubscriptions } from '@domain/common/canvas/canvas.resolver.subscriptions';
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { UserModule } from '@domain/community/user/user.module';
+import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
   imports: [
+    EntityResolverModule,
+    ElasticsearchModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     CanvasCheckoutModule,
