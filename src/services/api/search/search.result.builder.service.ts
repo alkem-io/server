@@ -140,8 +140,9 @@ export default class SearchResultBuilderService
       JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`id\` = '${aspectId}' UNION
 
-      SELECT  \`hub\`.\`nameID\` as \`hub\`, null as \'challenge\', \`opportunity\`.\`nameID\` as \`opportunity\`, \`callout\`.\`nameID\` as \`callout\` FROM \`callout\`
+      SELECT  \`hub\`.\`nameID\` as \`hub\`, \`challenge\`.\`nameID\` as \`challenge\`, \`opportunity\`.\`nameID\` as \`opportunity\`, \`callout\`.\`nameID\` as \`callout\` FROM \`callout\`
       RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      JOIN \`challenge\` on \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
       JOIN \`hub\` on \`opportunity\`.\`hubID\` = \`hub\`.\`id\`
       JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`id\` = '${aspectId}';
