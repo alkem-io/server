@@ -17,6 +17,12 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
+import {
+  CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED,
+  CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS,
+  POLICY_RULE_COLLABORATION_CREATE,
+  POLICY_RULE_CALLOUT_CONTRIBUTE,
+} from '@common/constants';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -128,7 +134,8 @@ export class CollaborationAuthorizationService {
     const communityMemberNotInherited =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE_RELATION],
-        [AuthorizationCredential.USER_SELF_MANAGEMENT]
+        [AuthorizationCredential.USER_SELF_MANAGEMENT],
+        CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED
       );
     communityMemberNotInherited.inheritable = false;
     newRules.push(communityMemberNotInherited);
@@ -158,7 +165,8 @@ export class CollaborationAuthorizationService {
     const contributorsRule =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.CONTRIBUTE],
-        contributors
+        contributors,
+        CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS
       );
     newRules.push(contributorsRule);
 
@@ -179,7 +187,8 @@ export class CollaborationAuthorizationService {
         AuthorizationPrivilege.CREATE_CALLOUT,
         AuthorizationPrivilege.CREATE_RELATION,
       ],
-      AuthorizationPrivilege.CREATE
+      AuthorizationPrivilege.CREATE,
+      POLICY_RULE_COLLABORATION_CREATE
     );
     privilegeRules.push(createPrivilege);
 
@@ -191,7 +200,8 @@ export class CollaborationAuthorizationService {
     ) {
       const createCalloutPrivilege = new AuthorizationPolicyRulePrivilege(
         [AuthorizationPrivilege.CREATE_CALLOUT],
-        AuthorizationPrivilege.CONTRIBUTE
+        AuthorizationPrivilege.CONTRIBUTE,
+        POLICY_RULE_CALLOUT_CONTRIBUTE
       );
       privilegeRules.push(createCalloutPrivilege);
     }

@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
 import { Opportunity } from '@domain/collaboration/opportunity';
-import { IOpportunity } from '..';
+import { IOpportunity } from './opportunity.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
@@ -15,6 +15,11 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
+import {
+  CREDENTIAL_RULE_OPPORTUNITY_ADMIN,
+  CREDENTIAL_RULE_OPPORTUNITY_MEMBER,
+  CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW,
+} from '@common/constants';
 
 @Injectable()
 export class OpportunityAuthorizationService {
@@ -126,14 +131,16 @@ export class OpportunityAuthorizationService {
           AuthorizationPrivilege.GRANT,
           AuthorizationPrivilege.DELETE,
         ],
-        [this.communityPolicyService.getAdminCredential(policy)]
+        [this.communityPolicyService.getAdminCredential(policy)],
+        CREDENTIAL_RULE_OPPORTUNITY_ADMIN
       );
     rules.push(opportunityAdmin);
 
     const opportunityMember =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.READ],
-        [this.communityPolicyService.getMembershipCredential(policy)]
+        [this.communityPolicyService.getMembershipCredential(policy)],
+        CREDENTIAL_RULE_OPPORTUNITY_MEMBER
       );
     rules.push(opportunityMember);
 
@@ -143,7 +150,8 @@ export class OpportunityAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
-        ]
+        ],
+        CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW
       );
     updateInnovationFlowRule.inheritable = false;
     rules.push(updateInnovationFlowRule);

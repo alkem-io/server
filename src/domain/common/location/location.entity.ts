@@ -10,9 +10,15 @@ export class Location extends BaseAlkemioEntity implements ILocation {
   @Column('varchar', { length: 255, nullable: true })
   country = '';
 
-  constructor(city?: string, country?: string) {
-    super();
-    this.city = city || '';
-    this.country = country || '';
-  }
+  @Column('varchar', { length: 255, nullable: true })
+  addressLine1 = '';
+
+  @Column('varchar', { length: 255, nullable: true })
+  addressLine2 = '';
+
+  @Column('varchar', { length: 255, nullable: true })
+  stateOrProvince = '';
+
+  @Column('varchar', { length: 255, nullable: true })
+  postalCode = '';
 }

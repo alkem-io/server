@@ -7,19 +7,15 @@ import {
   CurrentUser,
 } from '@src/common/decorators';
 import { ICalendar } from './calendar.interface';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { CalendarEventService } from '../event/event.service';
 import { ICalendarEvent } from '../event/event.interface';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { CalendarArgsEvents } from './dto/calendar.args.events';
 import { CalendarService } from './calendar.service';
+import { UUID_NAMEID } from '@domain/common/scalars';
 
 @Resolver(() => ICalendar)
 export class CalendarResolverFields {
-  constructor(
-    private calendarEventService: CalendarEventService,
-    private calendarService: CalendarService
-  ) {}
+  constructor(private calendarService: CalendarService) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('event', () => ICalendarEvent, {
@@ -33,8 +29,8 @@ export class CalendarResolverFields {
     @Args({
       name: 'ID',
       nullable: false,
-      type: () => UUID,
-      description: 'The ID of the CalendarEvent',
+      type: () => UUID_NAMEID,
+      description: 'The ID or NAMEID of the CalendarEvent',
     })
     ID: string
   ): Promise<ICalendarEvent> {
@@ -52,7 +48,7 @@ export class CalendarResolverFields {
     nullable: true,
     description: 'The list of CalendarEvents for this Calendar.',
   })
-  async callouts(
+  async events(
     @Parent() calendar: ICalendar,
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) args: CalendarArgsEvents

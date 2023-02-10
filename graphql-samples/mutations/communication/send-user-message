@@ -1,0 +1,11 @@
+mutation sendMessageToUser($messageData: CommunicationSendMessageToUserInput!){
+  sendMessageToUser(messageData: $messageData)
+}
+
+Variables:
+{
+  "messageData": {
+    "message": "test",
+    "receiverIds": ["uuid_nameid"]
+  }
+}

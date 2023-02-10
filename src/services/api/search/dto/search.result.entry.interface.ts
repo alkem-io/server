@@ -9,6 +9,7 @@ import { ISearchResultChallenge } from './search.result.dto.entry.challenge';
 import { ISearchResultUser } from './search.result.dto.entry.user';
 import { ISearchResultOrganization } from './search.result.dto.entry.organization';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
+import { ISearchResultCard } from './search.result.dto.entry.card';
 
 @InterfaceType('SearchResult', {
   resolveType(searchResult) {
@@ -24,6 +25,8 @@ import { IBaseAlkemio } from '@domain/common/entity/base-entity';
         return ISearchResultUser;
       case SearchResultType.ORGANIZATION:
         return ISearchResultOrganization;
+      case SearchResultType.CARD:
+        return ISearchResultCard;
     }
 
     throw new RelationshipNotFoundException(

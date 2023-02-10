@@ -15,7 +15,7 @@ export class LocationService {
   ) {}
 
   async createLocation(locationData?: CreateLocationInput): Promise<ILocation> {
-    const location = new Location(locationData?.city, locationData?.country);
+    const location = Location.create(locationData || {});
     return await this.locationRepository.save(location);
   }
   async removeLocation(location: ILocation): Promise<ILocation> {
@@ -38,6 +38,22 @@ export class LocationService {
 
     if (locationData.country || locationData.country === '') {
       location.country = locationData.country;
+    }
+
+    if (locationData.addressLine1 || locationData.addressLine1 === '') {
+      location.addressLine1 = locationData.addressLine1;
+    }
+
+    if (locationData.addressLine2 || locationData.addressLine2 === '') {
+      location.addressLine2 = locationData.addressLine2;
+    }
+
+    if (locationData.postalCode || locationData.postalCode === '') {
+      location.postalCode = locationData.postalCode;
+    }
+
+    if (locationData.stateOrProvince || locationData.stateOrProvince === '') {
+      location.stateOrProvince = locationData.stateOrProvince;
     }
   }
 

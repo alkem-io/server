@@ -37,18 +37,21 @@ export class AuthorizationPolicyService {
 
   createCredentialRule(
     grantedPrivileges: AuthorizationPrivilege[],
-    criterias: ICredentialDefinition[]
+    criterias: ICredentialDefinition[],
+    name: string
   ): IAuthorizationPolicyRuleCredential {
     return {
       grantedPrivileges,
       criterias,
       inheritable: true,
+      name,
     };
   }
 
   createCredentialRuleUsingTypesOnly(
     grantedPrivileges: AuthorizationPrivilege[],
-    createntialTypes: AuthorizationCredential[]
+    createntialTypes: AuthorizationCredential[],
+    name: string
   ): IAuthorizationPolicyRuleCredential {
     const criterias: ICredentialDefinition[] = [];
 
@@ -65,12 +68,14 @@ export class AuthorizationPolicyService {
       grantedPrivileges,
       criterias,
       inheritable: true,
+      name,
     };
   }
 
   private createCredentialRuleGlobalAdmins(
     grantedPrivileges: AuthorizationPrivilege[],
-    globalRoles: AuthorizationRoleGlobal[]
+    globalRoles: AuthorizationRoleGlobal[],
+    name: string
   ): IAuthorizationPolicyRuleCredential {
     const criterias: ICredentialDefinition[] = [];
 
@@ -105,15 +110,21 @@ export class AuthorizationPolicyService {
       grantedPrivileges,
       criterias,
       inheritable: true,
+      name,
     };
   }
 
   createGlobalRolesAuthorizationPolicy(
     globalRoles: AuthorizationRoleGlobal[],
-    privileges: AuthorizationPrivilege[]
+    privileges: AuthorizationPrivilege[],
+    name: string
   ): IAuthorizationPolicy {
     const authorization = new AuthorizationPolicy();
-    const rule = this.createCredentialRuleGlobalAdmins(privileges, globalRoles);
+    const rule = this.createCredentialRuleGlobalAdmins(
+      privileges,
+      globalRoles,
+      name
+    );
 
     const rules = [rule];
     this.appendCredentialAuthorizationRules(authorization, rules);
@@ -179,7 +190,8 @@ export class AuthorizationPolicyService {
   appendCredentialAuthorizationRule(
     authorization: IAuthorizationPolicy | undefined,
     credentialCriteria: CredentialsSearchInput,
-    grantedPrivileges: AuthorizationPrivilege[]
+    grantedPrivileges: AuthorizationPrivilege[],
+    name: string
   ): IAuthorizationPolicy {
     const auth = this.validateAuthorization(authorization);
     const rules = this.authorizationService.convertCredentialRulesStr(
@@ -187,8 +199,11 @@ export class AuthorizationPolicyService {
     );
     const newRule = new AuthorizationPolicyRuleCredential(
       grantedPrivileges,
-      credentialCriteria.type,
-      credentialCriteria.resourceID
+      {
+        type: credentialCriteria.type,
+        resourceID: credentialCriteria.resourceID || '',
+      },
+      name
     );
     rules.push(newRule);
     auth.credentialRules = JSON.stringify(rules);

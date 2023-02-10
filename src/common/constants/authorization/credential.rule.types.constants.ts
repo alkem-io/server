@@ -1,0 +1,48 @@
+export const CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW =
+  'credentialRuleTypes-challengeInnovationFlow';
+export const CREDENTIAL_RULE_TYPES_HUB_AUTHORIZATION_RESET =
+  'credentialRuleTypes-hubAuthorizationReset';
+export const CREDENTIAL_RULE_TYPES_HUB_GLOBAL_ADMIN_COMMUNITY_READ =
+  'credentialRuleTypes-hubGlobalAdminCommunityRead';
+export const CREDENTIAL_RULE_TYPES_HUB_AUTHORIZATION_GLOBAL_ADMIN_GRANT =
+  'credentialRuleTypes-hubAuthorizationGlobalAdminGrant';
+export const CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_APPLY_GLOBAL_REGISTERED =
+  'credentialRuleTypes-hubCommunityApplyGlobalRegistered';
+export const CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_JOIN_GLOBAL_REGISTERED =
+  'credentialRuleTypes-hubCommunityJoinGlobalRegistered';
+export const CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS =
+  'credentialRuleTypes-calloutUpdatePublisherGlobalAdmins';
+export const CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED =
+  'credentialRuleTypes-collaborationCreateRelationRegistered';
+export const CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW =
+  'credentialRuleTypes-opportunityUpdateInnovationFLow';
+export const CREDENTIAL_RULE_TYPES_RELATION_CREATED_GLOBAL_REGISTERED =
+  'credentialRuleTypes-relationCreateGlobalRegistered';
+export const CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL =
+  'credentialRuleTypes-communityGlobalAdminCommunityAll';
+export const CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED =
+  'credentialRuleTypes-communityReadGlobalRegistered';
+export const CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET =
+  'credentialRuleTypes-organizationAuthorizationReset';
+export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMIN_COMMUNITY =
+  'credentialRuleTypes-organizationGlobalAdminCommunity';
+export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS =
+  'credentialRuleTypes-organizationGlobalAdmins';
+export const CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL =
+  'credentialRuleTypes-organizationGlobalAdminsAll';
+export const CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET =
+  'credentialRuleTypes-userAuthorizationReset';
+export const CREDENTIAL_RULE_TYPES_USER_GLOBAL_ADMIN_COMMUNITY =
+  'credentialRuleTypes-userGlobalAdminCommunity';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS =
+  'credentialRuleTypes-platformGlobalAdmins';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS =
+  'credentialRuleTypes-platformGrantGlobalAdmins';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS =
+  'credentialRuleTypes-platformPlatformAdmins';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED =
+  'credentialRuleTypes-platformReadRegistered';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD =
+  'credentialRuleTypes-platformCreateOrgFileUpload';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN =
+  'credentialRuleTypes-platformAnyAdmin';

@@ -1,14 +1,15 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
-import { LONG_TEXT_LENGTH } from '@src/common/constants';
+import { VERY_LONG_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateReferenceInput } from '@domain/common/reference';
 import { Type } from 'class-transformer';
+import { UpdateLocationInput } from '@domain/common/location/dto/location.dto.update';
 
 @InputType()
 export class UpdateCardProfileInput {
   @Field({ nullable: true })
   @IsOptional()
-  @MaxLength(LONG_TEXT_LENGTH)
+  @MaxLength(VERY_LONG_TEXT_LENGTH)
   description?: string;
 
   @Field(() => [UpdateReferenceInput], { nullable: true })
@@ -23,4 +24,10 @@ export class UpdateCardProfileInput {
   })
   @IsOptional()
   tags?: string[];
+
+  @Field(() => UpdateLocationInput, { nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateLocationInput)
+  location?: UpdateLocationInput;
 }

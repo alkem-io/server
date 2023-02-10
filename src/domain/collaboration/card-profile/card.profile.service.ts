@@ -20,12 +20,14 @@ import { RestrictedTagsetNames } from '@domain/common/tagset';
 import { CardProfile } from './card.profile.entity';
 import { ICardProfile } from './card.profile.interface';
 import { CreateReferenceOnCardProfileInput } from './dto/card.profile.dto.create.reference';
+import { ILocation, LocationService } from '@domain/common/location';
 
 @Injectable()
 export class CardProfileService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private tagsetService: TagsetService,
+    private locationService: LocationService,
     private referenceService: ReferenceService,
     @InjectRepository(CardProfile)
     private cardProfileRepository: Repository<CardProfile>,
@@ -50,6 +52,10 @@ export class CardProfileService {
       cardProfile.references = [];
     }
 
+    cardProfile.location = await this.locationService.createLocation(
+      cardProfileData?.location
+    );
+
     await this.cardProfileRepository.save(cardProfile);
     this.logger.verbose?.(
       `Created new cardProfile with id: ${cardProfile.id}`,
@@ -63,7 +69,7 @@ export class CardProfileService {
     cardProfileData: UpdateCardProfileInput
   ): Promise<ICardProfile> {
     const cardProfile = await this.getCardProfileOrFail(cardProfileOrig.id, {
-      relations: ['references', 'tagset', 'authorization'],
+      relations: ['references', 'tagset', 'authorization', 'location'],
     });
 
     if (cardProfileData.description) {
@@ -74,6 +80,13 @@ export class CardProfileService {
       cardProfile.references = this.referenceService.updateReferences(
         cardProfile.references,
         cardProfileData.references
+      );
+    }
+
+    if (cardProfileData.location) {
+      this.locationService.updateLocationValues(
+        cardProfile.location,
+        cardProfileData.location
       );
     }
 
@@ -93,7 +106,7 @@ export class CardProfileService {
   async deleteCardProfile(cardProfileID: string): Promise<ICardProfile> {
     // Note need to load it in with all contained entities so can remove fully
     const cardProfile = await this.getCardProfileOrFail(cardProfileID, {
-      relations: ['references', 'tagset', 'authorization'],
+      relations: ['references', 'tagset', 'authorization', 'location'],
     });
 
     if (cardProfile.tagset) {
@@ -106,6 +119,10 @@ export class CardProfileService {
           ID: reference.id,
         });
       }
+    }
+
+    if (cardProfile.location) {
+      await this.locationService.removeLocation(cardProfile.location);
     }
 
     if (cardProfile.authorization)
@@ -176,6 +193,19 @@ export class CardProfileService {
       );
     }
     return cardProfile.references;
+  }
+
+  async getLocation(cardProfileInput: ICardProfile): Promise<ILocation> {
+    const cardProfile = await this.getCardProfileOrFail(cardProfileInput.id, {
+      relations: ['location'],
+    });
+    if (!cardProfile.location) {
+      throw new EntityNotInitializedException(
+        `CardProfile not initialized: ${cardProfile.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+    return cardProfile.location;
   }
 
   async getTagset(cardProfileID: string): Promise<ITagset> {

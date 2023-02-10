@@ -5,6 +5,10 @@ import { Field, ObjectType } from '@nestjs/graphql';
 export abstract class IAuthorizationPolicyRulePrivilege {
   @Field(() => AuthorizationPrivilege)
   sourcePrivilege!: AuthorizationPrivilege;
+
   @Field(() => [AuthorizationPrivilege])
   grantedPrivileges!: AuthorizationPrivilege[];
+
+  @Field(() => String, { nullable: true })
+  name!: string;
 }

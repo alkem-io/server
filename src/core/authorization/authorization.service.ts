@@ -49,7 +49,7 @@ export class AuthorizationService {
     )}'; authorization definition: anonymousAccess=${
       authorization?.anonymousReadAccess
     } & rules: ${authorization?.credentialRules}`;
-    this.logger.verbose?.(msg, LogContext.AUTH);
+    this.logger.verbose?.(msg, LogContext.AUTH_POLICY);
   }
 
   logAgentInfo(agentInfo: AgentInfo) {
@@ -77,7 +77,7 @@ export class AuthorizationService {
     if (!authorization)
       throw new ForbiddenException(
         'Authorization: no definition provided',
-        LogContext.AUTH
+        LogContext.AUTH_POLICY
       );
     return authorization;
   }
@@ -92,6 +92,10 @@ export class AuthorizationService {
       authorization.anonymousReadAccess &&
       privilegeRequired === AuthorizationPrivilege.READ
     ) {
+      this.logger.verbose?.(
+        `Granted privilege '${privilegeRequired}' using rule 'AnonymouseReadAccess'`,
+        LogContext.AUTH_POLICY
+      );
       return true;
     }
 
@@ -105,7 +109,13 @@ export class AuthorizationService {
       for (const credential of agentInfo.credentials) {
         if (this.isCredentialMatch(credential, rule)) {
           for (const privilege of rule.grantedPrivileges) {
-            if (privilege === privilegeRequired) return true;
+            if (privilege === privilegeRequired) {
+              this.logger.verbose?.(
+                `[CredentialRule] Granted privilege '${privilegeRequired}' using rule '${rule.name}'`,
+                LogContext.AUTH_POLICY
+              );
+              return true;
+            }
             grantedPrivileges.push(privilege);
           }
         }
@@ -125,8 +135,8 @@ export class AuthorizationService {
           for (const privilege of rule.grantedPrivileges) {
             if (privilege === privilegeRequired) {
               this.logger.verbose?.(
-                `[Authorization] Access granted based on VC of type: '${verifiedCredential.type}'`,
-                LogContext.AUTH
+                `[VerifiedCredentialRule] Access granted based on VC of type: '${verifiedCredential.type}'`,
+                LogContext.AUTH_POLICY
               );
               return true;
             }
@@ -141,7 +151,13 @@ export class AuthorizationService {
     );
     for (const rule of privilegeRules) {
       if (grantedPrivileges.includes(rule.sourcePrivilege)) {
-        if (rule.grantedPrivileges.includes(privilegeRequired)) return true;
+        if (rule.grantedPrivileges.includes(privilegeRequired)) {
+          this.logger.verbose?.(
+            `[PrivilegeRule] Granted privilege '${privilegeRequired}' using privilege rule '${rule.name}'`,
+            LogContext.AUTH_POLICY
+          );
+          return true;
+        }
       }
     }
     return false;

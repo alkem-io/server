@@ -21,15 +21,19 @@ import { LogContext } from '@common/enums/logging.context';
 import { getRandomId } from '@src/common/utils';
 import { DeleteCanvasInput } from './dto/canvas.dto.delete';
 import { CanvasCheckoutService } from '../canvas-checkout/canvas.checkout.service';
+import { ElasticsearchService } from '@services/external/elasticsearch';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverMutations {
   constructor(
+    private elasticService: ElasticsearchService,
     private authorizationService: AuthorizationService,
     private canvasService: CanvasService,
     private canvasCheckoutService: CanvasCheckoutService,
     private canvasCheckoutAuthorizationService: CanvasCheckoutAuthorizationService,
     private canvasCheckoutLifecycleOptionsProvider: CanvasCheckoutLifecycleOptionsProvider,
+    private communityResolverService: CommunityResolverService,
     @Inject(SUBSCRIPTION_CANVAS_CONTENT)
     private readonly subscriptionCanvasContent: PubSubEngine,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -77,6 +81,10 @@ export class CanvasResolverMutations {
       `update Canvas: ${canvas.displayName}`
     );
 
+    if (canvas.value === canvasData.value) {
+      return canvas;
+    }
+
     const updatedCanvas = await this.canvasService.updateCanvas(
       canvas,
       canvasData,
@@ -96,6 +104,27 @@ export class CanvasResolverMutations {
     this.subscriptionCanvasContent.publish(
       SubscriptionType.CANVAS_CONTENT_UPDATED,
       subscriptionPayload
+    );
+
+    const callout = await this.canvasService.getCanvasOrFail(canvas.id, {
+      relations: ['callout'],
+    });
+
+    const { hubID } =
+      await this.communityResolverService.getCommunityFromCalloutOrFail(
+        callout.id
+      );
+
+    this.elasticService.calloutCanvasEdited(
+      {
+        id: canvas.id,
+        name: canvas.displayName,
+        hub: hubID,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
     );
 
     return updatedCanvas;
