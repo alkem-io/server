@@ -23,6 +23,7 @@ import { DeleteCanvasInput } from './dto/canvas.dto.delete';
 import { CanvasCheckoutService } from '../canvas-checkout/canvas.checkout.service';
 import { ElasticsearchService } from '@services/external/elasticsearch';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { EntityNotInitializedException } from '@common/exceptions';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverMutations {
@@ -73,7 +74,9 @@ export class CanvasResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('canvasData') canvasData: UpdateCanvasDirectInput
   ): Promise<ICanvas> {
-    const canvas = await this.canvasService.getCanvasOrFail(canvasData.ID);
+    const canvas = await this.canvasService.getCanvasOrFail(canvasData.ID, {
+      relations: ['callout'],
+    });
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       canvas.authorization,
@@ -106,13 +109,14 @@ export class CanvasResolverMutations {
       subscriptionPayload
     );
 
-    const callout = await this.canvasService.getCanvasOrFail(canvas.id, {
-      relations: ['callout'],
-    });
-
+    if (!canvas || !canvas.callout)
+      throw new EntityNotInitializedException(
+        `Canvas ${canvas.id} not initialized`,
+        LogContext.COLLABORATION
+      );
     const { hubID } =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
-        callout.id
+        canvas?.callout.id
       );
 
     this.elasticService.calloutCanvasEdited(
