@@ -1,0 +1,21 @@
+query search($searchData: SearchInput!){
+  search(searchData: $searchData) {
+    id
+    score
+    terms
+    type
+    ... on SearchResultCard {
+      hub
+      challenge
+      opportunity
+      callout
+    }
+  }
+}
+
+{
+  "searchData":
+  {
+    "terms": ["aspect-name"]
+  }
+}

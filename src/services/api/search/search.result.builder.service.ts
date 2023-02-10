@@ -18,6 +18,14 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { ISearchResultCard } from './dto/search.result.dto.entry.card';
+import { getConnection } from 'typeorm';
+
+export type AspectParents = {
+  challenge: string;
+  hub: string;
+  opportunity: string;
+  callout: string;
+};
 
 export default class SearchResultBuilderService
   implements ISearchResultBuilder
@@ -118,12 +126,41 @@ export default class SearchResultBuilderService
     return searchResultUserGroup;
   }
 
+  private async getAspectParents(aspectId: string): Promise<AspectParents> {
+    const [queryResult]: AspectParents[] = await getConnection().query(
+      `
+      SELECT \`hub\`.\`nameID\` as \`hub\`, \`challenge\`.\`nameID\` as \`challenge\`, null as \'opportunity\', \`callout\`.\`nameID\` as \`callout\` FROM \`callout\`
+      RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      JOIN \`hub\` on \`challenge\`.\`hubID\` = \`hub\`.\`id\`
+      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
+      WHERE \`aspect\`.\`id\` = '${aspectId}' UNION
+
+      SELECT \`hub\`.\`nameID\` as \`hub\`, null as \'challenge\', null as \'opportunity\', \`callout\`.\`nameID\` as \`callout\`  FROM \`callout\`
+      RIGHT JOIN \`hub\` on \`hub\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
+      WHERE \`aspect\`.\`id\` = '${aspectId}' UNION
+
+      SELECT  \`hub\`.\`nameID\` as \`hub\`, null as \'challenge\', \`opportunity\`.\`nameID\` as \`opportunity\`, \`callout\`.\`nameID\` as \`callout\` FROM \`callout\`
+      RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      JOIN \`hub\` on \`opportunity\`.\`hubID\` = \`hub\`.\`id\`
+      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
+      WHERE \`aspect\`.\`id\` = '${aspectId}';
+      `
+    );
+
+    return queryResult;
+  }
+
   async [SearchResultType.CARD](rawSearchResult: ISearchResult) {
     const card = await this.cardService.getAspectOrFail(
       rawSearchResult.result.id
     );
+    const aspectParents: AspectParents = await this.getAspectParents(
+      rawSearchResult.result.id
+    );
     const searchResultUser: ISearchResultCard = {
       ...this.searchResultBase,
+      ...aspectParents,
       card,
     };
     return searchResultUser;
