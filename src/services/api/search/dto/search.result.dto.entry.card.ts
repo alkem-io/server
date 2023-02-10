@@ -20,25 +20,25 @@ export abstract class ISearchResultCard
     nullable: false,
     description: 'The Hub nameID of the Card.',
   })
-  hub!: string;
+  hubNameID!: string;
 
   @Field(() => String, {
     nullable: false,
     description: 'The Callout nameID of the Card.',
   })
-  callout!: string;
+  calloutNameID!: string;
 
   @Field(() => String, {
     nullable: true,
     description:
       'The Challenge nameID of the Card. Applicable for Callouts on Opportunities and Challenges.',
   })
-  challenge?: string;
+  challengeNameID?: string;
 
   @Field(() => String, {
     nullable: true,
     description:
       'The Opportunity nameID of the Card. Applicable only for Callouts on Opportunities.',
   })
-  opportunity?: string;
+  opportunityNameID?: string;
 }

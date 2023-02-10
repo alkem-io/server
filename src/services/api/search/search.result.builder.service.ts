@@ -21,10 +21,10 @@ import { ISearchResultCard } from './dto/search.result.dto.entry.card';
 import { getConnection } from 'typeorm';
 
 export type AspectParents = {
-  challenge: string;
-  hub: string;
-  opportunity: string;
-  callout: string;
+  challengeNameID: string;
+  hubNameID: string;
+  opportunityNameID: string;
+  calloutNameID: string;
 };
 
 export default class SearchResultBuilderService
@@ -129,18 +129,18 @@ export default class SearchResultBuilderService
   private async getAspectParents(aspectId: string): Promise<AspectParents> {
     const [queryResult]: AspectParents[] = await getConnection().query(
       `
-      SELECT \`hub\`.\`nameID\` as \`hub\`, \`challenge\`.\`nameID\` as \`challenge\`, null as \'opportunity\', \`callout\`.\`nameID\` as \`callout\` FROM \`callout\`
+      SELECT \`hub\`.\`nameID\` as \`hubNameID\`, \`challenge\`.\`nameID\` as \`challengeNameID\`, null as \'opportunityNameID\', \`callout\`.\`nameID\` as \`calloutNameID\` FROM \`callout\`
       RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       JOIN \`hub\` on \`challenge\`.\`hubID\` = \`hub\`.\`id\`
       JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`id\` = '${aspectId}' UNION
 
-      SELECT \`hub\`.\`nameID\` as \`hub\`, null as \'challenge\', null as \'opportunity\', \`callout\`.\`nameID\` as \`callout\`  FROM \`callout\`
+      SELECT \`hub\`.\`nameID\` as \`hubNameID\`, null as \'challengeNameID\', null as \'opportunityNameID\', \`callout\`.\`nameID\` as \`calloutNameID\`  FROM \`callout\`
       RIGHT JOIN \`hub\` on \`hub\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`id\` = '${aspectId}' UNION
 
-      SELECT  \`hub\`.\`nameID\` as \`hub\`, \`challenge\`.\`nameID\` as \`challenge\`, \`opportunity\`.\`nameID\` as \`opportunity\`, \`callout\`.\`nameID\` as \`callout\` FROM \`callout\`
+      SELECT  \`hub\`.\`nameID\` as \`hubNameID\`, \`challenge\`.\`nameID\` as \`challengeNameID\`, \`opportunity\`.\`nameID\` as \`opportunityNameID\`, \`callout\`.\`nameID\` as \`calloutNameID\` FROM \`callout\`
       RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       JOIN \`challenge\` on \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
       JOIN \`hub\` on \`opportunity\`.\`hubID\` = \`hub\`.\`id\`

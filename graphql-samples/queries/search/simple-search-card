@@ -5,10 +5,10 @@ query search($searchData: SearchInput!){
     terms
     type
     ... on SearchResultCard {
-      hub
-      challenge
-      opportunity
-      callout
+      hubNameID
+      challengeNameID
+      opportunityNameID
+      calloutNameID
     }
   }
 }
