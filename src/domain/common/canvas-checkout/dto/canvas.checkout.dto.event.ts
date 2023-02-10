@@ -11,4 +11,11 @@ export class CanvasCheckoutEventInput {
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)
   eventName!: string;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Report an error if this event fails to trigger a transition.',
+    defaultValue: true,
+  })
+  errorOnFailedTransition!: boolean;
 }
