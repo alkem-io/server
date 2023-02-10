@@ -8,11 +8,11 @@ import { UserService } from '@domain/community/user/user.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
+  CommunityPolicyRoleLimitsException,
   EntityNotFoundException,
   EntityNotInitializedException,
   InvalidStateTransitionException,
   ValidationException,
-  CommunityPolicyRoleLimitsException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -42,11 +42,13 @@ import { AgentInfo } from '@core/authentication';
 import { CommunityPolicyService } from '../community-policy/community.policy.service';
 import { ICommunityPolicyDefinition } from '../community-policy/community.policy.definition';
 import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
+import { ElasticsearchService } from '@services/external/elasticsearch';
 
 @Injectable()
 export class CommunityService {
   constructor(
     private activityAdapter: ActivityAdapter,
+    private elasticSearch: ElasticsearchService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private userService: UserService,
@@ -339,6 +341,9 @@ export class CommunityService {
         user: user,
       };
       this.activityAdapter.memberJoined(activityLogInput);
+      if (community.type === CommunityType.HUB) {
+        // todo: community joined
+      }
     }
 
     return community;

@@ -19,9 +19,12 @@ import { CanvasTemplateModule } from '@domain/template/canvas-template/canvas.te
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { UserModule } from '@domain/community/user/user.module';
+import { ElasticsearchModule } from '@services/external/elasticsearch';
 
 @Module({
   imports: [
+    EntityResolverModule,
+    ElasticsearchModule,
     ActivityAdapterModule,
     NotificationAdapterModule,
     AuthorizationPolicyModule,
