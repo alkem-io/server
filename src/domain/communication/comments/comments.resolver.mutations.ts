@@ -27,10 +27,9 @@ import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';
 import { CalendarEventCommentsMessageReceived } from '@domain/timeline/event/dto/event.dto.event.message.received';
 import { MessagingService } from '../messaging/messaging.service';
-import { NotificationInputEntityMention } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.mention';
 import { CommentType } from '@common/enums/comment.type';
-import { MentionedEntityType } from '../messaging/mention.interface';
 import { ICalendarEvent } from '@domain/timeline/event';
+import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
 
 @Resolver()
 export class CommentsResolverMutations {
@@ -171,31 +170,19 @@ export class CommentsResolverMutations {
       commentSent.message
     );
 
-    for (const mention of mentions) {
-      const entityMentionNotificationInput: NotificationInputEntityMention = {
-        triggeredBy: agentInfo.userID,
-        comment: commentSent.message,
-        mentionedEntityID: mention.nameId,
-        commentsId: comments.id,
-        originEntity: {
-          id: aspect.id,
-          nameId: aspect.nameID,
-          displayName: aspect.displayName,
-        },
-        commentType: CommentType.CARD,
-      };
-
-      if (mention.userType == MentionedEntityType.USER) {
-        await this.notificationAdapter.userMention(
-          entityMentionNotificationInput
-        );
-      }
-      if (mention.userType == MentionedEntityType.ORGANIZATION) {
-        await this.notificationAdapter.organizationMention(
-          entityMentionNotificationInput
-        );
-      }
-    }
+    const entityMentionsNotificationInput: NotificationInputEntityMentions = {
+      triggeredBy: agentInfo.userID,
+      comment: commentSent.message,
+      commentsId: comments.id,
+      mentions,
+      originEntity: {
+        id: aspect.id,
+        nameId: aspect.nameID,
+        displayName: aspect.displayName,
+      },
+      commentType: CommentType.CARD,
+    };
+    this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
   }
 
   private async processCalendarEventCommentEvents(
@@ -220,31 +207,18 @@ export class CommentsResolverMutations {
     const mentions = await this.messagingService.getMentionsFromText(
       commentSent.message
     );
-
-    for (const mention of mentions) {
-      const entityMentionNotificationInput: NotificationInputEntityMention = {
-        triggeredBy: agentInfo.userID,
-        comment: commentSent.message,
-        mentionedEntityID: mention.nameId,
-        commentsId: comments.id,
-        originEntity: {
-          id: calendar.id,
-          nameId: calendar.nameID,
-          displayName: calendar.displayName,
-        },
-        commentType: CommentType.CALENDAR_EVENT,
-      };
-
-      if (mention.userType == MentionedEntityType.USER) {
-        await this.notificationAdapter.userMention(
-          entityMentionNotificationInput
-        );
-      }
-      if (mention.userType == MentionedEntityType.ORGANIZATION) {
-        await this.notificationAdapter.organizationMention(
-          entityMentionNotificationInput
-        );
-      }
-    }
+    const entityMentionsNotificationInput: NotificationInputEntityMentions = {
+      triggeredBy: agentInfo.userID,
+      comment: commentSent.message,
+      commentsId: comments.id,
+      mentions,
+      originEntity: {
+        id: calendar.id,
+        nameId: calendar.nameID,
+        displayName: calendar.displayName,
+      },
+      commentType: CommentType.CALENDAR_EVENT,
+    };
+    this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
   }
 }

@@ -49,10 +49,9 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { NotificationInputCanvasCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.canvas.created';
 import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
-import { NotificationInputEntityMention } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.mention';
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
-import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
 import { CommentType } from '@common/enums/comment.type';
+import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -171,29 +170,19 @@ export class CalloutResolverMutations {
         commentSent.message
       );
 
-      for (const mention of mentions) {
-        const entityMentionNotificationInput: NotificationInputEntityMention = {
-          triggeredBy: agentInfo.userID,
-          comment: commentSent.message,
-          mentionedEntityID: mention.nameId,
-          commentsId: comments.id,
-          originEntity: {
-            id: callout.id,
-            nameId: callout.nameID,
-            displayName: callout.displayName,
-          },
-          commentType: CommentType.DISCUSSION,
-        };
-
-        if (mention.userType == MentionedEntityType.USER) {
-          this.notificationAdapter.userMention(entityMentionNotificationInput);
-        }
-        if (mention.userType == MentionedEntityType.ORGANIZATION) {
-          this.notificationAdapter.organizationMention(
-            entityMentionNotificationInput
-          );
-        }
-      }
+      const entityMentionsNotificationInput: NotificationInputEntityMentions = {
+        triggeredBy: agentInfo.userID,
+        comment: commentSent.message,
+        commentsId: comments.id,
+        mentions,
+        originEntity: {
+          id: callout.id,
+          nameId: callout.nameID,
+          displayName: callout.displayName,
+        },
+        commentType: CommentType.DISCUSSION,
+      };
+      this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
     }
 
     return commentSent;
