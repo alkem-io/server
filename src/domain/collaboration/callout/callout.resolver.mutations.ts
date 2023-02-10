@@ -49,6 +49,10 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { NotificationInputCanvasCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.canvas.created';
 import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
+import { NotificationInputEntityMention } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.mention';
+import { MessagingService } from '@domain/communication/messaging/messaging.service';
+import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
+import { CommentType } from '@common/enums/comment.type';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -61,6 +65,7 @@ export class CalloutResolverMutations {
     private commentsService: CommentsService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
+    private messagingService: MessagingService,
     @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
     private aspectCreatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_CALLOUT_MESSAGE_CREATED)
@@ -161,6 +166,36 @@ export class CalloutResolverMutations {
         commentSent,
       };
       await this.notificationAdapter.discussionComment(notificationInput);
+
+      const mentions = await this.messagingService.getMentionsFromText(
+        commentSent.message
+      );
+
+      for (const mention of mentions) {
+        const entityMentionNotificationInput: NotificationInputEntityMention = {
+          triggeredBy: agentInfo.userID,
+          comment: commentSent.message,
+          mentionedEntityID: mention.nameId,
+          commentsId: comments.id,
+          originEntity: {
+            id: callout.id,
+            nameId: callout.nameID,
+            displayName: callout.displayName,
+          },
+          commentType: CommentType.DISCUSSION,
+        };
+
+        if (mention.userType == MentionedEntityType.USER) {
+          await this.notificationAdapter.userMention(
+            entityMentionNotificationInput
+          );
+        }
+        if (mention.userType == MentionedEntityType.ORGANIZATION) {
+          await this.notificationAdapter.organizationMention(
+            entityMentionNotificationInput
+          );
+        }
+      }
     }
 
     return commentSent;

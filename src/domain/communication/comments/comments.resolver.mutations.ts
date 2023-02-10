@@ -26,6 +26,11 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';
 import { CalendarEventCommentsMessageReceived } from '@domain/timeline/event/dto/event.dto.event.message.received';
+import { MessagingService } from '../messaging/messaging.service';
+import { NotificationInputEntityMention } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.mention';
+import { CommentType } from '@common/enums/comment.type';
+import { MentionedEntityType } from '../messaging/mention.interface';
+import { ICalendarEvent } from '@domain/timeline/event';
 
 @Resolver()
 export class CommentsResolverMutations {
@@ -36,6 +41,7 @@ export class CommentsResolverMutations {
     private commentsService: CommentsService,
     private namingService: NamingService,
     private commentsAuthorizationService: CommentsAuthorizationService,
+    private messagingService: MessagingService,
     @Inject(SUBSCRIPTION_ASPECT_COMMENT)
     private readonly subscriptionAspectComments: PubSubEngine
   ) {}
@@ -79,11 +85,16 @@ export class CommentsResolverMutations {
       this.activityAdapter.aspectComment(activityLogInput);
     }
 
-    const calendarID = await this.namingService.getCalendarEventIdForComments(
+    const calendar = await this.namingService.getCalendarEventForComments(
       messageData.commentsID
     );
-    if (calendarID) {
-      this.processCalendarEventCommentEvents(calendarID, commentSent);
+    if (calendar) {
+      this.processCalendarEventCommentEvents(
+        calendar,
+        comments,
+        commentSent,
+        agentInfo
+      );
     }
 
     return commentSent;
@@ -155,23 +166,85 @@ export class CommentsResolverMutations {
       commentSent: commentSent,
     };
     await this.notificationAdapter.aspectComment(notificationInput);
+
+    const mentions = await this.messagingService.getMentionsFromText(
+      commentSent.message
+    );
+
+    for (const mention of mentions) {
+      const entityMentionNotificationInput: NotificationInputEntityMention = {
+        triggeredBy: agentInfo.userID,
+        comment: commentSent.message,
+        mentionedEntityID: mention.nameId,
+        commentsId: comments.id,
+        originEntity: {
+          id: aspect.id,
+          nameId: aspect.nameID,
+          displayName: aspect.displayName,
+        },
+        commentType: CommentType.CARD,
+      };
+
+      if (mention.userType == MentionedEntityType.USER) {
+        await this.notificationAdapter.userMention(
+          entityMentionNotificationInput
+        );
+      }
+      if (mention.userType == MentionedEntityType.ORGANIZATION) {
+        await this.notificationAdapter.organizationMention(
+          entityMentionNotificationInput
+        );
+      }
+    }
   }
 
   private async processCalendarEventCommentEvents(
-    calendarID: string,
-    commentSent: IMessage
+    calendar: ICalendarEvent,
+    comments: IComments,
+    commentSent: IMessage,
+    agentInfo: AgentInfo
   ) {
     // build subscription payload
     const eventID = `comment-msg-${getRandomId()}`;
     const subscriptionPayload: CalendarEventCommentsMessageReceived = {
       eventID: eventID,
       message: commentSent,
-      calendarEventID: calendarID,
+      calendarEventID: calendar.id,
     };
     // send the subscriptions event
     this.subscriptionAspectComments.publish(
       SubscriptionType.CALENDAR_EVENT_COMMENTS_MESSAGE_RECEIVED,
       subscriptionPayload
     );
+
+    const mentions = await this.messagingService.getMentionsFromText(
+      commentSent.message
+    );
+
+    for (const mention of mentions) {
+      const entityMentionNotificationInput: NotificationInputEntityMention = {
+        triggeredBy: agentInfo.userID,
+        comment: commentSent.message,
+        mentionedEntityID: mention.nameId,
+        commentsId: comments.id,
+        originEntity: {
+          id: calendar.id,
+          nameId: calendar.nameID,
+          displayName: calendar.displayName,
+        },
+        commentType: CommentType.CALENDAR_EVENT,
+      };
+
+      if (mention.userType == MentionedEntityType.USER) {
+        await this.notificationAdapter.userMention(
+          entityMentionNotificationInput
+        );
+      }
+      if (mention.userType == MentionedEntityType.ORGANIZATION) {
+        await this.notificationAdapter.organizationMention(
+          entityMentionNotificationInput
+        );
+      }
+    }
   }
 }

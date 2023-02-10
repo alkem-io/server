@@ -1,4 +1,4 @@
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { CommunityType } from '@common/enums/community.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
@@ -30,9 +30,15 @@ import {
   CommunicationUserMessageEventPayload,
   CommunicationOrganizationMessageEventPayload,
   CommunicationCommunityLeadsMessageEventPayload,
+  CommunicationUserMentionEventPayload,
+  CommunicationOrganizationMentionEventPayload,
   CommunityApplicationCreatedEventPayload,
   CollaborationDiscussionCommentEventPayload,
   CollaborationCanvasCreatedEventPayload,
+  createJourneyURL,
+  createCalloutURL,
+  createCardURL,
+  createCalendarEventURL,
 } from '@alkemio/notifications-lib';
 
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
@@ -45,6 +51,8 @@ import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { Community } from '@domain/community/community/community.entity';
+import { ConfigService } from '@nestjs/config/dist/config.service';
+import { CommentType } from '@common/enums/comment.type';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -66,7 +74,9 @@ export class NotificationPayloadBuilder {
     private organizationRepository: Repository<Organization>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private configService: ConfigService
   ) {}
 
   async buildApplicationCreatedNotificationPayload(
@@ -212,7 +222,7 @@ export class NotificationPayloadBuilder {
       { relations: ['callout'] }
     );
     const community =
-      await this.communityResolverService.getCommunityFromCommentsOrFail(
+      await this.communityResolverService.getCommunityFromCardCommentsOrFail(
         commentsId
       );
 
@@ -424,7 +434,9 @@ export class NotificationPayloadBuilder {
     receiverID: string,
     message: string
   ): Promise<CommunicationUserMessageEventPayload> {
-    const receiverDisplayName = await this.getUserDisplayNameOrFail(receiverID);
+    const { displayName: receiverDisplayName } = await this.getUserDataOrFail(
+      receiverID
+    );
     const payload: CommunicationUserMessageEventPayload = {
       triggeredBy: senderID,
       messageReceiver: {
@@ -437,11 +449,14 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  private async getUserDisplayNameOrFail(userId: string): Promise<string> {
+  private async getUserDataOrFail(
+    userId: string
+  ): Promise<{ id: string; displayName: string }> {
     const user = await this.userRepository
       .createQueryBuilder('user')
-      .select('user.displayName')
-      .where('user.id = :id')
+      .select(['user.id', 'user.displayName'])
+      .where('user.nameID = :id')
+      .orWhere('user.id = :id')
       .setParameters({ id: userId })
       .getOne();
 
@@ -451,7 +466,7 @@ export class NotificationPayloadBuilder {
         LogContext.COMMUNITY
       );
     }
-    return user.displayName;
+    return { id: user.id, displayName: user.displayName };
   }
 
   async buildCommunicationOrganizationMessageNotificationPayload(
@@ -459,7 +474,9 @@ export class NotificationPayloadBuilder {
     message: string,
     organizationID: string
   ): Promise<CommunicationOrganizationMessageEventPayload> {
-    const orgDisplayName = await this.getOrgDisplayNameOrFail(organizationID);
+    const { displayName: orgDisplayName } = await this.getOrgDataOrFail(
+      organizationID
+    );
     const payload: CommunicationOrganizationMessageEventPayload = {
       triggeredBy: senderID,
       message,
@@ -472,21 +489,24 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  private async getOrgDisplayNameOrFail(orgId: string): Promise<string> {
+  private async getOrgDataOrFail(
+    orgId: string
+  ): Promise<{ id: string; displayName: string }> {
     const org = await this.organizationRepository
       .createQueryBuilder('organization')
-      .select('organization.displayName')
+      .select(['organization.id', 'organization.displayName'])
       .where('organization.id = :id')
+      .orWhere('organization.nameID = :id')
       .setParameters({ id: orgId })
       .getOne();
 
     if (!org) {
       throw new EntityNotFoundException(
-        `Unable to find User with id: ${orgId}`,
+        `Unable to find Organization with id: ${orgId}`,
         LogContext.COMMUNITY
       );
     }
-    return org.displayName;
+    return { id: org.id, displayName: org.displayName };
   }
 
   async buildCommunicationCommunityLeadsMessageNotificationPayload(
@@ -503,6 +523,158 @@ export class NotificationPayloadBuilder {
     };
 
     return payload;
+  }
+
+  async buildCommunicationUserMentionNotificationPayload(
+    senderID: string,
+    mentionedUserNameID: string,
+    comment: string,
+    commentsId: string,
+    originEntityId: string,
+    originEntityNameId: string,
+    originEntityDisplayName: string,
+    commentType: CommentType
+  ): Promise<CommunicationUserMentionEventPayload> {
+    const { displayName: mentionedUserDisplayName, id: mentionedUserID } =
+      await this.getUserDataOrFail(mentionedUserNameID);
+
+    const commentOriginUrl = await this.buildCommentOriginUrl(
+      commentType,
+      originEntityId,
+      originEntityNameId,
+      commentsId
+    );
+
+    const payload: CommunicationUserMentionEventPayload = {
+      triggeredBy: senderID,
+      mentionedUser: {
+        id: mentionedUserID,
+        displayName: mentionedUserDisplayName,
+      },
+      comment,
+      commentOrigin: {
+        url: commentOriginUrl,
+        displayName: originEntityDisplayName,
+      },
+    };
+
+    return payload;
+  }
+
+  async buildCommunicationOrganizationMentionNotificationPayload(
+    senderID: string,
+    mentionedUserNameID: string,
+    comment: string,
+    commentsId: string,
+    originEntityId: string,
+    originEntityNameId: string,
+    originEntityDisplayName: string,
+    commentType: CommentType
+  ): Promise<CommunicationOrganizationMentionEventPayload> {
+    const {
+      id: mentionedOrganizationID,
+      displayName: mentionedOrgDisplayName,
+    } = await this.getOrgDataOrFail(mentionedUserNameID);
+
+    const commentOriginUrl = await this.buildCommentOriginUrl(
+      commentType,
+      originEntityId,
+      originEntityNameId,
+      commentsId
+    );
+
+    const payload: CommunicationOrganizationMentionEventPayload = {
+      triggeredBy: senderID,
+      mentionedOrganization: {
+        id: mentionedOrganizationID,
+        displayName: mentionedOrgDisplayName,
+      },
+      comment,
+      commentOrigin: {
+        url: commentOriginUrl,
+        displayName: originEntityDisplayName,
+      },
+    };
+
+    return payload;
+  }
+
+  private async buildCommentOriginUrl(
+    commentType: CommentType,
+    originEntityId: string,
+    originEntityNameId: string,
+    commentsId: string
+  ): Promise<string> {
+    const endpoint = this.configService.get(
+      ConfigurationTypes.HOSTING
+    )?.endpoint_cluster;
+
+    if (commentType === CommentType.DISCUSSION) {
+      const community =
+        await this.communityResolverService.getCommunityFromCalloutOrFail(
+          originEntityId
+        );
+
+      if (!community) {
+        throw new NotificationEventException(
+          `Could not acquire community from comments with id: ${commentsId}`,
+          LogContext.NOTIFICATIONS
+        );
+      }
+
+      const journeyPayload = await this.buildJourneyPayload(community);
+      const journeyUrl = createJourneyURL(endpoint, journeyPayload);
+      return createCalloutURL(journeyUrl, originEntityNameId);
+    }
+
+    if (commentType === CommentType.CARD) {
+      const card = await this.aspectRepository.findOne(
+        { id: originEntityId },
+        { relations: ['callout'] }
+      );
+      const community =
+        await this.communityResolverService.getCommunityFromCardCommentsOrFail(
+          commentsId
+        );
+
+      if (!community) {
+        throw new NotificationEventException(
+          `Could not acquire community from comments with id: ${commentsId}`,
+          LogContext.NOTIFICATIONS
+        );
+      }
+      const callout = card?.callout;
+      if (!callout) {
+        throw new NotificationEventException(
+          `Could not acquire callout from card with id: ${card?.id}`,
+          LogContext.NOTIFICATIONS
+        );
+      }
+
+      const journeyPayload = await this.buildJourneyPayload(community);
+      const journeyUrl = createJourneyURL(endpoint, journeyPayload);
+      return createCardURL(journeyUrl, callout.nameID, card.nameID);
+    }
+
+    if (commentType === CommentType.CALENDAR_EVENT) {
+      const community =
+        await this.communityResolverService.getCommunityFromCalendarEventOrFail(
+          originEntityId
+        );
+
+      if (!community) {
+        throw new NotificationEventException(
+          `Could not acquire community from comments with id: ${commentsId}`,
+          LogContext.NOTIFICATIONS
+        );
+      }
+
+      const journeyPayload = await this.buildJourneyPayload(community);
+      const journeyUrl = createJourneyURL(endpoint, journeyPayload);
+      return createCalendarEventURL(journeyUrl, originEntityNameId);
+    }
+
+    return endpoint;
   }
 
   private async buildJourneyPayload(
