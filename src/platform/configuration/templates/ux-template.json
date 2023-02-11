@@ -55,5 +55,37 @@
       "actorGroups": ["key_users", "stakeholders"],
       "relations": ["members", "groups"]
     }
+  ],
+  "challenges": [
+    {
+      "name": "default",
+      "feedback": [
+        {
+          "name": "default",
+          "questions": [
+            {
+              "question": "Vision: How does the end destination of this Challenge resonate?",
+              "required": true,
+              "sortOrder": 1
+            },
+            {
+              "question": "Background: Any additional context needed to describe the current situation?",
+              "required": true,
+              "sortOrder": 2
+            },
+            {
+              "question": "Impact: Any other change that you see??",
+              "required": true,
+              "sortOrder": 3
+            },
+            {
+              "question": "Who: Is the right set of stakeholders identified?",
+              "required": false,
+              "sortOrder": 4
+            }
+          ]
+        }
+      ]
+    }
   ]
 }

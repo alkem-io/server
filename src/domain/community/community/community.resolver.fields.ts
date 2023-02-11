@@ -201,7 +201,7 @@ export class CommunityResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('applicationForm', () => IForm, {
-    nullable: false,
+    nullable: true,
     description: 'The Form used for Applications to this community.',
   })
   @Profiling.api

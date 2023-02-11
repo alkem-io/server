@@ -5,6 +5,7 @@ import { ITemplate } from './template.interface';
 import { UserTemplate } from './user.template.entity';
 import { IUserTemplate } from './user.template.interface';
 import { OrganizationTemplate } from './organization.template.entity';
+import { ChallengeTemplate } from './challenge.template.entity';
 
 @ObjectType()
 export class Template implements ITemplate {
@@ -31,6 +32,12 @@ export class Template implements ITemplate {
     description: 'Opportunity templates.',
   })
   opportunities?: IOpportunityTemplate[];
+
+  @Field(() => [ChallengeTemplate], {
+    nullable: false,
+    description: 'Challenge templates.',
+  })
+  challenges?: ChallengeTemplate[];
 
   @Field(() => [OrganizationTemplate], {
     nullable: false,
