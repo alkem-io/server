@@ -37,7 +37,7 @@ export class FormService {
     const questions: IFormQuestion[] = this.deserializeQuestions(
       form.questions
     );
-    return questions;
+    return questions.sort((a, b) => (a.sortOrder > b.sortOrder ? 1 : -1));
   }
 
   public async updateForm(
