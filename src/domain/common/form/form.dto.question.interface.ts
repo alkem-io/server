@@ -26,4 +26,10 @@ export abstract class IFormQuestion {
       'The maxiumum length of the answer, in characters, up to a limit of 512.',
   })
   maxLength!: number;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Whether this Question requires an answer or not.',
+  })
+  required!: boolean;
 }

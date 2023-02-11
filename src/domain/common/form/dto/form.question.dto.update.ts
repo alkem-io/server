@@ -30,4 +30,10 @@ export class UpdateFormQuestionInput {
       'The maxiumum length of the answer, in characters, up to a limit of 512.',
   })
   maxLength!: number;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Whether an answer is required for this Question.',
+  })
+  required!: boolean;
 }

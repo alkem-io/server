@@ -6,4 +6,6 @@ export class CreateFormQuestionInput {
   sortOrder!: number;
 
   maxLength!: number;
+
+  required!: boolean;
 }

@@ -8,4 +8,6 @@ export abstract class FormQuestion implements IFormQuestion {
   sortOrder!: number;
 
   maxLength!: number;
+
+  required!: boolean;
 }
