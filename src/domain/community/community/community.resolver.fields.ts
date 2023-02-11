@@ -16,6 +16,7 @@ import { PaginationInputOutOfBoundException } from '@common/exceptions';
 import { UserService } from '../user/user.service';
 import { UserFilterInput } from '@core/filtering';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
+import { IForm } from '@domain/common/form/form.interface';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -196,6 +197,16 @@ export class CommunityResolverFields {
   async applications(@Parent() community: Community) {
     const apps = await this.communityService.getApplications(community);
     return apps || [];
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('applicationForm', () => IForm, {
+    nullable: false,
+    description: 'The Form used for Applications to this community.',
+  })
+  @Profiling.api
+  async applicationForm(@Parent() community: Community): Promise<IForm> {
+    return await this.communityService.getApplicationForm(community);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
