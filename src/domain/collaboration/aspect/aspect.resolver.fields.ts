@@ -8,8 +8,9 @@ import { IVisual } from '@domain/common/visual/visual.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { IUser } from '@domain/community';
 import { UserService } from '@domain/community/user/user.service';
-import { UseGuards } from '@nestjs/common';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICardProfile } from '../card-profile';
 import { IAspect } from './aspect.interface';
 import { AspectService } from './aspect.service';
@@ -18,14 +19,15 @@ import { AspectService } from './aspect.service';
 export class AspectResolverFields {
   constructor(
     private aspectService: AspectService,
-    private userService: UserService
+    private userService: UserService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @ResolveField('createdBy', () => IUser, {
-    nullable: false,
+    nullable: true,
     description: 'The user that created this Aspect',
   })
-  async createdBy(@Parent() aspect: IAspect): Promise<IUser> {
+  async createdBy(@Parent() aspect: IAspect): Promise<IUser | undefined> {
     const createdBy = aspect.createdBy;
     if (!createdBy) {
       throw new EntityNotInitializedException(
@@ -33,7 +35,15 @@ export class AspectResolverFields {
         LogContext.COLLABORATION
       );
     }
-    return await this.userService.getUserOrFail(createdBy);
+    try {
+      return await this.userService.getUserOrFail(createdBy);
+    } catch (error) {
+      this.logger.warn(
+        `Unable to resolve user: ${createdBy}`,
+        LogContext.COLLABORATION
+      );
+      return undefined;
+    }
   }
 
   @UseGuards(GraphqlGuard)

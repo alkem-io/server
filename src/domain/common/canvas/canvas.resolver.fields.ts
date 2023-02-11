@@ -10,19 +10,23 @@ import { IUser } from '@domain/community/user/user.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { UserService } from '@domain/community/user/user.service';
+import { LoggerService } from '@nestjs/common/services/logger.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Inject } from '@nestjs/common';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverFields {
   constructor(
     private canvasService: CanvasService,
-    private userService: UserService
+    private userService: UserService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @ResolveField('createdBy', () => IUser, {
-    nullable: false,
+    nullable: true,
     description: 'The user that created this Canvas',
   })
-  async createdBy(@Parent() canvas: ICanvas): Promise<IUser> {
+  async createdBy(@Parent() canvas: ICanvas): Promise<IUser | undefined> {
     const createdBy = canvas.createdBy;
     if (!createdBy) {
       throw new EntityNotInitializedException(
@@ -30,7 +34,15 @@ export class CanvasResolverFields {
         LogContext.COLLABORATION
       );
     }
-    return await this.userService.getUserOrFail(createdBy);
+    try {
+      return await this.userService.getUserOrFail(createdBy);
+    } catch (error) {
+      this.logger.warn(
+        `Unable to resolve user: ${createdBy}`,
+        LogContext.COLLABORATION
+      );
+      return undefined;
+    }
   }
 
   @ResolveField('checkout', () => ICanvasCheckout, {
