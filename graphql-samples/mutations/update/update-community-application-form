@@ -1,0 +1,25 @@
+mutation updateCommunityApplicationForm($applicationFormData: UpdateCommunityApplicationFormInput!) {
+  updateCommunityApplicationForm(applicationFormData: $applicationFormData) {
+    id
+    applicationForm {
+      description
+    }
+  }
+}
+
+Variables:
+{
+  "applicationFormData": {
+      "communityID": "f0f1997d-3394-4974-815a-13132bf1ac97",
+      "formData": {
+        "description": "wow",
+        "questions": [{
+          "question": "question1",
+          "explanation": "something",
+          "maxLength": 200,
+          "required": true,
+          "sortOrder": 2
+        }]
+      }
+  }
+}

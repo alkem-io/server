@@ -370,7 +370,7 @@ export class CommunityResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IApplication, {
+  @Mutation(() => ICommunity, {
     description: 'Update the Application Form used by this Community.',
   })
   @Profiling.api
