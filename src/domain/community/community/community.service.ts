@@ -45,6 +45,7 @@ import { DiscussionCategoryCommunity } from '@common/enums/communication.discuss
 import { IForm } from '@domain/common/form/form.interface';
 import { FormService } from '@domain/common/form/form.service';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
+import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 
 @Injectable()
 export class CommunityService {
@@ -226,6 +227,18 @@ export class CommunityService {
       return await this.getCommunityOrFail(parentCommunity.id);
     }
     return undefined;
+  }
+
+  async updateApplicationForm(
+    community: ICommunity,
+    formData: UpdateFormInput
+  ): Promise<ICommunity> {
+    const applicationForm = await this.getApplicationForm(community);
+    community.applicationForm = await this.formService.updateForm(
+      applicationForm,
+      formData
+    );
+    return await this.save(community);
   }
 
   async setParentCommunity(
