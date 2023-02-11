@@ -18,8 +18,23 @@ Variables:
           "explanation": "something",
           "maxLength": 200,
           "required": true,
+          "sortOrder": 1
+        },
+        {
+          "question": "question3",
+          "explanation": "something else",
+          "maxLength": 200,
+          "required": false,
+          "sortOrder": 3
+        },
+        {
+          "question": "question2",
+          "explanation": "something",
+          "maxLength": 200,
+          "required": true,
           "sortOrder": 2
         }]
+      }
       }
   }
 }
