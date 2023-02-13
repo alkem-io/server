@@ -54,6 +54,7 @@ import { CommentType } from '@common/enums/comment.type';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
 import { ElasticsearchService } from '@services/external/elasticsearch';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { getMentionsFromText } from '@domain/communication/messaging/get.mentions.from.text';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -170,9 +171,7 @@ export class CalloutResolverMutations {
       };
       await this.notificationAdapter.discussionComment(notificationInput);
 
-      const mentions = await this.messagingService.getMentionsFromText(
-        commentSent.message
-      );
+      const mentions = getMentionsFromText(commentSent.message);
 
       const entityMentionsNotificationInput: NotificationInputEntityMentions = {
         triggeredBy: agentInfo.userID,

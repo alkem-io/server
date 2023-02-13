@@ -259,10 +259,10 @@ export class NotificationAdapter {
         commentType: eventData.commentType,
       };
 
-      if (mention.userType == MentionedEntityType.USER) {
+      if (mention.type == MentionedEntityType.USER) {
         this.userMention(entityMentionNotificationInput);
       }
-      if (mention.userType == MentionedEntityType.ORGANIZATION) {
+      if (mention.type == MentionedEntityType.ORGANIZATION) {
         this.organizationMention(entityMentionNotificationInput);
       }
     }

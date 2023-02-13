@@ -32,6 +32,7 @@ import { ICalendarEvent } from '@domain/timeline/event';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
 import { ElasticsearchService } from '@services/external/elasticsearch';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { getMentionsFromText } from '../messaging/get.mentions.from.text';
 
 @Resolver()
 export class CommentsResolverMutations {
@@ -187,9 +188,7 @@ export class CommentsResolverMutations {
     };
     await this.notificationAdapter.aspectComment(notificationInput);
 
-    const mentions = await this.messagingService.getMentionsFromText(
-      commentSent.message
-    );
+    const mentions = getMentionsFromText(commentSent.message);
 
     const entityMentionsNotificationInput: NotificationInputEntityMentions = {
       triggeredBy: agentInfo.userID,
@@ -206,7 +205,7 @@ export class CommentsResolverMutations {
     this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
   }
 
-  private async processCalendarEventCommentEvents(
+  private processCalendarEventCommentEvents(
     calendar: ICalendarEvent,
     comments: IComments,
     commentSent: IMessage,
@@ -225,9 +224,7 @@ export class CommentsResolverMutations {
       subscriptionPayload
     );
 
-    const mentions = await this.messagingService.getMentionsFromText(
-      commentSent.message
-    );
+    const mentions = getMentionsFromText(commentSent.message);
     const entityMentionsNotificationInput: NotificationInputEntityMentions = {
       triggeredBy: agentInfo.userID,
       comment: commentSent.message,

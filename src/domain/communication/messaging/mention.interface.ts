@@ -4,5 +4,5 @@ export enum MentionedEntityType {
 }
 export abstract class Mention {
   nameId!: string;
-  userType!: MentionedEntityType;
+  type!: MentionedEntityType;
 }
