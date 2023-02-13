@@ -5,13 +5,13 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { SearchInput } from './dto/search.dto.input';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
-import { ISearchResult } from './dto/search.result.entry.interface';
+import { ISearchResults } from './dto/search.result.dto';
 @Resolver()
 export class SearchResolverQueries {
   constructor(private searchService: SearchService) {}
 
   @UseGuards(GraphqlGuard)
-  @Query(() => [ISearchResult], {
+  @Query(() => ISearchResults, {
     nullable: false,
     description: 'Search the platform for terms supplied',
   })
@@ -19,7 +19,7 @@ export class SearchResolverQueries {
   async search(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('searchData') searchData: SearchInput
-  ): Promise<ISearchResult[]> {
+  ): Promise<ISearchResults> {
     return await this.searchService.search(searchData, agentInfo);
   }
 }

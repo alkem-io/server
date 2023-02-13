@@ -32,6 +32,7 @@ import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
 import { IHub } from '@domain/challenge/hub/hub.interface';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity';
+import { ISearchResults } from './dto/search.result.dto';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -57,6 +58,7 @@ const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
 const TERM_MINIMUM_LENGTH = 2;
 const SCORE_INCREMENT = 10;
+const RESULTS_LIMIT = 10;
 
 class Match {
   key = 0;
@@ -96,7 +98,7 @@ export class SearchService {
   async search(
     searchData: SearchInput,
     agentInfo: AgentInfo
-  ): Promise<ISearchResult[]> {
+  ): Promise<ISearchResults> {
     this.validateSearchParameters(searchData);
 
     // Use maps to aggregate results as searching; data structure chosen for linear lookup o(1)
@@ -177,17 +179,42 @@ export class SearchService {
       LogContext.API
     );
 
-    const results: ISearchResult[] = [];
-    if (searchUsers) {
-      results.push(...(await this.buildSearchResults(userResults)));
-    }
-    results.push(...(await this.buildSearchResults(groupResults)));
-    results.push(...(await this.buildSearchResults(organizationResults)));
-    results.push(...(await this.buildSearchResults(hubResults)));
-    results.push(...(await this.buildSearchResults(challengeResults)));
-    results.push(...(await this.buildSearchResults(opportunityResults)));
-    results.push(...(await this.buildSearchResults(cardResults)));
-    this.ensureUniqueTermsPerResult(results);
+    const results: ISearchResults = {
+      contributionResults: [],
+      contributionResultsCount: cardResults.size,
+      contributorResults: [],
+      contributorResultsCount: userResults.size + organizationResults.size,
+      journeyResults: [],
+      journeyResultsCount:
+        hubResults.size + challengeResults.size + opportunityResults.size,
+      groupResults: [],
+    };
+
+    results.contributorResults.push(
+      ...(await this.buildSearchResults(userResults))
+    );
+    results.contributorResults.push(
+      ...(await this.buildSearchResults(organizationResults))
+    );
+
+    results.groupResults.push(...(await this.buildSearchResults(groupResults)));
+
+    results.journeyResults.push(...(await this.buildSearchResults(hubResults)));
+    results.journeyResults.push(
+      ...(await this.buildSearchResults(challengeResults))
+    );
+    results.journeyResults.push(
+      ...(await this.buildSearchResults(opportunityResults))
+    );
+
+    results.contributionResults.push(
+      ...(await this.buildSearchResults(cardResults))
+    );
+
+    this.processResults(results.contributionResults, RESULTS_LIMIT);
+    this.processResults(results.contributorResults, RESULTS_LIMIT);
+    this.processResults(results.journeyResults, RESULTS_LIMIT);
+    this.processResults(results.groupResults, RESULTS_LIMIT);
     return results;
   }
 
@@ -204,6 +231,12 @@ export class SearchService {
       }
     }
     return filteredTerms;
+  }
+
+  private processResults(results: ISearchResult[], limit: number) {
+    results.sort((a, b) => b.score - a.score);
+    results.splice(limit);
+    this.ensureUniqueTermsPerResult(results);
   }
 
   ensureUniqueTermsPerResult(results: ISearchResult[]) {
