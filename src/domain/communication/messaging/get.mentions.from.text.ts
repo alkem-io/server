@@ -1,7 +1,8 @@
 import { Mention, MentionedEntityType } from './mention.interface';
 
 const MENTION_REGEX = new RegExp(
-  `\[@[^\]]*\]\(http:\/\/[^\)]*\/(${MentionedEntityType.USER}|${MentionedEntityType.ORGANIZATION}})([^\)]+)\)/gm`
+  `\\[@[^\\]]*\]\\(http:\\/\\/[^\)]*\\/(${MentionedEntityType.USER}|${MentionedEntityType.ORGANIZATION})([^\)]+)\\)`,
+  'gm'
 );
 
 export const getMentionsFromText = (text: string): Mention[] => {
