@@ -3,7 +3,10 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { EntityNotInitializedException } from '@common/exceptions';
+import {
+  EntityNotInitializedException,
+  InvalidStateTransitionException,
+} from '@common/exceptions';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -49,7 +52,13 @@ export class CanvasCheckoutLifecycleOptionsProvider {
         canvasCheckout.authorization
       );
     } catch (error) {
-      if (canvasCheckoutEventData.errorOnFailedTransition) {
+      const isTransitionError =
+        error instanceof InvalidStateTransitionException;
+
+      if (
+        canvasCheckoutEventData.errorOnFailedTransition ||
+        !isTransitionError
+      ) {
         throw error;
       } else {
         this.logger.warn(
