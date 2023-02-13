@@ -6,6 +6,7 @@ import { Visual } from './visual.entity';
 import { VisualResolverMutations } from './visual.resolver.mutations';
 import { VisualService } from './visual.service';
 import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
+import { VisualAuthorizationService } from './visual.service.authorization';
 
 @Module({
   imports: [
@@ -14,7 +15,11 @@ import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
     TypeOrmModule.forFeature([Visual]),
     IpfsModule,
   ],
-  providers: [VisualResolverMutations, VisualService],
-  exports: [VisualService],
+  providers: [
+    VisualResolverMutations,
+    VisualService,
+    VisualAuthorizationService,
+  ],
+  exports: [VisualService, VisualAuthorizationService],
 })
 export class VisualModule {}

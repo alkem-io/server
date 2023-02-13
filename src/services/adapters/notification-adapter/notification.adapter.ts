@@ -23,6 +23,9 @@ import { stringifyWithoutAuthorization } from '@common/utils';
 import { NotificationInputUserMessage } from './dto/notification.dto.input.user.message';
 import { NotificationInputOrganizationMessage } from './dto/notification.input.organization.message';
 import { NotificationInputCommunityLeadsMessage } from './dto/notification.dto.input.community.leads.message';
+import { NotificationInputEntityMention } from './dto/notification.dto.input.entity.mention';
+import { NotificationInputEntityMentions } from './dto/notification.dto.input.entity.mentions';
+import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
 
 @Injectable()
 export class NotificationAdapter {
@@ -195,6 +198,74 @@ export class NotificationAdapter {
         eventData.communityID
       );
     this.notificationsClient.emit<number>(event, payload);
+  }
+
+  public async userMention(
+    eventData: NotificationInputEntityMention
+  ): Promise<void> {
+    const event = NotificationEventType.COMMUNICATION_USER_MENTION;
+    this.logEventTriggered(eventData, event);
+    // Emit the events to notify others
+    const payload =
+      await this.notificationPayloadBuilder.buildCommunicationUserMentionNotificationPayload(
+        eventData.triggeredBy,
+        eventData.mentionedEntityID,
+        eventData.comment,
+        eventData.commentsId,
+        eventData.originEntity.id,
+        eventData.originEntity.nameId,
+        eventData.originEntity.displayName,
+        eventData.commentType
+      );
+
+    if (payload) {
+      this.notificationsClient.emit<number>(event, payload);
+    }
+  }
+
+  public async organizationMention(
+    eventData: NotificationInputEntityMention
+  ): Promise<void> {
+    const event = NotificationEventType.COMMUNICATION_ORGANIZATION_MENTION;
+    this.logEventTriggered(eventData, event);
+    // Emit the events to notify others
+    const payload =
+      await this.notificationPayloadBuilder.buildCommunicationOrganizationMentionNotificationPayload(
+        eventData.triggeredBy,
+        eventData.mentionedEntityID,
+        eventData.comment,
+        eventData.commentsId,
+        eventData.originEntity.id,
+        eventData.originEntity.nameId,
+        eventData.originEntity.displayName,
+        eventData.commentType
+      );
+
+    if (payload) {
+      this.notificationsClient.emit<number>(event, payload);
+    }
+  }
+
+  public async entityMentions(
+    eventData: NotificationInputEntityMentions
+  ): Promise<void> {
+    for (const mention of eventData.mentions) {
+      const entityMentionNotificationInput: NotificationInputEntityMention = {
+        triggeredBy: eventData.triggeredBy,
+        comment: eventData.comment,
+        mentionedEntityID: mention.nameId,
+        commentsId: eventData.commentsId,
+        originEntity: eventData.originEntity,
+        commentType: eventData.commentType,
+      };
+
+      if (mention.type == MentionedEntityType.USER) {
+        this.userMention(entityMentionNotificationInput);
+      }
+      if (mention.type == MentionedEntityType.ORGANIZATION) {
+        this.organizationMention(entityMentionNotificationInput);
+      }
+    }
   }
 
   public async applicationCreated(

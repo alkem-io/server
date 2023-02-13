@@ -19,6 +19,7 @@ import {
 } from '@common/exceptions';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { ICalendarEvent } from '@domain/timeline/event';
 import { Collaboration } from '@domain/collaboration/collaboration';
 
 export class NamingService {
@@ -376,18 +377,27 @@ export class NamingService {
     return aspect;
   }
 
-  async getCalendarEventIdForComments(
+  async getCalendarEventForComments(
     commentsID: string
-  ): Promise<string | undefined> {
+  ): Promise<ICalendarEvent | undefined> {
     // check if this is a comment related to an calendar
     const [calendarEvent]: {
       id: string;
+      displayName: string;
+      nameID: string;
+      type: string;
+      createdBy: string;
+      startDate: Date;
+      createdDate: Date;
+      wholeDay: boolean;
+      multipleDays: boolean;
+      durationMinutes: number;
+      durationDays: number;
     }[] = await getConnection().query(
-      `SELECT id FROM calendar_event WHERE commentsId = '${commentsID}'`
+      `SELECT id, displayName, nameID, type, createdBy, startDate, createdDate,  wholeDay, multipleDays, durationMinutes, durationDays 
+      FROM calendar_event WHERE commentsId = '${commentsID}'`
     );
-    if (calendarEvent) {
-      return calendarEvent.id;
-    }
-    return undefined;
+
+    return calendarEvent;
   }
 }

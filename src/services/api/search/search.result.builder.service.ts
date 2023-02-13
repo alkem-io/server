@@ -18,6 +18,14 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { ISearchResultCard } from './dto/search.result.dto.entry.card';
+import { getConnection } from 'typeorm';
+
+export type AspectParents = {
+  challengeNameID: string;
+  hubNameID: string;
+  opportunityNameID: string;
+  calloutNameID: string;
+};
 
 export default class SearchResultBuilderService
   implements ISearchResultBuilder
@@ -118,12 +126,42 @@ export default class SearchResultBuilderService
     return searchResultUserGroup;
   }
 
+  private async getAspectParents(aspectId: string): Promise<AspectParents> {
+    const [queryResult]: AspectParents[] = await getConnection().query(
+      `
+      SELECT \`hub\`.\`nameID\` as \`hubNameID\`, \`challenge\`.\`nameID\` as \`challengeNameID\`, null as \'opportunityNameID\', \`callout\`.\`nameID\` as \`calloutNameID\` FROM \`callout\`
+      RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      JOIN \`hub\` on \`challenge\`.\`hubID\` = \`hub\`.\`id\`
+      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
+      WHERE \`aspect\`.\`id\` = '${aspectId}' UNION
+
+      SELECT \`hub\`.\`nameID\` as \`hubNameID\`, null as \'challengeNameID\', null as \'opportunityNameID\', \`callout\`.\`nameID\` as \`calloutNameID\`  FROM \`callout\`
+      RIGHT JOIN \`hub\` on \`hub\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
+      WHERE \`aspect\`.\`id\` = '${aspectId}' UNION
+
+      SELECT  \`hub\`.\`nameID\` as \`hubNameID\`, \`challenge\`.\`nameID\` as \`challengeNameID\`, \`opportunity\`.\`nameID\` as \`opportunityNameID\`, \`callout\`.\`nameID\` as \`calloutNameID\` FROM \`callout\`
+      RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      JOIN \`challenge\` on \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
+      JOIN \`hub\` on \`opportunity\`.\`hubID\` = \`hub\`.\`id\`
+      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
+      WHERE \`aspect\`.\`id\` = '${aspectId}';
+      `
+    );
+
+    return queryResult;
+  }
+
   async [SearchResultType.CARD](rawSearchResult: ISearchResult) {
     const card = await this.cardService.getAspectOrFail(
       rawSearchResult.result.id
     );
+    const aspectParents: AspectParents = await this.getAspectParents(
+      rawSearchResult.result.id
+    );
     const searchResultUser: ISearchResultCard = {
       ...this.searchResultBase,
+      ...aspectParents,
       card,
     };
     return searchResultUser;

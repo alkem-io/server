@@ -16,13 +16,15 @@ import {
   POLICY_RULE_CANVAS_UPDATE,
   POLICY_RULE_CANVAS_CONTRIBUTE,
 } from '@common/constants';
+import { VisualAuthorizationService } from '../visual/visual.service.authorization';
 
 @Injectable()
 export class CanvasAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private canvasService: CanvasService,
-    private canvasCheckoutAuthorizationService: CanvasCheckoutAuthorizationService
+    private canvasCheckoutAuthorizationService: CanvasCheckoutAuthorizationService,
+    private visualAuthorizationService: VisualAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -47,9 +49,9 @@ export class CanvasAuthorizationService {
     }
 
     if (canvas.preview) {
-      canvas.preview.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          canvas.preview.authorization,
+      canvas.preview =
+        await this.visualAuthorizationService.applyAuthorizationPolicy(
+          canvas.preview,
           canvas.authorization
         );
     }
