@@ -19,6 +19,7 @@ import { CanvasTemplateModule } from '@domain/template/canvas-template/canvas.te
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { UserModule } from '@domain/community/user/user.module';
+import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 
 @Module({
@@ -38,6 +39,7 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
     NamingModule,
     AspectTemplateModule,
     CanvasTemplateModule,
+    MessagingModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [
