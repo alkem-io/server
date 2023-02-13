@@ -99,12 +99,12 @@ export class UpdatesResolverMutations {
 
     const { hubID } =
       await this.communityResolverService.getCommunityFromUpdatesOrFail(
-        updateSent.id
+        updates.id
       );
 
     this.elasticService.updateCreated(
       {
-        id: updateSent.id,
+        id: updates.id,
         name: '',
         hub: hubID,
       },
