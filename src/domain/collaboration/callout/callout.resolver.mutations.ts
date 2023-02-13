@@ -49,10 +49,18 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { NotificationInputCanvasCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.canvas.created';
 import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
+import { MessagingService } from '@domain/communication/messaging/messaging.service';
+import { CommentType } from '@common/enums/comment.type';
+import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
+import { ElasticsearchService } from '@services/external/elasticsearch';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { getMentionsFromText } from '@domain/communication/messaging/get.mentions.from.text';
 
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
+    private communityResolverService: CommunityResolverService,
+    private elasticService: ElasticsearchService,
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
@@ -61,6 +69,7 @@ export class CalloutResolverMutations {
     private commentsService: CommentsService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
+    private messagingService: MessagingService,
     @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
     private aspectCreatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_CALLOUT_MESSAGE_CREATED)
@@ -161,7 +170,40 @@ export class CalloutResolverMutations {
         commentSent,
       };
       await this.notificationAdapter.discussionComment(notificationInput);
+
+      const mentions = getMentionsFromText(commentSent.message);
+
+      const entityMentionsNotificationInput: NotificationInputEntityMentions = {
+        triggeredBy: agentInfo.userID,
+        comment: commentSent.message,
+        commentsId: comments.id,
+        mentions,
+        originEntity: {
+          id: callout.id,
+          nameId: callout.nameID,
+          displayName: callout.displayName,
+        },
+        commentType: CommentType.DISCUSSION,
+      };
+      this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
     }
+
+    const { hubID } =
+      await this.communityResolverService.getCommunityFromCalloutOrFail(
+        callout.id
+      );
+
+    this.elasticService.calloutCommentCreated(
+      {
+        id: callout.id,
+        name: callout.displayName,
+        hub: hubID,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
 
     return commentSent;
   }
@@ -322,6 +364,23 @@ export class CalloutResolverMutations {
         callout: callout,
       };
       this.activityAdapter.aspectCreated(activityLogInput);
+
+      const { hubID } =
+        await this.communityResolverService.getCommunityFromCalloutOrFail(
+          aspectData.calloutID
+        );
+
+      this.elasticService.calloutCardCreated(
+        {
+          id: aspect.id,
+          name: aspect.displayName,
+          hub: hubID,
+        },
+        {
+          id: agentInfo.userID,
+          email: agentInfo.email,
+        }
+      );
     }
 
     return aspect;
@@ -375,6 +434,23 @@ export class CalloutResolverMutations {
         canvas: authorizedCanvas,
         callout: callout,
       });
+
+      const { hubID } =
+        await this.communityResolverService.getCommunityFromCalloutOrFail(
+          canvasData.calloutID
+        );
+
+      this.elasticService.calloutCanvasCreated(
+        {
+          id: canvas.id,
+          name: canvas.displayName,
+          hub: hubID,
+        },
+        {
+          id: agentInfo.userID,
+          email: agentInfo.email,
+        }
+      );
     }
 
     return authorizedCanvas;

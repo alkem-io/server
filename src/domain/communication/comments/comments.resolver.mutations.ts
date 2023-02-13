@@ -26,16 +26,26 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';
 import { CalendarEventCommentsMessageReceived } from '@domain/timeline/event/dto/event.dto.event.message.received';
+import { MessagingService } from '../messaging/messaging.service';
+import { CommentType } from '@common/enums/comment.type';
+import { ICalendarEvent } from '@domain/timeline/event';
+import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
+import { ElasticsearchService } from '@services/external/elasticsearch';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { getMentionsFromText } from '../messaging/get.mentions.from.text';
 
 @Resolver()
 export class CommentsResolverMutations {
   constructor(
+    private communityResolverService: CommunityResolverService,
+    private elasticService: ElasticsearchService,
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
     private commentsService: CommentsService,
     private namingService: NamingService,
     private commentsAuthorizationService: CommentsAuthorizationService,
+    private messagingService: MessagingService,
     @Inject(SUBSCRIPTION_ASPECT_COMMENT)
     private readonly subscriptionAspectComments: PubSubEngine
   ) {}
@@ -77,13 +87,35 @@ export class CommentsResolverMutations {
         message: commentSent,
       };
       this.activityAdapter.aspectComment(activityLogInput);
+
+      const { hubID } =
+        await this.communityResolverService.getCommunityFromCardCommentsOrFail(
+          messageData.commentsID
+        );
+
+      this.elasticService.calloutCardCommentCreated(
+        {
+          id: aspect.id,
+          name: aspect.displayName,
+          hub: hubID,
+        },
+        {
+          id: agentInfo.userID,
+          email: agentInfo.email,
+        }
+      );
     }
 
-    const calendarID = await this.namingService.getCalendarEventIdForComments(
+    const calendar = await this.namingService.getCalendarEventForComments(
       messageData.commentsID
     );
-    if (calendarID) {
-      this.processCalendarEventCommentEvents(calendarID, commentSent);
+    if (calendar) {
+      this.processCalendarEventCommentEvents(
+        calendar,
+        comments,
+        commentSent,
+        agentInfo
+      );
     }
 
     return commentSent;
@@ -155,23 +187,56 @@ export class CommentsResolverMutations {
       commentSent: commentSent,
     };
     await this.notificationAdapter.aspectComment(notificationInput);
+
+    const mentions = getMentionsFromText(commentSent.message);
+
+    const entityMentionsNotificationInput: NotificationInputEntityMentions = {
+      triggeredBy: agentInfo.userID,
+      comment: commentSent.message,
+      commentsId: comments.id,
+      mentions,
+      originEntity: {
+        id: aspect.id,
+        nameId: aspect.nameID,
+        displayName: aspect.displayName,
+      },
+      commentType: CommentType.CARD,
+    };
+    this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
   }
 
-  private async processCalendarEventCommentEvents(
-    calendarID: string,
-    commentSent: IMessage
+  private processCalendarEventCommentEvents(
+    calendar: ICalendarEvent,
+    comments: IComments,
+    commentSent: IMessage,
+    agentInfo: AgentInfo
   ) {
     // build subscription payload
     const eventID = `comment-msg-${getRandomId()}`;
     const subscriptionPayload: CalendarEventCommentsMessageReceived = {
       eventID: eventID,
       message: commentSent,
-      calendarEventID: calendarID,
+      calendarEventID: calendar.id,
     };
     // send the subscriptions event
     this.subscriptionAspectComments.publish(
       SubscriptionType.CALENDAR_EVENT_COMMENTS_MESSAGE_RECEIVED,
       subscriptionPayload
     );
+
+    const mentions = getMentionsFromText(commentSent.message);
+    const entityMentionsNotificationInput: NotificationInputEntityMentions = {
+      triggeredBy: agentInfo.userID,
+      comment: commentSent.message,
+      commentsId: comments.id,
+      mentions,
+      originEntity: {
+        id: calendar.id,
+        nameId: calendar.nameID,
+        displayName: calendar.displayName,
+      },
+      commentType: CommentType.CALENDAR_EVENT,
+    };
+    this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
   }
 }

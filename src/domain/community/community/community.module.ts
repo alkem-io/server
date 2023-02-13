@@ -11,6 +11,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { TrustRegistryAdapterModule } from '@services/external/trust-registry/trust.registry.adapter/trust.registry.adapter.module';
+import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { CommunityPolicyModule } from '../community-policy/community.policy.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { Community } from './community.entity';
@@ -38,6 +39,7 @@ import { CommunityAuthorizationService } from './community.service.authorization
     AgentModule,
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,
+    ElasticsearchModule,
   ],
   providers: [
     CommunityService,

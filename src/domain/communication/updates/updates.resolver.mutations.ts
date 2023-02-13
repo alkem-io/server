@@ -23,10 +23,14 @@ import { NotificationAdapter } from '@services/adapters/notification-adapter/not
 import { ActivityInputUpdateSent } from '@services/adapters/activity-adapter/dto/activity.dto.input.update.sent';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';
+import { ElasticsearchService } from '@services/external/elasticsearch';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 @Resolver()
 export class UpdatesResolverMutations {
   constructor(
+    private communityResolverService: CommunityResolverService,
+    private elasticService: ElasticsearchService,
     private authorizationService: AuthorizationService,
     private notificationAdapter: NotificationAdapter,
     private activityAdapter: ActivityAdapter,
@@ -92,6 +96,23 @@ export class UpdatesResolverMutations {
       message: updateSent,
     };
     this.activityAdapter.updateSent(activityLogInput);
+
+    const { hubID } =
+      await this.communityResolverService.getCommunityFromUpdatesOrFail(
+        updates.id
+      );
+
+    this.elasticService.updateCreated(
+      {
+        id: updates.id,
+        name: '',
+        hub: hubID,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
 
     return updateSent;
   }

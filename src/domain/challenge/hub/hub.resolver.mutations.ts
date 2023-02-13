@@ -34,10 +34,12 @@ import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_CHALLENGE_CREATED } from '@common/constants';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { ElasticsearchService } from '@services/external/elasticsearch';
 
 @Resolver()
 export class HubResolverMutations {
   constructor(
+    private elasticService: ElasticsearchService,
     private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
     private hubService: HubService,
@@ -92,7 +94,21 @@ export class HubResolverMutations {
     // ensure working with UUID
     hubData.ID = hub.id;
 
-    return await this.hubService.update(hubData);
+    const updatedHub = await this.hubService.update(hubData);
+
+    this.elasticService.hubContentEdited(
+      {
+        id: updatedHub.id,
+        name: updatedHub.displayName,
+        hub: updatedHub.id,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
+
+    return updatedHub;
   }
 
   @UseGuards(GraphqlGuard)
@@ -256,6 +272,18 @@ export class HubResolverMutations {
       triggeredBy: agentInfo.userID,
       challenge: challenge,
     });
+
+    this.elasticService.challengeCreated(
+      {
+        id: challenge.id,
+        name: challenge.displayName,
+        hub: challenge.hubID ?? '',
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
 
     const challengeCreatedEvent: ChallengeCreatedPayload = {
       eventID: `hub-challenge-created-${Math.round(Math.random() * 100)}`,
