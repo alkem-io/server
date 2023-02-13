@@ -105,6 +105,35 @@ export class CommunityResolverService {
     return community;
   }
 
+  public async getCommunityFromCalendarEventOrFail(
+    callendarEventId: string
+  ): Promise<ICommunity> {
+    const [result]: {
+      entityId: string;
+      communityId: string;
+      communityType: string;
+    }[] = await getConnection().query(
+      `
+        SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`timeline\`
+        RIGHT JOIN \`hub\` on \`timeline\`.\`id\` = \`hub\`.\`timelineID\`
+        JOIN \`calendar\` on \`timeline\`.\`calendarId\` = \`calendar\`.\`id\`
+        JOIN \`calendar_event\` on \`calendar\`.\`id\` = \`calendar_event\`.\`calendarId\`
+        WHERE \`calendar_event\`.\`id\` = '${callendarEventId}';
+      `
+    );
+
+    const community = await this.communityRepository.findOne({
+      id: result.communityId,
+    });
+    if (!community) {
+      throw new EntityNotFoundException(
+        `Unable to find Community: ${result.communityId} for CalendarEvent with id: ${callendarEventId}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return community;
+  }
+
   public async getCommunityFromCollaborationOrFail(
     collaborationID: string
   ): Promise<ICommunity> {
@@ -142,7 +171,7 @@ export class CommunityResolverService {
       .getOne();
   }
 
-  public async getCommunityFromCommentsOrFail(
+  public async getCommunityFromCardCommentsOrFail(
     commentsId: string
   ): Promise<ICommunity> {
     const [queryResult]: {

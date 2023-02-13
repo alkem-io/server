@@ -6,11 +6,12 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class MessagingService {
   constructor(private preferenceSetService: PreferenceSetService) {}
+
   public async isContactableWithDirectMessage(
-    receipientUserPreferences: IPreferenceSet
+    recipientUserPreferences: IPreferenceSet
   ): Promise<boolean> {
     return this.preferenceSetService.getPreferenceValue(
-      receipientUserPreferences,
+      recipientUserPreferences,
       UserPreferenceType.NOTIFICATION_COMMUNICATION_MESSAGE
     );
   }

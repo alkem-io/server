@@ -14,6 +14,7 @@ import { CommentsResolverFields } from './comments.resolver.fields';
 import { CommentsResolverMutations } from './comments.resolver.mutations';
 import { CommentsService } from './comments.service';
 import { CommentsAuthorizationService } from './comments.service.authorization';
+import { MessagingModule } from '../messaging/messaging.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { CommentsAuthorizationService } from './comments.service.authorization';
     NamingModule,
     RoomModule,
     CommunicationAdapterModule,
+    MessagingModule,
     TypeOrmModule.forFeature([Comments]),
   ],
   providers: [
