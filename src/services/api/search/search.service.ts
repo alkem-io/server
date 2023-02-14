@@ -19,7 +19,6 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { ISearchResult } from './dto/search.result.entry.interface';
 import { SearchResultType } from '@common/enums/search.result.type';
-import { ISearchResultBuilder } from './search.result.builder.interface';
 import { HubService } from '@domain/challenge/hub/hub.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
@@ -33,6 +32,8 @@ import { IHub } from '@domain/challenge/hub/hub.interface';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { ISearchResults } from './dto/search.result.dto';
+import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { ISearchResultBuilder } from './search.result.builder.interface';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -91,6 +92,7 @@ export class SearchService {
     private organizationService: OrganizationService,
     private userGroupService: UserGroupService,
     private cardService: AspectService,
+    private calloutService: CalloutService,
     private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -783,6 +785,7 @@ export class SearchService {
         type: result.type,
         id: `${result.type}-${result.entity.id}`,
       };
+
       const searchResultBuilder: ISearchResultBuilder =
         new SearchResultBuilderService(
           searchResultBase,
@@ -792,7 +795,8 @@ export class SearchService {
           this.userService,
           this.organizationService,
           this.userGroupService,
-          this.cardService
+          this.cardService,
+          this.calloutService
         );
       const searchResultType = searchResultBase.type as SearchResultType;
       const searchResult = await searchResultBuilder[searchResultType](
