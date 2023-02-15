@@ -50,6 +50,7 @@ import { PreferenceType } from '@common/enums/preference.type';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
+import { challengeCommunityApplicationForm } from './challenge.community.application.form';
 import { UpdateChallengeInnovationFlowInput } from './dto/challenge.dto.update.innovation.flow';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
@@ -59,7 +60,6 @@ import { HubVisibility } from '@common/enums/hub.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { ElasticsearchService } from '@services/external/elasticsearch';
 
 @Injectable()
 export class ChallengeService {
@@ -75,7 +75,6 @@ export class ChallengeService {
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
     private namingService: NamingService,
-    private elasticSearch: ElasticsearchService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -121,7 +120,8 @@ export class ChallengeService {
       challengeData,
       hubID,
       CommunityType.CHALLENGE,
-      challengeCommunityPolicy
+      challengeCommunityPolicy,
+      challengeCommunityApplicationForm
     );
 
     await this.challengeRepository.save(challenge);

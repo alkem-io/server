@@ -53,87 +53,12 @@
     {
       "name": "default",
       "actorGroups": ["key_users", "stakeholders"],
-      "relations": ["members", "groups"],
-      "applications": [
-        {
-          "name": "default",
-          "questions": [
-            {
-              "question": "Why do you want to join?",
-              "required": true
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "hubs": [
-    {
-      "name": "default",
-      "applications": [
-        {
-          "name": "default",
-          "questions": [
-            {
-              "question": "What makes you want to join?",
-              "required": true,
-              "sortOrder": 1
-            },
-            {
-              "question": "Any particular role or contribution that you have in mind?",
-              "required": false,
-              "sortOrder": 2
-            },
-            {
-              "question": "Through which user,organization or medium have you become acquainted with this community?",
-              "required": false,
-              "sortOrder": 3
-            },
-            {
-              "question": "Anything fun you want to tell us about yourself?!",
-              "required": false,
-              "sortOrder": 4
-            },
-            {
-              "question": "Do you already want to join a Challenge? If so, please provide the name(s).",
-              "required": false,
-              "sortOrder": 5
-            }
-          ]
-        }
-      ]
+      "relations": ["members", "groups"]
     }
   ],
   "challenges": [
     {
       "name": "default",
-      "applications": [
-        {
-          "name": "default",
-          "questions": [
-            {
-              "question": "What makes you want to join this Challenge?",
-              "required": true,
-              "sortOrder": 1
-            },
-            {
-              "question": "Any particular role or contribution that you have in mind?",
-              "required": false,
-              "sortOrder": 2
-            },
-            {
-              "question": "Through which user,organization or medium have you become acquainted with this community?",
-              "required": false,
-              "sortOrder": 3
-            },
-            {
-              "question": "Anything fun you want to tell us about yourself?!",
-              "required": false,
-              "sortOrder": 4
-            }
-          ]
-        }
-      ],
       "feedback": [
         {
           "name": "default",

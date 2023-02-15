@@ -6,6 +6,7 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ICommunication } from '@domain/communication/communication';
 import { CommunityType } from '@common/enums/community.type';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
+import { IForm } from '@domain/common/form/form.interface';
 
 @ObjectType('Community', {
   implements: () => [IGroupable],
@@ -20,6 +21,8 @@ export abstract class ICommunity extends IAuthorizable {
   groups?: IUserGroup[];
 
   applications?: IApplication[];
+
+  applicationForm?: IForm;
 
   parentCommunity?: ICommunity;
 

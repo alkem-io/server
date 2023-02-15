@@ -42,13 +42,15 @@ import { AgentInfo } from '@core/authentication';
 import { CommunityPolicyService } from '../community-policy/community.policy.service';
 import { ICommunityPolicyDefinition } from '../community-policy/community.policy.definition';
 import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
-import { ElasticsearchService } from '@services/external/elasticsearch';
+import { IForm } from '@domain/common/form/form.interface';
+import { FormService } from '@domain/common/form/form.service';
+import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
+import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 
 @Injectable()
 export class CommunityService {
   constructor(
     private activityAdapter: ActivityAdapter,
-    private elasticSearch: ElasticsearchService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private agentService: AgentService,
     private userService: UserService,
@@ -56,6 +58,7 @@ export class CommunityService {
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
     private communicationService: CommunicationService,
+    private formService: FormService,
     private communityPolicyService: CommunityPolicyService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
@@ -66,7 +69,8 @@ export class CommunityService {
     name: string,
     hubID: string,
     type: CommunityType,
-    policy: ICommunityPolicyDefinition
+    policy: ICommunityPolicyDefinition,
+    applicationFormData: CreateFormInput
   ): Promise<ICommunity> {
     const community: ICommunity = new Community(name, type);
     community.authorization = new AuthorizationPolicy();
@@ -75,6 +79,9 @@ export class CommunityService {
       policy.lead
     );
     community.hubID = hubID;
+    community.applicationForm = await this.formService.createForm(
+      applicationFormData
+    );
 
     community.groups = [];
     community.communication =
@@ -143,7 +150,7 @@ export class CommunityService {
   async removeCommunity(communityID: string): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const community = await this.getCommunityOrFail(communityID, {
-      relations: ['applications', 'groups', 'communication'],
+      relations: ['applications', 'groups', 'communication', 'applicationForm'],
     });
 
     // Remove all groups
@@ -192,6 +199,10 @@ export class CommunityService {
       );
     }
 
+    if (community.applicationForm) {
+      await this.formService.removeForm(community.applicationForm);
+    }
+
     if (community.policy) {
       await this.communityPolicyService.removeCommunityPolicy(community.policy);
     }
@@ -216,6 +227,18 @@ export class CommunityService {
       return await this.getCommunityOrFail(parentCommunity.id);
     }
     return undefined;
+  }
+
+  async updateApplicationForm(
+    community: ICommunity,
+    formData: UpdateFormInput
+  ): Promise<ICommunity> {
+    const applicationForm = await this.getApplicationForm(community);
+    community.applicationForm = await this.formService.updateForm(
+      applicationForm,
+      formData
+    );
+    return await this.save(community);
   }
 
   async setParentCommunity(
@@ -744,6 +767,20 @@ export class CommunityService {
       relations: ['applications'],
     });
     return communityApps?.applications || [];
+  }
+
+  async getApplicationForm(community: ICommunity): Promise<IForm> {
+    const communityForm = await this.getCommunityOrFail(community.id, {
+      relations: ['applicationForm'],
+    });
+    const applicationForm = communityForm.applicationForm;
+    if (!applicationForm) {
+      throw new EntityNotFoundException(
+        `Unable to find Application Form for Community with ID: ${community.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return applicationForm;
   }
 
   async getMembersCount(community: ICommunity): Promise<number> {

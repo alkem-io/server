@@ -12,6 +12,7 @@ import {
   IOpportunity,
   Opportunity,
   opportunityCommunityPolicy,
+  opportunityCommunityApplicationForm,
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
 import { AuthorizationCredential, LogContext } from '@common/enums';
@@ -98,7 +99,8 @@ export class OpportunityService {
       opportunityData,
       hubID,
       CommunityType.OPPORTUNITY,
-      opportunityCommunityPolicy
+      opportunityCommunityPolicy,
+      opportunityCommunityApplicationForm
     );
 
     await this.opportunityRepository.save(opportunity);

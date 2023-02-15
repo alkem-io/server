@@ -65,6 +65,7 @@ import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/cal
 import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
 import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
+import { UpdateCommunityApplicationFormInput } from '@domain/community/community/dto/community.dto.update.application.form';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -104,6 +105,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateActorInput,
       UpdateAspectInput,
       UpdateAspectTemplateInput,
+      UpdateCommunityApplicationFormInput,
       UpdateHubInput,
       UpdateOrganizationInput,
       UpdateOpportunityInput,

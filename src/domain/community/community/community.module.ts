@@ -21,6 +21,7 @@ import { CommunityResolverMutations } from './community.resolver.mutations';
 import { CommunityResolverQueries } from './community.resolver.queries';
 import { CommunityService } from './community.service';
 import { CommunityAuthorizationService } from './community.service.authorization';
+import { FormModule } from '@domain/common/form/form.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { CommunityAuthorizationService } from './community.service.authorization
     CommunityPolicyModule,
     LifecycleModule,
     AgentModule,
+    FormModule,
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,
     ElasticsearchModule,

@@ -19,6 +19,7 @@ import {
   UUID_LENGTH,
 } from '@src/common/constants/entity.field.length.constants';
 import { CommunityPolicy } from '../community-policy/community.policy.entity';
+import { Form } from '@domain/common/form/form.entity';
 
 @Entity()
 export class Community
@@ -38,6 +39,14 @@ export class Community
   })
   @JoinColumn()
   communication?: Communication;
+
+  @OneToOne(() => Form, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  applicationForm?: Form;
 
   @OneToMany(() => UserGroup, userGroup => userGroup.community, {
     eager: false,

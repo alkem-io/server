@@ -41,6 +41,7 @@ import { NotificationInputCommunityContextReview } from '@services/adapters/noti
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { CommunityType } from '@common/enums/community.type';
 import { ElasticsearchService } from '@services/external/elasticsearch';
+import { UpdateCommunityApplicationFormInput } from './dto/community.dto.update.application.form';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -366,6 +367,33 @@ export class CommunityResolverMutations {
     await this.notificationAdapter.applicationCreated(notificationInput);
 
     return savedApplication;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICommunity, {
+    description: 'Update the Application Form used by this Community.',
+  })
+  @Profiling.api
+  async updateCommunityApplicationForm(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('applicationFormData')
+    applicationFormData: UpdateCommunityApplicationFormInput
+  ): Promise<ICommunity> {
+    const community = await this.communityService.getCommunityOrFail(
+      applicationFormData.communityID
+    );
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update community application form: ${community.displayName}`
+    );
+
+    return await this.communityService.updateApplicationForm(
+      community,
+      applicationFormData.formData
+    );
   }
 
   @UseGuards(GraphqlGuard)
