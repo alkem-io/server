@@ -19,6 +19,7 @@ import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity
 import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
 import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
+import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
     OpportunityModule,
     CollaborationModule,
     AspectModule,
+    CalloutModule,
     TypeOrmModule.forFeature([User]),
     TypeOrmModule.forFeature([UserGroup]),
     TypeOrmModule.forFeature([Organization]),
