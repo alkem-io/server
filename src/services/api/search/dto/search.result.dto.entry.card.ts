@@ -1,4 +1,8 @@
+import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
+import { IHub } from '@domain/challenge/hub/hub.interface';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { ICallout } from '@domain/collaboration/callout';
+import { IOpportunity } from '@domain/collaboration/opportunity';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISearchResultBase } from './search.result.dto.entry.base.interface';
 import { ISearchResult } from './search.result.entry.interface';
@@ -16,29 +20,29 @@ export abstract class ISearchResultCard
   })
   card!: IAspect;
 
-  @Field(() => String, {
+  @Field(() => IHub, {
     nullable: false,
-    description: 'The Hub nameID of the Card.',
+    description: 'The Hub of the Card.',
   })
-  hubNameID!: string;
+  hub!: IHub;
 
-  @Field(() => String, {
+  @Field(() => ICallout, {
     nullable: false,
-    description: 'The Callout nameID of the Card.',
+    description: 'The Callout of the Card.',
   })
-  calloutNameID!: string;
+  callout!: ICallout;
 
-  @Field(() => String, {
+  @Field(() => IChallenge, {
     nullable: true,
     description:
-      'The Challenge nameID of the Card. Applicable for Callouts on Opportunities and Challenges.',
+      'The Challenge of the Card. Applicable for Callouts on Opportunities and Challenges.',
   })
-  challengeNameID?: string;
+  challenge?: IChallenge;
 
-  @Field(() => String, {
+  @Field(() => IOpportunity, {
     nullable: true,
     description:
-      'The Opportunity nameID of the Card. Applicable only for Callouts on Opportunities.',
+      'The Opportunity of the Card. Applicable only for Callouts on Opportunities.',
   })
-  opportunityNameID?: string;
+  opportunity?: IOpportunity;
 }

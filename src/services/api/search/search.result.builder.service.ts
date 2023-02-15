@@ -19,12 +19,24 @@ import { LogContext } from '@common/enums';
 import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { ISearchResultCard } from './dto/search.result.dto.entry.card';
 import { getConnection } from 'typeorm';
+import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
+import { IHub } from '@domain/challenge/hub/hub.interface';
+import { IOpportunity } from '@domain/collaboration/opportunity';
+import { ICallout } from '@domain/collaboration/callout';
+import { CalloutService } from '@domain/collaboration/callout/callout.service';
 
 export type AspectParents = {
-  challengeNameID: string;
-  hubNameID: string;
-  opportunityNameID: string;
-  calloutNameID: string;
+  callout: ICallout;
+  hub: IHub;
+  challenge: IChallenge | undefined;
+  opportunity: IOpportunity | undefined;
+};
+
+export type AspectParentIDs = {
+  calloutID: string;
+  hubID: string;
+  challengeID: string | undefined;
+  opportunityID: string | undefined;
 };
 
 export default class SearchResultBuilderService
@@ -38,7 +50,8 @@ export default class SearchResultBuilderService
     private readonly userService: UserService,
     private readonly organizationService: OrganizationService,
     private readonly userGroupService: UserGroupService,
-    private readonly cardService: AspectService
+    private readonly cardService: AspectService,
+    private readonly calloutService: CalloutService
   ) {}
 
   async [SearchResultType.HUB](rawSearchResult: ISearchResult) {
@@ -127,20 +140,20 @@ export default class SearchResultBuilderService
   }
 
   private async getAspectParents(aspectId: string): Promise<AspectParents> {
-    const [queryResult]: AspectParents[] = await getConnection().query(
+    const [queryResult]: AspectParentIDs[] = await getConnection().query(
       `
-      SELECT \`hub\`.\`nameID\` as \`hubNameID\`, \`challenge\`.\`nameID\` as \`challengeNameID\`, null as \'opportunityNameID\', \`callout\`.\`nameID\` as \`calloutNameID\` FROM \`callout\`
+      SELECT \`hub\`.\`id\` as \`hubID\`, \`challenge\`.\`id\` as \`challengeID\`, null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
       RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       JOIN \`hub\` on \`challenge\`.\`hubID\` = \`hub\`.\`id\`
       JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`id\` = '${aspectId}' UNION
 
-      SELECT \`hub\`.\`nameID\` as \`hubNameID\`, null as \'challengeNameID\', null as \'opportunityNameID\', \`callout\`.\`nameID\` as \`calloutNameID\`  FROM \`callout\`
+      SELECT \`hub\`.\`id\` as \`hubID\`, null as \'challengeID\', null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\`  FROM \`callout\`
       RIGHT JOIN \`hub\` on \`hub\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`id\` = '${aspectId}' UNION
 
-      SELECT  \`hub\`.\`nameID\` as \`hubNameID\`, \`challenge\`.\`nameID\` as \`challengeNameID\`, \`opportunity\`.\`nameID\` as \`opportunityNameID\`, \`callout\`.\`nameID\` as \`calloutNameID\` FROM \`callout\`
+      SELECT  \`hub\`.\`id\` as \`hubID\`, \`challenge\`.\`id\` as \`challengeID\`, \`opportunity\`.\`id\` as \`opportunityID\`, \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
       RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       JOIN \`challenge\` on \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
       JOIN \`hub\` on \`opportunity\`.\`hubID\` = \`hub\`.\`id\`
@@ -149,7 +162,24 @@ export default class SearchResultBuilderService
       `
     );
 
-    return queryResult;
+    let challenge: IChallenge | undefined = undefined;
+    let opportunity: IOpportunity | undefined = undefined;
+
+    const callout = await this.calloutService.getCalloutOrFail(
+      queryResult.calloutID
+    );
+    const hub = await this.hubService.getHubOrFail(queryResult.hubID);
+
+    if (queryResult.challengeID)
+      challenge = await this.challengeService.getChallengeOrFail(
+        queryResult.challengeID
+      );
+    if (queryResult.opportunityID)
+      opportunity = await this.opportunityService.getOpportunityOrFail(
+        queryResult.opportunityID
+      );
+
+    return { challenge, opportunity, callout, hub };
   }
 
   async [SearchResultType.CARD](rawSearchResult: ISearchResult) {
@@ -159,11 +189,11 @@ export default class SearchResultBuilderService
     const aspectParents: AspectParents = await this.getAspectParents(
       rawSearchResult.result.id
     );
-    const searchResultUser: ISearchResultCard = {
+    const searchResultCard: ISearchResultCard = {
       ...this.searchResultBase,
       ...aspectParents,
       card,
     };
-    return searchResultUser;
+    return searchResultCard;
   }
 }
