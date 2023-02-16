@@ -32,6 +32,7 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 
 @Injectable()
 export class BaseChallengeService {
@@ -52,7 +53,8 @@ export class BaseChallengeService {
     baseChallengeData: CreateBaseChallengeInput,
     hubID: string,
     communityType: CommunityType,
-    communityPolicy: ICommunityPolicyDefinition
+    communityPolicy: ICommunityPolicyDefinition,
+    applicationFormData: CreateFormInput
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
     await this.isNameAvailableOrFail(baseChallengeData.nameID, hubID);
@@ -61,7 +63,8 @@ export class BaseChallengeService {
       baseChallenge.displayName,
       hubID,
       communityType,
-      communityPolicy
+      communityPolicy,
+      applicationFormData
     );
 
     if (!baseChallengeData.context) {

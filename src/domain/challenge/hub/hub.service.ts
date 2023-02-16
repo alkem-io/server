@@ -12,6 +12,7 @@ import {
   CreateHubInput,
   DeleteHubInput,
   hubCommunityPolicy,
+  hubCommunityApplicationForm,
 } from '@domain/challenge/hub';
 import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
@@ -104,7 +105,8 @@ export class HubService {
       hubData,
       hub.id,
       CommunityType.HUB,
-      hubCommunityPolicy
+      hubCommunityPolicy,
+      hubCommunityApplicationForm
     );
 
     // set immediate community parent and  community policy
