@@ -77,6 +77,11 @@ export class KonfigService {
             enabled: this.configService.get(ConfigurationTypes.COLLABORATION)
               ?.canvases?.enabled,
           },
+          {
+            name: 'landing-page',
+            enabled: this.configService.get(ConfigurationTypes.PLATFORM)
+              ?.landing_page?.enabled,
+          },
         ],
       },
       sentry: {

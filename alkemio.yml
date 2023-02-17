@@ -389,6 +389,10 @@ platform:
 
   # Acceptable Usage Policy
   aup: ${PLATFORM_AUP}:https://www.alkemio.foundation/legal/hub/#aup
+
+  # Information about the landing page
+  landing_page:
+    enabled: ${LANDING_PAGE_ENABLED}:false
 ssi:
   # Jolocom SDK is used for providing SSI capabilities on the platform.
   # Note: NOT FOR PRODUCTION USAGE, experimental functionality,
