@@ -390,7 +390,7 @@ platform:
   # Acceptable Usage Policy
   aup: ${PLATFORM_AUP}:https://www.alkemio.foundation/legal/hub/#aup
 
-  # Information about the landing page
+  # Client can optionally work with a landing page, to give additional information
   landing_page:
     enabled: ${LANDING_PAGE_ENABLED}:false
 ssi:
