@@ -221,6 +221,14 @@ export class NotificationPayloadBuilder {
       { id: aspect.id },
       { relations: ['callout'] }
     );
+
+    if (!card) {
+      throw new NotificationEventException(
+        `Could not acquire card with id: ${aspect.id}`,
+        LogContext.NOTIFICATIONS
+      );
+    }
+
     const community =
       await this.communityResolverService.getCommunityFromCardCommentsOrFail(
         commentsId
@@ -232,10 +240,10 @@ export class NotificationPayloadBuilder {
         LogContext.NOTIFICATIONS
       );
     }
-    const callout = card?.callout;
+    const callout = card.callout;
     if (!callout) {
       throw new NotificationEventException(
-        `Could not acquire callout from card with id: ${card?.id}`,
+        `Could not acquire callout from card with id: ${card.id}`,
         LogContext.NOTIFICATIONS
       );
     }
@@ -666,6 +674,14 @@ export class NotificationPayloadBuilder {
         { id: originEntityId },
         { relations: ['callout'] }
       );
+
+      if (!card) {
+        throw new NotificationEventException(
+          `Could not acquire card with id: ${originEntityId}`,
+          LogContext.NOTIFICATIONS
+        );
+      }
+
       const community =
         await this.communityResolverService.getCommunityFromCardCommentsOrFail(
           commentsId
@@ -677,10 +693,10 @@ export class NotificationPayloadBuilder {
           LogContext.NOTIFICATIONS
         );
       }
-      const callout = card?.callout;
+      const callout = card.callout;
       if (!callout) {
         throw new NotificationEventException(
-          `Could not acquire callout from card with id: ${card?.id}`,
+          `Could not acquire callout from card with id: ${card.id}`,
           LogContext.NOTIFICATIONS
         );
       }
