@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { v4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
@@ -76,7 +76,7 @@ export class TrustRegistryAdapter {
   }
 
   generateCredentialOfferUrl() {
-    const nonce = v4();
+    const nonce = randomUUID();
     const publicRestApi = this.generatePublicRestApiUrl();
     const uniqueCallbackURL = `${publicRestApi}/${RestEndpoint.COMPLETE_CREDENTIAL_OFFER_INTERACTION}/${nonce}`;
 
@@ -94,7 +94,7 @@ export class TrustRegistryAdapter {
   }
 
   generateNonceForInteraction() {
-    const nonce = v4();
+    const nonce = randomUUID();
     return nonce;
   }
 
