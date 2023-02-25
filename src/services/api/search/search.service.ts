@@ -328,9 +328,9 @@ export class SearchService {
               .orWhere('user.nameID like :term')
               .orWhere('user.lastName like :term')
               .orWhere('user.email like :term')
-              .orWhere('user.displayName like :term')
               .orWhere('location.country like :term')
               .orWhere('location.city like :term')
+              .orWhere('profile.displayName like :term')
               .orWhere('profile.description like :term');
           })
         )

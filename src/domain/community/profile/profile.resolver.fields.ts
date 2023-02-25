@@ -1,5 +1,5 @@
 import { Profiling } from '@common/decorators';
-import { Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IProfile } from './profile.interface';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
@@ -22,6 +22,20 @@ export class ProfileResolverFields {
   @Profiling.api
   async avatar(@Parent() profile: IProfile): Promise<IVisual> {
     return await this.profileService.getVisual(profile, VisualType.AVATAR);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('visual', () => IVisual, {
+    nullable: true,
+    description: 'A particular type of visual for this Profile.',
+  })
+  @Profiling.api
+  async visual(
+    @Parent() profile: IProfile,
+    @Args('type', { type: () => VisualType }) type: VisualType
+  ): Promise<IVisual> {
+    const result = await this.profileService.getVisual(profile, type);
+    return result;
   }
 
   @UseGuards(GraphqlGuard)

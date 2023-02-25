@@ -462,9 +462,9 @@ export class NotificationPayloadBuilder {
   ): Promise<{ id: string; displayName: string }> {
     const user = await this.userRepository
       .createQueryBuilder('user')
-      .select(['user.id', 'user.displayName'])
+      .select(['user.id', 'user.nameID'])
       .leftJoin('user.profile', 'profile')
-      .where('profile.nameID = :id')
+      .where('user.nameID = :id')
       .orWhere('user.id = :id')
       .setParameters({ id: userId })
       .getOne();
@@ -483,9 +483,9 @@ export class NotificationPayloadBuilder {
   ): Promise<{ id: string; displayName: string } | undefined> {
     const user = await this.userRepository
       .createQueryBuilder('user')
-      .select(['user.id', 'user.displayName'])
+      .select(['user.id'])
       .leftJoin('user.profile', 'profile')
-      .where('profile.nameID = :id')
+      .where('user.nameID = :id')
       .orWhere('user.id = :id')
       .setParameters({ id: userId })
       .getOne();
