@@ -206,18 +206,4 @@ export class OrganizationResolverFields {
       privilege
     );
   }
-
-  // TODO: temporary until update client
-  @ResolveField('displayName', () => String, {
-    nullable: false,
-    description: 'TODO: The displayName for this Org.',
-  })
-  @Profiling.api
-  async displayName(
-    @Parent() organization: Organization,
-    @Context() { loaders }: IGraphQLContext
-  ): Promise<string> {
-    const profile = await loaders.orgProfileLoader.load(organization.id);
-    return profile.displayName;
-  }
 }

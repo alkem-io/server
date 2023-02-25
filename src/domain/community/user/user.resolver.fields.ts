@@ -148,20 +148,6 @@ export class UserResolverFields {
     return 'not accessible';
   }
 
-  // TODO: temporary until update client
-  @ResolveField('displayName', () => String, {
-    nullable: false,
-    description: 'TODO: The displayName for this User.',
-  })
-  @Profiling.api
-  async displayName(
-    @Parent() user: User,
-    @Context() { loaders }: IGraphQLContext
-  ): Promise<string> {
-    const profile = await loaders.userProfileLoader.load(user.id);
-    return profile.displayName;
-  }
-
   @UseGuards(GraphqlGuard)
   @ResolveField('isContactable', () => Boolean, {
     nullable: false,
