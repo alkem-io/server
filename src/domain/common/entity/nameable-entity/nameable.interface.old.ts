@@ -2,8 +2,14 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { NameID } from '@domain/common/scalars';
 
-@ObjectType('INameable')
-export abstract class INameable2 extends IAuthorizable {
+@ObjectType('INameableOld')
+export abstract class INameableOld extends IAuthorizable {
+  @Field(() => String, {
+    nullable: false,
+    description: 'The display name.',
+  })
+  displayName!: string;
+
   @Field(() => NameID, {
     nullable: false,
     description:

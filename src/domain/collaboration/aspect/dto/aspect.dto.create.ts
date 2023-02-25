@@ -1,13 +1,13 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { MID_TEXT_LENGTH } from '@src/common/constants';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
-import { CreateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.create';
+import { CreateNameableInputOld } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create.old';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { CreateCardProfileInput } from '@domain/collaboration/card-profile/dto';
 import { Type } from 'class-transformer';
 
 @InputType()
-export class CreateAspectInput extends CreateNameableInput {
+export class CreateAspectInput extends CreateNameableInputOld {
   @Field({ nullable: false })
   @MaxLength(MID_TEXT_LENGTH)
   type!: string;

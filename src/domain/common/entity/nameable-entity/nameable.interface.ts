@@ -4,12 +4,6 @@ import { NameID } from '@domain/common/scalars';
 
 @ObjectType('INameable')
 export abstract class INameable extends IAuthorizable {
-  @Field(() => String, {
-    nullable: false,
-    description: 'The display name.',
-  })
-  displayName!: string;
-
   @Field(() => NameID, {
     nullable: false,
     description:

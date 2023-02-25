@@ -2,12 +2,12 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IAspect } from './aspect.interface';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { Comments } from '@domain/communication/comments';
-import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { NameableEntityOld } from '@domain/common/entity/nameable-entity/nameable.entity.old';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CardProfile } from '../card-profile';
 
 @Entity()
-export class Aspect extends NameableEntity implements IAspect {
+export class Aspect extends NameableEntityOld implements IAspect {
   @Column('text')
   type: string;
 

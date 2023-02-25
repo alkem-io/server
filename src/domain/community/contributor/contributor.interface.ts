@@ -1,10 +1,10 @@
 import { IProfile } from '@domain/community/profile/profile.interface';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ObjectType } from '@nestjs/graphql';
-import { INameable2 } from '@domain/common/entity/nameable-entity/nameable2.interface';
+import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
 
 @ObjectType('Contributor')
-export abstract class IContributor extends INameable2 {
+export abstract class IContributor extends INameable {
   profile?: IProfile;
 
   agent?: IAgent;

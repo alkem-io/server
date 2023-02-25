@@ -4,13 +4,13 @@ import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { Context } from '@domain/context/context/context.entity';
-import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { NameableEntityOld } from '@domain/common/entity/nameable-entity/nameable.entity.old';
 import { IBaseChallenge } from './base.challenge.interface';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { Collaboration } from '../../collaboration/collaboration/collaboration.entity';
 
 export abstract class BaseChallenge
-  extends NameableEntity
+  extends NameableEntityOld
   implements IBaseChallenge
 {
   @OneToOne(() => Collaboration, {

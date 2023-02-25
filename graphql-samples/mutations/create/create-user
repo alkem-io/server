@@ -1,6 +1,9 @@
 mutation CreateUser($userData: CreateUserInput!) {
   createUser(userData: $userData) {
-    displayName
+    profile {
+      displayName
+    }
+
   }
 }
 
@@ -10,11 +13,11 @@ query variables:
   "userData":
   {
       "nameID": "Valentin",
-      "displayName": "Valentin",
       "firstName": "Valentin",
       "lastName": "Valentin",
       "email": "test@test.com",
       "profileData": {
+        "displayName": "Valentin",
         "description": "some description",
         "avatar": "http://someUri",
         "referencesData": {

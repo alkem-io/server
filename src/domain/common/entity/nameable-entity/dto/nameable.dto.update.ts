@@ -3,7 +3,7 @@ import { NameID } from '@domain/common/scalars';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
 
 @InputType()
-export class UpdateNameable2Input extends UpdateBaseAlkemioInput {
+export class UpdateNameableInput extends UpdateBaseAlkemioInput {
   @Field(() => NameID, {
     nullable: true,
     description:

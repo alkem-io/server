@@ -1,14 +1,14 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { MID_TEXT_LENGTH, NAMEID_LENGTH } from '@src/common/constants';
 import { IsDate, IsOptional, MaxLength, ValidateNested } from 'class-validator';
-import { CreateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.create';
+import { CreateNameableInputOld } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create.old';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { CreateCardProfileInput } from '@domain/collaboration/card-profile/dto';
 import { Type } from 'class-transformer';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
 
 @InputType()
-export class CreateCalendarEventInput extends CreateNameableInput {
+export class CreateCalendarEventInput extends CreateNameableInputOld {
   @Field(() => CalendarEventType, { nullable: false })
   @MaxLength(MID_TEXT_LENGTH)
   type!: string;
