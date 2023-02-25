@@ -15,16 +15,6 @@ export class ProfileResolverFields {
   constructor(private profileService: ProfileService) {}
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('avatar', () => IVisual, {
-    nullable: true,
-    description: 'The Visual avatar for this Profile.',
-  })
-  @Profiling.api
-  async avatar(@Parent() profile: IProfile): Promise<IVisual> {
-    return await this.profileService.getVisual(profile, VisualType.AVATAR);
-  }
-
-  @UseGuards(GraphqlGuard)
   @ResolveField('visual', () => IVisual, {
     nullable: true,
     description: 'A particular type of visual for this Profile.',
