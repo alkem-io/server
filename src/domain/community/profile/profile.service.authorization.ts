@@ -22,7 +22,13 @@ export class ProfileAuthorizationService {
     const profile = await this.profileService.getProfileOrFail(
       profileInput.id,
       {
-        relations: ['references', 'avatar', 'tagsets', 'authorization'],
+        relations: [
+          'references',
+          'avatar',
+          'tagsets',
+          'authorization',
+          'visuals',
+        ],
       }
     );
 
@@ -52,12 +58,14 @@ export class ProfileAuthorizationService {
           );
       }
     }
-    if (profile.avatar) {
-      profile.avatar.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          profile.avatar.authorization,
-          profile.authorization
-        );
+    if (profile.visuals) {
+      for (const visual of profile.visuals) {
+        visual.authorization =
+          this.authorizationPolicyService.inheritParentAuthorization(
+            visual.authorization,
+            profile.authorization
+          );
+      }
     }
     return await this.profileRepository.save(profile);
   }

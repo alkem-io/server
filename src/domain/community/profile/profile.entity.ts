@@ -5,9 +5,9 @@ import {
   Tagset,
 } from '@domain/common/tagset/tagset.entity';
 import { IProfile } from './profile.interface';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { Location } from '@domain/common/location/location.entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 
 @Entity()
 export class Profile extends AuthorizableEntity implements IProfile {
@@ -23,13 +23,17 @@ export class Profile extends AuthorizableEntity implements IProfile {
   })
   tagsets?: Tagset[];
 
-  @OneToOne(() => Visual, {
+  @OneToMany(() => Visual, visual => visual.profile, {
     eager: false,
     cascade: true,
-    onDelete: 'SET NULL',
   })
-  @JoinColumn()
-  avatar?: Visual;
+  visuals?: Visual[];
+
+  @Column('text', { nullable: true })
+  displayName = '';
+
+  @Column('text', { nullable: true })
+  tagline = '';
 
   @Column('text', { nullable: true })
   description = '';

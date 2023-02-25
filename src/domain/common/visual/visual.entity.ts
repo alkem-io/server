@@ -2,6 +2,7 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { Context } from '@domain/context/context/context.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { IVisual } from './visual.interface';
+import { Profile } from '@domain/community/profile/profile.entity';
 
 @Entity()
 export class Visual extends AuthorizableEntity implements IVisual {
@@ -28,6 +29,13 @@ export class Visual extends AuthorizableEntity implements IVisual {
 
   @Column('simple-array')
   allowedTypes: string[];
+
+  @ManyToOne(() => Profile, profile => profile.visuals, {
+    eager: false,
+    cascade: false,
+    onDelete: 'CASCADE',
+  })
+  profile?: Profile;
 
   @ManyToOne(() => Context, context => context.visuals, {
     eager: false,

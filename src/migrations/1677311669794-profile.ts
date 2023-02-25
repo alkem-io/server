@@ -5,9 +5,6 @@ export class profile1677311669794 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`profile\` ADD \`nameID\` varchar(36) NULL`
-    );
-    await queryRunner.query(
       `ALTER TABLE \`profile\` ADD \`displayName\` varchar(255) NULL`
     );
     await queryRunner.query(
@@ -35,30 +32,27 @@ export class profile1677311669794 implements MigrationInterface {
     );
     await queryRunner.query(`ALTER TABLE \`profile\` DROP COLUMN \`avatarId\``);
 
-    // Migrate the nameID, displayName
+    // Migrate the displayName
     const users: any[] = await queryRunner.query(
-      `SELECT id, nameID, displayName, profileId from user`
+      `SELECT id, displayName, profileId from user`
     );
     for (const user of users) {
       await queryRunner.query(
-        `UPDATE profile SET nameID = '${user.nameID}', displayName = '${user.displayName}' WHERE (id = '${user.profileId}')`
+        `UPDATE profile SET displayName = '${user.displayName}' WHERE (id = '${user.profileId}')`
       );
     }
-    await queryRunner.query(`ALTER TABLE \`user\` DROP COLUMN \`nameID\``);
     await queryRunner.query(`ALTER TABLE \`user\` DROP COLUMN \`displayName\``);
 
-    // Migrate the nameID, displayName
+    // Migrate the displayName
     const organizations: any[] = await queryRunner.query(
-      `SELECT id, nameID, displayName, profileId from organization`
+      `SELECT id, displayName, profileId from organization`
     );
     for (const organization of organizations) {
       await queryRunner.query(
-        `UPDATE profile SET nameID = '${organization.nameID}', displayName = '${organization.displayName}' WHERE (id = '${organization.profileId}')`
+        `UPDATE profile SET displayName = '${organization.displayName}' WHERE (id = '${organization.profileId}')`
       );
     }
-    await queryRunner.query(
-      `ALTER TABLE \`organization\` DROP COLUMN \`nameID\``
-    );
+
     await queryRunner.query(
       `ALTER TABLE \`organization\` DROP COLUMN \`displayName\``
     );
@@ -66,30 +60,24 @@ export class profile1677311669794 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`organization\`ADD \`nameID\` varchar(36) NULL`
-    );
-    await queryRunner.query(
       `ALTER TABLE \`organization\`ADD \`displayName\` varchar(255) NULL`
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`user\`ADD \`nameID\` varchar(36) NULL`
-    );
-    await queryRunner.query(
       `ALTER TABLE \`user\`ADD \`displayName\` varchar(255) NULL`
     );
 
-    // Migrate the nameID, displayName
+    // Migrate the displayName
     const organizations: any[] = await queryRunner.query(
       `SELECT id, profileId from organization`
     );
     for (const organization of organizations) {
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, nameID, displayName from profile WHERE (id = '${organization.profileId}')`
+        `SELECT id, displayName from profile WHERE (id = '${organization.profileId}')`
       );
       const profile = profiles[0];
       await queryRunner.query(
-        `UPDATE organization SET nameID = '${profile.nameID}', displayName = '${profile.displayName}' WHERE (id = '${organization.id}')`
+        `UPDATE organization SET displayName = '${profile.displayName}' WHERE (id = '${organization.id}')`
       );
     }
 
@@ -99,15 +87,14 @@ export class profile1677311669794 implements MigrationInterface {
     );
     for (const user of users) {
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, nameID, displayName from profile WHERE (id = '${user.profileId}')`
+        `SELECT id, displayName from profile WHERE (id = '${user.profileId}')`
       );
       const profile = profiles[0];
       await queryRunner.query(
-        `UPDATE user SET nameID = '${profile.nameID}', displayName = '${profile.displayName}' WHERE (id = '${user.id}')`
+        `UPDATE user SET displayName = '${profile.displayName}' WHERE (id = '${user.id}')`
       );
     }
 
-    await queryRunner.query(`ALTER TABLE \`profile\` DROP COLUMN \`nameID\``);
     await queryRunner.query(
       `ALTER TABLE \`profile\` DROP COLUMN \`displayName\``
     );

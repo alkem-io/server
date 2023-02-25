@@ -5,7 +5,6 @@ import { IProfile } from '@domain/community';
 import { ILocation } from '@domain/common/location/location.interface';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { IVisual } from '@domain/common/visual/visual.interface';
 import { ProfileDataloaderService } from '@domain/community/profile/profile.dataloader.service';
 import { UserDataloaderService } from '@domain/community/user/user.dataloader.service';
 import { OrganizationDataloaderService } from '@domain/community/organization/organization.dataloader.service';
@@ -35,10 +34,7 @@ export class DataloaderService {
       async (keys: readonly string[]) =>
         this.profileDataloaderService.findReferencesByBatch(keys as string[])
     );
-    const avatarsLoader = new DataLoader<string, IVisual>(
-      async (keys: readonly string[]) =>
-        this.profileDataloaderService.findAvatarsByBatch(keys as string[])
-    );
+
     const tagsetsLoader = new DataLoader<string, ITagset[]>(
       async (keys: readonly string[]) =>
         this.profileDataloaderService.findTagsetsByBatch(keys as string[])
@@ -64,7 +60,6 @@ export class DataloaderService {
       userProfileLoader,
       orgProfileLoader,
       referencesLoader,
-      avatarsLoader,
       tagsetsLoader,
       locationsLoader,
       calloutsLoader,

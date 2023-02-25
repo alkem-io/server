@@ -8,6 +8,7 @@ import { IReference } from '@domain/common/reference/reference.interface';
 import { ProfileService } from './profile.service';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ILocation } from '@domain/common/location/location.interface';
+import { VisualType } from '@common/enums/visual.type';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
@@ -19,11 +20,8 @@ export class ProfileResolverFields {
     description: 'The Visual avatar for this Profile.',
   })
   @Profiling.api
-  async avatar(
-    @Parent() profile: IProfile,
-    @Context() { loaders }: IGraphQLContext
-  ): Promise<IVisual> {
-    return loaders.avatarsLoader.load(profile.id);
+  async avatar(@Parent() profile: IProfile): Promise<IVisual> {
+    return await this.profileService.getVisual(profile, VisualType.AVATAR);
   }
 
   @UseGuards(GraphqlGuard)
@@ -50,6 +48,16 @@ export class ProfileResolverFields {
     @Context() { loaders }: IGraphQLContext
   ): Promise<ITagset[]> {
     return loaders.tagsetsLoader.load(profile.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('visuals', () => [IVisual], {
+    nullable: false,
+    description: 'A list of visuals for this Profile.',
+  })
+  @Profiling.api
+  async visuals(@Parent() profile: IProfile): Promise<IVisual[]> {
+    return await this.profileService.getVisuals(profile);
   }
 
   @UseGuards(GraphqlGuard)

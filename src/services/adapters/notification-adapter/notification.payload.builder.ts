@@ -382,7 +382,7 @@ export class NotificationPayloadBuilder {
     const result: PlatformUserRemovedEventPayload = {
       triggeredBy: triggeredBy,
       user: {
-        displayName: user.displayName,
+        displayName: user.profile?.displayName || '',
         email: user.email,
       },
     };
@@ -463,18 +463,19 @@ export class NotificationPayloadBuilder {
     const user = await this.userRepository
       .createQueryBuilder('user')
       .select(['user.id', 'user.displayName'])
-      .where('user.nameID = :id')
+      .leftJoin('user.profile', 'profile')
+      .where('profile.nameID = :id')
       .orWhere('user.id = :id')
       .setParameters({ id: userId })
       .getOne();
 
-    if (!user) {
+    if (!user || !user.profile) {
       throw new EntityNotFoundException(
-        `Unable to find User with id: ${userId}`,
+        `Unable to find User with profile for id: ${userId}`,
         LogContext.COMMUNITY
       );
     }
-    return { id: user.id, displayName: user.displayName };
+    return { id: user.id, displayName: user.profile?.displayName };
   }
 
   private async getUserData(
@@ -483,15 +484,16 @@ export class NotificationPayloadBuilder {
     const user = await this.userRepository
       .createQueryBuilder('user')
       .select(['user.id', 'user.displayName'])
-      .where('user.nameID = :id')
+      .leftJoin('user.profile', 'profile')
+      .where('profile.nameID = :id')
       .orWhere('user.id = :id')
       .setParameters({ id: userId })
       .getOne();
 
-    if (!user) {
+    if (!user || !user.profile) {
       return undefined;
     }
-    return { id: user.id, displayName: user.displayName };
+    return { id: user.id, displayName: user.profile.displayName };
   }
 
   async buildCommunicationOrganizationMessageNotificationPayload(
@@ -520,18 +522,19 @@ export class NotificationPayloadBuilder {
     const org = await this.organizationRepository
       .createQueryBuilder('organization')
       .select(['organization.id', 'organization.displayName'])
+      .leftJoin('organization.profile', 'profile')
       .where('organization.id = :id')
-      .orWhere('organization.nameID = :id')
+      .orWhere('profile.nameID = :id')
       .setParameters({ id: orgId })
       .getOne();
 
-    if (!org) {
+    if (!org || !org.profile) {
       throw new EntityNotFoundException(
         `Unable to find Organization with id: ${orgId}`,
         LogContext.COMMUNITY
       );
     }
-    return { id: org.id, displayName: org.displayName };
+    return { id: org.id, displayName: org.profile.displayName };
   }
 
   private async getOrgData(
@@ -540,15 +543,16 @@ export class NotificationPayloadBuilder {
     const org = await this.organizationRepository
       .createQueryBuilder('organization')
       .select(['organization.id', 'organization.displayName'])
+      .leftJoin('organization.profile', 'profile')
       .where('organization.id = :id')
-      .orWhere('organization.nameID = :id')
+      .orWhere('organization.profile.nameID = :id')
       .setParameters({ id: orgId })
       .getOne();
 
-    if (!org) {
+    if (!org || !org.profile) {
       return undefined;
     }
-    return { id: org.id, displayName: org.displayName };
+    return { id: org.id, displayName: org.profile.displayName };
   }
 
   async buildCommunicationCommunityLeadsMessageNotificationPayload(

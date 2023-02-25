@@ -26,6 +26,7 @@ import {
 } from './dto';
 import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
 import { ILocation, LocationService } from '@domain/common/location';
+import { VisualType } from '@common/enums/visual.type';
 
 @Injectable()
 export class ProfileService {
@@ -43,12 +44,16 @@ export class ProfileService {
   async createProfile(profileData?: CreateProfileInput): Promise<IProfile> {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
+      tagline: profileData?.tagline,
+      displayName: profileData?.displayName,
     });
     profile.authorization = new AuthorizationPolicy();
-    profile.avatar = await this.visualService.createVisualAvatar();
+    profile.visuals = [];
+    const visualAvatar = await this.visualService.createVisualAvatar();
     if (profileData?.avatarURL) {
-      profile.avatar.uri = profileData.avatarURL;
+      visualAvatar.uri = profileData.avatarURL;
     }
+    profile.visuals.push(visualAvatar);
     profile.location = await this.locationService.createLocation(
       profileData?.location
     );
@@ -87,11 +92,20 @@ export class ProfileService {
         'tagsets',
         'authorization',
         'location',
+        'visuals',
       ],
     });
 
     if (profileData.description) {
       profile.description = profileData.description;
+    }
+
+    if (profileData.displayName) {
+      profile.displayName = profileData.displayName;
+    }
+
+    if (profileData.tagline) {
+      profile.tagline = profileData.tagline;
     }
 
     if (profileData.references) {
@@ -123,10 +137,10 @@ export class ProfileService {
     const profile = await this.getProfileOrFail(profileID, {
       relations: [
         'references',
-        'avatar',
         'location',
         'tagsets',
         'authorization',
+        'visuals',
       ],
     });
 
@@ -144,8 +158,10 @@ export class ProfileService {
       }
     }
 
-    if (profile.avatar) {
-      await this.visualService.deleteVisual({ ID: profile.avatar.id });
+    if (profile.visuals) {
+      for (const visual of profile.visuals) {
+        await this.visualService.deleteVisual({ ID: visual.id });
+      }
     }
 
     if (profile.location) {
@@ -223,19 +239,6 @@ export class ProfileService {
     return `https://eu.ui-avatars.com/api/?name=${firstName}+${lastName}&background=${randomColor}&color=ffffff`;
   }
 
-  async getAvatar(profileInput: IProfile): Promise<IVisual> {
-    const profile = await this.getProfileOrFail(profileInput.id, {
-      relations: ['avatar'],
-    });
-    if (!profile.avatar) {
-      throw new EntityNotInitializedException(
-        `Profile not initialized: ${profile.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return profile.avatar;
-  }
-
   async getReferences(profileInput: IProfile): Promise<IReference[]> {
     const profile = await this.getProfileOrFail(profileInput.id, {
       relations: ['references'],
@@ -247,6 +250,34 @@ export class ProfileService {
       );
     }
     return profile.references;
+  }
+
+  async getVisuals(profileInput: IProfile): Promise<IVisual[]> {
+    const profile = await this.getProfileOrFail(profileInput.id, {
+      relations: ['visuals'],
+    });
+    if (!profile.visuals) {
+      throw new EntityNotInitializedException(
+        `Profile not initialized: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return profile.visuals;
+  }
+
+  async getVisual(
+    profileInput: IProfile,
+    visualType: VisualType
+  ): Promise<IVisual> {
+    const visuals = await this.getVisuals(profileInput);
+    const visual = visuals.find(v => v.name === visualType);
+    if (!visual) {
+      throw new EntityNotInitializedException(
+        `Unable to find visual with name '${visualType}' on ${profileInput.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return visual;
   }
 
   async getTagsets(profileInput: IProfile): Promise<ITagset[]> {

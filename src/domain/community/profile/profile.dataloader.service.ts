@@ -5,7 +5,6 @@ import { Repository } from 'typeorm';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
-import { IVisual } from '@domain/common/visual/visual.interface';
 import { ILocation } from '@domain/common/location/location.interface';
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
@@ -35,26 +34,6 @@ export class ProfileDataloaderService {
         )
     );
   }
-
-  public async findAvatarsByBatch(
-    avatarIds: string[]
-  ): Promise<(IVisual | Error)[]> {
-    const profiles = await this.profileRepository.findByIds(avatarIds, {
-      relations: ['avatar'],
-      select: ['id'],
-    });
-
-    const results = profiles.filter(avatar => avatarIds.includes(avatar.id));
-    return avatarIds.map(
-      id =>
-        results.find(result => result.id === id)?.avatar ||
-        new EntityNotFoundException(
-          `Could not load profile ${id}`,
-          LogContext.COMMUNITY
-        )
-    );
-  }
-
   public async findLocationsByBatch(
     locationIds: string[]
   ): Promise<(ILocation | Error)[]> {

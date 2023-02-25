@@ -60,6 +60,7 @@ import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
+import { VisualType } from '@common/enums/visual.type';
 
 @Injectable()
 export class UserService {
@@ -118,11 +119,16 @@ export class UserService {
     );
 
     // ensure have a random avatar. todo: use a package we control
-    if (user.profile.avatar?.uri === '') {
-      user.profile.avatar.uri = this.profileService.generateRandomAvatar(
+    const avatarVisual = await this.profileService.getVisual(
+      user.profile,
+      VisualType.AVATAR
+    );
+    if (avatarVisual.uri === '') {
+      avatarVisual.uri = this.profileService.generateRandomAvatar(
         user.firstName,
         user.lastName
       );
+      // TODO: check that visual update is picked up
     }
 
     user.preferenceSet = await this.preferenceSetService.createPreferenceSet(
@@ -169,6 +175,7 @@ export class UserService {
     if (!result) {
       result = {
         referencesData: [],
+        displayName: '',
       };
     }
     if (!result.referencesData) {
@@ -273,10 +280,10 @@ export class UserService {
       email: email,
       firstName: agentInfo.firstName,
       lastName: agentInfo.lastName,
-      displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       accountUpn: email,
       profileData: {
         avatarURL: agentInfo.avatarURL,
+        displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       },
     });
   }
@@ -661,9 +668,7 @@ export class UserService {
         user.nameID = userInput.nameID;
       }
     }
-    if (userInput.displayName !== undefined) {
-      user.displayName = userInput.displayName;
-    }
+
     if (userInput.firstName !== undefined) {
       user.firstName = userInput.firstName;
     }

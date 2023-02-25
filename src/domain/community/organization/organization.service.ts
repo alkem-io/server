@@ -73,7 +73,9 @@ export class OrganizationService {
     // Convert nameID to lower case
     organizationData.nameID = organizationData.nameID.toLowerCase();
     await this.checkNameIdOrFail(organizationData.nameID);
-    await this.checkDisplayNameOrFail(organizationData.displayName);
+    await this.checkDisplayNameOrFail(
+      organizationData.profileData?.displayName
+    );
 
     const organization: IOrganization = Organization.create(organizationData);
     organization.authorization = new AuthorizationPolicy();
@@ -138,9 +140,14 @@ export class OrganizationService {
     if (newDisplayName === existingDisplayName) {
       return;
     }
-    const organizationCount = await this.organizationRepository.count({
-      displayName: newDisplayName,
-    });
+    const organizationCount = await this.organizationRepository
+      .createQueryBuilder('organization')
+      .leftJoinAndSelect('organization.profile', 'profile')
+      .where('profile.displayName = :displayName')
+      .setParameters({
+        displayName: `${newDisplayName}`,
+      })
+      .getCount();
     if (organizationCount >= 1)
       throw new ValidationException(
         `Organization: the provided displayName is already taken: ${newDisplayName}`,
@@ -156,13 +163,9 @@ export class OrganizationService {
     });
 
     await this.checkDisplayNameOrFail(
-      organizationData.displayName,
-      organization.displayName
+      organizationData.profileData?.displayName,
+      organization.profile?.displayName
     );
-
-    // Merge in the data
-    if (organizationData.displayName)
-      organization.displayName = organizationData.displayName;
 
     // Check the tagsets
     if (organizationData.profileData && organization.profile) {
@@ -490,7 +493,7 @@ export class OrganizationService {
     const groups = organizationGroups.groups;
     if (!groups)
       throw new ValidationException(
-        `No groups on organization: ${organization.displayName}`,
+        `No groups on organization: ${organization.nameID}`,
         LogContext.COMMUNITY
       );
     return groups;
@@ -668,7 +671,7 @@ export class OrganizationService {
       });
       if (orgOwners.length === 1)
         throw new ForbiddenException(
-          `Not allowed to remove last owner for organisaiton: ${organization.displayName}`,
+          `Not allowed to remove last owner for organisaiton: ${organization.nameID}`,
           LogContext.AUTH
         );
     }
@@ -693,7 +696,7 @@ export class OrganizationService {
     );
     if (!organization.verification) {
       throw new EntityNotFoundException(
-        `Unable to load verification for organisation: ${organization.displayName}`,
+        `Unable to load verification for organisation: ${organization.nameID}`,
         LogContext.COMMUNITY
       );
     }
