@@ -58,6 +58,7 @@ export class profile1677311669794 implements MigrationInterface {
     );
   }
 
+  ///////////////////////////////
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
       `ALTER TABLE \`organization\`ADD \`displayName\` varchar(255) NULL`
