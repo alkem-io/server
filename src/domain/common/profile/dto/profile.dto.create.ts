@@ -5,7 +5,6 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { CreateTagsetInput } from '@domain/common/tagset';
 import {
   LONG_TEXT_LENGTH,
   MID_TEXT_LENGTH,
@@ -41,12 +40,6 @@ export class CreateProfileInput {
   @ValidateNested()
   @Type(() => CreateLocationInput)
   location?: CreateLocationInput;
-
-  @Field(() => [CreateTagsetInput], { nullable: true })
-  @IsOptional()
-  @ValidateNested({ each: true })
-  @Type(() => CreateTagsetInput)
-  tagsetsData?: CreateTagsetInput[];
 
   @Field(() => [CreateReferenceInput], { nullable: true })
   @IsOptional()

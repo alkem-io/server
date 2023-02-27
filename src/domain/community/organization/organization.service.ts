@@ -50,6 +50,7 @@ import { CreateUserGroupInput } from '../user-group/dto/user-group.dto.create';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
+import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 
 @Injectable()
 export class OrganizationService {
@@ -82,15 +83,14 @@ export class OrganizationService {
     organization.profile = await this.profileService.createProfile(
       organizationData.profileData
     );
-    const profileData = organizationData.profileData;
-    if (profileData?.tagsetsData) {
-      for (const tagsetData of profileData.tagsetsData) {
-        await this.profileService.addTagsetOnProfile(
-          organization.profile,
-          tagsetData
-        );
-      }
-    }
+    await this.profileService.addTagsetOnProfile(organization.profile, {
+      name: RestrictedTagsetNames.KEYWORDS,
+      tags: [],
+    });
+    await this.profileService.addTagsetOnProfile(organization.profile, {
+      name: RestrictedTagsetNames.CAPABILITIES,
+      tags: [],
+    });
     // Set the visuals
     let avatarURL = organizationData.profileData?.avatarURL;
     if (!avatarURL) {

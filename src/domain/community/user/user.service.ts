@@ -60,6 +60,7 @@ import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
+import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
@@ -117,11 +118,14 @@ export class UserService {
       );
     }
     await this.profileService.createVisualAvatar(user.profile, avatarURL);
-    if (profileData?.tagsetsData) {
-      for (const tagsetData of profileData.tagsetsData) {
-        await this.profileService.addTagsetOnProfile(user.profile, tagsetData);
-      }
-    }
+    await this.profileService.addTagsetOnProfile(user.profile, {
+      name: RestrictedTagsetNames.SKILLS,
+      tags: [],
+    });
+    await this.profileService.addTagsetOnProfile(user.profile, {
+      name: RestrictedTagsetNames.KEYWORDS,
+      tags: [],
+    });
 
     user.agent = await this.agentService.createAgent({
       parentDisplayID: user.email,

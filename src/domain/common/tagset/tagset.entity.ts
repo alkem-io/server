@@ -6,6 +6,8 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 export enum RestrictedTagsetNames {
   DEFAULT = 'default',
   SKILLS = 'skills',
+  CAPABILITIES = 'capabilities',
+  KEYWORDS = 'keywords',
 }
 
 @Entity()
