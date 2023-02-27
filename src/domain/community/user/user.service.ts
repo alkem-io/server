@@ -109,6 +109,13 @@ export class UserService {
       userData.profileData
     );
     user.profile = await this.profileService.createProfile(profileData);
+
+    // Set the visuals
+    await this.profileService.createVisualAvatar(
+      user.profile,
+      profileData?.avatarURL
+    );
+
     user.agent = await this.agentService.createAgent({
       parentDisplayID: user.email,
     });

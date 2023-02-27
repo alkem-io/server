@@ -82,6 +82,11 @@ export class OrganizationService {
     organization.profile = await this.profileService.createProfile(
       organizationData.profileData
     );
+    // Set the visuals
+    await this.profileService.createVisualAvatar(
+      organization.profile,
+      organizationData.profileData?.avatarURL
+    );
 
     organization.groups = [];
 

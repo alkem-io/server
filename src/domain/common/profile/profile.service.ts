@@ -49,11 +49,6 @@ export class ProfileService {
     });
     profile.authorization = new AuthorizationPolicy();
     profile.visuals = [];
-    const visualAvatar = await this.visualService.createVisualAvatar();
-    if (profileData?.avatarURL) {
-      visualAvatar.uri = profileData.avatarURL;
-    }
-    profile.visuals.push(visualAvatar);
     profile.location = await this.locationService.createLocation(
       profileData?.location
     );
@@ -172,6 +167,20 @@ export class ProfileService {
       await this.authorizationPolicyService.delete(profile.authorization);
 
     return await this.profileRepository.remove(profile as Profile);
+  }
+
+  async createVisualAvatar(profile: IProfile, avatarURL: string | undefined) {
+    const visualAvatar = await this.visualService.createVisualAvatar();
+    if (avatarURL) {
+      visualAvatar.uri = avatarURL;
+    }
+    if (!profile.visuals) {
+      throw new EntityNotInitializedException(
+        `No visuals found on profile: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    profile.visuals.push(visualAvatar);
   }
 
   async createTagset(tagsetData: CreateTagsetOnProfileInput): Promise<ITagset> {
