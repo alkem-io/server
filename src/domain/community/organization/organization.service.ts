@@ -82,10 +82,26 @@ export class OrganizationService {
     organization.profile = await this.profileService.createProfile(
       organizationData.profileData
     );
+    const profileData = organizationData.profileData;
+    if (profileData?.tagsetsData) {
+      for (const tagsetData of profileData.tagsetsData) {
+        await this.profileService.addTagsetOnProfile(
+          organization.profile,
+          tagsetData
+        );
+      }
+    }
     // Set the visuals
+    let avatarURL = organizationData.profileData?.avatarURL;
+    if (!avatarURL) {
+      avatarURL = this.profileService.generateRandomAvatar(
+        organization.profile?.displayName,
+        ''
+      );
+    }
     await this.profileService.createVisualAvatar(
       organization.profile,
-      organizationData.profileData?.avatarURL
+      avatarURL
     );
 
     organization.groups = [];

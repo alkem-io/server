@@ -60,8 +60,6 @@ import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
-import { VisualType } from '@common/enums/visual.type';
-
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
@@ -111,10 +109,19 @@ export class UserService {
     user.profile = await this.profileService.createProfile(profileData);
 
     // Set the visuals
-    await this.profileService.createVisualAvatar(
-      user.profile,
-      profileData?.avatarURL
-    );
+    let avatarURL = profileData?.avatarURL;
+    if (!avatarURL) {
+      avatarURL = this.profileService.generateRandomAvatar(
+        user.firstName,
+        user.lastName
+      );
+    }
+    await this.profileService.createVisualAvatar(user.profile, avatarURL);
+    if (profileData?.tagsetsData) {
+      for (const tagsetData of profileData.tagsetsData) {
+        await this.profileService.addTagsetOnProfile(user.profile, tagsetData);
+      }
+    }
 
     user.agent = await this.agentService.createAgent({
       parentDisplayID: user.email,
@@ -124,19 +131,6 @@ export class UserService {
       `Created a new user with nameID: ${user.nameID}`,
       LogContext.COMMUNITY
     );
-
-    // ensure have a random avatar. todo: use a package we control
-    const avatarVisual = await this.profileService.getVisual(
-      user.profile,
-      VisualType.AVATAR
-    );
-    if (avatarVisual.uri === '') {
-      avatarVisual.uri = this.profileService.generateRandomAvatar(
-        user.firstName,
-        user.lastName
-      );
-      // TODO: check that visual update is picked up
-    }
 
     user.preferenceSet = await this.preferenceSetService.createPreferenceSet(
       PreferenceDefinitionSet.USER,

@@ -9,6 +9,9 @@ import { ProfileService } from './profile.service';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ILocation } from '@domain/common/location/location.interface';
 import { VisualType } from '@common/enums/visual.type';
+import { RestrictedTagsetNames } from '../tagset/tagset.entity';
+import { EntityNotFoundException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
@@ -39,6 +42,30 @@ export class ProfileResolverFields {
     @Context() { loaders }: IGraphQLContext
   ): Promise<IReference[]> {
     return loaders.referencesLoader.load(profile.id);
+  }
+
+  // TODO: to make the switch for entities with a single tagset easier
+  @UseGuards(GraphqlGuard)
+  @ResolveField('tagset', () => ITagset, {
+    nullable: true,
+    description: 'The default tagset.',
+  })
+  @Profiling.api
+  async tagset(
+    @Parent() profile: IProfile,
+    @Context() { loaders }: IGraphQLContext
+  ): Promise<ITagset> {
+    const tagsets = await loaders.tagsetsLoader.load(profile.id);
+    const defaultTagset = tagsets.find(
+      t => t.name === RestrictedTagsetNames.DEFAULT
+    );
+    if (!defaultTagset) {
+      throw new EntityNotFoundException(
+        `Unable to locate DEFAULT tagset: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return defaultTagset;
   }
 
   @UseGuards(GraphqlGuard)

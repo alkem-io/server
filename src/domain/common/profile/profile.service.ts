@@ -19,14 +19,11 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { IVisual } from '@domain/common/visual/visual.interface';
-import {
-  CreateProfileInput,
-  CreateTagsetOnProfileInput,
-  UpdateProfileInput,
-} from './dto';
+import { CreateProfileInput, UpdateProfileInput } from './dto';
 import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
 import { ILocation, LocationService } from '@domain/common/location';
 import { VisualType } from '@common/enums/visual.type';
+import { CreateTagsetInput } from '../tagset';
 
 @Injectable()
 export class ProfileService {
@@ -41,6 +38,8 @@ export class ProfileService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
+  // Create an empty profile, that the creating entity then has to
+  // add tagets / visuals to.
   async createProfile(profileData?: CreateProfileInput): Promise<IProfile> {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
@@ -64,12 +63,6 @@ export class ProfileService {
     }
 
     profile.tagsets = [];
-    if (profileData?.tagsetsData) {
-      for (const tagsetData of profileData.tagsetsData) {
-        const tagset = await this.tagsetService.createTagset(tagsetData);
-        profile.tagsets.push(tagset);
-      }
-    }
 
     await this.profileRepository.save(profile);
     this.logger.verbose?.(
@@ -168,12 +161,13 @@ export class ProfileService {
 
     return await this.profileRepository.remove(profile as Profile);
   }
+  async save(profile: IProfile): Promise<IProfile> {
+    return await this.profileRepository.save(profile);
+  }
 
-  async createVisualAvatar(profile: IProfile, avatarURL: string | undefined) {
+  async createVisualAvatar(profile: IProfile, avatarURL: string) {
     const visualAvatar = await this.visualService.createVisualAvatar();
-    if (avatarURL) {
-      visualAvatar.uri = avatarURL;
-    }
+    visualAvatar.uri = avatarURL;
     if (!profile.visuals) {
       throw new EntityNotInitializedException(
         `No visuals found on profile: ${profile.id}`,
@@ -183,15 +177,16 @@ export class ProfileService {
     profile.visuals.push(visualAvatar);
   }
 
-  async createTagset(tagsetData: CreateTagsetOnProfileInput): Promise<ITagset> {
-    const profile = await this.getProfileOrFail(tagsetData.profileID, {
-      relations: ['tagsets'],
-    });
-
-    const tagset = await this.tagsetService.addTagsetWithName(
+  async addTagsetOnProfile(
+    profile: IProfile,
+    tagsetData: CreateTagsetInput
+  ): Promise<ITagset> {
+    profile.tagsets = await this.getTagsets(profile);
+    const tagset = await this.tagsetService.createTagsetWithName(
       profile,
       tagsetData
     );
+    profile.tagsets.push(tagset);
 
     await this.profileRepository.save(profile);
 

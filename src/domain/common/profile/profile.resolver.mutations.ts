@@ -35,10 +35,7 @@ export class ProfileResolverMutations {
     @Args('tagsetData') tagsetData: CreateTagsetOnProfileInput
   ): Promise<ITagset> {
     const profile = await this.profileService.getProfileOrFail(
-      tagsetData.profileID,
-      {
-        relations: ['tagsets'],
-      }
+      tagsetData.profileID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -47,9 +44,12 @@ export class ProfileResolverMutations {
       `profile: ${profile.id}`
     );
 
-    const tagset = await this.profileService.createTagset(tagsetData);
+    const tagset = await this.profileService.addTagsetOnProfile(
+      profile,
+      tagsetData
+    );
     tagset.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
+      this.authorizationPolicyService.inheritParentAuthorization(
         tagset.authorization,
         profile.authorization
       );
