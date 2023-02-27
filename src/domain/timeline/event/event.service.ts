@@ -14,6 +14,7 @@ import { CalendarEvent } from './event.entity';
 import { ICalendarEvent } from './event.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 
 @Injectable()
 export class CalendarEventService {
@@ -36,6 +37,11 @@ export class CalendarEventService {
     calendarEvent.profile = await this.profileService.createProfile(
       calendarEventInput.profileData
     );
+    await this.profileService.addTagsetOnProfile(calendarEvent.profile, {
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: [],
+    });
+
     calendarEvent.authorization = new AuthorizationPolicy();
     calendarEvent.createdBy = userID;
 

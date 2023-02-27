@@ -1,7 +1,9 @@
 mutation CreateOrganization($organizationData: CreateOrganizationInput!) {
   createOrganization(organizationData: $organizationData) {
-    displayName
-    nameID,
+    profile {
+      displayName
+    }
+    nameID
     id
     members
     {
@@ -16,10 +18,12 @@ query variables:
   "organizationData":
   {
     "nameID": "AlkemioOrg",
-    "displayName": "Stichting Alkemio",
-    legalEntityName: "Alkemio Legal Name",
+    "profileData": {
+        "displayName": "Stichting Alkemio"
+    },
+    "legalEntityName": "Alkemio Legal Name",
     "domain": "alkem.io",
     "website": "alkem.io",
-    contactEmail: "contact@alkem.io"
+    "contactEmail": "contact@alkem.io"
   }
 }

@@ -1,5 +1,6 @@
 mutation CreateUser($userData: CreateUserInput!) {
   createUser(userData: $userData) {
+    id
     profile {
       displayName
     }

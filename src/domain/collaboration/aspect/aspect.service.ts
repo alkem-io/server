@@ -15,6 +15,7 @@ import { CommentsService } from '@domain/communication/comments/comments.service
 import { CreateAspectInput } from './dto/aspect.dto.create';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 
 @Injectable()
 export class AspectService {
@@ -37,6 +38,10 @@ export class AspectService {
     aspect.profile = await this.profileService.createProfile(
       aspectInput.profileData
     );
+    await this.profileService.addTagsetOnProfile(aspect.profile, {
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: [],
+    });
     aspect.authorization = new AuthorizationPolicy();
     aspect.createdBy = userID;
     aspect.banner = await this.visualService.createVisualBanner(
