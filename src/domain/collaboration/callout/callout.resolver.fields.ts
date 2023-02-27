@@ -1,8 +1,10 @@
 import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { LoggerService } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { AuthorizationAgentPrivilege, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
@@ -14,11 +16,13 @@ import { IAspectTemplate } from '@domain/template/aspect-template/aspect.templat
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { ICanvasTemplate } from '@domain/template/canvas-template/canvas.template.interface';
-import { EntityNotInitializedException } from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
     private calloutService: CalloutService,
     private userService: UserService
   ) {}
@@ -171,17 +175,27 @@ export class CalloutResolverFields {
   }
 
   @ResolveField('createdBy', () => IUser, {
-    nullable: false,
+    nullable: true,
     description: 'The user that created this Callout',
   })
-  async createdBy(@Parent() callout: ICallout): Promise<IUser> {
+  async createdBy(@Parent() callout: ICallout): Promise<IUser | null> {
     const createdBy = callout.createdBy;
     if (!createdBy) {
-      throw new EntityNotInitializedException(
-        'CreatedBy not set on Callout',
-        LogContext.COLLABORATION
-      );
+      return null;
     }
-    return await this.userService.getUserOrFail(createdBy);
+
+    try {
+      return await this.userService.getUserOrFail(createdBy);
+    } catch (e: unknown) {
+      if (e instanceof EntityNotFoundException) {
+        this.logger?.warn(
+          `createdBy '${createdBy}' unable to be resolved when resolving callout '${callout.id}'`,
+          LogContext.COLLABORATION
+        );
+        return null;
+      } else {
+        throw e;
+      }
+    }
   }
 }
