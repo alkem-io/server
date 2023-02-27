@@ -12,6 +12,7 @@ import {
 import { AuthenticationService } from './authentication.service';
 import { OryDefaultIdentitySchema } from './ory.default.identity.schema';
 import { verifyIdentityIfOidcAuth } from './verify.identity.if.oidc.auth';
+import { IncomingMessage } from 'http';
 
 @Injectable()
 export class OryApiStrategy extends PassportStrategy(
@@ -37,8 +38,7 @@ export class OryApiStrategy extends PassportStrategy(
     );
   }
 
-  async validate(payload: any) {
-    console.warn('OryApiStrategy::validate');
+  async validate(payload: IncomingMessage) {
     const apiAccessEnabled = this.configService.get(ConfigurationTypes.IDENTITY)
       .authentication.api_access_enabled;
 
