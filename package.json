@@ -57,7 +57,7 @@
     "@nestjs/passport": "^8.0.0",
     "@nestjs/platform-express": "^8.0.5",
     "@nestjs/typeorm": "8.0.4",
-    "@ory/kratos-client": "^0.10.1",
+    "@ory/kratos-client": "^0.11.1",
     "ajv": "^8.11.0",
     "amqp-connection-manager": "^3.7.0",
     "amqplib": "^0.8.0",
