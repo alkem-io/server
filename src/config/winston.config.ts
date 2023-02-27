@@ -67,7 +67,7 @@ export class WinstonConfigService {
           format: 'MM-DD hh:mm:ss',
         }),
         winston.format.printf(
-          info =>
+          (info: any) =>
             `${info.timestamp} ${info.level} [${info.context}] - ${info.message}`
         ),
         winston.format.align(),
