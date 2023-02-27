@@ -22,13 +22,7 @@ export class ProfileAuthorizationService {
     const profile = await this.profileService.getProfileOrFail(
       profileInput.id,
       {
-        relations: [
-          'references',
-          'avatar',
-          'tagsets',
-          'authorization',
-          'visuals',
-        ],
+        relations: ['references', 'tagsets', 'authorization', 'visuals'],
       }
     );
 

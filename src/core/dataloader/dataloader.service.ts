@@ -1,7 +1,6 @@
 import { IDataloaders } from './dataloader.interface';
 import DataLoader from 'dataloader';
 import { Injectable } from '@nestjs/common';
-import { IProfile } from '@domain/community';
 import { ILocation } from '@domain/common/location/location.interface';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
@@ -11,6 +10,7 @@ import { OrganizationDataloaderService } from '@domain/community/organization/or
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CollaborationDataloaderService } from '@domain/collaboration/collaboration/collaboration.dataloader.service';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
 
 @Injectable()
 export class DataloaderService {

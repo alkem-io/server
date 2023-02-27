@@ -1,14 +1,14 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { MID_TEXT_LENGTH, NAMEID_LENGTH } from '@src/common/constants';
 import { IsDate, IsOptional, MaxLength, ValidateNested } from 'class-validator';
-import { CreateNameableInputOld } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create.old';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { CreateCardProfileInput } from '@domain/collaboration/card-profile/dto';
 import { Type } from 'class-transformer';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
+import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
+import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 
 @InputType()
-export class CreateCalendarEventInput extends CreateNameableInputOld {
+export class CreateCalendarEventInput extends CreateNameableInput {
   @Field(() => CalendarEventType, { nullable: false })
   @MaxLength(MID_TEXT_LENGTH)
   type!: string;
@@ -22,11 +22,11 @@ export class CreateCalendarEventInput extends CreateNameableInputOld {
   @IsOptional()
   nameID!: string;
 
-  @Field(() => CreateCardProfileInput, { nullable: true })
+  @Field(() => CreateProfileInput, { nullable: true })
   @IsOptional()
   @ValidateNested({ each: true })
-  @Type(() => CreateCardProfileInput)
-  profileData?: CreateCardProfileInput;
+  @Type(() => CreateProfileInput)
+  profileData?: CreateProfileInput;
 
   @Field(() => Date, {
     nullable: false,

@@ -99,7 +99,7 @@ export class NotificationPayloadBuilder {
   ): Promise<CollaborationCardCreatedEventPayload> {
     const card = await this.aspectRepository.findOne(
       { id: aspectId },
-      { relations: ['callout'] }
+      { relations: ['callout', 'profile'] }
     );
     if (!card) {
       throw new NotificationEventException(
@@ -131,7 +131,7 @@ export class NotificationPayloadBuilder {
       card: {
         id: aspectId,
         createdBy: card.createdBy,
-        displayName: card.displayName,
+        displayName: card.profile?.displayName || '',
         nameID: card.nameID,
         type: card.type,
       },
@@ -219,7 +219,7 @@ export class NotificationPayloadBuilder {
   ): Promise<CollaborationCardCommentEventPayload> {
     const card = await this.aspectRepository.findOne(
       { id: aspect.id },
-      { relations: ['callout'] }
+      { relations: ['callout', 'profile'] }
     );
 
     if (!card) {
@@ -256,7 +256,7 @@ export class NotificationPayloadBuilder {
         nameID: callout.nameID,
       },
       card: {
-        displayName: card.displayName,
+        displayName: card.profile?.displayName || '',
         createdBy: card.createdBy,
         nameID: card.nameID,
       },

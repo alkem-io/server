@@ -2,12 +2,12 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IAspect } from './aspect.interface';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { Comments } from '@domain/communication/comments';
-import { NameableEntityOld } from '@domain/common/entity/nameable-entity/nameable.entity.old';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { CardProfile } from '../card-profile';
+import { Profile } from '@domain/common/profile/profile.entity';
+import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 
 @Entity()
-export class Aspect extends NameableEntityOld implements IAspect {
+export class Aspect extends NameableEntity implements IAspect {
   @Column('text')
   type: string;
 
@@ -38,13 +38,13 @@ export class Aspect extends NameableEntityOld implements IAspect {
   @JoinColumn()
   comments?: Comments;
 
-  @OneToOne(() => CardProfile, {
+  @OneToOne(() => Profile, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  profile?: CardProfile;
+  profile?: Profile;
 
   @ManyToOne(() => Callout, callout => callout.aspects, {
     eager: false,

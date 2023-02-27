@@ -13,7 +13,6 @@ import {
 } from '@common/enums';
 import { AspectService } from './aspect.service';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
-import { CardProfileAuthorizationService } from '../card-profile/card.profile.service.authorization';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
@@ -21,6 +20,7 @@ import {
   CREDENTIAL_RULE_ASPECT_CREATED_BY,
   CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD,
 } from '@common/constants';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 
 @Injectable()
 export class AspectAuthorizationService {
@@ -29,7 +29,7 @@ export class AspectAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private commentsAuthorizationService: CommentsAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
-    private cardProfileAuthorizationService: CardProfileAuthorizationService,
+    private profileAuthorizationService: ProfileAuthorizationService,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>
   ) {}
@@ -74,9 +74,9 @@ export class AspectAuthorizationService {
         );
     }
 
-    aspect.profile = await this.aspectService.getCardProfile(aspect);
+    aspect.profile = await this.aspectService.getProfile(aspect);
     aspect.profile =
-      await this.cardProfileAuthorizationService.applyAuthorizationPolicy(
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
         aspect.profile,
         aspect.authorization
       );

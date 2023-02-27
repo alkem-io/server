@@ -1,18 +1,18 @@
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { INameableOld } from '@domain/common/entity/nameable-entity';
-import { ICardProfile } from '@domain/collaboration/card-profile/card.profile.interface';
 import { ICalendar } from '../calendar/calendar.interface';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
+import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
 
 @ObjectType('CalendarEvent')
-export abstract class ICalendarEvent extends INameableOld {
+export abstract class ICalendarEvent extends INameable {
   @Field(() => CalendarEventType, {
     description: 'The event type, e.g. webinar, meetup etc.',
   })
   type!: string;
 
-  profile?: ICardProfile;
+  profile?: IProfile;
 
   calendar?: ICalendar;
 
