@@ -8,5 +8,7 @@ export class UserFilterInput implements Partial<IUser> {
   @Field(() => String, { nullable: true })
   lastName!: string;
   @Field(() => String, { nullable: true })
+  displayName!: string;
+  @Field(() => String, { nullable: true })
   email!: string;
 }

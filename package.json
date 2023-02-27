@@ -40,7 +40,6 @@
   },
   "overrides": {
     "fs-capacitor": "6.2.0",
-    "busboy": "1.0.0",
     "jsonwebtoken": "9.0.0"
   },
   "dependencies": {
