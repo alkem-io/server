@@ -521,7 +521,7 @@ export class NotificationPayloadBuilder {
   ): Promise<{ id: string; displayName: string }> {
     const org = await this.organizationRepository
       .createQueryBuilder('organization')
-      .select(['organization.id', 'organization.displayName'])
+      .select(['organization.id'])
       .leftJoin('organization.profile', 'profile')
       .where('organization.id = :id')
       .orWhere('profile.nameID = :id')
@@ -542,10 +542,10 @@ export class NotificationPayloadBuilder {
   ): Promise<{ id: string; displayName: string } | undefined> {
     const org = await this.organizationRepository
       .createQueryBuilder('organization')
-      .select(['organization.id', 'organization.displayName'])
+      .select(['organization.id'])
       .leftJoin('organization.profile', 'profile')
       .where('organization.id = :id')
-      .orWhere('organization.profile.nameID = :id')
+      .orWhere('organization.nameID = :id')
       .setParameters({ id: orgId })
       .getOne();
 
