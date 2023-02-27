@@ -5,7 +5,7 @@ import { IProfile } from '@domain/community';
 import { ILocation } from '@domain/common/location/location.interface';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { ProfileDataloaderService } from '@domain/community/profile/profile.dataloader.service';
+import { ProfileDataloaderService } from '@domain/common/profile/profile.dataloader.service';
 import { UserDataloaderService } from '@domain/community/user/user.dataloader.service';
 import { OrganizationDataloaderService } from '@domain/community/organization/organization.dataloader.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';

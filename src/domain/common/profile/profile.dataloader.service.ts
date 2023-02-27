@@ -4,7 +4,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { Profile } from '@domain/community/profile/profile.entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 import { ILocation } from '@domain/common/location/location.interface';
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';

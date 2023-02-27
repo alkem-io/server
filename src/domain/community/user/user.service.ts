@@ -21,7 +21,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
-import { ProfileService } from '@domain/community/profile/profile.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
 import {
   CreateUserInput,
   DeleteUserInput,
@@ -49,12 +49,12 @@ import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set
 import { PreferenceType } from '@common/enums/preference.type';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
-import { IProfile } from '../profile/profile.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
 import { PaginationArgs } from '@core/pagination';
 import { applyFiltering, UserFilterInput } from '@core/filtering';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
-import { CreateProfileInput } from '../profile/dto/profile.dto.create';
+import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
 import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';

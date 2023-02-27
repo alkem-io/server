@@ -1,6 +1,6 @@
 import { IReference } from '@domain/common/reference';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { IProfile } from '@domain/community/profile/profile.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';

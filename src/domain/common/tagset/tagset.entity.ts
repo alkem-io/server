@@ -1,6 +1,6 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { Profile } from '@domain/community/profile/profile.entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 
 export enum RestrictedTagsetNames {

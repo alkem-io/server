@@ -10,7 +10,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
-import { ProfileService } from '@domain/community/profile/profile.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import {
   CreateOrganizationInput,

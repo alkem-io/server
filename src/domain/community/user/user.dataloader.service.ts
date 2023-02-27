@@ -3,7 +3,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { IProfile } from '../profile';
+import { IProfile } from '../../common/profile';
 import { User } from './user.entity';
 
 @Injectable()
