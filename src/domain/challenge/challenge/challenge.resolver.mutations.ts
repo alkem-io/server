@@ -111,7 +111,7 @@ export class ChallengeResolverMutations {
     this.elasticService.opportunityCreated(
       {
         id: opportunity.id,
-        name: opportunity.displayName,
+        name: opportunity.profile?.displayName || '',
         hub: opportunity.hubID ?? '',
       },
       {
@@ -187,7 +187,7 @@ export class ChallengeResolverMutations {
     this.elasticService.challengeContentEdited(
       {
         id: challenge.id,
-        name: challenge.displayName,
+        name: challenge.profile?.displayName || '',
         hub: challenge.hubID ?? '',
       },
       {
@@ -262,7 +262,7 @@ export class ChallengeResolverMutations {
       agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign user challenge admin: ${challenge.displayName}`
+      `assign user challenge admin: ${challenge.nameID}`
     );
     return await this.challengeService.assignChallengeAdmin(membershipData);
   }
@@ -283,7 +283,7 @@ export class ChallengeResolverMutations {
       agentInfo,
       challenge.authorization,
       AuthorizationPrivilege.GRANT,
-      `remove user challenge admin: ${challenge.displayName}`
+      `remove user challenge admin: ${challenge.nameID}`
     );
     return await this.challengeService.removeChallengeAdmin(membershipData);
   }

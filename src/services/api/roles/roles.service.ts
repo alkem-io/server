@@ -329,7 +329,7 @@ export class RolesService {
     const newChallengeResult = new RolesResultCommunity(
       challenge.nameID,
       challenge.id,
-      challenge.displayName
+      challenge.profile?.displayName || ''
     );
     hubResult.challenges.push(newChallengeResult);
     return newChallengeResult;
@@ -357,7 +357,7 @@ export class RolesService {
     const newOpportunityResult = new RolesResultCommunity(
       opportunity.nameID,
       opportunity.id,
-      opportunity.displayName
+      opportunity.profile?.displayName || ''
     );
     hubResult.opportunities.push(newOpportunityResult);
     return newOpportunityResult;

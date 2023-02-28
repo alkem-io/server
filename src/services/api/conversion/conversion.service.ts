@@ -65,7 +65,7 @@ export class ConversionService {
     const createHubInput: CreateHubInput = {
       hostID: hostOrg.nameID,
       nameID: challenge.nameID,
-      displayName: challenge.displayName,
+      displayName: challenge.profile?.displayName || '',
     };
     const hub = await this.hubService.createHub(createHubInput, agentInfo);
 
@@ -165,7 +165,7 @@ export class ConversionService {
       challenge = await this.challengeService.createChallenge(
         {
           nameID: challengeNameID,
-          displayName: opportunity.displayName,
+          displayName: opportunity.profile?.displayName || '',
           innovationFlowTemplateID: lifecycleTemplateID,
         },
         hubID,
@@ -180,7 +180,7 @@ export class ConversionService {
       challenge = await this.challengeService.createChallenge(
         {
           nameID: challengeNameID,
-          displayName: opportunity.displayName,
+          displayName: opportunity.profile?.displayName || '',
           innovationFlowTemplateID: defaultChallengeLifecycleTemplate.id,
         },
         hubID,

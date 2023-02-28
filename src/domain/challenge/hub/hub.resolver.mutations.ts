@@ -99,7 +99,7 @@ export class HubResolverMutations {
     this.elasticService.hubContentEdited(
       {
         id: updatedHub.id,
-        name: updatedHub.displayName,
+        name: updatedHub.profile?.displayName || '',
         hub: updatedHub.id,
       },
       {
@@ -276,7 +276,7 @@ export class HubResolverMutations {
     this.elasticService.challengeCreated(
       {
         id: challenge.id,
-        name: challenge.displayName,
+        name: challenge.profile?.displayName || '',
         hub: challenge.hubID ?? '',
       },
       {
@@ -334,7 +334,7 @@ export class HubResolverMutations {
       agentInfo,
       hub.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign user hub admin: ${hub.displayName}`
+      `assign user hub admin: ${hub.nameID}`
     );
     return await this.hubService.assignHubAdmin(membershipData);
   }
@@ -353,7 +353,7 @@ export class HubResolverMutations {
       agentInfo,
       hub.authorization,
       AuthorizationPrivilege.GRANT,
-      `remove user hub admin: ${hub.displayName}`
+      `remove user hub admin: ${hub.nameID}`
     );
     return await this.hubService.removeHubAdmin(membershipData);
   }

@@ -60,7 +60,7 @@ export class OpportunityResolverMutations {
     this.elasticService.opportunityContentEdited(
       {
         id: updatedOpportunity.id,
-        name: updatedOpportunity.displayName,
+        name: updatedOpportunity.profile?.displayName || '',
         hub: updatedOpportunity.hubID ?? '',
       },
       {
@@ -186,7 +186,7 @@ export class OpportunityResolverMutations {
       agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign user opportunity admin: ${opportunity.displayName}`
+      `assign user opportunity admin: ${opportunity.nameID}`
     );
     return await this.opportunityService.assignOpportunityAdmin(membershipData);
   }
@@ -207,7 +207,7 @@ export class OpportunityResolverMutations {
       agentInfo,
       opportunity.authorization,
       AuthorizationPrivilege.GRANT,
-      `remove user opportunity admin: ${opportunity.displayName}`
+      `remove user opportunity admin: ${opportunity.nameID}`
     );
     return await this.opportunityService.removeOpportunityAdmin(membershipData);
   }

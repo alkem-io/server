@@ -40,24 +40,6 @@ export class ContextAuthorizationService {
         context.ecosystemModel
       );
 
-    context.visuals = await this.contextService.getVisuals(context);
-    for (const visual of context.visuals) {
-      visual.authorization =
-        await this.authorizationPolicyService.inheritParentAuthorization(
-          visual.authorization,
-          context.authorization
-        );
-    }
-
-    context.references = await this.contextService.getReferences(context);
-    for (const reference of context.references) {
-      reference.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          reference.authorization,
-          context.authorization
-        );
-    }
-
     context.recommendations = await this.contextService.getRecommendations(
       context
     );

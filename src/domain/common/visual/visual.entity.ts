@@ -1,5 +1,4 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
-import { Context } from '@domain/context/context/context.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { IVisual } from './visual.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
@@ -36,13 +35,6 @@ export class Visual extends AuthorizableEntity implements IVisual {
     onDelete: 'CASCADE',
   })
   profile?: Profile;
-
-  @ManyToOne(() => Context, context => context.visuals, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  context?: Context;
 
   constructor(name: string, uri: string) {
     super();

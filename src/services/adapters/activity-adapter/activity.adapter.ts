@@ -59,7 +59,7 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdForHub(
       challenge.hubID
     );
-    const description = challenge.displayName;
+    const description = challenge.nameID;
 
     const activity = await this.activityService.createActivity({
       collaborationID,
@@ -86,7 +86,7 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdForChallenge(
       eventData.challengeId
     );
-    const description = opportunity.displayName;
+    const description = opportunity.nameID;
 
     const activity = await this.activityService.createActivity({
       collaborationID,

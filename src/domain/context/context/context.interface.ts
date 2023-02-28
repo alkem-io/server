@@ -3,23 +3,10 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IEcosystemModel } from '@domain/context/ecosystem-model/ecosystem-model.interface';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
-import { IVisual } from '@domain/common/visual/visual.interface';
 import { ILocation } from '@domain/common/location/location.interface';
 
 @ObjectType('Context')
 export abstract class IContext extends IAuthorizable {
-  @Field(() => String, {
-    nullable: true,
-    description: 'A one line description',
-  })
-  tagline?: string;
-
-  @Field(() => Markdown, {
-    nullable: true,
-    description: 'A detailed description of the current situation',
-  })
-  background?: string;
-
   @Field(() => Markdown, {
     nullable: true,
     description: 'The goal that is being pursued',
@@ -44,11 +31,7 @@ export abstract class IContext extends IAuthorizable {
   })
   location?: ILocation;
 
-  references?: IReference[];
-
   recommendations?: IReference[];
 
   ecosystemModel?: IEcosystemModel;
-
-  visuals?: IVisual[];
 }

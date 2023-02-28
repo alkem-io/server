@@ -15,13 +15,6 @@ export class Reference extends AuthorizableEntity implements IReference {
   @Column('text', { nullable: true })
   description?: string;
 
-  @ManyToOne(() => Context, context => context.references, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  context?: Context;
-
   @ManyToOne(() => Context, context => context.recommendations, {
     eager: false,
     cascade: false,

@@ -165,16 +165,38 @@ export class ProfileService {
     return await this.profileRepository.save(profile);
   }
 
-  async createVisualAvatar(profile: IProfile, avatarURL: string) {
-    const visualAvatar = await this.visualService.createVisualAvatar();
-    visualAvatar.uri = avatarURL;
+  async addVisualOnProfile(
+    profile: IProfile,
+    visualType: VisualType,
+    url?: string
+  ) {
+    let visual: IVisual;
+    switch (visualType) {
+      case VisualType.AVATAR:
+        visual = await this.visualService.createVisualAvatar();
+        break;
+      case VisualType.BANNER:
+        visual = await this.visualService.createVisualBanner();
+        break;
+      case VisualType.CARD:
+        visual = await this.visualService.createVisualBannerNarrow();
+        break;
+
+      default:
+        throw new Error(
+          `Unable to recognise type of visual requested: ${visualType}`
+        );
+    }
+    if (url) {
+      visual.uri = url;
+    }
     if (!profile.visuals) {
       throw new EntityNotInitializedException(
         `No visuals found on profile: ${profile.id}`,
         LogContext.COMMUNITY
       );
     }
-    profile.visuals.push(visualAvatar);
+    profile.visuals.push(visual);
   }
 
   async addTagsetOnProfile(

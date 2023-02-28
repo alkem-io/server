@@ -2,7 +2,6 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Repository } from 'typeorm';
-import { Project } from '@domain/collaboration/project/project.entity';
 import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -16,7 +15,6 @@ import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
 import { CreateTagsetInput } from '@domain/common/tagset/tagset.dto.create';
 import { UpdateTagsetInput } from '@domain/common/tagset/tagset.dto.update';
 import { DeleteTagsetInput } from '@domain/common/tagset/tagset.dto.delete';
-import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 
@@ -97,16 +95,6 @@ export class TagsetService {
       }
     }
     return tagsets;
-  }
-
-  replaceTagsOnEntity(entity: BaseChallenge | Project, tags: string[]) {
-    if (!entity.tagset)
-      throw new EntityNotInitializedException(
-        `Entity with id(${entity.id}) not initialised with a tagset!`,
-        LogContext.COMMUNITY
-      );
-    entity.tagset.tags = [...tags];
-    return entity;
   }
 
   // Get the default tagset

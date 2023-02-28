@@ -65,6 +65,7 @@ import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
+import { IProfile } from '@domain/common/profile/profile.interface';
 
 @Injectable()
 export class HubService {
@@ -522,7 +523,7 @@ export class HubService {
 
     // Sort the challenges base on their display name
     const sortedChallenges = limitAndShuffled.sort((a, b) =>
-      a.displayName > b.displayName ? 1 : -1
+      a.nameID > b.nameID ? 1 : -1
     );
     return sortedChallenges;
   }
@@ -588,6 +589,13 @@ export class HubService {
 
   async getContext(hub: IHub): Promise<IContext> {
     return await this.baseChallengeService.getContext(
+      hub.id,
+      this.hubRepository
+    );
+  }
+
+  async getProfile(hub: IHub): Promise<IProfile> {
+    return await this.baseChallengeService.getProfile(
       hub.id,
       this.hubRepository
     );
