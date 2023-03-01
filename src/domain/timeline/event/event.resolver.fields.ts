@@ -24,7 +24,7 @@ export class CalendarEventResolverFields {
   ) {}
 
   @ResolveField('createdBy', () => IUser, {
-    nullable: false,
+    nullable: true,
     description: 'The user that created this CalendarEvent',
   })
   async createdBy(
