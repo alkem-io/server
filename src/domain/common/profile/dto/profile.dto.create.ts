@@ -17,7 +17,10 @@ import { Markdown } from '@domain/common/scalars/scalar.markdown';
 
 @InputType()
 export class CreateProfileInput {
-  @Field({ nullable: false, description: 'The display name for the entity.' })
+  @Field({
+    nullable: false,
+    description: 'The display name for the entity.',
+  })
   @MinLength(3)
   @MaxLength(SMALL_TEXT_LENGTH)
   displayName!: string;
@@ -47,7 +50,10 @@ export class CreateProfileInput {
   @Type(() => CreateReferenceInput)
   referencesData?: CreateReferenceInput[];
 
-  @Field({ nullable: true, description: 'The URL of the avatar of the user' })
+  @Field({
+    nullable: true,
+    description: 'The URL of the avatar of the user',
+  })
   @IsOptional()
   @MaxLength(MID_TEXT_LENGTH)
   avatarURL?: string;
