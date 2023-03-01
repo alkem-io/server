@@ -95,7 +95,7 @@ export class OrganizationService {
     let avatarURL = organizationData.profileData?.avatarURL;
     if (!avatarURL) {
       avatarURL = this.profileService.generateRandomAvatar(
-        organization.profile?.displayName,
+        organization.profile.displayName,
         ''
       );
     }
@@ -185,7 +185,7 @@ export class OrganizationService {
 
     await this.checkDisplayNameOrFail(
       organizationData.profileData?.displayName,
-      organization.profile?.displayName
+      organization.profile.displayName
     );
 
     // Check the tagsets

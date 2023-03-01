@@ -96,7 +96,7 @@ export class CommentsResolverMutations {
       this.elasticService.calloutCardCommentCreated(
         {
           id: aspect.id,
-          name: aspect.profile?.displayName || '',
+          name: aspect.profile.displayName,
           hub: hubID,
         },
         {
@@ -198,7 +198,7 @@ export class CommentsResolverMutations {
       originEntity: {
         id: aspect.id,
         nameId: aspect.nameID,
-        displayName: aspect.profile?.displayName || '',
+        displayName: aspect.profile.displayName,
       },
       commentType: CommentType.CARD,
     };
@@ -233,7 +233,7 @@ export class CommentsResolverMutations {
       originEntity: {
         id: calendarEvent.id,
         nameId: calendarEvent.nameID,
-        displayName: calendarEvent.profile?.displayName || '',
+        displayName: calendarEvent.profile.displayName,
       },
       commentType: CommentType.CALENDAR_EVENT,
     };

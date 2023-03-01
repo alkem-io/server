@@ -12,7 +12,7 @@ export abstract class ICalendarEvent extends INameable {
   })
   type!: string;
 
-  profile?: IProfile;
+  profile!: IProfile;
 
   calendar?: ICalendar;
 

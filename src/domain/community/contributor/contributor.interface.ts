@@ -5,7 +5,7 @@ import { INameable } from '@domain/common/entity/nameable-entity/nameable.interf
 
 @ObjectType('Contributor')
 export abstract class IContributor extends INameable {
-  profile?: IProfile;
+  profile!: IProfile;
 
   agent?: IAgent;
 }

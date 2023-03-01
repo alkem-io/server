@@ -44,7 +44,7 @@ export class Aspect extends NameableEntity implements IAspect {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  profile?: Profile;
+  profile!: Profile;
 
   @ManyToOne(() => Callout, callout => callout.aspects, {
     eager: false,

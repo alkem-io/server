@@ -6,9 +6,9 @@ import {
   ValidateNested,
 } from 'class-validator';
 import {
-  LONG_TEXT_LENGTH,
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
+  VERY_LONG_TEXT_LENGTH,
 } from '@src/common/constants';
 import { UpdateReferenceInput } from '@domain/common/reference';
 import { UpdateTagsetInput } from '@domain/common/tagset/tagset.dto.update';
@@ -33,7 +33,7 @@ export class UpdateProfileInput extends UpdateBaseAlkemioInput {
 
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
-  @MaxLength(LONG_TEXT_LENGTH)
+  @MaxLength(VERY_LONG_TEXT_LENGTH)
   description?: string;
 
   @Field(() => [UpdateReferenceInput], { nullable: true })

@@ -13,7 +13,7 @@ export abstract class IAspect extends INameable {
   })
   type!: string;
 
-  profile?: IProfile;
+  profile!: IProfile;
 
   @Field(() => ICallout, {
     nullable: true,

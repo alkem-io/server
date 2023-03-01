@@ -294,7 +294,7 @@ export class CalloutService {
     // Check that there isn't an aspect with the same title
     const displayName = aspectData.profileData?.displayName || 'not defined';
     const existingAspect = callout.aspects?.find(
-      aspect => aspect.profile?.displayName === displayName
+      aspect => aspect.profile.displayName === displayName
     );
     if (existingAspect)
       throw new ValidationException(
