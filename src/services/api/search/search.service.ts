@@ -403,16 +403,17 @@ export class SearchService {
       const readableHubMatches: Hub[] = [];
       const hubMatches = await this.hubRepository
         .createQueryBuilder('hub')
-        .leftJoinAndSelect('hub.tagset', 'tagset')
         .leftJoinAndSelect('hub.challenges', 'challenges')
         .leftJoinAndSelect('hub.authorization', 'authorization')
         .leftJoinAndSelect('hub.context', 'context')
         .leftJoinAndSelect('hub.collaboration', 'collaboration')
-        .leftJoinAndSelect('context.location', 'location')
+        .leftJoinAndSelect('hub.profile', 'profile')
+        .leftJoinAndSelect('profile.location', 'location')
+        .leftJoinAndSelect('profile.tagsets', 'tagset')
         .where('hub.nameID like :term')
-        .orWhere('hub.displayName like :term')
+        .orWhere('profile.displayName like :term')
+        .orWhere('profile.tagline like :term')
         .orWhere('tagset.tags like :term')
-        .orWhere('context.tagline like :term')
         .orWhere('context.background like :term')
         .orWhere('context.impact like :term')
         .orWhere('context.vision like :term')
@@ -457,12 +458,13 @@ export class SearchService {
       const readableChallengeMatches: Challenge[] = [];
       const challengeQuery = this.challengeRepository
         .createQueryBuilder('challenge')
-        .leftJoinAndSelect('challenge.tagset', 'tagset')
         .leftJoinAndSelect('challenge.opportunities', 'opportunities')
         .leftJoinAndSelect('challenge.authorization', 'authorization')
         .leftJoinAndSelect('challenge.context', 'context')
         .leftJoinAndSelect('challenge.collaboration', 'collaboration')
-        .leftJoinAndSelect('context.location', 'location');
+        .leftJoinAndSelect('challenge.profile', 'profile')
+        .leftJoinAndSelect('profile.location', 'location')
+        .leftJoinAndSelect('profile.tagsets', 'tagset');
 
       // Optionally restrict to search in just one Hub
       if (challengeIDsFilter) {
@@ -478,7 +480,7 @@ export class SearchService {
             qb.where('challenge.nameID like :term')
               .orWhere('challenge.displayName like :term')
               .orWhere('tagset.tags like :term')
-              .orWhere('context.tagline like :term')
+              .orWhere('profile.tagline like :term')
               .orWhere('context.background like :term')
               .orWhere('context.impact like :term')
               .orWhere('context.vision like :term')
@@ -526,13 +528,14 @@ export class SearchService {
       const readableOpportunityMatches: Opportunity[] = [];
       const opportunitiesQuery = this.opportunityRepository
         .createQueryBuilder('opportunity')
-        .leftJoinAndSelect('opportunity.tagset', 'tagset')
         .leftJoinAndSelect('opportunity.projects', 'projects')
         .leftJoinAndSelect('opportunity.authorization', 'authorization')
         .leftJoinAndSelect('opportunity.context', 'context')
         .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
         .leftJoinAndSelect('opportunity.challenge', 'challenge')
-        .leftJoinAndSelect('context.location', 'location');
+        .leftJoinAndSelect('opportunity.profile', 'profile')
+        .leftJoinAndSelect('profile.location', 'location')
+        .leftJoinAndSelect('profile.tagsets', 'tagset');
       // Optionally restrict to search in just one Hub
       if (opportunityIDsFilter) {
         opportunitiesQuery.where('opportunity.id IN (:opportunitiesFilter)', {
@@ -546,7 +549,7 @@ export class SearchService {
             qb.where('opportunity.nameID like :term')
               .orWhere('opportunity.displayName like :term')
               .orWhere('tagset.tags like :term')
-              .orWhere('context.tagline like :term')
+              .orWhere('profile.tagline like :term')
               .orWhere('context.background like :term')
               .orWhere('context.impact like :term')
               .orWhere('context.vision like :term')

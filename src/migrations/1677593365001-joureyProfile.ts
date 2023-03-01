@@ -59,7 +59,7 @@ export class joureyProfile1677593365001 implements MigrationInterface {
     );
     for (const hub of hubs) {
       const contexts: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, tagline, locationId, background from context WHERE (id = '${hub.contextId}')`
+        `SELECT id, createdDate, updatedDate, version, tagline, locationId from context WHERE (id = '${hub.contextId}')`
       );
       const context = contexts[0];
       const newProfileID = randomUUID();
@@ -80,7 +80,7 @@ export class joureyProfile1677593365001 implements MigrationInterface {
                       '${context.version}',
                       '${profileAuthID}',
                       '${context.locationId}',
-                      '${escapeString(context.background)}',
+                      '',
                       '${escapeString(hub.displayName)}',
                       '${escapeString(context.tagline)}')`
       );
@@ -112,7 +112,7 @@ export class joureyProfile1677593365001 implements MigrationInterface {
     );
     for (const challenge of challenges) {
       const contexts: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, tagline, locationId, background from context WHERE (id = '${challenge.contextId}')`
+        `SELECT id, createdDate, updatedDate, version, tagline, locationId from context WHERE (id = '${challenge.contextId}')`
       );
       const context = contexts[0];
       const newProfileID = randomUUID();
@@ -132,7 +132,7 @@ export class joureyProfile1677593365001 implements MigrationInterface {
                       '${context.version}',
                       '${profileAuthID}',
                       '${context.locationId}',
-                      '${escapeString(context.background)}',
+                      '',
                       '${escapeString(challenge.displayName)}',
                       '${escapeString(context.tagline)}')`
       );
@@ -164,7 +164,7 @@ export class joureyProfile1677593365001 implements MigrationInterface {
     );
     for (const opportunity of opportunities) {
       const contexts: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, tagline, locationId, background from context WHERE (id = '${opportunity.contextId}')`
+        `SELECT id, createdDate, updatedDate, version, tagline, locationId from context WHERE (id = '${opportunity.contextId}')`
       );
       const context = contexts[0];
       const newProfileID = randomUUID();
@@ -184,7 +184,7 @@ export class joureyProfile1677593365001 implements MigrationInterface {
                             '${context.version}',
                             '${profileAuthID}',
                             '${context.locationId}',
-                            '${escapeString(context.background)}',
+                            '',
                             '${escapeString(opportunity.displayName)}',
                             '${escapeString(context.tagline)}')`
       );
@@ -224,7 +224,6 @@ export class joureyProfile1677593365001 implements MigrationInterface {
     );
 
     await queryRunner.query('ALTER TABLE `context` DROP COLUMN `locationId`');
-    await queryRunner.query('ALTER TABLE `context` DROP COLUMN `background`');
     await queryRunner.query('ALTER TABLE `context` DROP COLUMN `tagline`');
 
     await queryRunner.query('ALTER TABLE `visual` DROP COLUMN `contextId`');
@@ -284,9 +283,6 @@ export class joureyProfile1677593365001 implements MigrationInterface {
       `ALTER TABLE \`context\` ADD CONSTRAINT \`FK_88888ca8ac212b8357637794d6f\` FOREIGN KEY (\`locationId\`) REFERENCES \`location\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      'ALTER TABLE `context` ADD `background` varchar(255) NULL'
-    );
-    await queryRunner.query(
       'ALTER TABLE `context` ADD `tagline` varchar(255) NULL'
     );
 
@@ -335,11 +331,10 @@ export class joureyProfile1677593365001 implements MigrationInterface {
         WHERE (id = '${hub.id}')`
       );
 
-      // Update background, tagline, locationId on Hub
+      // Update tagline, locationId on Hub
       await queryRunner.query(
         `UPDATE context SET
         locationId = '${profile.locationId}',
-        background = '${escapeString(profile.description)}'
         tagline = '${escapeString(profile.tagline)}'
         WHERE (id = '${context.id}')`
       );
@@ -392,11 +387,10 @@ export class joureyProfile1677593365001 implements MigrationInterface {
         WHERE (id = '${challenge.id}')`
       );
 
-      // Update background, tagline, locationId on Hub
+      // Update , tagline, locationId on Hub
       await queryRunner.query(
         `UPDATE context SET
         locationId = '${profile.locationId}',
-        background = '${escapeString(profile.description)}'
         tagline = '${escapeString(profile.tagline)}'
         WHERE (id = '${context.id}')`
       );
@@ -449,11 +443,10 @@ export class joureyProfile1677593365001 implements MigrationInterface {
         WHERE (id = '${opportunity.id}')`
       );
 
-      // Update background, tagline, locationId on Hub
+      // Update tagline, locationId on Hub
       await queryRunner.query(
         `UPDATE context SET
         locationId = '${profile.locationId}',
-        background = '${escapeString(profile.description)}'
         tagline = '${escapeString(profile.tagline)}'
         WHERE (id = '${context.id}')`
       );
