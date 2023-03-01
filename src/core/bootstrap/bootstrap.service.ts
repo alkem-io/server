@@ -25,6 +25,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@platform/admin/authorization/admin.authorization.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { PlatformService } from '@platform/platfrom/platform.service';
+import { CreateHubInput } from '@domain/challenge/hub/dto/hub.dto.create';
 
 @Injectable()
 export class BootstrapService {
@@ -235,14 +236,15 @@ export class BootstrapService {
         );
       }
 
-      const hub = await this.hubService.createHub({
+      const hubInput: CreateHubInput = {
         nameID: DEFAULT_HUB_NAMEID,
-        displayName: DEFAULT_HUB_DISPLAYNAME,
         hostID: DEFAULT_HOST_ORG_NAMEID,
-        context: {
+        profileData: {
+          displayName: DEFAULT_HUB_DISPLAYNAME,
           tagline: 'An empty hub to be populated',
         },
-      });
+      };
+      const hub = await this.hubService.createHub(hubInput);
       return await this.hubAuthorizationService.applyAuthorizationPolicy(hub);
     }
   }

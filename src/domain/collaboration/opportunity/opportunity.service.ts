@@ -83,7 +83,7 @@ export class OpportunityService {
 
     if (!opportunityData.nameID) {
       opportunityData.nameID = this.namingService.createNameID(
-        opportunityData.displayName
+        opportunityData.profileData?.displayName || ''
       );
     }
     await this.baseChallengeService.isNameAvailableOrFail(

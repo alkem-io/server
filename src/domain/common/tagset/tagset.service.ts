@@ -145,7 +145,8 @@ export class TagsetService {
 
   async createTagsetWithName(
     tagsetable: ITagsetable,
-    tagsetData: CreateTagsetInput
+    tagsetData: CreateTagsetInput,
+    checkForRestricted: boolean
   ): Promise<ITagset> {
     // Check if the group already exists, if so log a warning
     if (this.hasTagsetWithName(tagsetable, tagsetData.name)) {
@@ -155,11 +156,13 @@ export class TagsetService {
       );
     }
 
-    if (tagsetable.restrictedTagsetNames?.includes(tagsetData.name)) {
-      throw new ValidationException(
-        `Restricted Tagset name: ${tagsetData.name}`,
-        LogContext.COMMUNITY
-      );
+    if (checkForRestricted) {
+      if (tagsetable.restrictedTagsetNames?.includes(tagsetData.name)) {
+        throw new ValidationException(
+          `Restricted Tagset name: ${tagsetData.name}`,
+          LogContext.COMMUNITY
+        );
+      }
     }
 
     return await this.createTagset(tagsetData);

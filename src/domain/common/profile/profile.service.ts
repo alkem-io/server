@@ -201,12 +201,14 @@ export class ProfileService {
 
   async addTagsetOnProfile(
     profile: IProfile,
-    tagsetData: CreateTagsetInput
+    tagsetData: CreateTagsetInput,
+    checkForRestricted = false
   ): Promise<ITagset> {
     profile.tagsets = await this.getTagsets(profile);
     const tagset = await this.tagsetService.createTagsetWithName(
       profile,
-      tagsetData
+      tagsetData,
+      checkForRestricted
     );
     profile.tagsets.push(tagset);
 
