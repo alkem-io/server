@@ -48,10 +48,10 @@ export class TimelineService {
     timelineID: string,
     options?: FindOneOptions<Timeline>
   ): Promise<ITimeline> {
-    const timeline = await this.timelineRepository.findOne(
-      { id: timelineID },
-      options
-    );
+    const timeline = await this.timelineRepository.findOne({
+      where: { id: timelineID },
+      ...options,
+    });
     if (!timeline)
       throw new EntityNotFoundException(
         `Timeline not found: ${timelineID}`,

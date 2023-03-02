@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, getConnection, Repository } from 'typeorm';
+import { FindOneOptions, getConnection, In, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -176,20 +176,20 @@ export class OpportunityService {
     opportunityID: string,
     nameableScopeID: string,
     options?: FindOneOptions<Opportunity>
-  ): Promise<IOpportunity> {
-    let opportunity: IOpportunity | undefined;
+  ): Promise<IOpportunity | never> {
+    let opportunity: IOpportunity | null = null;
     if (opportunityID.length == UUID_LENGTH) {
-      opportunity = await this.opportunityRepository.findOne(
-        { id: opportunityID, hubID: nameableScopeID },
-        options
-      );
+      opportunity = await this.opportunityRepository.findOne({
+        where: { id: opportunityID, hubID: nameableScopeID },
+        ...options,
+      });
     }
     if (!opportunity) {
       // look up based on nameID
-      opportunity = await this.opportunityRepository.findOne(
-        { nameID: opportunityID, hubID: nameableScopeID },
-        options
-      );
+      opportunity = await this.opportunityRepository.findOne({
+        where: { nameID: opportunityID, hubID: nameableScopeID },
+        ...options,
+      });
     }
 
     if (!opportunity) {
@@ -205,13 +205,15 @@ export class OpportunityService {
   async getOpportunityOrFail(
     opportunityID: string,
     options?: FindOneOptions<Opportunity>
-  ): Promise<IOpportunity> {
-    let opportunity: IOpportunity | undefined;
+  ): Promise<IOpportunity | never> {
+    let opportunity: IOpportunity | null = null;
     if (opportunityID.length == UUID_LENGTH) {
-      opportunity = await this.opportunityRepository.findOne(
-        { id: opportunityID },
-        options
-      );
+      opportunity = await this.opportunityRepository.findOne({
+        where: {
+          id: opportunityID,
+        },
+        ...options,
+      });
     }
 
     if (!opportunity) {
@@ -229,12 +231,12 @@ export class OpportunityService {
     IDs?: string[]
   ): Promise<IOpportunity[]> {
     if (IDs && IDs.length > 0) {
-      return await this.opportunityRepository.findByIds(IDs, {
-        hubID: nameableScopeID,
+      return await this.opportunityRepository.find({
+        where: { id: In(IDs), hubID: nameableScopeID },
       });
     }
 
-    return await this.opportunityRepository.find({
+    return await this.opportunityRepository.findBy({
       hubID: nameableScopeID,
     });
   }
@@ -404,9 +406,7 @@ export class OpportunityService {
   }
 
   async getOpportunitiesInHubCount(hubID: string): Promise<number> {
-    return await this.opportunityRepository.count({
-      where: { hubID: hubID },
-    });
+    return await this.opportunityRepository.countBy({ hubID: hubID });
   }
 
   async getOpportunitiesCount(
@@ -421,9 +421,7 @@ export class OpportunityService {
   }
 
   async getOpportunitiesInChallengeCount(challengeID: string): Promise<number> {
-    return await this.opportunityRepository.count({
-      where: { challenge: challengeID },
-    });
+    return await this.opportunityRepository.countBy({ challenge: challengeID });
   }
 
   async assignMember(userID: string, opportunityId: string) {
@@ -476,7 +474,7 @@ export class OpportunityService {
 
   async getOpportunityForCommunity(
     communityID: string
-  ): Promise<IOpportunity | undefined> {
+  ): Promise<IOpportunity | null> {
     return await this.opportunityRepository.findOne({
       relations: ['community', 'challenge'],
       where: {

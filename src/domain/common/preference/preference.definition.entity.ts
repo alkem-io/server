@@ -43,17 +43,7 @@ export class PreferenceDefinition
   @OneToMany(() => Preference, pref => pref.preferenceDefinition)
   preference?: Preference;
 
-  constructor(
-    group: string,
-    displayName: string,
-    description: string,
-    valueType: PreferenceValueType
-  ) {
+  constructor() {
     super();
-
-    this.group = group;
-    this.displayName = displayName;
-    this.description = description;
-    this.valueType = valueType;
   }
 }

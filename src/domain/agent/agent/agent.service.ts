@@ -89,7 +89,10 @@ export class AgentService {
     agentID: string,
     options?: FindOneOptions<Agent>
   ): Promise<IAgent> {
-    const agent = await this.agentRepository.findOne({ id: agentID }, options);
+    const agent = await this.agentRepository.findOne({
+      where: { id: agentID },
+      ...options,
+    });
     if (!agent)
       throw new EntityNotFoundException(
         `No Agent found with the given id: ${agentID}`,
@@ -655,7 +658,7 @@ export class AgentService {
   }
 
   async ensureDidsCreated() {
-    const agentsWithoutDids = await this.agentRepository.find({ did: '' });
+    const agentsWithoutDids = await this.agentRepository.findBy({ did: '' });
     for (const agent of agentsWithoutDids) {
       await this.createDidOnAgent(agent);
     }

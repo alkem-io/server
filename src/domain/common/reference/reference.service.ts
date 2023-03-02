@@ -93,10 +93,10 @@ export class ReferenceService {
     referenceID: string,
     options?: FindOneOptions<Reference>
   ): Promise<IReference> {
-    const reference = await this.referenceRepository.findOne(
-      { id: referenceID },
-      options
-    );
+    const reference = await this.referenceRepository.findOne({
+      where: { id: referenceID },
+      ...options,
+    });
     if (!reference)
       throw new EntityNotFoundException(
         `Not able to locate reference with the specified ID: ${referenceID}`,

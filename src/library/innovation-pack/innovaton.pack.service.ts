@@ -134,19 +134,19 @@ export class InnovationPackService {
     innovationPackID: string,
     options?: FindOneOptions<InnovationPack>
   ): Promise<IInnovationPack> {
-    let innovationPack: IInnovationPack | undefined;
+    let innovationPack: IInnovationPack | null = null;
     if (innovationPackID.length === UUID_LENGTH) {
-      innovationPack = await this.innovationPackRepository.findOne(
-        { id: innovationPackID },
-        options
-      );
+      innovationPack = await this.innovationPackRepository.findOne({
+        where: { id: innovationPackID },
+        ...options,
+      });
     }
     if (!innovationPack) {
       // look up based on nameID
-      innovationPack = await this.innovationPackRepository.findOne(
-        { nameID: innovationPackID },
-        options
-      );
+      innovationPack = await this.innovationPackRepository.findOne({
+        where: { nameID: innovationPackID },
+        ...options,
+      });
     }
     if (!innovationPack)
       throw new EntityNotFoundException(
@@ -212,7 +212,7 @@ export class InnovationPackService {
   }
 
   async isNameIdAvailable(nameID: string): Promise<boolean> {
-    const innovationPackCount = await this.innovationPackRepository.count({
+    const innovationPackCount = await this.innovationPackRepository.countBy({
       nameID: nameID,
     });
     if (innovationPackCount != 0) return false;

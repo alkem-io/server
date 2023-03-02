@@ -30,7 +30,7 @@ export class RelationService {
         `Invalid relation type supplied: ${relationData.type}`,
         LogContext.CHALLENGES
       );
-    const relation = Relation.create(relationData);
+    const relation = Relation.create({ ...relationData });
     relation.authorization = new AuthorizationPolicy();
 
     // to do: set the rest of the fields
@@ -59,7 +59,9 @@ export class RelationService {
   }
 
   async getRelationOrFail(relationID: string): Promise<IRelation> {
-    const relation = await this.relationRepository.findOne({ id: relationID });
+    const relation = await this.relationRepository.findOneBy({
+      id: relationID,
+    });
     if (!relation)
       throw new EntityNotFoundException(
         `Not able to locate relation with the specified ID: ${relationID}`,
@@ -90,8 +92,8 @@ export class RelationService {
   public async getRelationsInCollaborationCount(
     collaborationId: string
   ): Promise<number> {
-    return await this.relationRepository.count({
-      where: { collaboration: collaborationId },
+    return await this.relationRepository.countBy({
+      collaboration: collaborationId,
     });
   }
 }

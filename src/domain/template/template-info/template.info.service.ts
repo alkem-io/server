@@ -45,10 +45,10 @@ export class TemplateInfoService {
     templateInfoID: string,
     options?: FindOneOptions<TemplateInfo>
   ): Promise<ITemplateInfo> {
-    const templateInfo = await this.templateInfoRepository.findOne(
-      { id: templateInfoID },
-      options
-    );
+    const templateInfo = await this.templateInfoRepository.findOne({
+      where: { id: templateInfoID },
+      ...options,
+    });
     if (!templateInfo)
       throw new EntityNotFoundException(
         `TemplateInfo with id(${templateInfoID}) not found!`,

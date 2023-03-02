@@ -8,7 +8,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 @Entity()
 export class UserGroup extends AuthorizableEntity implements IUserGroup {
   @Column()
-  name: string;
+  name!: string;
 
   @Column()
   hubID?: string;
@@ -31,8 +31,7 @@ export class UserGroup extends AuthorizableEntity implements IUserGroup {
   })
   community?: Community;
 
-  constructor(name: string) {
+  constructor() {
     super();
-    this.name = name;
   }
 }

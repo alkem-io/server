@@ -51,17 +51,17 @@ export class NamingService {
     nameID: string,
     hubID: string
   ): Promise<boolean> {
-    const challengeCount = await this.challengeRepository.count({
+    const challengeCount = await this.challengeRepository.countBy({
       nameID: nameID,
       hubID: hubID,
     });
     if (challengeCount > 0) return false;
-    const opportunityCount = await this.opportunityRepository.count({
+    const opportunityCount = await this.opportunityRepository.countBy({
       nameID: nameID,
       hubID: hubID,
     });
     if (opportunityCount > 0) return false;
-    const projectCount = await this.projectRepository.count({
+    const projectCount = await this.projectRepository.countBy({
       nameID: nameID,
       hubID: hubID,
     });
@@ -394,7 +394,7 @@ export class NamingService {
       durationMinutes: number;
       durationDays: number;
     }[] = await getConnection().query(
-      `SELECT id, displayName, nameID, type, createdBy, startDate, createdDate,  wholeDay, multipleDays, durationMinutes, durationDays 
+      `SELECT id, displayName, nameID, type, createdBy, startDate, createdDate,  wholeDay, multipleDays, durationMinutes, durationDays
       FROM calendar_event WHERE commentsId = '${commentsID}'`
     );
 

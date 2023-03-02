@@ -2,7 +2,7 @@ import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { IProfile } from '../profile';
 import { User } from './user.entity';
 
@@ -16,7 +16,8 @@ export class UserDataloaderService {
   public async findProfilesByBatch(
     userIds: string[]
   ): Promise<(IProfile | Error)[]> {
-    const users = await this.userRepository.findByIds(userIds, {
+    const users = await this.userRepository.find({
+      where: { id: In(userIds) },
       relations: ['profile'],
       select: ['id'],
     });

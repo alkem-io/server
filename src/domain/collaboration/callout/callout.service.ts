@@ -111,19 +111,19 @@ export class CalloutService {
     calloutID: string,
     options?: FindOneOptions<Callout>
   ): Promise<ICallout> {
-    let callout: ICallout | undefined;
+    let callout: ICallout | null = null;
     if (calloutID.length === UUID_LENGTH) {
-      callout = await this.calloutRepository.findOne(
-        { id: calloutID },
-        options
-      );
+      callout = await this.calloutRepository.findOne({
+        where: { id: calloutID },
+        ...options,
+      });
     }
     if (!callout) {
       // look up based on nameID
-      callout = await this.calloutRepository.findOne(
-        { nameID: calloutID },
-        options
-      );
+      callout = await this.calloutRepository.findOne({
+        where: { nameID: calloutID },
+        ...options,
+      });
     }
     if (!callout)
       throw new EntityNotFoundException(

@@ -67,10 +67,10 @@ export class PreferenceSetService {
     preferenceSetID: string,
     options?: FindOneOptions<PreferenceSet>
   ): Promise<IPreferenceSet> {
-    const preferenceSet = await PreferenceSet.findOne(
-      { id: preferenceSetID },
-      options
-    );
+    const preferenceSet = await PreferenceSet.findOne({
+      where: { id: preferenceSetID },
+      ...options,
+    });
     if (!preferenceSet)
       throw new EntityNotFoundException(
         `PreferenceSet with id(${preferenceSetID}) not found!`,

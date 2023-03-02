@@ -29,7 +29,9 @@ export class CanvasCheckoutService {
   async createCanvasCheckout(
     checkoutData: CreateCanvasCheckoutInput
   ): Promise<ICanvasCheckout> {
-    const canvasCheckout: ICanvasCheckout = CanvasCheckout.create(checkoutData);
+    const canvasCheckout: ICanvasCheckout = CanvasCheckout.create({
+      ...checkoutData,
+    });
     canvasCheckout.authorization = new AuthorizationPolicy();
 
     // save the user to get the id assigned
@@ -70,10 +72,10 @@ export class CanvasCheckoutService {
     canvasCheckoutID: string,
     options?: FindOneOptions<CanvasCheckout>
   ): Promise<ICanvasCheckout> {
-    const canvasCheckout = await this.canvasCheckoutRepository.findOne(
-      { id: canvasCheckoutID },
-      options
-    );
+    const canvasCheckout = await this.canvasCheckoutRepository.findOne({
+      where: { id: canvasCheckoutID },
+      ...options,
+    });
     if (!canvasCheckout)
       throw new EntityNotFoundException(
         `Unable to find CanvasCheckout with ID: ${canvasCheckoutID}`,

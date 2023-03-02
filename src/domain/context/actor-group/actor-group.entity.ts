@@ -11,7 +11,7 @@ export enum RestrictedActorGroupNames {
 @Entity()
 export class ActorGroup extends AuthorizableEntity implements IActorGroup {
   @Column()
-  name: string;
+  name!: string;
 
   @Column('text', { nullable: true })
   description?: string;
@@ -29,8 +29,7 @@ export class ActorGroup extends AuthorizableEntity implements IActorGroup {
   })
   actors?: Actor[];
 
-  constructor(name: string) {
+  constructor() {
     super();
-    this.name = name;
   }
 }

@@ -93,7 +93,7 @@ export class CommunityResolverService {
       `
     );
 
-    const community = await this.communityRepository.findOne({
+    const community = await this.communityRepository.findOneBy({
       id: result.communityId,
     });
     if (!community) {
@@ -122,7 +122,7 @@ export class CommunityResolverService {
       `
     );
 
-    const community = await this.communityRepository.findOne({
+    const community = await this.communityRepository.findOneBy({
       id: result.communityId,
     });
     if (!community) {
@@ -197,7 +197,7 @@ export class CommunityResolverService {
       `
     );
 
-    const community = await this.communityRepository.findOne({
+    const community = await this.communityRepository.findOneBy({
       id: queryResult.communityId,
     });
     if (!community) {

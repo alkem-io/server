@@ -22,7 +22,7 @@ export class PlatformService {
   ) {}
 
   async getPlatformOrFail(
-    options?: FindOneOptions<Platform>
+    options: FindOneOptions<Platform>
   ): Promise<IPlatform> {
     const platform = await this.platformRepository.findOne(options);
     if (!platform)

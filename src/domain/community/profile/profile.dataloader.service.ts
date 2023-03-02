@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Profile } from '@domain/community/profile/profile.entity';
@@ -18,15 +18,18 @@ export class ProfileDataloaderService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
   public async findReferencesByBatch(
-    profileIds: string[]
+    referenceIds: string[]
   ): Promise<(IReference[] | Error)[]> {
-    const profiles = await this.profileRepository.findByIds(profileIds, {
+    const profiles = await this.profileRepository.find({
+      where: { references: In(referenceIds) },
       relations: ['references'],
       select: ['id'],
     });
 
-    const results = profiles.filter(profile => profileIds.includes(profile.id));
-    return profileIds.map(
+    const results = profiles.filter(profile =>
+      referenceIds.includes(profile.id)
+    );
+    return referenceIds.map(
       id =>
         results.find(result => result.id === id)?.references ||
         new EntityNotFoundException(
@@ -39,7 +42,8 @@ export class ProfileDataloaderService {
   public async findAvatarsByBatch(
     avatarIds: string[]
   ): Promise<(IVisual | Error)[]> {
-    const profiles = await this.profileRepository.findByIds(avatarIds, {
+    const profiles = await this.profileRepository.find({
+      where: { avatar: In(avatarIds) },
       relations: ['avatar'],
       select: ['id'],
     });
@@ -58,7 +62,8 @@ export class ProfileDataloaderService {
   public async findLocationsByBatch(
     locationIds: string[]
   ): Promise<(ILocation | Error)[]> {
-    const profiles = await this.profileRepository.findByIds(locationIds, {
+    const profiles = await this.profileRepository.find({
+      where: { location: In(locationIds) },
       relations: ['location'],
       select: ['id'],
     });
@@ -79,7 +84,8 @@ export class ProfileDataloaderService {
   public async findTagsetsByBatch(
     tagsetIds: string[]
   ): Promise<(ITagset[] | Error)[]> {
-    const profiles = await this.profileRepository.findByIds(tagsetIds, {
+    const profiles = await this.profileRepository.find({
+      where: { tagsets: In(tagsetIds) },
       relations: ['tagsets'],
       select: ['id'],
     });

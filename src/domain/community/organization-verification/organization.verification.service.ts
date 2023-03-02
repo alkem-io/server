@@ -25,7 +25,7 @@ export class OrganizationVerificationService {
     organizationVerificationData: CreateOrganizationVerificationInput
   ): Promise<IOrganizationVerification> {
     const organizationVerification: IOrganizationVerification =
-      OrganizationVerification.create(organizationVerificationData);
+      OrganizationVerification.create({ ...organizationVerificationData });
 
     organizationVerification.status = OrganizationVerificationEnum.NOT_VERIFIED;
     organizationVerification.authorization = new AuthorizationPolicy();
@@ -75,10 +75,10 @@ export class OrganizationVerificationService {
     options?: FindOneOptions<OrganizationVerification>
   ): Promise<IOrganizationVerification> {
     const organizationVerification =
-      await this.organizationVerificationRepository.findOne(
-        { id: organizationVerificationID },
-        options
-      );
+      await this.organizationVerificationRepository.findOne({
+        where: { id: organizationVerificationID },
+        ...options,
+      });
     if (!organizationVerification)
       throw new EntityNotFoundException(
         `Unable to find organizationVerification with ID: ${organizationVerificationID}`,

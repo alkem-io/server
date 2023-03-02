@@ -128,10 +128,10 @@ export class LifecycleService {
     lifecycleID: string,
     options?: FindOneOptions<Lifecycle>
   ): Promise<ILifecycle> {
-    const lifecycle = await this.lifecycleRepository.findOne(
-      { id: lifecycleID },
-      options
-    );
+    const lifecycle = await this.lifecycleRepository.findOne({
+      where: { id: lifecycleID },
+      ...options,
+    });
     if (!lifecycle)
       throw new EntityNotFoundException(
         `Unable to find Lifecycle with ID: ${lifecycleID}`,

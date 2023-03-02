@@ -379,13 +379,19 @@ export class HubService {
     hubID: string,
     options?: FindOneOptions<Hub>
   ): Promise<IHub> {
-    let hub: IHub | undefined;
+    let hub: IHub | null = null;
     if (hubID.length === UUID_LENGTH) {
-      hub = await this.hubRepository.findOne({ id: hubID }, options);
+      hub = await this.hubRepository.findOne({
+        where: { id: hubID },
+        ...options,
+      });
     }
     if (!hub) {
       // look up based on nameID
-      hub = await this.hubRepository.findOne({ nameID: hubID }, options);
+      hub = await this.hubRepository.findOne({
+        where: { nameID: hubID },
+        ...options,
+      });
     }
     if (!hub)
       throw new EntityNotFoundException(
@@ -475,7 +481,7 @@ export class HubService {
   }
 
   async isNameIdAvailable(nameID: string): Promise<boolean> {
-    const challengeCount = await this.hubRepository.count({
+    const challengeCount = await this.hubRepository.countBy({
       nameID: nameID,
     });
     if (challengeCount != 0) return false;
@@ -784,9 +790,7 @@ export class HubService {
   }
 
   async getHubCount(visibility = HubVisibility.ACTIVE): Promise<number> {
-    return await this.hubRepository.count({
-      where: { visibility: visibility },
-    });
+    return await this.hubRepository.countBy({ visibility: visibility });
   }
 
   async getHost(hubID: string): Promise<IOrganization | undefined> {

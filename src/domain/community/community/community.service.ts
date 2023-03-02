@@ -135,10 +135,10 @@ export class CommunityService {
     communityID: string,
     options?: FindOneOptions<Community>
   ): Promise<ICommunity> {
-    const community = await this.communityRepository.findOne(
-      { id: communityID },
-      options
-    );
+    const community = await this.communityRepository.findOne({
+      where: { id: communityID },
+      ...options,
+    });
     if (!community)
       throw new EntityNotFoundException(
         `Unable to find Community with ID: ${communityID}`,
@@ -747,7 +747,7 @@ export class CommunityService {
     communityID: string,
     nameableScopeID: string
   ): Promise<ICommunity> {
-    const community = await this.communityRepository.findOne({
+    const community = await this.communityRepository.findOneBy({
       id: communityID,
       hubID: nameableScopeID,
     });

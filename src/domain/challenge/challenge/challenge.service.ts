@@ -291,19 +291,19 @@ export class ChallengeService {
     nameableScopeID: string,
     options?: FindOneOptions<Challenge>
   ): Promise<IChallenge> {
-    let challenge: IChallenge | undefined;
+    let challenge: IChallenge | null = null;
     if (challengeID.length == UUID_LENGTH) {
-      challenge = await this.challengeRepository.findOne(
-        { id: challengeID, hubID: nameableScopeID },
-        options
-      );
+      challenge = await this.challengeRepository.findOne({
+        where: { id: challengeID, hubID: nameableScopeID },
+        ...options,
+      });
     }
     if (!challenge) {
       // look up based on nameID
-      challenge = await this.challengeRepository.findOne(
-        { nameID: challengeID, hubID: nameableScopeID },
-        options
-      );
+      challenge = await this.challengeRepository.findOne({
+        where: { nameID: challengeID, hubID: nameableScopeID },
+        ...options,
+      });
     }
 
     if (!challenge) {
@@ -328,6 +328,7 @@ export class ChallengeService {
       );
     }
     if (!challenge) {
+      options.where = { nameID: challengeID };
       // look up based on nameID
       challenge = await this.challengeRepository.findOne(
         { nameID: challengeID },
@@ -601,9 +602,7 @@ export class ChallengeService {
   }
 
   async getChallengesInHubCount(hubID: string): Promise<number> {
-    const count = await this.challengeRepository.count({
-      where: { hubID: hubID },
-    });
+    const count = await this.challengeRepository.countBy({ hubID: hubID });
     return count;
   }
 
@@ -617,8 +616,8 @@ export class ChallengeService {
   }
 
   async getChildChallengesCount(challengeID: string): Promise<number> {
-    return await this.challengeRepository.count({
-      where: { parentChallenge: challengeID },
+    return await this.challengeRepository.countBy({
+      parentChallenge: challengeID,
     });
   }
   async getMembersCount(challenge: IChallenge): Promise<number> {

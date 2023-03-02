@@ -72,10 +72,10 @@ export class TemplatesSetService {
     templatesSetID: string,
     options?: FindOneOptions<TemplatesSet>
   ): Promise<ITemplatesSet> {
-    const templatesSet = await TemplatesSet.findOne(
-      { id: templatesSetID },
-      options
-    );
+    const templatesSet = await TemplatesSet.findOne({
+      where: { id: templatesSetID },
+      ...options,
+    });
     if (!templatesSet)
       throw new EntityNotFoundException(
         `TemplatesSet with id(${templatesSetID}) not found!`,

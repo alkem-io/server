@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindConditions, FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, Repository, FindManyOptions } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { IUser } from '@domain/community/user';
@@ -43,7 +43,7 @@ export class UserGroupService {
     userGroupData: CreateUserGroupInput,
     hubID = ''
   ): Promise<IUserGroup> {
-    const group = UserGroup.create(userGroupData);
+    const group = UserGroup.create({ ...userGroupData });
     group.hubID = hubID;
     group.authorization = new AuthorizationPolicy();
 
@@ -123,10 +123,10 @@ export class UserGroupService {
     options?: FindOneOptions<UserGroup>
   ): Promise<IUserGroup> {
     //const t1 = performance.now()
-    const group = await this.userGroupRepository.findOne(
-      { id: groupID },
-      options
-    );
+    const group = await this.userGroupRepository.findOne({
+      where: { id: groupID },
+      ...options,
+    });
     if (!group)
       throw new EntityNotFoundException(
         `Unable to find group with ID: ${groupID}`,
@@ -224,14 +224,14 @@ export class UserGroupService {
   }
 
   async getGroups(
-    conditions?: FindConditions<UserGroup>
+    conditions?: FindManyOptions<UserGroup>
   ): Promise<IUserGroup[]> {
     return (await this.userGroupRepository.find(conditions)) || [];
   }
 
   async getGroupsWithTag(
     tagFilter: string,
-    conditions?: FindConditions<UserGroup>
+    conditions?: FindManyOptions<UserGroup>
   ): Promise<IUserGroup[]> {
     const groups = await this.getGroups(conditions);
     return groups.filter(g => {

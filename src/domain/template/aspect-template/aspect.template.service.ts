@@ -37,10 +37,10 @@ export class AspectTemplateService {
     aspectTemplateID: string,
     options?: FindOneOptions<AspectTemplate>
   ): Promise<IAspectTemplate> {
-    const aspectTemplate = await this.aspectTemplateRepository.findOne(
-      aspectTemplateID,
-      options
-    );
+    const aspectTemplate = await this.aspectTemplateRepository.findOne({
+      where: { id: aspectTemplateID },
+      ...options,
+    });
     if (!aspectTemplate)
       throw new EntityNotFoundException(
         `Not able to locate AspectTemplate with the specified ID: ${aspectTemplateID}`,

@@ -35,7 +35,7 @@ export class ContextService {
   ) {}
 
   async createContext(contextData: CreateContextInput): Promise<IContext> {
-    const context: IContext = Context.create(contextData);
+    const context: IContext = Context.create({ ...contextData });
 
     // Manually create the references to ensure child entities like authorization are created
     context.references = [];
@@ -80,10 +80,10 @@ export class ContextService {
     contextID: string,
     options?: FindOneOptions<Context>
   ): Promise<IContext> {
-    const context = await this.contextRepository.findOne(
-      { id: contextID },
-      options
-    );
+    const context = await this.contextRepository.findOne({
+      where: { id: contextID },
+      ...options,
+    });
     if (!context)
       throw new EntityNotFoundException(
         `No Context found with the given id: ${contextID}`,

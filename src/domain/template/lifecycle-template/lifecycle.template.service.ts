@@ -40,10 +40,10 @@ export class LifecycleTemplateService {
     lifecycleTemplateID: string,
     options?: FindOneOptions<LifecycleTemplate>
   ): Promise<ILifecycleTemplate> {
-    const lifecycleTemplate = await this.lifecycleTemplateRepository.findOne(
-      lifecycleTemplateID,
-      options
-    );
+    const lifecycleTemplate = await this.lifecycleTemplateRepository.findOne({
+      where: { id: lifecycleTemplateID },
+      ...options,
+    });
 
     if (!lifecycleTemplate)
       throw new EntityNotFoundException(

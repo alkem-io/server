@@ -170,10 +170,12 @@ export class CardProfileService {
     cardProfileID: string,
     options?: FindOneOptions<CardProfile>
   ): Promise<ICardProfile> {
-    const cardProfile = await CardProfile.findOne(
-      { id: cardProfileID },
-      options
-    );
+    const cardProfile = await CardProfile.findOne({
+      where: {
+        id: cardProfileID,
+      },
+      ...options,
+    });
     if (!cardProfile)
       throw new EntityNotFoundException(
         `CardProfile with id(${cardProfileID}) not found!`,

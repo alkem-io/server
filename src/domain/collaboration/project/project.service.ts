@@ -73,21 +73,21 @@ export class ProjectService {
     projectID: string,
     nameableScopeID: string,
     options?: FindOneOptions<Project>
-  ): Promise<IProject> {
-    let project: IProject | undefined;
+  ): Promise<IProject | never> {
+    let project: IProject | null = null;
     if (projectID.length == UUID_LENGTH) {
-      project = await this.projectRepository.findOne(
-        { id: projectID, hubID: nameableScopeID },
-        options
-      );
+      project = await this.projectRepository.findOne({
+        where: { id: projectID, hubID: nameableScopeID },
+        ...options,
+      });
     }
 
     if (!project) {
       // look up based on nameID instead
-      project = await this.projectRepository.findOne(
-        { nameID: projectID, hubID: nameableScopeID },
-        options
-      );
+      project = await this.projectRepository.findOne({
+        where: { nameID: projectID, hubID: nameableScopeID },
+        ...options,
+      });
     }
 
     if (!project) {
@@ -117,10 +117,10 @@ export class ProjectService {
     projectID: string,
     options?: FindOneOptions<Project>
   ): Promise<IProject> {
-    const project = await this.projectRepository.findOne(
-      { id: projectID },
-      options
-    );
+    const project = await this.projectRepository.findOne({
+      where: { id: projectID },
+      ...options,
+    });
     if (!project)
       throw new EntityNotFoundException(
         `Unable to find Project with ID: ${projectID}`,
@@ -130,7 +130,7 @@ export class ProjectService {
   }
 
   async getProjects(hubID: string): Promise<Project[]> {
-    const projects = await this.projectRepository.find({
+    const projects = await this.projectRepository.findBy({
       hubID: hubID,
     });
     return projects || [];
@@ -167,16 +167,12 @@ export class ProjectService {
   }
 
   async getProjectsInHubCount(hubID: string): Promise<number> {
-    const count = await this.projectRepository.count({
-      where: { hubID: hubID },
-    });
+    const count = await this.projectRepository.countBy({ hubID: hubID });
     return count;
   }
 
   async getProjectsInOpportunityCount(opportunityID: string): Promise<number> {
-    return await this.projectRepository.count({
-      where: { opportunity: opportunityID },
-    });
+    return await this.projectRepository.countBy({ opportunity: opportunityID });
   }
 
   async getProjectsInChallengeCount(challengeID: string): Promise<number> {

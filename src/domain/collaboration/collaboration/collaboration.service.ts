@@ -79,10 +79,10 @@ export class CollaborationService {
     collaborationID: string,
     options?: FindOneOptions<Collaboration>
   ): Promise<ICollaboration> {
-    const collaboration = await this.collaborationRepository.findOne(
-      { id: collaborationID },
-      options
-    );
+    const collaboration = await this.collaborationRepository.findOne({
+      where: { id: collaborationID },
+      ...options,
+    });
     if (!collaboration)
       throw new EntityNotFoundException(
         `No Collaboration found with the given id: ${collaborationID}`,
