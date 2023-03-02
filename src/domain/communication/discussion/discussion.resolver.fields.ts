@@ -1,17 +1,22 @@
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { DiscussionService } from './discussion.service';
 import { IDiscussion } from './discussion.interface';
 import { IMessage } from '../message/message.interface';
 import { Discussion } from './discussion.entity';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @Resolver(() => IDiscussion)
 export class DiscussionResolverFields {
-  constructor(private discussionService: DiscussionService) {}
+  constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private discussionService: DiscussionService
+  ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
@@ -38,12 +43,19 @@ export class DiscussionResolverFields {
   }
 
   @ResolveField('createdBy', () => UUID, {
-    nullable: false,
+    nullable: true,
     description: 'The id of the user that created this discussion',
   })
-  async createdBy(@Parent() discussion: IDiscussion): Promise<string> {
+  async createdBy(@Parent() discussion: IDiscussion): Promise<string | null> {
     const createdBy = discussion.createdBy;
-    if (!createdBy) return '';
+
+    if (!createdBy) {
+      this.logger?.warn(
+        `createdBy '${createdBy}' unable to be resolved when resolving discussion '${discussion.id}'`,
+        LogContext.COLLABORATION
+      );
+    }
+
     return createdBy;
   }
 }

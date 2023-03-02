@@ -1,7 +1,11 @@
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
 import { Profiling } from '@common/decorators/profiling.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
+import { EntityNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -9,31 +13,41 @@ import { IVisual } from '@domain/common/visual/visual.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
-import { UseGuards } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IAspect } from './aspect.interface';
 import { AspectService } from './aspect.service';
 
 @Resolver(() => IAspect)
 export class AspectResolverFields {
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
     private aspectService: AspectService,
     private userService: UserService
   ) {}
 
   @ResolveField('createdBy', () => IUser, {
-    nullable: false,
+    nullable: true,
     description: 'The user that created this Aspect',
   })
-  async createdBy(@Parent() aspect: IAspect): Promise<IUser> {
-    const createdBy = aspect.createdBy;
+  async createdBy(@Parent() card: IAspect): Promise<IUser | null> {
+    const createdBy = card.createdBy;
     if (!createdBy) {
-      throw new EntityNotInitializedException(
-        `CreatedBy not set on Aspect with id ${aspect.id}`,
-        LogContext.COLLABORATION
-      );
+      return null;
     }
-    return await this.userService.getUserOrFail(createdBy);
+
+    try {
+      return await this.userService.getUserOrFail(createdBy);
+    } catch (e: unknown) {
+      if (e instanceof EntityNotFoundException) {
+        this.logger?.warn(
+          `createdBy '${createdBy}' unable to be resolved when resolving card '${card.id}'`,
+          LogContext.COLLABORATION
+        );
+        return null;
+      } else {
+        throw e;
+      }
+    }
   }
 
   @UseGuards(GraphqlGuard)
