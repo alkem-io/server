@@ -18,18 +18,16 @@ export class ProfileDataloaderService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
   public async findReferencesByBatch(
-    referenceIds: string[]
+    profileIds: string[]
   ): Promise<(IReference[] | Error)[]> {
     const profiles = await this.profileRepository.find({
-      where: { references: { id: In(referenceIds) } },
+      where: { id: In(profileIds) },
       relations: ['references'],
       select: ['id'],
     });
 
-    const results = profiles.filter(profile =>
-      referenceIds.includes(profile.id)
-    );
-    return referenceIds.map(
+    const results = profiles.filter(profile => profileIds.includes(profile.id));
+    return profileIds.map(
       id =>
         results.find(result => result.id === id)?.references ||
         new EntityNotFoundException(
@@ -40,16 +38,16 @@ export class ProfileDataloaderService {
   }
 
   public async findAvatarsByBatch(
-    avatarIds: string[]
+    profileIds: string[]
   ): Promise<(IVisual | Error)[]> {
     const profiles = await this.profileRepository.find({
-      where: { avatar: { id: In(avatarIds) } },
+      where: { id: In(profileIds) },
       relations: ['avatar'],
       select: ['id'],
     });
 
-    const results = profiles.filter(avatar => avatarIds.includes(avatar.id));
-    return avatarIds.map(
+    const results = profiles.filter(avatar => profileIds.includes(avatar.id));
+    return profileIds.map(
       id =>
         results.find(result => result.id === id)?.avatar ||
         new EntityNotFoundException(
@@ -60,18 +58,18 @@ export class ProfileDataloaderService {
   }
 
   public async findLocationsByBatch(
-    locationIds: string[]
+    profileIds: string[]
   ): Promise<(ILocation | Error)[]> {
     const profiles = await this.profileRepository.find({
-      where: { location: { id: In(locationIds) } },
+      where: { id: In(profileIds) },
       relations: ['location'],
       select: ['id'],
     });
 
     const results = profiles.filter(location =>
-      locationIds.includes(location.id)
+      profileIds.includes(location.id)
     );
-    return locationIds.map(
+    return profileIds.map(
       id =>
         results.find(result => result.id === id)?.location ||
         new EntityNotFoundException(
@@ -82,16 +80,16 @@ export class ProfileDataloaderService {
   }
 
   public async findTagsetsByBatch(
-    tagsetIds: string[]
+    profileIds: string[]
   ): Promise<(ITagset[] | Error)[]> {
     const profiles = await this.profileRepository.find({
-      where: { tagsets: { id: In(tagsetIds) } },
+      where: { id: In(profileIds) },
       relations: ['tagsets'],
       select: ['id'],
     });
 
-    const results = profiles.filter(profile => tagsetIds.includes(profile.id));
-    return tagsetIds.map(
+    const results = profiles.filter(profile => profileIds.includes(profile.id));
+    return profileIds.map(
       id =>
         results.find(result => result.id === id)?.tagsets ||
         new EntityNotFoundException(
