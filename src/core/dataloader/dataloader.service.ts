@@ -1,4 +1,3 @@
-import { IDataloaders } from './dataloader.interface';
 import DataLoader from 'dataloader';
 import { Injectable } from '@nestjs/common';
 import { IProfile } from '@domain/community';
@@ -12,6 +11,9 @@ import { OrganizationDataloaderService } from '@domain/community/organization/or
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CollaborationDataloaderService } from '@domain/collaboration/collaboration/collaboration.dataloader.service';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
+import { DataLoaderNames } from './data.loader.names';
+import { IDataloaders } from './dataloader.interface';
+import { ILazyDataloaders } from './dataloader.lazy.interface';
 
 @Injectable()
 export class DataloaderService {
@@ -71,4 +73,52 @@ export class DataloaderService {
       relationsLoader,
     };
   }
+
+  createLazyLoaders(): ILazyDataloaders {
+    return {
+      userProfileLoader: () =>
+        new DataLoader<string, IProfile>(async (keys: readonly string[]) =>
+          this.userDataloaderService.findProfilesByBatch(keys as string[])
+        ),
+      orgProfileLoader: () =>
+        new DataLoader<string, IProfile>(async (keys: readonly string[]) =>
+          this.orgDataloaderService.findProfilesByBatch(keys as string[])
+        ),
+      referencesLoader: () =>
+        new DataLoader<string, IReference[]>(async (keys: readonly string[]) =>
+          this.profileDataloaderService.findReferencesByBatch(keys as string[])
+        ),
+      avatarsLoader: () =>
+        new DataLoader<string, IVisual>(async (keys: readonly string[]) =>
+          this.profileDataloaderService.findAvatarsByBatch(keys as string[])
+        ),
+      tagsetsLoader: () =>
+        new DataLoader<string, ITagset[]>(async (keys: readonly string[]) =>
+          this.profileDataloaderService.findTagsetsByBatch(keys as string[])
+        ),
+      locationsLoader: () =>
+        new DataLoader<string, ILocation>(async (keys: readonly string[]) =>
+          this.profileDataloaderService.findLocationsByBatch(keys as string[])
+        ),
+      calloutsLoader: () =>
+        new DataLoader<string, ICallout[]>(async (keys: readonly string[]) =>
+          this.collaborationDataloaderService.findCalloutsByBatch(
+            keys as string[]
+          )
+        ),
+      relationsLoader: () =>
+        new DataLoader<string, IRelation[]>(async (keys: readonly string[]) =>
+          this.collaborationDataloaderService.findRelationsByBatch(
+            keys as string[]
+          )
+        ),
+    };
+  }
+
+  // get(loaderName: DataLoaderNames) {
+  //   if (!this.loaders[loaderName]) {
+  //     this.loaders[loaderName] = createLoader(loaderName)
+  //   }
+  //   return this.loaders[loaderName] as Loaders<T>
+  // }
 }
