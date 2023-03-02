@@ -172,7 +172,9 @@ export class ProjectService {
   }
 
   async getProjectsInOpportunityCount(opportunityID: string): Promise<number> {
-    return await this.projectRepository.countBy({ opportunity: opportunityID });
+    return await this.projectRepository.countBy({
+      opportunity: { id: opportunityID },
+    });
   }
 
   async getProjectsInChallengeCount(challengeID: string): Promise<number> {

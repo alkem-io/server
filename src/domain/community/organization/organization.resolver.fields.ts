@@ -73,7 +73,7 @@ export class OrganizationResolverFields {
       )
     ) {
       return await this.groupService.getUserGroupOrFail(groupID, {
-        where: { organization: organization, groupID },
+        where: { organization: { id: organization.id } },
       });
     }
 

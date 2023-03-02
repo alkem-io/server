@@ -173,15 +173,4 @@ export class CalendarEventService {
 
     return calendarEventLoaded.comments;
   }
-
-  public async getCalendarEventsInCalloutCount(calloutId: string) {
-    return this.calendarEventRepository.countBy({ callout: { id: calloutId } });
-  }
-
-  public async getCardsInCalloutCount(calloutID: string): Promise<number> {
-    const count = await this.calendarEventRepository.countBy({
-      callout: calloutID,
-    });
-    return count;
-  }
 }

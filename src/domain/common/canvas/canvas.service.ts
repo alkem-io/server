@@ -161,6 +161,6 @@ export class CanvasService {
   }
 
   async getCanvasesInCalloutCount(calloutId: string): Promise<number> {
-    return await this.canvasRepository.countBy({ callout: calloutId });
+    return await this.canvasRepository.countBy({ callout: { id: calloutId } });
   }
 }

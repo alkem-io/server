@@ -421,7 +421,9 @@ export class OpportunityService {
   }
 
   async getOpportunitiesInChallengeCount(challengeID: string): Promise<number> {
-    return await this.opportunityRepository.countBy({ challenge: challengeID });
+    return await this.opportunityRepository.countBy({
+      challenge: { id: challengeID },
+    });
   }
 
   async assignMember(userID: string, opportunityId: string) {

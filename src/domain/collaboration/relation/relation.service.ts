@@ -93,7 +93,9 @@ export class RelationService {
     collaborationId: string
   ): Promise<number> {
     return await this.relationRepository.countBy({
-      collaboration: collaborationId,
+      collaboration: {
+        id: collaborationId,
+      },
     });
   }
 }

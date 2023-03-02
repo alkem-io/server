@@ -124,7 +124,7 @@ export class UserGroupService {
   ): Promise<IUserGroup> {
     //const t1 = performance.now()
     const group = await this.userGroupRepository.findOne({
-      where: { id: groupID },
+      where: { id: groupID, ...options?.where },
       ...options,
     });
     if (!group)

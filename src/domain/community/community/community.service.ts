@@ -685,7 +685,7 @@ export class CommunityService {
 
   async getCommunities(hubId: string): Promise<Community[]> {
     const communites = await this.communityRepository.find({
-      where: { hub: { id: hubId } },
+      where: { hubID: hubId },
     });
     return communites || [];
   }

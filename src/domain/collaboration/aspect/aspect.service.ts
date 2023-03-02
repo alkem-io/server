@@ -84,10 +84,10 @@ export class AspectService {
     aspectID: string,
     options?: FindOneOptions<Aspect>
   ): Promise<IAspect> {
-    const aspect = await this.aspectRepository.findOne(
-      { id: aspectID },
-      options
-    );
+    const aspect = await this.aspectRepository.findOne({
+      where: { id: aspectID },
+      ...options,
+    });
     if (!aspect)
       throw new EntityNotFoundException(
         `Not able to locate aspect with the specified ID: ${aspectID}`,
@@ -165,7 +165,9 @@ export class AspectService {
   }
 
   public async getCardsInCalloutCount(calloutID: string): Promise<number> {
-    const count = await this.aspectRepository.countBy({ callout: calloutID });
+    const count = await this.aspectRepository.countBy({
+      callout: { id: calloutID },
+    });
     return count;
   }
 }

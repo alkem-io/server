@@ -23,7 +23,12 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, getConnection, Repository } from 'typeorm';
+import {
+  FindOneOptions,
+  FindOptionsWhere,
+  getConnection,
+  Repository,
+} from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
@@ -320,20 +325,19 @@ export class ChallengeService {
     challengeID: string,
     options?: FindOneOptions<Challenge>
   ): Promise<IChallenge> {
-    let challenge: IChallenge | undefined;
+    let challenge: IChallenge | null = null;
     if (challengeID.length == UUID_LENGTH) {
-      challenge = await this.challengeRepository.findOne(
-        { id: challengeID },
-        options
-      );
+      challenge = await this.challengeRepository.findOne({
+        where: { id: challengeID },
+        ...options,
+      });
     }
     if (!challenge) {
-      options.where = { nameID: challengeID };
       // look up based on nameID
-      challenge = await this.challengeRepository.findOne(
-        { nameID: challengeID },
-        options
-      );
+      challenge = await this.challengeRepository.findOne({
+        where: { nameID: challengeID },
+        ...options,
+      });
     }
 
     if (!challenge) {
@@ -617,7 +621,9 @@ export class ChallengeService {
 
   async getChildChallengesCount(challengeID: string): Promise<number> {
     return await this.challengeRepository.countBy({
-      parentChallenge: challengeID,
+      parentChallenge: {
+        id: challengeID,
+      },
     });
   }
   async getMembersCount(challenge: IChallenge): Promise<number> {
@@ -767,7 +773,7 @@ export class ChallengeService {
 
   async getChallengeForCommunity(
     communityID: string
-  ): Promise<IChallenge | undefined> {
+  ): Promise<IChallenge | null> {
     return await this.challengeRepository.findOne({
       relations: ['community'],
       where: {
