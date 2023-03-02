@@ -1,7 +1,5 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { getConnection, Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project';
@@ -44,7 +42,8 @@ export class NamingService {
     private collaborationRepository: Repository<Collaboration>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   async isNameIdAvailableInHub(
@@ -184,7 +183,7 @@ export class NamingService {
   async getCommunityIdFromCollaborationId(collaborationID: string) {
     const [result]: {
       communityId: string;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `
         SELECT communityId from \`hub\`
         WHERE \`hub\`.\`collaborationId\` = '${collaborationID}' UNION
@@ -371,7 +370,7 @@ export class NamingService {
       type: string;
       description: string;
       nameID: string;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `SELECT id, displayName, createdBy, createdDate, type, nameID FROM aspect WHERE commentsId = '${commentsID}'`
     );
     return aspect;
@@ -393,7 +392,7 @@ export class NamingService {
       multipleDays: boolean;
       durationMinutes: number;
       durationDays: number;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `SELECT id, displayName, nameID, type, createdBy, startDate, createdDate,  wholeDay, multipleDays, durationMinutes, durationDays
       FROM calendar_event WHERE commentsId = '${commentsID}'`
     );

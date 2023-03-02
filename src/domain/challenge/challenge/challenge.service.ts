@@ -22,13 +22,8 @@ import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  FindOptionsWhere,
-  getConnection,
-  Repository,
-} from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
@@ -82,7 +77,10 @@ export class ChallengeService {
     private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   async createChallenge(
@@ -614,7 +612,7 @@ export class ChallengeService {
     const sqlQuery = `SELECT COUNT(*) as challengesCount FROM challenge RIGHT JOIN hub ON challenge.hubID = hub.id WHERE hub.visibility = '${visibility}'`;
     const [queryResult]: {
       challengesCount: number;
-    }[] = await getConnection().query(sqlQuery);
+    }[] = await this.entityManager.connection.query(sqlQuery);
 
     return queryResult.challengesCount;
   }

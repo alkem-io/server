@@ -1,9 +1,8 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, getConnection, FindOneOptions } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { Repository, FindOneOptions, EntityManager } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LifecycleTemplate } from '@domain/template/lifecycle-template/lifecycle.template.entity';
 import { ILifecycleTemplate } from '@domain/template/lifecycle-template/lifecycle.template.interface';
 import { TemplateBaseService } from '@domain/template/template-base/template.base.service';
@@ -17,9 +16,9 @@ export class LifecycleTemplateService {
   constructor(
     @InjectRepository(LifecycleTemplate)
     private lifecycleTemplateRepository: Repository<LifecycleTemplate>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    private templateBaseService: TemplateBaseService
+    private templateBaseService: TemplateBaseService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   async createInnovationFLowTemplate(
@@ -112,7 +111,7 @@ export class LifecycleTemplateService {
   ): Promise<string> {
     const [{ lifecycleTemplateId }]: {
       lifecycleTemplateId: string;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `
       SELECT lifecycle_template.id AS lifecycleTemplateId FROM hub
       LEFT JOIN lifecycle_template ON hub.templatesSetId = lifecycle_template.templatesSetId
@@ -157,7 +156,7 @@ export class LifecycleTemplateService {
   ) {
     const [queryResult]: {
       hubCount: string;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `
       SELECT COUNT(*) as hubCount FROM \`hub\`
       RIGHT JOIN \`lifecycle_template\` ON \`hub\`.\`templatesSetId\` = \`lifecycle_template\`.\`templatesSetId\`

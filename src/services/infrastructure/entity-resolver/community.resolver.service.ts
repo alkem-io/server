@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { getConnection, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { Community, ICommunity } from '@domain/community/community';
 import { EntityNotFoundException } from '@common/exceptions';
@@ -15,7 +15,9 @@ export class CommunityResolverService {
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
     @InjectRepository(Communication)
-    private communicationRepository: Repository<Communication>
+    private communicationRepository: Repository<Communication>,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   public async getCommunityFromDiscussionOrFail(
@@ -77,7 +79,7 @@ export class CommunityResolverService {
       entityId: string;
       communityId: string;
       communityType: string;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `
         SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`callout\`
         RIGHT JOIN \`hub\` on \`callout\`.\`collaborationId\` = \`hub\`.\`collaborationId\`
@@ -112,7 +114,7 @@ export class CommunityResolverService {
       entityId: string;
       communityId: string;
       communityType: string;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `
         SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`timeline\`
         RIGHT JOIN \`hub\` on \`timeline\`.\`id\` = \`hub\`.\`timelineID\`
@@ -139,7 +141,7 @@ export class CommunityResolverService {
   ): Promise<ICommunity> {
     const [result]: {
       communityId: string;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `
         SELECT communityId from \`hub\`
         WHERE \`hub\`.\`collaborationId\` = '${collaborationID}' UNION
@@ -178,7 +180,7 @@ export class CommunityResolverService {
       entityId: string;
       communityId: string;
       communityType: string;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `
       SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`communityType\` FROM \`callout\`
       RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`

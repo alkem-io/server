@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, getConnection, In, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -57,7 +57,10 @@ export class OpportunityService {
     private namingService: NamingService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   async createOpportunity(
@@ -415,7 +418,7 @@ export class OpportunityService {
     const sqlQuery = `SELECT COUNT(*) as opportunitiesCount FROM opportunity RIGHT JOIN hub ON opportunity.hubID = hub.id WHERE hub.visibility = '${visibility}'`;
     const [queryResult]: {
       opportunitiesCount: number;
-    }[] = await getConnection().query(sqlQuery);
+    }[] = await this.entityManager.connection.query(sqlQuery);
 
     return queryResult.opportunitiesCount;
   }
