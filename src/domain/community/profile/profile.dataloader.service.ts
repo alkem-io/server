@@ -21,7 +21,7 @@ export class ProfileDataloaderService {
     referenceIds: string[]
   ): Promise<(IReference[] | Error)[]> {
     const profiles = await this.profileRepository.find({
-      where: { references: In(referenceIds) },
+      where: { references: { id: In(referenceIds) } },
       relations: ['references'],
       select: ['id'],
     });
@@ -43,7 +43,7 @@ export class ProfileDataloaderService {
     avatarIds: string[]
   ): Promise<(IVisual | Error)[]> {
     const profiles = await this.profileRepository.find({
-      where: { avatar: In(avatarIds) },
+      where: { avatar: { id: In(avatarIds) } },
       relations: ['avatar'],
       select: ['id'],
     });
@@ -63,7 +63,7 @@ export class ProfileDataloaderService {
     locationIds: string[]
   ): Promise<(ILocation | Error)[]> {
     const profiles = await this.profileRepository.find({
-      where: { location: In(locationIds) },
+      where: { location: { id: In(locationIds) } },
       relations: ['location'],
       select: ['id'],
     });
@@ -85,7 +85,7 @@ export class ProfileDataloaderService {
     tagsetIds: string[]
   ): Promise<(ITagset[] | Error)[]> {
     const profiles = await this.profileRepository.find({
-      where: { tagsets: In(tagsetIds) },
+      where: { tagsets: { id: In(tagsetIds) } },
       relations: ['tagsets'],
       select: ['id'],
     });
