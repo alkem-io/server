@@ -3,7 +3,7 @@ import { Args, Context, Resolver } from '@nestjs/graphql';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { Organization } from './organization.entity';
 import { OrganizationService } from './organization.service';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { IOrganization } from '@domain/community/organization';
 import { IUserGroup } from '@domain/community/user-group';
@@ -20,6 +20,7 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { ForbiddenException } from '@common/exceptions';
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
   constructor(
@@ -50,7 +51,7 @@ export class OrganizationResolverFields {
       return await this.organizationService.getUserGroups(organization);
     }
 
-    return 'not accessible';
+    throw new ForbiddenException('not accessible', LogContext.COMMUNITY);
   }
 
   //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -77,7 +78,7 @@ export class OrganizationResolverFields {
       });
     }
 
-    return 'not accessible';
+    throw new ForbiddenException('not accessible', LogContext.COMMUNITY);
   }
 
   //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -100,8 +101,7 @@ export class OrganizationResolverFields {
     ) {
       return await this.organizationService.getAssociates(organization);
     }
-
-    return 'not accessible';
+    throw new ForbiddenException('not accessible', LogContext.COMMUNITY);
   }
 
   @UseGuards(GraphqlGuard)
@@ -185,7 +185,7 @@ export class OrganizationResolverFields {
       return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
     }
 
-    return 'not accessible';
+    throw new ForbiddenException('not accessible', LogContext.COMMUNITY);
   }
 
   private async isAccessGranted(
