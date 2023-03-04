@@ -1,5 +1,8 @@
 import { join } from 'path';
+import dotenv from 'dotenv';
 import { MysqlConnectionOptions } from 'typeorm/driver/mysql/MysqlConnectionOptions';
+
+dotenv.config();
 
 export const typeormCliConfig: MysqlConnectionOptions = {
   type: 'mysql',
@@ -18,5 +21,3 @@ export const typeormCliConfig: MysqlConnectionOptions = {
   migrationsTableName: 'migrations_typeorm',
   migrationsRun: true,
 };
-
-module.exports = typeormCliConfig;

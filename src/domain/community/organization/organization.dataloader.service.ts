@@ -14,16 +14,18 @@ export class OrganizationDataloaderService {
   ) {}
 
   public async findProfilesByBatch(
-    profileIds: string[]
+    organizationIds: string[]
   ): Promise<(IProfile | Error)[]> {
     const organizations = await this.organizationRepository.find({
-      where: { profile: In(profileIds) },
+      where: { id: In(organizationIds) },
       relations: ['profile'],
       select: ['id'],
     });
 
-    const results = organizations.filter(org => profileIds.includes(org.id));
-    return profileIds.map(
+    const results = organizations.filter(org =>
+      organizationIds.includes(org.id)
+    );
+    return organizationIds.map(
       id =>
         results.find(result => result.id === id)?.profile ||
         new EntityNotFoundException(
