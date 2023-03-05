@@ -1,17 +1,19 @@
+import DataLoader from 'dataloader';
 import { Profiling } from '@common/decorators';
 import { Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IProfile } from './profile.interface';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IReference } from '@domain/common/reference/reference.interface';
-import { ProfileService } from './profile.service';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ILocation } from '@domain/common/location/location.interface';
+import { Loader } from '@core/dataloader/data.loader.decorator';
+import { ProfileAvatarsLoader } from '@core/dataloader/loaders';
+import { IProfile } from './profile.interface';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
-  constructor(private profileService: ProfileService) {}
+  constructor() {}
 
   @UseGuards(GraphqlGuard)
   @ResolveField('avatar', () => IVisual, {
@@ -23,6 +25,7 @@ export class ProfileResolverFields {
     @Parent() profile: IProfile,
     @Context() { loaders }: IGraphQLContext
   ): Promise<IVisual> {
+    // return loader.load(profile.id);
     return loaders.avatarsLoader.load(profile.id);
   }
 

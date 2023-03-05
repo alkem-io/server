@@ -1,5 +1,5 @@
 import DataLoader from 'dataloader';
 
-export interface IDataLoader<TKey, TReturn> {
+export interface DataLoaderCreator<TReturn, TKey = string> {
   create(): DataLoader<TKey, TReturn>;
 }

@@ -2,9 +2,10 @@ import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { IProfile } from '../profile';
 import { User } from './user.entity';
+import { IAgent } from '@src/domain';
 
 @Injectable()
 export class UserDataloaderService {
@@ -16,6 +17,7 @@ export class UserDataloaderService {
   public async findProfilesByBatch(
     userIds: string[]
   ): Promise<(IProfile | Error)[]> {
+    console.log(userIds);
     const users = await this.userRepository.findByIds(userIds, {
       relations: ['profile'],
       select: ['id'],
@@ -27,6 +29,24 @@ export class UserDataloaderService {
         results.find(result => result.id === id)?.profile ||
         new EntityNotFoundException(
           `Could not load user ${id}`,
+          LogContext.COMMUNITY
+        )
+    );
+  }
+
+  public async findAgentsByBatch(
+    userIds: string[]
+  ): Promise<(IAgent | Error)[]> {
+    const users = await this.userRepository.find({
+      relations: ['agent'],
+      where: { id: In(userIds) },
+    });
+
+    return userIds.map(
+      id =>
+        users.find(result => result.id === id)?.agent ||
+        new EntityNotFoundException(
+          `Could not load agent for user ${id}`,
           LogContext.COMMUNITY
         )
     );
