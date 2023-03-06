@@ -450,7 +450,7 @@ export class CalloutService {
     shuffle?: boolean
   ): Promise<IAspect[]> {
     const loadedCallout = await this.getCalloutOrFail(callout.id, {
-      relations: ['aspects'],
+      relations: ['aspects', 'aspects.comments'],
     });
     if (!loadedCallout.aspects) {
       throw new EntityNotFoundException(
