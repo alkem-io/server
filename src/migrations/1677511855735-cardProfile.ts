@@ -33,7 +33,7 @@ export class cardProfile1677511855735 implements MigrationInterface {
     for (const aspect of aspects) {
       const newProfileID = randomUUID();
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, authorizationId, description, tagsetId, locationId from card_profile WHERE (id = '${aspect.profileId}'`
+        `SELECT id, createdDate, updatedDate, version, authorizationId, description, tagsetId, locationId from card_profile WHERE (id = '${aspect.profileId}')`
       );
       const oldCardProfile = profiles[0];
       await queryRunner.query(
@@ -66,7 +66,7 @@ export class cardProfile1677511855735 implements MigrationInterface {
     for (const event of events) {
       const newProfileID = randomUUID();
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, authorizationId, description, tagsetId, locationId from card_profile WHERE (id = '${event.profileId}'`
+        `SELECT id, createdDate, updatedDate, version, authorizationId, description, tagsetId, locationId from card_profile WHERE (id = '${event.profileId}')`
       );
       const oldCardProfile = profiles[0];
       await queryRunner.query(
