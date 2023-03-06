@@ -408,6 +408,7 @@ export class UserService {
 
     if (await this.isUserIdEmail(userID)) {
       user = await this.userRepository.findOne({
+        relationLoadStrategy: 'query',
         where: {
           email: userID,
         },
@@ -416,6 +417,7 @@ export class UserService {
     } else if (userID.length === UUID_LENGTH) {
       {
         user = await this.userRepository.findOne({
+          relationLoadStrategy: 'query',
           where: {
             id: userID,
           },
@@ -426,6 +428,7 @@ export class UserService {
 
     if (!user)
       user = await this.userRepository.findOne({
+        relationLoadStrategy: 'query',
         where: {
           nameID: userID,
         },
