@@ -50,6 +50,8 @@ export class NamingService {
     nameID: string,
     hubID: string
   ): Promise<boolean> {
+    if (!nameID) return true;
+
     const challengeCount = await this.challengeRepository.countBy({
       nameID: nameID,
       hubID: hubID,
