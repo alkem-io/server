@@ -3,20 +3,29 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { DataLoaderInterceptorNotProvided } from '@common/exceptions/data-loader';
 import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
-import { DataLoaderCreator } from '../data.loader.creator';
+import { DataLoaderCreator } from '../creators/base/data.loader.creator';
 import { DataLoaderInterceptor } from '../interceptors/data.loader.interceptor';
+import { DataLoaderCreatorOptions } from '../creators/base/data.loader.creator.options';
 
-export const Loader = createParamDecorator(
-  (loaderRef: Type<DataLoaderCreator<unknown>>, context: ExecutionContext) => {
-    const ctx =
-      GqlExecutionContext.create(context).getContext<IGraphQLContext>();
+export function Loader(
+  creatorRef: Type<DataLoaderCreator<unknown>>,
+  options?: DataLoaderCreatorOptions
+): ParameterDecorator {
+  return createParamDecorator(
+    (
+      innerCreatorRef: Type<DataLoaderCreator<unknown>>,
+      context: ExecutionContext
+    ) => {
+      const ctx =
+        GqlExecutionContext.create(context).getContext<IGraphQLContext>();
 
-    if (!ctx[DATA_LOADER_CTX_INJECT_TOKEN]) {
-      throw new DataLoaderInterceptorNotProvided(
-        `You must provide ${DataLoaderInterceptor.name} globally with the ${APP_INTERCEPTOR} injector token`
-      );
+      if (!ctx[DATA_LOADER_CTX_INJECT_TOKEN]) {
+        throw new DataLoaderInterceptorNotProvided(
+          `You must provide ${DataLoaderInterceptor.name} globally with the ${APP_INTERCEPTOR} injector token`
+        );
+      }
+
+      return ctx[DATA_LOADER_CTX_INJECT_TOKEN].get(innerCreatorRef, options);
     }
-
-    return ctx[DATA_LOADER_CTX_INJECT_TOKEN].get(loaderRef);
-  }
-);
+  )(creatorRef);
+}
