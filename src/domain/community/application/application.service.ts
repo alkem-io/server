@@ -85,9 +85,13 @@ export class ApplicationService {
     applicationId: string,
     options?: FindOneOptions<Application>
   ): Promise<IApplication> {
+    let where;
+    if (options && options.where)
+      where = { ...options?.where, id: applicationId };
+    else where = { id: applicationId };
     const application = await this.applicationRepository.findOne({
-      where: { id: applicationId },
       ...options,
+      where,
     });
     if (!application)
       throw new EntityNotFoundException(
