@@ -694,6 +694,7 @@ export class UserService {
 
     if (userInput.profileData) {
       user.profile = await this.profileService.updateProfile(
+        user.profile.id,
         userInput.profileData
       );
     }

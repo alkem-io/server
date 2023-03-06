@@ -116,6 +116,7 @@ export class AspectService {
         );
       }
       aspect.profile = await this.profileService.updateProfile(
+        aspect.profile.id,
         aspectData.profileData
       );
     }

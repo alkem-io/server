@@ -72,8 +72,11 @@ export class ProfileService {
     return profile;
   }
 
-  async updateProfile(profileData: UpdateProfileInput): Promise<IProfile> {
-    const profile = await this.getProfileOrFail(profileData.ID, {
+  async updateProfile(
+    profileId: string,
+    profileData: UpdateProfileInput
+  ): Promise<IProfile> {
+    const profile = await this.getProfileOrFail(profileId, {
       relations: [
         'references',
         'avatar',

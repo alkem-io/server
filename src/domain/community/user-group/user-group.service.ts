@@ -86,7 +86,9 @@ export class UserGroupService {
   async updateUserGroup(
     userGroupInput: UpdateUserGroupInput
   ): Promise<IUserGroup> {
-    const group = await this.getUserGroupOrFail(userGroupInput.ID);
+    const group = await this.getUserGroupOrFail(userGroupInput.ID, {
+      relations: ['profile'],
+    });
 
     const newName = userGroupInput.name;
     if (newName && newName.length > 0 && newName !== group.name) {
@@ -94,7 +96,14 @@ export class UserGroupService {
     }
 
     if (userGroupInput.profileData) {
+      if (!group.profile) {
+        throw new EntityNotFoundException(
+          `Group profile not initialised: ${group.id}`,
+          LogContext.COMMUNITY
+        );
+      }
       group.profile = await this.profileService.updateProfile(
+        group.profile.id,
         userGroupInput.profileData
       );
     }

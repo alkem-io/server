@@ -112,6 +112,7 @@ export class CalendarEventService {
         );
       }
       calendarEvent.profile = await this.profileService.updateProfile(
+        calendarEvent.profile.id,
         calendarEventData.profileData
       );
     }
