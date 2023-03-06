@@ -241,7 +241,12 @@ export class ChallengeService {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const challenge = await this.getChallengeOrFail(challengeID, {
-      relations: ['childChallenges', 'opportunities', 'preferenceSet'],
+      relations: [
+        'childChallenges',
+        'opportunities',
+        'preferenceSet',
+        'preferenceSet.preferences',
+      ],
     });
 
     // Do not remove a challenge that has child challenges , require these to be individually first removed
@@ -698,7 +703,7 @@ export class ChallengeService {
   async getPreferenceSetOrFail(challengeId: string): Promise<IPreferenceSet> {
     const challengeWithPreferences = await this.getChallengeOrFail(
       challengeId,
-      { relations: ['preferenceSet'] }
+      { relations: ['preferenceSet', 'preferenceSet.preferences'] }
     );
     const preferenceSet = challengeWithPreferences.preferenceSet;
 

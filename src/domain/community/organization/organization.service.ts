@@ -216,6 +216,7 @@ export class OrganizationService {
         'agent',
         'verification',
         'preferenceSet',
+        'preferenceSet.preferences',
       ],
     });
     const isHubHost = await this.isHubHost(organization);
@@ -502,7 +503,7 @@ export class OrganizationService {
 
   async getPreferenceSetOrFail(orgId: string): Promise<IPreferenceSet> {
     const orgWithPreferences = await this.getOrganizationOrFail(orgId, {
-      relations: ['preferenceSet'],
+      relations: ['preferenceSet', 'preferenceSet.preferences'],
     });
     const preferenceSet = orgWithPreferences.preferenceSet;
 
