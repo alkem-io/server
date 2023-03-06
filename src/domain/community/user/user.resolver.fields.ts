@@ -18,10 +18,9 @@ import { LogContext } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { Loader } from '@core/dataloader/data.loader.decorator';
-import { UserAgentLoader } from '@core/dataloader/loaders/user.agent.loader';
-import * as DataLoader from 'dataloader';
-import { IVisual } from '@domain/common/visual';
+import { Loader } from '@core/dataloader/decorators';
+import { UserAgentLoaderCreator } from '@core/dataloader/creators';
+import { ILoader } from '@core/dataloader/loader.interface';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -53,9 +52,8 @@ export class UserResolverFields {
   @Profiling.api
   async agent(
     @Parent() user: User,
-    @Loader(UserAgentLoader) loader: DataLoader<string, IAgent>
+    @Loader(UserAgentLoaderCreator) loader: ILoader<IAgent>
   ): Promise<IAgent> {
-    // return await this.userService.getAgent(user.id);
     return loader.load(user.id);
   }
 

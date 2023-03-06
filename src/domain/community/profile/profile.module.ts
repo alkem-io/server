@@ -12,7 +12,7 @@ import { VisualModule } from '@domain/common/visual/visual.module';
 import { ProfileResolverFields } from './profile.resolver.fields';
 import { LocationModule } from '@domain/common/location';
 import { ProfileDataloaderService } from './profile.dataloader.service';
-import { ProfileAvatarsLoader } from '@core/dataloader/loaders';
+import { ProfileAvatarsLoaderCreator } from '@core/dataloader/creators';
 
 @Module({
   imports: [
@@ -27,7 +27,7 @@ import { ProfileAvatarsLoader } from '@core/dataloader/loaders';
   providers: [
     ProfileResolverMutations,
     ProfileService,
-    ProfileAvatarsLoader,
+    ProfileAvatarsLoaderCreator,
     ProfileDataloaderService,
     ProfileAuthorizationService,
     ProfileResolverFields,

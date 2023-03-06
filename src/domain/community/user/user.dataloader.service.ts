@@ -17,7 +17,6 @@ export class UserDataloaderService {
   public async findProfilesByBatch(
     userIds: string[]
   ): Promise<(IProfile | Error)[]> {
-    console.log(userIds);
     const users = await this.userRepository.findByIds(userIds, {
       relations: ['profile'],
       select: ['id'],

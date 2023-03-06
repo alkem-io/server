@@ -53,7 +53,7 @@ import { FileManagerModule } from '@domain/common/file-manager/file.manager.modu
 import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
-import { DataLoaderInterceptor } from '@core/dataloader/data.loader.interceptor';
+import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 
 @Module({
   imports: [
