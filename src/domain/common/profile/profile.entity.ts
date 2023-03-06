@@ -1,9 +1,6 @@
 import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { Reference } from '@domain/common/reference/reference.entity';
-import {
-  RestrictedTagsetNames,
-  Tagset,
-} from '@domain/common/tagset/tagset.entity';
+import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { IProfile } from './profile.interface';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { Location } from '@domain/common/location/location.entity';
@@ -51,6 +48,5 @@ export class Profile extends AuthorizableEntity implements IProfile {
   // Constructor
   constructor() {
     super();
-    this.restrictedTagsetNames = [RestrictedTagsetNames.DEFAULT];
   }
 }

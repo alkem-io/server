@@ -309,7 +309,7 @@ export class CalloutService {
   ): Promise<IAspect> {
     const calloutID = aspectData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['aspects'],
+      relations: ['aspects', 'aspects.profile'],
     });
     if (!callout.aspects)
       throw new EntityNotInitializedException(

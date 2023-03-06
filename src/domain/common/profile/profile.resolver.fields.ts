@@ -26,7 +26,7 @@ export class ProfileResolverFields {
   async visual(
     @Parent() profile: IProfile,
     @Args('type', { type: () => VisualType }) type: VisualType
-  ): Promise<IVisual> {
+  ): Promise<IVisual | undefined> {
     const result = await this.profileService.getVisual(profile, type);
     return result;
   }
