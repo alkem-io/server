@@ -3,7 +3,6 @@ import {
   ExecutionContext,
   Injectable,
   NestInterceptor,
-  Type,
 } from '@nestjs/common';
 import { ContextIdFactory, ModuleRef } from '@nestjs/core';
 import { GqlExecutionContext } from '@nestjs/graphql';
@@ -12,7 +11,7 @@ import {
   DataLoaderNotProvided,
 } from '@common/exceptions/data-loader';
 import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
-import { DataLoaderCreator } from '../data.loader.creator';
+import { DataLoaderCreator } from '../creators/base/data.loader.creator';
 import { DataLoaderContextEntry } from './data.loader.context.entry';
 
 @Injectable()
@@ -28,7 +27,7 @@ export class DataLoaderInterceptor implements NestInterceptor {
       // the key is used to generate a single instance across multiple resolve() calls,
       // and ensure they share the same generated DI container sub-tree
       contextId: ContextIdFactory.create(),
-      get: (creatorRef: Type<DataLoaderCreator<unknown>>) => {
+      get: (creatorRef, options) => {
         const creatorName = creatorRef.name;
         if (ctx[creatorName]) {
           return ctx[creatorName];
@@ -48,7 +47,7 @@ export class DataLoaderInterceptor implements NestInterceptor {
               `${DataLoaderInterceptor.name} unable to resolve ${creatorName}. Make sure that it is provided in your module providers list.`
             );
           })
-          .then(x => x.create())
+          .then(x => x.create(options))
           .catch(e => {
             throw new DataLoaderInitError(
               `Unable to initialize ${creatorName}: ${e}`

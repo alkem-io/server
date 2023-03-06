@@ -18,9 +18,9 @@ import { LogContext } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { Loader } from '@core/dataloader/decorators';
 import { UserAgentLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { Loader } from '@core/dataloader/decorators';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
