@@ -349,7 +349,7 @@ export class UserService {
 
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {
     const user = await this.getUserOrFail(userID, {
-      relations: ['preferenceSet'],
+      relations: ['preferenceSet', 'preferenceSet.preferences'],
     });
 
     if (!user.preferenceSet) {
@@ -408,7 +408,6 @@ export class UserService {
 
     if (await this.isUserIdEmail(userID)) {
       user = await this.userRepository.findOne({
-        relationLoadStrategy: 'query',
         where: {
           email: userID,
         },
@@ -417,7 +416,6 @@ export class UserService {
     } else if (userID.length === UUID_LENGTH) {
       {
         user = await this.userRepository.findOne({
-          relationLoadStrategy: 'query',
           where: {
             id: userID,
           },
@@ -428,7 +426,6 @@ export class UserService {
 
     if (!user)
       user = await this.userRepository.findOne({
-        relationLoadStrategy: 'query',
         where: {
           nameID: userID,
         },

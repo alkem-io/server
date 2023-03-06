@@ -420,8 +420,7 @@ export class CommunityService {
 
   async getCommunication(communityID: string): Promise<ICommunication> {
     const community = await this.getCommunityOrFail(communityID, {
-      relationLoadStrategy: 'query',
-      relations: ['communication'],
+      relations: ['communication', 'communication.updates'],
     });
 
     const communication = community.communication;

@@ -79,7 +79,6 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
         type: 'mysql',
         insecureAuth: true,
         synchronize: false,
-        // relationLoadStrategy: 'query',
         cache: true,
         entities: [join(__dirname, '**', '*.entity.{ts,js}')],
         host: configService.get(ConfigurationTypes.STORAGE)?.database?.host,

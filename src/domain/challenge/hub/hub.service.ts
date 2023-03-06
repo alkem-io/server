@@ -435,7 +435,7 @@ export class HubService {
 
   async getPreferenceSetOrFail(hubId: string): Promise<IPreferenceSet> {
     const hubWithPreferences = await this.getHubOrFail(hubId, {
-      relations: ['preferenceSet'],
+      relations: ['preferenceSet', 'preferenceSet.preferences'],
     });
     const preferenceSet = hubWithPreferences.preferenceSet;
 
