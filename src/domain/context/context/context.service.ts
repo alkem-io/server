@@ -146,6 +146,7 @@ export class ContextService {
         'references',
         'recommendations',
         'ecosystemModel',
+        'ecosystemModel.actorGroups',
         'visuals',
         'location',
       ],
@@ -264,7 +265,7 @@ export class ContextService {
 
   async getEcosystemModel(context: IContext): Promise<IEcosystemModel> {
     const contextLoaded = await this.getContextOrFail(context.id, {
-      relations: ['ecosystemModel'],
+      relations: ['ecosystemModel', 'ecosystemModel.actorGroups'],
     });
     if (!contextLoaded.ecosystemModel)
       throw new EntityNotFoundException(
