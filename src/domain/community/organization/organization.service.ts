@@ -448,7 +448,7 @@ export class OrganizationService {
     );
     // Try to find the organization
     const organization = await this.getOrganizationOrFail(orgID, {
-      relations: ['groups'],
+      relations: ['groups', 'groups.profile'],
     });
 
     const group = await this.userGroupService.addGroupWithName(
@@ -485,7 +485,7 @@ export class OrganizationService {
     const organizationGroups = await this.getOrganizationOrFail(
       organization.id,
       {
-        relations: ['groups'],
+        relations: ['groups', 'groups.profile'],
       }
     );
     const groups = organizationGroups.groups;
