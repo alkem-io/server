@@ -57,7 +57,7 @@ export class AspectService {
   public async deleteAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
     const aspectID = deleteData.ID;
     const aspect = await this.getAspectOrFail(aspectID, {
-      relations: ['profile'],
+      relations: ['profile', 'profile.tagset'],
     });
     if (aspect.authorization) {
       await this.authorizationPolicyService.delete(aspect.authorization);
@@ -98,7 +98,7 @@ export class AspectService {
 
   public async updateAspect(aspectData: UpdateAspectInput): Promise<IAspect> {
     const aspect = await this.getAspectOrFail(aspectData.ID, {
-      relations: ['profile'],
+      relations: ['profile', 'profile.tagset'],
     });
 
     // Copy over the received data
@@ -132,7 +132,7 @@ export class AspectService {
 
   public async getCardProfile(aspect: IAspect): Promise<ICardProfile> {
     const aspectLoaded = await this.getAspectOrFail(aspect.id, {
-      relations: ['profile'],
+      relations: ['profile', 'profile.tagset'],
     });
     if (!aspectLoaded.profile)
       throw new EntityNotFoundException(

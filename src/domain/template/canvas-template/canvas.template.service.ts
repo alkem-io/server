@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, FindOptionsWhere, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -47,9 +47,13 @@ export class CanvasTemplateService {
     canvasTemplateID: string,
     options?: FindOneOptions<CanvasTemplate>
   ): Promise<ICanvasTemplate> {
+    let where: FindOptionsWhere<CanvasTemplate>;
+    if (options && options.where)
+      where = { ...options?.where, id: canvasTemplateID };
+    else where = { id: canvasTemplateID };
     const canvasTemplate = await this.canvasTemplateRepository.findOne({
-      where: { id: canvasTemplateID },
       ...options,
+      where,
     });
     if (!canvasTemplate)
       throw new EntityNotFoundException(

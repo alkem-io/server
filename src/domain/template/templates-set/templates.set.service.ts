@@ -125,7 +125,7 @@ export class TemplatesSetService {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['aspectTemplates'],
+        relations: ['aspectTemplates', 'aspectTemplates.templateInfo'],
       }
     );
     if (!templatesSetPopulated.aspectTemplates) {
@@ -142,7 +142,7 @@ export class TemplatesSetService {
     templatesSetId: string
   ): Promise<IAspectTemplate> {
     return this.aspectTemplateService.getAspectTemplateOrFail(templateId, {
-      relations: ['templatesSet'],
+      relations: ['templatesSet', 'templateInfo'],
       where: { templatesSet: { id: templatesSetId } },
     });
   }
@@ -152,7 +152,7 @@ export class TemplatesSetService {
     templatesSetId: string
   ): Promise<ICanvasTemplate> {
     return this.canvasTemplateService.getCanvasTemplateOrFail(templateId, {
-      relations: ['templatesSet'],
+      relations: ['templatesSet', 'templateInfo'],
       where: { templatesSet: { id: templatesSetId } },
     });
   }
