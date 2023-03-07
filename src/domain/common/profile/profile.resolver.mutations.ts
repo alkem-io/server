@@ -13,6 +13,8 @@ import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CreateTagsetOnProfileInput } from './dto';
 import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
+import { IProfile } from './profile.interface';
+import { UpdateProfileDirectInput } from './dto/profile.dto.update.direct';
 
 @Resolver()
 export class ProfileResolverMutations {
@@ -83,5 +85,26 @@ export class ProfileResolverMutations {
         profile.authorization
       );
     return await this.referenceService.saveReference(reference);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IProfile, {
+    description: 'Updates the specified Profile.',
+  })
+  @Profiling.api
+  async updateProfile(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('profileData') profileData: UpdateProfileDirectInput
+  ): Promise<IProfile> {
+    const profile = await this.profileService.getProfileOrFail(
+      profileData.profileID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `profile: ${profile.id}`
+    );
+    return await this.profileService.updateProfile(profile.id, profileData);
   }
 }
