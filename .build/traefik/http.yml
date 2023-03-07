@@ -219,7 +219,7 @@ http:
         - 'rabbitmq-management'
 
     homepage: # if basePath is changed in the nextjs app this path also will have to change
-      rule: 'PathPrefix(`/home`)'
+      rule: 'PathPrefix(`/landing`)'
       service: 'homepage'
       entryPoints:
         - 'web'
