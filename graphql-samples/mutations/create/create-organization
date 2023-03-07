@@ -1,10 +1,10 @@
 mutation CreateOrganization($organizationData: CreateOrganizationInput!) {
   createOrganization(organizationData: $organizationData) {
+    nameID
+    id
     profile {
       displayName
     }
-    nameID
-    id
     members
     {
      	nameID
