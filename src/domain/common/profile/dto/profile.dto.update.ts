@@ -18,6 +18,7 @@ import { Markdown } from '@domain/common/scalars/scalar.markdown';
 @InputType()
 export class UpdateProfileInput {
   @Field({ nullable: true, description: 'The display name for the entity.' })
+  @IsOptional()
   @MinLength(3)
   @MaxLength(SMALL_TEXT_LENGTH)
   displayName?: string;

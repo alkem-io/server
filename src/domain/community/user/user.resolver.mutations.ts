@@ -132,7 +132,9 @@ export class UserResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(deleteData.ID);
+    const user = await this.userService.getUserOrFail(deleteData.ID, {
+      relations: ['profile'],
+    });
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       user.authorization,
