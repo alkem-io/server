@@ -32,7 +32,7 @@
     "test:ci:no:coverage": "jest --forceExit --config ./test/config/jest.config.ci.js",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource src/config/migration.create.config.ts",
     "typeorm-no-entities": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource src/config/migration.config.ts",
-    "migration:create": "npm run typeorm migration:create",
+    "migration:create": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:create",
     "migration:generate": "npm run typeorm migration:generate",
     "migration:run": "npm run typeorm-no-entities migration:run",
     "migration:revert": "npm run typeorm-no-entities migration:revert",
