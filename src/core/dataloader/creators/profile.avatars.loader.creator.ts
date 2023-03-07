@@ -9,10 +9,13 @@ import { DataLoaderCreatorOptions } from '../creators/base/data.loader.creator.o
 export class ProfileAvatarsLoaderCreator implements DataLoaderCreator<IVisual> {
   constructor(private readonly profileService: ProfileDataloaderService) {}
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   create(options?: DataLoaderCreatorOptions) {
-    return new DataLoader<string, IVisual>(async keys =>
-      this.profileService.findAvatarsByBatch(keys as string[])
+    return new DataLoader<string, IVisual>(
+      async keys => this.profileService.findAvatarsByBatch(keys as string[]),
+      {
+        cache: options?.cache,
+        name: 'ProfileAvatarsLoaderCreator',
+      }
     );
   }
 }

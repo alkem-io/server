@@ -1,20 +1,19 @@
 import DataLoader from 'dataloader';
 import { Injectable } from '@nestjs/common';
 import { UserDataloaderService } from '@domain/community/user/user.dataloader.service';
-import { IAgent } from '@src/domain';
+import { IProfile } from '@src/domain';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from './base';
 
 @Injectable()
-export class UserAgentLoaderCreator implements DataLoaderCreator<IAgent> {
+export class UserProfileLoaderCreator implements DataLoaderCreator<IProfile> {
   constructor(private readonly userService: UserDataloaderService) {}
 
   create(options?: DataLoaderCreatorOptions) {
-    return new DataLoader<string, IAgent>(
-      keys => this.userService.findAgentsByBatch(keys as string[]),
+    return new DataLoader<string, IProfile>(
+      keys => this.userService.findProfilesByBatch(keys as string[]),
       {
         cache: options?.cache,
-        name: 'UserAgentLoaderCreator',
-        cacheMap: null,
+        name: 'UserProfileLoaderCreator',
       }
     );
   }

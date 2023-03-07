@@ -3,9 +3,8 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { DataLoaderInterceptorNotProvided } from '@common/exceptions/data-loader';
 import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
-import { DataLoaderCreator } from '../creators/base/data.loader.creator';
-import { DataLoaderInterceptor } from '../interceptors/data.loader.interceptor';
-import { DataLoaderCreatorOptions } from '../creators/base/data.loader.creator.options';
+import { DataLoaderInterceptor } from '../interceptors';
+import { DataLoaderCreator, DataLoaderCreatorOptions } from '../creators/base';
 
 export function Loader(
   creatorRef: Type<DataLoaderCreator<unknown>>,

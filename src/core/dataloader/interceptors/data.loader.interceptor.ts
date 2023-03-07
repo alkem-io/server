@@ -19,8 +19,8 @@ export class DataLoaderInterceptor implements NestInterceptor {
   constructor(private readonly moduleRef: ModuleRef) {}
   // intercept every request and inject the data loader creator in the context
   intercept(context: ExecutionContext, next: CallHandler) {
-    const graphqlExecutionContext = GqlExecutionContext.create(context);
-    const ctx = graphqlExecutionContext.getContext();
+    const ctx =
+      GqlExecutionContext.create(context).getContext<IGraphQLContext>();
 
     ctx[DATA_LOADER_CTX_INJECT_TOKEN] = {
       // generate a key to associate each injectable instance with;
@@ -47,7 +47,19 @@ export class DataLoaderInterceptor implements NestInterceptor {
               `${DataLoaderInterceptor.name} unable to resolve ${creatorName}. Make sure that it is provided in your module providers list.`
             );
           })
-          .then(x => x.create(options))
+          .then(x => {
+            // WORKAROUND -> disable the cache for subscription context
+            // these headers are determining if it's a subscription context
+            const enableCacheForQueries =
+              options?.cache ??
+              (ctx.req.headers.connection !== 'Upgrade' &&
+                ctx.req.headers.upgrade !== 'websocket');
+
+            return x.create({
+              ...options,
+              cache: enableCacheForQueries,
+            });
+          })
           .catch(e => {
             throw new DataLoaderInitError(
               `Unable to initialize ${creatorName}: ${e}`
