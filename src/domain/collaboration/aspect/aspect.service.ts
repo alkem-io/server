@@ -44,12 +44,6 @@ export class AspectService {
     });
     aspect.authorization = new AuthorizationPolicy();
     aspect.createdBy = userID;
-    aspect.banner = await this.visualService.createVisualBanner(
-      aspectInput.visualUri
-    );
-    aspect.bannerNarrow = await this.visualService.createVisualBannerNarrow(
-      aspectInput.visualUri
-    );
 
     aspect.comments = await this.commentsService.createComments(
       communicationGroupID,
@@ -116,6 +110,7 @@ export class AspectService {
         );
       }
       aspect.profile = await this.profileService.updateProfile(
+        aspect.profile.id,
         aspectData.profileData
       );
     }

@@ -1,6 +1,5 @@
 import { IReference } from '@domain/common/reference';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { IProfile } from '@domain/common/profile/profile.interface';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -12,7 +11,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CreateTagsetOnProfileInput, UpdateProfileInput } from './dto';
+import { CreateTagsetOnProfileInput } from './dto';
 import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
 
 @Resolver()
@@ -85,24 +84,5 @@ export class ProfileResolverMutations {
         profile.authorization
       );
     return await this.referenceService.saveReference(reference);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IProfile, {
-    description: 'Updates the specified Profile.',
-  })
-  @Profiling.api
-  async updateProfile(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('profileData') profileData: UpdateProfileInput
-  ): Promise<IProfile> {
-    const profile = await this.profileService.getProfileOrFail(profileData.ID);
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      profile.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `profile: ${profile.id}`
-    );
-    return await this.profileService.updateProfile(profileData);
   }
 }

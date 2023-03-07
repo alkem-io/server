@@ -84,7 +84,7 @@ export class AspectResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
-    nullable: true,
+    nullable: false,
     description: 'The Profile for this Card.',
   })
   @Profiling.api

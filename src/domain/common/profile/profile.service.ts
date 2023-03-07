@@ -47,7 +47,10 @@ export class ProfileService {
       displayName: profileData?.displayName,
     });
     profile.authorization = new AuthorizationPolicy();
-    profile.visuals = [];
+    const banner = await this.visualService.createVisualBanner();
+    const bannerNarrow = await this.visualService.createVisualBannerNarrow();
+
+    profile.visuals = [banner, bannerNarrow];
     profile.location = await this.locationService.createLocation(
       profileData?.location
     );
@@ -72,11 +75,13 @@ export class ProfileService {
     return profile;
   }
 
-  async updateProfile(profileData: UpdateProfileInput): Promise<IProfile> {
-    const profile = await this.getProfileOrFail(profileData.ID, {
+  async updateProfile(
+    profileId: string,
+    profileData: UpdateProfileInput
+  ): Promise<IProfile> {
+    const profile = await this.getProfileOrFail(profileId, {
       relations: [
         'references',
-        'avatar',
         'tagsets',
         'authorization',
         'location',
@@ -296,15 +301,15 @@ export class ProfileService {
   async getVisual(
     profileInput: IProfile,
     visualType: VisualType
-  ): Promise<IVisual> {
+  ): Promise<IVisual | undefined> {
     const visuals = await this.getVisuals(profileInput);
     const visual = visuals.find(v => v.name === visualType);
-    if (!visual) {
-      throw new EntityNotInitializedException(
-        `Unable to find visual with name '${visualType}' on ${profileInput.id}`,
-        LogContext.COMMUNITY
-      );
-    }
+    // if (!visual) {
+    //   throw new EntityNotInitializedException(
+    //     `Unable to find visual with name '${visualType}' on ${profileInput.id}`,
+    //     LogContext.COMMUNITY
+    //   );
+    // }
     return visual;
   }
 

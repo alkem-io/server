@@ -24,7 +24,7 @@ export class CalendarEventResolverFields {
   ) {}
 
   @ResolveField('createdBy', () => IUser, {
-    nullable: false,
+    nullable: true,
     description: 'The user that created this CalendarEvent',
   })
   async createdBy(
@@ -52,7 +52,7 @@ export class CalendarEventResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
-    nullable: true,
+    nullable: false,
     description: 'The Profile for this Card.',
   })
   @Profiling.api

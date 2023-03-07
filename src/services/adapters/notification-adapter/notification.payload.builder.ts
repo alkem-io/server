@@ -95,15 +95,15 @@ export class NotificationPayloadBuilder {
   }
 
   async buildCardCreatedPayload(
-    aspectId: string
+    cardId: string
   ): Promise<CollaborationCardCreatedEventPayload> {
     const card = await this.aspectRepository.findOne(
-      { id: aspectId },
+      { id: cardId },
       { relations: ['callout', 'profile'] }
     );
     if (!card) {
       throw new NotificationEventException(
-        `Could not acquire aspect from id: ${aspectId}`,
+        `Could not acquire aspect from id: ${cardId}`,
         LogContext.NOTIFICATIONS
       );
     }
@@ -111,7 +111,7 @@ export class NotificationPayloadBuilder {
     const callout = card.callout;
     if (!callout) {
       throw new NotificationEventException(
-        `Could not acquire callout from aspect with id: ${aspectId}`,
+        `Could not acquire callout from aspect with id: ${cardId}`,
         LogContext.NOTIFICATIONS
       );
     }
@@ -129,9 +129,9 @@ export class NotificationPayloadBuilder {
         nameID: callout.nameID,
       },
       card: {
-        id: aspectId,
+        id: cardId,
         createdBy: card.createdBy,
-        displayName: card.profile?.displayName || '',
+        displayName: card.profile.displayName,
         nameID: card.nameID,
         type: card.type,
       },
@@ -256,7 +256,7 @@ export class NotificationPayloadBuilder {
         nameID: callout.nameID,
       },
       card: {
-        displayName: card.profile?.displayName || '',
+        displayName: card.profile.displayName,
         createdBy: card.createdBy,
         nameID: card.nameID,
       },
@@ -382,7 +382,7 @@ export class NotificationPayloadBuilder {
     const result: PlatformUserRemovedEventPayload = {
       triggeredBy: triggeredBy,
       user: {
-        displayName: user.profile?.displayName || '',
+        displayName: user.profile.displayName,
         email: user.email,
       },
     };
@@ -463,7 +463,7 @@ export class NotificationPayloadBuilder {
     const user = await this.userRepository
       .createQueryBuilder('user')
       .select(['user.id', 'user.nameID'])
-      .leftJoin('user.profile', 'profile')
+      .leftJoinAndSelect('user.profile', 'profile')
       .where('user.nameID = :id')
       .orWhere('user.id = :id')
       .setParameters({ id: userId })
@@ -475,7 +475,7 @@ export class NotificationPayloadBuilder {
         LogContext.COMMUNITY
       );
     }
-    return { id: user.id, displayName: user.profile?.displayName };
+    return { id: user.id, displayName: user.profile.displayName };
   }
 
   private async getUserData(
@@ -484,7 +484,7 @@ export class NotificationPayloadBuilder {
     const user = await this.userRepository
       .createQueryBuilder('user')
       .select(['user.id'])
-      .leftJoin('user.profile', 'profile')
+      .leftJoinAndSelect('user.profile', 'profile')
       .where('user.nameID = :id')
       .orWhere('user.id = :id')
       .setParameters({ id: userId })
@@ -522,7 +522,7 @@ export class NotificationPayloadBuilder {
     const org = await this.organizationRepository
       .createQueryBuilder('organization')
       .select(['organization.id'])
-      .leftJoin('organization.profile', 'profile')
+      .leftJoinAndSelect('organization.profile', 'profile')
       .where('organization.id = :id')
       .orWhere('profile.nameID = :id')
       .setParameters({ id: orgId })
@@ -543,7 +543,7 @@ export class NotificationPayloadBuilder {
     const org = await this.organizationRepository
       .createQueryBuilder('organization')
       .select(['organization.id'])
-      .leftJoin('organization.profile', 'profile')
+      .leftJoinAndSelect('organization.profile', 'profile')
       .where('organization.id = :id')
       .orWhere('organization.nameID = :id')
       .setParameters({ id: orgId })

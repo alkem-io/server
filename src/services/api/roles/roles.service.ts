@@ -274,7 +274,7 @@ export class RolesService {
     );
     const newOrgResult = new RolesResultOrganization(
       organization,
-      organization.profile?.displayName || ''
+      organization.profile.displayName
     );
     orgsMap.set(organization.id, newOrgResult);
     return newOrgResult;

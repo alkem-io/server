@@ -12,7 +12,7 @@ export class Contributor extends NameableEntity implements IContributor {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  profile?: Profile;
+  profile!: Profile;
 
   @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'SET NULL' })
   @JoinColumn()

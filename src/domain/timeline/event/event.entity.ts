@@ -27,7 +27,7 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  profile?: Profile;
+  profile!: Profile;
 
   @ManyToOne(() => Calendar, calendar => calendar.events, {
     eager: false,

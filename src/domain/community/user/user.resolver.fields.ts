@@ -31,7 +31,7 @@ export class UserResolverFields {
   ) {}
 
   @ResolveField('profile', () => IProfile, {
-    nullable: true,
+    nullable: false,
     description: 'The Profile for this User.',
   })
   @Profiling.api

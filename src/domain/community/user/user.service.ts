@@ -669,7 +669,9 @@ export class UserService {
   }
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
-    const user = await this.getUserOrFail(userInput.ID);
+    const user = await this.getUserOrFail(userInput.ID, {
+      relations: ['profile'],
+    });
 
     if (userInput.nameID) {
       if (userInput.nameID.toLowerCase() !== user.nameID.toLowerCase()) {
@@ -699,6 +701,7 @@ export class UserService {
 
     if (userInput.profileData) {
       user.profile = await this.profileService.updateProfile(
+        user.profile.id,
         userInput.profileData
       );
     }

@@ -19,7 +19,7 @@ import {
 } from '@common/exceptions';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { ICalendarEvent } from '@domain/timeline/event';
+import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
 import { Collaboration } from '@domain/collaboration/collaboration';
 
 export class NamingService {
@@ -44,6 +44,8 @@ export class NamingService {
     private collaborationRepository: Repository<Collaboration>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
+    @InjectRepository(CalendarEvent)
+    private calendarEventRepository: Repository<CalendarEvent>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -362,41 +364,42 @@ export class NamingService {
   }
 
   async getAspectForComments(commentsID: string): Promise<IAspect | undefined> {
-    // check if this is a comment related to an aspect
-    const [aspect]: {
-      id: string;
-      displayName: string;
-      createdBy: string;
-      createdDate: Date;
-      type: string;
-      description: string;
-      nameID: string;
-    }[] = await getConnection().query(
-      `SELECT id, displayName, createdBy, createdDate, type, nameID FROM aspect WHERE commentsId = '${commentsID}'`
-    );
+    const aspect = await this.aspectRepository
+      .createQueryBuilder('aspect')
+      .select([
+        'aspect.id',
+        'aspect.createdBy',
+        'aspect.createdDate',
+        'aspect.type',
+        'aspect.description',
+        'nameID',
+      ])
+      .leftJoinAndSelect('aspect.profile', 'profile')
+      .where(`commentsId = ${commentsID}`)
+      .getOne();
     return aspect;
   }
 
   async getCalendarEventForComments(
     commentsID: string
   ): Promise<ICalendarEvent | undefined> {
-    // check if this is a comment related to an calendar
-    const [calendarEvent]: {
-      id: string;
-      displayName: string;
-      nameID: string;
-      type: string;
-      createdBy: string;
-      startDate: Date;
-      createdDate: Date;
-      wholeDay: boolean;
-      multipleDays: boolean;
-      durationMinutes: number;
-      durationDays: number;
-    }[] = await getConnection().query(
-      `SELECT id, displayName, nameID, type, createdBy, startDate, createdDate,  wholeDay, multipleDays, durationMinutes, durationDays 
-      FROM calendar_event WHERE commentsId = '${commentsID}'`
-    );
+    const calendarEvent = await this.calendarEventRepository
+      .createQueryBuilder('calendarEvent')
+      .select([
+        'calendarEvent.id',
+        'calendarEvent.nameID',
+        'calendarEvent.type',
+        'calendarEvent.createdBy',
+        'calendarEvent.startDate',
+        'calendarEvent.createdDate',
+        'calendarEvent.wholeDay',
+        'calendarEvent.multipleDays',
+        'calendarEvent.durationMinutes',
+        'calendarEvent.durationDays',
+      ])
+      .leftJoinAndSelect('calendarEvent.profile', 'profile')
+      .where(`commentsId = ${commentsID}`)
+      .getOne();
 
     return calendarEvent;
   }

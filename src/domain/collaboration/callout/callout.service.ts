@@ -294,7 +294,7 @@ export class CalloutService {
     // Check that there isn't an aspect with the same title
     const displayName = aspectData.profileData?.displayName || 'not defined';
     const existingAspect = callout.aspects?.find(
-      aspect => aspect.profile?.displayName === displayName
+      aspect => aspect.profile.displayName === displayName
     );
     if (existingAspect)
       throw new ValidationException(
@@ -309,7 +309,7 @@ export class CalloutService {
   ): Promise<IAspect> {
     const calloutID = aspectData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['aspects'],
+      relations: ['aspects', 'aspects.profile'],
     });
     if (!callout.aspects)
       throw new EntityNotInitializedException(

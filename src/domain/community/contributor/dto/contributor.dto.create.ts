@@ -6,8 +6,8 @@ import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/n
 
 @InputType()
 export class CreateContributorInput extends CreateNameableInput {
-  @Field(() => CreateProfileInput, { nullable: true })
+  @Field(() => CreateProfileInput, { nullable: false })
   @ValidateNested()
   @Type(() => CreateProfileInput)
-  profileData?: CreateProfileInput;
+  profileData!: CreateProfileInput;
 }
