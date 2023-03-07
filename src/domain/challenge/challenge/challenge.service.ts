@@ -60,6 +60,7 @@ import { HubVisibility } from '@common/enums/hub.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
 
 @Injectable()
 export class ChallengeService {
@@ -395,6 +396,13 @@ export class ChallengeService {
   async getCommunity(challengeId: string): Promise<ICommunity> {
     return await this.baseChallengeService.getCommunity(
       challengeId,
+      this.challengeRepository
+    );
+  }
+
+  async getProfile(challenge: IChallenge): Promise<IProfile> {
+    return await this.baseChallengeService.getProfile(
+      challenge.id,
       this.challengeRepository
     );
   }
