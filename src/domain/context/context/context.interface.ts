@@ -9,12 +9,6 @@ import { ILocation } from '@domain/common/location/location.interface';
 export abstract class IContext extends IAuthorizable {
   @Field(() => Markdown, {
     nullable: true,
-    description: 'A detailed description of the current situation',
-  })
-  background?: string;
-
-  @Field(() => Markdown, {
-    nullable: true,
     description: 'The goal that is being pursued',
   })
   vision?: string;

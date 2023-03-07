@@ -76,10 +76,10 @@ export class ProfileService {
   }
 
   async updateProfile(
-    profileId: string,
+    profileOrig: IProfile,
     profileData: UpdateProfileInput
   ): Promise<IProfile> {
-    const profile = await this.getProfileOrFail(profileId, {
+    const profile = await this.getProfileOrFail(profileOrig.id, {
       relations: [
         'references',
         'tagsets',

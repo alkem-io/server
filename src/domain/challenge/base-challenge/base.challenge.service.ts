@@ -137,6 +137,7 @@ export class BaseChallengeService {
     }
     if (baseChallengeData.profileData) {
       baseChallenge.profile = await this.profileService.updateProfile(
+        baseChallenge.profile,
         baseChallengeData.profileData
       );
     }

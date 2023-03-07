@@ -8,11 +8,6 @@ export class CreateContextInput {
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(VERY_LONG_TEXT_LENGTH)
-  background?: string;
-
-  @Field(() => Markdown, { nullable: true })
-  @IsOptional()
-  @MaxLength(VERY_LONG_TEXT_LENGTH)
   vision?: string;
 
   @Field(() => Markdown, { nullable: true })

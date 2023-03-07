@@ -35,7 +35,7 @@ export abstract class BaseChallenge
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  profile?: Profile;
+  profile!: Profile;
 
   @OneToOne(() => Community, {
     eager: false,

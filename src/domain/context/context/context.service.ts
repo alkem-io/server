@@ -71,9 +71,6 @@ export class ContextService {
     const context = await this.getContextOrFail(contextInput.id, {
       relations: ['recommendations'],
     });
-    if (contextUpdateData.background) {
-      context.background = contextUpdateData.background;
-    }
     if (contextUpdateData.vision) {
       context.vision = contextUpdateData.vision;
     }

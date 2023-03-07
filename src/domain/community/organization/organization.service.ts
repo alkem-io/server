@@ -193,7 +193,7 @@ export class OrganizationService {
     // Check the tagsets
     if (organizationData.profileData && organization.profile) {
       organization.profile = await this.profileService.updateProfile(
-        organization.profile.id,
+        organization.profile,
         organizationData.profileData
       );
     }

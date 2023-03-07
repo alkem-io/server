@@ -18,7 +18,7 @@ export abstract class IBaseChallenge extends INameable {
   collaboration?: ICollaboration;
   context?: IContext;
   community?: ICommunity;
-  profile?: IProfile;
+  profile!: IProfile;
   lifecycle?: ILifecycle;
   preferenceSet?: IPreferenceSet;
 }

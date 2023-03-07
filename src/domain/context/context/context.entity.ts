@@ -6,9 +6,6 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 @Entity()
 export class Context extends AuthorizableEntity implements IContext {
   @Column('text', { nullable: true })
-  background?: string = '';
-
-  @Column('text', { nullable: true })
   vision?: string = '';
 
   @Column('text', { nullable: true })

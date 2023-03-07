@@ -413,8 +413,8 @@ export class SearchService {
         .where('hub.nameID like :term')
         .orWhere('profile.displayName like :term')
         .orWhere('profile.tagline like :term')
+        .orWhere('profile.description like :term')
         .orWhere('tagset.tags like :term')
-        .orWhere('context.background like :term')
         .orWhere('context.impact like :term')
         .orWhere('context.vision like :term')
         .orWhere('context.who like :term')
@@ -478,10 +478,10 @@ export class SearchService {
         .andWhere(
           new Brackets(qb => {
             qb.where('challenge.nameID like :term')
-              .orWhere('challenge.displayName like :term')
               .orWhere('tagset.tags like :term')
+              .orWhere('profile.displayName like :term')
               .orWhere('profile.tagline like :term')
-              .orWhere('context.background like :term')
+              .orWhere('profile.description like :term')
               .orWhere('context.impact like :term')
               .orWhere('context.vision like :term')
               .orWhere('context.who like :term')
@@ -547,10 +547,10 @@ export class SearchService {
         .andWhere(
           new Brackets(qb => {
             qb.where('opportunity.nameID like :term')
-              .orWhere('opportunity.displayName like :term')
               .orWhere('tagset.tags like :term')
               .orWhere('profile.tagline like :term')
-              .orWhere('context.background like :term')
+              .orWhere('profile.displayName like :term')
+              .orWhere('profile.description like :term')
               .orWhere('context.impact like :term')
               .orWhere('context.vision like :term')
               .orWhere('context.who like :term')
