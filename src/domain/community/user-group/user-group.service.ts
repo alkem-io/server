@@ -128,12 +128,13 @@ export class UserGroupService {
     options?: FindOneOptions<UserGroup>
   ): Promise<IUserGroup | never> {
     //const t1 = performance.now()
-    let where: FindOptionsWhere<UserGroup>;
-    if (options && options.where) where = { ...options?.where, id: groupID };
-    else where = { id: groupID };
+
     const group = await this.userGroupRepository.findOne({
       ...options,
-      where,
+      where: {
+        ...options?.where,
+        id: groupID,
+      },
     });
 
     if (!group)
