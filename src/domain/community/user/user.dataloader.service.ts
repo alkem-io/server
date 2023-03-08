@@ -36,29 +36,11 @@ export class UserDataloaderService {
 
   public async findAgentsByBatch(
     userIds: string[]
-  ): Promise<(IAgent | Error)[]> {
-    const users = await this.userRepository.find({
-      relations: ['agent'],
-      where: { id: In(userIds) },
-    });
-
-    const test = await findByBatchIds<User, IAgent>(
+  ): Promise<(IAgent | Error)[] | never> {
+    return await findByBatchIds<User, IAgent>(
       this.userRepository,
       userIds,
-      'agent',
-      {
-        limit: 3,
-        fields: ['id'],
-      }
-    );
-
-    return userIds.map(
-      id =>
-        users.find(result => result.id === id)?.agent ||
-        new EntityNotFoundException(
-          `Could not load agent for user ${id}`,
-          LogContext.COMMUNITY
-        )
+      'profile'
     );
   }
 }

@@ -1,12 +1,18 @@
-import { Repository } from 'typeorm';
+import { ObjectLiteral, Repository } from 'typeorm';
+import { EntityNotFoundException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
+import { EntityRelations } from '@src/types';
 
 const parentAlias = 'parent';
 const resultAlias = 'relation';
 
-export const findByBatchIds = async <TParent, TResult>(
+export const findByBatchIds = async <
+  TParent extends { id: string } & { [key: string]: any }, // todo better type
+  TResult
+>(
   repo: Repository<TParent>,
   ids: string[],
-  relation: string, // todo typed of TParent like EntityFieldsNames
+  relation: EntityRelations<TParent>,
   options?: {
     // todo make it use DataLoaderCreatorOptions
     fields?: (keyof TResult)[];
@@ -19,7 +25,7 @@ export const findByBatchIds = async <TParent, TResult>(
   }
 
   const { fields, limit } = options ?? {};
-  // todo make alias based in TResult name
+  // todo make alias based on TResult name
   const qb = repo.createQueryBuilder(parentAlias).whereInIds(ids);
 
   if (fields && fields.length) {
@@ -35,16 +41,14 @@ export const findByBatchIds = async <TParent, TResult>(
 
   qb.take(limit);
 
-  console.time('get');
   const results = await qb.getMany();
-
-  // return ids.map(
-  //   id =>
-  //     results.find(result => result.id === id)?.profile ||
-  //     new EntityNotFoundException(
-  //       `Could not load user ${id}`,
-  //       LogContext.COMMUNITY
-  //     )
-  // );
-  return [];
+  // ensure the result length matches the input length
+  return ids.map(
+    id =>
+      results.find(result => result.id === id)?.[relation] ??
+      new EntityNotFoundException(
+        `Could not load user ${id}`,
+        LogContext.COMMUNITY
+      )
+  );
 };
