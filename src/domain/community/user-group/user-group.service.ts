@@ -1,6 +1,11 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository, FindManyOptions } from 'typeorm';
+import {
+  FindOneOptions,
+  Repository,
+  FindManyOptions,
+  FindOptionsWhere,
+} from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { ProfileService } from '@domain/community/profile/profile.service';
 import { IUser } from '@domain/community/user';
@@ -43,7 +48,7 @@ export class UserGroupService {
     userGroupData: CreateUserGroupInput,
     hubID = ''
   ): Promise<IUserGroup> {
-    const group = UserGroup.create({ ...userGroupData });
+    const group = UserGroup.create({ ...userGroupData, hubID });
     group.hubID = hubID;
     group.authorization = new AuthorizationPolicy();
 
@@ -123,10 +128,14 @@ export class UserGroupService {
     options?: FindOneOptions<UserGroup>
   ): Promise<IUserGroup> {
     //const t1 = performance.now()
+    let where: FindOptionsWhere<UserGroup>;
+    if (options && options.where) where = { ...options?.where, id: groupID };
+    else where = { id: groupID };
     const group = await this.userGroupRepository.findOne({
-      where: { id: groupID, ...options?.where },
       ...options,
+      where,
     });
+
     if (!group)
       throw new EntityNotFoundException(
         `Unable to find group with ID: ${groupID}`,
