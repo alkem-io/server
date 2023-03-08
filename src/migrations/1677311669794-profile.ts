@@ -1,4 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { escapeString } from './utils/escape-string';
 
 export class profile1677311669794 implements MigrationInterface {
   name = 'profile1677311669794';
@@ -38,7 +39,9 @@ export class profile1677311669794 implements MigrationInterface {
     );
     for (const user of users) {
       await queryRunner.query(
-        `UPDATE profile SET displayName = '${user.displayName}' WHERE (id = '${user.profileId}')`
+        `UPDATE profile SET displayName = '${escapeString(
+          user.displayName
+        )}' WHERE (id = '${user.profileId}')`
       );
     }
     await queryRunner.query(`ALTER TABLE \`user\` DROP COLUMN \`displayName\``);
@@ -49,7 +52,9 @@ export class profile1677311669794 implements MigrationInterface {
     );
     for (const organization of organizations) {
       await queryRunner.query(
-        `UPDATE profile SET displayName = '${organization.displayName}' WHERE (id = '${organization.profileId}')`
+        `UPDATE profile SET displayName = '${escapeString(
+          organization.displayName
+        )}' WHERE (id = '${organization.profileId}')`
       );
     }
 
@@ -78,7 +83,9 @@ export class profile1677311669794 implements MigrationInterface {
       );
       const profile = profiles[0];
       await queryRunner.query(
-        `UPDATE organization SET displayName = '${profile.displayName}' WHERE (id = '${organization.id}')`
+        `UPDATE organization SET displayName = '${escapeString(
+          profile.displayName
+        )}' WHERE (id = '${organization.id}')`
       );
     }
 
@@ -92,7 +99,9 @@ export class profile1677311669794 implements MigrationInterface {
       );
       const profile = profiles[0];
       await queryRunner.query(
-        `UPDATE user SET displayName = '${profile.displayName}' WHERE (id = '${user.id}')`
+        `UPDATE user SET displayName = '${escapeString(
+          profile.displayName
+        )}' WHERE (id = '${user.id}')`
       );
     }
 

@@ -28,6 +28,10 @@ export class CreateCalendarEventInput extends CreateNameableInput {
   @Type(() => CreateProfileInput)
   profileData?: CreateProfileInput;
 
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  tags?: string[];
+
   @Field(() => Date, {
     nullable: false,
     description: 'The start date for the event.',
