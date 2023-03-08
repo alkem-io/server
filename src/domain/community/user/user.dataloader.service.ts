@@ -6,6 +6,7 @@ import { In, Repository } from 'typeorm';
 import { IProfile } from '../profile';
 import { User } from './user.entity';
 import { IAgent } from '@src/domain';
+import { findByBatchIds } from '@core/dataloader/utils/findByBatchIds';
 
 @Injectable()
 export class UserDataloaderService {
@@ -40,6 +41,16 @@ export class UserDataloaderService {
       relations: ['agent'],
       where: { id: In(userIds) },
     });
+
+    const test = await findByBatchIds<User, IAgent>(
+      this.userRepository,
+      userIds,
+      'agent',
+      {
+        limit: 3,
+        fields: ['id'],
+      }
+    );
 
     return userIds.map(
       id =>

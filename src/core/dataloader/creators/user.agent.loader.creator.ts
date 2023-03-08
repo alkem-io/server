@@ -8,7 +8,7 @@ import { DataLoaderCreator, DataLoaderCreatorOptions } from './base';
 export class UserAgentLoaderCreator implements DataLoaderCreator<IAgent> {
   constructor(private readonly userService: UserDataloaderService) {}
 
-  create(options?: DataLoaderCreatorOptions) {
+  create(options?: DataLoaderCreatorOptions<IAgent>) {
     return new DataLoader<string, IAgent>(
       keys => this.userService.findAgentsByBatch(keys as string[]),
       {

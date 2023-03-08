@@ -8,7 +8,7 @@ import { DataLoaderCreator, DataLoaderCreatorOptions } from './base';
 export class UserProfileLoaderCreator implements DataLoaderCreator<IProfile> {
   constructor(private readonly userService: UserDataloaderService) {}
 
-  create(options?: DataLoaderCreatorOptions) {
+  create(options?: DataLoaderCreatorOptions<IProfile>) {
     return new DataLoader<string, IProfile>(
       keys => this.userService.findProfilesByBatch(keys as string[]),
       {

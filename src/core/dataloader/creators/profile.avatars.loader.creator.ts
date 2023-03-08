@@ -9,7 +9,7 @@ import { DataLoaderCreatorOptions } from '../creators/base/data.loader.creator.o
 export class ProfileAvatarsLoaderCreator implements DataLoaderCreator<IVisual> {
   constructor(private readonly profileService: ProfileDataloaderService) {}
 
-  create(options?: DataLoaderCreatorOptions) {
+  create(options?: DataLoaderCreatorOptions<IVisual>) {
     return new DataLoader<string, IVisual>(
       async keys => this.profileService.findAvatarsByBatch(keys as string[]),
       {

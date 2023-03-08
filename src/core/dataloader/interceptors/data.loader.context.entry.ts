@@ -8,6 +8,6 @@ export interface DataLoaderContextEntry {
   contextId: ContextId;
   get: <TReturn>(
     creatorRef: Type<DataLoaderCreator<TReturn>>,
-    options?: DataLoaderCreatorOptions
+    options?: DataLoaderCreatorOptions<TReturn>
   ) => Promise<ILoader<TReturn> | never>;
 }
