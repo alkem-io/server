@@ -80,7 +80,7 @@ export class CollaborationService {
   async getCollaborationOrFail(
     collaborationID: string,
     options?: FindOneOptions<Collaboration>
-  ): Promise<ICollaboration> {
+  ): Promise<ICollaboration | never> {
     const collaboration = await this.collaborationRepository.findOne({
       where: { id: collaborationID },
       ...options,

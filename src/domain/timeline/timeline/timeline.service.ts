@@ -47,7 +47,7 @@ export class TimelineService {
   async getTimelineOrFail(
     timelineID: string,
     options?: FindOneOptions<Timeline>
-  ): Promise<ITimeline> {
+  ): Promise<ITimeline | never> {
     const timeline = await this.timelineRepository.findOne({
       where: { id: timelineID },
       ...options,

@@ -74,7 +74,7 @@ export class CalendarEventService {
   public async getCalendarEventOrFail(
     calendarEventID: string,
     options?: FindOneOptions<CalendarEvent>
-  ): Promise<ICalendarEvent> {
+  ): Promise<ICalendarEvent | never> {
     const calendarEvent = await this.calendarEventRepository.findOne({
       where: { id: calendarEventID },
       ...options,

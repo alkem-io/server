@@ -88,7 +88,7 @@ export class AgentService {
   async getAgentOrFail(
     agentID: string,
     options?: FindOneOptions<Agent>
-  ): Promise<IAgent> {
+  ): Promise<IAgent | never> {
     const agent = await this.agentRepository.findOne({
       where: { id: agentID },
       ...options,

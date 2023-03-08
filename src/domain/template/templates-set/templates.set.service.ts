@@ -71,7 +71,7 @@ export class TemplatesSetService {
   async getTemplatesSetOrFail(
     templatesSetID: string,
     options?: FindOneOptions<TemplatesSet>
-  ): Promise<ITemplatesSet> {
+  ): Promise<ITemplatesSet | never> {
     const templatesSet = await TemplatesSet.findOne({
       where: { id: templatesSetID },
       ...options,

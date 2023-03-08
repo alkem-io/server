@@ -66,7 +66,7 @@ export class PreferenceSetService {
   async getPreferenceSetOrFail(
     preferenceSetID: string,
     options?: FindOneOptions<PreferenceSet>
-  ): Promise<IPreferenceSet> {
+  ): Promise<IPreferenceSet | never> {
     const preferenceSet = await PreferenceSet.findOne({
       where: { id: preferenceSetID },
       ...options,

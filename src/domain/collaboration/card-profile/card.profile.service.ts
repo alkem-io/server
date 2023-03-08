@@ -169,7 +169,7 @@ export class CardProfileService {
   async getCardProfileOrFail(
     cardProfileID: string,
     options?: FindOneOptions<CardProfile>
-  ): Promise<ICardProfile> {
+  ): Promise<ICardProfile | never> {
     const cardProfile = await CardProfile.findOne({
       where: {
         id: cardProfileID,

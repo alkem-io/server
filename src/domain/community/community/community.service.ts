@@ -134,7 +134,7 @@ export class CommunityService {
   async getCommunityOrFail(
     communityID: string,
     options?: FindOneOptions<Community>
-  ): Promise<ICommunity> {
+  ): Promise<ICommunity | never> {
     const community = await this.communityRepository.findOne({
       where: { id: communityID },
       ...options,

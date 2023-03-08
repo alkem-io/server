@@ -191,7 +191,7 @@ export class BaseChallengeService {
     baseChallengeID: string,
     repository: Repository<BaseChallenge>,
     options?: FindOneOptions<BaseChallenge>
-  ): Promise<IBaseChallenge> {
+  ): Promise<IBaseChallenge | never> {
     const challenge = await repository.findOne({
       where: { id: baseChallengeID },
       ...options,

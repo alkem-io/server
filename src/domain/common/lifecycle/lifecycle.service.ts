@@ -127,7 +127,7 @@ export class LifecycleService {
   async getLifecycleOrFail(
     lifecycleID: string,
     options?: FindOneOptions<Lifecycle>
-  ): Promise<ILifecycle> {
+  ): Promise<ILifecycle | never> {
     const lifecycle = await this.lifecycleRepository.findOne({
       where: { id: lifecycleID },
       ...options,

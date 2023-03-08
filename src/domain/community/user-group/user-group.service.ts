@@ -126,7 +126,7 @@ export class UserGroupService {
   async getUserGroupOrFail(
     groupID: string,
     options?: FindOneOptions<UserGroup>
-  ): Promise<IUserGroup> {
+  ): Promise<IUserGroup | never> {
     //const t1 = performance.now()
     let where: FindOptionsWhere<UserGroup>;
     if (options && options.where) where = { ...options?.where, id: groupID };

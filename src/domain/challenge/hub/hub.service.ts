@@ -384,7 +384,7 @@ export class HubService {
   async getHubOrFail(
     hubID: string,
     options?: FindOneOptions<Hub>
-  ): Promise<IHub> {
+  ): Promise<IHub | never> {
     let hub: IHub | null = null;
     if (hubID.length === UUID_LENGTH) {
       hub = await this.hubRepository.findOne({

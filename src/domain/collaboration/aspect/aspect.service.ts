@@ -83,7 +83,7 @@ export class AspectService {
   public async getAspectOrFail(
     aspectID: string,
     options?: FindOneOptions<Aspect>
-  ): Promise<IAspect> {
+  ): Promise<IAspect | never> {
     const aspect = await this.aspectRepository.findOne({
       where: { id: aspectID },
       ...options,

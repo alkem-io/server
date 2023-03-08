@@ -73,7 +73,7 @@ export class OrganizationVerificationService {
   async getOrganizationVerificationOrFail(
     organizationVerificationID: string,
     options?: FindOneOptions<OrganizationVerification>
-  ): Promise<IOrganizationVerification> {
+  ): Promise<IOrganizationVerification | never> {
     const organizationVerification =
       await this.organizationVerificationRepository.findOne({
         where: { id: organizationVerificationID },

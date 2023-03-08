@@ -330,7 +330,7 @@ export class OrganizationService {
   async getOrganizationOrFail(
     organizationID: string,
     options?: FindOneOptions<Organization>
-  ): Promise<IOrganization> {
+  ): Promise<IOrganization | never> {
     const organization = await this.getOrganization(organizationID, options);
     if (!organization)
       throw new EntityNotFoundException(

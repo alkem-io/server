@@ -84,7 +84,7 @@ export class ApplicationService {
   async getApplicationOrFail(
     applicationId: string,
     options?: FindOneOptions<Application>
-  ): Promise<IApplication> {
+  ): Promise<IApplication | never> {
     let where;
     if (options && options.where)
       where = { ...options?.where, id: applicationId };

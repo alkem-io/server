@@ -71,7 +71,7 @@ export class CanvasCheckoutService {
   async getCanvasCheckoutOrFail(
     canvasCheckoutID: string,
     options?: FindOneOptions<CanvasCheckout>
-  ): Promise<ICanvasCheckout> {
+  ): Promise<CanvasCheckout | never> {
     const canvasCheckout = await this.canvasCheckoutRepository.findOne({
       where: { id: canvasCheckoutID },
       ...options,

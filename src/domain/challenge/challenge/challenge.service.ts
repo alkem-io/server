@@ -298,7 +298,7 @@ export class ChallengeService {
     challengeID: string,
     nameableScopeID: string,
     options?: FindOneOptions<Challenge>
-  ): Promise<IChallenge> {
+  ): Promise<IChallenge | never> {
     let challenge: IChallenge | null = null;
     if (challengeID.length == UUID_LENGTH) {
       challenge = await this.challengeRepository.findOne({
@@ -327,7 +327,7 @@ export class ChallengeService {
   async getChallengeOrFail(
     challengeID: string,
     options?: FindOneOptions<Challenge>
-  ): Promise<IChallenge> {
+  ): Promise<IChallenge | never> {
     let challenge: IChallenge | null = null;
     if (challengeID.length == UUID_LENGTH) {
       challenge = await this.challengeRepository.findOne({

@@ -208,7 +208,7 @@ export class ProfileService {
   async getProfileOrFail(
     profileID: string,
     options?: FindOneOptions<Profile>
-  ): Promise<IProfile> {
+  ): Promise<IProfile | never> {
     const profile = await Profile.findOne({
       where: { id: profileID },
       ...options,

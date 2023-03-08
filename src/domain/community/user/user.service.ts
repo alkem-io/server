@@ -370,7 +370,7 @@ export class UserService {
   async getUserOrFail(
     userID: string,
     options?: FindOneOptions<User>
-  ): Promise<IUser> {
+  ): Promise<IUser | never> {
     const user = await this.getUserByEmailIdUUID(userID, options);
 
     if (!user) {
@@ -448,7 +448,7 @@ export class UserService {
   async getUserByEmail(
     email: string,
     options?: FindOneOptions<User>
-  ): Promise<IUser | null> {
+  ): Promise<IUser | never | null> {
     if (!validateEmail(email)) {
       throw new FormatNotSupportedException(
         `Incorrect format of the user email: ${email}`,

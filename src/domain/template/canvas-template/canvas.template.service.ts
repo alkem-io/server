@@ -46,7 +46,7 @@ export class CanvasTemplateService {
   async getCanvasTemplateOrFail(
     canvasTemplateID: string,
     options?: FindOneOptions<CanvasTemplate>
-  ): Promise<ICanvasTemplate> {
+  ): Promise<ICanvasTemplate | never> {
     let where: FindOptionsWhere<CanvasTemplate>;
     if (options && options.where)
       where = { ...options?.where, id: canvasTemplateID };

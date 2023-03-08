@@ -79,7 +79,7 @@ export class ContextService {
   async getContextOrFail(
     contextID: string,
     options?: FindOneOptions<Context>
-  ): Promise<IContext> {
+  ): Promise<IContext | never> {
     const context = await this.contextRepository.findOne({
       where: { id: contextID },
       ...options,

@@ -36,7 +36,7 @@ export class AspectTemplateService {
   async getAspectTemplateOrFail(
     aspectTemplateID: string,
     options?: FindOneOptions<AspectTemplate>
-  ): Promise<IAspectTemplate> {
+  ): Promise<IAspectTemplate | never> {
     let where: FindOptionsWhere<AspectTemplate>;
     if (options && options.where)
       where = { ...options?.where, id: aspectTemplateID };

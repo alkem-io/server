@@ -99,7 +99,7 @@ export class ReferenceService {
   async getReferenceOrFail(
     referenceID: string,
     options?: FindOneOptions<Reference>
-  ): Promise<IReference> {
+  ): Promise<IReference | never> {
     const reference = await this.referenceRepository.findOne({
       where: { id: referenceID },
       ...options,

@@ -38,7 +38,7 @@ export class LifecycleTemplateService {
   async getLifecycleTemplateOrFail(
     lifecycleTemplateID: string,
     options?: FindOneOptions<LifecycleTemplate>
-  ): Promise<ILifecycleTemplate> {
+  ): Promise<ILifecycleTemplate | never> {
     const lifecycleTemplate = await this.lifecycleTemplateRepository.findOne({
       where: { id: lifecycleTemplateID },
       ...options,

@@ -44,7 +44,7 @@ export class TemplateInfoService {
   async getTemplateInfoOrFail(
     templateInfoID: string,
     options?: FindOneOptions<TemplateInfo>
-  ): Promise<ITemplateInfo> {
+  ): Promise<ITemplateInfo | never> {
     const templateInfo = await this.templateInfoRepository.findOne({
       where: { id: templateInfoID },
       ...options,

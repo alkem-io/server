@@ -110,7 +110,7 @@ export class CalloutService {
   public async getCalloutOrFail(
     calloutID: string,
     options?: FindOneOptions<Callout>
-  ): Promise<ICallout> {
+  ): Promise<ICallout | never> {
     let callout: ICallout | null = null;
     if (calloutID.length === UUID_LENGTH) {
       callout = await this.calloutRepository.findOne({

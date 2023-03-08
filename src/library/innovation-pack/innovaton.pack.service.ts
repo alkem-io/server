@@ -133,7 +133,7 @@ export class InnovationPackService {
   async getInnovationPackOrFail(
     innovationPackID: string,
     options?: FindOneOptions<InnovationPack>
-  ): Promise<IInnovationPack> {
+  ): Promise<IInnovationPack | never> {
     let innovationPack: IInnovationPack | null = null;
     if (innovationPackID.length === UUID_LENGTH) {
       innovationPack = await this.innovationPackRepository.findOne({

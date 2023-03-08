@@ -259,7 +259,7 @@ export class CommunicationService {
   async getCommunicationOrFail(
     communicationID: string,
     options?: FindOneOptions<Communication>
-  ): Promise<ICommunication> {
+  ): Promise<ICommunication | never> {
     const communication = await this.communicationRepository.findOne({
       where: {
         id: communicationID,
