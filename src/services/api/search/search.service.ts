@@ -596,7 +596,7 @@ export class SearchService {
       const cardQuery = this.cardRepository
         .createQueryBuilder('aspect')
         .leftJoinAndSelect('aspect.profile', 'profile')
-        .leftJoinAndSelect('profile.tagset', 'tagset')
+        .leftJoinAndSelect('profile.tagsets', 'tagset')
         .leftJoinAndSelect('aspect.authorization', 'authorization');
 
       // Optionally restrict to search in just one Hub
@@ -610,8 +610,8 @@ export class SearchService {
         .andWhere(
           new Brackets(qb => {
             qb.where('aspect.nameID like :term')
-              .orWhere('aspect.displayName like :term')
-              .orWhere('tagset.tags like :term')
+              .orWhere('profile.displayName like :term')
+              .orWhere('find_in_set(:term, tagset.tags)')
               .orWhere('profile.description like :term');
           })
         )
