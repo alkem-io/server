@@ -14,7 +14,10 @@ import { ISearchResultOrganization } from './dto/search.result.dto.entry.organiz
 import { ISearchResult } from './dto/search.result.entry.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { ISearchResultUserGroup } from './dto/search.result.dto.entry.user.group';
-import { RelationshipNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { ISearchResultCard } from './dto/search.result.dto.entry.card';
@@ -167,6 +170,13 @@ export default class SearchResultBuilderService
 
     let challenge: IChallenge | undefined = undefined;
     let opportunity: IOpportunity | undefined = undefined;
+
+    if (!queryResult) {
+      throw new EntityNotFoundException(
+        `Unable to find parents for card with ID: ${aspectId}`,
+        LogContext.SEARCH
+      );
+    }
 
     const callout = await this.calloutService.getCalloutOrFail(
       queryResult.calloutID

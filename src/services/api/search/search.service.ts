@@ -803,10 +803,19 @@ export class SearchService {
           this.entityManager
         );
       const searchResultType = searchResultBase.type as SearchResultType;
-      const searchResult = await searchResultBuilder[searchResultType](
-        searchResultBase
-      );
-      searchResults.push(searchResult);
+      try {
+        const searchResult = await searchResultBuilder[searchResultType](
+          searchResultBase
+        );
+        searchResults.push(searchResult);
+      } catch (error) {
+        this.logger.error(
+          `Unable to process search result: ${JSON.stringify(
+            result
+          )} - error: ${error}`,
+          LogContext.SEARCH
+        );
+      }
     }
 
     return searchResults;
