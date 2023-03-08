@@ -26,6 +26,13 @@ export class cardProfile1677511855735 implements MigrationInterface {
       `ALTER TABLE \`reference\` DROP FOREIGN KEY \`FK_282838434c7198a323ea6f475fb\``
     );
 
+    await queryRunner.query(
+      `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_67663901817dd09d5906537e088\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_111838434c7198a323ea6f475fb\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
     // Migrate the profileData from aspects
     const aspects: any[] = await queryRunner.query(
       `SELECT id, displayName, profileId from aspect`
@@ -59,7 +66,7 @@ export class cardProfile1677511855735 implements MigrationInterface {
       );
     }
 
-    // Migrate the profileData from aspects
+    // Migrate the profileData from calendar events
     const events: any[] = await queryRunner.query(
       `SELECT id, displayName, profileId from calendar_event`
     );
@@ -91,12 +98,6 @@ export class cardProfile1677511855735 implements MigrationInterface {
         `UPDATE reference SET profileId = '${newProfileID}' WHERE (cardProfileId = '${oldCardProfile.id}')`
       );
     }
-    await queryRunner.query(
-      `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_67663901817dd09d5906537e088\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_111838434c7198a323ea6f475fb\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
     await queryRunner.query('DROP TABLE `card_profile`');
     await queryRunner.query(
       'ALTER TABLE `reference` DROP COLUMN `cardProfileId`'
@@ -135,10 +136,19 @@ export class cardProfile1677511855735 implements MigrationInterface {
                 ) ENGINE=InnoDB`
     );
     await queryRunner.query(
+      `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_67663901817dd09d5906537e088\` FOREIGN KEY (\`profileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_111838434c7198a323ea6f475fb\` FOREIGN KEY (\`profileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
       `ALTER TABLE \`card_profile\` ADD CONSTRAINT \`FK_22223901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       `ALTER TABLE \`card_profile\` ADD CONSTRAINT \`FK_44443901817dd09d5906537e088\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`card_profile\` ADD CONSTRAINT \`FK_87777ca8ac212b8357637794d6f\` FOREIGN KEY (\`locationId\`) REFERENCES \`location\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     await queryRunner.query(
