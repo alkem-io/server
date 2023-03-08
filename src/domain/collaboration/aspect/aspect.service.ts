@@ -40,7 +40,7 @@ export class AspectService {
     );
     await this.profileService.addTagsetOnProfile(aspect.profile, {
       name: RestrictedTagsetNames.DEFAULT,
-      tags: [],
+      tags: aspectInput.tags || [],
     });
     aspect.authorization = new AuthorizationPolicy();
     aspect.createdBy = userID;

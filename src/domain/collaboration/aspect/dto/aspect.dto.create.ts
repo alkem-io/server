@@ -27,4 +27,8 @@ export class CreateAspectInput extends CreateNameableInput {
   @ValidateNested({ each: true })
   @Type(() => CreateProfileInput)
   profileData!: CreateProfileInput;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  tags?: string[];
 }
