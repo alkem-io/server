@@ -1,12 +1,11 @@
 import DataLoader from 'dataloader';
+import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
-import { IVisual } from '@domain/common/visual';
-import { DataLoaderCreator } from './base/data.loader.creator';
-import { DataLoaderCreatorOptions } from '../creators/base/data.loader.creator.options';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Profile } from '@src/domain';
-import { Repository } from 'typeorm';
-import { findByBatchIds } from '@core/dataloader/utils/findByBatchIds';
+import { IVisual } from '@domain/common/visual';
+import { DataLoaderCreator, DataLoaderCreatorOptions } from './base';
+import { findByBatchIds } from '../utils';
 
 @Injectable()
 export class ProfileAvatarsLoaderCreator implements DataLoaderCreator<IVisual> {
@@ -21,7 +20,8 @@ export class ProfileAvatarsLoaderCreator implements DataLoaderCreator<IVisual> {
         findByBatchIds<Profile, IVisual>(
           this.profileRepository,
           keys as string[],
-          'avatar'
+          'avatar',
+          options
         ),
       {
         cache: options?.cache,

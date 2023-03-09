@@ -38,14 +38,17 @@ export const findByBatchIds = async <
     // unable to select just the relation fields without the parents
     qb.leftJoinAndSelect(`${parentAlias}.${relation}`, resultAlias);
   }
-
   qb.take(limit);
 
   const results = await qb.getMany();
+
+  const resultsById = new Map<string, TResult>(
+    results.map<[string, TResult]>(x => [x.id, x[relation]])
+  );
   // ensure the result length matches the input length
   return ids.map(
     id =>
-      results.find(result => result.id === id)?.[relation] ??
+      resultsById.get(id) ??
       new EntityNotFoundException(
         `Could not load user ${id}`,
         LogContext.COMMUNITY

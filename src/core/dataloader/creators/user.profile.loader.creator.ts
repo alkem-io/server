@@ -1,10 +1,10 @@
 import DataLoader from 'dataloader';
 import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
 import { IProfile, User } from '@src/domain';
-import { InjectRepository } from '@nestjs/typeorm';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from './base';
-import { findByBatchIds } from '@core/dataloader/utils/findByBatchIds';
+import { findByBatchIds } from '../utils/findByBatchIds';
 
 @Injectable()
 export class UserProfileLoaderCreator implements DataLoaderCreator<IProfile> {
@@ -19,7 +19,8 @@ export class UserProfileLoaderCreator implements DataLoaderCreator<IProfile> {
         findByBatchIds<User, IProfile>(
           this.userRepository,
           keys as string[],
-          'profile'
+          'profile',
+          options
         ),
       {
         cache: options?.cache,

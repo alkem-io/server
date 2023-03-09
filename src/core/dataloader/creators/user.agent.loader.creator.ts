@@ -1,8 +1,8 @@
 import DataLoader from 'dataloader';
 import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
 import { IAgent, User } from '@src/domain';
-import { InjectRepository } from '@nestjs/typeorm';
 import { findByBatchIds } from '../utils/findByBatchIds';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from './base';
 
@@ -19,7 +19,8 @@ export class UserAgentLoaderCreator implements DataLoaderCreator<IAgent> {
         findByBatchIds<User, IAgent>(
           this.userRepository,
           keys as string[],
-          'agent'
+          'agent',
+          options
         ),
       {
         cache: options?.cache,
