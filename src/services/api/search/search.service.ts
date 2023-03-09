@@ -142,6 +142,7 @@ export class SearchService {
         userResults,
         groupResults,
         organizationResults,
+        cardResults,
         userIDsFilter,
         entityTypesFilter
       );
@@ -599,7 +600,6 @@ export class SearchService {
       const cardQuery = this.cardRepository
         .createQueryBuilder('aspect')
         .leftJoinAndSelect('aspect.profile', 'profile')
-        .leftJoinAndSelect('profile.tagset', 'tagset')
         .leftJoinAndSelect('aspect.authorization', 'authorization');
 
       // Optionally restrict to search in just one Hub
@@ -613,8 +613,7 @@ export class SearchService {
         .andWhere(
           new Brackets(qb => {
             qb.where('aspect.nameID like :term')
-              .orWhere('aspect.displayName like :term')
-              .orWhere('tagset.tags like :term')
+              .orWhere('profile.displayName like :term')
               .orWhere('profile.description like :term');
           })
         )
@@ -650,10 +649,11 @@ export class SearchService {
     userResults: Map<number, Match>,
     groupResults: Map<number, Match>,
     organizationResults: Map<number, Match>,
+    cardResults: Map<number, Match>,
     usersFilter: string[] | undefined,
     entityTypesFilter?: string[]
   ) {
-    const [searchUsers, searchGroups, searchOrganizations] =
+    const [searchUsers, searchGroups, searchOrganizations, searchCards] =
       await this.searchBy(agentInfo, entityTypesFilter);
 
     if (searchUsers)
@@ -668,6 +668,7 @@ export class SearchService {
         tagsets,
         organizationResults
       );
+    if (searchCards) await this.searchCardsByTagsets(terms, cardResults);
   }
 
   async searchUsersByTagsets(
@@ -759,6 +760,26 @@ export class SearchService {
     }
   }
 
+  async searchCardsByTagsets(terms: string[], cardResults: Map<number, Match>) {
+    for (const term of terms) {
+      const cardMatches = await this.cardRepository
+        .createQueryBuilder('aspect')
+        .leftJoinAndSelect('aspect.profile', 'profile')
+        .leftJoinAndSelect('profile.tagsets', 'tagset')
+        .where('find_in_set(:term, tagset.tags)')
+        .setParameters({ term: `${term}` })
+        .getMany();
+
+      // Create results for each match
+      await this.buildMatchingResults(
+        cardMatches,
+        cardResults,
+        term,
+        SearchResultType.CARD
+      );
+    }
+  }
+
   async buildMatchingResults(
     rawMatches: any[],
     resultsMap: Map<number, Match>,
@@ -801,10 +822,19 @@ export class SearchService {
           this.calloutService
         );
       const searchResultType = searchResultBase.type as SearchResultType;
-      const searchResult = await searchResultBuilder[searchResultType](
-        searchResultBase
-      );
-      searchResults.push(searchResult);
+      try {
+        const searchResult = await searchResultBuilder[searchResultType](
+          searchResultBase
+        );
+        searchResults.push(searchResult);
+      } catch (error) {
+        this.logger.error(
+          `Unable to process search result: ${JSON.stringify(
+            result
+          )} - error: ${error}`,
+          LogContext.SEARCH
+        );
+      }
     }
 
     return searchResults;

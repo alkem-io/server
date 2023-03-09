@@ -414,10 +414,20 @@ export class OrganizationService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     filter?: OrganizationFilterInput
   ): Promise<IPaginatedType<IOrganization>> {
-    const qb = await this.organizationRepository.createQueryBuilder().select();
-
+    const qb = await this.organizationRepository.createQueryBuilder(
+      'organization'
+    );
     if (filter) {
-      applyFiltering(qb, filter);
+      const { displayName, ...rest } = filter;
+
+      if (displayName)
+        qb.leftJoinAndSelect('organization.profile', 'profile')
+          .where('profile.displayName like :term')
+          .setParameters({ term: `%${displayName}%` });
+
+      if (rest) {
+        applyFiltering(qb, rest);
+      }
     }
 
     return getPaginationResults(qb, paginationArgs);

@@ -39,7 +39,7 @@ export class CalendarEventService {
     );
     await this.profileService.addTagsetOnProfile(calendarEvent.profile, {
       name: RestrictedTagsetNames.DEFAULT,
-      tags: [],
+      tags: calendarEventInput.tags || [],
     });
 
     calendarEvent.authorization = new AuthorizationPolicy();

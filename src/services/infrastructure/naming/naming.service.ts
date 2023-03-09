@@ -371,11 +371,12 @@ export class NamingService {
         'aspect.createdBy',
         'aspect.createdDate',
         'aspect.type',
-        'aspect.description',
         'nameID',
+        'commentsId',
       ])
-      .leftJoinAndSelect('aspect.profile', 'profile')
-      .where(`commentsId = ${commentsID}`)
+      .leftJoin('aspect.profile', 'profile')
+      .addSelect(['profile.displayName'])
+      .where(`commentsId = '${commentsID}'`)
       .getOne();
     return aspect;
   }
@@ -398,7 +399,7 @@ export class NamingService {
         'calendarEvent.durationDays',
       ])
       .leftJoinAndSelect('calendarEvent.profile', 'profile')
-      .where(`commentsId = ${commentsID}`)
+      .where(`commentsId = '${commentsID}'`)
       .getOne();
 
     return calendarEvent;

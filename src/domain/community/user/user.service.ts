@@ -585,10 +585,18 @@ export class UserService {
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
-    const qb = await this.userRepository.createQueryBuilder().select();
-
+    const qb = await this.userRepository.createQueryBuilder('user');
     if (filter) {
-      applyFiltering(qb, filter);
+      const { displayName, ...rest } = filter;
+
+      if (displayName)
+        qb.leftJoinAndSelect('user.profile', 'profile')
+          .where('profile.displayName like :term')
+          .setParameters({ term: `%${displayName}%` });
+
+      if (rest) {
+        applyFiltering(qb, rest);
+      }
     }
 
     return getPaginationResults(qb, paginationArgs);
