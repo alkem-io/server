@@ -463,7 +463,8 @@ export class NotificationPayloadBuilder {
     const user = await this.userRepository
       .createQueryBuilder('user')
       .select(['user.id', 'user.nameID'])
-      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoin('user.profile', 'profile')
+      .addSelect(['profile.displayName'])
       .where('user.nameID = :id')
       .orWhere('user.id = :id')
       .setParameters({ id: userId })
@@ -522,9 +523,10 @@ export class NotificationPayloadBuilder {
     const org = await this.organizationRepository
       .createQueryBuilder('organization')
       .select(['organization.id'])
-      .leftJoinAndSelect('organization.profile', 'profile')
+      .leftJoin('organization.profile', 'profile')
+      .addSelect(['profile.displayName'])
       .where('organization.id = :id')
-      .orWhere('profile.nameID = :id')
+      .orWhere('organization.nameID = :id')
       .setParameters({ id: orgId })
       .getOne();
 
@@ -543,7 +545,8 @@ export class NotificationPayloadBuilder {
     const org = await this.organizationRepository
       .createQueryBuilder('organization')
       .select(['organization.id'])
-      .leftJoinAndSelect('organization.profile', 'profile')
+      .leftJoin('organization.profile', 'profile')
+      .addSelect(['profile.displayName'])
       .where('organization.id = :id')
       .orWhere('organization.nameID = :id')
       .setParameters({ id: orgId })
