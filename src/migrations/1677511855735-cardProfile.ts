@@ -62,6 +62,9 @@ export class cardProfile1677511855735 implements MigrationInterface {
       );
     }
     await queryRunner.query(
+      'ALTER TABLE \`aspect\` ADD UNIQUE INDEX \`IDX_67663901817dd09d5906537e088\` (\`profileId\`)'
+    );
+    await queryRunner.query(
       `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_67663901817dd09d5906537e088\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
@@ -102,6 +105,9 @@ export class cardProfile1677511855735 implements MigrationInterface {
     }
 
     await queryRunner.query(
+      'ALTER TABLE \`calendar_event\` ADD UNIQUE INDEX \`IDX_111838434c7198a323ea6f475fb\` (\`profileId\`)'
+    );
+    await queryRunner.query(
       `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_111838434c7198a323ea6f475fb\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query('DROP TABLE `card_profile`');
@@ -121,7 +127,13 @@ export class cardProfile1677511855735 implements MigrationInterface {
       `ALTER TABLE \`aspect\` DROP FOREIGN KEY \`FK_67663901817dd09d5906537e088\``
     );
     await queryRunner.query(
+      'DROP INDEX \`IDX_67663901817dd09d5906537e088\` ON \`aspect\`'
+    );
+    await queryRunner.query(
       `ALTER TABLE \`calendar_event\` DROP FOREIGN KEY \`FK_111838434c7198a323ea6f475fb\``
+    );
+    await queryRunner.query(
+      'DROP INDEX \`IDX_111838434c7198a323ea6f475fb\` ON \`calendar_event\`'
     );
     await queryRunner.query(
       `ALTER TABLE \`aspect\`ADD \`displayName\` varchar(255) NULL`
@@ -142,12 +154,6 @@ export class cardProfile1677511855735 implements MigrationInterface {
                 ) ENGINE=InnoDB`
     );
     await queryRunner.query(
-      `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_67663901817dd09d5906537e088\` FOREIGN KEY (\`profileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_111838434c7198a323ea6f475fb\` FOREIGN KEY (\`profileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
       `ALTER TABLE \`card_profile\` ADD CONSTRAINT \`FK_22223901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
@@ -156,7 +162,6 @@ export class cardProfile1677511855735 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`card_profile\` ADD CONSTRAINT \`FK_87777ca8ac212b8357637794d6f\` FOREIGN KEY (\`locationId\`) REFERENCES \`location\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
-
     await queryRunner.query(
       `ALTER TABLE \`reference\` ADD \`cardProfileId\` varchar(36) NULL`
     );
@@ -174,7 +179,7 @@ export class cardProfile1677511855735 implements MigrationInterface {
     for (const aspect of aspects) {
       const newCardProfileID = randomUUID();
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, authorizationId, description, locationId, displayName from profile WHERE (id = '${aspect.profileId}'`
+        `SELECT id, createdDate, updatedDate, version, authorizationId, description, locationId, displayName from profile WHERE (id = '${aspect.profileId}')`
       );
       const oldProfile = profiles[0];
       const tagsets: any[] = await queryRunner.query(
@@ -189,21 +194,33 @@ export class cardProfile1677511855735 implements MigrationInterface {
                     '${oldProfile.version}',
                     '${oldProfile.authorizationId}',
                     '${oldProfile.locationId}',
-                    '${escapeString(oldProfile.description)}'
+                    '${escapeString(oldProfile.description)}',
                     '${tagset.id}')`
       );
 
       // Update the tagset to be one of many
       await queryRunner.query(
-        `UPDATE tagset SET profileId = 'null' WHERE (id = '${tagset.id}')`
+        `UPDATE tagset SET profileId = NULL WHERE (id = '${tagset.id}')`
       );
 
       // Update the references to be parented on the new profile
       await queryRunner.query(
-        `UPDATE reference SET cardProfileId = '${newCardProfileID}', profileId = 'null' WHERE (profileId = '${oldProfile.id}')`
+        `UPDATE reference SET cardProfileId = '${newCardProfileID}', profileId = NULL WHERE (profileId = '${oldProfile.id}')`
+      );
+
+      await queryRunner.query(
+        `UPDATE aspect SET profileId = '${newCardProfileID}', displayName = '${escapeString(oldProfile.displayName)}'  WHERE (id = '${aspect.id}')`
+      );
+
+      await queryRunner.query(
+        `DELETE FROM profile WHERE (id = '${oldProfile.id}')`
       );
 
     }
+
+    await queryRunner.query(
+      `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_67663901817dd09d5906537e088\` FOREIGN KEY (\`profileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
 
     // Migrate the profileData from calendar events
     const events: any[] = await queryRunner.query(
@@ -212,7 +229,7 @@ export class cardProfile1677511855735 implements MigrationInterface {
     for (const event of events) {
       const newCardProfileID = randomUUID();
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, authorizationId, description, locationId, displayName from profile WHERE (id = '${event.profileId}'`
+        `SELECT id, createdDate, updatedDate, version, authorizationId, description, locationId, displayName from profile WHERE (id = '${event.profileId}')`
       );
       const oldProfile = profiles[0];
       const tagsets: any[] = await queryRunner.query(
@@ -227,19 +244,31 @@ export class cardProfile1677511855735 implements MigrationInterface {
                     '${oldProfile.version}',
                     '${oldProfile.authorizationId}',
                     '${oldProfile.locationId}',
-                    '${escapeString(oldProfile.description)}'
+                    '${escapeString(oldProfile.description)}',
                     '${tagset.id}')`
       );
 
       // Update the tagset to be one to one
       await queryRunner.query(
-        `UPDATE tagset SET profileId = 'null' WHERE (id = '${tagset.id}')`
+        `UPDATE tagset SET profileId = NULL WHERE (id = '${tagset.id}')`
       );
 
       // Update the references to be parented on the card profile
       await queryRunner.query(
-        `UPDATE reference SET cardProfileId = '${newCardProfileID}', profileId = 'null' WHERE (profileId = '${oldProfile.id}')`
+        `UPDATE reference SET cardProfileId = '${newCardProfileID}', profileId = NULL WHERE (profileId = '${oldProfile.id}')`
+      );
+
+      await queryRunner.query(
+        `UPDATE calendar_event SET profileId = '${newCardProfileID}', displayName = '${escapeString(oldProfile.displayName)}' WHERE (id = '${event.id}')`
+      );
+
+      await queryRunner.query(
+        `DELETE FROM profile WHERE (id = '${oldProfile.id}')`
       );
     }
+
+    await queryRunner.query(
+      `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_111838434c7198a323ea6f475fb\` FOREIGN KEY (\`profileId\`) REFERENCES \`card_profile\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
   }
 }
