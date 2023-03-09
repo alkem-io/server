@@ -2,11 +2,9 @@ import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { IProfile } from '../profile';
 import { User } from './user.entity';
-import { IAgent } from '@src/domain';
-import { findByBatchIds } from '@core/dataloader/utils/findByBatchIds';
 
 @Injectable()
 export class UserDataloaderService {
@@ -31,16 +29,6 @@ export class UserDataloaderService {
           `Could not load user ${id}`,
           LogContext.COMMUNITY
         )
-    );
-  }
-
-  public async findAgentsByBatch(
-    userIds: string[]
-  ): Promise<(IAgent | Error)[] | never> {
-    return await findByBatchIds<User, IAgent>(
-      this.userRepository,
-      userIds,
-      'profile'
     );
   }
 }
