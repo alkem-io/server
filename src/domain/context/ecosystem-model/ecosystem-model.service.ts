@@ -35,8 +35,9 @@ export class EcosystemModelService {
   async createEcosystemModel(
     ecosystemModelData: CreateEcosystemModelInput
   ): Promise<IEcosystemModel> {
-    const ecosystemModel: IEcosystemModel =
-      EcosystemModel.create(ecosystemModelData);
+    const ecosystemModel: IEcosystemModel = EcosystemModel.create({
+      ...ecosystemModelData,
+    });
     ecosystemModel.authorization = new AuthorizationPolicy();
     await this.createRestrictedActorGroups(ecosystemModel);
     ecosystemModel.actorGroups = [];
@@ -46,7 +47,7 @@ export class EcosystemModelService {
   async getEcosystemModelOrFail(
     ecosystemModelID: string
   ): Promise<IEcosystemModel> {
-    const ecosystemModel = await this.ecosystemModelRepository.findOne({
+    const ecosystemModel = await this.ecosystemModelRepository.findOneBy({
       id: ecosystemModelID,
     });
     if (!ecosystemModel)

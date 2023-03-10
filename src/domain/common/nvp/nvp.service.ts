@@ -13,7 +13,7 @@ export class NVPService {
   ) {}
 
   async getNvpOrFail(NVPID: string): Promise<NVP> {
-    const NVP = await this.nvpRepository.findOne({
+    const NVP = await this.nvpRepository.findOneBy({
       id: NVPID,
     });
     if (!NVP)

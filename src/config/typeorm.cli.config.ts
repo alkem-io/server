@@ -1,7 +1,10 @@
-import { ConnectionOptions } from 'typeorm';
 import { join } from 'path';
+import dotenv from 'dotenv';
+import { MysqlConnectionOptions } from 'typeorm/driver/mysql/MysqlConnectionOptions';
 
-export const typeormCliConfig: ConnectionOptions = {
+dotenv.config();
+
+export const typeormCliConfig: MysqlConnectionOptions = {
   type: 'mysql',
   host: process.env.DATABASE_HOST ?? 'localhost',
   port: process.env.MYSQL_DB_PORT ? Number(process.env.MYSQL_DB_PORT) : 3306,
@@ -18,9 +21,4 @@ export const typeormCliConfig: ConnectionOptions = {
   migrations: [join('src', 'migrations', '*.{ts,js}')],
   migrationsTableName: 'migrations_typeorm',
   migrationsRun: true,
-  cli: {
-    migrationsDir: 'src/migrations',
-  },
 };
-
-module.exports = typeormCliConfig;

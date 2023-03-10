@@ -32,7 +32,9 @@ export class ActorGroupService {
   async createActorGroup(
     actorGroupData: CreateActorGroupInput
   ): Promise<IActorGroup> {
-    const actorGroup = ActorGroup.create(actorGroupData);
+    const actorGroup: IActorGroup = ActorGroup.create({
+      ...actorGroupData,
+    });
     actorGroup.authorization = new AuthorizationPolicy();
     actorGroup.actors = [];
     return await this.actorGroupRepository.save(actorGroup);
@@ -59,7 +61,7 @@ export class ActorGroupService {
   }
 
   async getActorGroupOrFail(actorGroupID: string): Promise<IActorGroup> {
-    const actorGroup = await this.actorGroupRepository.findOne({
+    const actorGroup = await this.actorGroupRepository.findOneBy({
       id: actorGroupID,
     });
     if (!actorGroup)
