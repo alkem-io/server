@@ -1,10 +1,10 @@
 import { CurrentUser, Profiling } from '@common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
 import { IUser, User } from '@domain/community/user';
-import { UseGuards, Inject, LoggerService } from '@nestjs/common';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from './user.service';
@@ -14,10 +14,10 @@ import { IProfile } from '../profile/profile.interface';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { ForbiddenException } from '@common/exceptions';
 import {
   UserAgentLoaderCreator,
   UserProfileLoaderCreator,
@@ -132,11 +132,10 @@ export class UserResolverFields {
     ) {
       return user.email;
     }
-    this.logger.warn(
+    throw new ForbiddenException(
       `Not able to grant access to agent ${agentInfo} for user ${user}`,
       LogContext.COMMUNITY
     );
-    return 'not accessible';
   }
 
   @UseGuards(GraphqlGuard)
@@ -154,7 +153,7 @@ export class UserResolverFields {
     ) {
       return user.phone;
     }
-    return 'not accessible';
+    throw new ForbiddenException('not accessible', LogContext.COMMUNITY);
   }
 
   @UseGuards(GraphqlGuard)
