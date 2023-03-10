@@ -1,12 +1,12 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { UpdateContextInput } from '@domain/context/context/dto/context.dto.update';
-import { UpdateNameableInputOld } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update.old';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
 import { Type } from 'class-transformer';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 
 @InputType()
-export class UpdateBaseChallengeInput extends UpdateNameableInputOld {
+export class UpdateBaseChallengeInput extends UpdateNameableInput {
   @Field(() => UpdateContextInput, {
     nullable: true,
     description: 'Update the contained Context entity.',
@@ -24,4 +24,8 @@ export class UpdateBaseChallengeInput extends UpdateNameableInputOld {
   @ValidateNested()
   @Type(() => UpdateProfileInput)
   profileData?: UpdateProfileInput;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  tags?: string[];
 }

@@ -1,6 +1,6 @@
 mutation createChildChallenge($childChallengeData: CreateChallengeOnChallengeInput!) {
   createChildChallenge(challengeData: $childChallengeData) {
-    displayName,
+    nameID,
     id
   }
 }

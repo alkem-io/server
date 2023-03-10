@@ -82,7 +82,7 @@ export class BaseChallengeService {
     );
     await this.profileService.addTagsetOnProfile(baseChallenge.profile, {
       name: RestrictedTagsetNames.DEFAULT,
-      tags: [],
+      tags: baseChallengeData.tags,
     });
     // add the visuals
     await this.profileService.addVisualOnProfile(

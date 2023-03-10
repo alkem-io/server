@@ -18,4 +18,8 @@ export class CreateBaseChallengeInput extends CreateNameableInput {
   @ValidateNested()
   @Type(() => CreateProfileInput)
   profileData?: CreateProfileInput;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  tags?: string[];
 }
