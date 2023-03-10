@@ -16,6 +16,15 @@ import { IPreference } from '@domain/common/preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
+import { Loader } from '@core/dataloader/decorators';
+import {
+  JourneyAgentLoaderCreator,
+  JourneyCollaborationLoaderCreator,
+  JourneyCommunityLoaderCreator,
+  JourneyLifecycleLoaderCreator,
+} from '@core/dataloader/creators/loader.creators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { JourneyContextLoaderCreator } from '@core/dataloader/creators/loader.creators';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -29,8 +38,11 @@ export class ChallengeResolverFields {
     description: 'The community for the challenge.',
   })
   @Profiling.api
-  async community(@Parent() challenge: Challenge) {
-    return await this.challengeService.getCommunity(challenge.id);
+  async community(
+    @Parent() challenge: Challenge,
+    @Loader(JourneyCommunityLoaderCreator) loader: ILoader<ICommunity>
+  ) {
+    return loader.load(challenge.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -38,8 +50,11 @@ export class ChallengeResolverFields {
     nullable: true,
     description: 'The context for the challenge.',
   })
-  async context(@Parent() challenge: Challenge) {
-    return await this.challengeService.getContext(challenge.id);
+  async context(
+    @Parent() challenge: Challenge,
+    @Loader(JourneyContextLoaderCreator) loader: ILoader<IContext>
+  ) {
+    return loader.load(challenge.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -49,8 +64,11 @@ export class ChallengeResolverFields {
     description: 'The collaboration for the challenge.',
   })
   @Profiling.api
-  async collaboration(@Parent() challenge: Challenge) {
-    return await this.challengeService.getCollaboration(challenge);
+  async collaboration(
+    @Parent() challenge: Challenge,
+    @Loader(JourneyCollaborationLoaderCreator) loader: ILoader<ICollaboration>
+  ) {
+    return loader.load(challenge.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -73,8 +91,11 @@ export class ChallengeResolverFields {
     description: 'The lifecycle for the Challenge.',
   })
   @Profiling.api
-  async lifecycle(@Parent() challenge: Challenge) {
-    return await this.challengeService.getLifecycle(challenge.id);
+  async lifecycle(
+    @Parent() challenge: Challenge,
+    @Loader(JourneyLifecycleLoaderCreator) loader: ILoader<ILifecycle>
+  ) {
+    return loader.load(challenge.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -93,8 +114,11 @@ export class ChallengeResolverFields {
     description: 'The Agent representing this Challenge.',
   })
   @Profiling.api
-  async agent(@Parent() challenge: Challenge): Promise<IAgent> {
-    return await this.challengeService.getAgent(challenge.id);
+  async agent(
+    @Parent() challenge: Challenge,
+    @Loader(JourneyAgentLoaderCreator) loader: ILoader<IAgent>
+  ): Promise<IAgent> {
+    return loader.load(challenge.id);
   }
 
   @ResolveField('metrics', () => [INVP], {

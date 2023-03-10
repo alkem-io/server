@@ -21,7 +21,7 @@ import { ForbiddenException } from '@common/exceptions';
 import {
   UserAgentLoaderCreator,
   UserProfileLoaderCreator,
-} from '@core/dataloader/creators';
+} from '@core/dataloader/creators/loader.creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 

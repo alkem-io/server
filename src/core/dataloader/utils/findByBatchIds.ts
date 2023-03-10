@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { EntityManager, EntityTarget, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { EntityRelations } from '@src/types';
@@ -6,27 +6,42 @@ import { EntityRelations } from '@src/types';
 const parentAlias = 'parent';
 const resultAlias = 'relation';
 
+type FindByBatchIdsDatasource<T> =
+  | Repository<T>
+  | {
+      manager: EntityManager;
+      classRef: EntityTarget<T>;
+    };
+
+type FindByBatchIdsOptions<TResult> = {
+  // todo make it use DataLoaderCreatorOptions
+  fields?: (keyof TResult)[];
+  limit?: number;
+  shuffle?: boolean;
+};
+
 export const findByBatchIds = async <
   TParent extends { id: string } & { [key: string]: any }, // todo better type
   TResult
 >(
-  repo: Repository<TParent>,
+  datasource: FindByBatchIdsDatasource<TParent>,
   ids: string[],
   relation: EntityRelations<TParent>,
-  options?: {
-    // todo make it use DataLoaderCreatorOptions
-    fields?: (keyof TResult)[];
-    limit?: number;
-    shuffle?: boolean;
-  }
+  options?: FindByBatchIdsOptions<TResult>
 ): Promise<(TResult | Error)[] | never> => {
   if (!ids.length) {
     return [];
   }
 
   const { fields, limit } = options ?? {};
-  // todo make alias based on TResult name
-  const qb = repo.createQueryBuilder(parentAlias).whereInIds(ids);
+  const qb = (
+    'classRef' in datasource
+      ? datasource.manager.createQueryBuilder<TParent>(
+          datasource.classRef,
+          parentAlias
+        )
+      : (datasource as Repository<TParent>).createQueryBuilder(parentAlias)
+  ).whereInIds(ids);
 
   if (fields && fields.length) {
     qb.leftJoin(`${parentAlias}.${relation}`, resultAlias)
@@ -49,9 +64,6 @@ export const findByBatchIds = async <
   return ids.map(
     id =>
       resultsById.get(id) ??
-      new EntityNotFoundException(
-        `Could not load user ${id}`,
-        LogContext.COMMUNITY
-      )
+      new Error(`Could not load relation '${relation}' for '${id}'`)
   );
 };

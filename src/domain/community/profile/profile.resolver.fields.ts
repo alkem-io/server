@@ -7,7 +7,7 @@ import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ILocation } from '@domain/common/location/location.interface';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
-import { ProfileAvatarsLoaderCreator } from '@core/dataloader/creators';
+import { ProfileAvatarsLoaderCreator } from '@core/dataloader/creators/loader.creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IProfile } from './profile.interface';
 

@@ -26,7 +26,7 @@ import { MessagingModule } from '@domain/communication/messaging/messaging.modul
 import {
   UserAgentLoaderCreator,
   UserProfileLoaderCreator,
-} from '@core/dataloader/creators';
+} from '@core/dataloader/creators/loader.creators';
 
 @Module({
   imports: [
