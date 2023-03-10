@@ -46,11 +46,11 @@ export class CanvasTemplateService {
   async getCanvasTemplateOrFail(
     canvasTemplateID: string,
     options?: FindOneOptions<CanvasTemplate>
-  ): Promise<ICanvasTemplate> {
-    const canvasTemplate = await this.canvasTemplateRepository.findOne(
-      canvasTemplateID,
-      options
-    );
+  ): Promise<ICanvasTemplate | never> {
+    const canvasTemplate = await this.canvasTemplateRepository.findOne({
+      ...options,
+      where: { ...options?.where, id: canvasTemplateID },
+    });
     if (!canvasTemplate)
       throw new EntityNotFoundException(
         `Not able to locate CanvasTemplate with the specified ID: ${canvasTemplateID}`,

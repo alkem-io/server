@@ -97,10 +97,12 @@ export class NotificationPayloadBuilder {
   async buildCardCreatedPayload(
     cardId: string
   ): Promise<CollaborationCardCreatedEventPayload> {
-    const card = await this.aspectRepository.findOne(
-      { id: cardId },
-      { relations: ['callout', 'profile'] }
-    );
+    const card = await this.aspectRepository.findOne({
+      relations: ['callout', 'profile'],
+      where: {
+        id: cardId,
+      },
+    });
     if (!card) {
       throw new NotificationEventException(
         `Could not acquire aspect from id: ${cardId}`,
@@ -144,10 +146,10 @@ export class NotificationPayloadBuilder {
   async buildCanvasCreatedPayload(
     canvasId: string
   ): Promise<CollaborationCanvasCreatedEventPayload> {
-    const canvas = await this.canvasRepository.findOne(
-      { id: canvasId },
-      { relations: ['callout'] }
-    );
+    const canvas = await this.canvasRepository.findOne({
+      where: { id: canvasId },
+      relations: ['callout'],
+    });
     if (!canvas) {
       throw new NotificationEventException(
         `Could not acquire canvas from id: ${canvasId}`,
@@ -217,10 +219,12 @@ export class NotificationPayloadBuilder {
     commentsId: string,
     messageResult: IMessage
   ): Promise<CollaborationCardCommentEventPayload> {
-    const card = await this.aspectRepository.findOne(
-      { id: aspect.id },
-      { relations: ['callout', 'profile'] }
-    );
+    const card = await this.aspectRepository.findOne({
+      relations: ['callout', 'profile'],
+      where: {
+        id: aspect.id,
+      },
+    });
 
     if (!card) {
       throw new NotificationEventException(
@@ -677,10 +681,12 @@ export class NotificationPayloadBuilder {
     }
 
     if (commentType === CommentType.CARD) {
-      const card = await this.aspectRepository.findOne(
-        { id: originEntityId },
-        { relations: ['callout'] }
-      );
+      const card = await this.aspectRepository.findOne({
+        where: {
+          id: originEntityId,
+        },
+        relations: ['callout'],
+      });
 
       if (!card) {
         throw new NotificationEventException(

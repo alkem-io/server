@@ -143,7 +143,7 @@ export class OrganizationService {
   }
 
   async checkNameIdOrFail(nameID: string) {
-    const organizationCount = await this.organizationRepository.count({
+    const organizationCount = await this.organizationRepository.countBy({
       nameID: nameID,
     });
     if (organizationCount >= 1)
@@ -336,19 +336,19 @@ export class OrganizationService {
   async getOrganization(
     organizationID: string,
     options?: FindOneOptions<Organization>
-  ): Promise<IOrganization | undefined> {
-    let organization: IOrganization | undefined;
+  ): Promise<IOrganization | null> {
+    let organization: IOrganization | null;
     if (organizationID.length === UUID_LENGTH) {
-      organization = await this.organizationRepository.findOne(
-        { id: organizationID },
-        options
-      );
+      organization = await this.organizationRepository.findOne({
+        where: { id: organizationID },
+        ...options,
+      });
     } else {
       // look up based on nameID
-      organization = await this.organizationRepository.findOne(
-        { nameID: organizationID },
-        options
-      );
+      organization = await this.organizationRepository.findOne({
+        where: { nameID: organizationID },
+        ...options,
+      });
     }
     return organization;
   }
@@ -356,7 +356,7 @@ export class OrganizationService {
   async getOrganizationOrFail(
     organizationID: string,
     options?: FindOneOptions<Organization>
-  ): Promise<IOrganization> {
+  ): Promise<IOrganization | never> {
     const organization = await this.getOrganization(organizationID, options);
     if (!organization)
       throw new EntityNotFoundException(
@@ -484,7 +484,7 @@ export class OrganizationService {
     );
     // Try to find the organization
     const organization = await this.getOrganizationOrFail(orgID, {
-      relations: ['groups'],
+      relations: ['groups', 'groups.profile'],
     });
 
     const group = await this.userGroupService.addGroupWithName(
@@ -521,7 +521,7 @@ export class OrganizationService {
     const organizationGroups = await this.getOrganizationOrFail(
       organization.id,
       {
-        relations: ['groups'],
+        relations: ['groups', 'groups.profile'],
       }
     );
     const groups = organizationGroups.groups;
@@ -539,7 +539,7 @@ export class OrganizationService {
 
   async getPreferenceSetOrFail(orgId: string): Promise<IPreferenceSet> {
     const orgWithPreferences = await this.getOrganizationOrFail(orgId, {
-      relations: ['preferenceSet'],
+      relations: ['preferenceSet', 'preferenceSet.preferences'],
     });
     const preferenceSet = orgWithPreferences.preferenceSet;
 
@@ -747,10 +747,8 @@ export class OrganizationService {
     return defaults;
   }
 
-  async getOrganizationByDomain(
-    domain: string
-  ): Promise<IOrganization | undefined> {
-    const org = await this.organizationRepository.findOne({ domain: domain });
+  async getOrganizationByDomain(domain: string): Promise<IOrganization | null> {
+    const org = await this.organizationRepository.findOneBy({ domain: domain });
     return org;
   }
 }

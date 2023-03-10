@@ -80,11 +80,11 @@ export class CalendarEventService {
   public async getCalendarEventOrFail(
     calendarEventID: string,
     options?: FindOneOptions<CalendarEvent>
-  ): Promise<ICalendarEvent> {
-    const calendarEvent = await this.calendarEventRepository.findOne(
-      { id: calendarEventID },
-      options
-    );
+  ): Promise<ICalendarEvent | never> {
+    const calendarEvent = await this.calendarEventRepository.findOne({
+      where: { id: calendarEventID },
+      ...options,
+    });
     if (!calendarEvent)
       throw new EntityNotFoundException(
         `Not able to locate calendarEvent with the specified ID: ${calendarEventID}`,
@@ -173,18 +173,5 @@ export class CalendarEventService {
     }
 
     return calendarEventLoaded.comments;
-  }
-
-  public async getCalendarEventsInCalloutCount(calloutId: string) {
-    return this.calendarEventRepository.count({
-      where: { callout: { id: calloutId } },
-    });
-  }
-
-  public async getCardsInCalloutCount(calloutID: string): Promise<number> {
-    const count = await this.calendarEventRepository.count({
-      where: { callout: calloutID },
-    });
-    return count;
   }
 }

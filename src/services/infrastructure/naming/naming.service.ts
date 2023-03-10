@@ -1,7 +1,5 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { getConnection, Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project';
@@ -21,6 +19,9 @@ import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
 import { Collaboration } from '@domain/collaboration/collaboration';
+import { LoggerService } from '@nestjs/common/services/logger.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Inject } from '@nestjs/common';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -46,24 +47,29 @@ export class NamingService {
     private communityRepository: Repository<Community>,
     @InjectRepository(CalendarEvent)
     private calendarEventRepository: Repository<CalendarEvent>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   async isNameIdAvailableInHub(
     nameID: string,
     hubID: string
   ): Promise<boolean> {
-    const challengeCount = await this.challengeRepository.count({
+    if (!nameID) return true;
+
+    const challengeCount = await this.challengeRepository.countBy({
       nameID: nameID,
       hubID: hubID,
     });
     if (challengeCount > 0) return false;
-    const opportunityCount = await this.opportunityRepository.count({
+    const opportunityCount = await this.opportunityRepository.countBy({
       nameID: nameID,
       hubID: hubID,
     });
     if (opportunityCount > 0) return false;
-    const projectCount = await this.projectRepository.count({
+    const projectCount = await this.projectRepository.countBy({
       nameID: nameID,
       hubID: hubID,
     });
@@ -186,7 +192,7 @@ export class NamingService {
   async getCommunityIdFromCollaborationId(collaborationID: string) {
     const [result]: {
       communityId: string;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `
         SELECT communityId from \`hub\`
         WHERE \`hub\`.\`collaborationId\` = '${collaborationID}' UNION
@@ -378,6 +384,7 @@ export class NamingService {
       .addSelect(['profile.displayName'])
       .where(`commentsId = '${commentsID}'`)
       .getOne();
+    if (aspect === null) return undefined;
     return aspect;
   }
 
@@ -402,6 +409,7 @@ export class NamingService {
       .where(`commentsId = '${commentsID}'`)
       .getOne();
 
+    if (calendarEvent === null) return undefined;
     return calendarEvent;
   }
 }

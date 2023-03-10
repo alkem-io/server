@@ -24,7 +24,7 @@ export class ActorService {
   ) {}
 
   async createActor(actorData: CreateActorInput): Promise<IActor> {
-    const actor = Actor.create(actorData);
+    const actor = Actor.create({ ...actorData });
     actor.authorization = new AuthorizationPolicy();
 
     await this.actorRepository.save(actor);
@@ -32,7 +32,7 @@ export class ActorService {
   }
 
   async getActorOrFail(actorID: string): Promise<IActor> {
-    const actor = await this.actorRepository.findOne({ id: actorID });
+    const actor = await this.actorRepository.findOneBy({ id: actorID });
     if (!actor)
       throw new EntityNotFoundException(
         `Not able to locate actor with the specified ID: ${actorID}`,

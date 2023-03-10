@@ -3,7 +3,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Organization } from './organization.entity';
 
 @Injectable()
@@ -16,13 +16,11 @@ export class OrganizationDataloaderService {
   public async findProfilesByBatch(
     organizationIds: string[]
   ): Promise<(IProfile | Error)[]> {
-    const organizations = await this.organizationRepository.findByIds(
-      organizationIds,
-      {
-        relations: ['profile'],
-        select: ['id'],
-      }
-    );
+    const organizations = await this.organizationRepository.find({
+      where: { id: In(organizationIds) },
+      relations: ['profile'],
+      select: ['id'],
+    });
 
     const results = organizations.filter(org =>
       organizationIds.includes(org.id)

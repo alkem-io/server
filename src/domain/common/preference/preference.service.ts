@@ -52,7 +52,7 @@ export class PreferenceService {
   async createDefinition(
     definitionData: CreatePreferenceDefinitionInput
   ): Promise<IPreferenceDefinition> {
-    const definition = PreferenceDefinition.create(definitionData);
+    const definition = PreferenceDefinition.create({ ...definitionData });
 
     return await this.definitionRepository.save(definition);
   }
@@ -62,7 +62,7 @@ export class PreferenceService {
     valueType: PreferenceValueType,
     type: UserPreferenceType | HubPreferenceType
   ) {
-    const res = await this.definitionRepository.findOne({
+    const res = await this.definitionRepository.findOneBy({
       group,
       type,
       valueType,
@@ -75,7 +75,7 @@ export class PreferenceService {
   }
 
   async getPreferenceOrFail(peferenceID: string): Promise<IPreference> {
-    const reference = await this.preferenceRepository.findOne({
+    const reference = await this.preferenceRepository.findOneBy({
       id: peferenceID,
     });
     if (!reference)
@@ -122,7 +122,7 @@ export class PreferenceService {
   async getAllDefinitionsInSet(
     definitionSet: PreferenceDefinitionSet
   ): Promise<IPreferenceDefinition[]> {
-    return await this.definitionRepository.find({
+    return await this.definitionRepository.findBy({
       definitionSet: definitionSet,
     });
   }

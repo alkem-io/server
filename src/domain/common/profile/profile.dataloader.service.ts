@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
@@ -19,7 +19,8 @@ export class ProfileDataloaderService {
   public async findReferencesByBatch(
     profileIds: string[]
   ): Promise<(IReference[] | Error)[]> {
-    const profiles = await this.profileRepository.findByIds(profileIds, {
+    const profiles = await this.profileRepository.find({
+      where: { id: In(profileIds) },
       relations: ['references'],
       select: ['id'],
     });
@@ -35,17 +36,18 @@ export class ProfileDataloaderService {
     );
   }
   public async findLocationsByBatch(
-    locationIds: string[]
+    profileIds: string[]
   ): Promise<(ILocation | Error)[]> {
-    const profiles = await this.profileRepository.findByIds(locationIds, {
+    const profiles = await this.profileRepository.find({
+      where: { id: In(profileIds) },
       relations: ['location'],
       select: ['id'],
     });
 
     const results = profiles.filter(location =>
-      locationIds.includes(location.id)
+      profileIds.includes(location.id)
     );
-    return locationIds.map(
+    return profileIds.map(
       id =>
         results.find(result => result.id === id)?.location ||
         new EntityNotFoundException(
@@ -56,15 +58,16 @@ export class ProfileDataloaderService {
   }
 
   public async findTagsetsByBatch(
-    tagsetIds: string[]
+    profileIds: string[]
   ): Promise<(ITagset[] | Error)[]> {
-    const profiles = await this.profileRepository.findByIds(tagsetIds, {
+    const profiles = await this.profileRepository.find({
+      where: { id: In(profileIds) },
       relations: ['tagsets'],
       select: ['id'],
     });
 
-    const results = profiles.filter(profile => tagsetIds.includes(profile.id));
-    return tagsetIds.map(
+    const results = profiles.filter(profile => profileIds.includes(profile.id));
+    return profileIds.map(
       id =>
         results.find(result => result.id === id)?.tagsets ||
         new EntityNotFoundException(

@@ -37,7 +37,7 @@ export class CommentsService {
   }
 
   async getCommentsOrFail(commentsID: string): Promise<IComments> {
-    const comments = await this.commentsRepository.findOne({
+    const comments = await this.commentsRepository.findOneBy({
       id: commentsID,
     });
     if (!comments)

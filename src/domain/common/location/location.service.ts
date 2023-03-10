@@ -15,7 +15,7 @@ export class LocationService {
   ) {}
 
   async createLocation(locationData?: CreateLocationInput): Promise<ILocation> {
-    const location = Location.create(locationData || {});
+    const location = Location.create({ ...locationData });
     return await this.locationRepository.save(location);
   }
   async removeLocation(location: ILocation): Promise<ILocation> {
