@@ -65,7 +65,7 @@ export class OrganizationResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() organization: Organization,
     @Args('ID', { type: () => UUID }) groupID: string
-  ): Promise<IUserGroup | 'not accessible'> {
+  ) {
     if (
       await this.isAccessGranted(
         organization,
@@ -176,7 +176,7 @@ export class OrganizationResolverFields {
   async preferences(
     @Parent() org: Organization,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IPreference[] | 'not accessible'> {
+  ) {
     if (
       await this.isAccessGranted(org, agentInfo, AuthorizationPrivilege.READ)
     ) {
