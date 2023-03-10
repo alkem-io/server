@@ -63,11 +63,11 @@ export class CalendarService {
   async getCalendarOrFail(
     calendarID: string,
     options?: FindOneOptions<Calendar>
-  ): Promise<ICalendar> {
-    const calendar = await this.calendarRepository.findOne(
-      { id: calendarID },
-      options
-    );
+  ): Promise<ICalendar | never> {
+    const calendar = await this.calendarRepository.findOne({
+      where: { id: calendarID },
+      ...options,
+    });
     if (!calendar)
       throw new EntityNotFoundException(
         `Calendar not found: ${calendarID}`,

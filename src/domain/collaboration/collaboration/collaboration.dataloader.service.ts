@@ -2,7 +2,7 @@ import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ICallout } from '../callout/callout.interface';
 import { IRelation } from '../relation/relation.interface';
 import { Collaboration } from './collaboration.entity';
@@ -17,13 +17,13 @@ export class CollaborationDataloaderService {
   public async findCalloutsByBatch(
     collaborationIds: string[]
   ): Promise<(ICallout[] | Error)[]> {
-    const collaborations = await this.collaborationRepository.findByIds(
-      collaborationIds,
-      {
-        relations: ['callouts'],
-        select: ['id'],
-      }
-    );
+    const collaborations = await this.collaborationRepository.find({
+      where: {
+        id: In(collaborationIds),
+      },
+      relations: ['callouts'],
+      select: ['id'],
+    });
 
     return collaborationIds.map(
       id =>
@@ -38,13 +38,13 @@ export class CollaborationDataloaderService {
   public async findRelationsByBatch(
     collaborationIds: string[]
   ): Promise<(IRelation[] | Error)[]> {
-    const collaborations = await this.collaborationRepository.findByIds(
-      collaborationIds,
-      {
-        relations: ['relations'],
-        select: ['id'],
-      }
-    );
+    const collaborations = await this.collaborationRepository.find({
+      where: {
+        id: In(collaborationIds),
+      },
+      relations: ['relations'],
+      select: ['id'],
+    });
 
     return collaborationIds.map(
       id =>

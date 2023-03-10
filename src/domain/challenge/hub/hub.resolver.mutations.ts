@@ -309,7 +309,8 @@ export class HubResolverMutations {
     authorizationResetData: HubAuthorizationResetInput
   ): Promise<IHub> {
     const hub = await this.hubService.getHubOrFail(
-      authorizationResetData.hubID
+      authorizationResetData.hubID,
+      { relations: ['preferenceSet', 'preferenceSet.preferences'] }
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,

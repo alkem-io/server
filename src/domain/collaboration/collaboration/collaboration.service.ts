@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, getConnection, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -37,7 +37,9 @@ export class CollaborationService {
     private namingService: NamingService,
     private relationService: RelationService,
     @InjectRepository(Collaboration)
-    private collaborationRepository: Repository<Collaboration>
+    private collaborationRepository: Repository<Collaboration>,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   async createCollaboration(
@@ -78,11 +80,11 @@ export class CollaborationService {
   async getCollaborationOrFail(
     collaborationID: string,
     options?: FindOneOptions<Collaboration>
-  ): Promise<ICollaboration> {
-    const collaboration = await this.collaborationRepository.findOne(
-      { id: collaborationID },
-      options
-    );
+  ): Promise<ICollaboration | never> {
+    const collaboration = await this.collaborationRepository.findOne({
+      where: { id: collaborationID },
+      ...options,
+    });
     if (!collaboration)
       throw new EntityNotFoundException(
         `No Collaboration found with the given id: ${collaborationID}`,
@@ -316,7 +318,7 @@ export class CollaborationService {
   public async getAspectsCount(collaboration: ICollaboration): Promise<number> {
     const [result]: {
       aspectsCount: number;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `
       SELECT COUNT(*) as aspectsCount
       FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
@@ -333,7 +335,7 @@ export class CollaborationService {
   ): Promise<number> {
     const [result]: {
       canvasesCount: number;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `
       SELECT COUNT(*) as canvasesCount
       FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`

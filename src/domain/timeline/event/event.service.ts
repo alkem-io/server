@@ -31,18 +31,18 @@ export class CalendarEventService {
     userID: string,
     communicationGroupID: string
   ): Promise<CalendarEvent> {
-    const calendarEvent: ICalendarEvent =
-      CalendarEvent.create(calendarEventInput);
-    calendarEvent.profile = await this.cardProfileService.createCardProfile(
-      calendarEventInput.profileData
-    );
-    calendarEvent.authorization = new AuthorizationPolicy();
-    calendarEvent.createdBy = userID;
-
-    calendarEvent.comments = await this.commentsService.createComments(
-      communicationGroupID,
-      `calendarEvent-comments-${calendarEvent.displayName}`
-    );
+    const calendarEvent: ICalendarEvent = CalendarEvent.create({
+      ...calendarEventInput,
+      createdBy: userID,
+      authorization: new AuthorizationPolicy(),
+      profile: await this.cardProfileService.createCardProfile(
+        calendarEventInput.profileData
+      ),
+      comments: await this.commentsService.createComments(
+        communicationGroupID,
+        `calendarEvent-comments-${calendarEventInput.displayName}`
+      ),
+    });
 
     return await this.calendarEventRepository.save(calendarEvent);
   }
@@ -74,11 +74,11 @@ export class CalendarEventService {
   public async getCalendarEventOrFail(
     calendarEventID: string,
     options?: FindOneOptions<CalendarEvent>
-  ): Promise<ICalendarEvent> {
-    const calendarEvent = await this.calendarEventRepository.findOne(
-      { id: calendarEventID },
-      options
-    );
+  ): Promise<ICalendarEvent | never> {
+    const calendarEvent = await this.calendarEventRepository.findOne({
+      where: { id: calendarEventID },
+      ...options,
+    });
     if (!calendarEvent)
       throw new EntityNotFoundException(
         `Not able to locate calendarEvent with the specified ID: ${calendarEventID}`,
@@ -172,18 +172,5 @@ export class CalendarEventService {
     }
 
     return calendarEventLoaded.comments;
-  }
-
-  public async getCalendarEventsInCalloutCount(calloutId: string) {
-    return this.calendarEventRepository.count({
-      where: { callout: { id: calloutId } },
-    });
-  }
-
-  public async getCardsInCalloutCount(calloutID: string): Promise<number> {
-    const count = await this.calendarEventRepository.count({
-      where: { callout: calloutID },
-    });
-    return count;
   }
 }

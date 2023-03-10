@@ -6,7 +6,7 @@ import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 @Entity()
 export class Actor extends AuthorizableEntity implements IActor {
   @Column()
-  name: string;
+  name!: string;
 
   @Column('text', { nullable: true })
   description?: string;
@@ -24,8 +24,7 @@ export class Actor extends AuthorizableEntity implements IActor {
   })
   actorGroup?: ActorGroup;
 
-  constructor(name: string) {
+  constructor() {
     super();
-    this.name = name;
   }
 }

@@ -151,7 +151,7 @@ export class AuthorizationPolicyService {
     authorizationPolicyID: string
   ): Promise<IAuthorizationPolicy> {
     const authorizationPolicy =
-      await this.authorizationPolicyRepository.findOne({
+      await this.authorizationPolicyRepository.findOneBy({
         id: authorizationPolicyID,
       });
     if (!authorizationPolicy)
