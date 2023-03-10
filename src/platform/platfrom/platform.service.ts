@@ -22,10 +22,12 @@ export class PlatformService {
   ) {}
 
   async getPlatformOrFail(
-    options: FindOneOptions<Platform>
+    options?: FindOneOptions<Platform>
   ): Promise<IPlatform | never> {
     let platform: IPlatform | null = null;
-    platform = (await this.platformRepository.find({ take: 1, ...options }))[0];
+    platform = (
+      await this.platformRepository.find({ take: 1, ...options })
+    )?.[0];
 
     if (!platform)
       throw new EntityNotFoundException(

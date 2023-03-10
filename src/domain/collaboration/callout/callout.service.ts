@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import {
+  FindOneOptions,
+  FindOptionsRelationByString,
+  Repository,
+} from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -447,10 +451,11 @@ export class CalloutService {
     callout: ICallout,
     aspectIDs?: string[],
     limit?: number,
-    shuffle?: boolean
+    shuffle?: boolean,
+    relations: FindOptionsRelationByString = []
   ): Promise<IAspect[]> {
     const loadedCallout = await this.getCalloutOrFail(callout.id, {
-      relations: ['aspects', 'aspects.comments'],
+      relations: ['aspects', ...relations],
     });
     if (!loadedCallout.aspects) {
       throw new EntityNotFoundException(

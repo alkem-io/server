@@ -15,7 +15,11 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import {
+  FindOneOptions,
+  FindOptionsRelationByString,
+  Repository,
+} from 'typeorm';
 import { IUser } from '@domain/community/user';
 import { CreateUserGroupInput } from '@domain/community/user-group/dto';
 import { Community, ICommunity } from '@domain/community/community';
@@ -418,9 +422,12 @@ export class CommunityService {
     return policy;
   }
 
-  async getCommunication(communityID: string): Promise<ICommunication> {
+  async getCommunication(
+    communityID: string,
+    relations: FindOptionsRelationByString = []
+  ): Promise<ICommunication> {
     const community = await this.getCommunityOrFail(communityID, {
-      relations: ['communication', 'communication.updates'],
+      relations: ['communication', ...relations],
     });
 
     const communication = community.communication;

@@ -216,7 +216,6 @@ export class OrganizationService {
         'agent',
         'verification',
         'preferenceSet',
-        'preferenceSet.preferences',
       ],
     });
     const isHubHost = await this.isHubHost(organization);

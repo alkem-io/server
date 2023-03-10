@@ -16,7 +16,7 @@ export class PlatformResolverQueries {
     description: 'Alkemio Platform',
   })
   async platform(): Promise<IPlatform> {
-    return await this.platformService.getPlatformOrFail({});
+    return await this.platformService.getPlatformOrFail();
   }
 
   // Todo: there is some additional tidy up needed related to platform level authorization + how

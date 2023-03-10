@@ -1,7 +1,11 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import {
+  FindOneOptions,
+  FindOptionsRelationByString,
+  Repository,
+} from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
@@ -57,7 +61,7 @@ export class AspectService {
   public async deleteAspect(deleteData: DeleteAspectInput): Promise<IAspect> {
     const aspectID = deleteData.ID;
     const aspect = await this.getAspectOrFail(aspectID, {
-      relations: ['profile', 'profile.tagset'],
+      relations: ['profile'],
     });
     if (aspect.authorization) {
       await this.authorizationPolicyService.delete(aspect.authorization);
@@ -130,9 +134,12 @@ export class AspectService {
     return await this.aspectRepository.save(aspect);
   }
 
-  public async getCardProfile(aspect: IAspect): Promise<ICardProfile> {
+  public async getCardProfile(
+    aspect: IAspect,
+    relations: FindOptionsRelationByString = []
+  ): Promise<ICardProfile> {
     const aspectLoaded = await this.getAspectOrFail(aspect.id, {
-      relations: ['profile', 'profile.tagset'],
+      relations: ['profile', ...relations],
     });
     if (!aspectLoaded.profile)
       throw new EntityNotFoundException(
