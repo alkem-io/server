@@ -1,16 +1,13 @@
 import { Project } from '@domain/collaboration/project/project.entity';
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IAgreement } from './agreement.interface';
-import {
-  RestrictedTagsetNames,
-  Tagset,
-} from '@domain/common/tagset/tagset.entity';
+import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 
 @Entity()
 export class Agreement extends BaseAlkemioEntity implements IAgreement {
   @Column()
-  name: string;
+  name!: string;
 
   @Column('text', { nullable: true })
   description?: string;
@@ -24,11 +21,5 @@ export class Agreement extends BaseAlkemioEntity implements IAgreement {
 
   @OneToOne(() => Tagset, { eager: true, cascade: true, onDelete: 'SET NULL' })
   @JoinColumn()
-  tagset: Tagset;
-
-  constructor(name: string) {
-    super();
-    this.name = name;
-    this.tagset = new Tagset(RestrictedTagsetNames.DEFAULT);
-  }
+  tagset!: Tagset;
 }

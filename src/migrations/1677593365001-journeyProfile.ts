@@ -2,8 +2,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { escapeString } from './utils/escape-string';
 
-export class joureyProfile1677593365001 implements MigrationInterface {
-  name = 'joureyProfile1677593365001';
+export class journeyProfile1677593365001 implements MigrationInterface {
+  name = 'journeyProfile1677593365001';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // // Extend Hub / Challenge / Opportunity with profiles
@@ -312,7 +312,7 @@ export class joureyProfile1677593365001 implements MigrationInterface {
       );
       const context = contexts[0];
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, tagline, description, displayName, locationId from profile WHERE (id = '${hub.profileId}')`
+        `SELECT id, tagline, description, displayName, locationId, authorizationId from profile WHERE (id = '${hub.profileId}')`
       );
       const profile = profiles[0];
       const tagsets: any[] = await queryRunner.query(
@@ -322,7 +322,7 @@ export class joureyProfile1677593365001 implements MigrationInterface {
 
       //Remove old authorization policy
       await queryRunner.query(
-        `DELETE FROM authorization WHERE (id = '${profile.authorizationId}')`
+        `DELETE FROM authorization_policy WHERE (id = '${profile.authorizationId}')`
       );
 
       // Update tagset, displayName on Hub
@@ -344,17 +344,17 @@ export class joureyProfile1677593365001 implements MigrationInterface {
 
       // Update the tagset to be not part of a profile
       await queryRunner.query(
-        `UPDATE tagset SET profileId = '' WHERE (profileId = '${profile.id}')`
+        `UPDATE tagset SET profileId = NULL WHERE (profileId = '${profile.id}')`
       );
 
       // Update the references to be parented on the Contet
       await queryRunner.query(
-        `UPDATE reference SET contextId = '${context.id}', profileId = '' WHERE (profileId = '${profile.id}')`
+        `UPDATE reference SET contextId = '${context.id}', profileId = NULL WHERE (profileId = '${profile.id}')`
       );
 
       // Update the visuals to be parented on the Context
       await queryRunner.query(
-        `UPDATE visual SET contextId = '${context.id}', profileId = '' WHERE (profileId = '${profile.id}')`
+        `UPDATE visual SET contextId = '${context.id}', profileId = NULL WHERE (profileId = '${profile.id}')`
       );
     }
 
@@ -369,7 +369,7 @@ export class joureyProfile1677593365001 implements MigrationInterface {
       );
       const context = contexts[0];
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, tagline, description, displayName, locationId from profile WHERE (id = '${challenge.profileId}')`
+        `SELECT id, tagline, description, displayName, locationId, authorizationId from profile WHERE (id = '${challenge.profileId}')`
       );
       const profile = profiles[0];
       const tagsets: any[] = await queryRunner.query(
@@ -379,7 +379,7 @@ export class joureyProfile1677593365001 implements MigrationInterface {
 
       // Remove old auth
       await queryRunner.query(
-        `DELETE FROM authorization WHERE (id = '${profile.authorizationId}')`
+        `DELETE FROM authorization_policy WHERE (id = '${profile.authorizationId}')`
       );
 
       // Update tagset, displayName on Hub
@@ -401,17 +401,17 @@ export class joureyProfile1677593365001 implements MigrationInterface {
 
       // Update the tagset to be not part of a profile
       await queryRunner.query(
-        `UPDATE tagset SET profileId = '' WHERE (profileId = '${profile.id}')`
+        `UPDATE tagset SET profileId = NULL WHERE (profileId = '${profile.id}')`
       );
 
       // Update the references to be parented on the Contet
       await queryRunner.query(
-        `UPDATE reference SET contextId = '${context.id}', profileId = '' WHERE (profileId = '${profile.id}')`
+        `UPDATE reference SET contextId = '${context.id}', profileId = NULL WHERE (profileId = '${profile.id}')`
       );
 
       // Update the visuals to be parented on the Context
       await queryRunner.query(
-        `UPDATE visual SET contextId = '${context.id}', profileId = '' WHERE (profileId = '${profile.id}')`
+        `UPDATE visual SET contextId = '${context.id}', profileId = NULL WHERE (profileId = '${profile.id}')`
       );
     }
 
@@ -426,7 +426,7 @@ export class joureyProfile1677593365001 implements MigrationInterface {
       );
       const context = contexts[0];
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, tagline, description, displayName, locationId from profile WHERE (id = '${opportunity.profileId}')`
+        `SELECT id, tagline, description, displayName, locationId, authorizationId from profile WHERE (id = '${opportunity.profileId}')`
       );
       const profile = profiles[0];
       const tagsets: any[] = await queryRunner.query(
@@ -436,7 +436,7 @@ export class joureyProfile1677593365001 implements MigrationInterface {
 
       //Remove old authorization policy
       await queryRunner.query(
-        `DELETE FROM authorization WHERE (id = '${profile.authorizationId}')`
+        `DELETE FROM authorization_policy WHERE (id = '${profile.authorizationId}')`
       );
 
       // Update tagset, displayName on Hub
@@ -458,17 +458,17 @@ export class joureyProfile1677593365001 implements MigrationInterface {
 
       // Update the tagset to be not part of a profile
       await queryRunner.query(
-        `UPDATE tagset SET profileId = '' WHERE (profileId = '${profile.id}')`
+        `UPDATE tagset SET profileId = NULL WHERE (profileId = '${profile.id}')`
       );
 
       // Update the references to be parented on the Contet
       await queryRunner.query(
-        `UPDATE reference SET contextId = '${context.id}', profileId = '' WHERE (profileId = '${profile.id}')`
+        `UPDATE reference SET contextId = '${context.id}', profileId = NULL WHERE (profileId = '${profile.id}')`
       );
 
       // Update the visuals to be parented on the Context
       await queryRunner.query(
-        `UPDATE visual SET contextId = '${context.id}', profileId = '' WHERE (profileId = '${profile.id}')`
+        `UPDATE visual SET contextId = '${context.id}', profileId = NULL WHERE (profileId = '${profile.id}')`
       );
     }
 
