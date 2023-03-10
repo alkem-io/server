@@ -13,10 +13,10 @@ export enum RestrictedTagsetNames {
 @Entity()
 export class Tagset extends AuthorizableEntity implements ITagset {
   @Column('varchar', { length: 255, nullable: false })
-  name: string;
+  name!: string;
 
   @Column('simple-array')
-  tags: string[];
+  tags!: string[];
 
   @ManyToOne(() => Profile, profile => profile.tagsets, {
     eager: false,
@@ -24,10 +24,4 @@ export class Tagset extends AuthorizableEntity implements ITagset {
     onDelete: 'CASCADE',
   })
   profile?: Profile;
-
-  constructor(name: string) {
-    super();
-    this.tags = [];
-    this.name = name;
-  }
 }

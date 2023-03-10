@@ -6,7 +6,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
   name = 'journeyProfile1677593365001';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // // Extend Hub / Challenge / Opportunity with profiles
+    // Extend Hub / Challenge / Opportunity with profiles
     await queryRunner.query(
       `ALTER TABLE \`hub\` ADD \`profileId\` char(36) NULL`
     );
@@ -50,6 +50,14 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     // Visual ==> Context
     await queryRunner.query(
       `ALTER TABLE \`visual\` DROP FOREIGN KEY \`FK_63de1450cf75dc486700ca034c6\``
+    );
+
+    // Location uniqueness; need to drop this so can move the location
+    await queryRunner.query(
+      `ALTER TABLE \`profile\` DROP FOREIGN KEY \`FK_77777ca8ac212b8357637794d6f\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`profile\` DROP INDEX \`IDX_77777ca8ac212b8357637794d6\``
     );
 
     /////////////////////////////////
@@ -229,6 +237,15 @@ export class journeyProfile1677593365001 implements MigrationInterface {
 
     await queryRunner.query('ALTER TABLE `visual` DROP COLUMN `contextId`');
     await queryRunner.query('ALTER TABLE `reference` DROP COLUMN `contextId`');
+
+    // Add back in index for location uniqueness
+    await queryRunner.query(
+      `ALTER TABLE \`profile\` ADD CONSTRAINT \`FK_77777ca8ac212b8357637794d6f\` FOREIGN KEY (\`locationId\`) REFERENCES \`location\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    // TODO: this is failing
+    // await queryRunner.query(
+    //   `ALTER TABLE \`profile\` ADD UNIQUE INDEX \`IDX_77777ca8ac212b8357637794d6\` (\`locationId\`)`
+    // );
   }
 
   ///////////////////////////////
