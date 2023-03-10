@@ -106,6 +106,6 @@ export class ProfileResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `profile: ${profile.id}`
     );
-    return await this.profileService.updateProfile(profile.id, profileData);
+    return await this.profileService.updateProfile(profile, profileData);
   }
 }
