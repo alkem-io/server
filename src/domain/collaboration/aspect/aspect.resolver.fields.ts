@@ -9,7 +9,6 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { IVisual } from '@domain/common/visual/visual.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
@@ -48,38 +47,6 @@ export class AspectResolverFields {
         throw e;
       }
     }
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('banner', () => IVisual, {
-    nullable: true,
-    description: 'The banner Visual for this Aspect.',
-  })
-  @Profiling.api
-  async banner(@Parent() aspect: IAspect): Promise<IVisual> {
-    if (!aspect.banner) {
-      throw new EntityNotInitializedException(
-        'Banner visual not defined',
-        LogContext.COLLABORATION
-      );
-    }
-    return aspect.banner;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('bannerNarrow', () => IVisual, {
-    nullable: true,
-    description: 'The narrow banner visual for this Aspect.',
-  })
-  @Profiling.api
-  async bannerNarrow(@Parent() aspect: IAspect): Promise<IVisual> {
-    if (!aspect.bannerNarrow) {
-      throw new EntityNotInitializedException(
-        'narrow banner visual not defined',
-        LogContext.COLLABORATION
-      );
-    }
-    return aspect.bannerNarrow;
   }
 
   @UseGuards(GraphqlGuard)

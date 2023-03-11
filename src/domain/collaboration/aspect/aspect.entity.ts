@@ -1,6 +1,5 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IAspect } from './aspect.interface';
-import { Visual } from '@domain/common/visual/visual.entity';
 import { Comments } from '@domain/communication/comments';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
@@ -13,22 +12,6 @@ export class Aspect extends NameableEntity implements IAspect {
 
   @Column('char', { length: 36, nullable: true })
   createdBy!: string;
-
-  @OneToOne(() => Visual, {
-    eager: true,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  banner?: Visual;
-
-  @OneToOne(() => Visual, {
-    eager: true,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  bannerNarrow?: Visual;
 
   @OneToOne(() => Comments, {
     eager: true,
