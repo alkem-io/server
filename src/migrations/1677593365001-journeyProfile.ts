@@ -495,5 +495,9 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `opportunity` DROP COLUMN `profileId`'
     );
+
+    await queryRunner.query(
+      `ALTER TABLE \`profile\` ADD UNIQUE INDEX \`IDX_77777ca8ac212b8357637794d6\` (\`locationId\`)`
+    );
   }
 }
