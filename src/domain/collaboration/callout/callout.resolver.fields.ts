@@ -17,6 +17,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { ICanvasTemplate } from '@domain/template/canvas-template/canvas.template.interface';
 import { EntityNotFoundException } from '@common/exceptions';
+import { IProfile } from '@domain/common/profile/profile.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -26,6 +27,16 @@ export class CalloutResolverFields {
     private calloutService: CalloutService,
     private userService: UserService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('profile', () => IProfile, {
+    nullable: false,
+    description: 'The Profile for this Callout.',
+  })
+  @Profiling.api
+  async profile(@Parent() callout: ICallout): Promise<IProfile> {
+    return await this.calloutService.getProfile(callout);
+  }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)

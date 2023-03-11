@@ -127,7 +127,7 @@ export class NotificationPayloadBuilder {
     const payload: CollaborationCardCreatedEventPayload = {
       triggeredBy: card.createdBy,
       callout: {
-        displayName: callout.displayName,
+        displayName: callout.profile.displayName,
         nameID: callout.nameID,
       },
       card: {
@@ -174,7 +174,7 @@ export class NotificationPayloadBuilder {
     const payload: CollaborationCanvasCreatedEventPayload = {
       triggeredBy: canvas.createdBy,
       callout: {
-        displayName: callout.displayName,
+        displayName: callout.profile.displayName,
         nameID: callout.nameID,
       },
       canvas: {
@@ -203,8 +203,8 @@ export class NotificationPayloadBuilder {
       triggeredBy: userId,
       callout: {
         id: callout.id,
-        displayName: callout.displayName,
-        description: callout.description,
+        displayName: callout.profile.displayName,
+        description: callout.profile.description,
         nameID: callout.nameID,
         type: callout.type,
       },
@@ -256,7 +256,7 @@ export class NotificationPayloadBuilder {
     const payload: CollaborationCardCommentEventPayload = {
       triggeredBy: card.createdBy,
       callout: {
-        displayName: callout.displayName,
+        displayName: callout.profile.displayName,
         nameID: callout.nameID,
       },
       card: {
@@ -295,7 +295,7 @@ export class NotificationPayloadBuilder {
     const payload: CollaborationDiscussionCommentEventPayload = {
       triggeredBy: messageResult.sender,
       callout: {
-        displayName: callout.displayName,
+        displayName: callout.profile.displayName,
         nameID: callout.nameID,
       },
 

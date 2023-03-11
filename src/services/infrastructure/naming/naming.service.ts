@@ -138,8 +138,9 @@ export class NamingService {
     const query = this.calloutRepository
       .createQueryBuilder('callout')
       .leftJoinAndSelect('callout.collaboration', 'collaboration')
+      .leftJoinAndSelect('callout.profile', 'profile')
       .where('collaboration.id = :id')
-      .andWhere('callout.displayName = :displayName')
+      .andWhere('callout.profile.displayName = :displayName')
       .setParameters({
         id: `${collaborationID}`,
         displayName: `${displayName}`,

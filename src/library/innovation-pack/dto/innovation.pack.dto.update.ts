@@ -1,12 +1,12 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { UUID_NAMEID } from '@domain/common/scalars';
-import { UpdateNameableInputOld } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update.old';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { Type } from 'class-transformer';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
 
 @InputType()
-export class UpdateInnovationPackInput extends UpdateNameableInputOld {
+export class UpdateInnovationPackInput extends UpdateNameableInput {
   @Field(() => UUID_NAMEID, {
     nullable: true,
     description: 'Update the provider Organization for the InnovationPack.',

@@ -175,7 +175,7 @@ export class CollaborationResolverMutations {
     this.elasticService.calloutCreated(
       {
         id: callout.id,
-        name: callout.displayName,
+        name: callout.nameID,
         hub: hubID,
       },
       {

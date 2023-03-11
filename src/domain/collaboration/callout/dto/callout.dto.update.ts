@@ -1,21 +1,22 @@
-import { LONG_TEXT_LENGTH } from '@common/constants';
 import { CalloutState } from '@common/enums/callout.state';
-import { UpdateNameableInputOld } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update.old';
-import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
+import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
-import { IsOptional, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsOptional, ValidateNested } from 'class-validator';
 import { UpdateCalloutCanvasTemplateInput } from './callout.dto.update.canvasTemplate';
 import { UpdateCalloutCardTemplateInput } from './callout.dto.update.cardTemplate';
 
 @InputType()
-export class UpdateCalloutInput extends UpdateNameableInputOld {
-  @Field(() => Markdown, {
+export class UpdateCalloutInput extends UpdateNameableInput {
+  @Field(() => UpdateProfileInput, {
     nullable: true,
-    description: 'Callout description.',
+    description: 'Update the Profile of the Canvas.',
   })
   @IsOptional()
-  @MaxLength(LONG_TEXT_LENGTH)
-  description?: string;
+  @ValidateNested()
+  @Type(() => UpdateProfileInput)
+  profileData?: UpdateProfileInput;
 
   @Field(() => CalloutState, {
     nullable: true,

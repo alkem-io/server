@@ -181,7 +181,7 @@ export class CalloutResolverMutations {
         originEntity: {
           id: callout.id,
           nameId: callout.nameID,
-          displayName: callout.displayName,
+          displayName: callout.profile.displayName,
         },
         commentType: CommentType.DISCUSSION,
       };
@@ -196,7 +196,7 @@ export class CalloutResolverMutations {
     this.elasticService.calloutCommentCreated(
       {
         id: callout.id,
-        name: callout.displayName,
+        name: callout.nameID,
         hub: hubID,
       },
       {
