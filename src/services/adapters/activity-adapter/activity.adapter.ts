@@ -183,7 +183,7 @@ export class ActivityAdapter {
     const canvas = eventData.canvas;
     const collaborationID = await this.getCollaborationIdForCanvas(canvas.id);
 
-    const description = `[${canvas.displayName}]`;
+    const description = `[${canvas.profile.displayName}]`;
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,

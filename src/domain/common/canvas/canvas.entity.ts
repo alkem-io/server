@@ -11,17 +11,16 @@ import {
   OneToOne,
 } from 'typeorm';
 import { ICanvas } from './canvas.interface';
-import { Visual } from '@domain/common/visual/visual.entity';
 import { CanvasCheckout } from '../canvas-checkout/canvas.checkout.entity';
-import { NameableEntityOld } from '../entity/nameable-entity/nameable.entity.old';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { compressText, decompressText } from '@common/utils/compression.util';
+import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
+import { Profile } from '../profile';
 
 @Entity()
-export class Canvas extends NameableEntityOld implements ICanvas {
+export class Canvas extends NameableEntity implements ICanvas {
   constructor(name?: string, value?: string) {
     super();
-    this.displayName = name || '';
     this.value = value || '';
   }
 
@@ -40,6 +39,14 @@ export class Canvas extends NameableEntityOld implements ICanvas {
       this.value = await decompressText(this.value);
     }
   }
+
+  @OneToOne(() => Profile, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  profile!: Profile;
 
   @Column('longtext', { nullable: false })
   value!: string;
@@ -61,12 +68,4 @@ export class Canvas extends NameableEntityOld implements ICanvas {
   })
   @JoinColumn()
   checkout?: CanvasCheckout;
-
-  @OneToOne(() => Visual, {
-    eager: true,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  preview?: Visual;
 }

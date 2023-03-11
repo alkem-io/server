@@ -1,17 +1,12 @@
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
-import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
+import { UpdateProfileInput } from '@domain/common/profile/dto';
 import { InputType, Field } from '@nestjs/graphql';
-import { CANVAS_VALUE_LENGTH } from '@src/common/constants';
 import { Type } from 'class-transformer';
-import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
+
+import { IsOptional, ValidateNested } from 'class-validator';
 
 @InputType()
-export class UpdateCanvasInput extends UpdateNameableInput {
-  @Field({ nullable: true })
-  @IsOptional()
-  @MaxLength(CANVAS_VALUE_LENGTH)
-  value?: string;
-
+export class UpdateProjectInput extends UpdateNameableInput {
   @Field(() => UpdateProfileInput, {
     nullable: true,
     description: 'Update the Profile of the Canvas.',

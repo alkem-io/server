@@ -354,7 +354,7 @@ export class CalloutService {
         );
     } else {
       canvasData.nameID = this.namingService.createNameID(
-        `${canvasData.displayName}`
+        `${canvasData.profileData.displayName}`
       );
     }
   }
@@ -377,9 +377,9 @@ export class CalloutService {
 
     const canvas = await this.canvasService.createCanvas(
       {
-        displayName: canvasData.displayName,
         nameID: canvasData.nameID,
         value: canvasData.value,
+        profileData: canvasData.profileData,
       },
       userID
     );

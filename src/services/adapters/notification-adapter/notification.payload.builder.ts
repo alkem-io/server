@@ -180,7 +180,7 @@ export class NotificationPayloadBuilder {
       canvas: {
         id: canvasId,
         createdBy: canvas.createdBy,
-        displayName: canvas.displayName,
+        displayName: canvas.profile.displayName,
         nameID: canvas.nameID,
       },
       journey: journeyPayload,

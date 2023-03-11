@@ -7,12 +7,14 @@ import { IInnovationPack } from './innovation.pack.interface';
 import { InnovationPack } from './innovation.pack.entity';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 
 @Injectable()
 export class InnovationPackAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
+    private profileAuthorizationService: ProfileAuthorizationService,
     private innovationPackService: InnovationPackService,
     @InjectRepository(InnovationPack)
     private innovationPackRepository: Repository<InnovationPack>
@@ -42,6 +44,14 @@ export class InnovationPackAuthorizationService {
   private async propagateAuthorizationToChildEntities(
     innovationPack: IInnovationPack
   ): Promise<IInnovationPack> {
+    innovationPack.profile = await this.innovationPackService.getProfile(
+      innovationPack
+    );
+    innovationPack.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        innovationPack.profile,
+        innovationPack.authorization
+      );
     innovationPack.templatesSet =
       await this.innovationPackService.getTemplatesSetOrFail(innovationPack.id);
     innovationPack.templatesSet =

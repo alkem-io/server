@@ -9,12 +9,14 @@ import { ProjectResolverFields } from './project.resolver.fields';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     NamingModule,
+    ProfileModule,
     LifecycleModule,
     TypeOrmModule.forFeature([Project]),
   ],

@@ -13,6 +13,7 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { LogContext } from '@common/enums/logging.context';
 import { UserService } from '@domain/community/user/user.service';
 import { EntityNotFoundException } from '@common/exceptions';
+import { IProfile } from '../profile/profile.interface';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverFields {
@@ -51,6 +52,16 @@ export class CanvasResolverFields {
     }
   }
 
+  @UseGuards(GraphqlGuard)
+  @ResolveField('profile', () => IProfile, {
+    nullable: false,
+    description: 'The Profile for this Canvas.',
+  })
+  @Profiling.api
+  async profile(@Parent() canvas: ICanvas): Promise<IProfile> {
+    return await this.canvasService.getProfile(canvas);
+  }
+
   @ResolveField('checkout', () => ICanvasCheckout, {
     nullable: true,
     description: 'The checkout out state of this Canvas.',
@@ -67,6 +78,6 @@ export class CanvasResolverFields {
   })
   @Profiling.api
   async preview(@Parent() canvas: ICanvas): Promise<IVisual> {
-    return await this.canvasService.getPreview(canvas);
+    return await this.canvasService.getVisualPreview(canvas);
   }
 }

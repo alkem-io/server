@@ -2,7 +2,7 @@ import { UseGuards } from '@nestjs/common';
 import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import {} from '@domain/context/actor-group';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { CreateProjectInput, IProject } from '@domain/collaboration/project';
+import { IProject } from '@domain/collaboration/project';
 import { GraphqlGuard } from '@core/authorization';
 import { OpportunityService } from './opportunity.service';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -22,6 +22,7 @@ import {
 } from './dto';
 import { UpdateOpportunityInnovationFlowInput } from './dto/opportunity.dto.update.innovation.flow';
 import { ElasticsearchService } from '@services/external/elasticsearch';
+import { CreateProjectInput } from '../project/dto';
 
 @Resolver()
 export class OpportunityResolverMutations {

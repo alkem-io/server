@@ -443,7 +443,7 @@ export class CalloutResolverMutations {
       this.elasticService.calloutCanvasCreated(
         {
           id: canvas.id,
-          name: canvas.displayName,
+          name: canvas.nameID,
           hub: hubID,
         },
         {
