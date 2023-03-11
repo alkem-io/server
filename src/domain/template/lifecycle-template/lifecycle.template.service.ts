@@ -53,9 +53,15 @@ export class LifecycleTemplateService {
   }
 
   async updateLifecycleTemplate(
-    lifecycleTemplate: ILifecycleTemplate,
+    lifecycleTemplateInput: ILifecycleTemplate,
     lifecycleTemplateData: UpdateLifecycleTemplateInput
   ): Promise<ILifecycleTemplate> {
+    const lifecycleTemplate = await this.getLifecycleTemplateOrFail(
+      lifecycleTemplateInput.id,
+      {
+        relations: ['profile'],
+      }
+    );
     await this.templateBaseService.updateTemplateBase(
       lifecycleTemplate,
       lifecycleTemplateData
@@ -68,8 +74,14 @@ export class LifecycleTemplateService {
   }
 
   async deleteLifecycleTemplate(
-    lifecycleTemplate: ILifecycleTemplate
+    lifecycleTemplateInput: ILifecycleTemplate
   ): Promise<ILifecycleTemplate> {
+    const lifecycleTemplate = await this.getLifecycleTemplateOrFail(
+      lifecycleTemplateInput.id,
+      {
+        relations: ['profile'],
+      }
+    );
     const templateId: string = lifecycleTemplate.id;
     await this.templateBaseService.deleteEntities(lifecycleTemplate);
     const result = await this.lifecycleTemplateRepository.remove(

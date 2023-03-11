@@ -53,9 +53,15 @@ export class AspectTemplateService {
   }
 
   async updateAspectTemplate(
-    aspectTemplate: IAspectTemplate,
+    aspectTemplateInput: IAspectTemplate,
     aspectTemplateData: UpdateAspectTemplateInput
   ): Promise<IAspectTemplate> {
+    const aspectTemplate = await this.getAspectTemplateOrFail(
+      aspectTemplateInput.id,
+      {
+        relations: ['profile'],
+      }
+    );
     await this.templateBaseService.updateTemplateBase(
       aspectTemplate,
       aspectTemplateData
@@ -71,8 +77,14 @@ export class AspectTemplateService {
   }
 
   async deleteAspectTemplate(
-    aspectTemplate: IAspectTemplate
+    aspectTemplateInput: IAspectTemplate
   ): Promise<IAspectTemplate> {
+    const aspectTemplate = await this.getAspectTemplateOrFail(
+      aspectTemplateInput.id,
+      {
+        relations: ['profile'],
+      }
+    );
     const templateId: string = aspectTemplate.id;
     await this.templateBaseService.deleteEntities(aspectTemplate);
     const result = await this.aspectTemplateRepository.remove(

@@ -1,9 +1,9 @@
+import { ProfileModule } from '@domain/common/profile/profile.module';
 import { Module } from '@nestjs/common';
-import { TemplateInfoModule } from '../template-info/template.info.module';
 import { TemplateBaseService } from './template.base.service';
 
 @Module({
-  imports: [TemplateInfoModule],
+  imports: [ProfileModule],
   providers: [TemplateBaseService],
   exports: [TemplateBaseService],
 })

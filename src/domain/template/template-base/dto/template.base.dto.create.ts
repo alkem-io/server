@@ -1,14 +1,19 @@
-import { CreateTemplateInfoInput } from '@domain/template/template-info/dto';
 import { InputType, Field } from '@nestjs/graphql';
-import { ValidateNested } from 'class-validator';
+import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 @InputType()
 export class CreateTemplateBaseInput {
-  @Field({
-    nullable: false,
-    description: 'The meta information for this Template.',
-  })
-  @ValidateNested()
-  @Type(() => CreateTemplateInfoInput)
-  info!: CreateTemplateInfoInput;
+  @Field(() => CreateProfileInput, { nullable: false })
+  @ValidateNested({ each: true })
+  @Type(() => CreateProfileInput)
+  profileData!: CreateProfileInput;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  tags?: string[];
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  visualUri?: string;
 }

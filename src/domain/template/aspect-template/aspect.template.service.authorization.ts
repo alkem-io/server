@@ -5,7 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AspectTemplate } from './aspect.template.entity';
 import { IAspectTemplate } from './aspect.template.interface';
-import { TemplateInfoAuthorizationService } from '../template-info/template.info.service.authorization';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 
 @Injectable()
 export class AspectTemplateAuthorizationService {
@@ -13,7 +13,7 @@ export class AspectTemplateAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(AspectTemplate)
     private aspectTemplateRepository: Repository<AspectTemplate>,
-    private templateInfoAuthorizationService: TemplateInfoAuthorizationService
+    private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -27,13 +27,11 @@ export class AspectTemplateAuthorizationService {
         parentAuthorization
       );
     // Cascade
-    if (aspectTemplate.templateInfo) {
-      aspectTemplate.templateInfo =
-        await this.templateInfoAuthorizationService.applyAuthorizationPolicy(
-          aspectTemplate.templateInfo,
-          aspectTemplate.authorization
-        );
-    }
+    aspectTemplate.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        aspectTemplate.profile,
+        aspectTemplate.authorization
+      );
 
     return await this.aspectTemplateRepository.save(aspectTemplate);
   }
