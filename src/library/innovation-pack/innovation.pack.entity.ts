@@ -3,7 +3,6 @@ import { TemplatesSet } from '@domain/template/templates-set/templates.set.entit
 import { Library } from '../library/library.entity';
 import { IInnovationPack } from './innovation.pack.interface';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { Profile } from '@domain/common/profile/profile.entity';
 
 @Entity()
 export class InnovationPack extends NameableEntity implements IInnovationPack {
@@ -21,14 +20,6 @@ export class InnovationPack extends NameableEntity implements IInnovationPack {
   })
   @JoinColumn()
   templatesSet?: TemplatesSet;
-
-  @OneToOne(() => Profile, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  profile!: Profile;
 
   constructor() {
     super();

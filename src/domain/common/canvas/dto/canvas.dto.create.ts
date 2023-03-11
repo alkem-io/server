@@ -1,9 +1,6 @@
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
-import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { Field, InputType } from '@nestjs/graphql';
-import { Type } from 'class-transformer';
-import { ValidateNested } from 'class-validator';
 
 @InputType()
 export class CreateCanvasInput extends CreateNameableInput {
@@ -16,9 +13,4 @@ export class CreateCanvasInput extends CreateNameableInput {
       'A readable identifier, unique within the containing scope. If not provided it will be generated based on the displayName.',
   })
   nameID!: string;
-
-  @Field(() => CreateProfileInput, { nullable: false })
-  @ValidateNested({ each: true })
-  @Type(() => CreateProfileInput)
-  profileData!: CreateProfileInput;
 }

@@ -17,18 +17,9 @@ import { Comments } from '@domain/communication/comments/comments.entity';
 import { AspectTemplate } from '@domain/template/aspect-template/aspect.template.entity';
 import { CanvasTemplate } from '@domain/template/canvas-template/canvas.template.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { Profile } from '@domain/common/profile/profile.entity';
 
 @Entity()
 export class Callout extends NameableEntity implements ICallout {
-  @OneToOne(() => Profile, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  profile!: Profile;
-
   @Column('text', { nullable: false })
   type!: CalloutType;
 

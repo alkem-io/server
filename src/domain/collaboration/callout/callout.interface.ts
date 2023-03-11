@@ -8,12 +8,9 @@ import { IComments } from '@domain/communication/comments/comments.interface';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 import { ICanvasTemplate } from '@domain/template/canvas-template/canvas.template.interface';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
-import { IProfile } from '@domain/common/profile/profile.interface';
 
 @ObjectType('Callout')
 export abstract class ICallout extends INameable {
-  profile!: IProfile;
-
   @Field(() => CalloutType, {
     description: 'The Callout type, e.g. Card, Canvas, Discussion',
   })
