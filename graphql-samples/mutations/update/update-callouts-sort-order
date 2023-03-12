@@ -8,6 +8,6 @@ Variables:
 {
   "sortOrderData": {
     "collaborationID": "uuid",
-    "calloutIDs": ["PUBLISHED"]
+    "calloutIDs": ["uuid_nameid", "uuid_nameid"]
   }
 }
