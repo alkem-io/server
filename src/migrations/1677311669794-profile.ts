@@ -17,9 +17,6 @@ export class profile1677311669794 implements MigrationInterface {
       `ALTER TABLE \`visual\` ADD \`profileId\` char(36) NULL`
     );
     await queryRunner.query(
-      'ALTER TABLE \`visual\` ADD UNIQUE INDEX \`IDX_77771450cf75dc486700ca034c6\` (\`profileId\`)'
-    );
-    await queryRunner.query(
       `ALTER TABLE \`visual\` ADD CONSTRAINT \`FK_77771450cf75dc486700ca034c6\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
@@ -120,9 +117,6 @@ export class profile1677311669794 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `visual` DROP FOREIGN KEY `FK_77771450cf75dc486700ca034c6`'
     );
-    await queryRunner.query(
-      'DROP INDEX `IDX_77771450cf75dc486700ca034c6` ON `visual`'
-    );
     const profiles: any[] = await queryRunner.query(`SELECT id from profile`);
     for (const profile of profiles) {
       const visuals: any[] = await queryRunner.query(
@@ -137,7 +131,7 @@ export class profile1677311669794 implements MigrationInterface {
       `ALTER TABLE \`profile\` ADD CONSTRAINT \`FK_65588ca8ac212b8357637794d6f\` FOREIGN KEY (\`avatarId\`) REFERENCES \`visual\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      'ALTER TABLE \`profile\` ADD UNIQUE INDEX \`IDX_65588ca8ac212b8357637794d6f\` (`avatarId`)'
+      'ALTER TABLE `profile` ADD UNIQUE INDEX `IDX_65588ca8ac212b8357637794d6f` (`avatarId`)'
     );
     await queryRunner.query(`ALTER TABLE \`visual\` DROP COLUMN \`profileId\``);
   }
