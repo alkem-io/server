@@ -1,6 +1,7 @@
 mutation updateCalloutsSortOrder($sortOrderData: UpdateCollaborationCalloutsSortOrderInput!) {
   updateCalloutsSortOrder(sortOrderData: $sortOrderData) {
     id
+    sortOrder
   }
 }
 
