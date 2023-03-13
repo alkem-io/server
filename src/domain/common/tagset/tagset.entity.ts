@@ -11,7 +11,7 @@ export enum RestrictedTagsetNames {
 @Entity()
 export class Tagset extends AuthorizableEntity implements ITagset {
   @Column({ default: RestrictedTagsetNames.DEFAULT })
-  name: string;
+  name!: string;
 
   @Column('simple-array')
   tags: string[];
@@ -23,9 +23,8 @@ export class Tagset extends AuthorizableEntity implements ITagset {
   })
   profile?: Profile;
 
-  constructor(name: string) {
+  constructor() {
     super();
     this.tags = [];
-    this.name = name;
   }
 }

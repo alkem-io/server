@@ -97,10 +97,10 @@ export class NotificationPayloadBuilder {
   async buildCardCreatedPayload(
     aspectId: string
   ): Promise<CollaborationCardCreatedEventPayload> {
-    const card = await this.aspectRepository.findOne(
-      { id: aspectId },
-      { relations: ['callout'] }
-    );
+    const card = await this.aspectRepository.findOne({
+      where: { id: aspectId },
+      relations: ['callout'],
+    });
     if (!card) {
       throw new NotificationEventException(
         `Could not acquire aspect from id: ${aspectId}`,
@@ -144,10 +144,10 @@ export class NotificationPayloadBuilder {
   async buildCanvasCreatedPayload(
     canvasId: string
   ): Promise<CollaborationCanvasCreatedEventPayload> {
-    const canvas = await this.canvasRepository.findOne(
-      { id: canvasId },
-      { relations: ['callout'] }
-    );
+    const canvas = await this.canvasRepository.findOne({
+      where: { id: canvasId },
+      relations: ['callout'],
+    });
     if (!canvas) {
       throw new NotificationEventException(
         `Could not acquire canvas from id: ${canvasId}`,
@@ -217,10 +217,10 @@ export class NotificationPayloadBuilder {
     commentsId: string,
     messageResult: IMessage
   ): Promise<CollaborationCardCommentEventPayload> {
-    const card = await this.aspectRepository.findOne(
-      { id: aspect.id },
-      { relations: ['callout'] }
-    );
+    const card = await this.aspectRepository.findOne({
+      where: { id: aspect.id },
+      relations: ['callout'],
+    });
 
     if (!card) {
       throw new NotificationEventException(
@@ -670,10 +670,12 @@ export class NotificationPayloadBuilder {
     }
 
     if (commentType === CommentType.CARD) {
-      const card = await this.aspectRepository.findOne(
-        { id: originEntityId },
-        { relations: ['callout'] }
-      );
+      const card = await this.aspectRepository.findOne({
+        where: {
+          id: originEntityId,
+        },
+        relations: ['callout'],
+      });
 
       if (!card) {
         throw new NotificationEventException(

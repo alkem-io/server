@@ -8,7 +8,7 @@ import { Calendar } from '../calendar/calendar.entity';
 @Entity()
 export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   @Column('text')
-  type: string;
+  type!: string;
 
   @Column('varchar', { length: 36, nullable: true })
   createdBy!: string;
@@ -51,8 +51,7 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   @Column('int')
   durationDays!: number;
 
-  constructor(type: string) {
+  constructor() {
     super();
-    this.type = type;
   }
 }

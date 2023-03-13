@@ -84,11 +84,14 @@ export class ApplicationService {
   async getApplicationOrFail(
     applicationId: string,
     options?: FindOneOptions<Application>
-  ): Promise<IApplication> {
-    const application = await this.applicationRepository.findOne(
-      { id: applicationId },
-      options
-    );
+  ): Promise<Application | never> {
+    const application = await this.applicationRepository.findOne({
+      ...options,
+      where: {
+        ...options?.where,
+        id: applicationId,
+      },
+    });
     if (!application)
       throw new EntityNotFoundException(
         `Application with ID ${applicationId} can not be found!`,

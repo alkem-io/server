@@ -5,14 +5,7 @@ import { BaseAlkemioEntity } from '@domain/common/entity/base-entity/base.alkemi
 import { ITemplateInfo } from './template.info.interface';
 
 @Entity()
-export abstract class TemplateInfo
-  extends BaseAlkemioEntity
-  implements ITemplateInfo
-{
-  constructor() {
-    super();
-  }
-
+export class TemplateInfo extends BaseAlkemioEntity implements ITemplateInfo {
   @Column()
   title!: string;
 
@@ -30,4 +23,8 @@ export abstract class TemplateInfo
   })
   @JoinColumn()
   visual?: Visual;
+
+  constructor() {
+    super();
+  }
 }

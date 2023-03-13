@@ -14,16 +14,19 @@ import { ISearchResultOrganization } from './dto/search.result.dto.entry.organiz
 import { ISearchResult } from './dto/search.result.entry.interface';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { ISearchResultUserGroup } from './dto/search.result.dto.entry.user.group';
-import { RelationshipNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { ISearchResultCard } from './dto/search.result.dto.entry.card';
-import { getConnection } from 'typeorm';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IHub } from '@domain/challenge/hub/hub.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { ICallout } from '@domain/collaboration/callout';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { EntityManager } from 'typeorm';
 
 export type AspectParents = {
   callout: ICallout;
@@ -51,7 +54,8 @@ export default class SearchResultBuilderService
     private readonly organizationService: OrganizationService,
     private readonly userGroupService: UserGroupService,
     private readonly cardService: AspectService,
-    private readonly calloutService: CalloutService
+    private readonly calloutService: CalloutService,
+    private readonly entityManager: EntityManager
   ) {}
 
   async [SearchResultType.HUB](rawSearchResult: ISearchResult) {
@@ -140,8 +144,9 @@ export default class SearchResultBuilderService
   }
 
   private async getAspectParents(aspectId: string): Promise<AspectParents> {
-    const [queryResult]: AspectParentIDs[] = await getConnection().query(
-      `
+    const [queryResult]: AspectParentIDs[] =
+      await this.entityManager.connection.query(
+        `
       SELECT \`hub\`.\`id\` as \`hubID\`, \`challenge\`.\`id\` as \`challengeID\`, null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
       RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       JOIN \`hub\` on \`challenge\`.\`hubID\` = \`hub\`.\`id\`
@@ -160,10 +165,17 @@ export default class SearchResultBuilderService
       JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
       WHERE \`aspect\`.\`id\` = '${aspectId}';
       `
-    );
+      );
 
     let challenge: IChallenge | undefined = undefined;
     let opportunity: IOpportunity | undefined = undefined;
+
+    if (!queryResult) {
+      throw new EntityNotFoundException(
+        `Unable to find parents for card with ID: ${aspectId}`,
+        LogContext.SEARCH
+      );
+    }
 
     const callout = await this.calloutService.getCalloutOrFail(
       queryResult.calloutID

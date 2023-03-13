@@ -56,7 +56,8 @@ export class CommunityAuthorizationService {
 
     // cascade to communication child entity
     community.communication = await this.communityService.getCommunication(
-      community.id
+      community.id,
+      ['communication.updates']
     );
     community.policy = await this.communityService.getCommunityPolicy(
       community

@@ -30,7 +30,8 @@ export class AspectMoveService {
     });
 
     const sourceCallout = aspect.callout as Callout;
-    const targetCallout = await this.calloutRepository.findOne(calloutID, {
+    const targetCallout = await this.calloutRepository.findOne({
+      where: { id: calloutID },
       relations: ['collaboration'],
     });
 
