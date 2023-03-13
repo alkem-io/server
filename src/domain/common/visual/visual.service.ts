@@ -34,7 +34,10 @@ export class VisualService {
     visualInput: CreateVisualInput,
     initialUri?: string
   ): Promise<IVisual> {
-    const visual: IVisual = Visual.create({ ...visualInput, uri: initialUri });
+    const visual: IVisual = Visual.create({
+      ...visualInput,
+      uri: initialUri ?? '',
+    });
     visual.authorization = new AuthorizationPolicy();
     if (initialUri) visual.uri = initialUri;
     await this.visualRepository.save(visual);
