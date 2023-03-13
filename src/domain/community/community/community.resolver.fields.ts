@@ -217,7 +217,9 @@ export class CommunityResolverFields {
   })
   @Profiling.api
   async communication(@Parent() community: Community) {
-    return await this.communityService.getCommunication(community.id);
+    return await this.communityService.getCommunication(community.id, [
+      'communication.updates',
+    ]);
   }
 
   @UseGuards(GraphqlGuard)

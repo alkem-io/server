@@ -24,7 +24,7 @@ export class LibraryService {
   ) {}
 
   async getLibraryOrFail(): Promise<ILibrary> {
-    const library = await this.libraryRepository.findOne();
+    const library = await this.libraryRepository.findOne({});
     if (!library)
       throw new EntityNotFoundException(
         'No Library found!',

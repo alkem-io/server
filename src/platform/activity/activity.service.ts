@@ -30,7 +30,7 @@ export class ActivityService {
 
   async getActivityOrFail(activityID: string): Promise<IActivity> {
     const activity = await this.activityRepository.findOne({
-      id: activityID,
+      where: { id: activityID },
     });
     if (!activity)
       throw new EntityNotFoundException(
@@ -80,10 +80,8 @@ export class ActivityService {
     return entries;
   }
 
-  async getActivityForMessage(
-    messageID: string
-  ): Promise<IActivity | undefined> {
-    const entry: IActivity | undefined = await this.activityRepository
+  async getActivityForMessage(messageID: string): Promise<IActivity | null> {
+    const entry: IActivity | null = await this.activityRepository
       .createQueryBuilder('activity')
       .where('messageID = :messageID')
       .setParameters({

@@ -9,10 +9,11 @@ import {
   LoggerService,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectEntityManager } from '@nestjs/typeorm';
 import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 // import Redlock, { RedlockAbortSignal } from 'redlock';
-import { getConnection } from 'typeorm';
+import { EntityManager } from 'typeorm';
 import { IAgent, ICredential } from '..';
 @Injectable()
 export class AgentCacheService {
@@ -25,7 +26,9 @@ export class AgentCacheService {
     // private readonly redisLockService: Redlock,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {
     this.cache_ttl = this.configService.get(
       ConfigurationTypes.IDENTITY
@@ -128,13 +131,14 @@ export class AgentCacheService {
   }
 
   public async getAgentEmail(agentId: string): Promise<string | undefined> {
-    const users: { email: string }[] = await getConnection().query(
-      `SELECT \`u\`.\`email\` FROM \`agent\` as \`a\`
+    const users: { email: string }[] =
+      await this.entityManager.connection.query(
+        `SELECT \`u\`.\`email\` FROM \`agent\` as \`a\`
       RIGHT JOIN \`user\` as \`u\`
       ON \`u\`.\`agentId\` = \`a\`.\`id\`
       WHERE \`a\`.\`id\` = ?`,
-      [agentId]
-    );
+        [agentId]
+      );
 
     if (!users[0]) return undefined;
 

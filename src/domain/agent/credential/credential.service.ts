@@ -19,13 +19,13 @@ export class CredentialService {
   async createCredential(
     credentialInput: CreateCredentialInput
   ): Promise<ICredential> {
-    const credential = Credential.create(credentialInput);
+    const credential = Credential.create({ ...credentialInput });
     await this.credentialRepository.save(credential);
     return credential;
   }
 
   async getCredentialOrFail(credentialID: string): Promise<ICredential> {
-    const credential = await this.credentialRepository.findOne({
+    const credential = await this.credentialRepository.findOneBy({
       id: credentialID,
     });
     if (!credential)

@@ -259,11 +259,13 @@ export class CommunicationService {
   async getCommunicationOrFail(
     communicationID: string,
     options?: FindOneOptions<Communication>
-  ): Promise<ICommunication> {
-    const communication = await this.communicationRepository.findOne(
-      { id: communicationID },
-      options
-    );
+  ): Promise<ICommunication | never> {
+    const communication = await this.communicationRepository.findOne({
+      where: {
+        id: communicationID,
+      },
+      ...options,
+    });
     if (!communication)
       throw new EntityNotFoundException(
         `Unable to find Communication with ID: ${communicationID}`,

@@ -32,7 +32,7 @@ export class CanvasService {
     canvasData: CreateCanvasInput,
     userID: string
   ): Promise<ICanvas> {
-    const canvas: ICanvas = Canvas.create(canvasData);
+    const canvas: ICanvas = Canvas.create({ ...canvasData });
     canvas.authorization = new AuthorizationPolicy();
     canvas.createdBy = userID;
 
@@ -51,13 +51,13 @@ export class CanvasService {
   async getCanvasOrFail(
     canvasID: string,
     options?: FindOneOptions<Canvas>
-  ): Promise<Canvas> {
-    const canvas = await this.canvasRepository.findOne(
-      {
+  ): Promise<Canvas | never> {
+    const canvas = await this.canvasRepository.findOne({
+      where: {
         id: canvasID,
       },
-      options
-    );
+      ...options,
+    });
     if (!canvas)
       throw new EntityNotFoundException(
         `Not able to locate Canvas with the specified ID: ${canvasID}`,
@@ -161,8 +161,6 @@ export class CanvasService {
   }
 
   async getCanvasesInCalloutCount(calloutId: string): Promise<number> {
-    return await this.canvasRepository.count({
-      where: { callout: calloutId },
-    });
+    return await this.canvasRepository.countBy({ callout: { id: calloutId } });
   }
 }
