@@ -31,7 +31,7 @@ export class PlatformAuthorizationService {
 
   async applyAuthorizationPolicy(): Promise<IPlatform> {
     const platform = await this.platformService.getPlatformOrFail({
-      relations: ['library', 'communication'],
+      relations: ['library', 'library.innovationPacks', 'communication'],
     });
 
     platform.authorization =
