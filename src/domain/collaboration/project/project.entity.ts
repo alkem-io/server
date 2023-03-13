@@ -46,10 +46,7 @@ export class Project extends NameableEntityOld implements IProject {
   })
   opportunity?: Opportunity;
 
-  constructor(name: string, nameID: string) {
+  constructor() {
     super();
-    this.displayName = name;
-    this.nameID = nameID;
-    this.hubID = '';
   }
 }

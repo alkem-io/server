@@ -7,10 +7,10 @@ import { Profile } from '@domain/common/profile/profile.entity';
 @Entity()
 export class Visual extends AuthorizableEntity implements IVisual {
   @Column()
-  name: string;
+  name!: string;
 
   @Column('text')
-  uri: string;
+  uri!: string;
 
   @Column('int')
   minWidth!: number;
@@ -44,10 +44,8 @@ export class Visual extends AuthorizableEntity implements IVisual {
   })
   context?: Context;
 
-  constructor(name: string, uri: string) {
+  constructor() {
     super();
-    this.name = name;
-    this.uri = uri || '';
     this.allowedTypes = this.createDefaultAllowedTypes();
     this.minHeight = 0;
     this.maxHeight = 0;

@@ -59,7 +59,9 @@ export class CalloutAuthorizationService {
 
     callout.authorization = this.appendCredentialRules(callout);
 
-    callout.aspects = await this.calloutService.getAspectsFromCallout(callout);
+    callout.aspects = await this.calloutService.getAspectsFromCallout(callout, [
+      'aspects.comments',
+    ]);
     for (const aspect of callout.aspects) {
       await this.aspectAuthorizationService.applyAuthorizationPolicy(
         aspect,

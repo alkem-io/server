@@ -15,7 +15,7 @@ import { IContext } from '@domain/context/context/context.interface';
 import { ContextService } from '@domain/context/context/context.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindConditions, FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, FindOptionsWhere, Repository } from 'typeorm';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.create';
 import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
@@ -191,12 +191,11 @@ export class BaseChallengeService {
     baseChallengeID: string,
     repository: Repository<BaseChallenge>,
     options?: FindOneOptions<BaseChallenge>
-  ): Promise<IBaseChallenge> {
-    const conditions: FindConditions<BaseChallenge> = {
-      id: baseChallengeID,
-    };
-
-    const challenge = await repository.findOne(conditions, options);
+  ): Promise<IBaseChallenge | never> {
+    const challenge = await repository.findOne({
+      where: { id: baseChallengeID },
+      ...options,
+    });
     if (!challenge)
       throw new EntityNotFoundException(
         `Unable to find base challenge with ID: ${baseChallengeID}`,

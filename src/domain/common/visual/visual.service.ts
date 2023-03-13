@@ -34,7 +34,7 @@ export class VisualService {
     visualInput: CreateVisualInput,
     initialUri?: string
   ): Promise<IVisual> {
-    const visual: IVisual = Visual.create(visualInput);
+    const visual: IVisual = Visual.create({ ...visualInput, uri: initialUri });
     visual.authorization = new AuthorizationPolicy();
     if (initialUri) visual.uri = initialUri;
     await this.visualRepository.save(visual);
@@ -66,7 +66,7 @@ export class VisualService {
   }
 
   async getVisualOrFail(visualID: string): Promise<IVisual> {
-    const visual = await this.visualRepository.findOne({
+    const visual = await this.visualRepository.findOneBy({
       id: visualID,
     });
     if (!visual)

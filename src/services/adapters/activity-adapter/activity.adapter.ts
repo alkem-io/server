@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { getConnection, Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
 import { ActivityService } from '@src/platform/activity/activity.service';
@@ -38,7 +38,9 @@ export class ActivityAdapter {
     private collaborationRepository: Repository<Collaboration>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private readonly graphqlSubscriptionService: SubscriptionPublishService
+    private readonly graphqlSubscriptionService: SubscriptionPublishService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   public async challengeCreated(
@@ -293,13 +295,14 @@ export class ActivityAdapter {
   }
 
   private async getCollaborationIdForHub(hubID: string): Promise<string> {
-    const [result]: { collaborationId: string }[] = await getConnection().query(
-      `
+    const [result]: { collaborationId: string }[] =
+      await this.entityManager.connection.query(
+        `
           SELECT collaboration.id as collaborationId FROM collaboration
           LEFT JOIN hub ON hub.collaborationId = collaboration.id
           WHERE hub.id = '${hubID}'
         `
-    );
+      );
 
     if (!result) {
       throw new EntityNotFoundException(
@@ -314,13 +317,14 @@ export class ActivityAdapter {
   private async getCollaborationIdForChallenge(
     challengeID: string
   ): Promise<string> {
-    const [result]: { collaborationId: string }[] = await getConnection().query(
-      `
+    const [result]: { collaborationId: string }[] =
+      await this.entityManager.connection.query(
+        `
           SELECT collaboration.id as collaborationId FROM collaboration
           LEFT JOIN challenge ON challenge.collaborationId = collaboration.id
           WHERE challenge.id = '${challengeID}'
         `
-    );
+      );
 
     if (!result) {
       throw new EntityNotFoundException(
@@ -403,7 +407,7 @@ export class ActivityAdapter {
   private async getCollaborationIdFromCommunity(communityId: string) {
     const [result]: {
       collaborationId: string;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `
         SELECT collaborationId from \`hub\`
         WHERE \`hub\`.\`communityId\` = '${communityId}' UNION
