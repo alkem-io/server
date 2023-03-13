@@ -40,7 +40,8 @@ export class AdminCommunicationService {
       CommunityRole.MEMBER
     );
     const communication = await this.communityService.getCommunication(
-      community.id
+      community.id,
+      ['communication.updates']
     );
 
     const result = new CommunicationAdminMembershipResult(

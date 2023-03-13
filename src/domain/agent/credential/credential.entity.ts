@@ -6,10 +6,10 @@ import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 @Entity()
 export class Credential extends BaseAlkemioEntity implements ICredential {
   @Column()
-  resourceID: string;
+  resourceID!: string;
 
   @Column()
-  type: string;
+  type!: string;
 
   @ManyToOne(() => Agent, agent => agent.credentials, {
     eager: false,
@@ -18,10 +18,7 @@ export class Credential extends BaseAlkemioEntity implements ICredential {
   })
   agent?: Agent;
 
-  constructor(type: string, resourceID: string) {
+  constructor() {
     super();
-    this.type = type;
-    this.resourceID = resourceID;
-    if (!this.resourceID) this.resourceID = '';
   }
 }

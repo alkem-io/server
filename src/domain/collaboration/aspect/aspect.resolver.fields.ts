@@ -89,7 +89,7 @@ export class AspectResolverFields {
   })
   @Profiling.api
   async profile(@Parent() aspect: IAspect): Promise<ICardProfile> {
-    return await this.aspectService.getCardProfile(aspect);
+    return await this.aspectService.getCardProfile(aspect, ['profile.tagset']);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
