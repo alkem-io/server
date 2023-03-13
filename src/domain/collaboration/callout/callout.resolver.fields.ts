@@ -64,7 +64,8 @@ export class CalloutResolverFields {
       callout,
       ids,
       limit,
-      shuffle
+      shuffle,
+      ['aspects.comments']
     );
   }
 

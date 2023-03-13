@@ -1,8 +1,8 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SearchInput } from './dto/search.dto.input';
-import { Brackets, Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+import { Brackets, EntityManager, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { User } from '@domain/community/user/user.entity';
 import {
@@ -94,7 +94,10 @@ export class SearchService {
     private cardService: AspectService,
     private calloutService: CalloutService,
     private authorizationService: AuthorizationService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   async search(
@@ -796,13 +799,23 @@ export class SearchService {
           this.organizationService,
           this.userGroupService,
           this.cardService,
-          this.calloutService
+          this.calloutService,
+          this.entityManager
         );
       const searchResultType = searchResultBase.type as SearchResultType;
-      const searchResult = await searchResultBuilder[searchResultType](
-        searchResultBase
-      );
-      searchResults.push(searchResult);
+      try {
+        const searchResult = await searchResultBuilder[searchResultType](
+          searchResultBase
+        );
+        searchResults.push(searchResult);
+      } catch (error) {
+        this.logger.error(
+          `Unable to process search result: ${JSON.stringify(
+            result
+          )} - error: ${error}`,
+          LogContext.SEARCH
+        );
+      }
     }
 
     return searchResults;

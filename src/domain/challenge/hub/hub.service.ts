@@ -216,7 +216,13 @@ export class HubService {
 
   async deleteHub(deleteData: DeleteHubInput): Promise<IHub> {
     const hub = await this.getHubOrFail(deleteData.ID, {
-      relations: ['challenges', 'preferenceSet', 'templatesSet', 'timeline'],
+      relations: [
+        'challenges',
+        'preferenceSet',
+        'preferenceSet.preferences',
+        'templatesSet',
+        'timeline',
+      ],
     });
 
     // Do not remove an hub that has child challenges , require these to be individually first removed
@@ -378,14 +384,20 @@ export class HubService {
   async getHubOrFail(
     hubID: string,
     options?: FindOneOptions<Hub>
-  ): Promise<IHub> {
-    let hub: IHub | undefined;
+  ): Promise<IHub | never> {
+    let hub: IHub | null = null;
     if (hubID.length === UUID_LENGTH) {
-      hub = await this.hubRepository.findOne({ id: hubID }, options);
+      hub = await this.hubRepository.findOne({
+        where: { id: hubID },
+        ...options,
+      });
     }
     if (!hub) {
       // look up based on nameID
-      hub = await this.hubRepository.findOne({ nameID: hubID }, options);
+      hub = await this.hubRepository.findOne({
+        where: { nameID: hubID },
+        ...options,
+      });
     }
     if (!hub)
       throw new EntityNotFoundException(
@@ -397,7 +409,7 @@ export class HubService {
 
   async getTemplatesSetOrFail(hubId: string): Promise<ITemplatesSet> {
     const hubWithTemplates = await this.getHubOrFail(hubId, {
-      relations: ['templatesSet'],
+      relations: ['templatesSet', 'templatesSet.aspectTemplates'],
     });
     const templatesSet = hubWithTemplates.templatesSet;
 
@@ -429,7 +441,7 @@ export class HubService {
 
   async getPreferenceSetOrFail(hubId: string): Promise<IPreferenceSet> {
     const hubWithPreferences = await this.getHubOrFail(hubId, {
-      relations: ['preferenceSet'],
+      relations: ['preferenceSet', 'preferenceSet.preferences'],
     });
     const preferenceSet = hubWithPreferences.preferenceSet;
 
@@ -475,7 +487,7 @@ export class HubService {
   }
 
   async isNameIdAvailable(nameID: string): Promise<boolean> {
-    const challengeCount = await this.hubRepository.count({
+    const challengeCount = await this.hubRepository.countBy({
       nameID: nameID,
     });
     if (challengeCount != 0) return false;
@@ -495,7 +507,7 @@ export class HubService {
     if (args && args.IDs) {
       {
         hubWithChallenges = await this.getHubOrFail(hub.id, {
-          relations: ['challenges'],
+          relations: ['challenges', 'challenges.tagset'],
         });
         hubWithChallenges.challenges = hubWithChallenges.challenges?.filter(c =>
           args.IDs?.includes(c.id)
@@ -503,7 +515,7 @@ export class HubService {
       }
     } else
       hubWithChallenges = await this.getHubOrFail(hub.id, {
-        relations: ['challenges'],
+        relations: ['challenges', 'challenges.tagset'],
       });
 
     const challenges = hubWithChallenges.challenges;
@@ -558,7 +570,8 @@ export class HubService {
   ): Promise<IChallenge> {
     return await this.challengeService.getChallengeInNameableScopeOrFail(
       challengeID,
-      hub.id
+      hub.id,
+      { relations: ['tagset'] }
     );
   }
 
@@ -784,9 +797,7 @@ export class HubService {
   }
 
   async getHubCount(visibility = HubVisibility.ACTIVE): Promise<number> {
-    return await this.hubRepository.count({
-      where: { visibility: visibility },
-    });
+    return await this.hubRepository.countBy({ visibility: visibility });
   }
 
   async getHost(hubID: string): Promise<IOrganization | undefined> {
