@@ -32,9 +32,11 @@ import { ITemplatesSet } from '@domain/template/templates-set';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Loader } from '@core/dataloader/decorators';
-import { JourneyCommunityLoaderCreator } from '@core/dataloader/creators/loader.creators';
+import {
+  HubCommunityLoaderCreator,
+  HubContextLoaderCreator,
+} from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 
 @Resolver(() => IHub)
@@ -56,12 +58,11 @@ export class HubResolverFields {
   async community(
     @Parent() hub: Hub,
     @Args('ID', { type: () => UUID, nullable: true }) ID: string,
-    @Loader(JourneyCommunityLoaderCreator) loader: ILoader<ICommunity>
+    @Loader(HubCommunityLoaderCreator) loader: ILoader<ICommunity>
   ) {
     // Default to returning the community for the Hub
     if (!ID) {
-      return await this.hubService.getCommunity(hub);
-     // return loader.load(hub.id);
+      return loader.load(hub.id);
     }
     return await this.hubService.getCommunityInNameableScope(ID, hub);
   }
@@ -73,7 +74,7 @@ export class HubResolverFields {
   @Profiling.api
   async context(
     @Parent() hub: Hub,
-    @Loader(JourneyCommunityLoaderCreator) loader: ILoader<ICommunity>
+    @Loader(HubContextLoaderCreator) loader: ILoader<IContext>
   ) {
     return loader.load(hub.id);
   }

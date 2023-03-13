@@ -3,30 +3,29 @@ import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
-import { IContext } from '@src/domain';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { findByBatchIds } from '../../utils';
-import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
+import { IPreference } from '@domain/common/preference';
+import { findByBatchIds } from '../../../utils';
+import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
-export class JourneyContextLoaderCreator
-  implements DataLoaderCreator<IContext>
+export class ChallengePreferencesLoaderCreator
+  implements DataLoaderCreator<IPreference[]>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<IContext>) {
-    return new DataLoader<string, IContext>(
+  create(options?: DataLoaderCreatorOptions<IPreference[]>) {
+    return new DataLoader<string, IPreference[]>(
       async keys =>
-        findByBatchIds<BaseChallenge, IContext>(
-          // using BaseChallenge throws "No metadata for \"BaseChallenge\" was found."
+        findByBatchIds<BaseChallenge, IPreference[]>(
           { manager: this.manager, classRef: Challenge },
           keys as string[],
-          'context',
+          'agent',
           options
         ),
       {
         cache: options?.cache,
-        name: 'JourneyContextLoaderCreator',
+        name: 'ChallengePreferencesLoaderCreator',
       }
     );
   }

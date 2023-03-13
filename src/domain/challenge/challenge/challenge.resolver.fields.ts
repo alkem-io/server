@@ -18,13 +18,13 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { Loader } from '@core/dataloader/decorators';
 import {
-  JourneyAgentLoaderCreator,
-  JourneyCollaborationLoaderCreator,
-  JourneyCommunityLoaderCreator,
-  JourneyLifecycleLoaderCreator,
+  ChallengeAgentLoaderCreator,
+  ChallengeCollaborationLoaderCreator,
+  ChallengeCommunityLoaderCreator,
+  ChallengeLifecycleLoaderCreator,
+  ChallengeContextLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { JourneyContextLoaderCreator } from '@core/dataloader/creators/loader.creators';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -40,7 +40,7 @@ export class ChallengeResolverFields {
   @Profiling.api
   async community(
     @Parent() challenge: Challenge,
-    @Loader(JourneyCommunityLoaderCreator) loader: ILoader<ICommunity>
+    @Loader(ChallengeCommunityLoaderCreator) loader: ILoader<ICommunity>
   ) {
     return loader.load(challenge.id);
   }
@@ -52,7 +52,7 @@ export class ChallengeResolverFields {
   })
   async context(
     @Parent() challenge: Challenge,
-    @Loader(JourneyContextLoaderCreator) loader: ILoader<IContext>
+    @Loader(ChallengeContextLoaderCreator) loader: ILoader<IContext>
   ) {
     return loader.load(challenge.id);
   }
@@ -66,7 +66,7 @@ export class ChallengeResolverFields {
   @Profiling.api
   async collaboration(
     @Parent() challenge: Challenge,
-    @Loader(JourneyCollaborationLoaderCreator) loader: ILoader<ICollaboration>
+    @Loader(ChallengeCollaborationLoaderCreator) loader: ILoader<ICollaboration>
   ) {
     return loader.load(challenge.id);
   }
@@ -93,7 +93,7 @@ export class ChallengeResolverFields {
   @Profiling.api
   async lifecycle(
     @Parent() challenge: Challenge,
-    @Loader(JourneyLifecycleLoaderCreator) loader: ILoader<ILifecycle>
+    @Loader(ChallengeLifecycleLoaderCreator) loader: ILoader<ILifecycle>
   ) {
     return loader.load(challenge.id);
   }
@@ -116,7 +116,7 @@ export class ChallengeResolverFields {
   @Profiling.api
   async agent(
     @Parent() challenge: Challenge,
-    @Loader(JourneyAgentLoaderCreator) loader: ILoader<IAgent>
+    @Loader(ChallengeAgentLoaderCreator) loader: ILoader<IAgent>
   ): Promise<IAgent> {
     return loader.load(challenge.id);
   }

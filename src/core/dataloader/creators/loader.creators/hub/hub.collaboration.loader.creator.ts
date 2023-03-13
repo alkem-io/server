@@ -2,15 +2,13 @@ import DataLoader from 'dataloader';
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
-import { ICommunity } from '@domain/community/community';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { findByBatchIds } from '../../utils';
-import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 import { ICollaboration } from '@domain/collaboration/collaboration';
+import { Hub } from '@domain/challenge/hub/hub.entity';
+import { findByBatchIds } from '../../../utils';
+import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
-export class JourneyCollaborationLoaderCreator
+export class HubCollaborationLoaderCreator
   implements DataLoaderCreator<ICollaboration>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
@@ -18,16 +16,15 @@ export class JourneyCollaborationLoaderCreator
   create(options?: DataLoaderCreatorOptions<ICollaboration>) {
     return new DataLoader<string, ICollaboration>(
       async keys =>
-        findByBatchIds<BaseChallenge, ICollaboration>(
-          // using BaseChallenge throws "No metadata for \"BaseChallenge\" was found."
-          { manager: this.manager, classRef: Challenge },
+        findByBatchIds<Hub, ICollaboration>(
+          { manager: this.manager, classRef: Hub },
           keys as string[],
           'collaboration',
           options
         ),
       {
         cache: options?.cache,
-        name: 'JourneyCollaborationLoaderCreator',
+        name: 'HubCollaborationLoaderCreator',
       }
     );
   }

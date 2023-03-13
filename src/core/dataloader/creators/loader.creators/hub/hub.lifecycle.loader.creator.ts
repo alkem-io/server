@@ -3,15 +3,13 @@ import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
-import { ICommunity } from '@domain/community/community';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { findByBatchIds } from '../../utils';
-import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
-import { ICollaboration } from '@domain/collaboration/collaboration';
+import { Hub } from '@domain/challenge/hub/hub.entity';
 import { ILifecycle } from '@domain/common/lifecycle';
+import { findByBatchIds } from '../../../utils';
+import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
-export class JourneyLifecycleLoaderCreator
+export class HubLifecycleLoaderCreator
   implements DataLoaderCreator<ILifecycle>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
@@ -20,15 +18,14 @@ export class JourneyLifecycleLoaderCreator
     return new DataLoader<string, ILifecycle>(
       async keys =>
         findByBatchIds<BaseChallenge, ILifecycle>(
-          // using BaseChallenge throws "No metadata for \"BaseChallenge\" was found."
-          { manager: this.manager, classRef: Challenge },
+          { manager: this.manager, classRef: Hub },
           keys as string[],
           'lifecycle',
           options
         ),
       {
         cache: options?.cache,
-        name: 'JourneyLifecycleLoaderCreator',
+        name: 'HubLifecycleLoaderCreator',
       }
     );
   }
