@@ -13,7 +13,9 @@ export class PlatformResolverFields {
     description: 'The Innovation Library for the platform',
   })
   async library(): Promise<ILibrary> {
-    const result = await this.platformService.getLibraryOrFail();
+    const result = await this.platformService.getLibraryOrFail([
+      'library.innovationPacks',
+    ]);
     return result;
   }
 
