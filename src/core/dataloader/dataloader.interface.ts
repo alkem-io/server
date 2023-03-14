@@ -18,3 +18,4 @@ export interface IDataloaders {
   relationsLoader: DataLoader<string, IRelation[]>;
   // add more loders here as you see fit
 }
+

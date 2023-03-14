@@ -17,7 +17,7 @@ import { HubModule } from '@domain/challenge/hub/hub.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { CacheModule, MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
@@ -53,6 +53,7 @@ import { FileManagerModule } from '@domain/common/file-manager/file.manager.modu
 import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 
 @Module({
   imports: [
@@ -215,6 +216,10 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
   controllers: [AppController],
   providers: [
     AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: DataLoaderInterceptor,
+    },
     {
       provide: APP_FILTER,
       useClass: HttpExceptionsFilter,

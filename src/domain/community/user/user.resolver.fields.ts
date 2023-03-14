@@ -18,6 +18,9 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { ForbiddenException } from '@common/exceptions';
+import { Loader } from '@core/dataloader/decorators';
+import { UserAgentLoaderCreator } from '@core/dataloader/creators';
+import { ILoader } from '@core/dataloader/loader.interface';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -47,8 +50,11 @@ export class UserResolverFields {
     description: 'The Agent representing this User.',
   })
   @Profiling.api
-  async agent(@Parent() user: User): Promise<IAgent> {
-    return await this.userService.getAgent(user.id);
+  async agent(
+    @Parent() user: User,
+    @Loader(UserAgentLoaderCreator) loader: ILoader<IAgent>
+  ): Promise<IAgent> {
+    return loader.load(user.id);
   }
 
   @UseGuards(GraphqlGuard)

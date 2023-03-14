@@ -1,18 +1,18 @@
 import { Profiling } from '@common/decorators';
 import { Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IProfile } from './profile.interface';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IReference } from '@domain/common/reference/reference.interface';
-import { ProfileService } from './profile.service';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ILocation } from '@domain/common/location/location.interface';
+import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
+import { ProfileAvatarsLoaderCreator } from '@core/dataloader/creators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { IProfile } from './profile.interface';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
-  constructor(private profileService: ProfileService) {}
-
   @UseGuards(GraphqlGuard)
   @ResolveField('avatar', () => IVisual, {
     nullable: true,
@@ -21,9 +21,9 @@ export class ProfileResolverFields {
   @Profiling.api
   async avatar(
     @Parent() profile: IProfile,
-    @Context() { loaders }: IGraphQLContext
+    @Loader(ProfileAvatarsLoaderCreator) loader: ILoader<IVisual>
   ): Promise<IVisual> {
-    return loaders.avatarsLoader.load(profile.id);
+    return loader.load(profile.id);
   }
 
   @UseGuards(GraphqlGuard)

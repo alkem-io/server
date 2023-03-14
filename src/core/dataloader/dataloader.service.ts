@@ -1,4 +1,3 @@
-import { IDataloaders } from './dataloader.interface';
 import DataLoader from 'dataloader';
 import { Injectable } from '@nestjs/common';
 import { IProfile } from '@domain/community';
@@ -12,6 +11,7 @@ import { OrganizationDataloaderService } from '@domain/community/organization/or
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CollaborationDataloaderService } from '@domain/collaboration/collaboration/collaboration.dataloader.service';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
+import { IDataloaders } from './dataloader.interface';
 
 @Injectable()
 export class DataloaderService {

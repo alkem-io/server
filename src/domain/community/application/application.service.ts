@@ -13,7 +13,7 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsWhere, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { NVPService } from '@domain/common/nvp/nvp.service';
 import { UserService } from '@domain/community/user/user.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
