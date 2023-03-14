@@ -313,14 +313,14 @@ export class OrganizationService {
     let organization: IOrganization | null;
     if (organizationID.length === UUID_LENGTH) {
       organization = await this.organizationRepository.findOne({
-        where: { id: organizationID },
         ...options,
+        where: { ...options?.where, id: organizationID },
       });
     } else {
       // look up based on nameID
       organization = await this.organizationRepository.findOne({
-        where: { nameID: organizationID },
         ...options,
+        where: { ...options?.where, nameID: organizationID },
       });
     }
     return organization;
