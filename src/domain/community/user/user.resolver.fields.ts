@@ -5,7 +5,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
 import { IUser, User } from '@domain/community/user';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
-import { Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from './user.service';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
@@ -18,9 +18,12 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { ForbiddenException } from '@common/exceptions';
-import { Loader } from '@core/dataloader/decorators';
-import { UserAgentLoaderCreator } from '@core/dataloader/creators';
+import {
+  UserAgentLoaderCreator,
+  UserProfileLoaderCreator,
+} from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { Loader } from '@core/dataloader/decorators';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -40,9 +43,9 @@ export class UserResolverFields {
   @Profiling.api
   async profile(
     @Parent() user: User,
-    @Context() { loaders }: IGraphQLContext
+    @Loader(UserProfileLoaderCreator) loader: ILoader<IProfile>
   ): Promise<IProfile> {
-    return loaders.userProfileLoader.load(user.id);
+    return loader.load(user.id);
   }
 
   @ResolveField('agent', () => IAgent, {

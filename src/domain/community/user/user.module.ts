@@ -23,7 +23,10 @@ import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/p
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
-import { UserAgentLoaderCreator } from '@core/dataloader/creators';
+import {
+  UserAgentLoaderCreator,
+  UserProfileLoaderCreator,
+} from '@core/dataloader/creators';
 
 @Module({
   imports: [
@@ -53,6 +56,7 @@ import { UserAgentLoaderCreator } from '@core/dataloader/creators';
     UserResolverFields,
     UserDataloaderService,
     UserAgentLoaderCreator,
+    UserProfileLoaderCreator,
   ],
   exports: [UserService, UserDataloaderService, UserAuthorizationService],
 })
