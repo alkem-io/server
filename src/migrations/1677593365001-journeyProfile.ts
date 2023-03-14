@@ -95,7 +95,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
 
       // Update the tagset to be one of many
       await queryRunner.query(
-        `UPDATE tagset SET profileId = '${newProfileID}' WHERE (id = '${context.tagsetId}')`
+        `UPDATE tagset SET profileId = '${newProfileID}' WHERE (id = '${hub.tagsetId}')`
       );
 
       // Update the references to be parented on the new profile
@@ -147,7 +147,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
 
       // Update the tagset to be one of many
       await queryRunner.query(
-        `UPDATE tagset SET profileId = '${newProfileID}' WHERE (id = '${context.tagsetId}')`
+        `UPDATE tagset SET profileId = '${newProfileID}' WHERE (id = '${challenge.tagsetId}')`
       );
 
       // Update the references to be parented on the new profile
@@ -199,7 +199,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
 
       // Update the tagset to be one of many
       await queryRunner.query(
-        `UPDATE tagset SET profileId = '${newProfileID}' WHERE (id = '${context.tagsetId}')`
+        `UPDATE tagset SET profileId = '${newProfileID}' WHERE (id = '${opportunity.tagsetId}')`
       );
 
       // Update the references to be parented on the new profile
