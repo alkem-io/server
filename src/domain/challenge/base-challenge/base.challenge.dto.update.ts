@@ -24,8 +24,4 @@ export class UpdateBaseChallengeInput extends UpdateNameableInput {
   @ValidateNested()
   @Type(() => UpdateProfileInput)
   profileData?: UpdateProfileInput;
-
-  @Field(() => [String], { nullable: true })
-  @IsOptional()
-  tags?: string[];
 }
