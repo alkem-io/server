@@ -8,7 +8,11 @@ import { ILibrary } from '@library/library/library.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import {
+  FindOneOptions,
+  FindOptionsRelationByString,
+  Repository,
+} from 'typeorm';
 import { Platform } from './platform.entity';
 import { IPlatform } from './platform.interface';
 
@@ -41,9 +45,11 @@ export class PlatformService {
     return await this.platformRepository.save(platform);
   }
 
-  async getLibraryOrFail(): Promise<ILibrary> {
+  async getLibraryOrFail(
+    relations: FindOptionsRelationByString = []
+  ): Promise<ILibrary> {
     const platform = await this.getPlatformOrFail({
-      relations: ['library'],
+      relations: ['library', ...relations],
     });
     const library = platform.library;
     if (!library) {
