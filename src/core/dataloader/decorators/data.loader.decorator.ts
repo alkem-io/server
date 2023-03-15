@@ -6,13 +6,13 @@ import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
 import { DataLoaderInterceptor } from '../interceptors';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../creators/base';
 
-export function Loader(
-  creatorRef: Type<DataLoaderCreator<unknown>>,
-  options?: DataLoaderCreatorOptions
+export function Loader<TReturn>(
+  creatorRef: Type<DataLoaderCreator<TReturn>>,
+  options?: DataLoaderCreatorOptions<TReturn>
 ): ParameterDecorator {
   return createParamDecorator(
     (
-      innerCreatorRef: Type<DataLoaderCreator<unknown>>,
+      innerCreatorRef: Type<DataLoaderCreator<TReturn>>,
       context: ExecutionContext
     ) => {
       const ctx =

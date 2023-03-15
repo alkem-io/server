@@ -37,7 +37,7 @@ export class DataLoaderInterceptor implements NestInterceptor {
         // To retrieve a provider from the global context
         // (for example, if the provider has been injected in a different module), pass the { strict: false }
         ctx[creatorName] = this.moduleRef
-          .resolve<DataLoaderCreator<unknown>>(
+          .resolve<DataLoaderCreator<any>>(
             creatorRef,
             ctx[DATA_LOADER_CTX_INJECT_TOKEN].contextId,
             { strict: false }

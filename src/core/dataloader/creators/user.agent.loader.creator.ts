@@ -1,20 +1,30 @@
 import DataLoader from 'dataloader';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
-import { UserDataloaderService } from '@domain/community/user/user.dataloader.service';
-import { IAgent } from '@src/domain';
+import { IAgent, User } from '@src/domain';
+import { findByBatchIds } from '../utils/findByBatchIds';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from './base';
 
 @Injectable()
 export class UserAgentLoaderCreator implements DataLoaderCreator<IAgent> {
-  constructor(private readonly userService: UserDataloaderService) {}
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>
+  ) {}
 
-  create(options?: DataLoaderCreatorOptions) {
+  create(options?: DataLoaderCreatorOptions<IAgent>) {
     return new DataLoader<string, IAgent>(
-      keys => this.userService.findAgentsByBatch(keys as string[]),
+      keys =>
+        findByBatchIds<User, IAgent>(
+          this.userRepository,
+          keys as string[],
+          'agent',
+          options
+        ),
       {
         cache: options?.cache,
         name: 'UserAgentLoaderCreator',
-        cacheMap: null,
       }
     );
   }
