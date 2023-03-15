@@ -8,7 +8,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { IOrganization } from '@domain/community/organization';
 import { IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
-import { IProfile } from '@domain/community/profile';
+import { IProfile } from '@domain/common/profile';
 import { CurrentUser, Profiling } from '@common/decorators';
 import { IAgent } from '@domain/agent/agent';
 import { UUID } from '@domain/common/scalars';
@@ -123,7 +123,7 @@ export class OrganizationResolverFields {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.READ,
-      `organization authorization access: ${organization.displayName}`
+      `organization authorization access: ${organization.nameID}`
     );
 
     return organization.authorization;

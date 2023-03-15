@@ -10,7 +10,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationCredential, LogContext } from '@common/enums';
-import { ProfileService } from '@domain/community/profile/profile.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import {
   CreateOrganizationInput,
@@ -50,6 +50,7 @@ import { CreateUserGroupInput } from '../user-group/dto/user-group.dto.create';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
+import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 
 @Injectable()
 export class OrganizationService {
@@ -73,12 +74,34 @@ export class OrganizationService {
     // Convert nameID to lower case
     organizationData.nameID = organizationData.nameID.toLowerCase();
     await this.checkNameIdOrFail(organizationData.nameID);
-    await this.checkDisplayNameOrFail(organizationData.displayName);
+    await this.checkDisplayNameOrFail(
+      organizationData.profileData?.displayName
+    );
 
     const organization: IOrganization = Organization.create(organizationData);
     organization.authorization = new AuthorizationPolicy();
     organization.profile = await this.profileService.createProfile(
       organizationData.profileData
+    );
+    await this.profileService.addTagsetOnProfile(organization.profile, {
+      name: RestrictedTagsetNames.KEYWORDS,
+      tags: [],
+    });
+    await this.profileService.addTagsetOnProfile(organization.profile, {
+      name: RestrictedTagsetNames.CAPABILITIES,
+      tags: [],
+    });
+    // Set the visuals
+    let avatarURL = organizationData.profileData?.avatarURL;
+    if (!avatarURL) {
+      avatarURL = this.profileService.generateRandomAvatar(
+        organization.profile.displayName,
+        ''
+      );
+    }
+    await this.profileService.createVisualAvatar(
+      organization.profile,
+      avatarURL
     );
 
     organization.groups = [];
@@ -139,7 +162,9 @@ export class OrganizationService {
       return;
     }
     const organizationCount = await this.organizationRepository.countBy({
-      displayName: newDisplayName,
+      profile: {
+        displayName: newDisplayName,
+      },
     });
     if (organizationCount >= 1)
       throw new ValidationException(
@@ -156,17 +181,14 @@ export class OrganizationService {
     });
 
     await this.checkDisplayNameOrFail(
-      organizationData.displayName,
-      organization.displayName
+      organizationData.profileData?.displayName,
+      organization.profile.displayName
     );
-
-    // Merge in the data
-    if (organizationData.displayName)
-      organization.displayName = organizationData.displayName;
 
     // Check the tagsets
     if (organizationData.profileData && organization.profile) {
       organization.profile = await this.profileService.updateProfile(
+        organization.profile.id,
         organizationData.profileData
       );
     }
@@ -387,10 +409,20 @@ export class OrganizationService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     filter?: OrganizationFilterInput
   ): Promise<IPaginatedType<IOrganization>> {
-    const qb = await this.organizationRepository.createQueryBuilder().select();
-
+    const qb = await this.organizationRepository.createQueryBuilder(
+      'organization'
+    );
     if (filter) {
-      applyFiltering(qb, filter);
+      const { displayName, ...rest } = filter;
+
+      if (displayName)
+        qb.leftJoinAndSelect('organization.profile', 'profile')
+          .where('profile.displayName like :term')
+          .setParameters({ term: `%${displayName}%` });
+
+      if (rest) {
+        applyFiltering(qb, rest);
+      }
     }
 
     return getPaginationResults(qb, paginationArgs);
@@ -490,7 +522,7 @@ export class OrganizationService {
     const groups = organizationGroups.groups;
     if (!groups)
       throw new ValidationException(
-        `No groups on organization: ${organization.displayName}`,
+        `No groups on organization: ${organization.nameID}`,
         LogContext.COMMUNITY
       );
     return groups;
@@ -668,7 +700,7 @@ export class OrganizationService {
       });
       if (orgOwners.length === 1)
         throw new ForbiddenException(
-          `Not allowed to remove last owner for organisaiton: ${organization.displayName}`,
+          `Not allowed to remove last owner for organisaiton: ${organization.nameID}`,
           LogContext.AUTH
         );
     }
@@ -693,7 +725,7 @@ export class OrganizationService {
     );
     if (!organization.verification) {
       throw new EntityNotFoundException(
-        `Unable to load verification for organisation: ${organization.displayName}`,
+        `Unable to load verification for organisation: ${organization.nameID}`,
         LogContext.COMMUNITY
       );
     }

@@ -155,7 +155,7 @@ export class TagsetService {
     throw new Error('Unable to find tagset with the name:' + { name });
   }
 
-  async addTagsetWithName(
+  async createTagsetWithName(
     tagsetable: ITagsetable,
     tagsetData: CreateTagsetInput
   ): Promise<ITagset> {
@@ -174,9 +174,7 @@ export class TagsetService {
       );
     }
 
-    const newTagset = await this.createTagset(tagsetData);
-    tagsetable.tagsets?.push(newTagset);
-    return newTagset;
+    return await this.createTagset(tagsetData);
   }
 
   hasTag(tagset: ITagset, tagToCheck: string): boolean {

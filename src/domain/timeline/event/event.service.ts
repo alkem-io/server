@@ -10,17 +10,18 @@ import { DeleteCalendarEventInput } from './dto/event.dto.delete';
 import { UpdateCalendarEventInput } from './dto/event.dto.update';
 import { CommentsService } from '@domain/communication/comments/comments.service';
 import { CreateCalendarEventInput } from './dto/event.dto.create';
-import { CardProfileService } from '@domain/collaboration/card-profile/card.profile.service';
-import { ICardProfile } from '@domain/collaboration/card-profile/card.profile.interface';
 import { CalendarEvent } from './event.entity';
 import { ICalendarEvent } from './event.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 
 @Injectable()
 export class CalendarEventService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private commentsService: CommentsService,
-    private cardProfileService: CardProfileService,
+    private profileService: ProfileService,
     @InjectRepository(CalendarEvent)
     private calendarEventRepository: Repository<CalendarEvent>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -35,12 +36,12 @@ export class CalendarEventService {
       ...calendarEventInput,
       createdBy: userID,
       authorization: new AuthorizationPolicy(),
-      profile: await this.cardProfileService.createCardProfile(
+      profile: await this.profileService.createProfile(
         calendarEventInput.profileData
       ),
       comments: await this.commentsService.createComments(
         communicationGroupID,
-        `calendarEvent-comments-${calendarEventInput.displayName}`
+        `calendarEvent-comments-${calendarEventInput.profileData?.displayName}`
       ),
     });
 
@@ -58,7 +59,7 @@ export class CalendarEventService {
       await this.authorizationPolicyService.delete(calendarEvent.authorization);
     }
     if (calendarEvent.profile) {
-      await this.cardProfileService.deleteCardProfile(calendarEvent.profile.id);
+      await this.profileService.deleteProfile(calendarEvent.profile.id);
     }
     if (calendarEvent.comments) {
       await this.commentsService.deleteComments(calendarEvent.comments);
@@ -98,9 +99,6 @@ export class CalendarEventService {
     );
 
     // Copy over the received data
-    if (calendarEventData.displayName) {
-      calendarEvent.displayName = calendarEventData.displayName;
-    }
     if (calendarEventData.profileData) {
       if (!calendarEvent.profile) {
         throw new EntityNotFoundException(
@@ -108,8 +106,8 @@ export class CalendarEventService {
           LogContext.CALENDAR
         );
       }
-      calendarEvent.profile = await this.cardProfileService.updateCardProfile(
-        calendarEvent.profile,
+      calendarEvent.profile = await this.profileService.updateProfile(
+        calendarEvent.profile.id,
         calendarEventData.profileData
       );
     }
@@ -138,9 +136,7 @@ export class CalendarEventService {
     return await this.calendarEventRepository.save(calendarEvent);
   }
 
-  public async getCardProfile(
-    calendarEvent: ICalendarEvent
-  ): Promise<ICardProfile> {
+  public async getProfile(calendarEvent: ICalendarEvent): Promise<IProfile> {
     const calendarEventLoaded = await this.getCalendarEventOrFail(
       calendarEvent.id,
       {

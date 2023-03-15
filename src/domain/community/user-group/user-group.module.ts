@@ -4,7 +4,7 @@ import { UserGroupResolverMutations } from './user-group.resolver.mutations';
 import { UserModule } from '@domain/community/user/user.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserGroup } from './user-group.entity';
-import { ProfileModule } from '@domain/community/profile/profile.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
 import { UserGroupResolverFields } from './user-group.resolver.fields';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
