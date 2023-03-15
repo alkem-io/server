@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.44.4",
+  "version": "0.44.5",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -91,7 +91,7 @@
     "redlock": "^5.0.0-beta.2",
     "replace-special-characters": "^1.2.5",
     "rxjs": "^7.3.0",
-    "typeorm": "0.3.12",
+    "typeorm": "0.3.11",
     "winston": "^3.3.3",
     "xstate": "^4.26.1",
     "yaml": "^2.0.0-7"
