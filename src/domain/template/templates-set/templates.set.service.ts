@@ -164,7 +164,7 @@ export class TemplatesSetService {
     return this.lifecycleTemplateService.getLifecycleTemplateOrFail(
       templateId,
       {
-        relations: ['templatesSet'],
+        relations: ['templatesSet', 'templateInfo'],
         where: { templatesSet: { id: templatesSetId } },
       }
     );
@@ -201,7 +201,7 @@ export class TemplatesSetService {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['canvasTemplates'],
+        relations: ['canvasTemplates', 'canvasTemplates.templateInfo'],
       }
     );
     if (!templatesSetPopulated.canvasTemplates) {
@@ -233,7 +233,7 @@ export class TemplatesSetService {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['lifecycleTemplates'],
+        relations: ['lifecycleTemplates', 'lifecycleTemplates.templateInfo'],
       }
     );
     if (!templatesSetPopulated.lifecycleTemplates) {

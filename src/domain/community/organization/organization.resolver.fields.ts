@@ -41,7 +41,7 @@ export class OrganizationResolverFields {
   async groups(
     @Parent() organization: Organization,
     @CurrentUser() agentInfo: AgentInfo
-  ) {
+  ): Promise<IUserGroup[] | 'not accessible'> {
     if (
       await this.isAccessGranted(
         organization,
@@ -52,7 +52,7 @@ export class OrganizationResolverFields {
       return await this.organizationService.getUserGroups(organization);
     }
 
-    throw new ForbiddenException('not accessible', LogContext.COMMUNITY);
+    return 'not accessible';
   }
 
   //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -66,7 +66,7 @@ export class OrganizationResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() organization: Organization,
     @Args('ID', { type: () => UUID }) groupID: string
-  ) {
+  ): Promise<IUserGroup | 'not accessible'> {
     if (
       await this.isAccessGranted(
         organization,
@@ -79,7 +79,7 @@ export class OrganizationResolverFields {
       });
     }
 
-    throw new ForbiddenException('not accessible', LogContext.COMMUNITY);
+    return 'not accessible';
   }
 
   //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -92,7 +92,7 @@ export class OrganizationResolverFields {
   async associates(
     @Parent() organization: Organization,
     @CurrentUser() agentInfo: AgentInfo
-  ) {
+  ): Promise<IUser[] | 'not accessible'> {
     if (
       await this.isAccessGranted(
         organization,
@@ -102,7 +102,7 @@ export class OrganizationResolverFields {
     ) {
       return await this.organizationService.getAssociates(organization);
     }
-    throw new ForbiddenException('not accessible', LogContext.COMMUNITY);
+    return 'not accessible';
   }
 
   @UseGuards(GraphqlGuard)
@@ -177,7 +177,7 @@ export class OrganizationResolverFields {
   async preferences(
     @Parent() org: Organization,
     @CurrentUser() agentInfo: AgentInfo
-  ) {
+  ): Promise<IPreference[] | 'not accessible'> {
     if (
       await this.isAccessGranted(org, agentInfo, AuthorizationPrivilege.READ)
     ) {
@@ -186,7 +186,7 @@ export class OrganizationResolverFields {
       return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
     }
 
-    throw new ForbiddenException('not accessible', LogContext.COMMUNITY);
+    return 'not accessible';
   }
 
   private async isAccessGranted(
