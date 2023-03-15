@@ -15,3 +15,10 @@ export * from './hub/hub.collaboration.loader.creator';
 export * from './hub/hub.context.loader.creator';
 export * from './hub/hub.lifecycle.loader.creator';
 export * from './hub/hub.preferences.loader.creator';
+
+export * from './journey/journey.agent.loader.creator';
+export * from './journey/journey.preferences.loader.creator';
+export * from './journey/journey.lifecycle.loader.creator';
+export * from './journey/journey.collaboration.loader.creator';
+export * from './journey/journey.context.loader.creator';
+export * from './journey/journey.community.loader.creator';

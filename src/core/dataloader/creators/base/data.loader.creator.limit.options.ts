@@ -1,7 +1,7 @@
 import { DataLoaderCreatorBaseOptions } from './data.loader.creator.base.options';
 
-export interface DataLoaderCreatorLimitOptions<T>
-  extends DataLoaderCreatorBaseOptions<T> {
+export interface DataLoaderCreatorLimitOptions<TResult>
+  extends DataLoaderCreatorBaseOptions<TResult> {
   /***
    * How many records to retrieve.
    * Retrieves all records by default

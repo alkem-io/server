@@ -34,10 +34,11 @@ import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { Loader } from '@core/dataloader/decorators';
 import {
-  HubCommunityLoaderCreator,
-  HubContextLoaderCreator,
+  JourneyCommunityLoaderCreator,
+  JourneyContextLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { JourneyAgentLoaderCreator } from '@core/dataloader/creators/loader.creators/journey/journey.agent.loader.creator';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -58,7 +59,7 @@ export class HubResolverFields {
   async community(
     @Parent() hub: Hub,
     @Args('ID', { type: () => UUID, nullable: true }) ID: string,
-    @Loader(HubCommunityLoaderCreator) loader: ILoader<ICommunity>
+    @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Hub }) loader: ILoader<ICommunity>
   ) {
     // Default to returning the community for the Hub
     if (!ID) {
@@ -74,7 +75,7 @@ export class HubResolverFields {
   @Profiling.api
   async context(
     @Parent() hub: Hub,
-    @Loader(HubContextLoaderCreator) loader: ILoader<IContext>
+    @Loader(JourneyContextLoaderCreator, { parentClassRef: Hub }) loader: ILoader<IContext>
   ) {
     return loader.load(hub.id);
   }
@@ -97,8 +98,12 @@ export class HubResolverFields {
   })
   @UseGuards(GraphqlGuard)
   @Profiling.api
-  async agent(@Parent() hub: Hub): Promise<IAgent> {
-    return await this.hubService.getAgent(hub.id);
+  async agent(
+    @Parent() hub: Hub,
+    @Loader(JourneyAgentLoaderCreator, { parentClassRef: Hub })
+    loader: ILoader<IAgent>
+  ): Promise<IAgent> {
+    return loader.load(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

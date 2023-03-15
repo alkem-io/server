@@ -1,4 +1,4 @@
-export class DataLoaderInitError extends Error {
+export class DataLoaderCreatorInitError extends Error {
   constructor(message: string) {
     super(message);
     this.name = this.constructor.name;
