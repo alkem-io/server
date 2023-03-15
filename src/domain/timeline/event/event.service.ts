@@ -36,12 +36,12 @@ export class CalendarEventService {
       ...calendarEventInput,
       createdBy: userID,
       authorization: new AuthorizationPolicy(),
-      profile: await this.cardProfileService.createCardProfile(
+      profile: await this.profileService.createProfile(
         calendarEventInput.profileData
       ),
       comments: await this.commentsService.createComments(
         communicationGroupID,
-        `calendarEvent-comments-${calendarEventInput.displayName}`
+        `calendarEvent-comments-${calendarEventInput.profileData?.displayName}`
       ),
     });
 

@@ -97,10 +97,12 @@ export class NotificationPayloadBuilder {
   async buildCardCreatedPayload(
     cardId: string
   ): Promise<CollaborationCardCreatedEventPayload> {
-    const card = await this.aspectRepository.findOne(
-      { id: cardId },
-      { relations: ['callout', 'profile'] }
-    );
+    const card = await this.aspectRepository.findOne({
+      where: {
+        id: cardId,
+      },
+      relations: ['callout', 'profile'],
+    });
     if (!card) {
       throw new NotificationEventException(
         `Could not acquire aspect from id: ${cardId}`,
@@ -217,10 +219,12 @@ export class NotificationPayloadBuilder {
     commentsId: string,
     messageResult: IMessage
   ): Promise<CollaborationCardCommentEventPayload> {
-    const card = await this.aspectRepository.findOne(
-      { id: aspect.id },
-      { relations: ['callout', 'profile'] }
-    );
+    const card = await this.aspectRepository.findOne({
+      where: {
+        id: aspect.id,
+      },
+      relations: ['callout', 'profile'],
+    });
 
     if (!card) {
       throw new NotificationEventException(

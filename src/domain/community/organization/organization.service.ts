@@ -164,7 +164,9 @@ export class OrganizationService {
       return;
     }
     const organizationCount = await this.organizationRepository.countBy({
-      displayName: newDisplayName,
+      profile: {
+        displayName: newDisplayName,
+      },
     });
     if (organizationCount >= 1)
       throw new ValidationException(

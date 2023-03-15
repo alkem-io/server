@@ -362,43 +362,23 @@ export class NamingService {
     return community.policy;
   }
 
-  async getAspectForComments(commentsID: string): Promise<IAspect | undefined> {
+  async getAspectForComments(commentsID: string): Promise<IAspect | null> {
     // check if this is a comment related to an aspect
-    const [aspect]: {
-      id: string;
-      displayName: string;
-      createdBy: string;
-      createdDate: Date;
-      type: string;
-      description: string;
-      nameID: string;
-    }[] = await this.entityManager.connection.query(
-      `SELECT id, displayName, createdBy, createdDate, type, nameID FROM aspect WHERE commentsId = '${commentsID}'`
-    );
-    return aspect;
+    return await this.entityManager.findOneBy(Aspect, {
+      comments: {
+        id: commentsID,
+      },
+    });
   }
 
   async getCalendarEventForComments(
     commentsID: string
-  ): Promise<ICalendarEvent | undefined> {
+  ): Promise<ICalendarEvent | null> {
     // check if this is a comment related to an calendar
-    const [calendarEvent]: {
-      id: string;
-      displayName: string;
-      nameID: string;
-      type: string;
-      createdBy: string;
-      startDate: Date;
-      createdDate: Date;
-      wholeDay: boolean;
-      multipleDays: boolean;
-      durationMinutes: number;
-      durationDays: number;
-    }[] = await this.entityManager.connection.query(
-      `SELECT id, displayName, nameID, type, createdBy, startDate, createdDate,  wholeDay, multipleDays, durationMinutes, durationDays
-      FROM calendar_event WHERE commentsId = '${commentsID}'`
-    );
-
-    return calendarEvent;
+    return await this.entityManager.findOneBy(CalendarEvent, {
+      comments: {
+        id: commentsID,
+      },
+    });
   }
 }
