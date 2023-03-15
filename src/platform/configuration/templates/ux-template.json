@@ -4,16 +4,6 @@
   "users": [
     {
       "name": "default",
-      "tagsets": [
-        {
-          "name": "skills",
-          "placeholder": "Communication, Blockchain"
-        },
-        {
-          "name": "keywords",
-          "placeholder": "Innovation, AI, Technology"
-        }
-      ],
       "references": [
         {
           "name": "linkedin",
@@ -30,21 +20,6 @@
           "name": "twitter",
           "description": "User profile on Twitter",
           "uri": ""
-        }
-      ]
-    }
-  ],
-  "organizations": [
-    {
-      "name": "default",
-      "tagsets": [
-        {
-          "name": "capabilities",
-          "placeholder": "Innovation, Collaboration"
-        },
-        {
-          "name": "keywords",
-          "placeholder": "Public sector, Industry"
         }
       ]
     }

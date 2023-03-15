@@ -17,8 +17,9 @@ import { UpdateAspectInput } from './dto/aspect.dto.update';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { CommentsService } from '@domain/communication/comments/comments.service';
 import { CreateAspectInput } from './dto/aspect.dto.create';
-import { CardProfileService } from '../card-profile/card.profile.service';
-import { ICardProfile } from '../card-profile';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 
 @Injectable()
 export class AspectService {
@@ -26,7 +27,7 @@ export class AspectService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private visualService: VisualService,
     private commentsService: CommentsService,
-    private cardProfileService: CardProfileService,
+    private profileService: ProfileService,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -38,21 +39,19 @@ export class AspectService {
     communicationGroupID: string
   ): Promise<IAspect> {
     const aspect: IAspect = Aspect.create(aspectInput);
-    aspect.profile = await this.cardProfileService.createCardProfile(
+    aspect.profile = await this.profileService.createProfile(
       aspectInput.profileData
     );
+    await this.profileService.addTagsetOnProfile(aspect.profile, {
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: aspectInput.tags || [],
+    });
     aspect.authorization = new AuthorizationPolicy();
     aspect.createdBy = userID;
-    aspect.banner = await this.visualService.createVisualBanner(
-      aspectInput.visualUri
-    );
-    aspect.bannerNarrow = await this.visualService.createVisualBannerNarrow(
-      aspectInput.visualUri
-    );
 
     aspect.comments = await this.commentsService.createComments(
       communicationGroupID,
-      `aspect-comments-${aspect.displayName}`
+      `aspect-comments-${aspect.nameID}`
     );
 
     return await this.aspectRepository.save(aspect);
@@ -73,7 +72,7 @@ export class AspectService {
       await this.visualService.deleteVisual({ ID: aspect.bannerNarrow.id });
     }
     if (aspect.profile) {
-      await this.cardProfileService.deleteCardProfile(aspect.profile.id);
+      await this.profileService.deleteProfile(aspect.profile.id);
     }
     if (aspect.comments) {
       await this.commentsService.deleteComments(aspect.comments);
@@ -106,9 +105,7 @@ export class AspectService {
     });
 
     // Copy over the received data
-    if (aspectData.displayName) {
-      aspect.displayName = aspectData.displayName;
-    }
+
     if (aspectData.profileData) {
       if (!aspect.profile) {
         throw new EntityNotFoundException(
@@ -116,8 +113,8 @@ export class AspectService {
           LogContext.COLLABORATION
         );
       }
-      aspect.profile = await this.cardProfileService.updateCardProfile(
-        aspect.profile,
+      aspect.profile = await this.profileService.updateProfile(
+        aspect.profile.id,
         aspectData.profileData
       );
     }
@@ -137,7 +134,7 @@ export class AspectService {
   public async getCardProfile(
     aspect: IAspect,
     relations: FindOptionsRelationByString = []
-  ): Promise<ICardProfile> {
+  ): Promise<IProfile> {
     const aspectLoaded = await this.getAspectOrFail(aspect.id, {
       relations: ['profile', ...relations],
     });

@@ -10,6 +10,5 @@ export interface IReferenceTemplate {
 }
 export interface IUserTemplate {
   name: string;
-  tagsets?: ITagsetTemplate[];
   references?: IReferenceTemplate[];
 }

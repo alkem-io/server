@@ -6,7 +6,7 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { IUserGroup, UserGroup } from '@domain/community/user-group';
