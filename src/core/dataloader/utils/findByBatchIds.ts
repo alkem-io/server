@@ -18,7 +18,7 @@ export const findByBatchIds = async <
 >(
   repo: Repository<TParent>,
   ids: string[],
-  relations: EntityRelations<TParent> | string[],
+  relation: EntityRelations<TParent>,
   options?: {
     // todo make it use DataLoaderCreatorOptions
     fields?: (keyof TResult)[];
@@ -30,17 +30,9 @@ export const findByBatchIds = async <
     return [];
   }
 
-  const relation = Array.isArray(relations) ? relations[0] : relations;
-
   const { fields, limit } = options ?? {};
   // todo make alias based on TResult name
   const qb = repo.createQueryBuilder(parentAlias).whereInIds(ids);
-
-  if (Array.isArray(relations)) {
-    relations.forEach(relation =>
-      qb.leftJoin(`${parentAlias}.${relation}`, resultAlias)
-    );
-  }
 
   if (fields && fields.length) {
     qb.leftJoin(`${parentAlias}.${relation}`, resultAlias)
@@ -64,7 +56,7 @@ export const findByBatchIds = async <
     id =>
       resultsById.get(id) ??
       new EntityNotFoundException(
-        `Could not load relation '${relations}' for '${id}'`,
+        `Could not load relation '${relation}' for '${id}'`,
         LogContext.DATA_LOADER
       )
   );
