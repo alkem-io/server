@@ -117,16 +117,13 @@ export class UserResolverFields {
   async email(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
+  ): Promise<string | 'not accessible'> {
     if (
       await this.isAccessGranted(user, agentInfo, AuthorizationPrivilege.READ)
     ) {
       return user.email;
     }
-    throw new ForbiddenException(
-      `Not able to grant access to agent ${agentInfo} for user ${user}`,
-      LogContext.COMMUNITY
-    );
+    return 'not accessible';
   }
 
   @UseGuards(GraphqlGuard)
@@ -138,13 +135,13 @@ export class UserResolverFields {
   async phone(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
+  ): Promise<string | 'not accessible'> {
     if (
       await this.isAccessGranted(user, agentInfo, AuthorizationPrivilege.READ)
     ) {
       return user.phone;
     }
-    throw new ForbiddenException('not accessible', LogContext.COMMUNITY);
+    return 'not accessible';
   }
 
   @UseGuards(GraphqlGuard)

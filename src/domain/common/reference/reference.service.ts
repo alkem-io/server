@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { createQueryBuilder, FindOneOptions, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import {
+  createQueryBuilder,
+  EntityManager,
+  FindOneOptions,
+  Repository,
+} from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import {
@@ -18,7 +23,9 @@ export class ReferenceService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Reference)
-    private referenceRepository: Repository<Reference>
+    private referenceRepository: Repository<Reference>,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   async createReference(
@@ -92,11 +99,11 @@ export class ReferenceService {
   async getReferenceOrFail(
     referenceID: string,
     options?: FindOneOptions<Reference>
-  ): Promise<IReference> {
-    const reference = await this.referenceRepository.findOne(
-      { id: referenceID },
-      options
-    );
+  ): Promise<IReference | never> {
+    const reference = await this.referenceRepository.findOne({
+      where: { id: referenceID },
+      ...options,
+    });
     if (!reference)
       throw new EntityNotFoundException(
         `Not able to locate reference with the specified ID: ${referenceID}`,
@@ -127,11 +134,11 @@ export class ReferenceService {
   }
 
   public async isRecommendation(reference: IReference): Promise<boolean> {
-    const referenceEntry = await createQueryBuilder('reference')
-      .select(['contextRecommendationId'])
-      .where('id = :id', { id: `${reference.id}` })
-      .getRawOne();
-    if (referenceEntry.contextRecommendationId) {
+    const referenceEntry = await this.entityManager.findOneBy(Reference, {
+      id: reference.id,
+    });
+
+    if (referenceEntry?.contextRecommendation) {
       return true;
     }
     return false;

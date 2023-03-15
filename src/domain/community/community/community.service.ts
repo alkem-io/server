@@ -15,7 +15,11 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import {
+  FindOneOptions,
+  FindOptionsRelationByString,
+  Repository,
+} from 'typeorm';
 import { IUser } from '@domain/community/user';
 import { CreateUserGroupInput } from '@domain/community/user-group/dto';
 import { Community, ICommunity } from '@domain/community/community';
@@ -134,11 +138,11 @@ export class CommunityService {
   async getCommunityOrFail(
     communityID: string,
     options?: FindOneOptions<Community>
-  ): Promise<ICommunity> {
-    const community = await this.communityRepository.findOne(
-      { id: communityID },
-      options
-    );
+  ): Promise<ICommunity | never> {
+    const community = await this.communityRepository.findOne({
+      where: { id: communityID },
+      ...options,
+    });
     if (!community)
       throw new EntityNotFoundException(
         `Unable to find Community with ID: ${communityID}`,
@@ -418,9 +422,12 @@ export class CommunityService {
     return policy;
   }
 
-  async getCommunication(communityID: string): Promise<ICommunication> {
+  async getCommunication(
+    communityID: string,
+    relations: FindOptionsRelationByString = []
+  ): Promise<ICommunication> {
     const community = await this.getCommunityOrFail(communityID, {
-      relations: ['communication'],
+      relations: ['communication', ...relations],
     });
 
     const communication = community.communication;
@@ -685,7 +692,7 @@ export class CommunityService {
 
   async getCommunities(hubId: string): Promise<Community[]> {
     const communites = await this.communityRepository.find({
-      where: { hub: { id: hubId } },
+      where: { hubID: hubId },
     });
     return communites || [];
   }
@@ -747,7 +754,7 @@ export class CommunityService {
     communityID: string,
     nameableScopeID: string
   ): Promise<ICommunity> {
-    const community = await this.communityRepository.findOne({
+    const community = await this.communityRepository.findOneBy({
       id: communityID,
       hubID: nameableScopeID,
     });

@@ -144,10 +144,10 @@ export class NotificationPayloadBuilder {
   async buildCanvasCreatedPayload(
     canvasId: string
   ): Promise<CollaborationCanvasCreatedEventPayload> {
-    const canvas = await this.canvasRepository.findOne(
-      { id: canvasId },
-      { relations: ['callout'] }
-    );
+    const canvas = await this.canvasRepository.findOne({
+      where: { id: canvasId },
+      relations: ['callout'],
+    });
     if (!canvas) {
       throw new NotificationEventException(
         `Could not acquire canvas from id: ${canvasId}`,
@@ -677,10 +677,12 @@ export class NotificationPayloadBuilder {
     }
 
     if (commentType === CommentType.CARD) {
-      const card = await this.aspectRepository.findOne(
-        { id: originEntityId },
-        { relations: ['callout'] }
-      );
+      const card = await this.aspectRepository.findOne({
+        where: {
+          id: originEntityId,
+        },
+        relations: ['callout'],
+      });
 
       if (!card) {
         throw new NotificationEventException(

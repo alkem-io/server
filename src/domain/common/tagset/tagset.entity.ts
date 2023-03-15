@@ -12,7 +12,7 @@ export enum RestrictedTagsetNames {
 
 @Entity()
 export class Tagset extends AuthorizableEntity implements ITagset {
-  @Column('varchar', { length: 255, nullable: false })
+  @Column({ default: RestrictedTagsetNames.DEFAULT })
   name!: string;
 
   @Column('simple-array')
@@ -24,4 +24,9 @@ export class Tagset extends AuthorizableEntity implements ITagset {
     onDelete: 'CASCADE',
   })
   profile?: Profile;
+
+  constructor() {
+    super();
+    this.tags = [];
+  }
 }

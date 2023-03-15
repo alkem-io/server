@@ -1,7 +1,5 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { getConnection, Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project';
@@ -44,26 +42,27 @@ export class NamingService {
     private collaborationRepository: Repository<Collaboration>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
-    @InjectRepository(CalendarEvent)
-    private calendarEventRepository: Repository<CalendarEvent>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   async isNameIdAvailableInHub(
     nameID: string,
     hubID: string
   ): Promise<boolean> {
-    const challengeCount = await this.challengeRepository.count({
+    if (!nameID) return true;
+
+    const challengeCount = await this.challengeRepository.countBy({
       nameID: nameID,
       hubID: hubID,
     });
     if (challengeCount > 0) return false;
-    const opportunityCount = await this.opportunityRepository.count({
+    const opportunityCount = await this.opportunityRepository.countBy({
       nameID: nameID,
       hubID: hubID,
     });
     if (opportunityCount > 0) return false;
-    const projectCount = await this.projectRepository.count({
+    const projectCount = await this.projectRepository.countBy({
       nameID: nameID,
       hubID: hubID,
     });
@@ -186,7 +185,7 @@ export class NamingService {
   async getCommunityIdFromCollaborationId(collaborationID: string) {
     const [result]: {
       communityId: string;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `
         SELECT communityId from \`hub\`
         WHERE \`hub\`.\`collaborationId\` = '${collaborationID}' UNION
@@ -364,43 +363,41 @@ export class NamingService {
   }
 
   async getAspectForComments(commentsID: string): Promise<IAspect | undefined> {
-    const aspect = await this.aspectRepository
-      .createQueryBuilder('aspect')
-      .select([
-        'aspect.id',
-        'aspect.createdBy',
-        'aspect.createdDate',
-        'aspect.type',
-        'nameID',
-        'commentsId',
-      ])
-      .leftJoin('aspect.profile', 'profile')
-      .addSelect(['profile.displayName'])
-      .where(`commentsId = '${commentsID}'`)
-      .getOne();
+    // check if this is a comment related to an aspect
+    const [aspect]: {
+      id: string;
+      displayName: string;
+      createdBy: string;
+      createdDate: Date;
+      type: string;
+      description: string;
+      nameID: string;
+    }[] = await this.entityManager.connection.query(
+      `SELECT id, displayName, createdBy, createdDate, type, nameID FROM aspect WHERE commentsId = '${commentsID}'`
+    );
     return aspect;
   }
 
   async getCalendarEventForComments(
     commentsID: string
   ): Promise<ICalendarEvent | undefined> {
-    const calendarEvent = await this.calendarEventRepository
-      .createQueryBuilder('calendarEvent')
-      .select([
-        'calendarEvent.id',
-        'calendarEvent.nameID',
-        'calendarEvent.type',
-        'calendarEvent.createdBy',
-        'calendarEvent.startDate',
-        'calendarEvent.createdDate',
-        'calendarEvent.wholeDay',
-        'calendarEvent.multipleDays',
-        'calendarEvent.durationMinutes',
-        'calendarEvent.durationDays',
-      ])
-      .leftJoinAndSelect('calendarEvent.profile', 'profile')
-      .where(`commentsId = '${commentsID}'`)
-      .getOne();
+    // check if this is a comment related to an calendar
+    const [calendarEvent]: {
+      id: string;
+      displayName: string;
+      nameID: string;
+      type: string;
+      createdBy: string;
+      startDate: Date;
+      createdDate: Date;
+      wholeDay: boolean;
+      multipleDays: boolean;
+      durationMinutes: number;
+      durationDays: number;
+    }[] = await this.entityManager.connection.query(
+      `SELECT id, displayName, nameID, type, createdBy, startDate, createdDate,  wholeDay, multipleDays, durationMinutes, durationDays
+      FROM calendar_event WHERE commentsId = '${commentsID}'`
+    );
 
     return calendarEvent;
   }

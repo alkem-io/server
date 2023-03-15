@@ -24,7 +24,7 @@ export class ContextService {
   ) {}
 
   async createContext(contextData: CreateContextInput): Promise<IContext> {
-    const context: IContext = Context.create(contextData);
+    const context: IContext = Context.create({ ...contextData });
 
     context.recommendations = [];
     const defaultRecommendations: CreateReferenceInput[] =
@@ -51,11 +51,11 @@ export class ContextService {
   async getContextOrFail(
     contextID: string,
     options?: FindOneOptions<Context>
-  ): Promise<IContext> {
-    const context = await this.contextRepository.findOne(
-      { id: contextID },
-      options
-    );
+  ): Promise<IContext | never> {
+    const context = await this.contextRepository.findOne({
+      where: { id: contextID },
+      ...options,
+    });
     if (!context)
       throw new EntityNotFoundException(
         `No Context found with the given id: ${contextID}`,
@@ -94,7 +94,14 @@ export class ContextService {
   async removeContext(contextID: string): Promise<IContext> {
     // Note need to load it in with all contained entities so can remove fully
     const context = await this.getContextOrFail(contextID, {
-      relations: ['recommendations', 'ecosystemModel'],
+      relations: [
+        'references',
+        'recommendations',
+        'ecosystemModel',
+        'ecosystemModel.actorGroups',
+        'visuals',
+        'location',
+      ],
     });
 
     if (context.recommendations) {
@@ -132,7 +139,7 @@ export class ContextService {
 
   async getEcosystemModel(context: IContext): Promise<IEcosystemModel> {
     const contextLoaded = await this.getContextOrFail(context.id, {
-      relations: ['ecosystemModel'],
+      relations: ['ecosystemModel', 'ecosystemModel.actorGroups'],
     });
     if (!contextLoaded.ecosystemModel)
       throw new EntityNotFoundException(
