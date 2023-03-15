@@ -170,7 +170,12 @@ export class CalloutService {
     calloutUpdateData: UpdateCalloutInput
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
-      relations: ['cardTemplate', 'canvasTemplate'],
+      relations: [
+        'cardTemplate',
+        'canvasTemplate',
+        'cardTemplate.templateInfo',
+        'canvasTemplate.templateInfo',
+      ],
     });
 
     if (calloutUpdateData.description)
