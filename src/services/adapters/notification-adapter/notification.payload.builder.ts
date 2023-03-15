@@ -97,6 +97,9 @@ export class NotificationPayloadBuilder {
   async buildCardCreatedPayload(
     cardId: string
   ): Promise<CollaborationCardCreatedEventPayload> {
+    {
+      relations: ['callout', 'profile'];
+    }
     const card = await this.aspectRepository.findOne({
       where: {
         id: cardId,
@@ -148,7 +151,7 @@ export class NotificationPayloadBuilder {
   ): Promise<CollaborationCanvasCreatedEventPayload> {
     const canvas = await this.canvasRepository.findOne({
       where: { id: canvasId },
-      relations: ['callout'],
+      relations: ['callout', 'profile'],
     });
     if (!canvas) {
       throw new NotificationEventException(

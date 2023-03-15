@@ -6,7 +6,7 @@ import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.creat
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
 
 @InputType()
-export class CreateBaseChallengeInput extends CreateNameableInput {
+export class CreateBaseChallengeInput extends CreateNameableInputOld {
   @Field(() => CreateContextInput, { nullable: true })
   @IsOptional()
   @ValidateNested()

@@ -10,7 +10,7 @@ import { Profile } from '@domain/common/profile';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 
 export abstract class BaseChallenge
-  extends NameableEntity
+  extends NameableEntityOld
   implements IBaseChallenge
 {
   @OneToOne(() => Collaboration, {

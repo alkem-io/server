@@ -19,6 +19,8 @@ import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
 import { Collaboration } from '@domain/collaboration/collaboration';
+import { Inject, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -43,7 +45,8 @@ export class NamingService {
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private entityManager: EntityManager,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async isNameIdAvailableInHub(
@@ -364,10 +367,12 @@ export class NamingService {
 
   async getAspectForComments(commentsID: string): Promise<IAspect | null> {
     // check if this is a comment related to an aspect
-    return await this.entityManager.findOneBy(Aspect, {
-      comments: {
-        id: commentsID,
+
+    return await this.entityManager.findOne(Aspect, {
+      where: {
+        comments: { id: commentsID },
       },
+      relations: ['profile'],
     });
   }
 
@@ -375,10 +380,11 @@ export class NamingService {
     commentsID: string
   ): Promise<ICalendarEvent | null> {
     // check if this is a comment related to an calendar
-    return await this.entityManager.findOneBy(CalendarEvent, {
-      comments: {
-        id: commentsID,
+    return await this.entityManager.findOne(CalendarEvent, {
+      where: {
+        comments: { id: commentsID },
       },
+      relations: ['profile', 'comments'],
     });
   }
 }

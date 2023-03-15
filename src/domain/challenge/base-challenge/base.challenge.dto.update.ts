@@ -6,7 +6,7 @@ import { Type } from 'class-transformer';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 
 @InputType()
-export class UpdateBaseChallengeInput extends UpdateNameableInput {
+export class UpdateBaseChallengeInput extends UpdateNameableInputOld {
   @Field(() => UpdateContextInput, {
     nullable: true,
     description: 'Update the contained Context entity.',
