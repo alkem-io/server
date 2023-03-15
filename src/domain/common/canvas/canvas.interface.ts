@@ -1,11 +1,11 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import JSON from 'graphql-type-json';
 import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
-import { INameableOld } from '../entity/nameable-entity';
+import { INameable } from '../entity/nameable-entity';
 import { IVisual } from '@domain/common/visual/visual.interface';
 
 @ObjectType('Canvas')
-export abstract class ICanvas extends INameableOld {
+export abstract class ICanvas extends INameable {
   @Field(() => JSON, {
     description: 'The JSON representation of the Canvas.',
   })

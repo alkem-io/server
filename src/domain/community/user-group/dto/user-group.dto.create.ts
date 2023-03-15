@@ -6,7 +6,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
-import { CreateProfileInput } from '@domain/common/profile/dto';
+import { CreateProfileInput } from '@domain/community/profile/dto';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Type } from 'class-transformer';
 

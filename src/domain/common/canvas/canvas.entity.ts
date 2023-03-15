@@ -13,12 +13,12 @@ import {
 import { ICanvas } from './canvas.interface';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { CanvasCheckout } from '../canvas-checkout/canvas.checkout.entity';
-import { NameableEntityOld } from '../entity/nameable-entity/nameable.entity.old';
+import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { compressText, decompressText } from '@common/utils/compression.util';
 
 @Entity()
-export class Canvas extends NameableEntityOld implements ICanvas {
+export class Canvas extends NameableEntity implements ICanvas {
   constructor(name?: string, value?: string) {
     super();
     this.displayName = name || '';

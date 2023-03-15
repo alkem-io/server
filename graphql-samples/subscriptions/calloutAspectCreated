@@ -2,9 +2,7 @@ subscription {
   calloutAspectCreated(calloutID: "uuid") {
     calloutID
     aspect {
-      profile {
-        displayName
-      }
+      displayName
     }
 
   }

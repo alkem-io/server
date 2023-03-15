@@ -116,7 +116,7 @@ export class CalendarService {
         );
     } else {
       calendarEventData.nameID = this.namingService.createNameID(
-        `${calendarEventData.profileData?.displayName}`
+        `${calendarEventData.displayName}`
       );
     }
 

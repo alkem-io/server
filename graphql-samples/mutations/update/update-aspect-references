@@ -1,6 +1,6 @@
 mutation updateAspect($aspectData: UpdateAspectInput!) {
   updateAspect(aspectData: $aspectData) {
-    id
+    displayName
     references {
       name
       uri

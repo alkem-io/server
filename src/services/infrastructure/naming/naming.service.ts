@@ -17,10 +17,8 @@ import {
 } from '@common/exceptions';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
+import { ICalendarEvent } from '@domain/timeline/event';
 import { Collaboration } from '@domain/collaboration/collaboration';
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -45,8 +43,7 @@ export class NamingService {
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @InjectEntityManager('default')
-    private entityManager: EntityManager,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private entityManager: EntityManager
   ) {}
 
   async isNameIdAvailableInHub(
@@ -365,26 +362,43 @@ export class NamingService {
     return community.policy;
   }
 
-  async getAspectForComments(commentsID: string): Promise<IAspect | null> {
+  async getAspectForComments(commentsID: string): Promise<IAspect | undefined> {
     // check if this is a comment related to an aspect
-
-    return await this.entityManager.findOne(Aspect, {
-      where: {
-        comments: { id: commentsID },
-      },
-      relations: ['profile'],
-    });
+    const [aspect]: {
+      id: string;
+      displayName: string;
+      createdBy: string;
+      createdDate: Date;
+      type: string;
+      description: string;
+      nameID: string;
+    }[] = await this.entityManager.connection.query(
+      `SELECT id, displayName, createdBy, createdDate, type, nameID FROM aspect WHERE commentsId = '${commentsID}'`
+    );
+    return aspect;
   }
 
   async getCalendarEventForComments(
     commentsID: string
-  ): Promise<ICalendarEvent | null> {
+  ): Promise<ICalendarEvent | undefined> {
     // check if this is a comment related to an calendar
-    return await this.entityManager.findOne(CalendarEvent, {
-      where: {
-        comments: { id: commentsID },
-      },
-      relations: ['profile', 'comments'],
-    });
+    const [calendarEvent]: {
+      id: string;
+      displayName: string;
+      nameID: string;
+      type: string;
+      createdBy: string;
+      startDate: Date;
+      createdDate: Date;
+      wholeDay: boolean;
+      multipleDays: boolean;
+      durationMinutes: number;
+      durationDays: number;
+    }[] = await this.entityManager.connection.query(
+      `SELECT id, displayName, nameID, type, createdBy, startDate, createdDate,  wholeDay, multipleDays, durationMinutes, durationDays
+      FROM calendar_event WHERE commentsId = '${commentsID}'`
+    );
+
+    return calendarEvent;
   }
 }

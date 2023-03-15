@@ -373,7 +373,7 @@ export class CalloutResolverMutations {
       this.elasticService.calloutCardCreated(
         {
           id: aspect.id,
-          name: aspect.profile.displayName,
+          name: aspect.displayName,
           hub: hubID,
         },
         {

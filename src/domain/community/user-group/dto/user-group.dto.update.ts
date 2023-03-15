@@ -2,7 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
-import { UpdateProfileInput } from '@domain/common/profile/dto';
+import { UpdateProfileInput } from '../../profile/dto';
 import { Type } from 'class-transformer';
 
 @InputType()

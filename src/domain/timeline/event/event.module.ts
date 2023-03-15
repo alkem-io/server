@@ -11,8 +11,8 @@ import { CalendarEventResolverFields } from './event.resolver.fields';
 import { CalendarEventAuthorizationService } from './event.service.authorization';
 import { CalendarEventResolverSubscriptions } from './event.resolver.subscriptions';
 import { UserModule } from '@domain/community/user/user.module';
+import { CardProfileModule } from '@domain/collaboration/card-profile/card.profile.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
-import { ProfileModule } from '@domain/common/profile/profile.module';
 
 @Module({
   imports: [
@@ -21,7 +21,7 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
     CommentsModule,
     VisualModule,
     UserModule,
-    ProfileModule,
+    CardProfileModule,
     CommunityPolicyModule,
     TypeOrmModule.forFeature([CalendarEvent]),
   ],

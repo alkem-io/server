@@ -6,7 +6,7 @@ import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organization } from '@domain/community/organization';
 import { OrganizationResolverFields } from './organization.resolver.fields';
-import { ProfileModule } from '@domain/common/profile/profile.module';
+import { ProfileModule } from '@domain/community/profile/profile.module';
 import { OrganizationResolverQueries } from './organization.resolver.queries';
 import { UserModule } from '@domain/community/user/user.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';

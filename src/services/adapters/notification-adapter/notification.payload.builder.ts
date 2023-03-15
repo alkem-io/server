@@ -95,18 +95,15 @@ export class NotificationPayloadBuilder {
   }
 
   async buildCardCreatedPayload(
-    cardId: string
+    aspectId: string
   ): Promise<CollaborationCardCreatedEventPayload> {
-    {
-      relations: ['callout', 'profile'];
-    }
     const card = await this.aspectRepository.findOne({
-      where: { id: cardId },
+      where: { id: aspectId },
       relations: ['callout'],
     });
     if (!card) {
       throw new NotificationEventException(
-        `Could not acquire aspect from id: ${cardId}`,
+        `Could not acquire aspect from id: ${aspectId}`,
         LogContext.NOTIFICATIONS
       );
     }
@@ -114,7 +111,7 @@ export class NotificationPayloadBuilder {
     const callout = card.callout;
     if (!callout) {
       throw new NotificationEventException(
-        `Could not acquire callout from aspect with id: ${cardId}`,
+        `Could not acquire callout from aspect with id: ${aspectId}`,
         LogContext.NOTIFICATIONS
       );
     }
@@ -132,9 +129,9 @@ export class NotificationPayloadBuilder {
         nameID: callout.nameID,
       },
       card: {
-        id: cardId,
+        id: aspectId,
         createdBy: card.createdBy,
-        displayName: card.profile.displayName,
+        displayName: card.displayName,
         nameID: card.nameID,
         type: card.type,
       },
@@ -149,7 +146,7 @@ export class NotificationPayloadBuilder {
   ): Promise<CollaborationCanvasCreatedEventPayload> {
     const canvas = await this.canvasRepository.findOne({
       where: { id: canvasId },
-      relations: ['callout', 'profile'],
+      relations: ['callout'],
     });
     if (!canvas) {
       throw new NotificationEventException(
@@ -259,7 +256,7 @@ export class NotificationPayloadBuilder {
         nameID: callout.nameID,
       },
       card: {
-        displayName: card.profile.displayName,
+        displayName: card.displayName,
         createdBy: card.createdBy,
         nameID: card.nameID,
       },
@@ -385,7 +382,7 @@ export class NotificationPayloadBuilder {
     const result: PlatformUserRemovedEventPayload = {
       triggeredBy: triggeredBy,
       user: {
-        displayName: user.profile.displayName,
+        displayName: user.displayName,
         email: user.email,
       },
     };
@@ -465,21 +462,19 @@ export class NotificationPayloadBuilder {
   ): Promise<{ id: string; displayName: string }> {
     const user = await this.userRepository
       .createQueryBuilder('user')
-      .select(['user.id', 'user.nameID'])
-      .leftJoin('user.profile', 'profile')
-      .addSelect(['profile.displayName'])
+      .select(['user.id', 'user.displayName'])
       .where('user.nameID = :id')
       .orWhere('user.id = :id')
       .setParameters({ id: userId })
       .getOne();
 
-    if (!user || !user.profile) {
+    if (!user) {
       throw new EntityNotFoundException(
-        `Unable to find User with profile for id: ${userId}`,
+        `Unable to find User with id: ${userId}`,
         LogContext.COMMUNITY
       );
     }
-    return { id: user.id, displayName: user.profile.displayName };
+    return { id: user.id, displayName: user.displayName };
   }
 
   private async getUserData(
@@ -487,17 +482,16 @@ export class NotificationPayloadBuilder {
   ): Promise<{ id: string; displayName: string } | undefined> {
     const user = await this.userRepository
       .createQueryBuilder('user')
-      .select(['user.id'])
-      .leftJoinAndSelect('user.profile', 'profile')
+      .select(['user.id', 'user.displayName'])
       .where('user.nameID = :id')
       .orWhere('user.id = :id')
       .setParameters({ id: userId })
       .getOne();
 
-    if (!user || !user.profile) {
+    if (!user) {
       return undefined;
     }
-    return { id: user.id, displayName: user.profile.displayName };
+    return { id: user.id, displayName: user.displayName };
   }
 
   async buildCommunicationOrganizationMessageNotificationPayload(
@@ -525,21 +519,19 @@ export class NotificationPayloadBuilder {
   ): Promise<{ id: string; displayName: string }> {
     const org = await this.organizationRepository
       .createQueryBuilder('organization')
-      .select(['organization.id'])
-      .leftJoin('organization.profile', 'profile')
-      .addSelect(['profile.displayName'])
+      .select(['organization.id', 'organization.displayName'])
       .where('organization.id = :id')
       .orWhere('organization.nameID = :id')
       .setParameters({ id: orgId })
       .getOne();
 
-    if (!org || !org.profile) {
+    if (!org) {
       throw new EntityNotFoundException(
         `Unable to find Organization with id: ${orgId}`,
         LogContext.COMMUNITY
       );
     }
-    return { id: org.id, displayName: org.profile.displayName };
+    return { id: org.id, displayName: org.displayName };
   }
 
   private async getOrgData(
@@ -547,18 +539,16 @@ export class NotificationPayloadBuilder {
   ): Promise<{ id: string; displayName: string } | undefined> {
     const org = await this.organizationRepository
       .createQueryBuilder('organization')
-      .select(['organization.id'])
-      .leftJoin('organization.profile', 'profile')
-      .addSelect(['profile.displayName'])
+      .select(['organization.id', 'organization.displayName'])
       .where('organization.id = :id')
       .orWhere('organization.nameID = :id')
       .setParameters({ id: orgId })
       .getOne();
 
-    if (!org || !org.profile) {
+    if (!org) {
       return undefined;
     }
-    return { id: org.id, displayName: org.profile.displayName };
+    return { id: org.id, displayName: org.displayName };
   }
 
   async buildCommunicationCommunityLeadsMessageNotificationPayload(

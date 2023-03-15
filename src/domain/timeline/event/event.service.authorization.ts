@@ -14,8 +14,8 @@ import {
 import { CalendarEventService } from './event.service';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { CardProfileAuthorizationService } from '@domain/collaboration/card-profile/card.profile.service.authorization';
 import { CREDENTIAL_RULE_CALENDAR_EVENT_CREATED_BY } from '@common/constants/authorization/credential.rule.constants';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 
 @Injectable()
 export class CalendarEventAuthorizationService {
@@ -23,7 +23,7 @@ export class CalendarEventAuthorizationService {
     private calendarEventService: CalendarEventService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private commentsAuthorizationService: CommentsAuthorizationService,
-    private profileAuthorizationService: ProfileAuthorizationService,
+    private cardProfileAuthorizationService: CardProfileAuthorizationService,
     @InjectRepository(CalendarEvent)
     private calendarEventRepository: Repository<CalendarEvent>
   ) {}
@@ -60,7 +60,7 @@ export class CalendarEventAuthorizationService {
 
     if (calendarEvent.profile) {
       calendarEvent.profile =
-        await this.profileAuthorizationService.applyAuthorizationPolicy(
+        await this.cardProfileAuthorizationService.applyAuthorizationPolicy(
           calendarEvent.profile,
           calendarEvent.authorization
         );

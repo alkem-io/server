@@ -96,7 +96,7 @@ export class CommentsResolverMutations {
       this.elasticService.calloutCardCommentCreated(
         {
           id: aspect.id,
-          name: aspect.profile.displayName,
+          name: aspect.displayName,
           hub: hubID,
         },
         {
@@ -198,7 +198,7 @@ export class CommentsResolverMutations {
       originEntity: {
         id: aspect.id,
         nameId: aspect.nameID,
-        displayName: aspect.profile.displayName,
+        displayName: aspect.displayName,
       },
       commentType: CommentType.CARD,
     };
@@ -206,7 +206,7 @@ export class CommentsResolverMutations {
   }
 
   private processCalendarEventCommentEvents(
-    calendarEvent: ICalendarEvent,
+    calendar: ICalendarEvent,
     comments: IComments,
     commentSent: IMessage,
     agentInfo: AgentInfo
@@ -216,7 +216,7 @@ export class CommentsResolverMutations {
     const subscriptionPayload: CalendarEventCommentsMessageReceived = {
       eventID: eventID,
       message: commentSent,
-      calendarEventID: calendarEvent.id,
+      calendarEventID: calendar.id,
     };
     // send the subscriptions event
     this.subscriptionAspectComments.publish(
@@ -231,9 +231,9 @@ export class CommentsResolverMutations {
       commentsId: comments.id,
       mentions,
       originEntity: {
-        id: calendarEvent.id,
-        nameId: calendarEvent.nameID,
-        displayName: calendarEvent.profile.displayName,
+        id: calendar.id,
+        nameId: calendar.nameID,
+        displayName: calendar.displayName,
       },
       commentType: CommentType.CALENDAR_EVENT,
     };

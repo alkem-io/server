@@ -166,12 +166,10 @@ export class BootstrapService {
           let user = await this.userService.createUser({
             nameID: nameID,
             email: userData.email,
+            displayName: `${userData.firstName} ${userData.lastName}`,
             accountUpn: userData.email,
             firstName: userData.firstName,
             lastName: userData.lastName,
-            profileData: {
-              displayName: `${userData.firstName} ${userData.lastName}`,
-            },
           });
           const credentialsData = userData.credentials;
           for (const credentialData of credentialsData) {
@@ -226,9 +224,7 @@ export class BootstrapService {
       if (!hostOrganization) {
         const hostOrg = await this.organizationService.createOrganization({
           nameID: DEFAULT_HOST_ORG_NAMEID,
-          profileData: {
-            displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
-          },
+          displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
         });
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
           hostOrg

@@ -2,9 +2,9 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IAspect } from './aspect.interface';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { Comments } from '@domain/communication/comments';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { Profile } from '@domain/common/profile/profile.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { CardProfile } from '../card-profile';
 
 @Entity()
 export class Aspect extends NameableEntity implements IAspect {
@@ -38,13 +38,13 @@ export class Aspect extends NameableEntity implements IAspect {
   @JoinColumn()
   comments?: Comments;
 
-  @OneToOne(() => Profile, {
+  @OneToOne(() => CardProfile, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  profile!: Profile;
+  profile?: CardProfile;
 
   @ManyToOne(() => Callout, callout => callout.aspects, {
     eager: false,

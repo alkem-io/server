@@ -21,7 +21,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
-import { ProfileService } from '@domain/common/profile/profile.service';
+import { ProfileService } from '@domain/community/profile/profile.service';
 import {
   CreateUserInput,
   DeleteUserInput,
@@ -49,18 +49,18 @@ import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set
 import { PreferenceType } from '@common/enums/preference.type';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { IPreferenceSet } from '@domain/common/preference-set/preference.set.interface';
-import { IProfile } from '@domain/common/profile/profile.interface';
+import { IProfile } from '../profile/profile.interface';
 import { PaginationArgs } from '@core/pagination';
 import { applyFiltering, UserFilterInput } from '@core/filtering';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { IPaginatedType } from '@core/pagination/paginated.type';
-import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
+import { CreateProfileInput } from '../profile/dto/profile.dto.create';
 import { validateEmail } from '@common/utils';
 import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
+
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
@@ -108,25 +108,6 @@ export class UserService {
       userData.profileData
     );
     user.profile = await this.profileService.createProfile(profileData);
-
-    // Set the visuals
-    let avatarURL = profileData?.avatarURL;
-    if (!avatarURL) {
-      avatarURL = this.profileService.generateRandomAvatar(
-        user.firstName,
-        user.lastName
-      );
-    }
-    await this.profileService.createVisualAvatar(user.profile, avatarURL);
-    await this.profileService.addTagsetOnProfile(user.profile, {
-      name: RestrictedTagsetNames.SKILLS,
-      tags: [],
-    });
-    await this.profileService.addTagsetOnProfile(user.profile, {
-      name: RestrictedTagsetNames.KEYWORDS,
-      tags: [],
-    });
-
     user.agent = await this.agentService.createAgent({
       parentDisplayID: user.email,
     });
@@ -135,6 +116,14 @@ export class UserService {
       `Created a new user with nameID: ${user.nameID}`,
       LogContext.COMMUNITY
     );
+
+    // ensure have a random avatar. todo: use a package we control
+    if (user.profile.avatar?.uri === '') {
+      user.profile.avatar.uri = this.profileService.generateRandomAvatar(
+        user.firstName,
+        user.lastName
+      );
+    }
 
     user.preferenceSet = await this.preferenceSetService.createPreferenceSet(
       PreferenceDefinitionSet.USER,
@@ -180,7 +169,6 @@ export class UserService {
     if (!result) {
       result = {
         referencesData: [],
-        displayName: '',
       };
     }
     if (!result.referencesData) {
@@ -285,10 +273,10 @@ export class UserService {
       email: email,
       firstName: agentInfo.firstName,
       lastName: agentInfo.lastName,
+      displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       accountUpn: email,
       profileData: {
         avatarURL: agentInfo.avatarURL,
-        displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       },
     });
   }
@@ -578,18 +566,10 @@ export class UserService {
     paginationArgs: PaginationArgs,
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
-    const qb = await this.userRepository.createQueryBuilder('user');
+    const qb = await this.userRepository.createQueryBuilder().select();
+
     if (filter) {
-      const { displayName, ...rest } = filter;
-
-      if (displayName)
-        qb.leftJoinAndSelect('user.profile', 'profile')
-          .where('profile.displayName like :term')
-          .setParameters({ term: `%${displayName}%` });
-
-      if (rest) {
-        applyFiltering(qb, rest);
-      }
+      applyFiltering(qb, filter);
     }
 
     return getPaginationResults(qb, paginationArgs);
@@ -670,9 +650,7 @@ export class UserService {
   }
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
-    const user = await this.getUserOrFail(userInput.ID, {
-      relations: ['profile'],
-    });
+    const user = await this.getUserOrFail(userInput.ID);
 
     if (userInput.nameID) {
       if (userInput.nameID.toLowerCase() !== user.nameID.toLowerCase()) {
@@ -681,7 +659,9 @@ export class UserService {
         user.nameID = userInput.nameID;
       }
     }
-
+    if (userInput.displayName !== undefined) {
+      user.displayName = userInput.displayName;
+    }
     if (userInput.firstName !== undefined) {
       user.firstName = userInput.firstName;
     }
@@ -702,7 +682,6 @@ export class UserService {
 
     if (userInput.profileData) {
       user.profile = await this.profileService.updateProfile(
-        user.profile.id,
         userInput.profileData
       );
     }

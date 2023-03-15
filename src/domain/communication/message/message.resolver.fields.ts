@@ -1,4 +1,5 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IMessage } from './message.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { UserService } from '@domain/community/user/user.service';

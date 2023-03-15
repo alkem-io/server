@@ -88,7 +88,7 @@ export class UserResolverMutations {
       agentInfo,
       user.authorization,
       AuthorizationPrivilege.UPDATE,
-      `userUpdate: ${user.id}`
+      `userUpdate: ${user.nameID}`
     );
     return await this.userService.updateUser(userData);
   }
@@ -132,14 +132,12 @@ export class UserResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(deleteData.ID, {
-      relations: ['profile'],
-    });
+    const user = await this.userService.getUserOrFail(deleteData.ID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       user.authorization,
       AuthorizationPrivilege.DELETE,
-      `user delete: ${user.id}`
+      `user delete: ${user.nameID}`
     );
     const userDeleted = await this.userService.deleteUser(deleteData);
     // Send the notification
@@ -168,7 +166,7 @@ export class UserResolverMutations {
       agentInfo,
       receivingUser.authorization,
       AuthorizationPrivilege.READ,
-      `user send message: ${receivingUser.id}`
+      `user send message: ${receivingUser.nameID}`
     );
 
     return await this.communicationAdapter.sendMessageToUser({

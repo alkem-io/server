@@ -134,7 +134,7 @@ export class ActivityAdapter {
     this.logEventTriggered(eventData, eventType);
 
     const aspect = eventData.aspect;
-    const description = `[${aspect.nameID}] - ${aspect.profile.description}`;
+    const description = `[${aspect.displayName}] - ${aspect.profile?.description}`;
     const collaborationID = await this.getCollaborationIdForAspect(aspect.id);
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
@@ -233,7 +233,7 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdFromCommunity(
       community.id
     );
-    const description = `[${community.type}] '${eventData.user.nameID}'`;
+    const description = `[${community.type}] '${eventData.user.displayName}'`;
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,

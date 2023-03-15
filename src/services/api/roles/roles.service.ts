@@ -267,15 +267,9 @@ export class RolesService {
     }
     // New org for roles, add an entry
     const organization = await this.organizationService.getOrganizationOrFail(
-      organizationID,
-      {
-        relations: ['profile'],
-      }
+      organizationID
     );
-    const newOrgResult = new RolesResultOrganization(
-      organization,
-      organization.profile.displayName
-    );
+    const newOrgResult = new RolesResultOrganization(organization);
     orgsMap.set(organization.id, newOrgResult);
     return newOrgResult;
   }

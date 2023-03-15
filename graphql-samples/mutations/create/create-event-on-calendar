@@ -8,11 +8,11 @@ Variables:
 {
   "data": {
     "calendarID": "uuid",
+    "displayName": "test event2",
     "type": "EVENT",
     "profileData": {
-      "displayName": "test event2",
       "description": "this is a very good event"
-    },
+    } ,
     "startDate": "2023-02-25T09:16:31.065Z",
     "wholeDay": false,
     "multipleDays": false,

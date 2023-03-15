@@ -1,14 +1,11 @@
 import { Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
-import { NameableEntityOld } from '@domain/common/entity/nameable-entity';
+import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { Library } from '../library/library.entity';
 import { IInnovationPack } from './innovation.pack.interface';
 
 @Entity()
-export class InnovationPack
-  extends NameableEntityOld
-  implements IInnovationPack
-{
+export class InnovationPack extends NameableEntity implements IInnovationPack {
   @ManyToOne(() => Library, library => library.innovationPacks, {
     eager: false,
     cascade: false,

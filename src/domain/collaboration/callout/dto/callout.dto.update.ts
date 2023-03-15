@@ -1,6 +1,6 @@
 import { LONG_TEXT_LENGTH } from '@common/constants';
 import { CalloutState } from '@common/enums/callout.state';
-import { UpdateNameableInputOld } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update.old';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.update';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
@@ -8,7 +8,7 @@ import { UpdateCalloutCanvasTemplateInput } from './callout.dto.update.canvasTem
 import { UpdateCalloutCardTemplateInput } from './callout.dto.update.cardTemplate';
 
 @InputType()
-export class UpdateCalloutInput extends UpdateNameableInputOld {
+export class UpdateCalloutInput extends UpdateNameableInput {
   @Field(() => Markdown, {
     nullable: true,
     description: 'Callout description.',

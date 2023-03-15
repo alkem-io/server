@@ -180,7 +180,7 @@ export class OrganizationResolverMutations {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign user organization: ${organization.nameID}`
+      `assign user organization: ${organization.displayName}`
     );
     return await this.organizationService.assignMember(membershipData);
   }
@@ -211,7 +211,7 @@ export class OrganizationResolverMutations {
       agentInfo,
       extendedAuthorization,
       AuthorizationPrivilege.GRANT,
-      `remove user from organization: ${organization.nameID}`
+      `remove user from organization: ${organization.displayName}`
     );
     return await this.organizationService.removeAssociate(membershipData);
   }
@@ -232,7 +232,7 @@ export class OrganizationResolverMutations {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign user organization admin: ${organization.nameID}`
+      `assign user organization admin: ${organization.displayName}`
     );
     return await this.organizationService.assignOrganizationAdmin(
       membershipData
@@ -255,7 +255,7 @@ export class OrganizationResolverMutations {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.GRANT,
-      `remove user organization admin: ${organization.nameID}`
+      `remove user organization admin: ${organization.displayName}`
     );
     return await this.organizationService.removeOrganizationAdmin(
       membershipData
@@ -279,7 +279,7 @@ export class OrganizationResolverMutations {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign user organization owner: ${organization.nameID}`
+      `assign user organization owner: ${organization.displayName}`
     );
     return await this.organizationService.assignOrganizationOwner(
       membershipData
@@ -303,7 +303,7 @@ export class OrganizationResolverMutations {
       agentInfo,
       organization.authorization,
       AuthorizationPrivilege.GRANT,
-      `remove user organization admin: ${organization.nameID}`
+      `remove user organization admin: ${organization.displayName}`
     );
     return await this.organizationService.removeOrganizationOwner(
       membershipData

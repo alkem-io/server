@@ -7,7 +7,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
-import { IProfile } from '@domain/common/profile/profile.interface';
+import { ICardProfile } from '@domain/collaboration/card-profile/card.profile.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { IUser } from '@domain/community';
 import { UserService } from '@domain/community/user/user.service';
@@ -51,13 +51,15 @@ export class CalendarEventResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('profile', () => IProfile, {
-    nullable: false,
-    description: 'The Profile for this Card.',
+  @ResolveField('profile', () => ICardProfile, {
+    nullable: true,
+    description: 'The CardProfile for this Card.',
   })
   @Profiling.api
-  async profile(@Parent() calendarEvent: ICalendarEvent): Promise<IProfile> {
-    return await this.calendarEventService.getProfile(calendarEvent);
+  async profile(
+    @Parent() calendarEvent: ICalendarEvent
+  ): Promise<ICardProfile> {
+    return await this.calendarEventService.getCardProfile(calendarEvent);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

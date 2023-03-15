@@ -1,7 +1,7 @@
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ObjectType, Field } from '@nestjs/graphql';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
-import { INameableOld } from '@domain/common/entity/nameable-entity/nameable.interface.old';
+import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
@@ -11,7 +11,7 @@ import { IAspectTemplate } from '@domain/template/aspect-template/aspect.templat
 import { ICanvasTemplate } from '@domain/template/canvas-template/canvas.template.interface';
 
 @ObjectType('Callout')
-export abstract class ICallout extends INameableOld {
+export abstract class ICallout extends INameable {
   @Field(() => Markdown, {
     description: 'The description of this Callout',
   })

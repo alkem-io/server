@@ -15,8 +15,8 @@ export class RolesResultOrganization extends RolesResult {
   })
   userGroups: RolesResult[];
 
-  constructor(organization: IOrganization, displayName: string) {
-    super(organization.nameID, organization.id, displayName);
+  constructor(organization: IOrganization) {
+    super(organization.nameID, organization.id, organization.displayName);
     this.organizationID = organization.id;
     this.userGroups = [];
   }

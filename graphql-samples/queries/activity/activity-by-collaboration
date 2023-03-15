@@ -12,10 +12,8 @@ query activityLogOnCollaboration($queryData: ActivityLogInput!) {
         id
       }
       user {
-        id,
-        profile {
-          displayName
-        }
+        id
+        displayName
       }
     }
     ... on ActivityLogEntryCalloutPublished {

@@ -39,12 +39,13 @@ import { CreateAspectOnCalloutInput } from '@domain/collaboration/callout/dto/ca
 import { CreateCanvasOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.canvas';
 import { CommunicationCreateDiscussionInput } from '@domain/communication/communication/dto/communication.dto.create.discussion';
 import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
+import { CreateReferenceOnCardProfileInput } from '@domain/collaboration/card-profile/dto/card.profile.dto.create.reference';
 import { CreateReferenceOnContextInput } from '@domain/context/context/dto/context.dto.create.reference';
-import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
+import { CreateReferenceOnProfileInput } from '@domain/community/profile/dto/profile.dto.create.reference';
 import {
   CreateTagsetOnProfileInput,
   UpdateProfileInput,
-} from '@domain/common/profile/dto';
+} from '@domain/community/profile/dto';
 import { ApplicationEventInput } from '@domain/community/application/dto/application.dto.event';
 import { CanvasCheckoutEventInput } from '@domain/common/canvas-checkout/dto/canvas.checkout.dto.event';
 import { OrganizationVerificationEventInput } from '@domain/community/organization-verification/dto/organization.verification.dto.event';
@@ -96,6 +97,7 @@ export class BaseHandler extends AbstractHandler {
       CreateRelationInput,
       CreateUserInput,
       CreateFeedbackOnCommunityContextInput,
+      CreateReferenceOnCardProfileInput,
       CreateReferenceOnContextInput,
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,

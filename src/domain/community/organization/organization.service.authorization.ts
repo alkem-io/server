@@ -4,7 +4,7 @@ import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Repository } from 'typeorm';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IOrganization, Organization } from '@domain/community/organization';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { ProfileAuthorizationService } from '@domain/community/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { EntityNotInitializedException } from '@common/exceptions';

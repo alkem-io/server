@@ -1,10 +1,13 @@
 import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { Reference } from '@domain/common/reference/reference.entity';
-import { Tagset } from '@domain/common/tagset/tagset.entity';
+import {
+  RestrictedTagsetNames,
+  Tagset,
+} from '@domain/common/tagset/tagset.entity';
 import { IProfile } from './profile.interface';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { Location } from '@domain/common/location/location.entity';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 
 @Entity()
 export class Profile extends AuthorizableEntity implements IProfile {
@@ -20,17 +23,13 @@ export class Profile extends AuthorizableEntity implements IProfile {
   })
   tagsets?: Tagset[];
 
-  @OneToMany(() => Visual, visual => visual.profile, {
+  @OneToOne(() => Visual, {
     eager: false,
     cascade: true,
+    onDelete: 'SET NULL',
   })
-  visuals?: Visual[];
-
-  @Column('text', { nullable: true })
-  displayName = '';
-
-  @Column('text', { nullable: true })
-  tagline = '';
+  @JoinColumn()
+  avatar?: Visual;
 
   @Column('text', { nullable: true })
   description = '';
@@ -48,5 +47,6 @@ export class Profile extends AuthorizableEntity implements IProfile {
   // Constructor
   constructor() {
     super();
+    this.restrictedTagsetNames = [RestrictedTagsetNames.DEFAULT];
   }
 }

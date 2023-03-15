@@ -13,17 +13,19 @@ import { IReference } from '@domain/common/reference/reference.interface';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { Profile } from '@domain/common/profile/profile.entity';
-import { IProfile } from '@domain/common/profile/profile.interface';
+import { Profile } from '@domain/community/profile/profile.entity';
+import { IProfile } from '@domain/community/profile/profile.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { IVisual } from '@domain/common/visual/visual.interface';
-import { CreateProfileInput, UpdateProfileInput } from './dto';
+import {
+  CreateProfileInput,
+  CreateTagsetOnProfileInput,
+  UpdateProfileInput,
+} from './dto';
 import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
 import { ILocation, LocationService } from '@domain/common/location';
-import { VisualType } from '@common/enums/visual.type';
-import { CreateTagsetInput } from '../tagset';
 
 @Injectable()
 export class ProfileService {
@@ -38,19 +40,15 @@ export class ProfileService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  // Create an empty profile, that the creating entity then has to
-  // add tagets / visuals to.
   async createProfile(profileData?: CreateProfileInput): Promise<IProfile> {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
-      tagline: profileData?.tagline,
-      displayName: profileData?.displayName,
     });
     profile.authorization = new AuthorizationPolicy();
-    const banner = await this.visualService.createVisualBanner();
-    const bannerNarrow = await this.visualService.createVisualBannerNarrow();
-
-    profile.visuals = [banner, bannerNarrow];
+    profile.avatar = await this.visualService.createVisualAvatar();
+    if (profileData?.avatarURL) {
+      profile.avatar.uri = profileData.avatarURL;
+    }
     profile.location = await this.locationService.createLocation(
       profileData?.location
     );
@@ -66,6 +64,12 @@ export class ProfileService {
     }
 
     profile.tagsets = [];
+    if (profileData?.tagsetsData) {
+      for (const tagsetData of profileData.tagsetsData) {
+        const tagset = await this.tagsetService.createTagset(tagsetData);
+        profile.tagsets.push(tagset);
+      }
+    }
 
     await this.profileRepository.save(profile);
     this.logger.verbose?.(
@@ -75,30 +79,19 @@ export class ProfileService {
     return profile;
   }
 
-  async updateProfile(
-    profileId: string,
-    profileData: UpdateProfileInput
-  ): Promise<IProfile> {
-    const profile = await this.getProfileOrFail(profileId, {
+  async updateProfile(profileData: UpdateProfileInput): Promise<IProfile> {
+    const profile = await this.getProfileOrFail(profileData.ID, {
       relations: [
         'references',
+        'avatar',
         'tagsets',
         'authorization',
         'location',
-        'visuals',
       ],
     });
 
     if (profileData.description) {
       profile.description = profileData.description;
-    }
-
-    if (profileData.displayName) {
-      profile.displayName = profileData.displayName;
-    }
-
-    if (profileData.tagline) {
-      profile.tagline = profileData.tagline;
     }
 
     if (profileData.references) {
@@ -130,10 +123,10 @@ export class ProfileService {
     const profile = await this.getProfileOrFail(profileID, {
       relations: [
         'references',
+        'avatar',
         'location',
         'tagsets',
         'authorization',
-        'visuals',
       ],
     });
 
@@ -151,10 +144,8 @@ export class ProfileService {
       }
     }
 
-    if (profile.visuals) {
-      for (const visual of profile.visuals) {
-        await this.visualService.deleteVisual({ ID: visual.id });
-      }
+    if (profile.avatar) {
+      await this.visualService.deleteVisual({ ID: profile.avatar.id });
     }
 
     if (profile.location) {
@@ -166,32 +157,16 @@ export class ProfileService {
 
     return await this.profileRepository.remove(profile as Profile);
   }
-  async save(profile: IProfile): Promise<IProfile> {
-    return await this.profileRepository.save(profile);
-  }
 
-  async createVisualAvatar(profile: IProfile, avatarURL: string) {
-    const visualAvatar = await this.visualService.createVisualAvatar();
-    visualAvatar.uri = avatarURL;
-    if (!profile.visuals) {
-      throw new EntityNotInitializedException(
-        `No visuals found on profile: ${profile.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    profile.visuals.push(visualAvatar);
-  }
+  async createTagset(tagsetData: CreateTagsetOnProfileInput): Promise<ITagset> {
+    const profile = await this.getProfileOrFail(tagsetData.profileID, {
+      relations: ['tagsets'],
+    });
 
-  async addTagsetOnProfile(
-    profile: IProfile,
-    tagsetData: CreateTagsetInput
-  ): Promise<ITagset> {
-    profile.tagsets = await this.getTagsets(profile);
-    const tagset = await this.tagsetService.createTagsetWithName(
+    const tagset = await this.tagsetService.addTagsetWithName(
       profile,
       tagsetData
     );
-    profile.tagsets.push(tagset);
 
     await this.profileRepository.save(profile);
 
@@ -251,6 +226,19 @@ export class ProfileService {
     return `https://eu.ui-avatars.com/api/?name=${firstName}+${lastName}&background=${randomColor}&color=ffffff`;
   }
 
+  async getAvatar(profileInput: IProfile): Promise<IVisual> {
+    const profile = await this.getProfileOrFail(profileInput.id, {
+      relations: ['avatar'],
+    });
+    if (!profile.avatar) {
+      throw new EntityNotInitializedException(
+        `Profile not initialized: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return profile.avatar;
+  }
+
   async getReferences(profileInput: IProfile): Promise<IReference[]> {
     const profile = await this.getProfileOrFail(profileInput.id, {
       relations: ['references'],
@@ -262,34 +250,6 @@ export class ProfileService {
       );
     }
     return profile.references;
-  }
-
-  async getVisuals(profileInput: IProfile): Promise<IVisual[]> {
-    const profile = await this.getProfileOrFail(profileInput.id, {
-      relations: ['visuals'],
-    });
-    if (!profile.visuals) {
-      throw new EntityNotInitializedException(
-        `Profile not initialized: ${profile.id}`,
-        LogContext.COMMUNITY
-      );
-    }
-    return profile.visuals;
-  }
-
-  async getVisual(
-    profileInput: IProfile,
-    visualType: VisualType
-  ): Promise<IVisual | undefined> {
-    const visuals = await this.getVisuals(profileInput);
-    const visual = visuals.find(v => v.name === visualType);
-    // if (!visual) {
-    //   throw new EntityNotInitializedException(
-    //     `Unable to find visual with name '${visualType}' on ${profileInput.id}`,
-    //     LogContext.COMMUNITY
-    //   );
-    // }
-    return visual;
   }
 
   async getTagsets(profileInput: IProfile): Promise<ITagset[]> {

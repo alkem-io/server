@@ -1,9 +1,9 @@
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
-import { IProfile } from '@domain/common/profile/profile.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
+import { IProfile } from '..';
 import { Organization } from './organization.entity';
 
 @Injectable()

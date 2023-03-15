@@ -7,7 +7,7 @@ import {
   FindOptionsWhere,
 } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { ProfileService } from '@domain/common/profile/profile.service';
+import { ProfileService } from '@domain/community/profile/profile.service';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -21,7 +21,7 @@ import { UserGroup, IUserGroup } from '@domain/community/user-group';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { IProfile } from '@domain/common/profile';
+import { IProfile } from '@domain/community/profile';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import {
   AssignUserGroupMemberInput,
@@ -91,9 +91,7 @@ export class UserGroupService {
   async updateUserGroup(
     userGroupInput: UpdateUserGroupInput
   ): Promise<IUserGroup> {
-    const group = await this.getUserGroupOrFail(userGroupInput.ID, {
-      relations: ['profile'],
-    });
+    const group = await this.getUserGroupOrFail(userGroupInput.ID);
 
     const newName = userGroupInput.name;
     if (newName && newName.length > 0 && newName !== group.name) {
@@ -101,14 +99,7 @@ export class UserGroupService {
     }
 
     if (userGroupInput.profileData) {
-      if (!group.profile) {
-        throw new EntityNotFoundException(
-          `Group profile not initialised: ${group.id}`,
-          LogContext.COMMUNITY
-        );
-      }
       group.profile = await this.profileService.updateProfile(
-        group.profile.id,
         userGroupInput.profileData
       );
     }

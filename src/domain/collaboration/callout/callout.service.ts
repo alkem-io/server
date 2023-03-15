@@ -296,14 +296,14 @@ export class CalloutService {
         );
     } else {
       aspectData.nameID = this.namingService.createNameID(
-        aspectData.profileData?.displayName || `${aspectData.type}`
+        aspectData.displayName || `${aspectData.type}`
       );
     }
 
     // Check that there isn't an aspect with the same title
-    const displayName = aspectData.profileData?.displayName || 'not defined';
+    const displayName = aspectData.displayName;
     const existingAspect = callout.aspects?.find(
-      aspect => aspect.profile.displayName === displayName
+      aspect => aspect.displayName === displayName
     );
     if (existingAspect)
       throw new ValidationException(
@@ -318,7 +318,7 @@ export class CalloutService {
   ): Promise<IAspect> {
     const calloutID = aspectData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['aspects', 'aspects.profile'],
+      relations: ['aspects'],
     });
     if (!callout.aspects)
       throw new EntityNotInitializedException(
@@ -475,7 +475,7 @@ export class CalloutService {
         shuffle
       );
       const sortedAspects = limitAndShuffled.sort((a, b) =>
-        a.nameID.toLowerCase() > b.nameID.toLowerCase() ? 1 : -1
+        a.displayName.toLowerCase() > b.displayName.toLowerCase() ? 1 : -1
       );
       return sortedAspects;
     }
