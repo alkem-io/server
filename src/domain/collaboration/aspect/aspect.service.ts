@@ -131,7 +131,7 @@ export class AspectService {
     return await this.aspectRepository.save(aspect);
   }
 
-  public async getCardProfile(
+  public async getProfile(
     aspect: IAspect,
     relations: FindOptionsRelationByString = []
   ): Promise<IProfile> {
