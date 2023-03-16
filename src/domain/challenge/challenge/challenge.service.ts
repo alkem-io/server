@@ -22,8 +22,8 @@ import { AuthorizationCredential, LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, getConnection, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
@@ -77,7 +77,10 @@ export class ChallengeService {
     private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   async createChallenge(
@@ -238,7 +241,12 @@ export class ChallengeService {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
     const challenge = await this.getChallengeOrFail(challengeID, {
-      relations: ['childChallenges', 'opportunities', 'preferenceSet'],
+      relations: [
+        'childChallenges',
+        'opportunities',
+        'preferenceSet',
+        'preferenceSet.preferences',
+      ],
     });
 
     // Do not remove a challenge that has child challenges , require these to be individually first removed
@@ -290,20 +298,20 @@ export class ChallengeService {
     challengeID: string,
     nameableScopeID: string,
     options?: FindOneOptions<Challenge>
-  ): Promise<IChallenge> {
-    let challenge: IChallenge | undefined;
+  ): Promise<IChallenge | never> {
+    let challenge: IChallenge | null = null;
     if (challengeID.length == UUID_LENGTH) {
-      challenge = await this.challengeRepository.findOne(
-        { id: challengeID, hubID: nameableScopeID },
-        options
-      );
+      challenge = await this.challengeRepository.findOne({
+        where: { id: challengeID, hubID: nameableScopeID },
+        ...options,
+      });
     }
     if (!challenge) {
       // look up based on nameID
-      challenge = await this.challengeRepository.findOne(
-        { nameID: challengeID, hubID: nameableScopeID },
-        options
-      );
+      challenge = await this.challengeRepository.findOne({
+        where: { nameID: challengeID, hubID: nameableScopeID },
+        ...options,
+      });
     }
 
     if (!challenge) {
@@ -319,20 +327,20 @@ export class ChallengeService {
   async getChallengeOrFail(
     challengeID: string,
     options?: FindOneOptions<Challenge>
-  ): Promise<IChallenge> {
-    let challenge: IChallenge | undefined;
+  ): Promise<IChallenge | never> {
+    let challenge: IChallenge | null = null;
     if (challengeID.length == UUID_LENGTH) {
-      challenge = await this.challengeRepository.findOne(
-        { id: challengeID },
-        options
-      );
+      challenge = await this.challengeRepository.findOne({
+        where: { id: challengeID },
+        ...options,
+      });
     }
     if (!challenge) {
       // look up based on nameID
-      challenge = await this.challengeRepository.findOne(
-        { nameID: challengeID },
-        options
-      );
+      challenge = await this.challengeRepository.findOne({
+        where: { nameID: challengeID },
+        ...options,
+      });
     }
 
     if (!challenge) {
@@ -601,9 +609,7 @@ export class ChallengeService {
   }
 
   async getChallengesInHubCount(hubID: string): Promise<number> {
-    const count = await this.challengeRepository.count({
-      where: { hubID: hubID },
-    });
+    const count = await this.challengeRepository.countBy({ hubID: hubID });
     return count;
   }
 
@@ -611,14 +617,16 @@ export class ChallengeService {
     const sqlQuery = `SELECT COUNT(*) as challengesCount FROM challenge RIGHT JOIN hub ON challenge.hubID = hub.id WHERE hub.visibility = '${visibility}'`;
     const [queryResult]: {
       challengesCount: number;
-    }[] = await getConnection().query(sqlQuery);
+    }[] = await this.entityManager.connection.query(sqlQuery);
 
     return queryResult.challengesCount;
   }
 
   async getChildChallengesCount(challengeID: string): Promise<number> {
-    return await this.challengeRepository.count({
-      where: { parentChallenge: challengeID },
+    return await this.challengeRepository.countBy({
+      parentChallenge: {
+        id: challengeID,
+      },
     });
   }
   async getMembersCount(challenge: IChallenge): Promise<number> {
@@ -695,7 +703,7 @@ export class ChallengeService {
   async getPreferenceSetOrFail(challengeId: string): Promise<IPreferenceSet> {
     const challengeWithPreferences = await this.getChallengeOrFail(
       challengeId,
-      { relations: ['preferenceSet'] }
+      { relations: ['preferenceSet', 'preferenceSet.preferences'] }
     );
     const preferenceSet = challengeWithPreferences.preferenceSet;
 
@@ -768,7 +776,7 @@ export class ChallengeService {
 
   async getChallengeForCommunity(
     communityID: string
-  ): Promise<IChallenge | undefined> {
+  ): Promise<IChallenge | null> {
     return await this.challengeRepository.findOne({
       relations: ['community'],
       where: {

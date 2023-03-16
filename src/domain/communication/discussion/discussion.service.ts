@@ -33,7 +33,13 @@ export class DiscussionService {
     userID: string,
     displayName: string
   ): Promise<IDiscussion> {
-    const discussion = Discussion.create(discussionData);
+    const discussion = new Discussion(
+      communicationGroupID,
+      `${displayName}-discussion-${discussionData.title}`,
+      discussionData.title,
+      discussionData.description,
+      discussionData.category
+    );
     discussion.authorization = new AuthorizationPolicy();
     discussion.communicationGroupID = communicationGroupID;
     discussion.displayName = `${displayName}-discussion-${discussion.title}`;
@@ -61,7 +67,7 @@ export class DiscussionService {
   }
 
   async getDiscussionOrFail(discussionID: string): Promise<IDiscussion> {
-    const discussion = await this.discussionRepository.findOne({
+    const discussion = await this.discussionRepository.findOneBy({
       id: discussionID,
     });
     if (!discussion)

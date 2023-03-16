@@ -15,7 +15,11 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import {
+  FindOneOptions,
+  FindOptionsRelationByString,
+  Repository,
+} from 'typeorm';
 import { IUser } from '@domain/community/user';
 import { CreateUserGroupInput } from '@domain/community/user-group/dto';
 import { Community, ICommunity } from '@domain/community/community';
@@ -46,6 +50,7 @@ import { IForm } from '@domain/common/form/form.interface';
 import { FormService } from '@domain/common/form/form.service';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
+import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 
 @Injectable()
 export class CommunityService {
@@ -134,11 +139,11 @@ export class CommunityService {
   async getCommunityOrFail(
     communityID: string,
     options?: FindOneOptions<Community>
-  ): Promise<ICommunity> {
-    const community = await this.communityRepository.findOne(
-      { id: communityID },
-      options
-    );
+  ): Promise<ICommunity | never> {
+    const community = await this.communityRepository.findOne({
+      where: { id: communityID },
+      ...options,
+    });
     if (!community)
       throw new EntityNotFoundException(
         `Unable to find Community with ID: ${communityID}`,
@@ -258,6 +263,31 @@ export class CommunityService {
         this.getCommunityPolicy(community)
       );
     return await this.communityRepository.save(community);
+  }
+
+  async getMembershipStatus(
+    agentInfo: AgentInfo,
+    community: ICommunity
+  ): Promise<CommunityMembershipStatus> {
+    const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
+    const isMember = await this.isMember(agent, community);
+    if (isMember) return CommunityMembershipStatus.MEMBER;
+
+    // Check if an application is pending
+    const applications = await this.applicationService.findExistingApplications(
+      agentInfo.userID,
+      community.id
+    );
+    for (const application of applications) {
+      // skip any finalized applications; only want to return pending applications
+      const isFinalized = await this.applicationService.isFinalizedApplication(
+        application.id
+      );
+      if (isFinalized) continue;
+      return CommunityMembershipStatus.APPLICATION_PENDING;
+    }
+
+    return CommunityMembershipStatus.NOT_MEMBER;
   }
 
   async getUsersWithRole(
@@ -400,7 +430,7 @@ export class CommunityService {
     if (community.parentCommunity) {
       const isParentMember = await this.isMember(
         agent,
-        community.parentCommunity.id
+        community.parentCommunity
       );
       return isParentMember;
     }
@@ -418,9 +448,12 @@ export class CommunityService {
     return policy;
   }
 
-  async getCommunication(communityID: string): Promise<ICommunication> {
+  async getCommunication(
+    communityID: string,
+    relations: FindOptionsRelationByString = []
+  ): Promise<ICommunication> {
     const community = await this.getCommunityOrFail(communityID, {
-      relations: ['communication'],
+      relations: ['communication', ...relations],
     });
 
     const communication = community.communication;
@@ -666,8 +699,7 @@ export class CommunityService {
     );
   }
 
-  async isMember(agent: IAgent, communityID: string): Promise<boolean> {
-    const community = await this.getCommunityOrFail(communityID);
+  async isMember(agent: IAgent, community: ICommunity): Promise<boolean> {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
       CommunityRole.MEMBER
@@ -685,7 +717,7 @@ export class CommunityService {
 
   async getCommunities(hubId: string): Promise<Community[]> {
     const communites = await this.communityRepository.find({
-      where: { hub: { id: hubId } },
+      where: { hubID: hubId },
     });
     return communites || [];
   }
@@ -720,7 +752,7 @@ export class CommunityService {
     }
 
     // Check if the user is already a member; if so do not allow an application
-    const isExistingMember = await this.isMember(agent, community.id);
+    const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new InvalidStateTransitionException(
         `User ${applicationData.userID} is already a member of the Community: ${community.displayName}.`,
@@ -747,7 +779,7 @@ export class CommunityService {
     communityID: string,
     nameableScopeID: string
   ): Promise<ICommunity> {
-    const community = await this.communityRepository.findOne({
+    const community = await this.communityRepository.findOneBy({
       id: communityID,
       hubID: nameableScopeID,
     });

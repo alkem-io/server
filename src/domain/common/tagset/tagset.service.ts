@@ -30,14 +30,14 @@ export class TagsetService {
   ) {}
 
   async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
-    const tagset = Tagset.create(tagsetData);
+    const tagset = Tagset.create({ ...tagsetData });
     tagset.authorization = new AuthorizationPolicy();
     if (!tagset.tags) tagset.tags = [];
     return await this.tagsetRepository.save(tagset);
   }
 
   async getTagsetOrFail(tagsetID: string): Promise<ITagset> {
-    const tagset = await this.tagsetRepository.findOne({ id: tagsetID });
+    const tagset = await this.tagsetRepository.findOneBy({ id: tagsetID });
     if (!tagset)
       throw new EntityNotFoundException(
         `Tagset with id(${tagsetID}) not found!`,

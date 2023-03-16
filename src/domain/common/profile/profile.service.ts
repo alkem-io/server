@@ -233,8 +233,11 @@ export class ProfileService {
   async getProfileOrFail(
     profileID: string,
     options?: FindOneOptions<Profile>
-  ): Promise<IProfile> {
-    const profile = await Profile.findOne({ id: profileID }, options);
+  ): Promise<IProfile | never> {
+    const profile = await Profile.findOne({
+      ...options,
+      where: { ...options?.where, id: profileID },
+    });
     if (!profile)
       throw new EntityNotFoundException(
         `Profile with id(${profileID}) not found!`,
