@@ -105,7 +105,7 @@ export class ChallengeService {
 
     if (!challengeData.nameID) {
       challengeData.nameID = this.namingService.createNameID(
-        challengeData.profileData?.displayName || ''
+        challengeData.profileData.displayName
       );
     }
     await this.baseChallengeService.isNameAvailableOrFail(

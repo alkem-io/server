@@ -12,7 +12,11 @@ export enum RestrictedTagsetNames {
 
 @Entity()
 export class Tagset extends AuthorizableEntity implements ITagset {
-  @Column('varchar', { default: RestrictedTagsetNames.DEFAULT, length: 255, nullable: false })
+  @Column('varchar', {
+    default: RestrictedTagsetNames.DEFAULT,
+    length: 255,
+    nullable: false,
+  })
   name!: string;
 
   @Column('simple-array')

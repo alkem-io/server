@@ -296,12 +296,12 @@ export class CalloutService {
         );
     } else {
       aspectData.nameID = this.namingService.createNameID(
-        aspectData.profileData?.displayName || `${aspectData.type}`
+        aspectData.profileData.displayName
       );
     }
 
     // Check that there isn't an aspect with the same title
-    const displayName = aspectData.profileData?.displayName || 'not defined';
+    const displayName = aspectData.profileData.displayName;
     const existingAspect = callout.aspects?.find(
       aspect => aspect.profile.displayName === displayName
     );
