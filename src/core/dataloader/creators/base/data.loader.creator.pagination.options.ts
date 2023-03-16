@@ -1,7 +1,7 @@
 import { DataLoaderCreatorBaseOptions } from './data.loader.creator.base.options';
 
-export interface DataLoaderCreatorPaginationOptions<TResult>
-  extends DataLoaderCreatorBaseOptions<TResult> {
+export interface DataLoaderCreatorPaginationOptions<TResult, TParent>
+  extends DataLoaderCreatorBaseOptions<TResult, TParent> {
   /***
    * A pivot cursor after which items are selected
    */

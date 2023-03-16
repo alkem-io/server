@@ -1,21 +1,26 @@
-import DataLoader from 'dataloader';
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IPreference } from '@domain/common/preference';
-import { createTypedDataLoaderNew, findByBatchIds } from '../../../utils';
-import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { Organization } from '@src/domain';
+import { Hub } from '@domain/challenge/hub/hub.entity';
+import { createTypedDataLoaderNew } from '../../utils';
+import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 
 @Injectable()
-export class JourneyPreferencesLoaderCreator
+export class PreferencesLoaderCreator
   implements DataLoaderCreator<IPreference[]>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<IPreference[]>) {
+  create(
+    options?: DataLoaderCreatorOptions<
+      IPreference[],
+      Challenge | Hub | Organization
+    >
+  ) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
         'This data loader requires the "parentClassRef" to be provided.'
@@ -25,7 +30,11 @@ export class JourneyPreferencesLoaderCreator
     return createTypedDataLoaderNew(
       this.manager,
       options.parentClassRef,
-      { preferences: true },
+      {
+        preferenceSet: {
+          preferences: true,
+        },
+      },
       this.constructor.name,
       options
     );

@@ -1,13 +1,11 @@
-import DataLoader from 'dataloader';
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { ILifecycle } from '@domain/common/lifecycle';
-import { createTypedDataLoaderNew, findByBatchIds } from '../../../utils';
-import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
+import { createTypedDataLoaderNew } from '../../../utils';
+import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
 export class JourneyLifecycleLoaderCreator
@@ -15,7 +13,7 @@ export class JourneyLifecycleLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ILifecycle>) {
+  create(options?: DataLoaderCreatorOptions<ILifecycle, BaseChallenge>) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
         'This data loader requires the "parentClassRef" to be provided.'

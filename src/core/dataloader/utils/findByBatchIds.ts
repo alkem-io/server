@@ -11,6 +11,10 @@ import { Type } from '@nestjs/common';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { EntityRelations } from '@src/types';
+import {
+  DataLoaderCreatorLimitOptions,
+  DataLoaderCreatorPaginationOptions,
+} from '../creators/base';
 
 const parentAlias = 'parent';
 const resultAlias = 'relation';
@@ -27,6 +31,14 @@ type FindByBatchIdsOptions<TResult> = {
   fields?: (keyof TResult)[];
   limit?: number;
   shuffle?: boolean;
+};
+
+export type FindByBatchIdsOptionsNew<TParent, TResult> = Omit<
+  DataLoaderCreatorLimitOptions<TParent, TResult> &
+    DataLoaderCreatorPaginationOptions<TParent, TResult>,
+  'cache' | 'parentClassRef' | 'fields'
+> & {
+  select: FindOptionsSelect<TParent>;
 };
 
 export const findByBatchIds = async <
@@ -131,12 +143,7 @@ export const findByBatchIdsNew = async <
   classRef: Type<TParent>,
   ids: string[],
   relations: FindOptionsRelations<TParent>,
-  options?: {
-    // todo make it use DataLoaderCreatorOptions
-    fields?: FindOptionsSelect<TParent>;
-    limit?: number;
-    shuffle?: boolean;
-  }
+  options?: FindByBatchIdsOptionsNew<TParent, TResult>
 ): Promise<(TResult | Error)[] | never> => {
   if (!ids.length) {
     return [];
@@ -150,21 +157,24 @@ export const findByBatchIdsNew = async <
     );
   }
 
-  const { fields, limit } = options ?? {};
+  const { select, limit } = options ?? {};
 
-  const results = await manager.find(classRef, {
+  const results = await manager.find<TParent>(classRef, {
     take: limit,
     where: {
       id: In(ids),
     } as FindOptionsWhere<TParent>,
     relations: relations,
-    select: fields,
+    select: select,
   });
 
-  const [topLevelRelation] = relationKeys;
+  const topLevelRelation = relationKeys[0];
+
+  const getRelation = (result: TParent) =>
+    options?.getResult?.(result) ?? result[topLevelRelation];
 
   const resultsById = new Map<string, TResult>(
-    results.map<[string, TResult]>(x => [x.id, x[topLevelRelation]])
+    results.map<[string, TResult]>(result => [result.id, getRelation(result)])
   );
   // ensure the result length matches the input length
   return ids.map(

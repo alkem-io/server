@@ -6,10 +6,10 @@ import {
 } from 'typeorm';
 import { Type } from '@nestjs/common';
 import { EntityRelations } from '@src/types';
-import { DataLoaderCreatorOptions } from '@core/dataloader/creators/base';
+import { DataLoaderCreatorOptions } from '../creators/base';
 import { ILoader } from '../loader.interface';
 import { findByBatchIds1, findByBatchIdsNew } from './findByBatchIds';
-import { IProfile } from '@src/domain';
+import { selectOptionsFromFields } from './selectOptionsFromFields';
 
 export const createTypedDataLoader = <
   TParent extends { id: string } & { [key: string]: any }, // todo better type,
@@ -51,13 +51,7 @@ export const createTypedDataLoaderNew = <
 
   const topRelation = <keyof TResult>Object.keys(relations)[0];
 
-  const selectOptions = fields?.reduce<FindOptionsSelect<TResult>>(
-    (acc, val) => ({
-      ...acc,
-      [val]: true,
-    }),
-    {}
-  );
+  const selectOptions = selectOptionsFromFields(fields);
 
   return new DataLoader<string, TResult>(
     keys =>
@@ -68,7 +62,7 @@ export const createTypedDataLoaderNew = <
         relations,
         {
           ...restOptions,
-          fields: {
+          select: {
             id: true,
             [topRelation]: selectOptions,
           } as FindOptionsSelect<TParent>,
