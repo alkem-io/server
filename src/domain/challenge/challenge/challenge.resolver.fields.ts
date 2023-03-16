@@ -23,6 +23,7 @@ import {
   JourneyCommunityLoaderCreator,
   JourneyLifecycleLoaderCreator,
   JourneyContextLoaderCreator,
+  PreferencesLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 
@@ -141,10 +142,14 @@ export class ChallengeResolverFields {
     description: 'The preferences for this Challenge',
   })
   @UseGuards(GraphqlGuard)
-  async preferences(@Parent() challenge: Challenge): Promise<IPreference[]> {
-    const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
-      challenge.id
-    );
-    return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
+  async preferences(
+    @Parent() challenge: Challenge,
+    @Loader(PreferencesLoaderCreator, {
+      parentClassRef: Challenge,
+      getResult: r => r.preferenceSet?.preferences,
+    })
+    loader: ILoader<IPreference[]>
+  ): Promise<IPreference[]> {
+    return loader.load(challenge.id);
   }
 }

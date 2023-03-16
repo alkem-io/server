@@ -34,8 +34,12 @@ import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { Loader } from '@core/dataloader/decorators';
 import {
+  HubTemplatesSetLoaderCreator,
+  HubTimelineLoaderCreator,
+  JourneyCollaborationLoaderCreator,
   JourneyCommunityLoaderCreator,
   JourneyContextLoaderCreator,
+  PreferencesLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { JourneyAgentLoaderCreator } from '@core/dataloader/creators/loader.creators/journey/journey.agent.loader.creator';
@@ -59,7 +63,8 @@ export class HubResolverFields {
   async community(
     @Parent() hub: Hub,
     @Args('ID', { type: () => UUID, nullable: true }) ID: string,
-    @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Hub }) loader: ILoader<ICommunity>
+    @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Hub })
+    loader: ILoader<ICommunity>
   ) {
     // Default to returning the community for the Hub
     if (!ID) {
@@ -75,7 +80,8 @@ export class HubResolverFields {
   @Profiling.api
   async context(
     @Parent() hub: Hub,
-    @Loader(JourneyContextLoaderCreator, { parentClassRef: Hub }) loader: ILoader<IContext>
+    @Loader(JourneyContextLoaderCreator, { parentClassRef: Hub })
+    loader: ILoader<IContext>
   ) {
     return loader.load(hub.id);
   }
@@ -87,8 +93,12 @@ export class HubResolverFields {
     description: 'The collaboration for the Hub.',
   })
   @Profiling.api
-  async collaboration(@Parent() hub: Hub) {
-    return await this.hubService.getCollaboration(hub);
+  async collaboration(
+    @Parent() hub: Hub,
+    @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Hub })
+    loader: ILoader<IContext>
+  ) {
+    return loader.load(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -112,8 +122,11 @@ export class HubResolverFields {
     description: 'The templates in use by this Hub',
   })
   @UseGuards(GraphqlGuard)
-  async templatesSet(@Parent() hub: Hub): Promise<ITemplatesSet> {
-    return await this.hubService.getTemplatesSetOrFail(hub.id);
+  async templatesSet(
+    @Parent() hub: Hub,
+    @Loader(HubTemplatesSetLoaderCreator) loader: ILoader<ITemplatesSet>
+  ): Promise<ITemplatesSet> {
+    return loader.load(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -122,8 +135,11 @@ export class HubResolverFields {
     description: 'The timeline with events in use by this Hub',
   })
   @UseGuards(GraphqlGuard)
-  async timeline(@Parent() hub: Hub): Promise<ITimeline> {
-    return await this.hubService.getTimelineOrFail(hub.id);
+  async timeline(
+    @Parent() hub: Hub,
+    @Loader(HubTimelineLoaderCreator) loader: ILoader<ITimeline>
+  ): Promise<ITimeline> {
+    return loader.load(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -132,9 +148,11 @@ export class HubResolverFields {
     description: 'The preferences for this Hub',
   })
   @UseGuards(GraphqlGuard)
-  async preferences(@Parent() hub: Hub): Promise<IPreference[]> {
-    const preferenceSet = await this.hubService.getPreferenceSetOrFail(hub.id);
-    return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
+  async preferences(
+    @Parent() hub: Hub,
+    @Loader(PreferencesLoaderCreator) loader: ILoader<IPreference[]>
+  ): Promise<IPreference[]> {
+    return loader.load(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
