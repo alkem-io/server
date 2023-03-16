@@ -95,12 +95,9 @@ export class ContextService {
     // Note need to load it in with all contained entities so can remove fully
     const context = await this.getContextOrFail(contextID, {
       relations: [
-        'references',
         'recommendations',
         'ecosystemModel',
         'ecosystemModel.actorGroups',
-        'visuals',
-        'location',
       ],
     });
 

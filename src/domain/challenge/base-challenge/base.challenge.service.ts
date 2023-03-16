@@ -62,7 +62,7 @@ export class BaseChallengeService {
     await this.isNameAvailableOrFail(baseChallengeData.nameID, hubID);
 
     baseChallenge.community = await this.communityService.createCommunity(
-      baseChallenge.profile.displayName,
+      baseChallengeData.profileData.displayName,
       hubID,
       communityType,
       communityPolicy,
@@ -310,7 +310,7 @@ export class BaseChallengeService {
     if (!profile)
       throw new RelationshipNotFoundException(
         `Unable to load profile for challenge ${challengeId} `,
-        LogContext.CONTEXT
+        LogContext.PROFILE
       );
     return profile;
   }
