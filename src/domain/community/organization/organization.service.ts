@@ -163,14 +163,11 @@ export class OrganizationService {
     if (newDisplayName === existingDisplayName) {
       return;
     }
-    const organizationCount = await this.organizationRepository
-      .createQueryBuilder('organization')
-      .leftJoinAndSelect('organization.profile', 'profile')
-      .where('profile.displayName = :displayName')
-      .setParameters({
-        displayName: `${newDisplayName}`,
-      })
-      .getCount();
+    const organizationCount = await this.organizationRepository.countBy({
+      profile: {
+        displayName: newDisplayName,
+      },
+    });
     if (organizationCount >= 1)
       throw new ValidationException(
         `Organization: the provided displayName is already taken: ${newDisplayName}`,
@@ -340,14 +337,14 @@ export class OrganizationService {
     let organization: IOrganization | null;
     if (organizationID.length === UUID_LENGTH) {
       organization = await this.organizationRepository.findOne({
-        where: { id: organizationID },
         ...options,
+        where: { ...options?.where, id: organizationID },
       });
     } else {
       // look up based on nameID
       organization = await this.organizationRepository.findOne({
-        where: { nameID: organizationID },
         ...options,
+        where: { ...options?.where, nameID: organizationID },
       });
     }
     return organization;

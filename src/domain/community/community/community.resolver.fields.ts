@@ -1,7 +1,11 @@
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver, Args, Float } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import {
+  AuthorizationAgentPrivilege,
+  CurrentUser,
+  Profiling,
+} from '@src/common/decorators';
 import { Community, ICommunity } from '@domain/community/community';
 import { CommunityService } from './community.service';
 import { IUser } from '@domain/community/user';
@@ -17,6 +21,8 @@ import { UserService } from '../user/user.service';
 import { UserFilterInput } from '@core/filtering';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
 import { IForm } from '@domain/common/form/form.interface';
+import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
+import { AgentInfo } from '@core/authentication';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -217,7 +223,9 @@ export class CommunityResolverFields {
   })
   @Profiling.api
   async communication(@Parent() community: Community) {
-    return await this.communityService.getCommunication(community.id);
+    return await this.communityService.getCommunication(community.id, [
+      'communication.updates',
+    ]);
   }
 
   @UseGuards(GraphqlGuard)
@@ -228,5 +236,18 @@ export class CommunityResolverFields {
   @Profiling.api
   async policy(@Parent() community: Community): Promise<ICommunityPolicy> {
     return this.communityService.getCommunityPolicy(community);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('myMembershipStatus', () => CommunityMembershipStatus, {
+    nullable: true,
+    description: 'The membership status of the currently logged in user.',
+  })
+  @Profiling.api
+  async myMembershipStatus(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() community: ICommunity
+  ): Promise<CommunityMembershipStatus> {
+    return this.communityService.getMembershipStatus(agentInfo, community);
   }
 }

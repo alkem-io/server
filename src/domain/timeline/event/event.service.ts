@@ -14,7 +14,6 @@ import { CalendarEvent } from './event.entity';
 import { ICalendarEvent } from './event.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 
 @Injectable()
 export class CalendarEventService {
@@ -32,23 +31,18 @@ export class CalendarEventService {
     userID: string,
     communicationGroupID: string
   ): Promise<CalendarEvent> {
-    const calendarEvent: ICalendarEvent =
-      CalendarEvent.create(calendarEventInput);
-    calendarEvent.profile = await this.profileService.createProfile(
-      calendarEventInput.profileData
-    );
-    await this.profileService.addTagsetOnProfile(calendarEvent.profile, {
-      name: RestrictedTagsetNames.DEFAULT,
-      tags: calendarEventInput.tags || [],
+    const calendarEvent: ICalendarEvent = CalendarEvent.create({
+      ...calendarEventInput,
+      createdBy: userID,
+      authorization: new AuthorizationPolicy(),
+      profile: await this.profileService.createProfile(
+        calendarEventInput.profileData
+      ),
+      comments: await this.commentsService.createComments(
+        communicationGroupID,
+        `calendarEvent-comments-${calendarEventInput.profileData?.displayName}`
+      ),
     });
-
-    calendarEvent.authorization = new AuthorizationPolicy();
-    calendarEvent.createdBy = userID;
-
-    calendarEvent.comments = await this.commentsService.createComments(
-      communicationGroupID,
-      `calendarEvent-comments-${calendarEvent.nameID}`
-    );
 
     return await this.calendarEventRepository.save(calendarEvent);
   }

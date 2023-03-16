@@ -98,10 +98,8 @@ export class NotificationPayloadBuilder {
     cardId: string
   ): Promise<CollaborationCardCreatedEventPayload> {
     const card = await this.aspectRepository.findOne({
+      where: { id: cardId },
       relations: ['callout', 'profile'],
-      where: {
-        id: cardId,
-      },
     });
     if (!card) {
       throw new NotificationEventException(
@@ -148,7 +146,7 @@ export class NotificationPayloadBuilder {
   ): Promise<CollaborationCanvasCreatedEventPayload> {
     const canvas = await this.canvasRepository.findOne({
       where: { id: canvasId },
-      relations: ['callout'],
+      relations: ['callout', 'profile'],
     });
     if (!canvas) {
       throw new NotificationEventException(
@@ -220,10 +218,8 @@ export class NotificationPayloadBuilder {
     messageResult: IMessage
   ): Promise<CollaborationCardCommentEventPayload> {
     const card = await this.aspectRepository.findOne({
+      where: { id: aspect.id },
       relations: ['callout', 'profile'],
-      where: {
-        id: aspect.id,
-      },
     });
 
     if (!card) {

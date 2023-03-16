@@ -177,7 +177,12 @@ export class CalloutService {
     calloutUpdateData: UpdateCalloutInput
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
-      relations: ['cardTemplate', 'canvasTemplate', 'profile'],
+      relations: [
+        'cardTemplate',
+        'canvasTemplate',
+        'cardTemplate.templateInfo',
+        'canvasTemplate.templateInfo',
+      ],
     });
 
     if (calloutUpdateData.profileData) {
@@ -320,12 +325,12 @@ export class CalloutService {
         );
     } else {
       aspectData.nameID = this.namingService.createNameID(
-        aspectData.profileData?.displayName || `${aspectData.type}`
+        aspectData.profileData.displayName
       );
     }
 
     // Check that there isn't an aspect with the same title
-    const displayName = aspectData.profileData?.displayName || 'not defined';
+    const displayName = aspectData.profileData.displayName;
     const existingAspect = callout.aspects?.find(
       aspect => aspect.profile.displayName === displayName
     );

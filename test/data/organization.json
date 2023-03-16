@@ -7,6 +7,19 @@
     "id": "03bb5b07-f134-4074-97b9-1dd7950c7fa4",
     "displayName": "UnitedNations",
     "nameID": "united-nations",
+    "profile": {
+      "id": "08c6ec54-524a-4d7f-9f58-a4c50f0c0496",
+      "tagline": "",
+      "description": "",
+      "displayName": "host org",
+      "authorization": {
+        "anonymousReadAccess": false,
+        "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"inheritable\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"inheritable\":true},{\"type\":\"user-self\",\"resourceID\":\"b69f82a1-bc7d-486c-85f9-e7ac6e689f4e\",\"grantedPrivileges\":[\"create\",\"read\",\"update\"],\"inheritable\":true}]",
+        "verifiedCredentialRules": "[]",
+        "privilegeRules": "",
+        "id": "2b82dab3-4581-4ff2-88e3-4997afe4f85b"
+      }
+    },
     "agent": {
       "parentDisplayID": "organization-united-nations",
       "did": "",

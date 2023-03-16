@@ -1,5 +1,5 @@
 import { CurrentUser, Profiling } from '@common/decorators';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
@@ -17,7 +17,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { ForbiddenException } from '@common/exceptions';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -117,16 +116,13 @@ export class UserResolverFields {
   async email(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
+  ): Promise<string | 'not accessible'> {
     if (
       await this.isAccessGranted(user, agentInfo, AuthorizationPrivilege.READ)
     ) {
       return user.email;
     }
-    throw new ForbiddenException(
-      `Not able to grant access to agent ${agentInfo} for user ${user}`,
-      LogContext.COMMUNITY
-    );
+    return 'not accessible';
   }
 
   @UseGuards(GraphqlGuard)
@@ -138,13 +134,13 @@ export class UserResolverFields {
   async phone(
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<string> {
+  ): Promise<string | 'not accessible'> {
     if (
       await this.isAccessGranted(user, agentInfo, AuthorizationPrivilege.READ)
     ) {
       return user.phone;
     }
-    throw new ForbiddenException('not accessible', LogContext.COMMUNITY);
+    return 'not accessible';
   }
 
   @UseGuards(GraphqlGuard)

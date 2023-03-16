@@ -223,6 +223,7 @@ export class HubService {
         'preferenceSet.preferences',
         'templatesSet',
         'timeline',
+        'profile',
       ],
     });
 

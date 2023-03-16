@@ -19,9 +19,8 @@ import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
 import { Collaboration } from '@domain/collaboration/collaboration';
-import { LoggerService } from '@nestjs/common/services/logger.service';
+import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Inject } from '@nestjs/common';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -45,12 +44,9 @@ export class NamingService {
     private collaborationRepository: Repository<Collaboration>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
-    @InjectRepository(CalendarEvent)
-    private calendarEventRepository: Repository<CalendarEvent>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
     @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private entityManager: EntityManager,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async isNameIdAvailableInHub(
@@ -370,47 +366,26 @@ export class NamingService {
     return community.policy;
   }
 
-  async getAspectForComments(commentsID: string): Promise<IAspect | undefined> {
-    const aspect = await this.aspectRepository
-      .createQueryBuilder('aspect')
-      .select([
-        'aspect.id',
-        'aspect.createdBy',
-        'aspect.createdDate',
-        'aspect.type',
-        'nameID',
-        'commentsId',
-      ])
-      .leftJoin('aspect.profile', 'profile')
-      .addSelect(['profile.displayName'])
-      .where(`commentsId = '${commentsID}'`)
-      .getOne();
-    if (aspect === null) return undefined;
-    return aspect;
+  async getAspectForComments(commentsID: string): Promise<IAspect | null> {
+    // check if this is a comment related to an aspect
+
+    return await this.entityManager.findOne(Aspect, {
+      where: {
+        comments: { id: commentsID },
+      },
+      relations: ['profile'],
+    });
   }
 
   async getCalendarEventForComments(
     commentsID: string
-  ): Promise<ICalendarEvent | undefined> {
-    const calendarEvent = await this.calendarEventRepository
-      .createQueryBuilder('calendarEvent')
-      .select([
-        'calendarEvent.id',
-        'calendarEvent.nameID',
-        'calendarEvent.type',
-        'calendarEvent.createdBy',
-        'calendarEvent.startDate',
-        'calendarEvent.createdDate',
-        'calendarEvent.wholeDay',
-        'calendarEvent.multipleDays',
-        'calendarEvent.durationMinutes',
-        'calendarEvent.durationDays',
-      ])
-      .leftJoinAndSelect('calendarEvent.profile', 'profile')
-      .where(`commentsId = '${commentsID}'`)
-      .getOne();
-
-    if (calendarEvent === null) return undefined;
-    return calendarEvent;
+  ): Promise<ICalendarEvent | null> {
+    // check if this is a comment related to an calendar
+    return await this.entityManager.findOne(CalendarEvent, {
+      where: {
+        comments: { id: commentsID },
+      },
+      relations: ['profile', 'comments'],
+    });
   }
 }

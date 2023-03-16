@@ -8,7 +8,7 @@ import { IVisual } from '@domain/common/visual/visual.interface';
 import { ILocation } from '@domain/common/location/location.interface';
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
-import { Profile } from './profile.entity';
+import { Profile } from '@domain/common/profile';
 
 @Injectable()
 export class ProfileDataloaderService {
@@ -42,7 +42,7 @@ export class ProfileDataloaderService {
   ): Promise<(IVisual[] | Error)[]> {
     const profiles = await this.profileRepository.find({
       where: { id: In(profileIds) },
-      relations: ['visuals'],
+      relations: ['avatar'],
       select: ['id'],
     });
 
