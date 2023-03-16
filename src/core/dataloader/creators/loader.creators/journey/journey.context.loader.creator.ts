@@ -1,13 +1,10 @@
-import DataLoader from 'dataloader';
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { IContext } from '@src/domain';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { createTypedDataLoaderNew, findByBatchIds } from '../../../utils';
-import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { createTypedDataLoader } from '../../../utils';
+import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
 export class JourneyContextLoaderCreator
@@ -22,7 +19,7 @@ export class JourneyContextLoaderCreator
       );
     }
 
-    return createTypedDataLoaderNew(
+    return createTypedDataLoader(
       this.manager,
       options.parentClassRef,
       { context: true },

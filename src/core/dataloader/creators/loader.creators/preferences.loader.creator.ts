@@ -6,7 +6,7 @@ import { DataLoaderInitError } from '@common/exceptions/data-loader';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Organization } from '@src/domain';
 import { Hub } from '@domain/challenge/hub/hub.entity';
-import { createTypedDataLoaderNew } from '../../utils';
+import { createTypedDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 
 @Injectable()
@@ -27,7 +27,7 @@ export class PreferencesLoaderCreator
       );
     }
 
-    return createTypedDataLoaderNew(
+    return createTypedDataLoader(
       this.manager,
       options.parentClassRef,
       {

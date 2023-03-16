@@ -1,18 +1,18 @@
-import { EntityManager } from 'typeorm';
+import { EntityManager, FindOptionsSelect } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { ICollaboration } from '@domain/collaboration/collaboration';
+import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { Opportunity } from '@domain/collaboration/opportunity';
 import { createTypedDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { DataLoaderInitError } from '@common/exceptions/data-loader';
 
 @Injectable()
-export class JourneyCollaborationLoaderCreator
-  implements DataLoaderCreator<ICollaboration>
+export class OpportunityParentNameLoaderCreator
+  implements DataLoaderCreator<string>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ICollaboration>) {
+  create(options?: DataLoaderCreatorOptions<string, Opportunity>) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
         'This data loader requires the "parentClassRef" to be provided.'
@@ -21,10 +21,17 @@ export class JourneyCollaborationLoaderCreator
 
     return createTypedDataLoader(
       this.manager,
-      options.parentClassRef,
-      { collaboration: true },
+      Opportunity,
+      { challenge: true },
       this.constructor.name,
-      options
+      {
+        ...options,
+        fields: {
+          challenge: {
+            nameID: true,
+          },
+        } as FindOptionsSelect<Opportunity>,
+      }
     );
   }
 }

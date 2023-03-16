@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
-import { createTypedDataLoaderNew } from '../../../utils';
+import { createTypedDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
@@ -13,7 +13,7 @@ export class HubTimelineLoaderCreator
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
   create(options?: DataLoaderCreatorOptions<ITimeline[]>) {
-    return createTypedDataLoaderNew(
+    return createTypedDataLoader(
       this.manager,
       Hub,
       { timeline: true },

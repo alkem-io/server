@@ -1,14 +1,11 @@
-import DataLoader from 'dataloader';
 import { EntityManager, Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { ICommunity } from '@domain/community/community';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { createTypedDataLoaderNew, findByBatchIds } from '../../../utils';
-import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { Hub } from '@domain/challenge/hub/hub.entity';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { createTypedDataLoader } from '../../../utils';
+import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
 export class JourneyCommunityLoaderCreator
@@ -26,7 +23,7 @@ export class JourneyCommunityLoaderCreator
       );
     }
 
-    return createTypedDataLoaderNew(
+    return createTypedDataLoader(
       this.manager,
       options.parentClassRef,
       { community: true },

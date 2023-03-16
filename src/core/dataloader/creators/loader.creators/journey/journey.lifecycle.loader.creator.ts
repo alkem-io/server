@@ -4,7 +4,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
-import { createTypedDataLoaderNew } from '../../../utils';
+import { createTypedDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
@@ -20,7 +20,7 @@ export class JourneyLifecycleLoaderCreator
       );
     }
 
-    return createTypedDataLoaderNew(
+    return createTypedDataLoader(
       this.manager,
       options.parentClassRef,
       { lifecycle: true },

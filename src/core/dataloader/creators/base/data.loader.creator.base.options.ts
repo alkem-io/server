@@ -1,4 +1,5 @@
 import { Type } from '@nestjs/common';
+import { FindOptionsSelect } from 'typeorm';
 
 export interface DataLoaderCreatorBaseOptions<TParent, TResult> {
   /***
@@ -20,7 +21,7 @@ export interface DataLoaderCreatorBaseOptions<TParent, TResult> {
    * Selects all fields by default
    */
   // todo make mandatory later
-  fields?: Array<keyof TResult>;
+  fields?: Array<keyof TResult> | FindOptionsSelect<TParent>;
   /**
    * Default `true`. Set to `false` to disable memoization caching, creating a
    * new Promise and new key in the `batchLoadFn` for every load of the same
