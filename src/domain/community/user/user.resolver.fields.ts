@@ -17,10 +17,9 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { ForbiddenException } from '@common/exceptions';
 import {
-  UserAgentLoaderCreator,
-  UserProfileLoaderCreator,
+  AgentLoaderCreator,
+  ProfileLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
@@ -43,7 +42,8 @@ export class UserResolverFields {
   @Profiling.api
   async profile(
     @Parent() user: User,
-    @Loader(UserProfileLoaderCreator) loader: ILoader<IProfile>
+    @Loader(ProfileLoaderCreator, { parentClassRef: User })
+    loader: ILoader<IProfile>
   ): Promise<IProfile> {
     return loader.load(user.id);
   }
@@ -55,7 +55,7 @@ export class UserResolverFields {
   @Profiling.api
   async agent(
     @Parent() user: User,
-    @Loader(UserAgentLoaderCreator) loader: ILoader<IAgent>
+    @Loader(AgentLoaderCreator) loader: ILoader<IAgent>
   ): Promise<IAgent> {
     return loader.load(user.id);
   }

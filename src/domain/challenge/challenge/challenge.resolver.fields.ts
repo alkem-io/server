@@ -17,13 +17,13 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { Loader } from '@core/dataloader/decorators';
 import {
-  JourneyAgentLoaderCreator,
   JourneyCollaborationLoaderCreator,
   JourneyCommunityLoaderCreator,
   JourneyLifecycleLoaderCreator,
   JourneyContextLoaderCreator,
   PreferencesLoaderCreator,
-} from '@core/dataloader/creators/loader.creators';
+  AgentLoaderCreator,
+} from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 
 @Resolver(() => IChallenge)
@@ -117,7 +117,7 @@ export class ChallengeResolverFields {
   @Profiling.api
   async agent(
     @Parent() challenge: Challenge,
-    @Loader(JourneyAgentLoaderCreator, { parentClassRef: Challenge })
+    @Loader(AgentLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
     return loader.load(challenge.id);

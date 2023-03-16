@@ -1,23 +1,17 @@
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { IPreference } from '@domain/common/preference';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { Agent, IAgent } from '@src/domain';
 import { createTypedDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
-import { PreferenceSet } from '@domain/common/preference-set';
 
 @Injectable()
-export class PreferencesLoaderCreator
-  implements DataLoaderCreator<IPreference[]>
-{
+export class AgentLoaderCreator implements DataLoaderCreator<IAgent> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
   create(
-    options?: DataLoaderCreatorOptions<
-      IPreference[],
-      { id: string; preferenceSet?: PreferenceSet }
-    >
+    options?: DataLoaderCreatorOptions<IAgent, { id: string; agent?: Agent }>
   ) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
@@ -29,9 +23,7 @@ export class PreferencesLoaderCreator
       this.manager,
       options.parentClassRef,
       {
-        preferenceSet: {
-          preferences: true,
-        },
+        agent: true,
       },
       this.constructor.name,
       options

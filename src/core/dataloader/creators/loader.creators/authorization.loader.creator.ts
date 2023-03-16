@@ -1,24 +1,19 @@
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { IPreference } from '@domain/common/preference';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
 import { createTypedDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
-import { PreferenceSet } from '@domain/common/preference-set';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 
 @Injectable()
-export class PreferencesLoaderCreator
-  implements DataLoaderCreator<IPreference[]>
+export class AuthorizationLoaderCreator
+  implements DataLoaderCreator<IAuthorizationPolicy>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(
-    options?: DataLoaderCreatorOptions<
-      IPreference[],
-      { id: string; preferenceSet?: PreferenceSet }
-    >
-  ) {
+  create(options?: DataLoaderCreatorOptions<IAuthorizable>) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
         `${this.constructor.name} requires the 'parentClassRef' to be provided.`
@@ -28,11 +23,7 @@ export class PreferencesLoaderCreator
     return createTypedDataLoader(
       this.manager,
       options.parentClassRef,
-      {
-        preferenceSet: {
-          preferences: true,
-        },
-      },
+      { authorization: true },
       this.constructor.name,
       options
     );

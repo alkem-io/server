@@ -15,7 +15,7 @@ export class JourneyContextLoaderCreator
   create(options?: DataLoaderCreatorOptions<IContext>) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
-        `The ${this.constructor.name} loader creator requires the 'parentClassRef' to be provided.`
+        `${this.constructor.name} requires the 'parentClassRef' to be provided.`
       );
     }
 

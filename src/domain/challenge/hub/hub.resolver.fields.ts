@@ -40,9 +40,9 @@ import {
   JourneyCommunityLoaderCreator,
   JourneyContextLoaderCreator,
   PreferencesLoaderCreator,
+  AgentLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { JourneyAgentLoaderCreator } from '@core/dataloader/creators/loader.creators/journey/journey.agent.loader.creator';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -110,7 +110,7 @@ export class HubResolverFields {
   @Profiling.api
   async agent(
     @Parent() hub: Hub,
-    @Loader(JourneyAgentLoaderCreator, { parentClassRef: Hub })
+    @Loader(AgentLoaderCreator, { parentClassRef: Hub })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
     return loader.load(hub.id);

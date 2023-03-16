@@ -1,22 +1,19 @@
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { IPreference } from '@domain/common/preference';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { IProfile } from '@src/domain';
 import { createTypedDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
-import { PreferenceSet } from '@domain/common/preference-set';
 
 @Injectable()
-export class PreferencesLoaderCreator
-  implements DataLoaderCreator<IPreference[]>
-{
+export class ProfileLoaderCreator implements DataLoaderCreator<IProfile> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
   create(
     options?: DataLoaderCreatorOptions<
-      IPreference[],
-      { id: string; preferenceSet?: PreferenceSet }
+      IProfile,
+      { id: string; profile?: IProfile }
     >
   ) {
     if (!options?.parentClassRef) {
@@ -29,9 +26,7 @@ export class PreferencesLoaderCreator
       this.manager,
       options.parentClassRef,
       {
-        preferenceSet: {
-          preferences: true,
-        },
+        profile: true,
       },
       this.constructor.name,
       options
