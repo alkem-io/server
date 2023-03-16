@@ -101,7 +101,7 @@ export class AspectService {
 
   public async updateAspect(aspectData: UpdateAspectInput): Promise<IAspect> {
     const aspect = await this.getAspectOrFail(aspectData.ID, {
-      relations: ['profile', 'profile.tagset'],
+      relations: ['profile'],
     });
 
     // Copy over the received data
