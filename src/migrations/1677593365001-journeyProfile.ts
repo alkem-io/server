@@ -239,14 +239,13 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     await queryRunner.query('ALTER TABLE `visual` DROP COLUMN `contextId`');
     await queryRunner.query('ALTER TABLE `reference` DROP COLUMN `contextId`');
 
-    // await queryRunner.query(
-    //   `ALTER TABLE \`profile\` ADD UNIQUE INDEX \`IDX_77777ca8ac212b8357637794d6\` (\`locationId\`)`
-    // );
     // Add back in index for location uniqueness
     await queryRunner.query(
       `ALTER TABLE \`profile\` ADD CONSTRAINT \`FK_77777ca8ac212b8357637794d6f\` FOREIGN KEY (\`locationId\`) REFERENCES \`location\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
-
+    await queryRunner.query(
+      `ALTER TABLE \`profile\` ADD UNIQUE INDEX \`IDX_77777ca8ac212b8357637794d6\` (\`locationId\`)`
+    );
   }
 
   ///////////////////////////////
@@ -508,9 +507,6 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     await queryRunner.query('ALTER TABLE `challenge` DROP COLUMN `profileId`');
     await queryRunner.query(
       'ALTER TABLE `opportunity` DROP COLUMN `profileId`'
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`profile\` ADD UNIQUE INDEX \`IDX_77777ca8ac212b8357637794d6\` (\`locationId\`)`
     );
   }
 }
