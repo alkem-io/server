@@ -13,3 +13,5 @@ export * from './journey/journey.lifecycle.loader.creator';
 export * from './journey/journey.collaboration.loader.creator';
 export * from './journey/journey.context.loader.creator';
 export * from './journey/journey.community.loader.creator';
+
+export * from './opportunity/opportunity.parent.name.loader.creator';

@@ -13,7 +13,6 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IAgent } from '@domain/agent/agent';
 import { IPreference } from '@domain/common/preference';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { Loader } from '@core/dataloader/decorators';
@@ -29,10 +28,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
-  constructor(
-    private challengeService: ChallengeService,
-    private preferenceSetService: PreferenceSetService
-  ) {}
+  constructor(private challengeService: ChallengeService) {}
 
   @ResolveField('community', () => ICommunity, {
     nullable: true,
@@ -146,7 +142,7 @@ export class ChallengeResolverFields {
     @Parent() challenge: Challenge,
     @Loader(PreferencesLoaderCreator, {
       parentClassRef: Challenge,
-      getResult: r => r.preferenceSet?.preferences,
+      getResult: r => r?.preferenceSet?.preferences,
     })
     loader: ILoader<IPreference[]>
   ): Promise<IPreference[]> {

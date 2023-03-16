@@ -150,7 +150,11 @@ export class HubResolverFields {
   @UseGuards(GraphqlGuard)
   async preferences(
     @Parent() hub: Hub,
-    @Loader(PreferencesLoaderCreator) loader: ILoader<IPreference[]>
+    @Loader(PreferencesLoaderCreator, {
+      parentClassRef: Hub,
+      getResult: r => r?.preferenceSet?.preferences,
+    })
+    loader: ILoader<IPreference[]>
   ): Promise<IPreference[]> {
     return loader.load(hub.id);
   }

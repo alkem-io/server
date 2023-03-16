@@ -1,7 +1,6 @@
 import { EntityManager, FindOptionsSelect } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { DataLoaderInitError } from '@common/exceptions/data-loader';
 import { Opportunity } from '@domain/collaboration/opportunity';
 import { createTypedDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
@@ -13,12 +12,6 @@ export class OpportunityParentNameLoaderCreator
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
   create(options?: DataLoaderCreatorOptions<string, Opportunity>) {
-    if (!options?.parentClassRef) {
-      throw new DataLoaderInitError(
-        'This data loader requires the "parentClassRef" to be provided.'
-      );
-    }
-
     return createTypedDataLoader(
       this.manager,
       Opportunity,
@@ -31,6 +24,7 @@ export class OpportunityParentNameLoaderCreator
             nameID: true,
           },
         } as FindOptionsSelect<Opportunity>,
+        getResult: r => r?.challenge?.nameID,
       }
     );
   }

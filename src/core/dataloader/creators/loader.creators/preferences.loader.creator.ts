@@ -23,7 +23,7 @@ export class PreferencesLoaderCreator
   ) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
-        'This data loader requires the "parentClassRef" to be provided.'
+        `The ${this.constructor.name} loader creator requires the 'parentClassRef' to be provided.`
       );
     }
 
