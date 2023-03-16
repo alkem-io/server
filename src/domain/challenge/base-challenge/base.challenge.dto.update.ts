@@ -21,7 +21,7 @@ export class UpdateBaseChallengeInput extends UpdateNameableInput {
     description: 'Update the contained Profile entity.',
   })
   @IsOptional()
-  @ValidateNested()
+  @ValidateNested({ each: true })
   @Type(() => UpdateProfileInput)
   profileData?: UpdateProfileInput;
 }

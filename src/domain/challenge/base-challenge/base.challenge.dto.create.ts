@@ -13,11 +13,10 @@ export class CreateBaseChallengeInput extends CreateNameableInput {
   @Type(() => CreateContextInput)
   context?: CreateContextInput;
 
-  @Field(() => CreateProfileInput, { nullable: true })
-  @IsOptional()
-  @ValidateNested()
+  @Field(() => CreateProfileInput, { nullable: false })
+  @ValidateNested({ each: true })
   @Type(() => CreateProfileInput)
-  profileData?: CreateProfileInput;
+  profileData!: CreateProfileInput;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()

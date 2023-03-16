@@ -62,7 +62,7 @@ export class BaseChallengeService {
     await this.isNameAvailableOrFail(baseChallengeData.nameID, hubID);
 
     baseChallenge.community = await this.communityService.createCommunity(
-      baseChallenge.nameID,
+      baseChallenge.profile.displayName,
       hubID,
       communityType,
       communityPolicy,

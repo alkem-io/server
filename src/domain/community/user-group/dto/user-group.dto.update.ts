@@ -13,7 +13,7 @@ export class UpdateUserGroupInput extends UpdateBaseAlkemioInput {
 
   @Field(() => UpdateProfileInput, { nullable: true })
   @IsOptional()
-  @ValidateNested()
+  @ValidateNested({ each: true })
   @Type(() => UpdateProfileInput)
   profileData?: UpdateProfileInput;
 }
