@@ -508,7 +508,7 @@ export class HubService {
     if (args && args.IDs) {
       {
         hubWithChallenges = await this.getHubOrFail(hub.id, {
-          relations: ['challenges', 'challenges.tagset'],
+          relations: ['challenges', 'challenges.profile'],
         });
         hubWithChallenges.challenges = hubWithChallenges.challenges?.filter(c =>
           args.IDs?.includes(c.id)
@@ -516,7 +516,7 @@ export class HubService {
       }
     } else
       hubWithChallenges = await this.getHubOrFail(hub.id, {
-        relations: ['challenges', 'challenges.tagset'],
+        relations: ['challenges', 'challenges.profile'],
       });
 
     const challenges = hubWithChallenges.challenges;

@@ -14,7 +14,7 @@ import { IContext } from '@domain/context/context/context.interface';
 import { ContextService } from '@domain/context/context/context.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsWhere, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { CreateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.create';
 import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
