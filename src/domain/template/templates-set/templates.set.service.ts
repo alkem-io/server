@@ -71,11 +71,11 @@ export class TemplatesSetService {
   async getTemplatesSetOrFail(
     templatesSetID: string,
     options?: FindOneOptions<TemplatesSet>
-  ): Promise<ITemplatesSet> {
-    const templatesSet = await TemplatesSet.findOne(
-      { id: templatesSetID },
-      options
-    );
+  ): Promise<ITemplatesSet | never> {
+    const templatesSet = await TemplatesSet.findOne({
+      where: { id: templatesSetID },
+      ...options,
+    });
     if (!templatesSet)
       throw new EntityNotFoundException(
         `TemplatesSet with id(${templatesSetID}) not found!`,
@@ -125,7 +125,7 @@ export class TemplatesSetService {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['aspectTemplates'],
+        relations: ['aspectTemplates', 'aspectTemplates.templateInfo'],
       }
     );
     if (!templatesSetPopulated.aspectTemplates) {
@@ -142,7 +142,7 @@ export class TemplatesSetService {
     templatesSetId: string
   ): Promise<IAspectTemplate> {
     return this.aspectTemplateService.getAspectTemplateOrFail(templateId, {
-      relations: ['templatesSet'],
+      relations: ['templatesSet', 'templateInfo'],
       where: { templatesSet: { id: templatesSetId } },
     });
   }
@@ -152,7 +152,7 @@ export class TemplatesSetService {
     templatesSetId: string
   ): Promise<ICanvasTemplate> {
     return this.canvasTemplateService.getCanvasTemplateOrFail(templateId, {
-      relations: ['templatesSet'],
+      relations: ['templatesSet', 'templateInfo'],
       where: { templatesSet: { id: templatesSetId } },
     });
   }
@@ -164,7 +164,7 @@ export class TemplatesSetService {
     return this.lifecycleTemplateService.getLifecycleTemplateOrFail(
       templateId,
       {
-        relations: ['templatesSet'],
+        relations: ['templatesSet', 'templateInfo'],
         where: { templatesSet: { id: templatesSetId } },
       }
     );
@@ -201,7 +201,7 @@ export class TemplatesSetService {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['canvasTemplates'],
+        relations: ['canvasTemplates', 'canvasTemplates.templateInfo'],
       }
     );
     if (!templatesSetPopulated.canvasTemplates) {
@@ -233,7 +233,7 @@ export class TemplatesSetService {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['lifecycleTemplates'],
+        relations: ['lifecycleTemplates', 'lifecycleTemplates.templateInfo'],
       }
     );
     if (!templatesSetPopulated.lifecycleTemplates) {

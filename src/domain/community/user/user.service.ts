@@ -350,7 +350,7 @@ export class UserService {
   }
 
   private async isNameIdAvailableOrFail(nameID: string) {
-    const userCount = await this.userRepository.count({
+    const userCount = await this.userRepository.countBy({
       nameID: nameID,
     });
     if (userCount != 0)
@@ -366,7 +366,7 @@ export class UserService {
 
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {
     const user = await this.getUserOrFail(userID, {
-      relations: ['preferenceSet'],
+      relations: ['preferenceSet', 'preferenceSet.preferences'],
     });
 
     if (!user.preferenceSet) {
@@ -382,7 +382,7 @@ export class UserService {
   async getUserOrFail(
     userID: string,
     options?: FindOneOptions<User>
-  ): Promise<IUser> {
+  ): Promise<IUser | never> {
     const user = await this.getUserByEmailIdUUID(userID, options);
 
     if (!user) {
@@ -420,34 +420,34 @@ export class UserService {
   private async getUserByEmailIdUUID(
     userID: string,
     options: FindOneOptions<User> | undefined
-  ): Promise<IUser | undefined> {
-    let user: IUser | undefined = undefined;
+  ): Promise<IUser | null> {
+    let user: IUser | null = null;
 
     if (await this.isUserIdEmail(userID)) {
-      user = await this.userRepository.findOne(
-        {
+      user = await this.userRepository.findOne({
+        where: {
           email: userID,
         },
-        options
-      );
+        ...options,
+      });
     } else if (userID.length === UUID_LENGTH) {
       {
-        user = await this.userRepository.findOne(
-          {
+        user = await this.userRepository.findOne({
+          where: {
             id: userID,
           },
-          options
-        );
+          ...options,
+        });
       }
     }
 
     if (!user)
-      user = await this.userRepository.findOne(
-        {
+      user = await this.userRepository.findOne({
+        where: {
           nameID: userID,
         },
-        options
-      );
+        ...options,
+      });
 
     return user;
   }
@@ -460,7 +460,7 @@ export class UserService {
   async getUserByEmail(
     email: string,
     options?: FindOneOptions<User>
-  ): Promise<IUser | undefined> {
+  ): Promise<IUser | never | null> {
     if (!validateEmail(email)) {
       throw new FormatNotSupportedException(
         `Incorrect format of the user email: ${email}`,
@@ -468,12 +468,10 @@ export class UserService {
       );
     }
 
-    const user = await this.userRepository.findOne(
-      {
-        email,
-      },
-      options
-    );
+    const user = await this.userRepository.findOne({
+      where: { email: email },
+      ...options,
+    });
 
     // same as in getUserOrFail
     if (user && !Boolean(user?.communicationID)) {
@@ -496,7 +494,7 @@ export class UserService {
     return user;
   }
   async isRegisteredUser(email: string): Promise<boolean> {
-    const user = await this.userRepository.findOne({ email: email });
+    const user = await this.userRepository.findOneBy({ email: email });
     if (user) return true;
     return false;
   }
@@ -576,7 +574,7 @@ export class UserService {
         })
         .getMany();
     } else {
-      users = await this.userRepository.find({ serviceProfile: false });
+      users = await this.userRepository.findBy({ serviceProfile: false });
     }
     return limitAndShuffle(users, limit, shuffle);
   }
@@ -807,7 +805,7 @@ export class UserService {
   }
 
   async getUserCount(): Promise<number> {
-    return await this.userRepository.count({ serviceProfile: false });
+    return await this.userRepository.countBy({ serviceProfile: false });
   }
 
   private async tryRegisterUserCommunication(
@@ -850,7 +848,10 @@ export class UserService {
   }
 
   async findProfilesByBatch(userIds: string[]): Promise<(IProfile | Error)[]> {
-    const users = await this.userRepository.findByIds(userIds, {
+    const users = await this.userRepository.find({
+      where: {
+        id: In(userIds),
+      },
       relations: ['profile'],
       select: ['id'],
     });

@@ -21,5 +21,10 @@ export class Agreement extends BaseAlkemioEntity implements IAgreement {
 
   @OneToOne(() => Tagset, { eager: true, cascade: true, onDelete: 'SET NULL' })
   @JoinColumn()
-  tagset!: Tagset;
+  tagset: Tagset;
+
+  constructor() {
+    super();
+    this.tagset = new Tagset();
+  }
 }

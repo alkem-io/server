@@ -74,7 +74,9 @@ export class AspectAuthorizationService {
         );
     }
 
-    aspect.profile = await this.aspectService.getProfile(aspect);
+    aspect.profile = await this.aspectService.getCardProfile(aspect, [
+      'profile.tagset',
+    ]);
     aspect.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         aspect.profile,

@@ -225,7 +225,7 @@ export class HubResolverFields {
   @Profiling.api
   async groups(@Parent() hub: Hub): Promise<IUserGroup[]> {
     return await this.groupService.getGroups({
-      hubID: hub.id,
+      where: { hubID: hub.id },
     });
   }
 
@@ -241,7 +241,9 @@ export class HubResolverFields {
     @Args('tag') tag: string
   ): Promise<IUserGroup[]> {
     return await this.groupService.getGroupsWithTag(tag, {
-      hubID: hub.id,
+      where: {
+        hubID: hub.id,
+      },
     });
   }
 

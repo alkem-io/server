@@ -1,7 +1,11 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import {
+  FindOneOptions,
+  FindOptionsRelationByString,
+  Repository,
+} from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
@@ -82,11 +86,11 @@ export class AspectService {
   public async getAspectOrFail(
     aspectID: string,
     options?: FindOneOptions<Aspect>
-  ): Promise<IAspect> {
-    const aspect = await this.aspectRepository.findOne(
-      { id: aspectID },
-      options
-    );
+  ): Promise<IAspect | never> {
+    const aspect = await this.aspectRepository.findOne({
+      where: { id: aspectID },
+      ...options,
+    });
     if (!aspect)
       throw new EntityNotFoundException(
         `Not able to locate aspect with the specified ID: ${aspectID}`,
@@ -97,7 +101,7 @@ export class AspectService {
 
   public async updateAspect(aspectData: UpdateAspectInput): Promise<IAspect> {
     const aspect = await this.getAspectOrFail(aspectData.ID, {
-      relations: ['profile'],
+      relations: ['profile', 'profile.tagset'],
     });
 
     // Copy over the received data
@@ -127,9 +131,12 @@ export class AspectService {
     return await this.aspectRepository.save(aspect);
   }
 
-  public async getProfile(aspect: IAspect): Promise<IProfile> {
+  public async getCardProfile(
+    aspect: IAspect,
+    relations: FindOptionsRelationByString = []
+  ): Promise<IProfile> {
     const aspectLoaded = await this.getAspectOrFail(aspect.id, {
-      relations: ['profile'],
+      relations: ['profile', ...relations],
     });
     if (!aspectLoaded.profile)
       throw new EntityNotFoundException(
@@ -158,14 +165,12 @@ export class AspectService {
   }
 
   public async getAspectsInCalloutCount(calloutId: string) {
-    return this.aspectRepository.count({
-      where: { callout: { id: calloutId } },
-    });
+    return this.aspectRepository.countBy({ callout: { id: calloutId } });
   }
 
   public async getCardsInCalloutCount(calloutID: string): Promise<number> {
-    const count = await this.aspectRepository.count({
-      where: { callout: calloutID },
+    const count = await this.aspectRepository.countBy({
+      callout: { id: calloutID },
     });
     return count;
   }

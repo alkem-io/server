@@ -8,7 +8,11 @@ import { ILibrary } from '@library/library/library.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import {
+  FindOneOptions,
+  FindOptionsRelationByString,
+  Repository,
+} from 'typeorm';
 import { Platform } from './platform.entity';
 import { IPlatform } from './platform.interface';
 
@@ -23,8 +27,12 @@ export class PlatformService {
 
   async getPlatformOrFail(
     options?: FindOneOptions<Platform>
-  ): Promise<IPlatform> {
-    const platform = await this.platformRepository.findOne(options);
+  ): Promise<IPlatform | never> {
+    let platform: IPlatform | null = null;
+    platform = (
+      await this.platformRepository.find({ take: 1, ...options })
+    )?.[0];
+
     if (!platform)
       throw new EntityNotFoundException(
         'No Platform found!',
@@ -37,9 +45,11 @@ export class PlatformService {
     return await this.platformRepository.save(platform);
   }
 
-  async getLibraryOrFail(): Promise<ILibrary> {
+  async getLibraryOrFail(
+    relations: FindOptionsRelationByString = []
+  ): Promise<ILibrary> {
     const platform = await this.getPlatformOrFail({
-      relations: ['library'],
+      relations: ['library', ...relations],
     });
     const library = platform.library;
     if (!library) {

@@ -1,7 +1,5 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { getConnection, Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project';
@@ -21,6 +19,8 @@ import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
 import { Collaboration } from '@domain/collaboration/collaboration';
+import { Inject, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -44,8 +44,8 @@ export class NamingService {
     private collaborationRepository: Repository<Collaboration>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
-    @InjectRepository(CalendarEvent)
-    private calendarEventRepository: Repository<CalendarEvent>,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -53,17 +53,19 @@ export class NamingService {
     nameID: string,
     hubID: string
   ): Promise<boolean> {
-    const challengeCount = await this.challengeRepository.count({
+    if (!nameID) return true;
+
+    const challengeCount = await this.challengeRepository.countBy({
       nameID: nameID,
       hubID: hubID,
     });
     if (challengeCount > 0) return false;
-    const opportunityCount = await this.opportunityRepository.count({
+    const opportunityCount = await this.opportunityRepository.countBy({
       nameID: nameID,
       hubID: hubID,
     });
     if (opportunityCount > 0) return false;
-    const projectCount = await this.projectRepository.count({
+    const projectCount = await this.projectRepository.countBy({
       nameID: nameID,
       hubID: hubID,
     });
@@ -186,7 +188,7 @@ export class NamingService {
   async getCommunityIdFromCollaborationId(collaborationID: string) {
     const [result]: {
       communityId: string;
-    }[] = await getConnection().query(
+    }[] = await this.entityManager.connection.query(
       `
         SELECT communityId from \`hub\`
         WHERE \`hub\`.\`collaborationId\` = '${collaborationID}' UNION
@@ -363,45 +365,26 @@ export class NamingService {
     return community.policy;
   }
 
-  async getAspectForComments(commentsID: string): Promise<IAspect | undefined> {
-    const aspect = await this.aspectRepository
-      .createQueryBuilder('aspect')
-      .select([
-        'aspect.id',
-        'aspect.createdBy',
-        'aspect.createdDate',
-        'aspect.type',
-        'nameID',
-        'commentsId',
-      ])
-      .leftJoin('aspect.profile', 'profile')
-      .addSelect(['profile.displayName'])
-      .where(`commentsId = '${commentsID}'`)
-      .getOne();
-    return aspect;
+  async getAspectForComments(commentsID: string): Promise<IAspect | null> {
+    // check if this is a comment related to an aspect
+
+    return await this.entityManager.findOne(Aspect, {
+      where: {
+        comments: { id: commentsID },
+      },
+      relations: ['profile'],
+    });
   }
 
   async getCalendarEventForComments(
     commentsID: string
-  ): Promise<ICalendarEvent | undefined> {
-    const calendarEvent = await this.calendarEventRepository
-      .createQueryBuilder('calendarEvent')
-      .select([
-        'calendarEvent.id',
-        'calendarEvent.nameID',
-        'calendarEvent.type',
-        'calendarEvent.createdBy',
-        'calendarEvent.startDate',
-        'calendarEvent.createdDate',
-        'calendarEvent.wholeDay',
-        'calendarEvent.multipleDays',
-        'calendarEvent.durationMinutes',
-        'calendarEvent.durationDays',
-      ])
-      .leftJoinAndSelect('calendarEvent.profile', 'profile')
-      .where(`commentsId = '${commentsID}'`)
-      .getOne();
-
-    return calendarEvent;
+  ): Promise<ICalendarEvent | null> {
+    // check if this is a comment related to an calendar
+    return await this.entityManager.findOne(CalendarEvent, {
+      where: {
+        comments: { id: commentsID },
+      },
+      relations: ['profile', 'comments'],
+    });
   }
 }

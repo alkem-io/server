@@ -36,7 +36,7 @@ export class UpdatesService {
   }
 
   async getUpdatesOrFail(updatesID: string): Promise<IUpdates> {
-    const updates = await this.updatesRepository.findOne({
+    const updates = await this.updatesRepository.findOneBy({
       id: updatesID,
     });
     if (!updates)

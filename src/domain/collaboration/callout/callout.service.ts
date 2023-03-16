@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import {
+  FindOneOptions,
+  FindOptionsRelationByString,
+  Repository,
+} from 'typeorm';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -110,20 +114,20 @@ export class CalloutService {
   public async getCalloutOrFail(
     calloutID: string,
     options?: FindOneOptions<Callout>
-  ): Promise<ICallout> {
-    let callout: ICallout | undefined;
+  ): Promise<ICallout | never> {
+    let callout: ICallout | null = null;
     if (calloutID.length === UUID_LENGTH) {
-      callout = await this.calloutRepository.findOne(
-        { id: calloutID },
-        options
-      );
+      callout = await this.calloutRepository.findOne({
+        where: { id: calloutID },
+        ...options,
+      });
     }
     if (!callout) {
       // look up based on nameID
-      callout = await this.calloutRepository.findOne(
-        { nameID: calloutID },
-        options
-      );
+      callout = await this.calloutRepository.findOne({
+        where: { nameID: calloutID },
+        ...options,
+      });
     }
     if (!callout)
       throw new EntityNotFoundException(
@@ -166,7 +170,12 @@ export class CalloutService {
     calloutUpdateData: UpdateCalloutInput
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
-      relations: ['cardTemplate', 'canvasTemplate'],
+      relations: [
+        'cardTemplate',
+        'canvasTemplate',
+        'cardTemplate.templateInfo',
+        'canvasTemplate.templateInfo',
+      ],
     });
 
     if (calloutUpdateData.description)
@@ -447,10 +456,11 @@ export class CalloutService {
     callout: ICallout,
     aspectIDs?: string[],
     limit?: number,
-    shuffle?: boolean
+    shuffle?: boolean,
+    relations: FindOptionsRelationByString = []
   ): Promise<IAspect[]> {
     const loadedCallout = await this.getCalloutOrFail(callout.id, {
-      relations: ['aspects'],
+      relations: ['aspects', ...relations],
     });
     if (!loadedCallout.aspects) {
       throw new EntityNotFoundException(
