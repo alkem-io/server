@@ -9,14 +9,12 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class AspectResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private aspectService: AspectService,
-    private authorizationPolicyService: AuthorizationPolicyService
+    private aspectService: AspectService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -32,7 +30,7 @@ export class AspectResolverMutations {
       agentInfo,
       aspect.authorization,
       AuthorizationPrivilege.DELETE,
-      `delete aspect: ${aspect.displayName}`
+      `delete aspect: ${aspect.nameID}`
     );
     return await this.aspectService.deleteAspect(deleteData);
   }

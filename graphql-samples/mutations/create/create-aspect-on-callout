@@ -8,7 +8,9 @@ Variables:
 {
   "data": {
     "calloutID": "aa57aae0-69e8-4382-a895-d5aa8643d5fe",
-    "displayName": "test aspect 2",
+    "profileData": {
+        "displayName": "test aspect 2"
+    },
     "type": "bla",
     "description": "this is a very good aspect"
   }

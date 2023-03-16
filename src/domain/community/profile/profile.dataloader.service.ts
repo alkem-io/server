@@ -4,11 +4,11 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { In, Repository } from 'typeorm';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { Profile } from '@domain/community/profile/profile.entity';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { ILocation } from '@domain/common/location/location.interface';
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
+import { Profile } from '@domain/common/profile';
 
 @Injectable()
 export class ProfileDataloaderService {
@@ -39,7 +39,7 @@ export class ProfileDataloaderService {
 
   public async findAvatarsByBatch(
     profileIds: string[]
-  ): Promise<(IVisual | Error)[]> {
+  ): Promise<(IVisual[] | Error)[]> {
     const profiles = await this.profileRepository.find({
       where: { id: In(profileIds) },
       relations: ['avatar'],
@@ -49,7 +49,7 @@ export class ProfileDataloaderService {
     const results = profiles.filter(avatar => profileIds.includes(avatar.id));
     return profileIds.map(
       id =>
-        results.find(result => result.id === id)?.avatar ||
+        results.find(result => result.id === id)?.visuals ||
         new EntityNotFoundException(
           `Could not load profile ${id}`,
           LogContext.COMMUNITY
