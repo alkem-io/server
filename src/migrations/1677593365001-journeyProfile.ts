@@ -163,6 +163,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE challenge SET profileId = '${newProfileID}' WHERE (id = '${challenge.id}')`
       );
+
     }
 
     /////////////////////////////////
@@ -238,20 +239,21 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     await queryRunner.query('ALTER TABLE `visual` DROP COLUMN `contextId`');
     await queryRunner.query('ALTER TABLE `reference` DROP COLUMN `contextId`');
 
+    // await queryRunner.query(
+    //   `ALTER TABLE \`profile\` ADD UNIQUE INDEX \`IDX_77777ca8ac212b8357637794d6\` (\`locationId\`)`
+    // );
     // Add back in index for location uniqueness
     await queryRunner.query(
       `ALTER TABLE \`profile\` ADD CONSTRAINT \`FK_77777ca8ac212b8357637794d6f\` FOREIGN KEY (\`locationId\`) REFERENCES \`location\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
-    // TODO: this is failing
-    // await queryRunner.query(
-    //   `ALTER TABLE \`profile\` ADD UNIQUE INDEX \`IDX_77777ca8ac212b8357637794d6\` (\`locationId\`)`
-    // );
+
   }
 
   ///////////////////////////////
   public async down(queryRunner: QueryRunner): Promise<void> {
+
     /////////////////////////////////
-    // Hub ==> Profile
+    //Hub ==> Profile
     await queryRunner.query(
       `ALTER TABLE \`hub\` DROP FOREIGN KEY \`FK_71231450cf75dc486700ca034c6\``
     );
@@ -373,6 +375,10 @@ export class journeyProfile1677593365001 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE visual SET contextId = '${context.id}', profileId = NULL WHERE (profileId = '${profile.id}')`
       );
+
+      await queryRunner.query(
+        `DELETE FROM profile WHERE (id = '${profile.id}')`
+      );
     }
 
     /////////////////////////////////
@@ -430,6 +436,10 @@ export class journeyProfile1677593365001 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE visual SET contextId = '${context.id}', profileId = NULL WHERE (profileId = '${profile.id}')`
       );
+
+      await queryRunner.query(
+        `DELETE FROM profile WHERE (id = '${profile.id}')`
+      );
     }
 
     /////////////////////////////////
@@ -460,8 +470,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE opportunity SET
         tagsetId = '${tagset.id}',
-        displayName = '${escapeString(profile.displayName)}',
-        background = '${escapeString(profile.description)}'
+        displayName = '${escapeString(profile.displayName)}'
         WHERE (id = '${opportunity.id}')`
       );
 
@@ -469,7 +478,8 @@ export class journeyProfile1677593365001 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE context SET
         locationId = '${profile.locationId}',
-        tagline = '${escapeString(profile.tagline)}'
+        tagline = '${escapeString(profile.tagline)}',
+        background = '${escapeString(profile.description)}'
         WHERE (id = '${context.id}')`
       );
 
@@ -487,6 +497,10 @@ export class journeyProfile1677593365001 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE visual SET contextId = '${context.id}', profileId = NULL WHERE (profileId = '${profile.id}')`
       );
+
+      await queryRunner.query(
+        `DELETE FROM profile WHERE (id = '${profile.id}')`
+      );
     }
 
     // Remove old data / structure
@@ -495,7 +509,6 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `opportunity` DROP COLUMN `profileId`'
     );
-
     await queryRunner.query(
       `ALTER TABLE \`profile\` ADD UNIQUE INDEX \`IDX_77777ca8ac212b8357637794d6\` (\`locationId\`)`
     );
