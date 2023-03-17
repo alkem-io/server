@@ -9,9 +9,7 @@ import { ContextResolverFields } from '@domain/context/context/context.resolver.
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ContextAuthorizationService } from './context.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { VisualModule } from '@domain/common/visual/visual.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { LocationModule } from '@domain/common/location';
 import { ContextResolverQueries } from './context.resolver.queries';
 
 @Module({
@@ -20,9 +18,7 @@ import { ContextResolverQueries } from './context.resolver.queries';
     AuthorizationModule,
     ReferenceModule,
     EcosystemModelModule,
-    VisualModule,
     NamingModule,
-    LocationModule,
     TypeOrmModule.forFeature([Context]),
   ],
   providers: [

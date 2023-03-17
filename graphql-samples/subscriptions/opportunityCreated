@@ -2,7 +2,7 @@ subscription {
   opportunityCreated(challengeID: "uuid") {
 		challengeID
     opportunity{
-      displayName
+      nameID
     }
   }
 }

@@ -51,6 +51,7 @@ import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args'
 import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
+import { VisualType } from '@common/enums/visual.type';
 
 @Injectable()
 export class OrganizationService {
@@ -99,8 +100,9 @@ export class OrganizationService {
         ''
       );
     }
-    await this.profileService.createVisualAvatar(
+    await this.profileService.addVisualOnProfile(
       organization.profile,
+      VisualType.AVATAR,
       avatarURL
     );
 
@@ -188,7 +190,7 @@ export class OrganizationService {
     // Check the tagsets
     if (organizationData.profileData && organization.profile) {
       organization.profile = await this.profileService.updateProfile(
-        organization.profile.id,
+        organization.profile,
         organizationData.profileData
       );
     }

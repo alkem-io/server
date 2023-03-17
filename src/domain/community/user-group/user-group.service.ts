@@ -108,7 +108,7 @@ export class UserGroupService {
         );
       }
       group.profile = await this.profileService.updateProfile(
-        group.profile.id,
+        group.profile,
         userGroupInput.profileData
       );
     }

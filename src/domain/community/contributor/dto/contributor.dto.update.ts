@@ -8,7 +8,7 @@ import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/n
 export class UpdateContributorInput extends UpdateNameableInput {
   @Field(() => UpdateProfileInput, { nullable: true })
   @IsOptional()
-  @ValidateNested()
+  @ValidateNested({ each: true })
   @Type(() => UpdateProfileInput)
   profileData?: UpdateProfileInput;
 }

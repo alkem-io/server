@@ -39,7 +39,6 @@ import { CreateAspectOnCalloutInput } from '@domain/collaboration/callout/dto/ca
 import { CreateCanvasOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.canvas';
 import { CommunicationCreateDiscussionInput } from '@domain/communication/communication/dto/communication.dto.create.discussion';
 import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
-import { CreateReferenceOnContextInput } from '@domain/context/context/dto/context.dto.create.reference';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
 import {
   CreateTagsetOnProfileInput,
@@ -96,7 +95,6 @@ export class BaseHandler extends AbstractHandler {
       CreateRelationInput,
       CreateUserInput,
       CreateFeedbackOnCommunityContextInput,
-      CreateReferenceOnContextInput,
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,
       CreateCalendarEventOnCalendarInput,

@@ -97,12 +97,9 @@ export class NotificationPayloadBuilder {
   async buildCardCreatedPayload(
     cardId: string
   ): Promise<CollaborationCardCreatedEventPayload> {
-    {
-      relations: ['callout', 'profile'];
-    }
     const card = await this.aspectRepository.findOne({
       where: { id: cardId },
-      relations: ['callout'],
+      relations: ['callout', 'profile'],
     });
     if (!card) {
       throw new NotificationEventException(
@@ -222,7 +219,7 @@ export class NotificationPayloadBuilder {
   ): Promise<CollaborationCardCommentEventPayload> {
     const card = await this.aspectRepository.findOne({
       where: { id: aspect.id },
-      relations: ['callout'],
+      relations: ['callout', 'profile'],
     });
 
     if (!card) {

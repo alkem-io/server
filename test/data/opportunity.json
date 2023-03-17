@@ -1,9 +1,22 @@
 {
   "opportunity": {
-    "displayName": "Food security and nutrition and sustainable agriculture",
+
     "nameID": "food-sec",
     "id": "d3c76102-087b-4b40-8aa5-b5e6023784d0",
     "hubID": "00655835-4d15-4546-801e-1ab80ac3078a",
+    "profile": {
+      "id": "08c6ec54-524a-4d7f-9f58-a4c50f0c0496",
+      "tagline": "",
+      "description": "",
+      "displayName": "Food security and nutrition and sustainable agriculture",
+      "authorization": {
+        "anonymousReadAccess": false,
+        "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"inheritable\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"inheritable\":true},{\"type\":\"user-self\",\"resourceID\":\"b69f82a1-bc7d-486c-85f9-e7ac6e689f4e\",\"grantedPrivileges\":[\"create\",\"read\",\"update\"],\"inheritable\":true}]",
+        "verifiedCredentialRules": "[]",
+        "privilegeRules": "",
+        "id": "2b82dab3-4581-4ff2-88e3-4997afe4f85b"
+      }
+    },
     "community": {
       "displayName": "Food security and nutrition and sustainable agriculture",
       "type": "opportunity",

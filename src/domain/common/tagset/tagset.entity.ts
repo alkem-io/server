@@ -12,11 +12,15 @@ export enum RestrictedTagsetNames {
 
 @Entity()
 export class Tagset extends AuthorizableEntity implements ITagset {
-  @Column({ default: RestrictedTagsetNames.DEFAULT })
+  @Column('varchar', {
+    default: RestrictedTagsetNames.DEFAULT,
+    length: 255,
+    nullable: false,
+  })
   name!: string;
 
   @Column('simple-array')
-  tags: string[];
+  tags!: string[];
 
   @ManyToOne(() => Profile, profile => profile.tagsets, {
     eager: false,

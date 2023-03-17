@@ -32,18 +32,34 @@ export class CalendarEventService {
     userID: string,
     communicationGroupID: string
   ): Promise<CalendarEvent> {
-    const calendarEvent: ICalendarEvent = CalendarEvent.create({
-      ...calendarEventInput,
-      createdBy: userID,
-      authorization: new AuthorizationPolicy(),
-      profile: await this.profileService.createProfile(
-        calendarEventInput.profileData
-      ),
-      comments: await this.commentsService.createComments(
-        communicationGroupID,
-        `calendarEvent-comments-${calendarEventInput.profileData?.displayName}`
-      ),
+    const calendarEvent: ICalendarEvent =
+      CalendarEvent.create(calendarEventInput);
+    calendarEvent.profile = await this.profileService.createProfile(
+      calendarEventInput.profileData
+    );
+    await this.profileService.addTagsetOnProfile(calendarEvent.profile, {
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: calendarEventInput.tags || [],
     });
+    calendarEvent.authorization = new AuthorizationPolicy();
+    calendarEvent.createdBy = userID;
+
+    calendarEvent.comments = await this.commentsService.createComments(
+      communicationGroupID,
+      `calendarEvent-comments-${calendarEvent.nameID}`
+    );
+
+    // const calendarEvent: ICalendarEvent = CalendarEvent.create({
+    //   ...calendarEventInput,
+    //   createdBy: userID,
+    //   authorization: new AuthorizationPolicy(),
+    //   profile: await this.profileService.createProfile(
+    //     calendarEventInput.profileData
+    //   ),
+    //   comments: await this.commentsService.createComments(
+    //     communicationGroupID,
+    //     `calendarEvent-comments-${calendarEventInput.profileData?.displayName}`
+    //   ),
 
     return await this.calendarEventRepository.save(calendarEvent);
   }
@@ -107,7 +123,7 @@ export class CalendarEventService {
         );
       }
       calendarEvent.profile = await this.profileService.updateProfile(
-        calendarEvent.profile.id,
+        calendarEvent.profile,
         calendarEventData.profileData
       );
     }
