@@ -43,6 +43,7 @@ import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
 
 @Injectable()
 export class OpportunityService {
@@ -85,7 +86,7 @@ export class OpportunityService {
 
     if (!opportunityData.nameID) {
       opportunityData.nameID = this.namingService.createNameID(
-        opportunityData.displayName
+        opportunityData.profileData?.displayName || ''
       );
     }
     await this.baseChallengeService.isNameAvailableOrFail(
@@ -312,6 +313,13 @@ export class OpportunityService {
   async getContext(opportunityId: string): Promise<IContext> {
     return await this.baseChallengeService.getContext(
       opportunityId,
+      this.opportunityRepository
+    );
+  }
+
+  async getProfile(opportunity: IOpportunity): Promise<IProfile> {
+    return await this.baseChallengeService.getProfile(
+      opportunity.id,
       this.opportunityRepository
     );
   }

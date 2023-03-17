@@ -11,7 +11,7 @@ import {
   VERY_LONG_TEXT_LENGTH,
 } from '@src/common/constants';
 import { UpdateReferenceInput } from '@domain/common/reference';
-import { UpdateTagsetInput } from '@domain/common/tagset/tagset.dto.update';
+import { UpdateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.update';
 import { UpdateLocationInput } from '@domain/common/location/dto/location.dto.update';
 import { Type } from 'class-transformer';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';

@@ -17,7 +17,7 @@ export class UpdateAspectInput extends UpdateNameableInput {
     description: 'Update the Profile of the Card.',
   })
   @IsOptional()
-  @ValidateNested()
+  @ValidateNested({ each: true })
   @Type(() => UpdateProfileInput)
   profileData?: UpdateProfileInput;
 }

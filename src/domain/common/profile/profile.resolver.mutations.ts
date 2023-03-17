@@ -47,7 +47,8 @@ export class ProfileResolverMutations {
 
     const tagset = await this.profileService.addTagsetOnProfile(
       profile,
-      tagsetData
+      tagsetData,
+      true
     );
     tagset.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
@@ -105,6 +106,6 @@ export class ProfileResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `profile: ${profile.id}`
     );
-    return await this.profileService.updateProfile(profile.id, profileData);
+    return await this.profileService.updateProfile(profile, profileData);
   }
 }

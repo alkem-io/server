@@ -47,10 +47,7 @@ export class ProfileService {
       displayName: profileData?.displayName,
     });
     profile.authorization = new AuthorizationPolicy();
-    const banner = await this.visualService.createVisualBanner();
-    const bannerNarrow = await this.visualService.createVisualBannerNarrow();
-
-    profile.visuals = [banner, bannerNarrow];
+    profile.visuals = [];
     profile.location = await this.locationService.createLocation(
       profileData?.location
     );
@@ -76,10 +73,10 @@ export class ProfileService {
   }
 
   async updateProfile(
-    profileId: string,
+    profileOrig: IProfile,
     profileData: UpdateProfileInput
   ): Promise<IProfile> {
-    const profile = await this.getProfileOrFail(profileId, {
+    const profile = await this.getProfileOrFail(profileOrig.id, {
       relations: [
         'references',
         'tagsets',
@@ -170,26 +167,50 @@ export class ProfileService {
     return await this.profileRepository.save(profile);
   }
 
-  async createVisualAvatar(profile: IProfile, avatarURL: string) {
-    const visualAvatar = await this.visualService.createVisualAvatar();
-    visualAvatar.uri = avatarURL;
+  async addVisualOnProfile(
+    profile: IProfile,
+    visualType: VisualType,
+    url?: string
+  ) {
+    let visual: IVisual;
+    switch (visualType) {
+      case VisualType.AVATAR:
+        visual = await this.visualService.createVisualAvatar();
+        break;
+      case VisualType.BANNER:
+        visual = await this.visualService.createVisualBanner();
+        break;
+      case VisualType.CARD:
+        visual = await this.visualService.createVisualBannerNarrow();
+        break;
+
+      default:
+        throw new Error(
+          `Unable to recognise type of visual requested: ${visualType}`
+        );
+    }
+    if (url) {
+      visual.uri = url;
+    }
     if (!profile.visuals) {
       throw new EntityNotInitializedException(
         `No visuals found on profile: ${profile.id}`,
         LogContext.COMMUNITY
       );
     }
-    profile.visuals.push(visualAvatar);
+    profile.visuals.push(visual);
   }
 
   async addTagsetOnProfile(
     profile: IProfile,
-    tagsetData: CreateTagsetInput
+    tagsetData: CreateTagsetInput,
+    checkForRestricted = false
   ): Promise<ITagset> {
     profile.tagsets = await this.getTagsets(profile);
     const tagset = await this.tagsetService.createTagsetWithName(
       profile,
-      tagsetData
+      tagsetData,
+      checkForRestricted
     );
     profile.tagsets.push(tagset);
 

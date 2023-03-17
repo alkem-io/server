@@ -22,11 +22,10 @@ export class CreateCalendarEventInput extends CreateNameableInput {
   @IsOptional()
   nameID!: string;
 
-  @Field(() => CreateProfileInput, { nullable: true })
-  @IsOptional()
+  @Field(() => CreateProfileInput, { nullable: false })
   @ValidateNested({ each: true })
   @Type(() => CreateProfileInput)
-  profileData?: CreateProfileInput;
+  profileData!: CreateProfileInput;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()
