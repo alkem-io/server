@@ -99,7 +99,7 @@ export class HubResolverMutations {
     this.elasticService.hubContentEdited(
       {
         id: updatedHub.id,
-        name: updatedHub.profile?.displayName || '',
+        name: updatedHub.profile.displayName,
         hub: updatedHub.id,
       },
       {
@@ -276,7 +276,7 @@ export class HubResolverMutations {
     this.elasticService.challengeCreated(
       {
         id: challenge.id,
-        name: challenge.profile?.displayName || '',
+        name: challenge.profile.displayName,
         hub: challenge.hubID ?? '',
       },
       {

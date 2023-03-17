@@ -39,7 +39,7 @@ export class ConversionService {
     const challenge = await this.challengeService.getChallengeOrFail(
       conversionData.challengeID,
       {
-        relations: ['community', 'context'],
+        relations: ['community', 'context', 'profile'],
       }
     );
     // check the community is in a fit state
@@ -66,7 +66,7 @@ export class ConversionService {
       hostID: hostOrg.nameID,
       nameID: challenge.nameID,
       profileData: {
-        displayName: challenge.profile?.displayName || '',
+        displayName: challenge.profile.displayName,
       },
     };
     const hub = await this.hubService.createHub(createHubInput, agentInfo);
@@ -155,7 +155,7 @@ export class ConversionService {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       opportunityID,
       {
-        relations: ['community', 'context'],
+        relations: ['community', 'context', 'profile'],
       }
     );
 
@@ -169,7 +169,7 @@ export class ConversionService {
           nameID: challengeNameID,
           innovationFlowTemplateID: lifecycleTemplateID,
           profileData: {
-            displayName: opportunity.profile?.displayName || '',
+            displayName: opportunity.profile.displayName,
           },
         },
         hubID,
@@ -186,7 +186,7 @@ export class ConversionService {
           nameID: challengeNameID,
           innovationFlowTemplateID: defaultChallengeLifecycleTemplate.id,
           profileData: {
-            displayName: opportunity.profile?.displayName || '',
+            displayName: opportunity.profile.displayName,
           },
         },
         hubID,
