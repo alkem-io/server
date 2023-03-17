@@ -5,7 +5,7 @@ export interface DataLoaderCreatorBaseOptions<TParent, TResult> {
   /***
    * Specify to which parent entity would you have to join the relation
    * in order to return the result.
-   * Useful in the where an entity like BaseChallenge is used for inheritance
+   * Useful in the where an entity like BaseChallenge, AuthorizableEntity, etc. are used for inheritance
    * but it's not a TypeORM entity and you can pass the appropriate entity here and
    * reduce the boilerplate
    */

@@ -1,5 +1,5 @@
 import { CurrentUser, Profiling } from '@common/decorators';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
@@ -19,8 +19,9 @@ import { MessagingService } from '@domain/communication/messaging/messaging.serv
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import {
   AgentLoaderCreator,
+  AuthorizationLoaderCreator,
   ProfileLoaderCreator,
-} from '@core/dataloader/creators/loader.creators';
+} from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 
@@ -55,7 +56,8 @@ export class UserResolverFields {
   @Profiling.api
   async agent(
     @Parent() user: User,
-    @Loader(AgentLoaderCreator) loader: ILoader<IAgent>
+    @Loader(AgentLoaderCreator, { parentClassRef: User })
+    loader: ILoader<IAgent>
   ): Promise<IAgent> {
     return loader.load(user.id);
   }
@@ -66,11 +68,12 @@ export class UserResolverFields {
     description: 'The Authorization for this User.',
   })
   @Profiling.api
-  async authorization(@Parent() parent: User) {
-    // Reload to ensure the authorization is loaded
-    const user = await this.userService.getUserOrFail(parent.id);
-
-    return user.authorization;
+  async authorization(
+    @Parent() user: User,
+    @Loader(AuthorizationLoaderCreator, { parentClassRef: User })
+    loader: ILoader<IAuthorizationPolicy>
+  ) {
+    return loader.load(user.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -83,6 +86,7 @@ export class UserResolverFields {
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IPreference[]> {
+    // reject when a basic user reads other user's preferences
     if (
       !(await this.isAccessGranted(
         user,

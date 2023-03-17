@@ -3,6 +3,7 @@ export * from './profile.avatars.loader.creator';
 export * from './profile.loader.creator';
 export * from './preferences.loader.creator';
 export * from './agent.loader.creator';
+export * from './authorization.loader.creator';
 
 export * from './hub/hub.templates.set.loader.creator';
 export * from './hub/hub.timeline.loader.creator';
