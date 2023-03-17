@@ -1,7 +1,15 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
-import { CreateTagsetInput } from '@domain/common/tagset';
-import { LONG_TEXT_LENGTH, MID_TEXT_LENGTH } from '@src/common/constants';
+import {
+  IsOptional,
+  MaxLength,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+import {
+  MID_TEXT_LENGTH,
+  SMALL_TEXT_LENGTH,
+  VERY_LONG_TEXT_LENGTH,
+} from '@src/common/constants';
 import { CreateReferenceInput } from '@domain/common/reference';
 import { CreateLocationInput } from '@domain/common/location/dto';
 import { Type } from 'class-transformer';
@@ -9,9 +17,25 @@ import { Markdown } from '@domain/common/scalars/scalar.markdown';
 
 @InputType()
 export class CreateProfileInput {
+  @Field({
+    nullable: false,
+    description: 'The display name for the entity.',
+  })
+  @MinLength(3)
+  @MaxLength(SMALL_TEXT_LENGTH)
+  displayName!: string;
+
+  @Field({
+    nullable: true,
+    description: 'A memorable short description for this entity.',
+  })
+  @IsOptional()
+  @MaxLength(MID_TEXT_LENGTH)
+  tagline?: string;
+
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
-  @MaxLength(LONG_TEXT_LENGTH)
+  @MaxLength(VERY_LONG_TEXT_LENGTH)
   description?: string;
 
   @Field(() => CreateLocationInput, { nullable: true })
@@ -20,19 +44,16 @@ export class CreateProfileInput {
   @Type(() => CreateLocationInput)
   location?: CreateLocationInput;
 
-  @Field(() => [CreateTagsetInput], { nullable: true })
-  @IsOptional()
-  @ValidateNested({ each: true })
-  @Type(() => CreateTagsetInput)
-  tagsetsData?: CreateTagsetInput[];
-
   @Field(() => [CreateReferenceInput], { nullable: true })
   @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => CreateReferenceInput)
   referencesData?: CreateReferenceInput[];
 
-  @Field({ nullable: true, description: 'The URL of the avatar of the user' })
+  @Field({
+    nullable: true,
+    description: 'The URL of the avatar of the user',
+  })
   @IsOptional()
   @MaxLength(MID_TEXT_LENGTH)
   avatarURL?: string;

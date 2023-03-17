@@ -11,8 +11,8 @@ import { AspectResolverFields } from './aspect.resolver.fields';
 import { AspectAuthorizationService } from './aspect.service.authorization';
 import { AspectResolverSubscriptions } from './aspect.resolver.subscriptions';
 import { UserModule } from '@domain/community/user/user.module';
-import { CardProfileModule } from '../card-profile/card.profile.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
 
 @Module({
   imports: [
@@ -22,7 +22,7 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
     CommunityPolicyModule,
     VisualModule,
     UserModule,
-    CardProfileModule,
+    ProfileModule,
     TypeOrmModule.forFeature([Aspect]),
   ],
   providers: [

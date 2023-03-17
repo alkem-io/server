@@ -60,6 +60,7 @@ import { HubVisibility } from '@common/enums/hub.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
 
 @Injectable()
 export class ChallengeService {
@@ -104,7 +105,7 @@ export class ChallengeService {
 
     if (!challengeData.nameID) {
       challengeData.nameID = this.namingService.createNameID(
-        challengeData.displayName
+        challengeData.profileData.displayName
       );
     }
     await this.baseChallengeService.isNameAvailableOrFail(
@@ -407,6 +408,13 @@ export class ChallengeService {
     );
   }
 
+  async getProfile(challenge: IChallenge): Promise<IProfile> {
+    return await this.baseChallengeService.getProfile(
+      challenge.id,
+      this.challengeRepository
+    );
+  }
+
   async getCommunityPolicy(challengeId: string): Promise<ICommunityPolicy> {
     return await this.baseChallengeService.getCommunityPolicy(
       challengeId,
@@ -485,7 +493,7 @@ export class ChallengeService {
 
     // Sort the opportunities base on their display name
     const sortedOpportunities = limitAndShuffled.sort((a, b) =>
-      a.displayName.toLowerCase() > b.displayName.toLowerCase() ? 1 : -1
+      a.nameID.toLowerCase() > b.nameID.toLowerCase() ? 1 : -1
     );
     return sortedOpportunities;
   }

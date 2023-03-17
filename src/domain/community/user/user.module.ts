@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserResolverQueries } from './user.resolver.queries';
-import { ProfileModule } from '@domain/community/profile/profile.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '@domain/community/user';
 import { UserResolverFields } from './user.resolver.fields';

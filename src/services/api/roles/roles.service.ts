@@ -267,9 +267,15 @@ export class RolesService {
     }
     // New org for roles, add an entry
     const organization = await this.organizationService.getOrganizationOrFail(
-      organizationID
+      organizationID,
+      {
+        relations: ['profile'],
+      }
     );
-    const newOrgResult = new RolesResultOrganization(organization);
+    const newOrgResult = new RolesResultOrganization(
+      organization,
+      organization.profile.displayName
+    );
     orgsMap.set(organization.id, newOrgResult);
     return newOrgResult;
   }
@@ -294,7 +300,7 @@ export class RolesService {
     }
     // New hub for roles, add an entry
     const hub = await this.hubService.getHubOrFail(hubID, {
-      relations: ['community'],
+      relations: ['community', 'profile'],
     });
     const newHubResult = new RolesResultHub(hub);
     hubsMap.set(hub.id, newHubResult);
@@ -307,7 +313,7 @@ export class RolesService {
   ): Promise<RolesResult> {
     const challenge = await this.challengeService.getChallengeOrFail(
       challengeID,
-      { relations: ['community'] }
+      { relations: ['community', 'profile'] }
     );
     const hubResult = await this.ensureHubRolesResult(
       hubsMap,
@@ -323,7 +329,7 @@ export class RolesService {
     const newChallengeResult = new RolesResultCommunity(
       challenge.nameID,
       challenge.id,
-      challenge.displayName
+      challenge.profile.displayName
     );
     hubResult.challenges.push(newChallengeResult);
     return newChallengeResult;
@@ -335,7 +341,7 @@ export class RolesService {
   ): Promise<RolesResult> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       opportunityID,
-      { relations: ['community'] }
+      { relations: ['community', 'profile'] }
     );
     const hubResult = await this.ensureHubRolesResult(
       hubsMap,
@@ -351,7 +357,7 @@ export class RolesService {
     const newOpportunityResult = new RolesResultCommunity(
       opportunity.nameID,
       opportunity.id,
-      opportunity.displayName
+      opportunity.profile.displayName
     );
     hubResult.opportunities.push(newOpportunityResult);
     return newOpportunityResult;

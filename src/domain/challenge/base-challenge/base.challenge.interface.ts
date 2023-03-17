@@ -1,20 +1,15 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
-import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { IContext } from '@domain/context/context/context.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { IPreferenceSet } from '@domain/common/preference-set';
+import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
+import { IProfile } from '@domain/common/profile';
 
 @ObjectType('IBaseChallenge')
 export abstract class IBaseChallenge extends INameable {
-  @Field(() => ITagset, {
-    nullable: true,
-    description: 'The set of tags for the challenge',
-  })
-  tagset?: ITagset;
   agent?: IAgent;
   @Field(() => ICollaboration, {
     nullable: true,
@@ -23,6 +18,7 @@ export abstract class IBaseChallenge extends INameable {
   collaboration?: ICollaboration;
   context?: IContext;
   community?: ICommunity;
+  profile!: IProfile;
   lifecycle?: ILifecycle;
   preferenceSet?: IPreferenceSet;
 }

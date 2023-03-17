@@ -1,5 +1,6 @@
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
@@ -15,6 +16,7 @@ export class BaseChallengeAuthorizationService {
     private baseChallengeService: BaseChallengeService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private contextAuthorizationService: ContextAuthorizationService,
+    private profileAuthorizationService: ProfileAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService
   ) {}
@@ -38,14 +40,15 @@ export class BaseChallengeAuthorizationService {
         );
     }
 
-    const tagset = baseChallenge.tagset;
-    if (tagset) {
-      tagset.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          tagset.authorization,
-          baseChallenge.authorization
-        );
-    }
+    const profile = await this.baseChallengeService.getProfile(
+      baseChallenge.id,
+      repository
+    );
+    baseChallenge.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        profile,
+        baseChallenge.authorization
+      );
 
     const context = await this.baseChallengeService.getContext(
       baseChallenge.id,

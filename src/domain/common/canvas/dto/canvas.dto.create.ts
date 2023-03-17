@@ -1,9 +1,9 @@
-import { CreateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.create';
+import { CreateNameableInputOld } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create.old';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class CreateCanvasInput extends CreateNameableInput {
+export class CreateCanvasInput extends CreateNameableInputOld {
   value?: string;
 
   // Override
