@@ -20,6 +20,7 @@ import { CreateAspectInput } from './dto/aspect.dto.create';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
+import { VisualType } from '@common/enums/visual.type';
 
 @Injectable()
 export class AspectService {
@@ -41,6 +42,14 @@ export class AspectService {
     const aspect: IAspect = Aspect.create(aspectInput);
     aspect.profile = await this.profileService.createProfile(
       aspectInput.profileData
+    );
+    await this.profileService.addVisualOnProfile(
+      aspect.profile,
+      VisualType.BANNER
+    );
+    await this.profileService.addVisualOnProfile(
+      aspect.profile,
+      VisualType.CARD
     );
     await this.profileService.addTagsetOnProfile(aspect.profile, {
       name: RestrictedTagsetNames.DEFAULT,

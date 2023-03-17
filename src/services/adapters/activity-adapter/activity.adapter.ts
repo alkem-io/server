@@ -61,7 +61,7 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdForHub(
       challenge.hubID
     );
-    const description = challenge.nameID;
+    const description = challenge.profile.displayName;
 
     const activity = await this.activityService.createActivity({
       collaborationID,
@@ -88,7 +88,7 @@ export class ActivityAdapter {
     const collaborationID = await this.getCollaborationIdForChallenge(
       eventData.challengeId
     );
-    const description = opportunity.nameID;
+    const description = opportunity.profile.displayName;
 
     const activity = await this.activityService.createActivity({
       collaborationID,
@@ -134,7 +134,7 @@ export class ActivityAdapter {
     this.logEventTriggered(eventData, eventType);
 
     const aspect = eventData.aspect;
-    const description = `[${aspect.nameID}] - ${aspect.profile.description}`;
+    const description = `[${aspect.profile.displayName}] - ${aspect.profile.description}`;
     const collaborationID = await this.getCollaborationIdForAspect(aspect.id);
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,

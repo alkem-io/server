@@ -47,10 +47,7 @@ export class ProfileService {
       displayName: profileData?.displayName,
     });
     profile.authorization = new AuthorizationPolicy();
-    const banner = await this.visualService.createVisualBanner();
-    const bannerNarrow = await this.visualService.createVisualBannerNarrow();
-
-    profile.visuals = [banner, bannerNarrow];
+    profile.visuals = [];
     profile.location = await this.locationService.createLocation(
       profileData?.location
     );
