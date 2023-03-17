@@ -1,5 +1,5 @@
 import { Profiling } from '@common/decorators';
-import { Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
@@ -7,7 +7,12 @@ import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ILocation } from '@domain/common/location/location.interface';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
-import { ProfileAvatarsLoaderCreator } from '@core/dataloader/creators/loader.creators';
+import {
+  ProfileAvatarsLoaderCreator,
+  ProfileLocationLoaderCreator,
+  ProfileReferencesLoaderCreator,
+  ProfileTagsetsLoaderCreator,
+} from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IProfile } from './profile.interface';
 
@@ -34,9 +39,9 @@ export class ProfileResolverFields {
   @Profiling.api
   async references(
     @Parent() profile: IProfile,
-    @Context() { loaders }: IGraphQLContext
+    @Loader(ProfileReferencesLoaderCreator) loader: ILoader<IReference[]>
   ): Promise<IReference[]> {
-    return loaders.referencesLoader.load(profile.id);
+    return loader.load(profile.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -47,9 +52,9 @@ export class ProfileResolverFields {
   @Profiling.api
   async tagsets(
     @Parent() profile: IProfile,
-    @Context() { loaders }: IGraphQLContext
+    @Loader(ProfileTagsetsLoaderCreator) loader: ILoader<ITagset[]>
   ): Promise<ITagset[]> {
-    return loaders.tagsetsLoader.load(profile.id);
+    return loader.load(profile.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -60,8 +65,8 @@ export class ProfileResolverFields {
   @Profiling.api
   async location(
     @Parent() profile: IProfile,
-    @Context() { loaders }: IGraphQLContext
+    @Loader(ProfileLocationLoaderCreator) loader: ILoader<ILocation>
   ): Promise<ILocation> {
-    return loaders.locationsLoader.load(profile.id);
+    return loader.load(profile.id);
   }
 }

@@ -3,9 +3,12 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { IPreference } from '@domain/common/preference';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
-import { createTypedDataLoader } from '../../utils';
-import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 import { PreferenceSet } from '@domain/common/preference-set';
+import { createTypedRelationDataLoader } from '../../utils';
+import {
+  DataLoaderCreator,
+  DataLoaderCreatorOptions,
+} from '../../creators/base';
 
 @Injectable()
 export class PreferencesLoaderCreator
@@ -25,7 +28,7 @@ export class PreferencesLoaderCreator
       );
     }
 
-    return createTypedDataLoader(
+    return createTypedRelationDataLoader(
       this.manager,
       options.parentClassRef,
       {

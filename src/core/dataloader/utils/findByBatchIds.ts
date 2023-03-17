@@ -1,6 +1,5 @@
 import {
   FindOptionsRelations,
-  FindOptionsSelect,
   FindOptionsWhere,
   EntityManager,
   In,
@@ -8,18 +7,7 @@ import {
 import { Type } from '@nestjs/common';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import {
-  DataLoaderCreatorLimitOptions,
-  DataLoaderCreatorPaginationOptions,
-} from '../creators/base';
-
-export type FindByBatchIdsOptionsNew<TParent, TResult> = Omit<
-  DataLoaderCreatorLimitOptions<TParent, TResult> &
-    DataLoaderCreatorPaginationOptions<TParent, TResult>,
-  'cache' | 'parentClassRef' | 'fields'
-> & {
-  select: FindOptionsSelect<TParent>;
-};
+import { FindByBatchIdsOptions } from '../utils';
 
 export const findByBatchIds = async <
   TParent extends { id: string } & { [key: string]: any }, // todo better type
@@ -29,7 +17,7 @@ export const findByBatchIds = async <
   classRef: Type<TParent>,
   ids: string[],
   relations: FindOptionsRelations<TParent>,
-  options?: FindByBatchIdsOptionsNew<TParent, TResult>
+  options?: FindByBatchIdsOptions<TParent, TResult>
 ): Promise<(TResult | Error)[] | never> => {
   if (!ids.length) {
     return [];
@@ -58,17 +46,20 @@ export const findByBatchIds = async <
 
   const getRelation = (result: TParent) =>
     options?.getResult?.(result) ?? result[topLevelRelation];
+  // return empty object because DataLoader does not allow to return NULL values
+  // handle the value when the result is returned
+  const resolveUnresolvedForKey = options?.resolveToNull
+    ? () => ({} as TResult)
+    : (key: string) =>
+        new EntityNotFoundException(
+          `Could not load relation '${topLevelRelation}' for '${key}'`,
+          LogContext.DATA_LOADER
+        );
 
   const resultsById = new Map<string, TResult>(
     results.map<[string, TResult]>(result => [result.id, getRelation(result)])
   );
   // ensure the result length matches the input length
-  return ids.map(
-    id =>
-      resultsById.get(id) ??
-      new EntityNotFoundException(
-        `Could not load relation '${topLevelRelation}' for '${id}'`,
-        LogContext.DATA_LOADER
-      )
-  );
+  const a = ids.map(id => resultsById.get(id) ?? resolveUnresolvedForKey(id));
+  return a;
 };

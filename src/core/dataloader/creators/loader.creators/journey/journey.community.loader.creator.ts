@@ -4,7 +4,7 @@ import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 import { ICommunity } from '@domain/community/community';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
-import { createTypedDataLoader } from '../../../utils';
+import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
@@ -23,7 +23,7 @@ export class JourneyCommunityLoaderCreator
       );
     }
 
-    return createTypedDataLoader(
+    return createTypedRelationDataLoader(
       this.manager,
       options.parentClassRef,
       { community: true },

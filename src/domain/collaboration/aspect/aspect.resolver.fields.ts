@@ -10,11 +10,14 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
-import { IUser } from '@domain/community';
+import { IProfile, IUser } from '@domain/community';
 import { UserService } from '@domain/community/user/user.service';
 import { ICardProfile } from '../card-profile';
 import { IAspect } from './aspect.interface';
 import { AspectService } from './aspect.service';
+import { Loader } from '@core/dataloader/decorators';
+import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { ILoader } from '@core/dataloader/loader.interface';
 
 @Resolver(() => IAspect)
 export class AspectResolverFields {
@@ -88,8 +91,11 @@ export class AspectResolverFields {
     description: 'The CardProfile for this Card.',
   })
   @Profiling.api
-  async profile(@Parent() aspect: IAspect): Promise<ICardProfile> {
-    return await this.aspectService.getCardProfile(aspect, ['profile.tagset']);
+  async profile(
+    @Parent() aspect: IAspect,
+    @Loader(ProfileLoaderCreator) loader: ILoader<IProfile>
+  ): Promise<IProfile> {
+    return loader.load(aspect.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

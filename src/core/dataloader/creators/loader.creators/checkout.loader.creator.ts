@@ -2,16 +2,21 @@ import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
-import { Agent, IAgent } from '@src/domain';
+import { ICanvasCheckout } from '@domain/common/canvas-checkout/canvas.checkout.interface';
 import { createTypedRelationDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 
 @Injectable()
-export class AgentLoaderCreator implements DataLoaderCreator<IAgent> {
+export class CheckoutLoaderCreator
+  implements DataLoaderCreator<ICanvasCheckout>
+{
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
   create(
-    options?: DataLoaderCreatorOptions<IAgent, { id: string; agent?: Agent }>
+    options?: DataLoaderCreatorOptions<
+      ICanvasCheckout,
+      { id: string; checkout?: ICanvasCheckout }
+    >
   ) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
@@ -23,7 +28,7 @@ export class AgentLoaderCreator implements DataLoaderCreator<IAgent> {
       this.manager,
       options.parentClassRef,
       {
-        agent: true,
+        checkout: true,
       },
       this.constructor.name,
       options

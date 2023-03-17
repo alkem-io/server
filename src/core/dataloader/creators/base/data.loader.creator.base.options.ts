@@ -28,4 +28,11 @@ export interface DataLoaderCreatorBaseOptions<TParent, TResult> {
    * key
    */
   cache?: boolean;
+  /***
+   * What to return when resolving the unresolved result for a key.
+   * The default behaviour is to return an error - set to true to return NULL instead.
+   * This is useful when an a result is expected to be null and it's not an
+   * exceptional case.
+   */
+  resolveToNull?: boolean;
 }

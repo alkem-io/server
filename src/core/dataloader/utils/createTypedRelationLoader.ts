@@ -10,7 +10,7 @@ import { ILoader } from '../loader.interface';
 import { findByBatchIds } from './findByBatchIds';
 import { selectOptionsFromFields } from './selectOptionsFromFields';
 
-export const createTypedDataLoader = <
+export const createTypedRelationDataLoader = <
   TParent extends { id: string } & { [key: string]: any }, // todo better type,
   TResult
 >(

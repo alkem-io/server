@@ -2,7 +2,7 @@ import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { ICollaboration } from '@domain/collaboration/collaboration';
-import { createTypedDataLoader } from '../../../utils';
+import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
 
@@ -19,7 +19,7 @@ export class JourneyCollaborationLoaderCreator
       );
     }
 
-    return createTypedDataLoader(
+    return createTypedRelationDataLoader(
       this.manager,
       options.parentClassRef,
       { collaboration: true },

@@ -1,22 +1,20 @@
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { Hub } from '@domain/challenge/hub/hub.entity';
-import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
+import { IVisual } from '@domain/common/visual';
+import { Canvas } from '@domain/common/canvas';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
-export class HubTimelineLoaderCreator
-  implements DataLoaderCreator<ITimeline[]>
-{
+export class CanvasVisualLoaderCreator implements DataLoaderCreator<IVisual> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ITimeline[]>) {
+  create(options?: DataLoaderCreatorOptions<IVisual>) {
     return createTypedRelationDataLoader(
       this.manager,
-      Hub,
-      { timeline: true },
+      Canvas,
+      { preview: true },
       this.constructor.name,
       options
     );

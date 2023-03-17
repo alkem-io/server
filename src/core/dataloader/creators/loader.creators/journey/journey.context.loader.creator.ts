@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { IContext } from '@src/domain';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
-import { createTypedDataLoader } from '../../../utils';
+import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
@@ -19,7 +19,7 @@ export class JourneyContextLoaderCreator
       );
     }
 
-    return createTypedDataLoader(
+    return createTypedRelationDataLoader(
       this.manager,
       options.parentClassRef,
       { context: true },

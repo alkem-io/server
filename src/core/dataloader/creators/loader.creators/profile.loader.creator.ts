@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
 import { IProfile } from '@src/domain';
-import { createTypedDataLoader } from '../../utils';
+import { createTypedRelationDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 
 @Injectable()
@@ -22,7 +22,7 @@ export class ProfileLoaderCreator implements DataLoaderCreator<IProfile> {
       );
     }
 
-    return createTypedDataLoader(
+    return createTypedRelationDataLoader(
       this.manager,
       options.parentClassRef,
       {

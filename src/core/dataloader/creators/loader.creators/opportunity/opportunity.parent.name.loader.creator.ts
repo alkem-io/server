@@ -2,7 +2,7 @@ import { EntityManager, FindOptionsSelect } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { Opportunity } from '@domain/collaboration/opportunity';
-import { createTypedDataLoader } from '../../../utils';
+import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 @Injectable()
@@ -12,7 +12,7 @@ export class OpportunityParentNameLoaderCreator
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
   create(options?: DataLoaderCreatorOptions<string, Opportunity>) {
-    return createTypedDataLoader(
+    return createTypedRelationDataLoader(
       this.manager,
       Opportunity,
       { challenge: true },

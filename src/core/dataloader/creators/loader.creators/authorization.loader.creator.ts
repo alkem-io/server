@@ -2,7 +2,7 @@ import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
-import { createTypedDataLoader } from '../../utils';
+import { createTypedRelationDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -22,7 +22,7 @@ export class AuthorizationLoaderCreator
       );
     }
 
-    return createTypedDataLoader(
+    return createTypedRelationDataLoader(
       this.manager,
       options.parentClassRef,
       { authorization: true },

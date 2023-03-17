@@ -2,16 +2,20 @@ import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
-import { Agent, IAgent } from '@src/domain';
+import { IComments } from '@domain/communication/comments/comments.interface';
+import { Comments } from '@domain/communication/comments';
 import { createTypedRelationDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 
 @Injectable()
-export class AgentLoaderCreator implements DataLoaderCreator<IAgent> {
+export class CommentsLoaderCreator implements DataLoaderCreator<IComments> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
   create(
-    options?: DataLoaderCreatorOptions<IAgent, { id: string; agent?: Agent }>
+    options?: DataLoaderCreatorOptions<
+      IComments,
+      { id: string; comments?: Comments }
+    >
   ) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
@@ -22,9 +26,7 @@ export class AgentLoaderCreator implements DataLoaderCreator<IAgent> {
     return createTypedRelationDataLoader(
       this.manager,
       options.parentClassRef,
-      {
-        agent: true,
-      },
+      { comments: true },
       this.constructor.name,
       options
     );
