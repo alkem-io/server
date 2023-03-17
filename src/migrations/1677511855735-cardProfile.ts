@@ -34,13 +34,12 @@ export class cardProfile1677511855735 implements MigrationInterface {
     for (const aspect of aspects) {
       const newProfileID = randomUUID();
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, createdDate, version, authorizationId, description, tagsetId, locationId from card_profile WHERE (id = '${aspect.profileId}')`
+        `SELECT id, version, authorizationId, description, tagsetId, locationId from card_profile WHERE (id = '${aspect.profileId}')`
       );
       const oldCardProfile = profiles[0];
       await queryRunner.query(
-        `INSERT INTO profile (id, createdDate, version, authorizationId, locationId, description, displayName)
+        `INSERT INTO profile (id, version, authorizationId, locationId, description, displayName)
             VALUES ('${newProfileID}',
-                    '${formatDatetime(oldCardProfile.createdDate)}',
                     '${oldCardProfile.version}',
                     '${oldCardProfile.authorizationId}',
                     '${oldCardProfile.locationId}',
@@ -75,13 +74,12 @@ export class cardProfile1677511855735 implements MigrationInterface {
     for (const event of events) {
       const newProfileID = randomUUID();
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, createdDate, version, authorizationId, description, tagsetId, locationId from card_profile WHERE (id = '${event.profileId}')`
+        `SELECT id, version, authorizationId, description, tagsetId, locationId from card_profile WHERE (id = '${event.profileId}')`
       );
       const oldCardProfile = profiles[0];
       await queryRunner.query(
-        `INSERT INTO profile (id, createdDate, version, authorizationId, locationId, description, displayName)
+        `INSERT INTO profile (id, version, authorizationId, locationId, description, displayName)
             VALUES ('${newProfileID}',
-                    '${formatDatetime(oldCardProfile.createdDate)}',
                     '${oldCardProfile.version}',
                     '${oldCardProfile.authorizationId}',
                     '${oldCardProfile.locationId}',
@@ -178,7 +176,7 @@ export class cardProfile1677511855735 implements MigrationInterface {
     for (const aspect of aspects) {
       const newCardProfileID = randomUUID();
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, createdDate, version, authorizationId, description, locationId, displayName from profile WHERE (id = '${aspect.profileId}')`
+        `SELECT id, version, authorizationId, description, locationId, displayName from profile WHERE (id = '${aspect.profileId}')`
       );
       const oldProfile = profiles[0];
       const tagsets: any[] = await queryRunner.query(
@@ -186,9 +184,8 @@ export class cardProfile1677511855735 implements MigrationInterface {
       );
       const tagset = tagsets[0];
       await queryRunner.query(
-        `INSERT INTO card_profile (id, createdDate, version, authorizationId, locationId, description, tagsetId)
+        `INSERT INTO card_profile (id, version, authorizationId, locationId, description, tagsetId)
             VALUES ('${newCardProfileID}',
-                    '${formatDatetime(oldProfile.createdDate)}',
                     '${oldProfile.version}',
                     '${oldProfile.authorizationId}',
                     '${oldProfile.locationId}',
@@ -227,7 +224,7 @@ export class cardProfile1677511855735 implements MigrationInterface {
     for (const event of events) {
       const newCardProfileID = randomUUID();
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, createdDate, version, authorizationId, description, locationId, displayName from profile WHERE (id = '${event.profileId}')`
+        `SELECT id, version, authorizationId, description, locationId, displayName from profile WHERE (id = '${event.profileId}')`
       );
       const oldProfile = profiles[0];
       const tagsets: any[] = await queryRunner.query(
@@ -235,9 +232,8 @@ export class cardProfile1677511855735 implements MigrationInterface {
       );
       const tagset = tagsets[0];
       await queryRunner.query(
-        `INSERT INTO card_profile (id, createdDate, version, authorizationId, locationId, description, tagsetId)
+        `INSERT INTO card_profile (id, version, authorizationId, locationId, description, tagsetId)
             VALUES ('${newCardProfileID}',
-                    '${formatDatetime(oldProfile.createdDate)}',
                     '${oldProfile.version}',
                     '${oldProfile.authorizationId}',
                     '${oldProfile.locationId}',
