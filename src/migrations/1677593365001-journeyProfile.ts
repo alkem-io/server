@@ -1,6 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { escapeString } from './utils/escape-string';
+import { formatDatetime } from './utils/format-datetime';
 
 export class journeyProfile1677593365001 implements MigrationInterface {
   name = 'journeyProfile1677593365001';
@@ -67,24 +68,23 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     );
     for (const hub of hubs) {
       const contexts: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, tagline, locationId, background from context WHERE (id = '${hub.contextId}')`
+        `SELECT id, createdDate, version, tagline, locationId, background from context WHERE (id = '${hub.contextId}')`
       );
       const context = contexts[0];
       const newProfileID = randomUUID();
       const profileAuthID = randomUUID();
 
       await queryRunner.query(
-        `INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+        `INSERT INTO authorization_policy (id, createdDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
           ('${profileAuthID}',
-          '${context.createdDate}',
-          '${context.updatedDate}', 1, '', '', 0, '')`
+          '${formatDatetime(context.createdDate)}',
+          1, '', '', 0, '')`
       );
 
       await queryRunner.query(
-        `INSERT INTO profile (id, createdDate, updatedDate, version, authorizationId, locationId, description, displayName, tagline)
+        `INSERT INTO profile (id, createdDate, version, authorizationId, locationId, description, displayName, tagline)
               VALUES ('${newProfileID}',
-                      '${context.createdDate}',
-                      '${context.updatedDate}',
+                      '${formatDatetime(context.createdDate)}',
                       '${context.version}',
                       '${profileAuthID}',
                       '${context.locationId}',
@@ -120,23 +120,22 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     );
     for (const challenge of challenges) {
       const contexts: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, tagline, locationId, background from context WHERE (id = '${challenge.contextId}')`
+        `SELECT id, createdDate, version, tagline, locationId, background from context WHERE (id = '${challenge.contextId}')`
       );
       const context = contexts[0];
       const newProfileID = randomUUID();
       const profileAuthID = randomUUID();
 
       await queryRunner.query(
-        `INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+        `INSERT INTO authorization_policy (id, createdDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
           ('${profileAuthID}',
-          '${context.createdDate}',
-          '${context.updatedDate}', 1, '', '', 0, '')`
+          '${formatDatetime(context.createdDate)}',
+           1, '', '', 0, '')`
       );
       await queryRunner.query(
-        `INSERT INTO profile (id, createdDate, updatedDate, version, authorizationId, locationId, description, displayName, tagline)
+        `INSERT INTO profile (id, createdDate, version, authorizationId, locationId, description, displayName, tagline)
               VALUES ('${newProfileID}',
-                      '${context.createdDate}',
-                      '${context.updatedDate}',
+                      '${formatDatetime(context.createdDate)}',
                       '${context.version}',
                       '${profileAuthID}',
                       '${context.locationId}',
@@ -173,23 +172,22 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     );
     for (const opportunity of opportunities) {
       const contexts: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, tagline, locationId, background from context WHERE (id = '${opportunity.contextId}')`
+        `SELECT id, createdDate, version, tagline, locationId, background from context WHERE (id = '${opportunity.contextId}')`
       );
       const context = contexts[0];
       const newProfileID = randomUUID();
       const profileAuthID = randomUUID();
 
       await queryRunner.query(
-        `INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+        `INSERT INTO authorization_policy (id, createdDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
                 ('${profileAuthID}',
-                '${context.createdDate}',
-                '${context.updatedDate}', 1, '', '', 0, '')`
+                '${formatDatetime(context.createdDate)}',
+                1, '', '', 0, '')`
       );
       await queryRunner.query(
-        `INSERT INTO profile (id, createdDate, updatedDate, version, authorizationId, locationId, description, displayName, tagline)
+        `INSERT INTO profile (id, createdDate, version, authorizationId, locationId, description, displayName, tagline)
                     VALUES ('${newProfileID}',
-                            '${context.createdDate}',
-                            '${context.updatedDate}',
+                            '${formatDatetime(context.createdDate)}',
                             '${context.version}',
                             '${profileAuthID}',
                             '${context.locationId}',
