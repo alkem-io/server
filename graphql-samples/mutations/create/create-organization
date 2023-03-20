@@ -17,9 +17,9 @@ query variables:
   {
     "nameID": "AlkemioOrg",
     "displayName": "Stichting Alkemio",
-    legalEntityName: "Alkemio Legal Name",
+    "legalEntityName": "Alkemio Legal Name",
     "domain": "alkem.io",
     "website": "alkem.io",
-    contactEmail: "contact@alkem.io"
+    "contactEmail": "contact@alkem.io"
   }
 }
