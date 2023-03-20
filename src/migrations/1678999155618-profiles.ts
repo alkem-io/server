@@ -82,162 +82,57 @@ export class profiles1678999155618 implements MigrationInterface {
       `ALTER TABLE \`canvas\` DROP FOREIGN KEY \`FK_c7b34f838919f526f829295cf86\``
     );
 
-    /////////////////////////////////
-    // Migrate the Hubs
-    const hubs: any[] = await queryRunner.query(
-      `SELECT id, tagsetId, contextId from hub`
-    );
-    for (const hub of hubs) {
-      const contexts: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, tagline, locationId, background from context WHERE (id = '${hub.contextId}')`
-      );
-      const context = contexts[0];
-      const newProfileID = randomUUID();
-      const profileAuthID = randomUUID();
+    // /////////////////////////////////
+    // // Migrate the Opportunities
+    // const opportunities: any[] = await queryRunner.query(
+    //   `SELECT id, tagsetId, contextId from opportunity`
+    // );
+    // for (const opportunity of opportunities) {
+    //   const contexts: any[] = await queryRunner.query(
+    //     `SELECT id, createdDate, updatedDate, version, tagline, locationId, background from context WHERE (id = '${opportunity.contextId}')`
+    //   );
+    //   const context = contexts[0];
+    //   const newProfileID = randomUUID();
+    //   const profileAuthID = randomUUID();
 
-      await queryRunner.query(
-        `INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
-            ('${profileAuthID}',
-            '${context.createdDate}',
-            '${context.updatedDate}', 1, '', '', 0, '')`
-      );
+    //   await queryRunner.query(
+    //     `INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+    //               ('${profileAuthID}',
+    //               '${context.createdDate}',
+    //               '${context.updatedDate}', 1, '', '', 0, '')`
+    //   );
+    //   await queryRunner.query(
+    //     `INSERT INTO profile (id, createdDate, updatedDate, version, authorizationId, locationId, description, displayName, tagline)
+    //                   VALUES ('${newProfileID}',
+    //                           '${context.createdDate}',
+    //                           '${context.updatedDate}',
+    //                           '${context.version}',
+    //                           '${profileAuthID}',
+    //                           '${context.locationId}',
+    //                           '${escapeString(context.background)}',
+    //                           '${escapeString(opportunity.displayName)}',
+    //                           '${escapeString(context.tagline)}')`
+    //   );
 
-      await queryRunner.query(
-        `INSERT INTO profile (id, createdDate, updatedDate, version, authorizationId, locationId, description, displayName, tagline)
-                VALUES ('${newProfileID}',
-                        '${context.createdDate}',
-                        '${context.updatedDate}',
-                        '${context.version}',
-                        '${profileAuthID}',
-                        '${context.locationId}',
-                        '${escapeString(context.background)}',
-                        '${escapeString(hub.displayName)}',
-                        '${escapeString(context.tagline)}')`
-      );
+    //   // Update the tagset to be one of many
+    //   await queryRunner.query(
+    //     `UPDATE tagset SET profileId = '${newProfileID}' WHERE (id = '${opportunity.tagsetId}')`
+    //   );
 
-      // Update the tagset to be one of many
-      await queryRunner.query(
-        `UPDATE tagset SET profileId = '${newProfileID}' WHERE (id = '${hub.tagsetId}')`
-      );
+    //   // Update the references to be parented on the new profile
+    //   await queryRunner.query(
+    //     `UPDATE reference SET profileId = '${newProfileID}' WHERE (contextId = '${context.id}')`
+    //   );
 
-      // Update the references to be parented on the new profile
-      await queryRunner.query(
-        `UPDATE reference SET profileId = '${newProfileID}' WHERE (contextId = '${context.id}')`
-      );
+    //   // Update the visuals to be parented on the new profile
+    //   await queryRunner.query(
+    //     `UPDATE visual SET profileId = '${newProfileID}' WHERE (contextId = '${context.id}')`
+    //   );
 
-      // Update the visuals to be parented on the new profile
-      await queryRunner.query(
-        `UPDATE visual SET profileId = '${newProfileID}' WHERE (contextId = '${context.id}')`
-      );
-
-      await queryRunner.query(
-        `UPDATE hub SET profileId = '${newProfileID}' WHERE (id = '${hub.id}')`
-      );
-    }
-
-    /////////////////////////////////
-    // Migrate the Challenges
-    const challenges: any[] = await queryRunner.query(
-      `SELECT id, tagsetId, contextId from challenge`
-    );
-    for (const challenge of challenges) {
-      const contexts: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, tagline, locationId, background from context WHERE (id = '${challenge.contextId}')`
-      );
-      const context = contexts[0];
-      const newProfileID = randomUUID();
-      const profileAuthID = randomUUID();
-
-      await queryRunner.query(
-        `INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
-            ('${profileAuthID}',
-            '${context.createdDate}',
-            '${context.updatedDate}', 1, '', '', 0, '')`
-      );
-      await queryRunner.query(
-        `INSERT INTO profile (id, createdDate, updatedDate, version, authorizationId, locationId, description, displayName, tagline)
-                VALUES ('${newProfileID}',
-                        '${context.createdDate}',
-                        '${context.updatedDate}',
-                        '${context.version}',
-                        '${profileAuthID}',
-                        '${context.locationId}',
-                        '${escapeString(context.background)}',
-                        '${escapeString(challenge.displayName)}',
-                        '${escapeString(context.tagline)}')`
-      );
-
-      // Update the tagset to be one of many
-      await queryRunner.query(
-        `UPDATE tagset SET profileId = '${newProfileID}' WHERE (id = '${challenge.tagsetId}')`
-      );
-
-      // Update the references to be parented on the new profile
-      await queryRunner.query(
-        `UPDATE reference SET profileId = '${newProfileID}' WHERE (contextId = '${context.id}')`
-      );
-
-      // Update the visuals to be parented on the new profile
-      await queryRunner.query(
-        `UPDATE visual SET profileId = '${newProfileID}' WHERE (contextId = '${context.id}')`
-      );
-
-      await queryRunner.query(
-        `UPDATE challenge SET profileId = '${newProfileID}' WHERE (id = '${challenge.id}')`
-      );
-    }
-
-    /////////////////////////////////
-    // Migrate the Opportunities
-    const opportunities: any[] = await queryRunner.query(
-      `SELECT id, tagsetId, contextId from opportunity`
-    );
-    for (const opportunity of opportunities) {
-      const contexts: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, tagline, locationId, background from context WHERE (id = '${opportunity.contextId}')`
-      );
-      const context = contexts[0];
-      const newProfileID = randomUUID();
-      const profileAuthID = randomUUID();
-
-      await queryRunner.query(
-        `INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
-                  ('${profileAuthID}',
-                  '${context.createdDate}',
-                  '${context.updatedDate}', 1, '', '', 0, '')`
-      );
-      await queryRunner.query(
-        `INSERT INTO profile (id, createdDate, updatedDate, version, authorizationId, locationId, description, displayName, tagline)
-                      VALUES ('${newProfileID}',
-                              '${context.createdDate}',
-                              '${context.updatedDate}',
-                              '${context.version}',
-                              '${profileAuthID}',
-                              '${context.locationId}',
-                              '${escapeString(context.background)}',
-                              '${escapeString(opportunity.displayName)}',
-                              '${escapeString(context.tagline)}')`
-      );
-
-      // Update the tagset to be one of many
-      await queryRunner.query(
-        `UPDATE tagset SET profileId = '${newProfileID}' WHERE (id = '${opportunity.tagsetId}')`
-      );
-
-      // Update the references to be parented on the new profile
-      await queryRunner.query(
-        `UPDATE reference SET profileId = '${newProfileID}' WHERE (contextId = '${context.id}')`
-      );
-
-      // Update the visuals to be parented on the new profile
-      await queryRunner.query(
-        `UPDATE visual SET profileId = '${newProfileID}' WHERE (contextId = '${context.id}')`
-      );
-
-      await queryRunner.query(
-        `UPDATE opportunity SET profileId = '${newProfileID}' WHERE (id = '${opportunity.id}')`
-      );
-    }
+    //   await queryRunner.query(
+    //     `UPDATE opportunity SET profileId = '${newProfileID}' WHERE (id = '${opportunity.id}')`
+    //   );
+    // }
 
     /////////////////////////////////
     // Remove old data / structure
