@@ -64,7 +64,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     /////////////////////////////////
     // Migrate the Hubs
     const hubs: any[] = await queryRunner.query(
-      `SELECT id, tagsetId, contextId from hub`
+      `SELECT id, tagsetId, contextId, displayName from hub`
     );
     for (const hub of hubs) {
       const contexts: any[] = await queryRunner.query(
@@ -114,7 +114,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     /////////////////////////////////
     // Migrate the Challenges
     const challenges: any[] = await queryRunner.query(
-      `SELECT id, tagsetId, contextId from challenge`
+      `SELECT id, tagsetId, contextId, displayName from challenge`
     );
     for (const challenge of challenges) {
       const contexts: any[] = await queryRunner.query(
@@ -158,13 +158,12 @@ export class journeyProfile1677593365001 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE challenge SET profileId = '${newProfileID}' WHERE (id = '${challenge.id}')`
       );
-
     }
 
     /////////////////////////////////
     // Migrate the Opportunities
     const opportunities: any[] = await queryRunner.query(
-      `SELECT id, tagsetId, contextId from opportunity`
+      `SELECT id, tagsetId, contextId, displayName from opportunity`
     );
     for (const opportunity of opportunities) {
       const contexts: any[] = await queryRunner.query(
@@ -242,7 +241,6 @@ export class journeyProfile1677593365001 implements MigrationInterface {
 
   ///////////////////////////////
   public async down(queryRunner: QueryRunner): Promise<void> {
-
     /////////////////////////////////
     //Hub ==> Profile
     await queryRunner.query(
