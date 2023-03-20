@@ -42,10 +42,7 @@ export class OrganizationResolverFields {
   ): Promise<IUserGroup[]> {
     // Reload to ensure the authorization is loaded
     const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id,
-      {
-        relations: ['authorization'],
-      }
+      parent.id
     );
 
     await this.authorizationService.grantAccessOrFail(
@@ -71,10 +68,7 @@ export class OrganizationResolverFields {
   ): Promise<IUserGroup> {
     // Reload to ensure the authorization is loaded
     const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id,
-      {
-        relations: ['authorization'],
-      }
+      parent.id
     );
 
     await this.authorizationService.grantAccessOrFail(
@@ -101,10 +95,7 @@ export class OrganizationResolverFields {
   ): Promise<IUser[]> {
     // Reload to ensure the authorization is loaded
     const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id,
-      {
-        relations: ['authorization'],
-      }
+      parent.id
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -128,10 +119,7 @@ export class OrganizationResolverFields {
   ) {
     // Reload to ensure the authorization is loaded
     const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id,
-      {
-        relations: ['authorization'],
-      }
+      parent.id
     );
 
     this.authorizationService.grantAccessOrFail(
@@ -194,10 +182,7 @@ export class OrganizationResolverFields {
   ): Promise<IPreference[]> {
     // Reload to ensure the authorization is loaded
     const organization = await this.organizationService.getOrganizationOrFail(
-      parent.id,
-      {
-        relations: ['authorization'],
-      }
+      parent.id
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
