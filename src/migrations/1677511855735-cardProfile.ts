@@ -1,6 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { escapeString } from './utils/escape-string';
+import { formatDatetime } from './utils/format-datetime';
 
 export class cardProfile1677511855735 implements MigrationInterface {
   name = 'cardProfile1677511855735';
@@ -33,14 +34,12 @@ export class cardProfile1677511855735 implements MigrationInterface {
     for (const aspect of aspects) {
       const newProfileID = randomUUID();
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, authorizationId, description, tagsetId, locationId from card_profile WHERE (id = '${aspect.profileId}')`
+        `SELECT id, version, authorizationId, description, tagsetId, locationId from card_profile WHERE (id = '${aspect.profileId}')`
       );
       const oldCardProfile = profiles[0];
       await queryRunner.query(
-        `INSERT INTO profile (id, createdDate, updatedDate, version, authorizationId, locationId, description, displayName)
+        `INSERT INTO profile (id, version, authorizationId, locationId, description, displayName)
             VALUES ('${newProfileID}',
-                    '${oldCardProfile.createdDate}',
-                    '${oldCardProfile.updatedDate}',
                     '${oldCardProfile.version}',
                     '${oldCardProfile.authorizationId}',
                     '${oldCardProfile.locationId}',
@@ -62,7 +61,7 @@ export class cardProfile1677511855735 implements MigrationInterface {
       );
     }
     await queryRunner.query(
-      'ALTER TABLE \`aspect\` ADD UNIQUE INDEX \`IDX_67663901817dd09d5906537e088\` (\`profileId\`)'
+      'ALTER TABLE `aspect` ADD UNIQUE INDEX `IDX_67663901817dd09d5906537e088` (`profileId`)'
     );
     await queryRunner.query(
       `ALTER TABLE \`aspect\` ADD CONSTRAINT \`FK_67663901817dd09d5906537e088\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -75,14 +74,12 @@ export class cardProfile1677511855735 implements MigrationInterface {
     for (const event of events) {
       const newProfileID = randomUUID();
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, authorizationId, description, tagsetId, locationId from card_profile WHERE (id = '${event.profileId}')`
+        `SELECT id, version, authorizationId, description, tagsetId, locationId from card_profile WHERE (id = '${event.profileId}')`
       );
       const oldCardProfile = profiles[0];
       await queryRunner.query(
-        `INSERT INTO profile (id, createdDate, updatedDate, version, authorizationId, locationId, description, displayName)
+        `INSERT INTO profile (id, version, authorizationId, locationId, description, displayName)
             VALUES ('${newProfileID}',
-                    '${oldCardProfile.createdDate}',
-                    '${oldCardProfile.updatedDate}',
                     '${oldCardProfile.version}',
                     '${oldCardProfile.authorizationId}',
                     '${oldCardProfile.locationId}',
@@ -105,7 +102,7 @@ export class cardProfile1677511855735 implements MigrationInterface {
     }
 
     await queryRunner.query(
-      'ALTER TABLE \`calendar_event\` ADD UNIQUE INDEX \`IDX_111838434c7198a323ea6f475fb\` (\`profileId\`)'
+      'ALTER TABLE `calendar_event` ADD UNIQUE INDEX `IDX_111838434c7198a323ea6f475fb` (`profileId`)'
     );
     await queryRunner.query(
       `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_111838434c7198a323ea6f475fb\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -127,13 +124,13 @@ export class cardProfile1677511855735 implements MigrationInterface {
       `ALTER TABLE \`aspect\` DROP FOREIGN KEY \`FK_67663901817dd09d5906537e088\``
     );
     await queryRunner.query(
-      'DROP INDEX \`IDX_67663901817dd09d5906537e088\` ON \`aspect\`'
+      'DROP INDEX `IDX_67663901817dd09d5906537e088` ON `aspect`'
     );
     await queryRunner.query(
       `ALTER TABLE \`calendar_event\` DROP FOREIGN KEY \`FK_111838434c7198a323ea6f475fb\``
     );
     await queryRunner.query(
-      'DROP INDEX \`IDX_111838434c7198a323ea6f475fb\` ON \`calendar_event\`'
+      'DROP INDEX `IDX_111838434c7198a323ea6f475fb` ON `calendar_event`'
     );
     await queryRunner.query(
       `ALTER TABLE \`aspect\`ADD \`displayName\` varchar(255) NULL`
@@ -179,7 +176,7 @@ export class cardProfile1677511855735 implements MigrationInterface {
     for (const aspect of aspects) {
       const newCardProfileID = randomUUID();
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, authorizationId, description, locationId, displayName from profile WHERE (id = '${aspect.profileId}')`
+        `SELECT id, version, authorizationId, description, locationId, displayName from profile WHERE (id = '${aspect.profileId}')`
       );
       const oldProfile = profiles[0];
       const tagsets: any[] = await queryRunner.query(
@@ -187,10 +184,8 @@ export class cardProfile1677511855735 implements MigrationInterface {
       );
       const tagset = tagsets[0];
       await queryRunner.query(
-        `INSERT INTO card_profile (id, createdDate, updatedDate, version, authorizationId, locationId, description, tagsetId)
+        `INSERT INTO card_profile (id, version, authorizationId, locationId, description, tagsetId)
             VALUES ('${newCardProfileID}',
-                    '${oldProfile.createdDate}',
-                    '${oldProfile.updatedDate}',
                     '${oldProfile.version}',
                     '${oldProfile.authorizationId}',
                     '${oldProfile.locationId}',
@@ -209,13 +204,14 @@ export class cardProfile1677511855735 implements MigrationInterface {
       );
 
       await queryRunner.query(
-        `UPDATE aspect SET profileId = '${newCardProfileID}', displayName = '${escapeString(oldProfile.displayName)}'  WHERE (id = '${aspect.id}')`
+        `UPDATE aspect SET profileId = '${newCardProfileID}', displayName = '${escapeString(
+          oldProfile.displayName
+        )}'  WHERE (id = '${aspect.id}')`
       );
 
       await queryRunner.query(
         `DELETE FROM profile WHERE (id = '${oldProfile.id}')`
       );
-
     }
 
     await queryRunner.query(
@@ -229,7 +225,7 @@ export class cardProfile1677511855735 implements MigrationInterface {
     for (const event of events) {
       const newCardProfileID = randomUUID();
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, createdDate, updatedDate, version, authorizationId, description, locationId, displayName from profile WHERE (id = '${event.profileId}')`
+        `SELECT id, version, authorizationId, description, locationId, displayName from profile WHERE (id = '${event.profileId}')`
       );
       const oldProfile = profiles[0];
       const tagsets: any[] = await queryRunner.query(
@@ -237,10 +233,8 @@ export class cardProfile1677511855735 implements MigrationInterface {
       );
       const tagset = tagsets[0];
       await queryRunner.query(
-        `INSERT INTO card_profile (id, createdDate, updatedDate, version, authorizationId, locationId, description, tagsetId)
+        `INSERT INTO card_profile (id, version, authorizationId, locationId, description, tagsetId)
             VALUES ('${newCardProfileID}',
-                    '${oldProfile.createdDate}',
-                    '${oldProfile.updatedDate}',
                     '${oldProfile.version}',
                     '${oldProfile.authorizationId}',
                     '${oldProfile.locationId}',
@@ -259,7 +253,9 @@ export class cardProfile1677511855735 implements MigrationInterface {
       );
 
       await queryRunner.query(
-        `UPDATE calendar_event SET profileId = '${newCardProfileID}', displayName = '${escapeString(oldProfile.displayName)}' WHERE (id = '${event.id}')`
+        `UPDATE calendar_event SET profileId = '${newCardProfileID}', displayName = '${escapeString(
+          oldProfile.displayName
+        )}' WHERE (id = '${event.id}')`
       );
 
       await queryRunner.query(

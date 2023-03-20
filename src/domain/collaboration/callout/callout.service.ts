@@ -224,6 +224,10 @@ export class CalloutService {
     return await this.calloutRepository.save(callout);
   }
 
+  async save(callout: ICallout): Promise<ICallout> {
+    return await this.calloutRepository.save(callout);
+  }
+
   public async deleteCallout(calloutID: string): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: [

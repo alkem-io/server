@@ -29,7 +29,7 @@ export class RolesResultHub extends RolesResultCommunity {
   visibility!: HubVisibility;
 
   constructor(hub: IHub) {
-    super(hub.nameID, hub.id, hub.profile?.displayName || '');
+    super(hub.nameID, hub.id, hub.profile.displayName);
     this.hubID = hub.id;
     this.hub = hub;
     this.visibility = hub.visibility ?? HubVisibility.ACTIVE;

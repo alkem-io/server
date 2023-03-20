@@ -61,7 +61,7 @@ export class OpportunityResolverMutations {
     this.elasticService.opportunityContentEdited(
       {
         id: updatedOpportunity.id,
-        name: updatedOpportunity.profile?.displayName || '',
+        name: updatedOpportunity.profile.displayName,
         hub: updatedOpportunity.hubID ?? '',
       },
       {

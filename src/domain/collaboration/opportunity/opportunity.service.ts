@@ -44,7 +44,7 @@ import { HubVisibility } from '@common/enums/hub.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { CreateProjectInput } from '../project/dto';
+import { CreateProjectInput } from '../project/dto/project.dto.create';
 
 @Injectable()
 export class OpportunityService {
@@ -278,7 +278,9 @@ export class OpportunityService {
       opportunityData,
       this.opportunityRepository
     );
-    const opportunity = await this.getOpportunityOrFail(baseOpportunity.id);
+    const opportunity = await this.getOpportunityOrFail(baseOpportunity.id, {
+      relations: ['profile'],
+    });
     if (opportunityData.nameID) {
       if (opportunityData.nameID !== baseOpportunity.nameID) {
         // updating the nameID, check new value is allowed

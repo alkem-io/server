@@ -37,23 +37,24 @@ export class OrganizationResolverFields {
   })
   @Profiling.api
   async groups(
-    @Parent() organization: Organization,
+    @Parent() parent: Organization,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IUserGroup[] | 'not accessible'> {
-    if (
-      await this.isAccessGranted(
-        organization,
-        agentInfo,
-        AuthorizationPrivilege.READ
-      )
-    ) {
-      return await this.organizationService.getUserGroups(organization);
-    }
+  ): Promise<IUserGroup[]> {
+    // Reload to ensure the authorization is loaded
+    const organization = await this.organizationService.getOrganizationOrFail(
+      parent.id
+    );
 
-    return 'not accessible';
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.READ,
+      `read user groups on org: ${organization.nameID}`
+    );
+
+    return await this.organizationService.getUserGroups(organization);
   }
 
-  //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('group', () => IUserGroup, {
     nullable: true,
@@ -62,25 +63,26 @@ export class OrganizationResolverFields {
   @Profiling.api
   async group(
     @CurrentUser() agentInfo: AgentInfo,
-    @Parent() organization: Organization,
+    @Parent() parent: Organization,
     @Args('ID', { type: () => UUID }) groupID: string
-  ): Promise<IUserGroup | 'not accessible'> {
-    if (
-      await this.isAccessGranted(
-        organization,
-        agentInfo,
-        AuthorizationPrivilege.READ
-      )
-    ) {
-      return await this.groupService.getUserGroupOrFail(groupID, {
-        where: { organization: { id: organization.id } },
-      });
-    }
+  ): Promise<IUserGroup> {
+    // Reload to ensure the authorization is loaded
+    const organization = await this.organizationService.getOrganizationOrFail(
+      parent.id
+    );
 
-    return 'not accessible';
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.READ,
+      `read single usergroup on org: ${organization.nameID}`
+    );
+
+    return await this.groupService.getUserGroupOrFail(groupID, {
+      where: { organization: { id: organization.id } },
+    });
   }
 
-  //@AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('associates', () => [IUser], {
     nullable: true,
@@ -88,19 +90,21 @@ export class OrganizationResolverFields {
   })
   @Profiling.api
   async associates(
-    @Parent() organization: Organization,
+    @Parent() parent: Organization,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IUser[] | 'not accessible'> {
-    if (
-      await this.isAccessGranted(
-        organization,
-        agentInfo,
-        AuthorizationPrivilege.READ
-      )
-    ) {
-      return await this.organizationService.getAssociates(organization);
-    }
-    return 'not accessible';
+  ): Promise<IUser[]> {
+    // Reload to ensure the authorization is loaded
+    const organization = await this.organizationService.getOrganizationOrFail(
+      parent.id
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.READ,
+      `read associates on org: ${organization.nameID}`
+    );
+
+    return await this.organizationService.getAssociates(organization);
   }
 
   @UseGuards(GraphqlGuard)
@@ -173,36 +177,22 @@ export class OrganizationResolverFields {
   })
   @UseGuards(GraphqlGuard)
   async preferences(
-    @Parent() org: Organization,
+    @Parent() parent: Organization,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IPreference[] | 'not accessible'> {
-    if (
-      await this.isAccessGranted(org, agentInfo, AuthorizationPrivilege.READ)
-    ) {
-      const preferenceSet =
-        await this.organizationService.getPreferenceSetOrFail(org.id);
-      return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
-    }
-
-    return 'not accessible';
-  }
-
-  private async isAccessGranted(
-    organization: IOrganization,
-    agentInfo: AgentInfo,
-    privilege: AuthorizationPrivilege
-  ) {
-    // needs to be loaded if you are not going through the orm layer
-    // e.g. pagination is going around the orm layer
-    const { authorization } =
-      await this.organizationService.getOrganizationOrFail(organization.id, {
-        relations: ['authorization'],
-      });
-
-    return await this.authorizationService.isAccessGranted(
-      agentInfo,
-      authorization,
-      privilege
+  ): Promise<IPreference[]> {
+    // Reload to ensure the authorization is loaded
+    const organization = await this.organizationService.getOrganizationOrFail(
+      parent.id
     );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.READ,
+      `read preferences on org: ${organization.nameID}`
+    );
+    const preferenceSet = await this.organizationService.getPreferenceSetOrFail(
+      organization.id
+    );
+    return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
   }
 }

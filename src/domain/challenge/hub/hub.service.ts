@@ -509,7 +509,7 @@ export class HubService {
     if (args && args.IDs) {
       {
         hubWithChallenges = await this.getHubOrFail(hub.id, {
-          relations: ['challenges', 'challenges.tagset'],
+          relations: ['challenges'],
         });
         hubWithChallenges.challenges = hubWithChallenges.challenges?.filter(c =>
           args.IDs?.includes(c.id)
@@ -517,7 +517,7 @@ export class HubService {
       }
     } else
       hubWithChallenges = await this.getHubOrFail(hub.id, {
-        relations: ['challenges', 'challenges.tagset'],
+        relations: ['challenges'],
       });
 
     const challenges = hubWithChallenges.challenges;
@@ -572,8 +572,7 @@ export class HubService {
   ): Promise<IChallenge> {
     return await this.challengeService.getChallengeInNameableScopeOrFail(
       challengeID,
-      hub.id,
-      { relations: ['tagset'] }
+      hub.id
     );
   }
 

@@ -146,7 +146,7 @@ export class NotificationPayloadBuilder {
   ): Promise<CollaborationCanvasCreatedEventPayload> {
     const canvas = await this.canvasRepository.findOne({
       where: { id: canvasId },
-      relations: ['callout', 'profile'],
+      relations: ['callout'],
     });
     if (!canvas) {
       throw new NotificationEventException(

@@ -111,7 +111,7 @@ export class ChallengeResolverMutations {
     this.elasticService.opportunityCreated(
       {
         id: opportunity.id,
-        name: opportunity.profile?.displayName || '',
+        name: opportunity.profile.displayName,
         hub: opportunity.hubID ?? '',
       },
       {
@@ -172,7 +172,8 @@ export class ChallengeResolverMutations {
     @Args('challengeData') challengeData: UpdateChallengeInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
-      challengeData.ID
+      challengeData.ID,
+      { relations: ['profile'] }
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -187,7 +188,7 @@ export class ChallengeResolverMutations {
     this.elasticService.challengeContentEdited(
       {
         id: challenge.id,
-        name: challenge.profile?.displayName || '',
+        name: challenge.profile.displayName,
         hub: challenge.hubID ?? '',
       },
       {

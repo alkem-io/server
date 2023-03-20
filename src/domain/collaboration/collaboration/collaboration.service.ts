@@ -27,6 +27,7 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
 
 @Injectable()
 export class CollaborationService {
@@ -364,5 +365,52 @@ export class CollaborationService {
     return await this.namingService.getCommunityPolicyForCollaboration(
       collaborationID
     );
+  }
+
+  public async updateCalloutsSortOrder(
+    collaboration: ICollaboration,
+    sortOrderData: UpdateCollaborationCalloutsSortOrderInput
+  ): Promise<ICallout[]> {
+    const collaborationLoaded = await this.getCollaborationOrFail(
+      collaboration.id,
+      {
+        relations: ['callouts'],
+      }
+    );
+    const allCallouts = collaborationLoaded.callouts;
+    if (!allCallouts)
+      throw new EntityNotFoundException(
+        `Callout not initialised, no Callouts: ${collaboration.id}`,
+        LogContext.COLLABORATION
+      );
+
+    // Get the callouts specified
+    const calloutsInOrder: ICallout[] = [];
+    let minCalloutSortOrder = 10000;
+    for (const calloutID of sortOrderData.calloutIDs) {
+      let callout;
+      if (calloutID.length === UUID_LENGTH)
+        callout = allCallouts.find(callout => callout.id === calloutID);
+      else callout = allCallouts.find(callout => callout.nameID === calloutID);
+
+      if (!callout) {
+        throw new EntityNotFoundException(
+          `Callout with requested ID (${calloutID}) not located within current Collaboration: ${collaboration.id}`,
+          LogContext.COLLABORATION
+        );
+      }
+      if (callout.sortOrder < minCalloutSortOrder) {
+        minCalloutSortOrder = callout.sortOrder;
+      }
+      calloutsInOrder.push(callout);
+    }
+
+    // Now update all the callouts sort order
+    for (const callout of calloutsInOrder) {
+      callout.sortOrder = minCalloutSortOrder;
+      minCalloutSortOrder += 2;
+      await this.calloutService.save(callout);
+    }
+    return calloutsInOrder;
   }
 }

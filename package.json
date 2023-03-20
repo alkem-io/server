@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.44.5",
+  "version": "0.45.1",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -83,6 +83,7 @@
     "jwt-decode": "^3.1.2",
     "logform": "^2.3.2",
     "module-alias": "^2.2.2",
+    "moment": "^2.29.4",
     "mysql": "^2.18.1",
     "nest-winston": "^1.5.0",
     "passport-custom": "^1.1.1",
