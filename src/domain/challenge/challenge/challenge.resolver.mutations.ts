@@ -172,7 +172,8 @@ export class ChallengeResolverMutations {
     @Args('challengeData') challengeData: UpdateChallengeInput
   ): Promise<IChallenge> {
     const challenge = await this.challengeService.getChallengeOrFail(
-      challengeData.ID
+      challengeData.ID,
+      { relations: ['profile'] }
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
