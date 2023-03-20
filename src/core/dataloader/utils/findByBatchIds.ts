@@ -52,7 +52,7 @@ export const findByBatchIds = async <
     ? () => ({} as TResult)
     : (key: string) =>
         new EntityNotFoundException(
-          `Could not load relation '${topLevelRelation}' for '${key}'`,
+          `Could not load relation '${topLevelRelation}' for ${classRef.name}:${key}`,
           LogContext.DATA_LOADER
         );
 
@@ -60,6 +60,5 @@ export const findByBatchIds = async <
     results.map<[string, TResult]>(result => [result.id, getRelation(result)])
   );
   // ensure the result length matches the input length
-  const a = ids.map(id => resultsById.get(id) ?? resolveUnresolvedForKey(id));
-  return a;
+  return ids.map(id => resultsById.get(id) ?? resolveUnresolvedForKey(id));
 };
