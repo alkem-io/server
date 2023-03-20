@@ -65,11 +65,6 @@ http:
         servers:
           - url: 'http://synapse-admin:80/'
 
-    homepage:
-      loadBalancer:
-        servers:
-          - url: 'http://homepage:3000/'
-
   middlewares:
     strip-api-private-non-interactive-prefix:
       stripPrefix:
@@ -217,12 +212,6 @@ http:
       service: 'rabbitmq-management'
       entryPoints:
         - 'rabbitmq-management'
-
-    homepage: # if basePath is changed in the nextjs app this path also will have to change
-      rule: 'PathPrefix(`/landing`)'
-      service: 'homepage'
-      entryPoints:
-        - 'web'
 
 tcp:
   services:
