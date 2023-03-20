@@ -1,13 +1,8 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
-import {
-  LONG_TEXT_LENGTH,
-  MID_TEXT_LENGTH,
-  VERY_LONG_TEXT_LENGTH,
-} from '@src/common/constants';
+import { LONG_TEXT_LENGTH, VERY_LONG_TEXT_LENGTH } from '@src/common/constants';
 import { UpdateReferenceInput } from '@domain/common/reference/reference.dto.update';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
-import { UpdateLocationInput } from '@domain/common/location/dto/location.dto.update';
 import { Type } from 'class-transformer';
 
 @InputType()
@@ -15,17 +10,7 @@ export class UpdateContextInput {
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
   @MaxLength(VERY_LONG_TEXT_LENGTH)
-  background?: string;
-
-  @Field(() => Markdown, { nullable: true })
-  @IsOptional()
-  @MaxLength(VERY_LONG_TEXT_LENGTH)
   vision?: string;
-
-  @Field({ nullable: true })
-  @IsOptional()
-  @MaxLength(MID_TEXT_LENGTH)
-  tagline?: string;
 
   @Field(() => Markdown, { nullable: true })
   @IsOptional()
@@ -39,23 +24,9 @@ export class UpdateContextInput {
 
   @Field(() => [UpdateReferenceInput], {
     nullable: true,
-    description: 'Update the set of References for the Context.',
-  })
-  @ValidateNested({ each: true })
-  @Type(() => UpdateReferenceInput)
-  references?: UpdateReferenceInput[];
-
-  @Field(() => [UpdateReferenceInput], {
-    nullable: true,
     description: 'Update the set of Recommendations for the Context.',
   })
   @ValidateNested({ each: true })
   @Type(() => UpdateReferenceInput)
   recommendations?: UpdateReferenceInput[];
-
-  @Field(() => UpdateLocationInput, { nullable: true })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => UpdateLocationInput)
-  location?: UpdateLocationInput;
 }

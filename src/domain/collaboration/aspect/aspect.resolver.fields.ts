@@ -8,13 +8,14 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
+import { IProfile } from '@domain/common/profile/profile.interface';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
-import { IProfile, IUser } from '@domain/community';
+import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
-import { ICardProfile } from '../card-profile';
 import { IAspect } from './aspect.interface';
 import { AspectService } from './aspect.service';
+import { Aspect } from './aspect.entity';
 import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -86,14 +87,15 @@ export class AspectResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('profile', () => ICardProfile, {
-    nullable: true,
-    description: 'The CardProfile for this Card.',
+  @ResolveField('profile', () => IProfile, {
+    nullable: false,
+    description: 'The Profile for this Card.',
   })
   @Profiling.api
   async profile(
     @Parent() aspect: IAspect,
-    @Loader(ProfileLoaderCreator) loader: ILoader<IProfile>
+    @Loader(ProfileLoaderCreator, { parentClassRef: Aspect })
+    loader: ILoader<IProfile>
   ): Promise<IProfile> {
     return loader.load(aspect.id);
   }

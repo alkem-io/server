@@ -1,4 +1,3 @@
-export * from './profile/profile.avatars.loader.creator';
 export * from './profile/profile.location.loader.creator';
 export * from './profile/profile.references.loader.creator';
 export * from './profile/profile.tagsets.loader.creator';

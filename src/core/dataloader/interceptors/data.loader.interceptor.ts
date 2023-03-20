@@ -28,7 +28,10 @@ export class DataLoaderInterceptor implements NestInterceptor {
       // and ensure they share the same generated DI container sub-tree
       contextId: ContextIdFactory.create(),
       get: (creatorRef, options) => {
-        const creatorName = creatorRef.name;
+        // handle a generic creator with different classes
+        const creatorName = options?.parentClassRef
+          ? `${creatorRef.name}:${options.parentClassRef?.name}`
+          : creatorRef.name;
         if (ctx[creatorName]) {
           return ctx[creatorName];
         }

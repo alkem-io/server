@@ -23,6 +23,7 @@ import { NotificationInputCollaborationInterest } from '@services/adapters/notif
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
 import { ElasticsearchService } from '@services/external/elasticsearch';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
 
 @Resolver()
 export class CollaborationResolverMutations {
@@ -185,5 +186,37 @@ export class CollaborationResolverMutations {
     );
 
     return calloutAuthorized;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => [ICallout], {
+    description:
+      'Update the sortOrder field of the supplied Callouts to increase as per the order that they are provided in.',
+  })
+  @Profiling.api
+  async updateCalloutsSortOrder(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('sortOrderData')
+    sortOrderData: UpdateCollaborationCalloutsSortOrderInput
+  ): Promise<ICallout[]> {
+    const collaboration =
+      await this.collaborationService.getCollaborationOrFail(
+        sortOrderData.collaborationID
+      );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      collaboration.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update callouts sort order on collaboration: ${collaboration.id}`
+    );
+
+    const updatedCallouts =
+      await this.collaborationService.updateCalloutsSortOrder(
+        collaboration,
+        sortOrderData
+      );
+
+    return updatedCallouts;
   }
 }

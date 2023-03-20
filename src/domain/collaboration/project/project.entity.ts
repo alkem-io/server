@@ -11,10 +11,10 @@ import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { IProject } from './project.interface';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
-import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { NameableEntityOld } from '@domain/common/entity/nameable-entity/nameable.entity.old';
 
 @Entity()
-export class Project extends NameableEntity implements IProject {
+export class Project extends NameableEntityOld implements IProject {
   @Column()
   hubID!: string;
 

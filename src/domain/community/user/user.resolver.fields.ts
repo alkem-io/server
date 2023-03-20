@@ -10,7 +10,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { UserService } from './user.service';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
 import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
-import { IProfile } from '../profile/profile.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -37,7 +37,7 @@ export class UserResolverFields {
   ) {}
 
   @ResolveField('profile', () => IProfile, {
-    nullable: true,
+    nullable: false,
     description: 'The Profile for this User.',
   })
   @Profiling.api

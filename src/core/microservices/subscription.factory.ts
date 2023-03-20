@@ -15,7 +15,7 @@ export async function subscriptionFactory(
     ConfigurationTypes.MICROSERVICES
   )?.rabbitmq;
   const connectionOptions = rabbitMqOptions.connection;
-  const connectionString = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=30`;
+  const connectionString = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}`;
 
   return amqp
     .connect(connectionString)

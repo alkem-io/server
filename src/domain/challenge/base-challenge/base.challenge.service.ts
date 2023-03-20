@@ -8,7 +8,6 @@ import {
 import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.update';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { IContext } from '@domain/context/context/context.interface';
@@ -24,7 +23,6 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { CommunityType } from '@common/enums/community.type';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
@@ -33,6 +31,10 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
+import { IProfile } from '@domain/common/profile';
+import { VisualType } from '@common/enums/visual.type';
 
 @Injectable()
 export class BaseChallengeService {
@@ -42,7 +44,7 @@ export class BaseChallengeService {
     private agentService: AgentService,
     private communityService: CommunityService,
     private namingService: NamingService,
-    private tagsetService: TagsetService,
+    private profileService: ProfileService,
     private lifecycleService: LifecycleService,
     private collaborationService: CollaborationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -60,7 +62,7 @@ export class BaseChallengeService {
     await this.isNameAvailableOrFail(baseChallengeData.nameID, hubID);
 
     baseChallenge.community = await this.communityService.createCommunity(
-      baseChallenge.displayName,
+      baseChallengeData.profileData.displayName,
       hubID,
       communityType,
       communityPolicy,
@@ -74,6 +76,28 @@ export class BaseChallengeService {
         baseChallengeData.context
       );
     }
+
+    baseChallenge.profile = await this.profileService.createProfile(
+      baseChallengeData.profileData
+    );
+    await this.profileService.addTagsetOnProfile(baseChallenge.profile, {
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: baseChallengeData.tags,
+    });
+    // add the visuals
+    await this.profileService.addVisualOnProfile(
+      baseChallenge.profile,
+      VisualType.AVATAR
+    );
+    await this.profileService.addVisualOnProfile(
+      baseChallenge.profile,
+      VisualType.BANNER
+    );
+    await this.profileService.addVisualOnProfile(
+      baseChallenge.profile,
+      VisualType.CARD
+    );
+
     const communicationGroupID =
       baseChallenge.community?.communication?.communicationGroupID || '';
 
@@ -82,11 +106,6 @@ export class BaseChallengeService {
         communityType,
         communicationGroupID
       );
-
-    baseChallenge.tagset = await this.tagsetService.createTagset({
-      name: RestrictedTagsetNames.DEFAULT,
-      tags: baseChallengeData.tags || [],
-    });
 
     baseChallenge.agent = await this.agentService.createAgent({
       parentDisplayID: `${baseChallenge.nameID}`,
@@ -101,7 +120,7 @@ export class BaseChallengeService {
       baseChallengeData.ID,
       repository,
       {
-        relations: ['context', 'community'],
+        relations: ['context', 'community', 'profile'],
       }
     );
 
@@ -116,21 +135,22 @@ export class BaseChallengeService {
         baseChallengeData.context
       );
     }
-    if (baseChallengeData.tags)
-      this.tagsetService.replaceTagsOnEntity(
-        baseChallenge as BaseChallenge,
-        baseChallengeData.tags
+    if (baseChallengeData.profileData) {
+      baseChallenge.profile = await this.profileService.updateProfile(
+        baseChallenge.profile,
+        baseChallengeData.profileData
       );
+    }
 
+    const newDisplayName = baseChallengeData.profileData?.displayName;
     if (
-      baseChallengeData.displayName &&
-      baseChallenge.displayName !== baseChallengeData.displayName
+      newDisplayName &&
+      newDisplayName !== baseChallenge.profile.displayName
     ) {
       if (baseChallenge.community) {
         // will be retrieved; see relations above
-        baseChallenge.community.displayName = baseChallengeData.displayName;
+        baseChallenge.community.displayName = newDisplayName;
       }
-      baseChallenge.displayName = baseChallengeData.displayName;
     }
 
     return await repository.save(baseChallenge);
@@ -150,6 +170,7 @@ export class BaseChallengeService {
           'context',
           'lifecycle',
           'agent',
+          'profile',
         ],
       }
     );
@@ -172,10 +193,8 @@ export class BaseChallengeService {
       await this.lifecycleService.deleteLifecycle(baseChallenge.lifecycle.id);
     }
 
-    if (baseChallenge.tagset) {
-      await this.tagsetService.removeTagset({
-        ID: baseChallenge.tagset.id,
-      });
+    if (baseChallenge.profile) {
+      await this.profileService.deleteProfile(baseChallenge.profile.id);
     }
 
     if (baseChallenge.agent) {
@@ -274,6 +293,26 @@ export class BaseChallengeService {
         LogContext.CONTEXT
       );
     return context;
+  }
+
+  public async getProfile(
+    challengeId: string,
+    repository: Repository<BaseChallenge>
+  ): Promise<IProfile> {
+    const challengeWithProfile = await this.getBaseChallengeOrFail(
+      challengeId,
+      repository,
+      {
+        relations: ['profile'],
+      }
+    );
+    const profile = challengeWithProfile.profile;
+    if (!profile)
+      throw new RelationshipNotFoundException(
+        `Unable to load profile for challenge ${challengeId} `,
+        LogContext.PROFILE
+      );
+    return profile;
   }
 
   public async getCollaboration(

@@ -4,21 +4,27 @@ export const hubsQuery = gql`
   query hubs {
     hubs {
       nameID
-      displayName
+      profile {
+        displayName
+      }
       community {
         id
         displayName
       }
       challenges {
         nameID
-        displayName
+        profile {
+          displayName
+        }
         community {
           id
           displayName
         }
         opportunities {
           nameID
-          displayName
+          profile {
+            displayName
+          }
           community {
             id
             displayName

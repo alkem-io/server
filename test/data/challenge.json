@@ -1,9 +1,21 @@
 {
   "challenge": {
-    "displayName": "12 Responsible Consumption + Production",
     "nameID": "ch12",
     "id": "31ad6631-2004-4b08-a6d7-07b9df2c49db",
     "hubID": "00655835-4d15-4546-801e-1ab80ac3078a",
+    "profile": {
+      "id": "08c6ec54-524a-4d7f-9f58-a4c50f0c0496",
+      "tagline": "",
+      "description": "",
+      "displayName": "12 Responsible Consumption + Production",
+      "authorization": {
+        "anonymousReadAccess": false,
+        "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"inheritable\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"inheritable\":true},{\"type\":\"user-self\",\"resourceID\":\"b69f82a1-bc7d-486c-85f9-e7ac6e689f4e\",\"grantedPrivileges\":[\"create\",\"read\",\"update\"],\"inheritable\":true}]",
+        "verifiedCredentialRules": "[]",
+        "privilegeRules": "",
+        "id": "2b82dab3-4581-4ff2-88e3-4997afe4f85b"
+      }
+    },
     "community": {
       "displayName": "12 Responsible Consumption + Production",
       "type": "challenge",

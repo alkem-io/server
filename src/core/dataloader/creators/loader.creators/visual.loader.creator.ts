@@ -13,7 +13,7 @@ export class VisualLoaderCreator implements DataLoaderCreator<IVisual> {
   create(
     options?: DataLoaderCreatorOptions<
       IVisual,
-      { id: string; visual?: IVisual }
+      { id: string; visuals?: IVisual[] }
     >
   ) {
     if (!options?.parentClassRef) {
@@ -25,7 +25,7 @@ export class VisualLoaderCreator implements DataLoaderCreator<IVisual> {
     return createTypedRelationDataLoader(
       this.manager,
       options.parentClassRef,
-      { visual: true },
+      { visuals: true },
       this.constructor.name,
       options
     );

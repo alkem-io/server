@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
-import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { NameableEntityOld } from '@domain/common/entity/nameable-entity/nameable.entity.old';
 import { ICallout } from './callout.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
@@ -19,7 +19,7 @@ import { AspectTemplate } from '@domain/template/aspect-template/aspect.template
 import { CanvasTemplate } from '@domain/template/canvas-template/canvas.template.entity';
 
 @Entity()
-export class Callout extends NameableEntity implements ICallout {
+export class Callout extends NameableEntityOld implements ICallout {
   @Column('text', { nullable: false })
   description!: string;
 
