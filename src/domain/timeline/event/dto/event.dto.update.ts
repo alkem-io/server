@@ -1,6 +1,6 @@
 import { CalendarEventType } from '@common/enums/calendar.event.type';
-import { UpdateCardProfileInput } from '@domain/collaboration/card-profile/dto';
-import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/nameable.dto.update';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
+import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { InputType, Field } from '@nestjs/graphql';
 import { MID_TEXT_LENGTH } from '@src/common/constants';
 import { Type } from 'class-transformer';
@@ -13,14 +13,14 @@ export class UpdateCalendarEventInput extends UpdateNameableInput {
   @MaxLength(MID_TEXT_LENGTH)
   type?: string;
 
-  @Field(() => UpdateCardProfileInput, {
+  @Field(() => UpdateProfileInput, {
     nullable: true,
     description: 'Update the Profile of the Card.',
   })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => UpdateCardProfileInput)
-  profileData?: UpdateCardProfileInput;
+  @ValidateNested({ each: true })
+  @Type(() => UpdateProfileInput)
+  profileData?: UpdateProfileInput;
 
   @Field(() => Date, {
     nullable: false,

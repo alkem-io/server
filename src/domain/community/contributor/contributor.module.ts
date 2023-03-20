@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ProfileModule } from '@domain/community/profile/profile.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';

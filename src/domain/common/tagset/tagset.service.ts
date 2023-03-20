@@ -2,7 +2,6 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Repository } from 'typeorm';
-import { Project } from '@domain/collaboration/project/project.entity';
 import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -13,10 +12,9 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
-import { CreateTagsetInput } from '@domain/common/tagset/tagset.dto.create';
-import { UpdateTagsetInput } from '@domain/common/tagset/tagset.dto.update';
-import { DeleteTagsetInput } from '@domain/common/tagset/tagset.dto.delete';
-import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
+import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
+import { UpdateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.update';
+import { DeleteTagsetInput } from '@domain/common/tagset/dto/tagset.dto.delete';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 
@@ -99,16 +97,6 @@ export class TagsetService {
     return tagsets;
   }
 
-  replaceTagsOnEntity(entity: BaseChallenge | Project, tags: string[]) {
-    if (!entity.tagset)
-      throw new EntityNotInitializedException(
-        `Entity with id(${entity.id}) not initialised with a tagset!`,
-        LogContext.COMMUNITY
-      );
-    entity.tagset.tags = [...tags];
-    return entity;
-  }
-
   // Get the default tagset
   defaultTagset(tagsetable: ITagsetable): ITagset | undefined {
     if (!tagsetable.tagsets)
@@ -155,9 +143,10 @@ export class TagsetService {
     throw new Error('Unable to find tagset with the name:' + { name });
   }
 
-  async addTagsetWithName(
+  async createTagsetWithName(
     tagsetable: ITagsetable,
-    tagsetData: CreateTagsetInput
+    tagsetData: CreateTagsetInput,
+    checkForRestricted: boolean
   ): Promise<ITagset> {
     // Check if the group already exists, if so log a warning
     if (this.hasTagsetWithName(tagsetable, tagsetData.name)) {
@@ -167,16 +156,16 @@ export class TagsetService {
       );
     }
 
-    if (tagsetable.restrictedTagsetNames?.includes(tagsetData.name)) {
-      throw new ValidationException(
-        `Restricted Tagset name: ${tagsetData.name}`,
-        LogContext.COMMUNITY
-      );
+    if (checkForRestricted) {
+      if (tagsetable.restrictedTagsetNames?.includes(tagsetData.name)) {
+        throw new ValidationException(
+          `Restricted Tagset name: ${tagsetData.name}`,
+          LogContext.COMMUNITY
+        );
+      }
     }
 
-    const newTagset = await this.createTagset(tagsetData);
-    tagsetable.tagsets?.push(newTagset);
-    return newTagset;
+    return await this.createTagset(tagsetData);
   }
 
   hasTag(tagset: ITagset, tagToCheck: string): boolean {
