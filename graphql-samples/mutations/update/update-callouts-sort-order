@@ -1,0 +1,14 @@
+mutation updateCalloutsSortOrder($sortOrderData: UpdateCollaborationCalloutsSortOrderInput!) {
+  updateCalloutsSortOrder(sortOrderData: $sortOrderData) {
+    id
+    sortOrder
+  }
+}
+
+Variables:
+{
+  "sortOrderData": {
+    "collaborationID": "uuid",
+    "calloutIDs": ["uuid_nameid", "uuid_nameid"]
+  }
+}

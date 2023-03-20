@@ -25,6 +25,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@platform/admin/authorization/admin.authorization.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { PlatformService } from '@platform/platfrom/platform.service';
+import { CreateHubInput } from '@domain/challenge/hub/dto/hub.dto.create';
 
 @Injectable()
 export class BootstrapService {
@@ -166,10 +167,12 @@ export class BootstrapService {
           let user = await this.userService.createUser({
             nameID: nameID,
             email: userData.email,
-            displayName: `${userData.firstName} ${userData.lastName}`,
             accountUpn: userData.email,
             firstName: userData.firstName,
             lastName: userData.lastName,
+            profileData: {
+              displayName: `${userData.firstName} ${userData.lastName}`,
+            },
           });
           const credentialsData = userData.credentials;
           for (const credentialData of credentialsData) {
@@ -224,21 +227,24 @@ export class BootstrapService {
       if (!hostOrganization) {
         const hostOrg = await this.organizationService.createOrganization({
           nameID: DEFAULT_HOST_ORG_NAMEID,
-          displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
+          profileData: {
+            displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
+          },
         });
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
           hostOrg
         );
       }
 
-      const hub = await this.hubService.createHub({
+      const hubInput: CreateHubInput = {
         nameID: DEFAULT_HUB_NAMEID,
-        displayName: DEFAULT_HUB_DISPLAYNAME,
         hostID: DEFAULT_HOST_ORG_NAMEID,
-        context: {
+        profileData: {
+          displayName: DEFAULT_HUB_DISPLAYNAME,
           tagline: 'An empty hub to be populated',
         },
-      });
+      };
+      const hub = await this.hubService.createHub(hubInput);
       return await this.hubAuthorizationService.applyAuthorizationPolicy(hub);
     }
   }

@@ -1,6 +1,5 @@
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
-import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { ContextModule } from '@domain/context/context/context.module';
 import { Module } from '@nestjs/common';
@@ -11,6 +10,7 @@ import { BaseChallengeAuthorizationService } from './base.challenge.service.auth
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
 
 @Module({
   imports: [
@@ -21,7 +21,7 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
     CommunityModule,
     CommunityPolicyModule,
     LifecycleModule,
-    TagsetModule,
+    ProfileModule,
     NamingModule,
     CollaborationModule,
   ],

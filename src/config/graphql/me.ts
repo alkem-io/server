@@ -4,10 +4,12 @@ export const meQuery = gql`
   query me {
     me {
       nameID
-      displayName
       firstName
       lastName
       email
+      profile {
+        displayName
+      }
       agent {
         id
         did

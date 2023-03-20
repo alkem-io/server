@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { IProfile, Profile } from '@domain/community/profile';
+import { IProfile, Profile } from '@domain/common/profile';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from './profile.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -22,7 +22,7 @@ export class ProfileAuthorizationService {
     const profile = await this.profileService.getProfileOrFail(
       profileInput.id,
       {
-        relations: ['references', 'avatar', 'tagsets', 'authorization'],
+        relations: ['references', 'tagsets', 'authorization', 'visuals'],
       }
     );
 
@@ -52,12 +52,14 @@ export class ProfileAuthorizationService {
           );
       }
     }
-    if (profile.avatar) {
-      profile.avatar.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          profile.avatar.authorization,
-          profile.authorization
-        );
+    if (profile.visuals) {
+      for (const visual of profile.visuals) {
+        visual.authorization =
+          this.authorizationPolicyService.inheritParentAuthorization(
+            visual.authorization,
+            profile.authorization
+          );
+      }
     }
     return await this.profileRepository.save(profile);
   }

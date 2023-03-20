@@ -1,6 +1,5 @@
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { IContext } from '@domain/context/context/context.interface';
@@ -16,6 +15,7 @@ import { IPreference } from '@domain/common/preference';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
+import { IProfile } from '@domain/common/profile/profile.interface';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -29,7 +29,7 @@ export class ChallengeResolverFields {
     description: 'The community for the challenge.',
   })
   @Profiling.api
-  async community(@Parent() challenge: Challenge) {
+  async community(@Parent() challenge: IChallenge) {
     return await this.challengeService.getCommunity(challenge.id);
   }
 
@@ -38,7 +38,7 @@ export class ChallengeResolverFields {
     nullable: true,
     description: 'The context for the challenge.',
   })
-  async context(@Parent() challenge: Challenge) {
+  async context(@Parent() challenge: IChallenge) {
     return await this.challengeService.getContext(challenge.id);
   }
 
@@ -49,8 +49,17 @@ export class ChallengeResolverFields {
     description: 'The collaboration for the challenge.',
   })
   @Profiling.api
-  async collaboration(@Parent() challenge: Challenge) {
+  async collaboration(@Parent() challenge: IChallenge) {
     return await this.challengeService.getCollaboration(challenge);
+  }
+
+  @ResolveField('profile', () => IProfile, {
+    nullable: false,
+    description: 'The Profile for the  Challenge.',
+  })
+  @Profiling.api
+  async profile(@Parent() challenge: IChallenge) {
+    return await this.challengeService.getProfile(challenge);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -61,7 +70,7 @@ export class ChallengeResolverFields {
   })
   @Profiling.api
   async opportunities(
-    @Parent() challenge: Challenge,
+    @Parent() challenge: IChallenge,
     @Args({ nullable: true }) args: LimitAndShuffleIdsQueryArgs
   ) {
     return await this.challengeService.getOpportunities(challenge.id, args);
@@ -73,7 +82,7 @@ export class ChallengeResolverFields {
     description: 'The lifecycle for the Challenge.',
   })
   @Profiling.api
-  async lifecycle(@Parent() challenge: Challenge) {
+  async lifecycle(@Parent() challenge: IChallenge) {
     return await this.challengeService.getLifecycle(challenge.id);
   }
 
@@ -84,7 +93,7 @@ export class ChallengeResolverFields {
     description: 'The set of child Challenges within this challenge.',
   })
   @Profiling.api
-  async challenges(@Parent() challenge: Challenge) {
+  async challenges(@Parent() challenge: IChallenge) {
     return await this.challengeService.getChildChallenges(challenge);
   }
 
@@ -93,7 +102,7 @@ export class ChallengeResolverFields {
     description: 'The Agent representing this Challenge.',
   })
   @Profiling.api
-  async agent(@Parent() challenge: Challenge): Promise<IAgent> {
+  async agent(@Parent() challenge: IChallenge): Promise<IAgent> {
     return await this.challengeService.getAgent(challenge.id);
   }
 
@@ -102,7 +111,7 @@ export class ChallengeResolverFields {
     description: 'Metrics about activity within this Challenge.',
   })
   @Profiling.api
-  async metrics(@Parent() challenge: Challenge) {
+  async metrics(@Parent() challenge: IChallenge) {
     return await this.challengeService.getMetrics(challenge);
   }
 
@@ -112,7 +121,7 @@ export class ChallengeResolverFields {
     description: 'The preferences for this Challenge',
   })
   @UseGuards(GraphqlGuard)
-  async preferences(@Parent() challenge: Challenge): Promise<IPreference[]> {
+  async preferences(@Parent() challenge: IChallenge): Promise<IPreference[]> {
     const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
       challenge.id
     );

@@ -1,6 +1,5 @@
 mutation UpdateHub($hubData: UpdateHubInput!) {
   updateHub(hubData: $hubData) {
-    displayName,
     id
   }
 }
@@ -8,7 +7,10 @@ mutation UpdateHub($hubData: UpdateHubInput!) {
   "hubData":
 		{
       "ID": "uuid",
-      "displayName": "New CT 3",
-      "hostID": "uuid"
+      "hostID": "uuid",
+      "profileData": {
+        "displayName": "New Hub 3"
+      }
+
 		}
 }

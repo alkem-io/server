@@ -146,6 +146,7 @@ export class SearchService {
         userResults,
         groupResults,
         organizationResults,
+        cardResults,
         userIDsFilter,
         entityTypesFilter
       );
@@ -334,9 +335,9 @@ export class SearchService {
               .orWhere('user.nameID like :term')
               .orWhere('user.lastName like :term')
               .orWhere('user.email like :term')
-              .orWhere('user.displayName like :term')
               .orWhere('location.country like :term')
               .orWhere('location.city like :term')
+              .orWhere('profile.displayName like :term')
               .orWhere('profile.description like :term');
           })
         )
@@ -382,13 +383,12 @@ export class SearchService {
       const organizationQuery = await this.organizationRepository
         .createQueryBuilder('organization')
         .leftJoinAndSelect('organization.profile', 'profile')
-        .leftJoinAndSelect('profile.avatar', 'avatar')
         .leftJoinAndSelect('organization.groups', 'groups')
         .leftJoinAndSelect('profile.location', 'location');
 
       // Optionally restrict to search in just one Hub
       if (organizationsFilter) {
-        organizationQuery.where('organization.id IN (:usersFilter)', {
+        organizationQuery.where('organization.id IN (:organizationsFilter)', {
           organizationsFilter: organizationsFilter,
         });
       }
@@ -397,7 +397,7 @@ export class SearchService {
         .andWhere(
           new Brackets(qb => {
             qb.where('organization.nameID like :term')
-              .orWhere('organization.displayName like :term')
+              .orWhere('profile.displayName like :term')
               .orWhere('profile.description like :term')
               .orWhere('location.country like :term')
               .orWhere('location.city like :term');
@@ -424,17 +424,18 @@ export class SearchService {
       const readableHubMatches: Hub[] = [];
       const hubMatches = await this.hubRepository
         .createQueryBuilder('hub')
-        .leftJoinAndSelect('hub.tagset', 'tagset')
         .leftJoinAndSelect('hub.challenges', 'challenges')
         .leftJoinAndSelect('hub.authorization', 'authorization')
         .leftJoinAndSelect('hub.context', 'context')
         .leftJoinAndSelect('hub.collaboration', 'collaboration')
-        .leftJoinAndSelect('context.location', 'location')
+        .leftJoinAndSelect('hub.profile', 'profile')
+        .leftJoinAndSelect('profile.location', 'location')
+        .leftJoinAndSelect('profile.tagsets', 'tagset')
         .where('hub.nameID like :term')
-        .orWhere('hub.displayName like :term')
+        .orWhere('profile.displayName like :term')
+        .orWhere('profile.tagline like :term')
+        .orWhere('profile.description like :term')
         .orWhere('tagset.tags like :term')
-        .orWhere('context.tagline like :term')
-        .orWhere('context.background like :term')
         .orWhere('context.impact like :term')
         .orWhere('context.vision like :term')
         .orWhere('context.who like :term')
@@ -478,12 +479,13 @@ export class SearchService {
       const readableChallengeMatches: Challenge[] = [];
       const challengeQuery = this.challengeRepository
         .createQueryBuilder('challenge')
-        .leftJoinAndSelect('challenge.tagset', 'tagset')
         .leftJoinAndSelect('challenge.opportunities', 'opportunities')
         .leftJoinAndSelect('challenge.authorization', 'authorization')
         .leftJoinAndSelect('challenge.context', 'context')
         .leftJoinAndSelect('challenge.collaboration', 'collaboration')
-        .leftJoinAndSelect('context.location', 'location');
+        .leftJoinAndSelect('challenge.profile', 'profile')
+        .leftJoinAndSelect('profile.location', 'location')
+        .leftJoinAndSelect('profile.tagsets', 'tagset');
 
       // Optionally restrict to search in just one Hub
       if (challengeIDsFilter) {
@@ -497,10 +499,10 @@ export class SearchService {
         .andWhere(
           new Brackets(qb => {
             qb.where('challenge.nameID like :term')
-              .orWhere('challenge.displayName like :term')
               .orWhere('tagset.tags like :term')
-              .orWhere('context.tagline like :term')
-              .orWhere('context.background like :term')
+              .orWhere('profile.displayName like :term')
+              .orWhere('profile.tagline like :term')
+              .orWhere('profile.description like :term')
               .orWhere('context.impact like :term')
               .orWhere('context.vision like :term')
               .orWhere('context.who like :term')
@@ -547,13 +549,14 @@ export class SearchService {
       const readableOpportunityMatches: Opportunity[] = [];
       const opportunitiesQuery = this.opportunityRepository
         .createQueryBuilder('opportunity')
-        .leftJoinAndSelect('opportunity.tagset', 'tagset')
         .leftJoinAndSelect('opportunity.projects', 'projects')
         .leftJoinAndSelect('opportunity.authorization', 'authorization')
         .leftJoinAndSelect('opportunity.context', 'context')
         .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
         .leftJoinAndSelect('opportunity.challenge', 'challenge')
-        .leftJoinAndSelect('context.location', 'location');
+        .leftJoinAndSelect('opportunity.profile', 'profile')
+        .leftJoinAndSelect('profile.location', 'location')
+        .leftJoinAndSelect('profile.tagsets', 'tagset');
       // Optionally restrict to search in just one Hub
       if (opportunityIDsFilter) {
         opportunitiesQuery.where('opportunity.id IN (:opportunitiesFilter)', {
@@ -565,10 +568,10 @@ export class SearchService {
         .andWhere(
           new Brackets(qb => {
             qb.where('opportunity.nameID like :term')
-              .orWhere('opportunity.displayName like :term')
               .orWhere('tagset.tags like :term')
-              .orWhere('context.tagline like :term')
-              .orWhere('context.background like :term')
+              .orWhere('profile.tagline like :term')
+              .orWhere('profile.displayName like :term')
+              .orWhere('profile.description like :term')
               .orWhere('context.impact like :term')
               .orWhere('context.vision like :term')
               .orWhere('context.who like :term')
@@ -617,7 +620,6 @@ export class SearchService {
       const cardQuery = this.cardRepository
         .createQueryBuilder('aspect')
         .leftJoinAndSelect('aspect.profile', 'profile')
-        .leftJoinAndSelect('profile.tagset', 'tagset')
         .leftJoinAndSelect('aspect.authorization', 'authorization');
 
       // Optionally restrict to search in just one Hub
@@ -631,8 +633,7 @@ export class SearchService {
         .andWhere(
           new Brackets(qb => {
             qb.where('aspect.nameID like :term')
-              .orWhere('aspect.displayName like :term')
-              .orWhere('tagset.tags like :term')
+              .orWhere('profile.displayName like :term')
               .orWhere('profile.description like :term');
           })
         )
@@ -668,10 +669,11 @@ export class SearchService {
     userResults: Map<number, Match>,
     groupResults: Map<number, Match>,
     organizationResults: Map<number, Match>,
+    cardResults: Map<number, Match>,
     usersFilter: string[] | undefined,
     entityTypesFilter?: string[]
   ) {
-    const [searchUsers, searchGroups, searchOrganizations] =
+    const [searchUsers, searchGroups, searchOrganizations, searchCards] =
       await this.searchBy(agentInfo, entityTypesFilter);
 
     if (searchUsers)
@@ -686,6 +688,7 @@ export class SearchService {
         tagsets,
         organizationResults
       );
+    if (searchCards) await this.searchCardsByTagsets(terms, cardResults);
   }
 
   async searchUsersByTagsets(
@@ -773,6 +776,26 @@ export class SearchService {
         organizationResults,
         term,
         SearchResultType.ORGANIZATION
+      );
+    }
+  }
+
+  async searchCardsByTagsets(terms: string[], cardResults: Map<number, Match>) {
+    for (const term of terms) {
+      const cardMatches = await this.cardRepository
+        .createQueryBuilder('aspect')
+        .leftJoinAndSelect('aspect.profile', 'profile')
+        .leftJoinAndSelect('profile.tagsets', 'tagset')
+        .where('find_in_set(:term, tagset.tags)')
+        .setParameters({ term: `${term}` })
+        .getMany();
+
+      // Create results for each match
+      await this.buildMatchingResults(
+        cardMatches,
+        cardResults,
+        term,
+        SearchResultType.CARD
       );
     }
   }
