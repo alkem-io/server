@@ -277,7 +277,9 @@ export class OpportunityService {
       opportunityData,
       this.opportunityRepository
     );
-    const opportunity = await this.getOpportunityOrFail(baseOpportunity.id);
+    const opportunity = await this.getOpportunityOrFail(baseOpportunity.id, {
+      relations: ['profile'],
+    });
     if (opportunityData.nameID) {
       if (opportunityData.nameID !== baseOpportunity.nameID) {
         // updating the nameID, check new value is allowed
