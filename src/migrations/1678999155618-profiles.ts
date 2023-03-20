@@ -146,6 +146,7 @@ export class profiles1678999155618 implements MigrationInterface {
     await queryRunner.query('ALTER TABLE `callout` DROP COLUMN `description`');
 
     await queryRunner.query('ALTER TABLE `canvas` DROP COLUMN `displayName`');
+    await queryRunner.query('ALTER TABLE `canvas` DROP COLUMN `previewId`');
 
     await queryRunner.query(
       'ALTER TABLE `innovation_pack` DROP COLUMN `displayName`'
@@ -169,6 +170,52 @@ export class profiles1678999155618 implements MigrationInterface {
 
   ///////////////////////////////
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `CREATE TABLE \`template_info\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+             \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+              \`version\` int NOT NULL, \`title\` varchar(128) NOT NULL, \`description\` text NOT NULL, \`tagsetId\` char(36) NULL, \`visualId\` char(36) NULL,
+              PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+    );
+
+    // Add back in the fields that were removed
+    await queryRunner.query(
+      'ALTER TABLE `callout` ADD `displayName` varchar(255) NULL'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `callout` ADD `description` text NULL'
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE `canvas` ADD `displayName` varchar(255) NULL'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `canvas` ADD `previewId` char(36) NULL'
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE `innovation_pack` ADD `displayName` varchar(255) NULL'
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE `project` ADD `displayName` varchar(255) NULL'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `project` ADD `description` text NULL'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `project` ADD `tagsetId` char(36) NULL'
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE `canvas_template` ADD COLUMN `templateInfoId` char(36) NULL'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `aspect_template` ADD COLUMN `templateInfoId` char(36) NULL'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `lifecycle_template` ADD COLUMN `templateInfoId` char(36) NULL'
+    );
+
     // Add back in FKs that were removed
     await queryRunner.query(
       `ALTER TABLE \`canvas_template\` ADD CONSTRAINT \`FK_65557901817dd09d5906537e088\` FOREIGN KEY (\`templateInfoId\`) REFERENCES \`template_info\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -191,6 +238,88 @@ export class profiles1678999155618 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`canvas\` ADD CONSTRAINT FK_c7b34f838919f526f829295cf86 FOREIGN KEY (previewId) REFERENCES visual(id) ON DELETE SET NULL;`
     );
+
+    //////////////////////////////
+    // Migrate the data
+    const callouts: any[] = await queryRunner.query(
+      `SELECT id, profileId from callout`
+    );
+    for (const callout of callouts) {
+      const { profileId, displayName, description, authorizationId } =
+        await this.getProfile(queryRunner, callout.profileId);
+
+      await queryRunner.query(
+        `UPDATE callout SET
+        description = '${escapeString(description)}',
+        displayName = '${escapeString(displayName)}'
+        WHERE (id = '${callout.id}')`
+      );
+
+      await this.deleteProfile(queryRunner, profileId, authorizationId);
+    }
+
+    const canvases: any[] = await queryRunner.query(
+      `SELECT id, profileId from canvas`
+    );
+    for (const canvas of canvases) {
+      const { profileId, displayName, description, authorizationId } =
+        await this.getProfile(queryRunner, canvas.profileId);
+      const visualId = await this.getVisualIdForProfile(queryRunner, profileId);
+
+      await queryRunner.query(
+        `UPDATE canvas SET
+        description = '${escapeString(description)}',
+        displayName = '${escapeString(displayName)}',
+        previewId = '${visualId}',
+        WHERE (id = '${canvas.id}')`
+      );
+      await queryRunner.query(
+        `UPDATE visual SET profileId = NULL WHERE (profileId = '${profileId}')`
+      );
+    }
+
+    const packs: any[] = await queryRunner.query(
+      `SELECT id, profileId from innovation_pack`
+    );
+    for (const pack of packs) {
+      const { profileId, displayName, description, authorizationId } =
+        await this.getProfile(queryRunner, pack.profileId);
+      await queryRunner.query(
+        `UPDATE innovation_pack SET
+          description = '${escapeString(description)}',
+          displayName = '${escapeString(displayName)}',
+          WHERE (id = '${pack.id}')`
+      );
+      await this.deleteProfile(queryRunner, profileId, authorizationId);
+    }
+
+    const projects: any[] = await queryRunner.query(
+      `SELECT id, profileId from project`
+    );
+    for (const project of projects) {
+      const { profileId, displayName, description, authorizationId } =
+        await this.getProfile(queryRunner, project.profileId);
+      const tagsetId = await this.getTagsetIdForProfile(queryRunner, profileId);
+
+      await queryRunner.query(
+        `UPDATE project SET
+          description = '${escapeString(description)}',
+          displayName = '${escapeString(displayName)}',
+          tagsetId = '${tagsetId}',
+          WHERE (id = '${project.id}')`
+      );
+      await queryRunner.query(
+        `UPDATE tagset SET profileId = NULL WHERE (profileId = '${profileId}')`
+      );
+
+      await this.deleteProfile(queryRunner, profileId, authorizationId);
+    }
+
+    await this.replaceProfileTemplateInfo(queryRunner, 'canvas_template');
+    await this.replaceProfileTemplateInfo(queryRunner, 'aspect_template');
+    await this.replaceProfileTemplateInfo(queryRunner, 'lifecycle_template');
+
+    ///////////////////////////
 
     await this.removeProfileRelation(
       queryRunner,
@@ -273,6 +402,61 @@ export class profiles1678999155618 implements MigrationInterface {
     return newProfileID;
   }
 
+  private async getProfile(
+    queryRunner: QueryRunner,
+    profileId: string
+  ): Promise<{
+    profileId: string;
+    displayName: string;
+    description: string;
+    authorizationId: string;
+  }> {
+    const profiles: any[] = await queryRunner.query(
+      `SELECT id, displayName, description, authorizationId from \`profile\` WHERE (id = '${profileId}')`
+    );
+    const profile = profiles[0];
+
+    return {
+      profileId: profile.id,
+      displayName: profile.displayName,
+      description: profile.description,
+      authorizationId: profile.authorizationId,
+    };
+  }
+
+  private async getVisualIdForProfile(
+    queryRunner: QueryRunner,
+    profileId: string
+  ): Promise<string> {
+    const visuals: any[] = await queryRunner.query(
+      `SELECT id from \`visual\` WHERE (profileId = '${profileId}')`
+    );
+    const visual = visuals[0];
+    return visual.id;
+  }
+
+  private async getTagsetIdForProfile(
+    queryRunner: QueryRunner,
+    profileId: string
+  ): Promise<string> {
+    const tagsets: any[] = await queryRunner.query(
+      `SELECT id from \`tagset\` WHERE (profileId = '${profileId}')`
+    );
+    const tagset = tagsets[0];
+    return tagset.id;
+  }
+
+  private async deleteProfile(
+    queryRunner: QueryRunner,
+    profileId: string,
+    profileAuthId: string
+  ): Promise<void> {
+    await queryRunner.query(
+      `DELETE FROM authorization_policy WHERE (id = '${profileAuthId}')`
+    );
+    await queryRunner.query(`DELETE FROM profile WHERE (id = '${profileId}')`);
+  }
+
   private async replaceTemplateInfoProfile(
     queryRunner: QueryRunner,
     entityTable: string
@@ -299,6 +483,47 @@ export class profiles1678999155618 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE tagset SET profileId = '${profileID}' WHERE (id = '${templateInfo.tagsetId}')`
       );
+    }
+  }
+
+  private async replaceProfileTemplateInfo(
+    queryRunner: QueryRunner,
+    entityTable: string
+  ): Promise<void> {
+    const templates: any[] = await queryRunner.query(
+      `SELECT id, profileId from  \`${entityTable}\``
+    );
+    for (const template of templates) {
+      const { profileId, displayName, description, authorizationId } =
+        await this.getProfile(queryRunner, template.profileId);
+      const tagsetId = await this.getTagsetIdForProfile(queryRunner, profileId);
+      const visualId = await this.getVisualIdForProfile(queryRunner, profileId);
+
+      const templateInfoID = randomUUID();
+
+      await queryRunner.query(
+        `INSERT INTO template_info (id, version, title, description, tagsetId, visualId)
+            VALUES ('${templateInfoID}',
+                    '1',
+                    '${escapeString(displayName)}',
+                    '${escapeString(description)}',
+                    '${tagsetId}',
+                    '${visualId}'
+                    )`
+      );
+
+      await queryRunner.query(
+        `UPDATE \`${entityTable}\` SET templateInfoId = '${templateInfoID}' WHERE (id = '${template.id}')`
+      );
+
+      // Update the visuals to be parented on the new profile
+      await queryRunner.query(
+        `UPDATE visual SET profileId = NULL WHERE (profileId = '${profileId}')`
+      );
+      await queryRunner.query(
+        `UPDATE tagset SET profileId = NULL WHERE (profileId = '${profileId}')`
+      );
+      await this.deleteProfile(queryRunner, profileId, authorizationId);
     }
   }
 
