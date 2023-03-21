@@ -286,7 +286,6 @@ export class profiles1679337399999 implements MigrationInterface {
         await this.getProfile(queryRunner, pack.profileId);
       await queryRunner.query(
         `UPDATE innovation_pack SET
-          description = '${escapeString(description)}',
           displayName = '${escapeString(displayName)}'
           WHERE (id = '${pack.id}')`
       );
