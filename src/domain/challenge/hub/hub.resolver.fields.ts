@@ -44,7 +44,6 @@ import {
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -182,7 +181,7 @@ export class HubResolverFields {
   @Profiling.api
   async profile(
     @Parent() hub: Hub,
-    @Loader(ProfileLoaderCreator, { parentClassRef: Challenge })
+    @Loader(ProfileLoaderCreator, { parentClassRef: Hub })
     loader: ILoader<IProfile>
   ) {
     return loader.load(hub.id);

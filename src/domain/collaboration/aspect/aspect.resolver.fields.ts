@@ -18,6 +18,7 @@ import { AspectService } from './aspect.service';
 import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
 
 @Resolver(() => IAspect)
 export class AspectResolverFields {
@@ -93,7 +94,8 @@ export class AspectResolverFields {
   @Profiling.api
   async profile(
     @Parent() aspect: IAspect,
-    @Loader(ProfileLoaderCreator) loader: ILoader<IProfile>
+    @Loader(ProfileLoaderCreator, { parentClassRef: Aspect })
+    loader: ILoader<IProfile>
   ): Promise<IProfile> {
     return loader.load(aspect.id);
   }

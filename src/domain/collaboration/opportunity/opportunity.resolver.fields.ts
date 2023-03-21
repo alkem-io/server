@@ -15,6 +15,7 @@ import { Opportunity } from './opportunity.entity';
 import { Loader } from '@core/dataloader/decorators';
 import {
   JourneyCollaborationLoaderCreator,
+  JourneyCommunityLoaderCreator,
   JourneyContextLoaderCreator,
   JourneyLifecycleLoaderCreator,
   OpportunityParentNameLoaderCreator,
@@ -49,7 +50,7 @@ export class OpportunityResolverFields {
   @Profiling.api
   async community(
     @Parent() opportunity: IOpportunity,
-    @Loader(JourneyLifecycleLoaderCreator, { parentClassRef: Opportunity })
+    @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Opportunity })
     loader: ILoader<ILifecycle>
   ) {
     return loader.load(opportunity.id);
