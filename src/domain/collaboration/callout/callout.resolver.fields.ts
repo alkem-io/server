@@ -70,10 +70,10 @@ export class CalloutResolverFields {
   ): Promise<IAspect[]> {
     return await this.calloutService.getAspectsFromCallout(
       callout,
+      ['aspects.comments'],
       ids,
       limit,
-      shuffle,
-      ['aspects.comments']
+      shuffle
     );
   }
 
