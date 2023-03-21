@@ -2,8 +2,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { escapeString } from './utils/escape-string';
 
-export class profiles1678999155618 implements MigrationInterface {
-  name = 'profiles1678999155618';
+export class profiles1679337399999 implements MigrationInterface {
+  name = 'profiles1679337399999';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Extend Callout / Canvas / InnovationPack / Project / AspectTemplate
@@ -270,7 +270,7 @@ export class profiles1678999155618 implements MigrationInterface {
         `UPDATE canvas SET
         description = '${escapeString(description)}',
         displayName = '${escapeString(displayName)}',
-        previewId = '${visualId}',
+        previewId = '${visualId}'
         WHERE (id = '${canvas.id}')`
       );
       await queryRunner.query(
@@ -287,7 +287,7 @@ export class profiles1678999155618 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE innovation_pack SET
           description = '${escapeString(description)}',
-          displayName = '${escapeString(displayName)}',
+          displayName = '${escapeString(displayName)}'
           WHERE (id = '${pack.id}')`
       );
       await this.deleteProfile(queryRunner, profileId, authorizationId);
@@ -305,7 +305,7 @@ export class profiles1678999155618 implements MigrationInterface {
         `UPDATE project SET
           description = '${escapeString(description)}',
           displayName = '${escapeString(displayName)}',
-          tagsetId = '${tagsetId}',
+          tagsetId = '${tagsetId}'
           WHERE (id = '${project.id}')`
       );
       await queryRunner.query(
@@ -388,12 +388,13 @@ export class profiles1678999155618 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `INSERT INTO profile (id, version, authorizationId, description, displayName)
+      `INSERT INTO profile (id, version, authorizationId, description, displayName, tagline)
             VALUES ('${newProfileID}',
                     '1',
                     '${profileAuthID}',
                     '${escapeString(description)}',
-                    '${escapeString(displayName)}')`
+                    '${escapeString(displayName)}',
+                    '')`
     );
 
     await queryRunner.query(
