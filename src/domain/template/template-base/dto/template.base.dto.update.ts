@@ -13,5 +13,5 @@ export class UpdateTemplateBaseInput extends UpdateBaseAlkemioInput {
   @IsOptional()
   @ValidateNested()
   @Type(() => UpdateProfileInput)
-  profileData?: UpdateProfileInput;
+  profile?: UpdateProfileInput;
 }

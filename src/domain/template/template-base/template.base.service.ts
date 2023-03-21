@@ -24,7 +24,7 @@ export class TemplateBaseService {
     baseTemplate.authorization = new AuthorizationPolicy();
 
     baseTemplate.profile = await this.profileService.createProfile(
-      baseTemplateData.profileData
+      baseTemplateData.profile
     );
     await this.profileService.addTagsetOnProfile(baseTemplate.profile, {
       name: RestrictedTagsetNames.DEFAULT,
@@ -43,10 +43,10 @@ export class TemplateBaseService {
     baseTemplate: ITemplateBase,
     baseTemplateData: UpdateTemplateBaseInput
   ): Promise<ITemplateBase> {
-    if (baseTemplateData.profileData) {
+    if (baseTemplateData.profile) {
       baseTemplate.profile = await this.profileService.updateProfile(
         baseTemplate.profile,
-        baseTemplateData.profileData
+        baseTemplateData.profile
       );
     }
 
