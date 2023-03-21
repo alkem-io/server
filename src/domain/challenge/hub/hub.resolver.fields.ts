@@ -4,7 +4,6 @@ import { Hub } from '@domain/challenge/hub/hub.entity';
 import { IProject } from '@domain/collaboration/project';
 import { INVP } from '@domain/common/nvp';
 import { UUID, UUID_NAMEID } from '@domain/common/scalars';
-import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { IOrganization } from '@domain/community';
 import { IApplication } from '@domain/community/application';
 import { ApplicationService } from '@domain/community/application/application.service';
@@ -32,6 +31,7 @@ import { ITemplatesSet } from '@domain/template/templates-set';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
+import { IProfile } from '@domain/common/profile';
 import { Loader } from '@core/dataloader/decorators';
 import {
   HubTemplatesSetLoaderCreator,
@@ -41,8 +41,10 @@ import {
   JourneyContextLoaderCreator,
   PreferencesLoaderCreator,
   AgentLoaderCreator,
+  ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -173,13 +175,17 @@ export class HubResolverFields {
     return await this.hubService.getChallenges(hub, args);
   }
 
-  @ResolveField('tagset', () => ITagset, {
-    nullable: true,
-    description: 'The set of tags for the  hub.',
+  @ResolveField('profile', () => IProfile, {
+    nullable: false,
+    description: 'The Profile for the  hub.',
   })
   @Profiling.api
-  async tagset(@Parent() hub: Hub) {
-    return hub.tagset;
+  async profile(
+    @Parent() hub: Hub,
+    @Loader(ProfileLoaderCreator, { parentClassRef: Challenge })
+    loader: ILoader<IProfile>
+  ) {
+    return loader.load(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

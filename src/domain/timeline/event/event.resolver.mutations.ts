@@ -31,7 +31,7 @@ export class CalendarEventResolverMutations {
       agentInfo,
       calendarEvent.authorization,
       AuthorizationPrivilege.DELETE,
-      `delete calendarEvent: ${calendarEvent.displayName}`
+      `delete calendarEvent: ${calendarEvent.nameID}`
     );
     return await this.calendarEventService.deleteCalendarEvent(deleteData);
   }

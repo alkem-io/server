@@ -1,9 +1,9 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { ICalendarEvent } from './event.interface';
 import { Comments } from '@domain/communication/comments';
-import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { CardProfile } from '@domain/collaboration/card-profile/card.profile.entity';
 import { Calendar } from '../calendar/calendar.entity';
+import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 
 @Entity()
 export class CalendarEvent extends NameableEntity implements ICalendarEvent {
@@ -21,13 +21,13 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   @JoinColumn()
   comments?: Comments;
 
-  @OneToOne(() => CardProfile, {
+  @OneToOne(() => Profile, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  profile?: CardProfile;
+  profile!: Profile;
 
   @ManyToOne(() => Calendar, calendar => calendar.events, {
     eager: false,

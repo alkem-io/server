@@ -1,6 +1,5 @@
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { Challenge } from './challenge.entity';
 import { ChallengeService } from './challenge.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { IContext } from '@domain/context/context/context.interface';
@@ -15,6 +14,7 @@ import { IAgent } from '@domain/agent/agent';
 import { IPreference } from '@domain/common/preference';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
+import { IProfile } from '@domain/common/profile/profile.interface';
 import { Loader } from '@core/dataloader/decorators';
 import {
   JourneyCollaborationLoaderCreator,
@@ -23,8 +23,10 @@ import {
   JourneyContextLoaderCreator,
   PreferencesLoaderCreator,
   AgentLoaderCreator,
+  ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -36,7 +38,7 @@ export class ChallengeResolverFields {
   })
   @Profiling.api
   async community(
-    @Parent() challenge: Challenge,
+    @Parent() challenge: IChallenge,
     @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<ICommunity>
   ) {
@@ -49,7 +51,7 @@ export class ChallengeResolverFields {
     description: 'The context for the challenge.',
   })
   async context(
-    @Parent() challenge: Challenge,
+    @Parent() challenge: IChallenge,
     @Loader(JourneyContextLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<IContext>
   ) {
@@ -64,9 +66,22 @@ export class ChallengeResolverFields {
   })
   @Profiling.api
   async collaboration(
-    @Parent() challenge: Challenge,
+    @Parent() challenge: IChallenge,
     @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<ICollaboration>
+  ) {
+    return loader.load(challenge.id);
+  }
+
+  @ResolveField('profile', () => IProfile, {
+    nullable: false,
+    description: 'The Profile for the  Challenge.',
+  })
+  @Profiling.api
+  async profile(
+    @Parent() challenge: IChallenge,
+    @Loader(ProfileLoaderCreator, { parentClassRef: Challenge })
+    loader: ILoader<IProfile>
   ) {
     return loader.load(challenge.id);
   }
@@ -79,7 +94,7 @@ export class ChallengeResolverFields {
   })
   @Profiling.api
   async opportunities(
-    @Parent() challenge: Challenge,
+    @Parent() challenge: IChallenge,
     @Args({ nullable: true }) args: LimitAndShuffleIdsQueryArgs
   ) {
     return await this.challengeService.getOpportunities(challenge.id, args);
@@ -92,7 +107,7 @@ export class ChallengeResolverFields {
   })
   @Profiling.api
   async lifecycle(
-    @Parent() challenge: Challenge,
+    @Parent() challenge: IChallenge,
     @Loader(JourneyLifecycleLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<ILifecycle>
   ) {
@@ -106,7 +121,7 @@ export class ChallengeResolverFields {
     description: 'The set of child Challenges within this challenge.',
   })
   @Profiling.api
-  async challenges(@Parent() challenge: Challenge) {
+  async challenges(@Parent() challenge: IChallenge) {
     return await this.challengeService.getChildChallenges(challenge);
   }
 
@@ -116,7 +131,7 @@ export class ChallengeResolverFields {
   })
   @Profiling.api
   async agent(
-    @Parent() challenge: Challenge,
+    @Parent() challenge: IChallenge,
     @Loader(AgentLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
@@ -128,7 +143,7 @@ export class ChallengeResolverFields {
     description: 'Metrics about activity within this Challenge.',
   })
   @Profiling.api
-  async metrics(@Parent() challenge: Challenge) {
+  async metrics(@Parent() challenge: IChallenge) {
     return await this.challengeService.getMetrics(challenge);
   }
 
@@ -139,7 +154,7 @@ export class ChallengeResolverFields {
   })
   @UseGuards(GraphqlGuard)
   async preferences(
-    @Parent() challenge: Challenge,
+    @Parent() challenge: IChallenge,
     @Loader(PreferencesLoaderCreator, {
       parentClassRef: Challenge,
       getResult: r => r?.preferenceSet?.preferences,

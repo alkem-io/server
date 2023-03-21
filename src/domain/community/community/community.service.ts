@@ -50,6 +50,7 @@ import { IForm } from '@domain/common/form/form.interface';
 import { FormService } from '@domain/common/form/form.service';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
+import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 
 @Injectable()
 export class CommunityService {
@@ -264,6 +265,31 @@ export class CommunityService {
     return await this.communityRepository.save(community);
   }
 
+  async getMembershipStatus(
+    agentInfo: AgentInfo,
+    community: ICommunity
+  ): Promise<CommunityMembershipStatus> {
+    const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
+    const isMember = await this.isMember(agent, community);
+    if (isMember) return CommunityMembershipStatus.MEMBER;
+
+    // Check if an application is pending
+    const applications = await this.applicationService.findExistingApplications(
+      agentInfo.userID,
+      community.id
+    );
+    for (const application of applications) {
+      // skip any finalized applications; only want to return pending applications
+      const isFinalized = await this.applicationService.isFinalizedApplication(
+        application.id
+      );
+      if (isFinalized) continue;
+      return CommunityMembershipStatus.APPLICATION_PENDING;
+    }
+
+    return CommunityMembershipStatus.NOT_MEMBER;
+  }
+
   async getUsersWithRole(
     community: ICommunity,
     role: CommunityRole,
@@ -404,7 +430,7 @@ export class CommunityService {
     if (community.parentCommunity) {
       const isParentMember = await this.isMember(
         agent,
-        community.parentCommunity.id
+        community.parentCommunity
       );
       return isParentMember;
     }
@@ -673,8 +699,7 @@ export class CommunityService {
     );
   }
 
-  async isMember(agent: IAgent, communityID: string): Promise<boolean> {
-    const community = await this.getCommunityOrFail(communityID);
+  async isMember(agent: IAgent, community: ICommunity): Promise<boolean> {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
       CommunityRole.MEMBER
@@ -727,7 +752,7 @@ export class CommunityService {
     }
 
     // Check if the user is already a member; if so do not allow an application
-    const isExistingMember = await this.isMember(agent, community.id);
+    const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new InvalidStateTransitionException(
         `User ${applicationData.userID} is already a member of the Community: ${community.displayName}.`,

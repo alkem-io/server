@@ -2,7 +2,7 @@ import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
-import { IProfile } from '@src/domain';
+import { IProfile } from '@domain/common/profile';
 import { createTypedRelationDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 

@@ -1,20 +1,26 @@
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { Profile } from '@domain/community/profile/profile.entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 
 export enum RestrictedTagsetNames {
   DEFAULT = 'default',
   SKILLS = 'skills',
+  CAPABILITIES = 'capabilities',
+  KEYWORDS = 'keywords',
 }
 
 @Entity()
 export class Tagset extends AuthorizableEntity implements ITagset {
-  @Column({ default: RestrictedTagsetNames.DEFAULT })
+  @Column('varchar', {
+    default: RestrictedTagsetNames.DEFAULT,
+    length: 255,
+    nullable: false,
+  })
   name!: string;
 
   @Column('simple-array')
-  tags: string[];
+  tags!: string[];
 
   @ManyToOne(() => Profile, profile => profile.tagsets, {
     eager: false,
