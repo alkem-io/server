@@ -1,6 +1,6 @@
 export class DataLoaderInitError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'DataLoaderInitError';
+    this.name = this.constructor.name;
   }
 }

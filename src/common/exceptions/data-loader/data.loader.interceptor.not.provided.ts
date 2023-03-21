@@ -1,6 +1,6 @@
 export class DataLoaderInterceptorNotProvided extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'DataLoaderInterceptorNotProvided';
+    this.name = this.constructor.name;
   }
 }

@@ -1,4 +1,3 @@
-import { IDataloaders } from '@core/dataloader/dataloader.interface';
 import { HttpContext } from '@src/types';
 import { DATA_LOADER_CTX_INJECT_TOKEN } from '@core/dataloader/data.loader.inject.token';
 import { DataLoaderContextEntry } from '@core/dataloader/interceptors';
@@ -6,7 +5,6 @@ import { ILoader } from '@core/dataloader/loader.interface';
 
 declare global {
   type IGraphQLContext = {
-    loaders: IDataloaders;
     req: HttpContext['req'];
     [DATA_LOADER_CTX_INJECT_TOKEN]: DataLoaderContextEntry;
   } & {

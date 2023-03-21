@@ -15,6 +15,9 @@ import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { IAspect } from './aspect.interface';
 import { AspectService } from './aspect.service';
+import { Loader } from '@core/dataloader/decorators';
+import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { ILoader } from '@core/dataloader/loader.interface';
 
 @Resolver(() => IAspect)
 export class AspectResolverFields {
@@ -88,8 +91,11 @@ export class AspectResolverFields {
     description: 'The Profile for this Card.',
   })
   @Profiling.api
-  async profile(@Parent() aspect: IAspect): Promise<IProfile> {
-    return await this.aspectService.getProfile(aspect);
+  async profile(
+    @Parent() aspect: IAspect,
+    @Loader(ProfileLoaderCreator) loader: ILoader<IProfile>
+  ): Promise<IProfile> {
+    return loader.load(aspect.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

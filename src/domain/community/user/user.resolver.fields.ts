@@ -18,8 +18,9 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import {
-  UserAgentLoaderCreator,
-  UserProfileLoaderCreator,
+  AgentLoaderCreator,
+  AuthorizationLoaderCreator,
+  ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
@@ -42,7 +43,8 @@ export class UserResolverFields {
   @Profiling.api
   async profile(
     @Parent() user: User,
-    @Loader(UserProfileLoaderCreator) loader: ILoader<IProfile>
+    @Loader(ProfileLoaderCreator, { parentClassRef: User })
+    loader: ILoader<IProfile>
   ): Promise<IProfile> {
     return loader.load(user.id);
   }
@@ -54,7 +56,8 @@ export class UserResolverFields {
   @Profiling.api
   async agent(
     @Parent() user: User,
-    @Loader(UserAgentLoaderCreator) loader: ILoader<IAgent>
+    @Loader(AgentLoaderCreator, { parentClassRef: User })
+    loader: ILoader<IAgent>
   ): Promise<IAgent> {
     return loader.load(user.id);
   }
@@ -65,11 +68,12 @@ export class UserResolverFields {
     description: 'The Authorization for this User.',
   })
   @Profiling.api
-  async authorization(@Parent() parent: User) {
-    // Reload to ensure the authorization is loaded
-    const user = await this.userService.getUserOrFail(parent.id);
-
-    return user.authorization;
+  async authorization(
+    @Parent() user: User,
+    @Loader(AuthorizationLoaderCreator, { parentClassRef: User })
+    loader: ILoader<IAuthorizationPolicy>
+  ) {
+    return loader.load(user.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -82,6 +86,7 @@ export class UserResolverFields {
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IPreference[]> {
+    // reject when a basic user reads other user's preferences
     if (
       !(await this.isAccessGranted(
         user,

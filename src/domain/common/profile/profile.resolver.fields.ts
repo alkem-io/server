@@ -1,10 +1,9 @@
 import { Profiling } from '@common/decorators';
-import { Args, Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IReference } from '@domain/common/reference/reference.interface';
-import { ProfileService } from './profile.service';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ILocation } from '@domain/common/location/location.interface';
 import { VisualType } from '@common/enums/visual.type';
@@ -12,6 +11,16 @@ import { RestrictedTagsetNames } from '../tagset/tagset.entity';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { IProfile } from './profile.interface';
+import { Profile } from '@domain/common/profile/profile.entity';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
+import {
+  ProfileLocationLoaderCreator,
+  ProfileReferencesLoaderCreator,
+  ProfileTagsetsLoaderCreator,
+  VisualLoaderCreator,
+} from '@core/dataloader/creators';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
@@ -27,8 +36,7 @@ export class ProfileResolverFields {
     @Parent() profile: IProfile,
     @Args('type', { type: () => VisualType }) type: VisualType
   ): Promise<IVisual | undefined> {
-    const result = await this.profileService.getVisual(profile, type);
-    return result;
+    return this.profileService.getVisual(profile, type);
   }
 
   @UseGuards(GraphqlGuard)
@@ -39,9 +47,9 @@ export class ProfileResolverFields {
   @Profiling.api
   async references(
     @Parent() profile: IProfile,
-    @Context() { loaders }: IGraphQLContext
+    @Loader(ProfileReferencesLoaderCreator) loader: ILoader<IReference[]>
   ): Promise<IReference[]> {
-    return loaders.referencesLoader.load(profile.id);
+    return loader.load(profile.id);
   }
 
   // TODO: to make the switch for entities with a single tagset easier
@@ -53,9 +61,10 @@ export class ProfileResolverFields {
   @Profiling.api
   async tagset(
     @Parent() profile: IProfile,
-    @Context() { loaders }: IGraphQLContext
+    @Loader(ProfileTagsetsLoaderCreator)
+    loader: ILoader<ITagset[]>
   ): Promise<ITagset> {
-    const tagsets = await loaders.tagsetsLoader.load(profile.id);
+    const tagsets = await loader.load(profile.id);
     const defaultTagset = tagsets.find(
       t => t.name === RestrictedTagsetNames.DEFAULT
     );
@@ -76,9 +85,9 @@ export class ProfileResolverFields {
   @Profiling.api
   async tagsets(
     @Parent() profile: IProfile,
-    @Context() { loaders }: IGraphQLContext
+    @Loader(ProfileTagsetsLoaderCreator) loader: ILoader<ITagset[]>
   ): Promise<ITagset[]> {
-    return loaders.tagsetsLoader.load(profile.id);
+    return loader.load(profile.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -87,8 +96,12 @@ export class ProfileResolverFields {
     description: 'A list of visuals for this Profile.',
   })
   @Profiling.api
-  async visuals(@Parent() profile: IProfile): Promise<IVisual[]> {
-    return await this.profileService.getVisuals(profile);
+  async visuals(
+    @Parent() profile: IProfile,
+    @Loader(VisualLoaderCreator, { parentClassRef: Profile })
+    loader: ILoader<IVisual[]>
+  ): Promise<IVisual[]> {
+    return loader.load(profile.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -99,8 +112,8 @@ export class ProfileResolverFields {
   @Profiling.api
   async location(
     @Parent() profile: IProfile,
-    @Context() { loaders }: IGraphQLContext
+    @Loader(ProfileLocationLoaderCreator) loader: ILoader<ILocation>
   ): Promise<ILocation> {
-    return loaders.locationsLoader.load(profile.id);
+    return loader.load(profile.id);
   }
 }

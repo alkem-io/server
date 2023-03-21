@@ -24,9 +24,9 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import {
-  UserAgentLoaderCreator,
-  UserProfileLoaderCreator,
-} from '@core/dataloader/creators';
+  AgentLoaderCreator,
+  ProfileLoaderCreator,
+} from '@core/dataloader/creators/loader.creators';
 
 @Module({
   imports: [
@@ -55,8 +55,8 @@ import {
     UserResolverQueries,
     UserResolverFields,
     UserDataloaderService,
-    UserAgentLoaderCreator,
-    UserProfileLoaderCreator,
+    AgentLoaderCreator,
+    ProfileLoaderCreator,
   ],
   exports: [UserService, UserDataloaderService, UserAuthorizationService],
 })

@@ -6,9 +6,9 @@ import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
 import { DataLoaderInterceptor } from '../interceptors';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../creators/base';
 
-export function Loader<TReturn>(
+export function Loader<TParent, TReturn>(
   creatorRef: Type<DataLoaderCreator<TReturn>>,
-  options?: DataLoaderCreatorOptions<TReturn>
+  options?: DataLoaderCreatorOptions<TReturn, TParent>
 ): ParameterDecorator {
   return createParamDecorator(
     (

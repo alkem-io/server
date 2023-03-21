@@ -32,6 +32,19 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { IProfile } from '@domain/common/profile';
+import { Loader } from '@core/dataloader/decorators';
+import {
+  HubTemplatesSetLoaderCreator,
+  HubTimelineLoaderCreator,
+  JourneyCollaborationLoaderCreator,
+  JourneyCommunityLoaderCreator,
+  JourneyContextLoaderCreator,
+  PreferencesLoaderCreator,
+  AgentLoaderCreator,
+  ProfileLoaderCreator,
+} from '@core/dataloader/creators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -51,11 +64,13 @@ export class HubResolverFields {
   @Profiling.api
   async community(
     @Parent() hub: Hub,
-    @Args('ID', { type: () => UUID, nullable: true }) ID: string
+    @Args('ID', { type: () => UUID, nullable: true }) ID: string,
+    @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Hub })
+    loader: ILoader<ICommunity>
   ) {
     // Default to returning the community for the Hub
     if (!ID) {
-      return await this.hubService.getCommunity(hub);
+      return loader.load(hub.id);
     }
     return await this.hubService.getCommunityInNameableScope(ID, hub);
   }
@@ -65,8 +80,12 @@ export class HubResolverFields {
     description: 'The context for the hub.',
   })
   @Profiling.api
-  async context(@Parent() hub: Hub) {
-    return await this.hubService.getContext(hub);
+  async context(
+    @Parent() hub: Hub,
+    @Loader(JourneyContextLoaderCreator, { parentClassRef: Hub })
+    loader: ILoader<IContext>
+  ) {
+    return loader.load(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -76,8 +95,12 @@ export class HubResolverFields {
     description: 'The collaboration for the Hub.',
   })
   @Profiling.api
-  async collaboration(@Parent() hub: Hub) {
-    return await this.hubService.getCollaboration(hub);
+  async collaboration(
+    @Parent() hub: Hub,
+    @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Hub })
+    loader: ILoader<IContext>
+  ) {
+    return loader.load(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -87,8 +110,12 @@ export class HubResolverFields {
   })
   @UseGuards(GraphqlGuard)
   @Profiling.api
-  async agent(@Parent() hub: Hub): Promise<IAgent> {
-    return await this.hubService.getAgent(hub.id);
+  async agent(
+    @Parent() hub: Hub,
+    @Loader(AgentLoaderCreator, { parentClassRef: Hub })
+    loader: ILoader<IAgent>
+  ): Promise<IAgent> {
+    return loader.load(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -97,8 +124,11 @@ export class HubResolverFields {
     description: 'The templates in use by this Hub',
   })
   @UseGuards(GraphqlGuard)
-  async templatesSet(@Parent() hub: Hub): Promise<ITemplatesSet> {
-    return await this.hubService.getTemplatesSetOrFail(hub.id);
+  async templatesSet(
+    @Parent() hub: Hub,
+    @Loader(HubTemplatesSetLoaderCreator) loader: ILoader<ITemplatesSet>
+  ): Promise<ITemplatesSet> {
+    return loader.load(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -107,8 +137,11 @@ export class HubResolverFields {
     description: 'The timeline with events in use by this Hub',
   })
   @UseGuards(GraphqlGuard)
-  async timeline(@Parent() hub: Hub): Promise<ITimeline> {
-    return await this.hubService.getTimelineOrFail(hub.id);
+  async timeline(
+    @Parent() hub: Hub,
+    @Loader(HubTimelineLoaderCreator) loader: ILoader<ITimeline>
+  ): Promise<ITimeline> {
+    return loader.load(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -117,9 +150,15 @@ export class HubResolverFields {
     description: 'The preferences for this Hub',
   })
   @UseGuards(GraphqlGuard)
-  async preferences(@Parent() hub: Hub): Promise<IPreference[]> {
-    const preferenceSet = await this.hubService.getPreferenceSetOrFail(hub.id);
-    return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
+  async preferences(
+    @Parent() hub: Hub,
+    @Loader(PreferencesLoaderCreator, {
+      parentClassRef: Hub,
+      getResult: r => r?.preferenceSet?.preferences,
+    })
+    loader: ILoader<IPreference[]>
+  ): Promise<IPreference[]> {
+    return loader.load(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -141,8 +180,12 @@ export class HubResolverFields {
     description: 'The Profile for the  hub.',
   })
   @Profiling.api
-  async profile(@Parent() hub: Hub) {
-    return await this.hubService.getProfile(hub);
+  async profile(
+    @Parent() hub: Hub,
+    @Loader(ProfileLoaderCreator, { parentClassRef: Challenge })
+    loader: ILoader<IProfile>
+  ) {
+    return loader.load(hub.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

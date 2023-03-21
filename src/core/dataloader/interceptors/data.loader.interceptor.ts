@@ -7,7 +7,7 @@ import {
 import { ContextIdFactory, ModuleRef } from '@nestjs/core';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import {
-  DataLoaderInitError,
+  DataLoaderCreatorInitError,
   DataLoaderNotProvided,
 } from '@common/exceptions/data-loader';
 import { DATA_LOADER_CTX_INJECT_TOKEN } from '../data.loader.inject.token';
@@ -61,8 +61,8 @@ export class DataLoaderInterceptor implements NestInterceptor {
             });
           })
           .catch(e => {
-            throw new DataLoaderInitError(
-              `Unable to initialize ${creatorName}: ${e}`
+            throw new DataLoaderCreatorInitError(
+              `Unable to initialize creator ${creatorName}: ${e}`
             );
           });
 
