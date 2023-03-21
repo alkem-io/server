@@ -40,6 +40,20 @@ export class ProfileResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
+  @ResolveField('visuals', () => [IVisual], {
+    nullable: false,
+    description: 'A list of visuals for this Profile.',
+  })
+  @Profiling.api
+  async visuals(
+    @Parent() profile: IProfile,
+    @Loader(VisualLoaderCreator, { parentClassRef: Profile })
+    loader: ILoader<IVisual[]>
+  ): Promise<IVisual[]> {
+    return loader.load(profile.id);
+  }
+
+  @UseGuards(GraphqlGuard)
   @ResolveField('references', () => [IReference], {
     nullable: true,
     description: 'A list of URLs to relevant information.',
@@ -87,20 +101,6 @@ export class ProfileResolverFields {
     @Parent() profile: IProfile,
     @Loader(ProfileTagsetsLoaderCreator) loader: ILoader<ITagset[]>
   ): Promise<ITagset[]> {
-    return loader.load(profile.id);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('visuals', () => [IVisual], {
-    nullable: false,
-    description: 'A list of visuals for this Profile.',
-  })
-  @Profiling.api
-  async visuals(
-    @Parent() profile: IProfile,
-    @Loader(VisualLoaderCreator, { parentClassRef: Profile })
-    loader: ILoader<IVisual[]>
-  ): Promise<IVisual[]> {
     return loader.load(profile.id);
   }
 
