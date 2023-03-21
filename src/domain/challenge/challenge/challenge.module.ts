@@ -28,6 +28,7 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { LoaderCreatorModule } from '@core/dataloader/creators';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     PreferenceSetModule,
     ElasticsearchModule,
     TypeOrmModule.forFeature([Challenge]),
+    LoaderCreatorModule,
   ],
   providers: [
     ChallengeService,

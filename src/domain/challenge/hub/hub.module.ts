@@ -33,6 +33,7 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
 import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { LoaderCreatorModule } from '@core/dataloader/creators';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
     CollaborationModule,
     HubFilterModule,
     ElasticsearchModule,
+    LoaderCreatorModule,
     TypeOrmModule.forFeature([Hub]),
   ],
   providers: [
