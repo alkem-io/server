@@ -122,6 +122,7 @@ export class SearchService {
       challengeIDsFilter,
       opportunityIDsFilter,
       userIDsFilter,
+      organizationIDsFilter,
       cardIDsFilter,
     } = await this.getIDFilters(searchData.searchInHubFilter);
 
@@ -155,7 +156,11 @@ export class SearchService {
     if (searchGroups)
       await this.searchGroupsByTerms(filteredTerms, groupResults);
     if (searchOrganizations)
-      await this.searchOrganizationsByTerms(filteredTerms, organizationResults);
+      await this.searchOrganizationsByTerms(
+        filteredTerms,
+        organizationResults,
+        organizationIDsFilter
+      );
     if (searchHubs)
       await this.searchHubsByTerms(filteredTerms, hubResults, agentInfo);
     if (searchChallenges)
@@ -288,8 +293,6 @@ export class SearchService {
 
     if (hubIDsFilter) {
       searchHubs = false;
-      // If searching in an org then interested in content and users
-      searchOrganizations = false;
     }
 
     return [
@@ -373,22 +376,36 @@ export class SearchService {
 
   async searchOrganizationsByTerms(
     terms: string[],
-    organizationResults: Map<number, Match>
+    organizationResults: Map<number, Match>,
+    organizationsFilter: string[] | undefined
   ) {
     for (const term of terms) {
-      const organizationMatches = await this.organizationRepository
+      const organizationQuery = await this.organizationRepository
         .createQueryBuilder('organization')
         .leftJoinAndSelect('organization.profile', 'profile')
         .leftJoinAndSelect('organization.groups', 'groups')
-        .leftJoinAndSelect('profile.location', 'location')
-        .where('organization.nameID like :term')
-        .orWhere('profile.displayName like :term')
-        .orWhere('profile.description like :term')
-        .orWhere('location.country like :term')
-        .orWhere('location.city like :term')
-        .setParameters({ term: `%${term}%` })
-        .getMany();
+        .leftJoinAndSelect('profile.location', 'location');
+
+      // Optionally restrict to search in just one Hub
+      if (organizationsFilter) {
+        organizationQuery.where('organization.id IN (:organizationsFilter)', {
+          organizationsFilter: organizationsFilter,
+        });
+      }
+      // Note that brackets are needed to nest the and
+      organizationQuery
+        .andWhere(
+          new Brackets(qb => {
+            qb.where('organization.nameID like :term')
+              .orWhere('profile.displayName like :term')
+              .orWhere('profile.description like :term')
+              .orWhere('location.country like :term')
+              .orWhere('location.city like :term');
+          })
+        )
+        .setParameters({ term: `%${term}%` });
       // Create results for each match
+      const organizationMatches = await organizationQuery.getMany();
       await this.buildMatchingResults(
         organizationMatches,
         organizationResults,
@@ -893,6 +910,7 @@ export class SearchService {
     challengeIDsFilter: string[] | undefined;
     opportunityIDsFilter: string[] | undefined;
     userIDsFilter: string[] | undefined;
+    organizationIDsFilter: string[] | undefined;
     cardIDsFilter: string[] | undefined;
   }> {
     let searchInHub: IHub | undefined = undefined;
@@ -900,6 +918,7 @@ export class SearchService {
     let challengeIDsFilter: string[] | undefined = undefined;
     let opportunityIDsFilter: string[] | undefined = undefined;
     let userIDsFilter: string[] | undefined = undefined;
+    let organizationIDsFilter: string[] | undefined = undefined;
     let cardIDsFilter: string[] | undefined = undefined;
     if (searchInHubID) {
       searchInHub = await this.hubService.getHubOrFail(searchInHubID, {
@@ -914,6 +933,7 @@ export class SearchService {
       );
       opportunityIDsFilter = opportunitiesFilter.map(opp => opp.id);
       userIDsFilter = await this.getUsersFilter(searchInHub);
+      organizationIDsFilter = await this.getOrganizationsFilter(searchInHub);
       cardIDsFilter = await this.getCardsFilter(
         searchInHub,
         challengesFilter,
@@ -925,6 +945,7 @@ export class SearchService {
       challengeIDsFilter,
       opportunityIDsFilter,
       userIDsFilter,
+      organizationIDsFilter,
       cardIDsFilter,
     };
   }
@@ -972,6 +993,35 @@ export class SearchService {
       usersFilter.push(user.id);
     }
     return usersFilter;
+  }
+
+  private async getOrganizationsFilter(searchInHub: IHub): Promise<string[]> {
+    const organizationsFilter = [];
+    const membersInHub =
+      await this.organizationService.organizationsWithCredentials({
+        type: AuthorizationCredential.HUB_MEMBER,
+        resourceID: searchInHub.id,
+      });
+    for (const org of membersInHub) {
+      organizationsFilter.push(org.id);
+    }
+    const adminsInHub =
+      await this.organizationService.organizationsWithCredentials({
+        type: AuthorizationCredential.HUB_ADMIN,
+        resourceID: searchInHub.id,
+      });
+    for (const org of adminsInHub) {
+      organizationsFilter.push(org.id);
+    }
+    const leadsInHub =
+      await this.organizationService.organizationsWithCredentials({
+        type: AuthorizationCredential.HUB_HOST,
+        resourceID: searchInHub.id,
+      });
+    for (const org of leadsInHub) {
+      organizationsFilter.push(org.id);
+    }
+    return organizationsFilter;
   }
 
   private async getCardsFilter(
