@@ -180,8 +180,8 @@ export class CalloutService {
       relations: [
         'cardTemplate',
         'canvasTemplate',
-        'cardTemplate.templateInfo',
-        'canvasTemplate.templateInfo',
+        'cardTemplate.profile',
+        'canvasTemplate.profile',
       ],
     });
 
