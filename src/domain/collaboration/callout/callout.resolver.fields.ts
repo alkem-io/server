@@ -14,18 +14,24 @@ import { UUID_NAMEID } from '@domain/common/scalars';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { UserService } from '@domain/community/user/user.service';
 import { ICanvasTemplate } from '@domain/template/canvas-template/canvas.template.interface';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import {
+  CalloutCanvasTemplateLoaderCreator,
+  CalloutCardTemplateLoaderCreator,
+  CommentsLoaderCreator,
+  UserLoaderCreator,
+} from '@core/dataloader/creators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { Loader } from '@core/dataloader/decorators';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private calloutService: CalloutService,
-    private userService: UserService
+    private calloutService: CalloutService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -73,10 +79,10 @@ export class CalloutResolverFields {
   ): Promise<IAspect[]> {
     return await this.calloutService.getAspectsFromCallout(
       callout,
+      ['aspects.comments'],
       ids,
       limit,
-      shuffle,
-      ['aspects.comments']
+      shuffle
     );
   }
 
@@ -128,8 +134,21 @@ export class CalloutResolverFields {
     description: 'The comments for this Callout.',
   })
   @Profiling.api
-  async comments(@Parent() callout: ICallout): Promise<IComments | undefined> {
-    return await this.calloutService.getCommentsFromCallout(callout.id);
+  async comments(
+    @Parent() callout: ICallout,
+    @Loader(CommentsLoaderCreator, {
+      parentClassRef: Callout,
+      resolveToNull: true,
+    })
+    loader: ILoader<IComments>
+  ): Promise<IComments | null> {
+    return (
+      loader
+        .load(callout.id)
+        // empty object is result because DataLoader does not allow to return NULL values
+        // handle the value when the result is returned
+        .then(x => (!Object.keys(x).length ? null : x))
+    );
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -139,9 +158,17 @@ export class CalloutResolverFields {
     description: 'The card template for this Callout.',
   })
   async cardTemplate(
-    @Parent() callout: ICallout
-  ): Promise<IAspectTemplate | undefined> {
-    return await this.calloutService.getCardTemplateFromCallout(callout.id);
+    @Parent() callout: ICallout,
+    @Loader(CalloutCardTemplateLoaderCreator, { resolveToNull: true })
+    loader: ILoader<IAspectTemplate>
+  ): Promise<IAspectTemplate | null> {
+    return (
+      loader
+        .load(callout.id)
+        // empty object is result because DataLoader does not allow to return NULL values
+        // handle the value when the result is returned
+        .then(x => (!Object.keys(x).length ? null : x))
+    );
   }
 
   @ResolveField('activity', () => Number, {
@@ -159,21 +186,32 @@ export class CalloutResolverFields {
     description: 'The canvas template for this Callout.',
   })
   async canvasTemplate(
-    @Parent() callout: ICallout
-  ): Promise<ICanvasTemplate | undefined> {
-    return await this.calloutService.getCanvasTemplateFromCallout(callout.id);
+    @Parent() callout: ICallout,
+    @Loader(CalloutCanvasTemplateLoaderCreator, { resolveToNull: true })
+    loader: ILoader<ICanvasTemplate>
+  ): Promise<ICanvasTemplate | null> {
+    return (
+      loader
+        .load(callout.id)
+        // empty object is result because DataLoader does not allow to return NULL values
+        // handle the value when the result is returned
+        .then(x => (!Object.keys(x).length ? null : x))
+    );
   }
 
   @ResolveField('publishedBy', () => IUser, {
     nullable: true,
     description: 'The user that published this Callout',
   })
-  async publishedBy(@Parent() callout: ICallout): Promise<IUser | undefined> {
+  async publishedBy(
+    @Parent() callout: ICallout,
+    @Loader(UserLoaderCreator, { resolveToNull: true }) loader: ILoader<IUser>
+  ): Promise<IUser | null> {
     const publishedBy = callout.publishedBy;
     if (!publishedBy) {
-      return undefined;
+      return null;
     }
-    return await this.userService.getUserOrFail(publishedBy);
+    return loader.load(publishedBy);
   }
 
   @ResolveField('publishedDate', () => Number, {
@@ -190,14 +228,23 @@ export class CalloutResolverFields {
     nullable: true,
     description: 'The user that created this Callout',
   })
-  async createdBy(@Parent() callout: ICallout): Promise<IUser | null> {
+  async createdBy(
+    @Parent() callout: ICallout,
+    @Loader(UserLoaderCreator, { resolveToNull: true }) loader: ILoader<IUser>
+  ): Promise<IUser | null> {
     const createdBy = callout.createdBy;
     if (!createdBy) {
       return null;
     }
 
     try {
-      return await this.userService.getUserOrFail(createdBy);
+      return await loader
+        .load(createdBy)
+        // empty object is result because DataLoader does not allow to return NULL values
+        // handle the value when the result is returned
+        .then(x => {
+          return !Object.keys(x).length ? null : x;
+        });
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(

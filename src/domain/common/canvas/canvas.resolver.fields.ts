@@ -4,31 +4,38 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Profiling } from '@src/common/decorators';
 import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
 import { ICanvas } from './canvas.interface';
-import { CanvasService } from './canvas.service';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@src/core/authorization/graphql.guard';
-import { IVisual } from '@src/domain/common/visual/visual.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { UserService } from '@domain/community/user/user.service';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IProfile } from '../profile/profile.interface';
+import { Loader } from '@core/dataloader/decorators';
+import {
+  CheckoutLoaderCreator,
+  UserLoaderCreator,
+} from '@core/dataloader/creators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { Canvas } from '@domain/common/canvas/canvas.entity';
+import { CanvasService } from './canvas.service';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverFields {
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
     private canvasService: CanvasService,
-    private userService: UserService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   @ResolveField('createdBy', () => IUser, {
     nullable: true,
     description: 'The user that created this Canvas',
   })
-  async createdBy(@Parent() canvas: ICanvas): Promise<IUser | null> {
+  async createdBy(
+    @Parent() canvas: ICanvas,
+    @Loader(UserLoaderCreator, { resolveToNull: true }) loader: ILoader<IUser>
+  ): Promise<IUser | null> {
     const createdBy = canvas.createdBy;
     if (!createdBy) {
       throw new EntityNotInitializedException(
@@ -38,7 +45,13 @@ export class CanvasResolverFields {
     }
 
     try {
-      return await this.userService.getUserOrFail(createdBy);
+      return await loader
+        .load(createdBy)
+        // empty object is result because DataLoader does not allow to return NULL values
+        // handle the value when the result is returned
+        .then(x => {
+          return !Object.keys(x).length ? null : x;
+        });
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(
@@ -67,17 +80,11 @@ export class CanvasResolverFields {
     description: 'The checkout out state of this Canvas.',
   })
   @Profiling.api
-  async checkout(@Parent() canvas: ICanvas) {
-    return await this.canvasService.getCanvasCheckout(canvas);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('preview', () => IVisual, {
-    nullable: true,
-    description: 'The preview image for this Canvas.',
-  })
-  @Profiling.api
-  async preview(@Parent() canvas: ICanvas): Promise<IVisual> {
-    return await this.canvasService.getVisualPreview(canvas);
+  async checkout(
+    @Parent() canvas: ICanvas,
+    @Loader(CheckoutLoaderCreator, { parentClassRef: Canvas })
+    loader: ILoader<ICanvasCheckout>
+  ) {
+    return loader.load(canvas.id);
   }
 }

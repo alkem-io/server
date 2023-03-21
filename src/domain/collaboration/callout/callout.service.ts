@@ -487,10 +487,10 @@ export class CalloutService {
 
   public async getAspectsFromCallout(
     callout: ICallout,
+    relations: FindOptionsRelationByString = [],
     aspectIDs?: string[],
     limit?: number,
-    shuffle?: boolean,
-    relations: FindOptionsRelationByString = []
+    shuffle?: boolean
   ): Promise<IAspect[]> {
     const loadedCallout = await this.getCalloutOrFail(callout.id, {
       relations: ['aspects', ...relations],
