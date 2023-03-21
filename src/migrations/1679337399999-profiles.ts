@@ -268,7 +268,6 @@ export class profiles1679337399999 implements MigrationInterface {
 
       await queryRunner.query(
         `UPDATE canvas SET
-        description = '${escapeString(description)}',
         displayName = '${escapeString(displayName)}',
         previewId = '${visualId}'
         WHERE (id = '${canvas.id}')`
@@ -276,6 +275,7 @@ export class profiles1679337399999 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE visual SET profileId = NULL WHERE (profileId = '${profileId}')`
       );
+      await this.deleteProfile(queryRunner, profileId, authorizationId);
     }
 
     const packs: any[] = await queryRunner.query(
@@ -345,11 +345,13 @@ export class profiles1679337399999 implements MigrationInterface {
       'FK_59991450cf75dc486700ca034c6',
       'aspect_template'
     );
+
     await this.removeProfileRelation(
       queryRunner,
       'FK_69991450cf75dc486700ca034c6',
       'canvas_template'
     );
+
     await this.removeProfileRelation(
       queryRunner,
       'FK_79991450cf75dc486700ca034c6',
