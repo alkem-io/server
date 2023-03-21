@@ -1,11 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import {
-  createQueryBuilder,
-  EntityManager,
-  FindOneOptions,
-  Repository,
-} from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import {

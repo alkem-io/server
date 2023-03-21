@@ -1,11 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindOneOptions,
-  Repository,
-  FindManyOptions,
-  FindOptionsWhere,
-} from 'typeorm';
+import { FindOneOptions, Repository, FindManyOptions } from 'typeorm';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { IUser } from '@domain/community/user';

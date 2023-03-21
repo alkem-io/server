@@ -1,11 +1,11 @@
 import { CurrentUser, Profiling } from '@common/decorators';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { AgentInfo } from '@core/authentication';
 import { GraphqlGuard } from '@core/authorization';
 import { IAgent } from '@domain/agent/agent';
 import { IUser, User } from '@domain/community/user';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
-import { Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from './user.service';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
@@ -17,7 +17,13 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { ForbiddenException } from '@common/exceptions';
+import {
+  AgentLoaderCreator,
+  AuthorizationLoaderCreator,
+  ProfileLoaderCreator,
+} from '@core/dataloader/creators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { Loader } from '@core/dataloader/decorators';
 
 @Resolver(() => IUser)
 export class UserResolverFields {
@@ -37,9 +43,10 @@ export class UserResolverFields {
   @Profiling.api
   async profile(
     @Parent() user: User,
-    @Context() { loaders }: IGraphQLContext
+    @Loader(ProfileLoaderCreator, { parentClassRef: User })
+    loader: ILoader<IProfile>
   ): Promise<IProfile> {
-    return loaders.userProfileLoader.load(user.id);
+    return loader.load(user.id);
   }
 
   @ResolveField('agent', () => IAgent, {
@@ -47,8 +54,12 @@ export class UserResolverFields {
     description: 'The Agent representing this User.',
   })
   @Profiling.api
-  async agent(@Parent() user: User): Promise<IAgent> {
-    return await this.userService.getAgent(user.id);
+  async agent(
+    @Parent() user: User,
+    @Loader(AgentLoaderCreator, { parentClassRef: User })
+    loader: ILoader<IAgent>
+  ): Promise<IAgent> {
+    return loader.load(user.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -57,11 +68,12 @@ export class UserResolverFields {
     description: 'The Authorization for this User.',
   })
   @Profiling.api
-  async authorization(@Parent() parent: User) {
-    // Reload to ensure the authorization is loaded
-    const user = await this.userService.getUserOrFail(parent.id);
-
-    return user.authorization;
+  async authorization(
+    @Parent() user: User,
+    @Loader(AuthorizationLoaderCreator, { parentClassRef: User })
+    loader: ILoader<IAuthorizationPolicy>
+  ) {
+    return loader.load(user.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -74,6 +86,7 @@ export class UserResolverFields {
     @Parent() user: User,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IPreference[]> {
+    // reject when a basic user reads other user's preferences
     if (
       !(await this.isAccessGranted(
         user,
