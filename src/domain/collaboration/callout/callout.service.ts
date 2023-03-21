@@ -170,7 +170,12 @@ export class CalloutService {
     calloutUpdateData: UpdateCalloutInput
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
-      relations: ['cardTemplate', 'canvasTemplate'],
+      relations: [
+        'cardTemplate',
+        'canvasTemplate',
+        'cardTemplate.templateInfo',
+        'canvasTemplate.templateInfo',
+      ],
     });
 
     if (calloutUpdateData.description)
@@ -208,6 +213,10 @@ export class CalloutService {
         );
     }
 
+    return await this.calloutRepository.save(callout);
+  }
+
+  async save(callout: ICallout): Promise<ICallout> {
     return await this.calloutRepository.save(callout);
   }
 
@@ -291,14 +300,14 @@ export class CalloutService {
         );
     } else {
       aspectData.nameID = this.namingService.createNameID(
-        aspectData.displayName || `${aspectData.type}`
+        aspectData.profileData.displayName
       );
     }
 
     // Check that there isn't an aspect with the same title
-    const displayName = aspectData.displayName;
+    const displayName = aspectData.profileData.displayName;
     const existingAspect = callout.aspects?.find(
-      aspect => aspect.displayName === displayName
+      aspect => aspect.profile.displayName === displayName
     );
     if (existingAspect)
       throw new ValidationException(
@@ -313,7 +322,7 @@ export class CalloutService {
   ): Promise<IAspect> {
     const calloutID = aspectData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['aspects'],
+      relations: ['aspects', 'aspects.profile'],
     });
     if (!callout.aspects)
       throw new EntityNotInitializedException(
@@ -470,7 +479,7 @@ export class CalloutService {
         shuffle
       );
       const sortedAspects = limitAndShuffled.sort((a, b) =>
-        a.displayName.toLowerCase() > b.displayName.toLowerCase() ? 1 : -1
+        a.nameID.toLowerCase() > b.nameID.toLowerCase() ? 1 : -1
       );
       return sortedAspects;
     }

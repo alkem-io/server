@@ -1,6 +1,5 @@
 import { IReference } from '@domain/common/reference';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { IProfile } from '@domain/community/profile/profile.interface';
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -12,8 +11,10 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CreateTagsetOnProfileInput, UpdateProfileInput } from './dto';
+import { CreateTagsetOnProfileInput } from './dto';
 import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
+import { IProfile } from './profile.interface';
+import { UpdateProfileDirectInput } from './dto/profile.dto.update.direct';
 
 @Resolver()
 export class ProfileResolverMutations {
@@ -35,10 +36,7 @@ export class ProfileResolverMutations {
     @Args('tagsetData') tagsetData: CreateTagsetOnProfileInput
   ): Promise<ITagset> {
     const profile = await this.profileService.getProfileOrFail(
-      tagsetData.profileID,
-      {
-        relations: ['tagsets'],
-      }
+      tagsetData.profileID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -47,9 +45,13 @@ export class ProfileResolverMutations {
       `profile: ${profile.id}`
     );
 
-    const tagset = await this.profileService.createTagset(tagsetData);
+    const tagset = await this.profileService.addTagsetOnProfile(
+      profile,
+      tagsetData,
+      true
+    );
     tagset.authorization =
-      await this.authorizationPolicyService.inheritParentAuthorization(
+      this.authorizationPolicyService.inheritParentAuthorization(
         tagset.authorization,
         profile.authorization
       );
@@ -93,15 +95,17 @@ export class ProfileResolverMutations {
   @Profiling.api
   async updateProfile(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('profileData') profileData: UpdateProfileInput
+    @Args('profileData') profileData: UpdateProfileDirectInput
   ): Promise<IProfile> {
-    const profile = await this.profileService.getProfileOrFail(profileData.ID);
+    const profile = await this.profileService.getProfileOrFail(
+      profileData.profileID
+    );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       profile.authorization,
       AuthorizationPrivilege.UPDATE,
       `profile: ${profile.id}`
     );
-    return await this.profileService.updateProfile(profileData);
+    return await this.profileService.updateProfile(profile, profileData);
   }
 }

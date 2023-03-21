@@ -2,7 +2,8 @@ import DataLoader from 'dataloader';
 import { FindOptionsSelect, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Injectable } from '@nestjs/common';
-import { IProfile, User } from '@src/domain';
+import { User } from '@src/domain';
+import { IProfile } from '@domain/common/profile';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from './base';
 import { findByBatchIdsNew } from '../utils/findByBatchIds';
 

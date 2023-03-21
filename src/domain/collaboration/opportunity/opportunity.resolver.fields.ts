@@ -1,6 +1,5 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { Opportunity } from './opportunity.entity';
 import { IOpportunity } from './opportunity.interface';
 import { OpportunityService } from './opportunity.service';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
@@ -11,6 +10,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { ICollaboration } from '../collaboration/collaboration.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
 
 @Resolver(() => IOpportunity)
 export class OpportunityResolverFields {
@@ -23,7 +23,7 @@ export class OpportunityResolverFields {
     description: 'The lifeycle for the Opportunity.',
   })
   @Profiling.api
-  async lifecycle(@Parent() opportunity: Opportunity) {
+  async lifecycle(@Parent() opportunity: IOpportunity) {
     return await this.opportunityService.getLifecycle(opportunity.id);
   }
 
@@ -34,7 +34,7 @@ export class OpportunityResolverFields {
     description: 'The community for the Opportunity.',
   })
   @Profiling.api
-  async community(@Parent() opportunity: Opportunity) {
+  async community(@Parent() opportunity: IOpportunity) {
     return await this.opportunityService.getCommunity(opportunity.id);
   }
 
@@ -45,7 +45,7 @@ export class OpportunityResolverFields {
     description: 'The context for the Opportunity.',
   })
   @Profiling.api
-  async context(@Parent() opportunity: Opportunity) {
+  async context(@Parent() opportunity: IOpportunity) {
     return await this.opportunityService.getContext(opportunity.id);
   }
 
@@ -56,8 +56,17 @@ export class OpportunityResolverFields {
     description: 'The collaboration for the Opportunity.',
   })
   @Profiling.api
-  async collaboration(@Parent() opportunity: Opportunity) {
+  async collaboration(@Parent() opportunity: IOpportunity) {
     return await this.opportunityService.getCollaboration(opportunity);
+  }
+
+  @ResolveField('profile', () => IProfile, {
+    nullable: false,
+    description: 'The Profile for the Opportunity.',
+  })
+  @Profiling.api
+  async profile(@Parent() opportunity: IOpportunity) {
+    return await this.opportunityService.getProfile(opportunity);
   }
 
   @ResolveField('metrics', () => [INVP], {
@@ -65,7 +74,7 @@ export class OpportunityResolverFields {
     description: 'Metrics about the activity within this Opportunity.',
   })
   @Profiling.api
-  async metrics(@Parent() opportunity: Opportunity) {
+  async metrics(@Parent() opportunity: IOpportunity) {
     return await this.opportunityService.getMetrics(opportunity);
   }
 
@@ -74,7 +83,7 @@ export class OpportunityResolverFields {
     description: 'The parent entity name (challenge) ID.',
   })
   @Profiling.api
-  async parentNameID(@Parent() opportunity: Opportunity) {
+  async parentNameID(@Parent() opportunity: IOpportunity) {
     const opp = await this.opportunityService.getOpportunityOrFail(
       opportunity.id,
       {

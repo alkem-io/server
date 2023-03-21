@@ -5,7 +5,7 @@ import { NameID } from '@domain/common/scalars';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
 
 @InputType()
-export class UpdateNameableInput extends UpdateBaseAlkemioInput {
+export class UpdateNameableInputOld extends UpdateBaseAlkemioInput {
   @Field({ nullable: true, description: 'The display name for this entity.' })
   @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)

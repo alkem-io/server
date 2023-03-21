@@ -7,20 +7,31 @@ import { IVisual } from '@domain/common/visual/visual.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 @ObjectType('Profile')
 export abstract class IProfile extends IAuthorizable {
+  @Field(() => String, {
+    nullable: false,
+    description: 'The display name.',
+  })
+  displayName!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'The taglie for this entity.',
+  })
+  tagline!: string;
+
+  @Field(() => Markdown, {
+    nullable: true,
+    description: 'A description of the entity associated with this profile.',
+  })
+  description!: string;
+
   references?: IReference[];
 
   tagsets?: ITagset[];
 
-  avatar?: IVisual;
+  visuals?: IVisual[];
 
   location?: ILocation;
-
-  @Field(() => Markdown, {
-    nullable: true,
-    description:
-      'A short description of the entity associated with this profile.',
-  })
-  description!: string;
 
   restrictedTagsetNames?: string[];
 }

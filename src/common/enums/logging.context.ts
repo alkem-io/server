@@ -1,6 +1,7 @@
 export enum LogContext {
   CHALLENGES = 'challenges',
   CONTEXT = 'context',
+  PROFILE = 'profile',
   COMMUNITY = 'community',
   DATA_LOADER = 'data-loader',
   COMMUNICATION = 'communication',
