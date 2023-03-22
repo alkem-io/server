@@ -115,6 +115,54 @@ export class OrganizationResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
+  @ResolveField('admins', () => [IUser], {
+    nullable: true,
+    description: 'All Users that are admins of this Organization.',
+  })
+  @Profiling.api
+  async admins(
+    @Parent() parent: Organization,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IUser[]> {
+    // Reload to ensure the authorization is loaded
+    const organization = await this.organizationService.getOrganizationOrFail(
+      parent.id
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.READ,
+      `read admins on org: ${organization.nameID}`
+    );
+
+    return await this.organizationService.getAdmins(organization);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('owners', () => [IUser], {
+    nullable: true,
+    description: 'All Users that are owners of this Organization.',
+  })
+  @Profiling.api
+  async owners(
+    @Parent() parent: Organization,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IUser[]> {
+    // Reload to ensure the authorization is loaded
+    const organization = await this.organizationService.getOrganizationOrFail(
+      parent.id
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      organization.authorization,
+      AuthorizationPrivilege.READ,
+      `read owners on org: ${organization.nameID}`
+    );
+
+    return await this.organizationService.getOwners(organization);
+  }
+
+  @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: true,
     description: 'The Authorization for this Organization.',
