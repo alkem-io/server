@@ -26,7 +26,6 @@ import { IHub } from '@domain/challenge/hub/hub.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { ICallout } from '@domain/collaboration/callout';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
-import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 
 export type AspectParents = {

@@ -47,6 +47,12 @@ export class Visual extends AuthorizableEntity implements IVisual {
   }
 
   private createDefaultAllowedTypes(): string[] {
-    return ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+    return [
+      'image/png',
+      'image/jpeg',
+      'image/jpg',
+      'image/svg+xml',
+      'image/webp',
+    ];
   }
 }

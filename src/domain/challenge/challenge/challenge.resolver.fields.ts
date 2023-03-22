@@ -12,25 +12,37 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IAgent } from '@domain/agent/agent';
 import { IPreference } from '@domain/common/preference';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { Loader } from '@core/dataloader/decorators';
+import {
+  JourneyCollaborationLoaderCreator,
+  JourneyCommunityLoaderCreator,
+  JourneyLifecycleLoaderCreator,
+  JourneyContextLoaderCreator,
+  PreferencesLoaderCreator,
+  AgentLoaderCreator,
+  ProfileLoaderCreator,
+} from '@core/dataloader/creators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
-  constructor(
-    private challengeService: ChallengeService,
-    private preferenceSetService: PreferenceSetService
-  ) {}
+  constructor(private challengeService: ChallengeService) {}
 
   @ResolveField('community', () => ICommunity, {
     nullable: true,
     description: 'The community for the challenge.',
   })
   @Profiling.api
-  async community(@Parent() challenge: IChallenge) {
-    return await this.challengeService.getCommunity(challenge.id);
+  async community(
+    @Parent() challenge: IChallenge,
+    @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Challenge })
+    loader: ILoader<ICommunity>
+  ) {
+    return loader.load(challenge.id);
   }
 
   @UseGuards(GraphqlGuard)
@@ -38,8 +50,12 @@ export class ChallengeResolverFields {
     nullable: true,
     description: 'The context for the challenge.',
   })
-  async context(@Parent() challenge: IChallenge) {
-    return await this.challengeService.getContext(challenge.id);
+  async context(
+    @Parent() challenge: IChallenge,
+    @Loader(JourneyContextLoaderCreator, { parentClassRef: Challenge })
+    loader: ILoader<IContext>
+  ) {
+    return loader.load(challenge.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -49,8 +65,12 @@ export class ChallengeResolverFields {
     description: 'The collaboration for the challenge.',
   })
   @Profiling.api
-  async collaboration(@Parent() challenge: IChallenge) {
-    return await this.challengeService.getCollaboration(challenge);
+  async collaboration(
+    @Parent() challenge: IChallenge,
+    @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Challenge })
+    loader: ILoader<ICollaboration>
+  ) {
+    return loader.load(challenge.id);
   }
 
   @ResolveField('profile', () => IProfile, {
@@ -58,8 +78,12 @@ export class ChallengeResolverFields {
     description: 'The Profile for the  Challenge.',
   })
   @Profiling.api
-  async profile(@Parent() challenge: IChallenge) {
-    return await this.challengeService.getProfile(challenge);
+  async profile(
+    @Parent() challenge: IChallenge,
+    @Loader(ProfileLoaderCreator, { parentClassRef: Challenge })
+    loader: ILoader<IProfile>
+  ) {
+    return loader.load(challenge.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -82,8 +106,12 @@ export class ChallengeResolverFields {
     description: 'The lifecycle for the Challenge.',
   })
   @Profiling.api
-  async lifecycle(@Parent() challenge: IChallenge) {
-    return await this.challengeService.getLifecycle(challenge.id);
+  async lifecycle(
+    @Parent() challenge: IChallenge,
+    @Loader(JourneyLifecycleLoaderCreator, { parentClassRef: Challenge })
+    loader: ILoader<ILifecycle>
+  ) {
+    return loader.load(challenge.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -102,8 +130,12 @@ export class ChallengeResolverFields {
     description: 'The Agent representing this Challenge.',
   })
   @Profiling.api
-  async agent(@Parent() challenge: IChallenge): Promise<IAgent> {
-    return await this.challengeService.getAgent(challenge.id);
+  async agent(
+    @Parent() challenge: IChallenge,
+    @Loader(AgentLoaderCreator, { parentClassRef: Challenge })
+    loader: ILoader<IAgent>
+  ): Promise<IAgent> {
+    return loader.load(challenge.id);
   }
 
   @ResolveField('metrics', () => [INVP], {
@@ -121,10 +153,14 @@ export class ChallengeResolverFields {
     description: 'The preferences for this Challenge',
   })
   @UseGuards(GraphqlGuard)
-  async preferences(@Parent() challenge: IChallenge): Promise<IPreference[]> {
-    const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
-      challenge.id
-    );
-    return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
+  async preferences(
+    @Parent() challenge: IChallenge,
+    @Loader(PreferencesLoaderCreator, {
+      parentClassRef: Challenge,
+      getResult: r => r?.preferenceSet?.preferences,
+    })
+    loader: ILoader<IPreference[]>
+  ): Promise<IPreference[]> {
+    return loader.load(challenge.id);
   }
 }
