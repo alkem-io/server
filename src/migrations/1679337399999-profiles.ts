@@ -368,7 +368,7 @@ export class profiles1679337399999 implements MigrationInterface {
       `ALTER TABLE \`${entityTable}\` ADD \`profileId\` char(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`${entityTable}\` ADD CONSTRAINT \`${fk}\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+      `ALTER TABLE \`${entityTable}\` ADD CONSTRAINT \`${fk}\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
   }
 
