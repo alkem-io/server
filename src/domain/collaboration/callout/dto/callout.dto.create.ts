@@ -12,7 +12,7 @@ export class CreateCalloutInput {
   @Field(() => CreateProfileInput, { nullable: false })
   @ValidateNested({ each: true })
   @Type(() => CreateProfileInput)
-  profileData!: CreateProfileInput;
+  profile!: CreateProfileInput;
 
   @Field(() => CalloutType, {
     description: 'Callout type.',

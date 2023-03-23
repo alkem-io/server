@@ -535,10 +535,8 @@ export class profiles1679337399999 implements MigrationInterface {
     entityTable: string
   ): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`${entityTable}\` DROP FOREIGN KEY \`${fk}\``
+      `ALTER TABLE ${entityTable} DROP FOREIGN KEY ${fk}`
     );
-    await queryRunner.query(
-      `ALTER TABLE \`${entityTable}\` DROP COLUMN \`profileId\``
-    );
+    await queryRunner.query(`ALTER TABLE ${entityTable} DROP COLUMN profileId`);
   }
 }

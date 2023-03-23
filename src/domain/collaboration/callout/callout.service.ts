@@ -83,12 +83,12 @@ export class CalloutService {
     const cardTemplateData = calloutData.cardTemplate;
     const canvasTemplateData = calloutData.canvasTemplate;
     const calloutNameID = this.namingService.createNameID(
-      `${calloutData.profileData.displayName}`
+      `${calloutData.profile.displayName}`
     );
     const calloutCreationData = { ...calloutData, nameID: calloutNameID };
     const callout: ICallout = Callout.create(calloutCreationData);
     callout.profile = await this.profileService.createProfile(
-      calloutData.profileData
+      calloutData.profile
     );
     if (calloutData.type == CalloutType.CARD && cardTemplateData) {
       callout.cardTemplate =
