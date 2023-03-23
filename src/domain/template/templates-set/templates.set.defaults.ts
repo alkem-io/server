@@ -5,8 +5,8 @@ import { opportunityLifecycleConfigDefault } from './templates.set.default.lifec
 export const templatesSetDefaults: any = {
   aspects: [
     {
-      info: {
-        title: 'knowledge',
+      profile: {
+        displayName: 'knowledge',
         description: 'To share relevant knowledge, building blocks etc.',
         tags: [],
       },
@@ -14,10 +14,10 @@ export const templatesSetDefaults: any = {
       defaultDescription: 'Please describe the knowledge that is relevant.',
     },
     {
-      info: {
-        title: 'stakeholder persona',
+      profile: {
+        displayName: 'stakeholder persona',
         description:
-          'To share a relevant persona, who would be either actively engaged, impacted by results, needs to informed, supportive etc',
+          'To share a relevant persona, who would be either actively engaged, impacted by results, needs to profilermed, supportive etc',
         tags: [],
       },
       type: 'stakeholder persona',
@@ -25,8 +25,8 @@ export const templatesSetDefaults: any = {
         'Please describe the stakeholder persona that is relevant.',
     },
     {
-      info: {
-        title: 'related initiative',
+      profile: {
+        displayName: 'related initiative',
         description:
           'Other initiatives that are relevant, be they similar in nature, supporting or just to be aware of.',
         tags: [],
@@ -36,8 +36,8 @@ export const templatesSetDefaults: any = {
         'Please describe the related initiative that is relevant.',
     },
     {
-      info: {
-        title: 'idea',
+      profile: {
+        displayName: 'idea',
         description:
           'Ideas that are later elicited and can be used to make progress.',
         tags: [],
@@ -46,8 +46,8 @@ export const templatesSetDefaults: any = {
       defaultDescription: 'Please describe the idea that is relevant.',
     },
     {
-      info: {
-        title: 'other',
+      profile: {
+        displayName: 'other',
         description:
           'Any other relevant information that can contribute to make progress.',
         tags: [],
@@ -58,8 +58,8 @@ export const templatesSetDefaults: any = {
   ],
   lifecycles: [
     {
-      info: {
-        title: 'Default Challenge lifecycle',
+      profile: {
+        displayName: 'Default Challenge lifecycle',
         description: 'Default Challenge lifecycle',
         tags: [],
       },
@@ -67,8 +67,8 @@ export const templatesSetDefaults: any = {
       definition: JSON.stringify(challengeLifecycleConfigDefault),
     },
     {
-      info: {
-        title: 'Default Opportunity lifecycle',
+      profile: {
+        displayName: 'Default Opportunity lifecycle',
         description: 'Default Opportunity lifecycle',
         tags: [],
       },
