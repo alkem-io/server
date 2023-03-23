@@ -1,9 +1,9 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
-import { randomUUID } from 'crypto';
-import { escapeString } from './utils/escape-string';
+import { randomUUID } from "crypto";
+import { MigrationInterface, QueryRunner } from "typeorm"
+import { escapeString } from "./utils/escape-string";
 
-export class profiles1679337399999 implements MigrationInterface {
-  name = 'profiles1679337399999';
+export class profiles1679583623740 implements MigrationInterface {
+  name = 'profiles1679583623740';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Extend Callout / Canvas / InnovationPack / Project / AspectTemplate
