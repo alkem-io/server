@@ -104,7 +104,9 @@ export class CalloutResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('data') data: SendMessageOnCalloutInput
   ): Promise<IMessage> {
-    const callout = await this.calloutService.getCalloutOrFail(data.calloutID);
+    const callout = await this.calloutService.getCalloutOrFail(data.calloutID, {
+      relations: ['profile'],
+    });
 
     if (callout.type !== CalloutType.COMMENTS) {
       throw new NotSupportedException(
