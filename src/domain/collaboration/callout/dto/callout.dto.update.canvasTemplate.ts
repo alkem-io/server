@@ -1,5 +1,5 @@
 import { CANVAS_VALUE_LENGTH } from '@common/constants/entity.field.length.constants';
-import { UpdateTemplateInfoInput } from '@domain/template/template-info/dto/template.base.dto.update';
+import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
@@ -13,11 +13,12 @@ export class UpdateCalloutCanvasTemplateInput {
   @MaxLength(CANVAS_VALUE_LENGTH)
   value?: string;
 
-  @Field({
+  @Field(() => UpdateProfileInput, {
     nullable: true,
-    description: 'The meta information for this Template.',
+    description: 'The Profile of the Template.',
   })
+  @IsOptional()
   @ValidateNested()
-  @Type(() => UpdateTemplateInfoInput)
-  info!: UpdateTemplateInfoInput;
+  @Type(() => UpdateProfileInput)
+  profileData?: UpdateProfileInput;
 }

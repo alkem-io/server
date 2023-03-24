@@ -102,7 +102,7 @@ export class CanvasResolverSubscriptions {
           agentInfo,
           canvas.authorization,
           AuthorizationPrivilege.READ,
-          `subscription to canvas content update of: ${canvas.displayName}`
+          `subscription to canvas content update of: ${canvas.nameID}`
         );
       }
     } else {

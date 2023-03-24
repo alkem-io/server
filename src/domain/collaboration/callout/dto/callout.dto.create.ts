@@ -1,19 +1,18 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CreateAspectTemplateInput } from '@domain/template/aspect-template/dto/aspect.template.dto.create';
-import { LONG_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
-import { MaxLength, MinLength } from 'class-validator';
 import { CreateCanvasTemplateInput } from '@domain/template/canvas-template/dto/canvas.template.dto.create';
+import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
+import { ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 
 @InputType()
 export class CreateCalloutInput {
-  @Field(() => Markdown, {
-    description: 'Callout description.',
-  })
-  @MaxLength(LONG_TEXT_LENGTH)
-  description!: string;
+  @Field(() => CreateProfileInput, { nullable: false })
+  @ValidateNested({ each: true })
+  @Type(() => CreateProfileInput)
+  profile!: CreateProfileInput;
 
   @Field(() => CalloutType, {
     description: 'Callout type.',
@@ -25,11 +24,6 @@ export class CreateCalloutInput {
     description: 'State of the callout.',
   })
   state!: CalloutState;
-
-  @Field({ nullable: false, description: 'The display name for the entity.' })
-  @MinLength(3)
-  @MaxLength(SMALL_TEXT_LENGTH)
-  displayName!: string;
 
   @Field(() => Number, {
     nullable: true,

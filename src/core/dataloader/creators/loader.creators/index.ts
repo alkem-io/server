@@ -17,8 +17,6 @@ export * from './user.loader.creator';
 export * from './checkout.loader.creator';
 export * from './visual.loader.creator';
 
-export * from './canvas/canvas.visual.loader.creator';
-
 export * from './hub/hub.templates.set.loader.creator';
 export * from './hub/hub.timeline.loader.creator';
 

@@ -8,7 +8,6 @@ import {
 } from 'typeorm';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
-import { NameableEntityOld } from '@domain/common/entity/nameable-entity/nameable.entity.old';
 import { ICallout } from './callout.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
@@ -17,12 +16,10 @@ import { Collaboration } from '@domain/collaboration/collaboration/collaboration
 import { Comments } from '@domain/communication/comments/comments.entity';
 import { AspectTemplate } from '@domain/template/aspect-template/aspect.template.entity';
 import { CanvasTemplate } from '@domain/template/canvas-template/canvas.template.entity';
+import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 
 @Entity()
-export class Callout extends NameableEntityOld implements ICallout {
-  @Column('text', { nullable: false })
-  description!: string;
-
+export class Callout extends NameableEntity implements ICallout {
   @Column('text', { nullable: false })
   type!: CalloutType;
 

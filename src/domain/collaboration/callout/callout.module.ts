@@ -21,6 +21,7 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
 import { UserModule } from '@domain/community/user/user.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { ProfileModule } from '@domain/common/profile/profile.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
     EntityResolverModule,
     UserModule,
     NamingModule,
+    ProfileModule,
     AspectTemplateModule,
     CanvasTemplateModule,
     MessagingModule,

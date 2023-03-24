@@ -8,8 +8,10 @@ Variables:
 {
   "calloutData": {
     "ID": "uuid",
-    "displayName": "some name",
-    "description": "text",
+    "profileData": {
+      "displayName": "some name",
+      "description": "text",
+    }
     "state": "closed"
   }
 }

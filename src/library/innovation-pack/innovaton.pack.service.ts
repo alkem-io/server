@@ -9,7 +9,11 @@ import {
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import {
+  FindOneOptions,
+  FindOptionsRelationByString,
+  Repository,
+} from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InnovationPack } from './innovation.pack.entity';
 import { IInnovationPack } from './innovation.pack.interface';
@@ -21,12 +25,15 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { CreateInnovationPackInput } from './dto/innovation.pack.dto.create';
 import { DeleteInnovationPackInput } from './dto/innovationPack.dto.delete';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
 
 @Injectable()
 export class InnovationPackService {
   constructor(
     private organizationService: OrganizationService,
     private agentService: AgentService,
+    private profileService: ProfileService,
     private templatesSetService: TemplatesSetService,
     @InjectRepository(InnovationPack)
     private innovationPackRepository: Repository<InnovationPack>,
@@ -39,6 +46,10 @@ export class InnovationPackService {
     const innovationPack: IInnovationPack =
       InnovationPack.create(innovationPackData);
     innovationPack.authorization = new AuthorizationPolicy();
+
+    innovationPack.profile = await this.profileService.createProfile(
+      innovationPackData.profileData
+    );
 
     innovationPack.templatesSet =
       await this.templatesSetService.createTemplatesSet(
@@ -69,7 +80,10 @@ export class InnovationPackService {
     innovationPackData: UpdateInnovationPackInput
   ): Promise<IInnovationPack> {
     const innovationPack = await this.getInnovationPackOrFail(
-      innovationPackData.ID
+      innovationPackData.ID,
+      {
+        relations: ['profile'],
+      }
     );
 
     if (innovationPackData.nameID) {
@@ -88,6 +102,13 @@ export class InnovationPackService {
       }
     }
 
+    if (innovationPackData.profileData) {
+      innovationPack.profile = await this.profileService.updateProfile(
+        innovationPack.profile,
+        innovationPackData.profileData
+      );
+    }
+
     if (innovationPackData.providerOrgID) {
       await this.setInnovationPackProvider(
         innovationPack.id,
@@ -102,7 +123,7 @@ export class InnovationPackService {
     deleteData: DeleteInnovationPackInput
   ): Promise<IInnovationPack> {
     const innovationPack = await this.getInnovationPackOrFail(deleteData.ID, {
-      relations: ['templatesSet'],
+      relations: ['templatesSet', 'profile'],
     });
 
     // Remove any host credentials
@@ -121,6 +142,10 @@ export class InnovationPackService {
       await this.templatesSetService.deleteTemplatesSet(
         innovationPack.templatesSet.id
       );
+    }
+
+    if (innovationPack.profile) {
+      await this.profileService.deleteProfile(innovationPack.profile.id);
     }
 
     const result = await this.innovationPackRepository.remove(
@@ -156,6 +181,24 @@ export class InnovationPackService {
     return innovationPack;
   }
 
+  public async getProfile(
+    innovationPackInput: IInnovationPack,
+    relations: FindOptionsRelationByString = []
+  ): Promise<IProfile> {
+    const innovationPack = await this.getInnovationPackOrFail(
+      innovationPackInput.id,
+      {
+        relations: ['profile', ...relations],
+      }
+    );
+    if (!innovationPack.profile)
+      throw new EntityNotFoundException(
+        `InnovationPack profile not initialised: ${innovationPack.id}`,
+        LogContext.COLLABORATION
+      );
+
+    return innovationPack.profile;
+  }
   async getTemplatesSetOrFail(
     innovationPackId: string
   ): Promise<ITemplatesSet> {

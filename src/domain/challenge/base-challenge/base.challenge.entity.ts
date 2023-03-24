@@ -6,7 +6,6 @@ import { Context } from '@domain/context/context/context.entity';
 import { IBaseChallenge } from './base.challenge.interface';
 import { Agent } from '@domain/agent/agent/agent.entity';
 import { Collaboration } from '../../collaboration/collaboration/collaboration.entity';
-import { Profile } from '@domain/common/profile';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 
 export abstract class BaseChallenge
@@ -28,14 +27,6 @@ export abstract class BaseChallenge
   })
   @JoinColumn()
   context?: Context;
-
-  @OneToOne(() => Profile, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  profile!: Profile;
 
   @OneToOne(() => Community, {
     eager: false,

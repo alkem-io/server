@@ -14,13 +14,14 @@ import { UUID_NAMEID } from '@domain/common/scalars';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { UserService } from '@domain/community/user/user.service';
 import { ICanvasTemplate } from '@domain/template/canvas-template/canvas.template.interface';
 import { EntityNotFoundException } from '@common/exceptions';
+import { IProfile } from '@domain/common/profile/profile.interface';
 import {
   CalloutCanvasTemplateLoaderCreator,
   CalloutCardTemplateLoaderCreator,
   CommentsLoaderCreator,
+  ProfileLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -31,9 +32,22 @@ export class CalloutResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private calloutService: CalloutService,
-    private userService: UserService
+    private calloutService: CalloutService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('profile', () => IProfile, {
+    nullable: false,
+    description: 'The Profile for this Callout.',
+  })
+  @Profiling.api
+  async profile(
+    @Parent() callout: ICallout,
+    @Loader(ProfileLoaderCreator, { parentClassRef: Callout })
+    loader: ILoader<IProfile>
+  ): Promise<IProfile> {
+    return loader.load(callout.id);
+  }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)

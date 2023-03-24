@@ -11,7 +11,7 @@ import {
   CreateProjectInput,
   ProjectEventInput,
   UpdateProjectInput,
-} from '@domain/collaboration/project';
+} from '@domain/collaboration/project/dto';
 import { CreateRelationInput } from '@domain/collaboration/relation/relation.dto.create';
 import { CreateUserInput, UpdateUserInput } from '@domain/community/user/dto';
 import { ValidationException } from '@common/exceptions';

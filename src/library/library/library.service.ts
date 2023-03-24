@@ -67,7 +67,7 @@ export class LibraryService {
         );
     } else {
       innovationPackData.nameID = this.namingService.createNameID(
-        `${innovationPackData.displayName}`
+        `${innovationPackData.profileData.displayName}`
       );
     }
 
