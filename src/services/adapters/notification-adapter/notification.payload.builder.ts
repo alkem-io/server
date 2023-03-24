@@ -219,7 +219,7 @@ export class NotificationPayloadBuilder {
   ): Promise<CollaborationCardCommentEventPayload> {
     const card = await this.aspectRepository.findOne({
       where: { id: aspect.id },
-      relations: ['callout', 'profile'],
+      relations: ['callout', 'callout.profile', 'profile'],
     });
 
     if (!card) {
