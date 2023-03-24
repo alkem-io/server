@@ -99,7 +99,7 @@ export class NotificationPayloadBuilder {
   ): Promise<CollaborationCardCreatedEventPayload> {
     const card = await this.aspectRepository.findOne({
       where: { id: cardId },
-      relations: ['callout', 'profile'],
+      relations: ['callout', 'callout.profile', 'profile'],
     });
     if (!card) {
       throw new NotificationEventException(
