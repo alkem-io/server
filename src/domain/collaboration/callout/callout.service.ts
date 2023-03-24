@@ -182,6 +182,7 @@ export class CalloutService {
         'canvasTemplate',
         'cardTemplate.profile',
         'canvasTemplate.profile',
+        'profile',
       ],
     });
 

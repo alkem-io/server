@@ -237,7 +237,8 @@ export class CalloutResolverMutations {
     @Args('calloutData') calloutData: UpdateCalloutVisibilityInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
-      calloutData.calloutID
+      calloutData.calloutID,
+      { relations: ['profile'] }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -262,7 +263,7 @@ export class CalloutResolverMutations {
         if (calloutData.sendNotification) {
           const notificationInput: NotificationInputCalloutPublished = {
             triggeredBy: agentInfo.userID,
-            callout: savedCallout,
+            callout: callout,
           };
           await this.notificationAdapter.calloutPublished(notificationInput);
         }
