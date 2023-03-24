@@ -21,6 +21,7 @@ import {
   CalloutCanvasTemplateLoaderCreator,
   CalloutCardTemplateLoaderCreator,
   CommentsLoaderCreator,
+  ProfileLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -40,8 +41,12 @@ export class CalloutResolverFields {
     description: 'The Profile for this Callout.',
   })
   @Profiling.api
-  async profile(@Parent() callout: ICallout): Promise<IProfile> {
-    return await this.calloutService.getProfile(callout);
+  async profile(
+    @Parent() callout: ICallout,
+    @Loader(ProfileLoaderCreator, { parentClassRef: Callout })
+    loader: ILoader<IProfile>
+  ): Promise<IProfile> {
+    return loader.load(callout.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

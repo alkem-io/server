@@ -14,6 +14,7 @@ import { IProfile } from '../profile/profile.interface';
 import { Loader } from '@core/dataloader/decorators';
 import {
   CheckoutLoaderCreator,
+  ProfileLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -71,8 +72,12 @@ export class CanvasResolverFields {
     description: 'The Profile for this Canvas.',
   })
   @Profiling.api
-  async profile(@Parent() canvas: ICanvas): Promise<IProfile> {
-    return await this.canvasService.getProfile(canvas);
+  async profile(
+    @Parent() canvas: ICanvas,
+    @Loader(ProfileLoaderCreator, { parentClassRef: Canvas })
+    loader: ILoader<IProfile>
+  ): Promise<IProfile> {
+    return loader.load(canvas.id);
   }
 
   @ResolveField('checkout', () => ICanvasCheckout, {

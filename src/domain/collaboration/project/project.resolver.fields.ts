@@ -6,6 +6,9 @@ import { IProject, Project } from '@domain/collaboration/project';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
 
 @Resolver(() => IProject)
 export class ProjectResolverFields {
@@ -27,7 +30,11 @@ export class ProjectResolverFields {
     description: 'The Profile for this Project.',
   })
   @Profiling.api
-  async profile(@Parent() project: IProject): Promise<IProfile> {
-    return await this.projectService.getProfile(project);
+  async profile(
+    @Parent() project: IProject,
+    @Loader(ProfileLoaderCreator, { parentClassRef: Project })
+    loader: ILoader<IProfile>
+  ): Promise<IProfile> {
+    return loader.load(project.id);
   }
 }
