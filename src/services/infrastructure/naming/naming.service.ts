@@ -136,7 +136,7 @@ export class NamingService {
       .leftJoinAndSelect('callout.collaboration', 'collaboration')
       .leftJoinAndSelect('callout.profile', 'profile')
       .where('collaboration.id = :id')
-      .andWhere('callout.profile.displayName = :displayName')
+      .andWhere('profile.displayName = :displayName')
       .setParameters({
         id: `${collaborationID}`,
         displayName: `${displayName}`,
