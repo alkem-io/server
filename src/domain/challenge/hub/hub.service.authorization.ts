@@ -298,7 +298,7 @@ export class HubAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_HUB_AUTHORIZATION_RESET
       );
-    authorizationReset.inheritable = false;
+    authorizationReset.cascade = false;
     newRules.push(authorizationReset);
 
     const communityAdmin =
@@ -383,7 +383,7 @@ export class HubAuthorizationService {
           [this.communityPolicyService.getMembershipCredential(policy)],
           CREDENTIAL_RULE_HUB_MEMBERS_CREATE_CHALLENGES
         );
-      memberChallenge.inheritable = false;
+      memberChallenge.cascade = false;
       newRules.push(memberChallenge);
     }
 
@@ -428,7 +428,7 @@ export class HubAuthorizationService {
           [AuthorizationCredential.GLOBAL_REGISTERED],
           CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_APPLY_GLOBAL_REGISTERED
         );
-      anyUserCanApply.inheritable = false;
+      anyUserCanApply.cascade = false;
       newRules.push(anyUserCanApply);
     }
 
@@ -444,7 +444,7 @@ export class HubAuthorizationService {
           [AuthorizationCredential.GLOBAL_REGISTERED],
           CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_JOIN_GLOBAL_REGISTERED
         );
-      anyUserCanJoin.inheritable = false;
+      anyUserCanJoin.cascade = false;
       newRules.push(anyUserCanJoin);
     }
 
@@ -471,7 +471,7 @@ export class HubAuthorizationService {
           ],
           CREDENTIAL_RULE_HUB_HOST_ASSOCIATES_JOIN
         );
-      hostOrgMembersCanJoin.inheritable = false;
+      hostOrgMembersCanJoin.cascade = false;
       newRules.push(hostOrgMembersCanJoin);
     }
 

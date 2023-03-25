@@ -43,7 +43,7 @@ export class AuthorizationPolicyService {
     return {
       grantedPrivileges,
       criterias,
-      inheritable: true,
+      cascade: true,
       name,
     };
   }
@@ -67,7 +67,7 @@ export class AuthorizationPolicyService {
     return {
       grantedPrivileges,
       criterias,
-      inheritable: true,
+      cascade: true,
       name,
     };
   }
@@ -109,7 +109,7 @@ export class AuthorizationPolicyService {
     return {
       grantedPrivileges,
       criterias,
-      inheritable: true,
+      cascade: true,
       name,
     };
   }
@@ -289,7 +289,7 @@ export class AuthorizationPolicyService {
     );
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
     for (const inheritedRule of inheritedRules) {
-      if (inheritedRule.inheritable) {
+      if (inheritedRule.cascade) {
         newRules.push(inheritedRule);
       }
     }

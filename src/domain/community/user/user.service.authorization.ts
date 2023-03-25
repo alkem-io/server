@@ -108,7 +108,7 @@ export class UserAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET
       );
-    globalAdminNotInherited.inheritable = false;
+    globalAdminNotInherited.cascade = false;
     newRules.push(globalAdminNotInherited);
 
     const communityAdmin =
