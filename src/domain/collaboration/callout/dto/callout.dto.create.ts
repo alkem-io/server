@@ -6,6 +6,7 @@ import { CreateCanvasTemplateInput } from '@domain/template/canvas-template/dto/
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { NameID } from '@domain/common/scalars/scalar.nameid';
 
 @InputType()
 export class CreateCalloutInput {
@@ -13,6 +14,12 @@ export class CreateCalloutInput {
   @ValidateNested({ each: true })
   @Type(() => CreateProfileInput)
   profile!: CreateProfileInput;
+
+  @Field(() => NameID, {
+    nullable: true,
+    description: 'A readable identifier, unique within the containing scope.',
+  })
+  nameID!: string;
 
   @Field(() => CalloutType, {
     description: 'Callout type.',
