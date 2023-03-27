@@ -150,7 +150,7 @@ export class ConversionService {
     opportunityID: string,
     hubID: string,
     agentInfo: AgentInfo,
-    lifecycleTemplateID?: string
+    innovationFlowTemplateID?: string
   ): Promise<IChallenge> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       opportunityID,
@@ -163,11 +163,11 @@ export class ConversionService {
     await this.hubService.validateChallengeNameIdOrFail(challengeNameID, hubID);
     let challenge: IChallenge;
 
-    if (lifecycleTemplateID)
+    if (innovationFlowTemplateID)
       challenge = await this.challengeService.createChallenge(
         {
           nameID: challengeNameID,
-          innovationFlowTemplateID: lifecycleTemplateID,
+          innovationFlowTemplateID: innovationFlowTemplateID,
           profileData: {
             displayName: opportunity.profile.displayName,
           },

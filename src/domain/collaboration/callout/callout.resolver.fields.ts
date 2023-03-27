@@ -162,7 +162,7 @@ export class CalloutResolverFields {
     nullable: true,
     description: 'The PostTemplate for this Callout.',
   })
-  async cardTemplate(
+  async postTemplate(
     @Parent() callout: ICallout,
     @Loader(CalloutPostTemplateLoaderCreator, { resolveToNull: true })
     loader: ILoader<IPostTemplate>
@@ -190,7 +190,7 @@ export class CalloutResolverFields {
     nullable: true,
     description: 'The Whiteboard template for this Callout.',
   })
-  async canvasTemplate(
+  async whiteboardTemplate(
     @Parent() callout: ICallout,
     @Loader(CalloutWhiteboardTemplateLoaderCreator, { resolveToNull: true })
     loader: ILoader<IWhiteboardTemplate>

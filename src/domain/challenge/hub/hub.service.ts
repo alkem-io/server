@@ -411,7 +411,7 @@ export class HubService {
 
   async getTemplatesSetOrFail(hubId: string): Promise<ITemplatesSet> {
     const hubWithTemplates = await this.getHubOrFail(hubId, {
-      relations: ['templatesSet', 'templatesSet.aspectTemplates'],
+      relations: ['templatesSet', 'templatesSet.postTemplates'],
     });
     const templatesSet = hubWithTemplates.templatesSet;
 
