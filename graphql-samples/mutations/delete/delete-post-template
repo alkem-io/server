@@ -1,0 +1,14 @@
+mutation deletePostTemplate($deleteData: DeletePostTemplateInput!) {
+  deletePostTemplate(deleteData: $deleteData) {
+    profile {
+      displayName
+    }
+  }
+}
+
+Variables:
+{
+  "deleteData": {
+      "ID": "uuid"
+  }
+}

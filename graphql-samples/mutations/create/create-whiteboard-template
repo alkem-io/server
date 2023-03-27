@@ -1,5 +1,5 @@
-mutation createCanvasTemplate($canvasTemplateInput: CreateCanvasTemplateOnTemplatesSetInput!) {
-  createCanvasTemplate(canvasTemplateInput: $canvasTemplateInput) {
+mutation createWhiteboardTemplate($whiteboardTemplateInput: CreateWhiteboardTemplateOnTemplatesSetInput!) {
+  createWhiteboardTemplate(whiteboardTemplateInput: $whiteboardTemplateInput) {
     profile {
       displayName
     }
@@ -8,7 +8,7 @@ mutation createCanvasTemplate($canvasTemplateInput: CreateCanvasTemplateOnTempla
 
 Variables:
 {
-  "canvasTemplateInput": {
+  "whiteboardTemplateInput": {
       "templatesSetID": "uuid",
       "profile": {
         "displayName": "wow",

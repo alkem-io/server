@@ -1,5 +1,5 @@
-mutation updateLifecycleTemplate($lifecycleTemplateInput: UpdateLifecycleTemplateInput!) {
-  updateLifecycleTemplate(lifecycleTemplateInput: $lifecycleTemplateInput) {
+mutation updateInnovationFlowTemplate($innovationFlowTemplateInput: UpdateInnovationFlowTemplateInput!) {
+  updateInnovationFlowTemplate(innovationFlowTemplateInput: $innovationFlowTemplateInput) {
     profile {
       displayName
     }
@@ -8,7 +8,7 @@ mutation updateLifecycleTemplate($lifecycleTemplateInput: UpdateLifecycleTemplat
 
 Variables:
 {
-  "lifecycleTemplateInput": {
+  "innovationFlowTemplateInput": {
       "ID": "uuid",
       "profile": {
         "displayName": "wow",

@@ -1,5 +1,5 @@
-mutation createAspectTemplate($aspectTemplateInput: CreateAspectTemplateOnTemplatesSetInput!) {
-  createAspectTemplate(aspectTemplateInput: $aspectTemplateInput) {
+mutation createPostTemplate($postTemplateInput: CreatePostTemplateOnTemplatesSetInput!) {
+  createPostTemplate(postTemplateInput: $postTemplateInput) {
     profile {
       displayName
     }
@@ -8,7 +8,7 @@ mutation createAspectTemplate($aspectTemplateInput: CreateAspectTemplateOnTempla
 
 Variables:
 {
-  "aspectTemplateInput": {
+  "postTemplateInput": {
       "templatesSetID": "uuid",
       "profile": {
         "displayName": "wow",
