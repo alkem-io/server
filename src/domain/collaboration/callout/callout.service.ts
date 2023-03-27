@@ -36,21 +36,21 @@ import { IComments } from '@domain/communication/comments/comments.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { AspectTemplateService } from '@domain/template/aspect-template/aspect.template.service';
-import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 import { UserService } from '@domain/community/user/user.service';
-import { ICanvasTemplate } from '@domain/template/canvas-template/canvas.template.interface';
-import { CanvasTemplateService } from '@domain/template/canvas-template/canvas.template.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { PostTemplateService } from '@domain/template/post-template/post.template.service';
+import { WhiteboardTemplateService } from '@domain/template/whiteboard-template/whiteboard.template.service';
+import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
+import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 
 @Injectable()
 export class CalloutService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private aspectService: AspectService,
-    private aspectTemplateService: AspectTemplateService,
-    private canvasTemplateService: CanvasTemplateService,
+    private postTemplateService: PostTemplateService,
+    private whiteboardTemplateService: WhiteboardTemplateService,
     private canvasService: CanvasService,
     private namingService: NamingService,
     private commentsService: CommentsService,
@@ -65,11 +65,14 @@ export class CalloutService {
     communicationGroupID: string,
     userID?: string
   ): Promise<ICallout> {
-    if (calloutData.type == CalloutType.CARD && !calloutData.cardTemplate) {
+    if (calloutData.type == CalloutType.CARD && !calloutData.postTemplate) {
       throw new Error('Please provide a card template');
     }
 
-    if (calloutData.type == CalloutType.CANVAS && !calloutData.canvasTemplate) {
+    if (
+      calloutData.type == CalloutType.CANVAS &&
+      !calloutData.whiteboardTemplate
+    ) {
       throw new Error('Please provide a canvas template');
     }
 
@@ -80,8 +83,8 @@ export class CalloutService {
     // Save the card template data for creation via service
     // Note: do NOT save the callout card template that is created through ORM creation flow,
     // as otherwise get a cardTemplate created without any child entities (auth etc)
-    const cardTemplateData = calloutData.cardTemplate;
-    const canvasTemplateData = calloutData.canvasTemplate;
+    const cardTemplateData = calloutData.postTemplate;
+    const canvasTemplateData = calloutData.whiteboardTemplate;
     const calloutNameID = this.namingService.createNameID(
       `${calloutData.profile.displayName}`
     );
@@ -91,12 +94,13 @@ export class CalloutService {
       calloutData.profile
     );
     if (calloutData.type == CalloutType.CARD && cardTemplateData) {
-      callout.cardTemplate =
-        await this.aspectTemplateService.createAspectTemplate(cardTemplateData);
+      callout.postTemplate = await this.postTemplateService.createPostTemplate(
+        cardTemplateData
+      );
     }
     if (calloutData.type == CalloutType.CANVAS && canvasTemplateData) {
-      callout.canvasTemplate =
-        await this.canvasTemplateService.createCanvasTemplate(
+      callout.whiteboardTemplate =
+        await this.whiteboardTemplateService.createWhiteboardTemplate(
           canvasTemplateData
         );
     }
@@ -200,25 +204,27 @@ export class CalloutService {
 
     if (
       callout.type == CalloutType.CARD &&
-      callout.cardTemplate &&
-      calloutUpdateData.cardTemplate
+      callout.postTemplate &&
+      calloutUpdateData.postTemplate
     ) {
-      callout.cardTemplate =
-        await this.aspectTemplateService.updateAspectTemplate(
-          callout.cardTemplate,
-          { ID: callout.cardTemplate.id, ...calloutUpdateData.cardTemplate }
-        );
+      callout.postTemplate = await this.postTemplateService.updatePostTemplate(
+        callout.postTemplate,
+        { ID: callout.postTemplate.id, ...calloutUpdateData.postTemplate }
+      );
     }
 
     if (
       callout.type == CalloutType.CANVAS &&
-      callout.canvasTemplate &&
-      calloutUpdateData.canvasTemplate
+      callout.whiteboardTemplate &&
+      calloutUpdateData.whiteboardTemplate
     ) {
-      callout.canvasTemplate =
-        await this.canvasTemplateService.updateCanvasTemplate(
-          callout.canvasTemplate,
-          { ID: callout.canvasTemplate.id, ...calloutUpdateData.canvasTemplate }
+      callout.whiteboardTemplate =
+        await this.whiteboardTemplateService.updateWhiteboardTemplate(
+          callout.whiteboardTemplate,
+          {
+            ID: callout.whiteboardTemplate.id,
+            ...calloutUpdateData.whiteboardTemplate,
+          }
         );
     }
 
@@ -261,15 +267,13 @@ export class CalloutService {
       await this.commentsService.deleteComments(callout.comments);
     }
 
-    if (callout.cardTemplate) {
-      await this.aspectTemplateService.deleteAspectTemplate(
-        callout.cardTemplate
-      );
+    if (callout.postTemplate) {
+      await this.postTemplateService.deletePostTemplate(callout.postTemplate);
     }
 
-    if (callout.canvasTemplate) {
-      await this.canvasTemplateService.deleteCanvasTemplate(
-        callout.canvasTemplate
+    if (callout.whiteboardTemplate) {
+      await this.whiteboardTemplateService.deleteWhiteboardTemplate(
+        callout.whiteboardTemplate
       );
     }
 
@@ -568,20 +572,20 @@ export class CalloutService {
     return loadedCallout.comments;
   }
 
-  public async getCardTemplateFromCallout(
+  public async getPostTemplateFromCallout(
     calloutID: string
-  ): Promise<IAspectTemplate | undefined> {
+  ): Promise<IPostTemplate | undefined> {
     const loadedCallout = await this.getCalloutOrFail(calloutID, {
       relations: ['cardTemplate'],
     });
-    return loadedCallout.cardTemplate;
+    return loadedCallout.postTemplate;
   }
-  public async getCanvasTemplateFromCallout(
+  public async getWhiteboardTemplateFromCallout(
     calloutID: string
-  ): Promise<ICanvasTemplate | undefined> {
+  ): Promise<IWhiteboardTemplate | undefined> {
     const loadedCallout = await this.getCalloutOrFail(calloutID, {
       relations: ['canvasTemplate'],
     });
-    return loadedCallout.canvasTemplate;
+    return loadedCallout.whiteboardTemplate;
   }
 }

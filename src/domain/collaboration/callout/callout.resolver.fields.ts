@@ -12,20 +12,20 @@ import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
-import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { ICanvasTemplate } from '@domain/template/canvas-template/canvas.template.interface';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import {
-  CalloutCanvasTemplateLoaderCreator,
-  CalloutCardTemplateLoaderCreator,
+  CalloutPostTemplateLoaderCreator,
+  CalloutWhiteboardTemplateLoaderCreator,
   CommentsLoaderCreator,
   ProfileLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
+import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
+import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -158,15 +158,15 @@ export class CalloutResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('cardTemplate', () => IAspectTemplate, {
+  @ResolveField('postTemplate', () => IPostTemplate, {
     nullable: true,
-    description: 'The card template for this Callout.',
+    description: 'The PostTemplate for this Callout.',
   })
   async cardTemplate(
     @Parent() callout: ICallout,
-    @Loader(CalloutCardTemplateLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IAspectTemplate>
-  ): Promise<IAspectTemplate | null> {
+    @Loader(CalloutPostTemplateLoaderCreator, { resolveToNull: true })
+    loader: ILoader<IPostTemplate>
+  ): Promise<IPostTemplate | null> {
     return (
       loader
         .load(callout.id)
@@ -186,15 +186,15 @@ export class CalloutResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('canvasTemplate', () => ICanvasTemplate, {
+  @ResolveField('whiteboardTemplate', () => IWhiteboardTemplate, {
     nullable: true,
-    description: 'The canvas template for this Callout.',
+    description: 'The Whiteboard template for this Callout.',
   })
   async canvasTemplate(
     @Parent() callout: ICallout,
-    @Loader(CalloutCanvasTemplateLoaderCreator, { resolveToNull: true })
-    loader: ILoader<ICanvasTemplate>
-  ): Promise<ICanvasTemplate | null> {
+    @Loader(CalloutWhiteboardTemplateLoaderCreator, { resolveToNull: true })
+    loader: ILoader<IWhiteboardTemplate>
+  ): Promise<IWhiteboardTemplate | null> {
     return (
       loader
         .load(callout.id)

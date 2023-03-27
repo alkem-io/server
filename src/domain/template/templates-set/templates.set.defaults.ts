@@ -1,9 +1,9 @@
-import { LifecycleType } from '@common/enums/lifecycle.type';
-import { challengeLifecycleConfigDefault } from './templates.set.default.lifecycle.challenge';
-import { opportunityLifecycleConfigDefault } from './templates.set.default.lifecycle.opportunity';
+import { InnovationFlowType } from '@common/enums/innovation.flow.type';
+import { challengeInnovationFlowConfigDefault } from './templates.set.default.innovation.flow.challenge';
+import { opportunityInnovationFlowConfigDefault } from './templates.set.default.innovation.flow.opportunity';
 
 export const templatesSetDefaults: any = {
-  aspects: [
+  posts: [
     {
       profile: {
         displayName: 'knowledge',
@@ -53,27 +53,27 @@ export const templatesSetDefaults: any = {
         tags: [],
       },
       type: 'other',
-      defaultDescription: 'Please describe the aspect that you wish to share.',
+      defaultDescription: 'Please describe the post that you wish to share.',
     },
   ],
-  lifecycles: [
+  innovationFlows: [
     {
       profile: {
-        displayName: 'Default Challenge lifecycle',
-        description: 'Default Challenge lifecycle',
+        displayName: 'Default Challenge innovationFlow',
+        description: 'Default Challenge innovationFlow',
         tags: [],
       },
-      type: LifecycleType.CHALLENGE,
-      definition: JSON.stringify(challengeLifecycleConfigDefault),
+      type: InnovationFlowType.CHALLENGE,
+      definition: JSON.stringify(challengeInnovationFlowConfigDefault),
     },
     {
       profile: {
-        displayName: 'Default Opportunity lifecycle',
-        description: 'Default Opportunity lifecycle',
+        displayName: 'Default Opportunity innovationFlow',
+        description: 'Default Opportunity innovationFlow',
         tags: [],
       },
-      type: LifecycleType.OPPORTUNITY,
-      definition: JSON.stringify(opportunityLifecycleConfigDefault),
+      type: InnovationFlowType.OPPORTUNITY,
+      definition: JSON.stringify(opportunityInnovationFlowConfigDefault),
     },
   ],
 };
