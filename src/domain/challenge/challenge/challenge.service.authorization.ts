@@ -333,7 +333,7 @@ export class ChallengeAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW
       );
-    updateInnovationFlowRule.inheritable = false;
+    updateInnovationFlowRule.cascade = false;
     rules.push(updateInnovationFlowRule);
 
     if (
@@ -349,7 +349,7 @@ export class ChallengeAuthorizationService {
           criteria,
           CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY
         );
-      createOpportunityRule.inheritable = false;
+      createOpportunityRule.cascade = false;
       rules.push(createOpportunityRule);
     }
 
@@ -438,7 +438,7 @@ export class ChallengeAuthorizationService {
           [parentCommunityCredential],
           CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_APPLY
         );
-      hubMemberCanApply.inheritable = false;
+      hubMemberCanApply.cascade = false;
       newRules.push(hubMemberCanApply);
     }
 
@@ -454,7 +454,7 @@ export class ChallengeAuthorizationService {
           [parentCommunityCredential],
           CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_JOIN
         );
-      hubMemberCanJoin.inheritable = false;
+      hubMemberCanJoin.cascade = false;
       newRules.push(hubMemberCanJoin);
     }
 

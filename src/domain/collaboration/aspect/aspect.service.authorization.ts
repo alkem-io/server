@@ -117,7 +117,7 @@ export class AspectAuthorizationService {
         credentials,
         CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD
       );
-    adminsMoveCardRule.inheritable = false;
+    adminsMoveCardRule.cascade = false;
     newRules.push(adminsMoveCardRule);
 
     const updatedAuthorization =

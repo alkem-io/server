@@ -162,7 +162,7 @@ export class CalloutAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS
       );
-    calloutPublishUpdate.inheritable = false;
+    calloutPublishUpdate.cascade = false;
     newRules.push(calloutPublishUpdate);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
