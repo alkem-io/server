@@ -1,5 +1,5 @@
 import { Inject } from '@nestjs/common';
-import { Profiling } from '@src/common/decorators';
+import { Headers, Profiling } from '@src/common/decorators';
 import { HubService } from './hub.service';
 import { IHub } from './hub.interface';
 import { Args, Query, Resolver } from '@nestjs/graphql';
@@ -15,7 +15,11 @@ export class HubResolverQueries {
     description: 'The Hubs on this platform',
   })
   @Profiling.api
-  async hubs(@Args({ nullable: true }) args: HubsQueryArgs): Promise<IHub[]> {
+  async hubs(
+    @Headers('myheader') header: string,
+    @Args({ nullable: true }) args: HubsQueryArgs
+  ): Promise<IHub[]> {
+    console.log(header);
     return await this.hubService.getHubs(args);
   }
 
