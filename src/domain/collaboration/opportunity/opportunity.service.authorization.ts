@@ -153,7 +153,7 @@ export class OpportunityAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW
       );
-    updateInnovationFlowRule.inheritable = false;
+    updateInnovationFlowRule.cascade = false;
     rules.push(updateInnovationFlowRule);
 
     return rules;

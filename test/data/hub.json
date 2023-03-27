@@ -10,7 +10,7 @@
       "displayName": "UN Sustainable Development Goals",
       "authorization": {
         "anonymousReadAccess": false,
-        "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"inheritable\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"inheritable\":true},{\"type\":\"user-self\",\"resourceID\":\"b69f82a1-bc7d-486c-85f9-e7ac6e689f4e\",\"grantedPrivileges\":[\"create\",\"read\",\"update\"],\"inheritable\":true}]",
+        "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"user-self\",\"resourceID\":\"b69f82a1-bc7d-486c-85f9-e7ac6e689f4e\",\"grantedPrivileges\":[\"create\",\"read\",\"update\"],\"cascade\":true}]",
         "verifiedCredentialRules": "[]",
         "privilegeRules": "",
         "id": "2b82dab3-4581-4ff2-88e3-4997afe4f85b"
@@ -25,7 +25,7 @@
       "id": "d9269921-1660-4f76-95d1-16c5b3d06fb1",
       "authorization": {
         "anonymousReadAccess": false,
-        "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"inheritable\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"inheritable\":true},{\"type\":\"hub-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"inheritable\":true},{\"type\":\"hub-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"inheritable\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"inheritable\":true},{\"type\":\"global-registered\",\"resourceID\":\"\",\"grantedPrivileges\":[\"community-apply\"],\"inheritable\":false}]",
+        "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"hub-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"hub-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-registered\",\"resourceID\":\"\",\"grantedPrivileges\":[\"community-apply\"],\"cascade\":false}]",
         "verifiedCredentialRules": "[]",
         "privilegeRules": "[]",
         "id": "4b4b27c3-6a46-4bb1-b437-fc569aa0ff3e"
@@ -33,7 +33,7 @@
     },
     "authorization": {
       "anonymousReadAccess": false,
-      "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"inheritable\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"inheritable\":true},{\"type\":\"hub-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"inheritable\":true},{\"type\":\"hub-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"inheritable\":true}]",
+      "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"hub-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"hub-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
       "verifiedCredentialRules": "[]",
       "privilegeRules": "",
       "id": "26b45df9-85fe-4dff-942a-726b17455911"
@@ -51,7 +51,7 @@
       "id": "093da171-5454-452f-b024-937ccb057920",
       "authorization": {
         "anonymousReadAccess": false,
-        "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"inheritable\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"inheritable\":true},{\"type\":\"hub-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"inheritable\":true},{\"type\":\"hub-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"inheritable\":true}]",
+        "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"hub-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"hub-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
         "verifiedCredentialRules": "[]",
         "privilegeRules": "",
         "id": "515a3ada-1b37-4c23-8da4-c431cce5880b"

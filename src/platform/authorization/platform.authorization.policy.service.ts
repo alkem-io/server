@@ -104,7 +104,7 @@ export class PlatformAuthorizationPolicyService {
         [AuthorizationCredential.GLOBAL_ADMIN],
         CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS
       );
-    globalAdminNotInherited.inheritable = false;
+    globalAdminNotInherited.cascade = false;
     credentialRules.push(globalAdminNotInherited);
 
     // Allow global admin Hubs to access Platform mgmt
@@ -118,7 +118,7 @@ export class PlatformAuthorizationPolicyService {
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
       );
-    platformAdmin.inheritable = false;
+    platformAdmin.cascade = false;
     credentialRules.push(platformAdmin);
 
     // Allow all registered users to query non-protected user information
@@ -128,7 +128,7 @@ export class PlatformAuthorizationPolicyService {
         [AuthorizationCredential.GLOBAL_REGISTERED],
         CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED
       );
-    userNotInherited.inheritable = false;
+    userNotInherited.cascade = false;
     credentialRules.push(userNotInherited);
 
     const createOrg =
@@ -143,7 +143,7 @@ export class PlatformAuthorizationPolicyService {
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD
       );
-    createOrg.inheritable = false;
+    createOrg.cascade = false;
     credentialRules.push(createOrg);
 
     const admin =
@@ -160,7 +160,7 @@ export class PlatformAuthorizationPolicyService {
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN
       );
-    admin.inheritable = false;
+    admin.cascade = false;
     credentialRules.push(admin);
 
     return credentialRules;

@@ -137,7 +137,7 @@ export class CollaborationAuthorizationService {
         [AuthorizationCredential.USER_SELF_MANAGEMENT],
         CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED
       );
-    communityMemberNotInherited.inheritable = false;
+    communityMemberNotInherited.cascade = false;
     newRules.push(communityMemberNotInherited);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
