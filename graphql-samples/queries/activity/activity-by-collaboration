@@ -31,7 +31,10 @@ query activityLogOnCollaboration($queryData: ActivityLogInput!) {
       }
       card {
         id
-        displayName
+        profile {
+          id
+          displayName
+        }
       }
     }
     ... on ActivityLogEntryCalloutCardComment {
@@ -41,7 +44,10 @@ query activityLogOnCollaboration($queryData: ActivityLogInput!) {
       }
       card {
         id
-        displayName
+        profile {
+          id
+          displayName
+        }
       }
     }
     ... on ActivityLogEntryCalloutCanvasCreated {
@@ -51,7 +57,10 @@ query activityLogOnCollaboration($queryData: ActivityLogInput!) {
       }
       canvas {
         id
-        displayName
+        profile {
+          id
+          displayName
+        }
       }
     }
     ... on ActivityLogEntryCalloutDiscussionComment {
@@ -63,13 +72,19 @@ query activityLogOnCollaboration($queryData: ActivityLogInput!) {
     ... on ActivityLogEntryChallengeCreated {
       challenge {
         id
-        displayName
+        profile {
+          id
+          displayName
+        }
       }
     }
     ... on ActivityLogEntryOpportunityCreated {
       opportunity {
         id
-        displayName
+        profile {
+          id
+          displayName
+        }
       }
     }
   }

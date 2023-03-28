@@ -5,7 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LifecycleTemplate } from './lifecycle.template.entity';
 import { ILifecycleTemplate } from './lifecycle.template.interface';
-import { TemplateInfoAuthorizationService } from '../template-info/template.info.service.authorization';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 
 @Injectable()
 export class LifecycleTemplateAuthorizationService {
@@ -13,7 +13,7 @@ export class LifecycleTemplateAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(LifecycleTemplate)
     private lifecycleTemplateRepository: Repository<LifecycleTemplate>,
-    private templateInfoAuthorizationService: TemplateInfoAuthorizationService
+    private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -26,14 +26,12 @@ export class LifecycleTemplateAuthorizationService {
         lifecycleTemplate.authorization,
         parentAuthorization
       );
-    // Cascade
-    if (lifecycleTemplate.templateInfo) {
-      lifecycleTemplate.templateInfo =
-        await this.templateInfoAuthorizationService.applyAuthorizationPolicy(
-          lifecycleTemplate.templateInfo,
-          lifecycleTemplate.authorization
-        );
-    }
+
+    lifecycleTemplate.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        lifecycleTemplate.profile,
+        lifecycleTemplate.authorization
+      );
 
     return await this.lifecycleTemplateRepository.save(lifecycleTemplate);
   }

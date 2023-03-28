@@ -1,7 +1,9 @@
 mutation CreateProject($projectData: CreateProjectInput!) {
   createProject(projectData: $projectData) {
-    displayName,
-    description
+    profile {
+      displayName,
+      description
+    }
   }
 }
 
@@ -11,8 +13,10 @@ query variables:
   "projectData":
   {
     "opportunityID": "uuid",
-    "displayName": "firstProject",
     "nameID": "tech-stack",
-    "description": "How do I handle scalability?"
+    "profileData": {
+      "description": "How do I handle scalability?",
+      "displayName": "firstProject"
+    }
   }
 }

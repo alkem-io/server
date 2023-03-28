@@ -32,7 +32,7 @@ export class AspectTemplateResolverMutations {
       await this.aspectTemplateService.getAspectTemplateOrFail(
         aspectTemplateInput.ID,
         {
-          relations: ['templateInfo'],
+          relations: ['profile'],
         }
       );
     await this.authorizationService.grantAccessOrFail(
@@ -57,7 +57,7 @@ export class AspectTemplateResolverMutations {
   ): Promise<IAspectTemplate> {
     const aspectTemplate =
       await this.aspectTemplateService.getAspectTemplateOrFail(deleteData.ID, {
-        relations: ['templateInfo'],
+        relations: ['profile'],
       });
     await this.authorizationService.grantAccessOrFail(
       agentInfo,

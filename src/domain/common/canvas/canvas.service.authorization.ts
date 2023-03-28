@@ -16,7 +16,7 @@ import {
   POLICY_RULE_CANVAS_UPDATE,
   POLICY_RULE_CANVAS_CONTRIBUTE,
 } from '@common/constants';
-import { VisualAuthorizationService } from '../visual/visual.service.authorization';
+import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 
 @Injectable()
 export class CanvasAuthorizationService {
@@ -24,7 +24,7 @@ export class CanvasAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private canvasService: CanvasService,
     private canvasCheckoutAuthorizationService: CanvasCheckoutAuthorizationService,
-    private visualAuthorizationService: VisualAuthorizationService
+    private profileAuthorizationService: ProfileAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -48,13 +48,12 @@ export class CanvasAuthorizationService {
         );
     }
 
-    if (canvas.preview) {
-      canvas.preview =
-        await this.visualAuthorizationService.applyAuthorizationPolicy(
-          canvas.preview,
-          canvas.authorization
-        );
-    }
+    canvas.profile = await this.canvasService.getProfile(canvas);
+    canvas.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        canvas.profile,
+        canvas.authorization
+      );
 
     return await this.canvasService.save(canvas);
   }

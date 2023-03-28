@@ -1,7 +1,7 @@
 mutation deleteCanvasTemplate($deleteData: DeleteCanvasTemplateInput!) {
   deleteCanvasTemplate(deleteData: $deleteData) {
-    info {
-      title
+    profile {
+      displayName
     }
     id
   }

@@ -60,9 +60,15 @@ export class CanvasTemplateService {
   }
 
   async updateCanvasTemplate(
-    canvasTemplate: ICanvasTemplate,
+    canvasTemplateInput: ICanvasTemplate,
     canvasTemplateData: UpdateCanvasTemplateInput
   ): Promise<ICanvasTemplate> {
+    const canvasTemplate = await this.getCanvasTemplateOrFail(
+      canvasTemplateInput.id,
+      {
+        relations: ['profile'],
+      }
+    );
     await this.templateBaseService.updateTemplateBase(
       canvasTemplate,
       canvasTemplateData
@@ -75,8 +81,14 @@ export class CanvasTemplateService {
   }
 
   async deleteCanvasTemplate(
-    canvasTemplate: ICanvasTemplate
+    canvasTemplateInput: ICanvasTemplate
   ): Promise<ICanvasTemplate> {
+    const canvasTemplate = await this.getCanvasTemplateOrFail(
+      canvasTemplateInput.id,
+      {
+        relations: ['profile'],
+      }
+    );
     const canvasID = canvasTemplate.id;
     await this.templateBaseService.deleteEntities(canvasTemplate);
     const result = await this.canvasTemplateRepository.remove(

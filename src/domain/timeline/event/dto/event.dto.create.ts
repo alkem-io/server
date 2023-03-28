@@ -1,11 +1,9 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { MID_TEXT_LENGTH, NAMEID_LENGTH } from '@src/common/constants';
-import { IsDate, IsOptional, MaxLength, ValidateNested } from 'class-validator';
+import { IsDate, IsOptional, MaxLength } from 'class-validator';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { Type } from 'class-transformer';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
-import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 
 @InputType()
 export class CreateCalendarEventInput extends CreateNameableInput {
@@ -21,11 +19,6 @@ export class CreateCalendarEventInput extends CreateNameableInput {
   @MaxLength(NAMEID_LENGTH)
   @IsOptional()
   nameID!: string;
-
-  @Field(() => CreateProfileInput, { nullable: false })
-  @ValidateNested({ each: true })
-  @Type(() => CreateProfileInput)
-  profileData!: CreateProfileInput;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()

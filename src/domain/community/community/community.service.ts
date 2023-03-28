@@ -370,7 +370,7 @@ export class CommunityService {
     );
     if (!hasMemberRoleInParent) {
       throw new ValidationException(
-        `Agent (${agent.id}) is not a member of parent community: ${community.displayName}`,
+        `Unable to assign Agent (${agent.id}) to community (${community.displayName}): agent is not a member of parent community`,
         LogContext.CHALLENGES
       );
     }

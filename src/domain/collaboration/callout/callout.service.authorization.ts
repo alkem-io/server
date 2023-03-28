@@ -27,6 +27,7 @@ import {
   POLICY_RULE_CALLOUT_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
 } from '@common/constants';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 @Injectable()
 export class CalloutAuthorizationService {
   constructor(
@@ -36,6 +37,7 @@ export class CalloutAuthorizationService {
     private aspectAuthorizationService: AspectAuthorizationService,
     private aspectTemplateAuthorizationService: AspectTemplateAuthorizationService,
     private canvasTemplateAuthorizationService: CanvasTemplateAuthorizationService,
+    private profileAuthorizationService: ProfileAuthorizationService,
     private commentsAuthorizationService: CommentsAuthorizationService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
@@ -69,6 +71,13 @@ export class CalloutAuthorizationService {
         communityPolicy
       );
     }
+
+    callout.profile = await this.calloutService.getProfile(callout);
+    callout.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        callout.profile,
+        callout.authorization
+      );
 
     callout.canvases = await this.calloutService.getCanvasesFromCallout(
       callout
@@ -153,7 +162,7 @@ export class CalloutAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS
       );
-    calloutPublishUpdate.inheritable = false;
+    calloutPublishUpdate.cascade = false;
     newRules.push(calloutPublishUpdate);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(

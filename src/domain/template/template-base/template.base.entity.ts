@@ -1,21 +1,17 @@
 import { JoinColumn, OneToOne } from 'typeorm';
 import { ITemplateBase } from '@domain/template/template-base/template.base.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
-import { TemplateInfo } from '@domain/template/template-info/template.info.entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 
 export abstract class TemplateBase
   extends AuthorizableEntity
   implements ITemplateBase
 {
-  constructor() {
-    super();
-  }
-
-  @OneToOne(() => TemplateInfo, {
+  @OneToOne(() => Profile, {
     eager: true,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  templateInfo!: TemplateInfo;
+  profile!: Profile;
 }

@@ -2,11 +2,11 @@ import {
   LONG_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
 } from '@common/constants/entity.field.length.constants';
+import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
-import { UpdateTemplateInfoInput } from '@domain/template/template-info/dto/template.base.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
-import { MaxLength, ValidateNested } from 'class-validator';
+import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateCalloutCardTemplateInput {
@@ -25,11 +25,12 @@ export class UpdateCalloutCardTemplateInput {
   @MaxLength(LONG_TEXT_LENGTH)
   defaultDescription!: string;
 
-  @Field({
+  @Field(() => UpdateProfileInput, {
     nullable: true,
-    description: 'The meta information for this Template.',
+    description: 'The Profile of the Template.',
   })
+  @IsOptional()
   @ValidateNested()
-  @Type(() => UpdateTemplateInfoInput)
-  info!: UpdateTemplateInfoInput;
+  @Type(() => UpdateProfileInput)
+  profileData?: UpdateProfileInput;
 }

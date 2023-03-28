@@ -7,6 +7,11 @@ import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { IInnovationPack } from './innovation.pack.interface';
 import { InnovationPackService } from './innovaton.pack.service';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { InnovationPack } from './innovation.pack.entity';
 
 @Resolver(() => IInnovationPack)
 export class InnovationPackResolverFields {
@@ -21,6 +26,20 @@ export class InnovationPackResolverFields {
     @Parent() innovationPack: IInnovationPack
   ): Promise<IOrganization | undefined> {
     return await this.innovationPackService.getProvider(innovationPack.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('profile', () => IProfile, {
+    nullable: false,
+    description: 'The Profile for this InnovationPack.',
+  })
+  @Profiling.api
+  async profile(
+    @Parent() pack: IInnovationPack,
+    @Loader(ProfileLoaderCreator, { parentClassRef: InnovationPack })
+    loader: ILoader<IProfile>
+  ): Promise<IProfile> {
+    return loader.load(pack.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

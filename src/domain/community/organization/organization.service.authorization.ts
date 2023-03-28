@@ -126,7 +126,7 @@ export class OrganizationAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET
       );
-    globalAdminNotInherited.inheritable = false;
+    globalAdminNotInherited.cascade = false;
     newRules.push(globalAdminNotInherited);
 
     const communityAdmin =

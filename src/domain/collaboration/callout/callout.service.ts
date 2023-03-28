@@ -41,6 +41,8 @@ import { IAspectTemplate } from '@domain/template/aspect-template/aspect.templat
 import { UserService } from '@domain/community/user/user.service';
 import { ICanvasTemplate } from '@domain/template/canvas-template/canvas.template.interface';
 import { CanvasTemplateService } from '@domain/template/canvas-template/canvas.template.service';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
 
 @Injectable()
 export class CalloutService {
@@ -53,6 +55,7 @@ export class CalloutService {
     private namingService: NamingService,
     private commentsService: CommentsService,
     private userService: UserService,
+    private profileService: ProfileService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -73,16 +76,23 @@ export class CalloutService {
     if (!calloutData.sortOrder) {
       calloutData.sortOrder = 10;
     }
+
     // Save the card template data for creation via service
     // Note: do NOT save the callout card template that is created through ORM creation flow,
     // as otherwise get a cardTemplate created without any child entities (auth etc)
     const cardTemplateData = calloutData.cardTemplate;
     const canvasTemplateData = calloutData.canvasTemplate;
     const calloutNameID = this.namingService.createNameID(
-      `${calloutData.displayName}`
+      `${calloutData.profile.displayName}`
     );
-    const calloutCreationData = { ...calloutData, nameID: calloutNameID };
+    const calloutCreationData = {
+      ...calloutData,
+      nameID: calloutData.nameID ?? calloutNameID,
+    };
     const callout: ICallout = Callout.create(calloutCreationData);
+    callout.profile = await this.profileService.createProfile(
+      calloutData.profile
+    );
     if (calloutData.type == CalloutType.CARD && cardTemplateData) {
       callout.cardTemplate =
         await this.aspectTemplateService.createAspectTemplate(cardTemplateData);
@@ -103,7 +113,7 @@ export class CalloutService {
     if (calloutData.type === CalloutType.COMMENTS) {
       savedCallout.comments = await this.commentsService.createComments(
         communicationGroupID,
-        `callout-comments-${savedCallout.displayName}`
+        `callout-comments-${savedCallout.nameID}`
       );
       return await this.calloutRepository.save(savedCallout);
     }
@@ -173,18 +183,20 @@ export class CalloutService {
       relations: [
         'cardTemplate',
         'canvasTemplate',
-        'cardTemplate.templateInfo',
-        'canvasTemplate.templateInfo',
+        'cardTemplate.profile',
+        'canvasTemplate.profile',
+        'profile',
       ],
     });
 
-    if (calloutUpdateData.description)
-      callout.description = calloutUpdateData.description;
+    if (calloutUpdateData.profileData) {
+      callout.profile = await this.profileService.updateProfile(
+        callout.profile,
+        calloutUpdateData.profileData
+      );
+    }
 
     if (calloutUpdateData.state) callout.state = calloutUpdateData.state;
-
-    if (calloutUpdateData.displayName)
-      callout.displayName = calloutUpdateData.displayName;
 
     if (calloutUpdateData.sortOrder)
       callout.sortOrder = calloutUpdateData.sortOrder;
@@ -228,8 +240,13 @@ export class CalloutService {
         'comments',
         'cardTemplate',
         'canvasTemplate',
+        'profile',
       ],
     });
+
+    if (callout.profile) {
+      await this.profileService.deleteProfile(callout.profile.id);
+    }
 
     if (callout.canvases) {
       for (const canvas of callout.canvases) {
@@ -266,6 +283,22 @@ export class CalloutService {
     result.id = calloutID;
 
     return result;
+  }
+
+  public async getProfile(
+    calloutInput: ICallout,
+    relations: FindOptionsRelationByString = []
+  ): Promise<IProfile> {
+    const callout = await this.getCalloutOrFail(calloutInput.id, {
+      relations: ['profile', ...relations],
+    });
+    if (!callout.profile)
+      throw new EntityNotFoundException(
+        `Callout profile not initialised: ${calloutInput.id}`,
+        LogContext.COLLABORATION
+      );
+
+    return callout.profile;
   }
 
   public async getActivityCount(callout: ICallout): Promise<number> {
@@ -363,7 +396,7 @@ export class CalloutService {
         );
     } else {
       canvasData.nameID = this.namingService.createNameID(
-        `${canvasData.displayName}`
+        `${canvasData.profileData.displayName}`
       );
     }
   }
@@ -386,9 +419,9 @@ export class CalloutService {
 
     const canvas = await this.canvasService.createCanvas(
       {
-        displayName: canvasData.displayName,
         nameID: canvasData.nameID,
         value: canvasData.value,
+        profileData: canvasData.profileData,
       },
       userID
     );

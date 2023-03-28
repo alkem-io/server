@@ -125,7 +125,7 @@ export class TemplatesSetService {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['aspectTemplates', 'aspectTemplates.templateInfo'],
+        relations: ['aspectTemplates', 'aspectTemplates.profile'],
       }
     );
     if (!templatesSetPopulated.aspectTemplates) {
@@ -142,7 +142,7 @@ export class TemplatesSetService {
     templatesSetId: string
   ): Promise<IAspectTemplate> {
     return this.aspectTemplateService.getAspectTemplateOrFail(templateId, {
-      relations: ['templatesSet', 'templateInfo'],
+      relations: ['templatesSet', 'profile'],
       where: { templatesSet: { id: templatesSetId } },
     });
   }
@@ -152,7 +152,7 @@ export class TemplatesSetService {
     templatesSetId: string
   ): Promise<ICanvasTemplate> {
     return this.canvasTemplateService.getCanvasTemplateOrFail(templateId, {
-      relations: ['templatesSet', 'templateInfo'],
+      relations: ['templatesSet', 'profile'],
       where: { templatesSet: { id: templatesSetId } },
     });
   }
@@ -164,7 +164,7 @@ export class TemplatesSetService {
     return this.lifecycleTemplateService.getLifecycleTemplateOrFail(
       templateId,
       {
-        relations: ['templatesSet', 'templateInfo'],
+        relations: ['templatesSet', 'profile'],
         where: { templatesSet: { id: templatesSetId } },
       }
     );
@@ -201,7 +201,7 @@ export class TemplatesSetService {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['canvasTemplates', 'canvasTemplates.templateInfo'],
+        relations: ['canvasTemplates', 'canvasTemplates.profile'],
       }
     );
     if (!templatesSetPopulated.canvasTemplates) {
@@ -233,7 +233,7 @@ export class TemplatesSetService {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['lifecycleTemplates', 'lifecycleTemplates.templateInfo'],
+        relations: ['lifecycleTemplates', 'lifecycleTemplates.profile'],
       }
     );
     if (!templatesSetPopulated.lifecycleTemplates) {

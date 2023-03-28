@@ -14,7 +14,6 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DeleteAspectInput } from './dto/aspect.dto.delete';
 import { UpdateAspectInput } from './dto/aspect.dto.update';
-import { VisualService } from '@domain/common/visual/visual.service';
 import { CommentsService } from '@domain/communication/comments/comments.service';
 import { CreateAspectInput } from './dto/aspect.dto.create';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -26,7 +25,6 @@ import { VisualType } from '@common/enums/visual.type';
 export class AspectService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private visualService: VisualService,
     private commentsService: CommentsService,
     private profileService: ProfileService,
     @InjectRepository(Aspect)
@@ -73,12 +71,6 @@ export class AspectService {
     });
     if (aspect.authorization) {
       await this.authorizationPolicyService.delete(aspect.authorization);
-    }
-    if (aspect.banner) {
-      await this.visualService.deleteVisual({ ID: aspect.banner.id });
-    }
-    if (aspect.bannerNarrow) {
-      await this.visualService.deleteVisual({ ID: aspect.bannerNarrow.id });
     }
     if (aspect.profile) {
       await this.profileService.deleteProfile(aspect.profile.id);

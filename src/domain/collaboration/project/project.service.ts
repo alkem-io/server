@@ -1,30 +1,37 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import {
+  FindOneOptions,
+  FindOptionsRelationByString,
+  Repository,
+} from 'typeorm';
 import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import {
-  UpdateProjectInput,
-  CreateProjectInput,
   Project,
   IProject,
   projectLifecycleConfigDefault,
 } from '@domain/collaboration/project';
-import { DeleteProjectInput } from './project.dto.delete';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { UUID_LENGTH } from '@common/constants';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { DeleteProjectInput } from './dto/project.dto.delete';
+import { UpdateProjectInput } from './dto/project.dto.update';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { CreateProjectInput } from './dto/project.dto.create';
 
 @Injectable()
 export class ProjectService {
   constructor(
     private namingService: NamingService,
+    private profileService: ProfileService,
     private lifecycleService: LifecycleService,
     @InjectRepository(Project)
     private projectRepository: Repository<Project>,
@@ -129,6 +136,10 @@ export class ProjectService {
     return project;
   }
 
+  async save(project: IProject): Promise<IProject> {
+    return await this.projectRepository.save(project);
+  }
+
   async getProjects(hubID: string): Promise<Project[]> {
     const projects = await this.projectRepository.findBy({
       hubID: hubID,
@@ -139,16 +150,32 @@ export class ProjectService {
   async updateProject(projectData: UpdateProjectInput): Promise<IProject> {
     const project = await this.getProjectOrFail(projectData.ID);
 
-    if (projectData.displayName) {
-      project.displayName = projectData.displayName;
-    }
-    if (projectData.description) {
-      project.description = projectData.description;
+    if (projectData.profileData) {
+      project.profile = await this.profileService.updateProfile(
+        project.profile,
+        projectData.profileData
+      );
     }
 
     await this.projectRepository.save(project);
 
     return project;
+  }
+
+  public async getProfile(
+    projectInput: IProject,
+    relations: FindOptionsRelationByString = []
+  ): Promise<IProfile> {
+    const project = await this.getProjectOrFail(projectInput.id, {
+      relations: ['profile', ...relations],
+    });
+    if (!project.profile)
+      throw new EntityNotFoundException(
+        `Project profile not initialised: ${projectInput.id}`,
+        LogContext.COLLABORATION
+      );
+
+    return project.profile;
   }
 
   async getLifecycle(projectId: string): Promise<ILifecycle> {

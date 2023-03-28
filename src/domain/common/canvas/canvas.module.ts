@@ -13,6 +13,7 @@ import { VisualModule } from '@domain/common/visual/visual.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { ProfileModule } from '../profile/profile.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     AuthorizationPolicyModule,
     CanvasCheckoutModule,
     VisualModule,
+    ProfileModule,
     UserModule,
     TypeOrmModule.forFeature([Canvas]),
   ],

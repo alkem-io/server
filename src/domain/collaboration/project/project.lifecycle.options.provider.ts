@@ -3,9 +3,10 @@ import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { ProjectEventInput, IProject } from '@domain/collaboration/project';
+import { IProject } from '@domain/collaboration/project';
 import { ProjectService } from './project.service';
 import { AgentInfo } from '@core/authentication';
+import { ProjectEventInput } from './dto';
 
 @Injectable()
 export class ProjectLifecycleOptionsProvider {

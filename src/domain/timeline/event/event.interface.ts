@@ -3,7 +3,6 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { ICalendar } from '../calendar/calendar.interface';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
-import { IProfile } from '@domain/common/profile/profile.interface';
 
 @ObjectType('CalendarEvent')
 export abstract class ICalendarEvent extends INameable {
@@ -11,8 +10,6 @@ export abstract class ICalendarEvent extends INameable {
     description: 'The event type, e.g. webinar, meetup etc.',
   })
   type!: string;
-
-  profile!: IProfile;
 
   calendar?: ICalendar;
 

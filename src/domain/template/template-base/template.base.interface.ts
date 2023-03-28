@@ -1,13 +1,12 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ITemplateInfo } from '../template-info/template.info.interface';
 
 @ObjectType('ITemplateBase')
 export abstract class ITemplateBase extends IAuthorizable {
-  @Field(() => ITemplateInfo, {
-    name: 'info',
+  @Field(() => IProfile, {
     nullable: false,
-    description: 'The meta information for this Template',
+    description: 'The Profile for this template.',
   })
-  templateInfo?: ITemplateInfo;
+  profile!: IProfile;
 }

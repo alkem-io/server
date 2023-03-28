@@ -3,7 +3,6 @@ import { ICalendarEvent } from './event.interface';
 import { Comments } from '@domain/communication/comments';
 import { Calendar } from '../calendar/calendar.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { Profile } from '@domain/common/profile/profile.entity';
 
 @Entity()
 export class CalendarEvent extends NameableEntity implements ICalendarEvent {
@@ -20,14 +19,6 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   })
   @JoinColumn()
   comments?: Comments;
-
-  @OneToOne(() => Profile, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  profile!: Profile;
 
   @ManyToOne(() => Calendar, calendar => calendar.events, {
     eager: false,

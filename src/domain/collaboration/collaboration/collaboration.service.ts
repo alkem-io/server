@@ -135,14 +135,31 @@ export class CollaborationService {
         LogContext.CONTEXT
       );
 
+    if (calloutData.nameID && calloutData.nameID.length > 0) {
+      const nameAvailable =
+        await this.namingService.isCalloutNameIdAvailableInCollaboration(
+          calloutData.nameID,
+          collaboration.id
+        );
+      if (!nameAvailable)
+        throw new ValidationException(
+          `Unable to create Callout: the provided nameID is already taken: ${calloutData.nameID}`,
+          LogContext.CHALLENGES
+        );
+    } else {
+      calloutData.nameID = this.namingService.createNameID(
+        `${calloutData.profile.displayName}`
+      );
+    }
+
     const displayNameAvailable =
       await this.namingService.isCalloutDisplayNameAvailableInCollaboration(
-        calloutData.displayName,
+        calloutData.profile.displayName,
         collaboration.id
       );
     if (!displayNameAvailable)
       throw new ValidationException(
-        `Unable to create Callout: the provided displayName is already taken: ${calloutData.displayName}`,
+        `Unable to create Callout: the provided displayName is already taken: ${calloutData.profile.displayName}`,
         LogContext.CHALLENGES
       );
 

@@ -1,8 +1,6 @@
-import { IVisual } from '@domain/common/visual/visual.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ICallout } from '@domain/collaboration/callout';
-import { IProfile } from '@domain/common/profile/profile.interface';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
 
 @ObjectType('Aspect')
@@ -12,8 +10,6 @@ export abstract class IAspect extends INameable {
       'The aspect type, e.g. knowledge, idea, stakeholder persona etc.',
   })
   type!: string;
-
-  profile!: IProfile;
 
   @Field(() => ICallout, {
     nullable: true,
@@ -26,9 +22,6 @@ export abstract class IAspect extends INameable {
   createdDate!: Date;
 
   createdBy!: string;
-
-  banner?: IVisual;
-  bannerNarrow?: IVisual;
 
   comments?: IComments;
 }

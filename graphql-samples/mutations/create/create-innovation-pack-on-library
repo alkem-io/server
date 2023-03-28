@@ -7,8 +7,10 @@ mutation createInnovationPackOnLibrary($data: CreateInnovationPackOnLibraryInput
 Variables:
 {
 	"data": {
-    "displayName": "innovationPack 1",
     "nameID": "pack1",
+    "profile": {
+      "displayName": "innovationPack 1"
+    }
     "providerID": "uuid_nameid"
   }
 }
