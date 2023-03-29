@@ -13,8 +13,4 @@ export abstract class NameableEntity extends AuthorizableEntity {
   })
   @JoinColumn()
   profile!: Profile;
-
-  constructor() {
-    super();
-  }
 }
