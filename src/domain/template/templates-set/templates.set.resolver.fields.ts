@@ -3,37 +3,37 @@ import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { UUID } from '@domain/common/scalars';
-import { IAspectTemplate } from '../aspect-template/aspect.template.interface';
+import { IPostTemplate } from '../post-template/post.template.interface';
 import { TemplatesSetService } from './templates.set.service';
 import { ITemplatesSet } from './templates.set.interface';
-import { ICanvasTemplate } from '../canvas-template/canvas.template.interface';
-import { ILifecycleTemplate } from '../lifecycle-template/lifecycle.template.interface';
 import { ITemplatesSetPolicy } from '../templates-set-policy/templates.set.policy.interface';
 import { TemplatesSet } from './templates.set.entity';
+import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
+import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
 
 @Resolver(() => ITemplatesSet)
 export class TemplatesSetResolverFields {
   constructor(private templatesSetService: TemplatesSetService) {}
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('aspectTemplates', () => [IAspectTemplate], {
+  @ResolveField('postTemplates', () => [IPostTemplate], {
     nullable: false,
-    description: 'The AspectTemplates in this TemplatesSet.',
+    description: 'The PostTemplates in this TemplatesSet.',
   })
   @Profiling.api
-  async aspectTemplates(
+  async postTemplates(
     @Parent() templatesSet: ITemplatesSet
-  ): Promise<IAspectTemplate[]> {
-    return await this.templatesSetService.getAspectTemplates(templatesSet);
+  ): Promise<IPostTemplate[]> {
+    return await this.templatesSetService.getPostTemplates(templatesSet);
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('aspectTemplate', () => IAspectTemplate, {
+  @ResolveField('postTemplate', () => IPostTemplate, {
     nullable: true,
-    description: 'A single AspectTemplate',
+    description: 'A single PostTemplate',
   })
   @Profiling.api
-  public aspectTemplate(
+  public postTemplate(
     @Parent() templatesSet: TemplatesSet,
     @Args({
       name: 'ID',
@@ -42,29 +42,29 @@ export class TemplatesSetResolverFields {
       description: 'The ID of the Template',
     })
     ID: string
-  ): Promise<IAspectTemplate> {
-    return this.templatesSetService.getAspectTemplate(ID, templatesSet.id);
+  ): Promise<IPostTemplate> {
+    return this.templatesSetService.getPostTemplate(ID, templatesSet.id);
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('canvasTemplates', () => [ICanvasTemplate], {
+  @ResolveField('whiteboardTemplates', () => [IWhiteboardTemplate], {
     nullable: false,
-    description: 'The CanvasTemplates in this TemplatesSet.',
+    description: 'The WhiteboardTemplates in this TemplatesSet.',
   })
   @Profiling.api
-  async canvasTemplates(
+  async whiteboardTemplates(
     @Parent() templatesSet: ITemplatesSet
-  ): Promise<ICanvasTemplate[]> {
-    return await this.templatesSetService.getCanvasTemplates(templatesSet);
+  ): Promise<IWhiteboardTemplate[]> {
+    return await this.templatesSetService.getWhiteboardTemplates(templatesSet);
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('canvasTemplate', () => ICanvasTemplate, {
+  @ResolveField('whiteboardTemplate', () => IWhiteboardTemplate, {
     nullable: true,
-    description: 'A single CanvasTemplate',
+    description: 'A single WhiteboardTemplate',
   })
   @Profiling.api
-  public canvasTemplate(
+  public whiteboardTemplate(
     @Parent() templatesSet: TemplatesSet,
     @Args({
       name: 'ID',
@@ -73,31 +73,31 @@ export class TemplatesSetResolverFields {
       description: 'The ID of the Template',
     })
     ID: string
-  ): Promise<ICanvasTemplate> {
-    return this.templatesSetService.getCanvasTemplate(ID, templatesSet.id);
+  ): Promise<IWhiteboardTemplate> {
+    return this.templatesSetService.getWhiteboardTemplate(ID, templatesSet.id);
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('lifecycleTemplates', () => [ILifecycleTemplate], {
+  @ResolveField('innovationFlowTemplates', () => [IInnovationFlowTemplate], {
     nullable: false,
-    description: 'The LifecycleTemplates in this TemplatesSet.',
+    description: 'The InnovationFlowTemplates in this TemplatesSet.',
   })
   @Profiling.api
-  async lifecycleTemplates(
+  async innovationFlowTemplates(
     @Parent() templatesSet: ITemplatesSet
-  ): Promise<ILifecycleTemplate[]> {
+  ): Promise<IInnovationFlowTemplate[]> {
     return await this.templatesSetService.getInnovationFlowTemplates(
       templatesSet
     );
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('lifecycleTemplate', () => ILifecycleTemplate, {
+  @ResolveField('innovationFlowTemplate', () => IInnovationFlowTemplate, {
     nullable: true,
-    description: 'A single LifecycleTemplate',
+    description: 'A single InnovationFlowTemplate',
   })
   @Profiling.api
-  public lifecycleTemplate(
+  public innovationFlowTemplate(
     @Parent() templatesSet: TemplatesSet,
     @Args({
       name: 'ID',
@@ -106,8 +106,11 @@ export class TemplatesSetResolverFields {
       description: 'The ID of the Template',
     })
     ID: string
-  ): Promise<ILifecycleTemplate> {
-    return this.templatesSetService.getLifecycleTemplate(ID, templatesSet.id);
+  ): Promise<IInnovationFlowTemplate> {
+    return this.templatesSetService.getInnovationFlowTemplate(
+      ID,
+      templatesSet.id
+    );
   }
 
   @UseGuards(GraphqlGuard)

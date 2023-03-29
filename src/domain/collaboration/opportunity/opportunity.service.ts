@@ -37,14 +37,14 @@ import { AgentInfo } from '@src/core/authentication/agent-info';
 import { IContext } from '@domain/context/context/context.interface';
 import { UpdateOpportunityInnovationFlowInput } from './dto/opportunity.dto.update.innovation.flow';
 import { ICollaboration } from '../collaboration/collaboration.interface';
-import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
-import { LifecycleType } from '@common/enums/lifecycle.type';
+import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { CreateProjectInput } from '../project/dto/project.dto.create';
+import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 
 @Injectable()
 export class OpportunityService {
@@ -52,7 +52,7 @@ export class OpportunityService {
     private baseChallengeService: BaseChallengeService,
     private projectService: ProjectService,
     private lifecycleService: LifecycleService,
-    private lifecycleTemplateService: LifecycleTemplateService,
+    private innovationFlowTemplateService: InnovationFlowTemplateService,
     private communityService: CommunityService,
     private userService: UserService,
     private agentService: AgentService,
@@ -72,16 +72,16 @@ export class OpportunityService {
   ): Promise<IOpportunity> {
     // Validate incoming data
     if (opportunityData.innovationFlowTemplateID) {
-      await this.lifecycleTemplateService.validateLifecycleDefinitionOrFail(
+      await this.innovationFlowTemplateService.validateInnovationFlowDefinitionOrFail(
         opportunityData.innovationFlowTemplateID,
         hubID,
-        LifecycleType.OPPORTUNITY
+        InnovationFlowType.OPPORTUNITY
       );
     } else {
       opportunityData.innovationFlowTemplateID =
-        await this.lifecycleTemplateService.getDefaultLifecycleTemplateId(
+        await this.innovationFlowTemplateService.getDefaultInnovationFlowTemplateId(
           hubID,
-          LifecycleType.OPPORTUNITY
+          InnovationFlowType.OPPORTUNITY
         );
     }
 
@@ -130,10 +130,10 @@ export class OpportunityService {
 
     if (opportunityData.innovationFlowTemplateID) {
       const machineConfig: ILifecycleDefinition =
-        await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
+        await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
           opportunityData.innovationFlowTemplateID,
           hubID,
-          LifecycleType.OPPORTUNITY
+          InnovationFlowType.OPPORTUNITY
         );
 
       opportunity.lifecycle = await this.lifecycleService.createLifecycle(
@@ -161,10 +161,10 @@ export class OpportunityService {
     }
 
     const machineConfig: ILifecycleDefinition =
-      await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
+      await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
         opportunityData.innovationFlowTemplateID,
         this.getHubID(opportunity),
-        LifecycleType.OPPORTUNITY
+        InnovationFlowType.OPPORTUNITY
       );
 
     opportunity.lifecycle.machineDef = JSON.stringify(machineConfig);

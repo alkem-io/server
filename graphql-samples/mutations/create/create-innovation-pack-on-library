@@ -8,9 +8,9 @@ Variables:
 {
 	"data": {
     "nameID": "pack1",
-    "profile": {
+    "profileData": {
       "displayName": "innovationPack 1"
-    }
-    "providerID": "uuid_nameid"
+    },
+    "providerID": "993a6ca0-bbd4-48bd-a1c5-ecadfdd1134b"
   }
 }

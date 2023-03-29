@@ -6,9 +6,9 @@ import { TemplatesSetService } from './templates.set.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from '.';
-import { CanvasTemplateAuthorizationService } from '../canvas-template/canvas.template.service.authorization';
-import { AspectTemplateAuthorizationService } from '../aspect-template/aspect.template.service.authorization';
-import { LifecycleTemplateAuthorizationService } from '../lifecycle-template/lifecycle.template.service.authorization';
+import { InnovationFlowTemplateAuthorizationService } from '../innovation-flow-template/innovation.flow.template.service.authorization';
+import { WhiteboardTemplateAuthorizationService } from '../whiteboard-template/whiteboard.template.service.authorization';
+import { PostTemplateAuthorizationService } from '../post-template/post.template.service.authorization';
 
 @Injectable()
 export class TemplatesSetAuthorizationService {
@@ -17,9 +17,9 @@ export class TemplatesSetAuthorizationService {
     private templatesSetService: TemplatesSetService,
     @InjectRepository(TemplatesSet)
     private templatesSetRepository: Repository<TemplatesSet>,
-    private aspectTemplateAuthorizationService: AspectTemplateAuthorizationService,
-    private canvasTemplateAuthorizationService: CanvasTemplateAuthorizationService,
-    private lifecycleTemplateAuthorizationService: LifecycleTemplateAuthorizationService
+    private postTemplateAuthorizationService: PostTemplateAuthorizationService,
+    private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
+    private innovationFlowTemplateAuthorizationService: InnovationFlowTemplateAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -29,7 +29,11 @@ export class TemplatesSetAuthorizationService {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       templatesSetInput.id,
       {
-        relations: ['aspectTemplates', 'canvasTemplates', 'lifecycleTemplates'],
+        relations: [
+          'postTemplates',
+          'whiteboardTemplates',
+          'innovationFlowTemplates',
+        ],
       }
     );
 
@@ -40,28 +44,28 @@ export class TemplatesSetAuthorizationService {
         parentAuthorization
       );
 
-    if (templatesSet.aspectTemplates) {
-      for (const aspectTemplate of templatesSet.aspectTemplates) {
-        await this.aspectTemplateAuthorizationService.applyAuthorizationPolicy(
-          aspectTemplate,
+    if (templatesSet.postTemplates) {
+      for (const postTemplate of templatesSet.postTemplates) {
+        await this.postTemplateAuthorizationService.applyAuthorizationPolicy(
+          postTemplate,
           parentAuthorization
         );
       }
     }
 
-    if (templatesSet.canvasTemplates) {
-      for (const canvasTemplate of templatesSet.canvasTemplates) {
-        await this.canvasTemplateAuthorizationService.applyAuthorizationPolicy(
-          canvasTemplate,
+    if (templatesSet.whiteboardTemplates) {
+      for (const whiteboardTemplate of templatesSet.whiteboardTemplates) {
+        await this.whiteboardTemplateAuthorizationService.applyAuthorizationPolicy(
+          whiteboardTemplate,
           parentAuthorization
         );
       }
     }
 
-    if (templatesSet.lifecycleTemplates) {
-      for (const lifecycleTemplate of templatesSet.lifecycleTemplates) {
-        await this.lifecycleTemplateAuthorizationService.applyAuthorizationPolicy(
-          lifecycleTemplate,
+    if (templatesSet.innovationFlowTemplates) {
+      for (const innovationFlowTemplate of templatesSet.innovationFlowTemplates) {
+        await this.innovationFlowTemplateAuthorizationService.applyAuthorizationPolicy(
+          innovationFlowTemplate,
           parentAuthorization
         );
       }
