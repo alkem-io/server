@@ -133,9 +133,9 @@ export class InnovationFlowTemplateService {
       innovationFlowTemplateId: string;
     }[] = await this.entityManager.connection.query(
       `
-      SELECT innovationFlow_template.id AS innovationFlowTemplateId FROM hub
-      LEFT JOIN innovationFlow_template ON hub.templatesSetId = innovationFlow_template.templatesSetId
-      WHERE innovationFlow_template.type = '${templateType}'
+      SELECT innovation_flow_template.id AS innovationFlowTemplateId FROM hub
+      LEFT JOIN innovation_flow_template ON hub.templatesSetId = innovation_flow_template.templatesSetId
+      WHERE innovation_flow_template.type = '${templateType}'
       AND hub.id = '${hubID}'
       LIMIT 1
       `
@@ -176,9 +176,9 @@ export class InnovationFlowTemplateService {
     }[] = await this.entityManager.connection.query(
       `
       SELECT COUNT(*) as hubCount FROM \`hub\`
-      RIGHT JOIN \`innovationFlow_template\` ON \`hub\`.\`templatesSetId\` = \`innovationFlow_template\`.\`templatesSetId\`
-      WHERE \`innovationFlow_template\`.\`id\` = '${innovationFlowTemplateID}'
-      AND \`innovationFlow_template\`.\`type\` = '${templateType}'
+      RIGHT JOIN \`innovation_flow_template\` ON \`hub\`.\`templatesSetId\` = \`innovation_flow_template\`.\`templatesSetId\`
+      WHERE \`innovation_flow_template\`.\`id\` = '${innovationFlowTemplateID}'
+      AND \`innovation_flow_template\`.\`type\` = '${templateType}'
       AND \`hub\`.\`id\` = '${hubID}'
       `
     );
