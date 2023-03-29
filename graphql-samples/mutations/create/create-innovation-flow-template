@@ -12,9 +12,9 @@ Variables:
       "templatesSetID": "uuid",
       "profile": {
         "displayName": "wow",
-        "description": "wow this is great",
-        "tags": ["Tag 1", "Tag 2"]
+        "description": "wow this is great"
       },
+      "tags": ["Tag 1", "Tag 2"],
       "type": "CHALLENGE",
       "definition": "{\"id\":\"challenge-lifecycle-default-3\",\"context\":{\"parentID\":\"2f2f3241-a70c-4887-a2c8-262059f36dfc\"},\"initial\":\"new\",\"states\":{\"new\":{\"on\":{\"REFINE\":{\"target\":\"beingRefined\",\"cond\":\"challengeStateUpdateAuthorized\"},\"ABANDONED\":{\"target\":\"abandoned\",\"cond\":\"challengeStateUpdateAuthorized\"}}},\"beingRefined\":{\"on\":{\"ACTIVE\":{\"target\":\"inProgress\",\"cond\":\"challengeStateUpdateAuthorized\"},\"ABANDONED\":{\"target\":\"abandoned\",\"cond\":\"challengeStateUpdateAuthorized\"}}},\"inProgress\":{\"entry\":[\"sampleEvent\"],\"on\":{\"COMPLETED\":{\"target\":\"complete\",\"cond\":\"challengeStateUpdateAuthorized\"},\"ABANDONED\":{\"target\":\"abandoned\",\"cond\":\"challengeStateUpdateAuthorized\"}}},\"complete\":{\"on\":{\"ARCHIVE\":\"archived\",\"ABANDONED\":\"abandoned\"}},\"abandoned\":{\"on\":{\"REOPEN\":\"inProgress\",\"ARCHIVE\":\"archived\"}},\"archived\":{\"type\":\"final\"}}}"
   }
