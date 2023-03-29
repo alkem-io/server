@@ -45,6 +45,7 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { CreateProjectInput } from '../project/dto/project.dto.create';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Injectable()
 export class OpportunityService {
@@ -120,8 +121,18 @@ export class OpportunityService {
         );
     }
 
-    if (agentInfo) {
-      await this.assignMember(agentInfo.userID, opportunity.id);
+    if (agentInfo && opportunity.community) {
+      await this.communityService.assignUserToRole(
+        opportunity.community,
+        agentInfo.userID,
+        CommunityRole.MEMBER
+      );
+
+      await this.communityService.assignUserToRole(
+        opportunity.community,
+        agentInfo.userID,
+        CommunityRole.LEAD
+      );
       await this.assignOpportunityAdmin({
         userID: agentInfo.userID,
         opportunityID: opportunity.id,
@@ -438,19 +449,6 @@ export class OpportunityService {
     return await this.opportunityRepository.countBy({
       challenge: { id: challengeID },
     });
-  }
-
-  async assignMember(userID: string, opportunityId: string) {
-    const agent = await this.userService.getAgent(userID);
-    const opportunity = await this.getOpportunityOrFail(opportunityId);
-
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.OPPORTUNITY_MEMBER,
-      resourceID: opportunity.id,
-    });
-
-    return await this.userService.getUserWithAgent(userID);
   }
 
   async assignOpportunityAdmin(
