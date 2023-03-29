@@ -88,7 +88,10 @@ export class CalloutService {
     const calloutNameID = this.namingService.createNameID(
       `${calloutData.profile.displayName}`
     );
-    const calloutCreationData = { ...calloutData, nameID: calloutNameID };
+    const calloutCreationData = {
+      ...calloutData,
+      nameID: calloutData.nameID ?? calloutNameID,
+    };
     const callout: ICallout = Callout.create(calloutCreationData);
     callout.profile = await this.profileService.createProfile(
       calloutData.profile

@@ -6,6 +6,8 @@ import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.create';
 import { CreateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.create';
+import { NameID } from '@domain/common/scalars/scalar.nameid';
+
 
 @InputType()
 export class CreateCalloutInput {
@@ -13,6 +15,12 @@ export class CreateCalloutInput {
   @ValidateNested({ each: true })
   @Type(() => CreateProfileInput)
   profile!: CreateProfileInput;
+
+  @Field(() => NameID, {
+    nullable: true,
+    description: 'A readable identifier, unique within the containing scope.',
+  })
+  nameID!: string;
 
   @Field(() => CalloutType, {
     description: 'Callout type.',
