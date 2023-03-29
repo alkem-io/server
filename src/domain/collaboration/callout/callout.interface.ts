@@ -5,10 +5,10 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { IComments } from '@domain/communication/comments/comments.interface';
-import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
-import { ICanvasTemplate } from '@domain/template/canvas-template/canvas.template.interface';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
 import { CalloutGroup } from '@common/enums/callout.group';
+import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
+import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 
 @ObjectType('Callout')
 export abstract class ICallout extends INameable {
@@ -39,11 +39,11 @@ export abstract class ICallout extends INameable {
   })
   aspects?: IAspect[];
 
-  @Field(() => IAspectTemplate, {
+  @Field(() => IPostTemplate, {
     nullable: true,
-    description: 'The Aspect template associated with this Callout.',
+    description: 'The Post template associated with this Callout.',
   })
-  cardTemplate?: IAspectTemplate;
+  postTemplate?: IPostTemplate;
 
   @Field(() => [ICanvas], {
     nullable: true,
@@ -51,11 +51,11 @@ export abstract class ICallout extends INameable {
   })
   canvases?: ICanvas[];
 
-  @Field(() => ICanvasTemplate, {
+  @Field(() => IWhiteboardTemplate, {
     nullable: true,
-    description: 'The Canvas template associated with this Callout.',
+    description: 'The whiteboard template associated with this Callout.',
   })
-  canvasTemplate?: ICanvasTemplate;
+  whiteboardTemplate?: IWhiteboardTemplate;
 
   @Field(() => IComments, {
     nullable: true,

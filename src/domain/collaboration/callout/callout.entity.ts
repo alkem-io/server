@@ -14,10 +14,10 @@ import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Comments } from '@domain/communication/comments/comments.entity';
-import { AspectTemplate } from '@domain/template/aspect-template/aspect.template.entity';
-import { CanvasTemplate } from '@domain/template/canvas-template/canvas.template.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { CalloutGroup } from '@common/enums/callout.group';
+import { PostTemplate } from '@domain/template/post-template/post.template.entity';
+import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
 
 @Entity()
 export class Callout extends NameableEntity implements ICallout {
@@ -51,21 +51,21 @@ export class Callout extends NameableEntity implements ICallout {
   })
   aspects?: Aspect[];
 
-  @OneToOne(() => AspectTemplate, {
+  @OneToOne(() => PostTemplate, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  cardTemplate?: AspectTemplate;
+  postTemplate?: PostTemplate;
 
-  @OneToOne(() => CanvasTemplate, {
+  @OneToOne(() => WhiteboardTemplate, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  canvasTemplate?: CanvasTemplate;
+  whiteboardTemplate?: WhiteboardTemplate;
 
   @OneToOne(() => Comments, {
     eager: false,

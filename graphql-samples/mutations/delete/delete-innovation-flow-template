@@ -1,0 +1,12 @@
+mutation deleteInnovationFlowTemplate($deleteData: DeleteInnovationFlowTemplateInput!) {
+  deleteInnovationFlowTemplate(deleteData: $deleteData) {
+    id
+  }
+}
+
+Variables:
+{
+  "deleteData": {
+      "ID": "uuid"
+  }
+}

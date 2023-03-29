@@ -1,5 +1,5 @@
-mutation updateCanvasTemplate($canvasTemplateInput: UpdateCanvasTemplateInput!) {
-  updateCanvasTemplate(canvasTemplateInput: $canvasTemplateInput) {
+mutation updateWhiteboardTemplate($whiteboardTemplateInput: UpdateWhiteboardTemplateInput!) {
+  updateWhiteboardTemplate(whiteboardTemplateInput: $whiteboardTemplateInput) {
     profile {
       displayName
     }
@@ -8,7 +8,7 @@ mutation updateCanvasTemplate($canvasTemplateInput: UpdateCanvasTemplateInput!) 
 
 Variables:
 {
-  "canvasTemplateInput": {
+  "whiteboardTemplateInput": {
       "ID": "uuid",
       "profile": {
         "displayName": "wow",

@@ -2,8 +2,8 @@ import { CalloutGroup } from '@common/enums/callout.group';
 import { CalloutState } from '@common/enums/callout.state';
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
-import { UpdateCalloutCanvasTemplateInput } from './callout.dto.update.canvasTemplate';
-import { UpdateCalloutCardTemplateInput } from './callout.dto.update.cardTemplate';
+import { UpdateCalloutWhiteboardTemplateInput } from './callout.dto.update.whiteboardTemplate';
+import { UpdateCalloutPostTemplateInput } from './callout.dto.update.postTemplate';
 
 @InputType()
 export class UpdateCalloutInput extends UpdateNameableInput {
@@ -19,17 +19,17 @@ export class UpdateCalloutInput extends UpdateNameableInput {
   })
   sortOrder!: number;
 
-  @Field(() => UpdateCalloutCardTemplateInput, {
+  @Field(() => UpdateCalloutPostTemplateInput, {
     nullable: true,
     description: 'CardTemplate data for this Callout.',
   })
-  cardTemplate?: UpdateCalloutCardTemplateInput;
+  postTemplate?: UpdateCalloutPostTemplateInput;
 
-  @Field(() => UpdateCalloutCanvasTemplateInput, {
+  @Field(() => UpdateCalloutWhiteboardTemplateInput, {
     nullable: true,
     description: 'CanvasTemplate data for this Callout.',
   })
-  canvasTemplate?: UpdateCalloutCanvasTemplateInput;
+  whiteboardTemplate?: UpdateCalloutWhiteboardTemplateInput;
 
   @Field(() => CalloutGroup, {
     nullable: true,

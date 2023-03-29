@@ -19,7 +19,7 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
-import { LifecycleType } from '@common/enums/lifecycle.type';
+import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
 
 export class ConversionService {
@@ -150,7 +150,7 @@ export class ConversionService {
     opportunityID: string,
     hubID: string,
     agentInfo: AgentInfo,
-    lifecycleTemplateID?: string
+    innovationFlowTemplateID?: string
   ): Promise<IChallenge> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
       opportunityID,
@@ -163,11 +163,11 @@ export class ConversionService {
     await this.hubService.validateChallengeNameIdOrFail(challengeNameID, hubID);
     let challenge: IChallenge;
 
-    if (lifecycleTemplateID)
+    if (innovationFlowTemplateID)
       challenge = await this.challengeService.createChallenge(
         {
           nameID: challengeNameID,
-          innovationFlowTemplateID: lifecycleTemplateID,
+          innovationFlowTemplateID: innovationFlowTemplateID,
           profileData: {
             displayName: opportunity.profile.displayName,
           },
@@ -179,7 +179,7 @@ export class ConversionService {
       const defaultChallengeLifecycleTemplate =
         await this.hubService.getDefaultInnovationFlowTemplate(
           hubID,
-          LifecycleType.CHALLENGE
+          InnovationFlowType.CHALLENGE
         );
       challenge = await this.challengeService.createChallenge(
         {

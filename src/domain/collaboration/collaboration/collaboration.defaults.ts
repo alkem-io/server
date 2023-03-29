@@ -56,7 +56,7 @@ export const collaborationDefaults: any = {
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 5,
-      cardTemplate: {
+      postTemplate: {
         type: 'contribution',
         defaultDescription:
           'Please share your contribution. The more details the better!',
@@ -78,7 +78,7 @@ export const collaborationDefaults: any = {
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 10,
-      canvasTemplate: {
+      whiteboardTemplate: {
         value: emptyCanvasValue,
         profile: {
           displayName: 'blank canvas',
