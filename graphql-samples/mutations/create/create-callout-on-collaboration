@@ -7,13 +7,21 @@ mutation createCalloutOnCollaboration($data: CreateCalloutOnCollaborationInput!)
 Variables:
 {
 	"data": {
-    "collaborationID": "a20606c8-496b-4c2b-b576-25eae8068379",
-    "nameID": "test-callout-4",
+    "collaborationID": "06a9d58e-ef4d-474b-81a1-b9d67d3decae",
+    "nameID": "test-callout-3",
     "state": "OPEN",
     "type": "CARD",
-    "profileData": {
+    "profile": {
       "description": "testing callouts",
-      "displayName": "test callout 4"
-     }
+      "displayName": "test callout 3"
+    },
+    "cardTemplate": {
+      "defaultDescription": "test",
+      "type": "bla",
+      "profile": {
+        "displayName": "test template"
+      }
+      
+    }
   }
 }

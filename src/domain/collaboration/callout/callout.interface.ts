@@ -8,6 +8,7 @@ import { IComments } from '@domain/communication/comments/comments.interface';
 import { IAspectTemplate } from '@domain/template/aspect-template/aspect.template.interface';
 import { ICanvasTemplate } from '@domain/template/canvas-template/canvas.template.interface';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
+import { CalloutGroup } from '@common/enums/callout.group';
 
 @ObjectType('Callout')
 export abstract class ICallout extends INameable {
@@ -25,6 +26,12 @@ export abstract class ICallout extends INameable {
     description: 'Visibility of the Callout.',
   })
   visibility!: CalloutVisibility;
+
+  @Field(() => CalloutGroup, {
+    nullable: false,
+    description: 'Callout group.',
+  })
+  group!: CalloutGroup;
 
   @Field(() => [IAspect], {
     nullable: true,

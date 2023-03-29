@@ -17,6 +17,7 @@ import { Comments } from '@domain/communication/comments/comments.entity';
 import { AspectTemplate } from '@domain/template/aspect-template/aspect.template.entity';
 import { CanvasTemplate } from '@domain/template/canvas-template/canvas.template.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { CalloutGroup } from '@common/enums/callout.group';
 
 @Entity()
 export class Callout extends NameableEntity implements ICallout {
@@ -31,6 +32,12 @@ export class Callout extends NameableEntity implements ICallout {
 
   @Column('text', { nullable: false, default: CalloutVisibility.DRAFT })
   visibility!: CalloutVisibility;
+
+  @Column('text', {
+    nullable: false,
+    default: CalloutGroup.KNOWLEDGE_GROUP_2,
+  })
+  group = CalloutGroup.KNOWLEDGE_GROUP_2;
 
   @OneToMany(() => Canvas, canvas => canvas.callout, {
     eager: false,

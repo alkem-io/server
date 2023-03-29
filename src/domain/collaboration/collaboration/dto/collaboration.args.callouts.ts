@@ -1,3 +1,4 @@
+import { CalloutGroup } from '@common/enums/callout.group';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { ArgsType, Field, Float } from '@nestjs/graphql';
 
@@ -33,4 +34,11 @@ export class CollaborationArgsCallouts {
     nullable: true,
   })
   sortByActivity?: boolean;
+
+  @Field(() => [CalloutGroup], {
+    name: 'groups',
+    description: 'Return only Callouts from this group.',
+    nullable: true,
+  })
+  groups?: CalloutGroup[];
 }

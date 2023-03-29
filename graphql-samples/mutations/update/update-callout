@@ -10,8 +10,8 @@ Variables:
     "ID": "uuid",
     "profileData": {
       "displayName": "some name",
-      "description": "text",
-    }
-    "state": "closed"
+      "description": "text"
+    },
+    "state": "CLOSED"
   }
 }

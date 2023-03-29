@@ -1,3 +1,4 @@
+import { CalloutGroup } from '@common/enums/callout.group';
 import { CalloutState } from '@common/enums/callout.state';
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
@@ -29,4 +30,10 @@ export class UpdateCalloutInput extends UpdateNameableInput {
     description: 'CanvasTemplate data for this Callout.',
   })
   canvasTemplate?: UpdateCalloutCanvasTemplateInput;
+
+  @Field(() => CalloutGroup, {
+    nullable: true,
+    description: 'Set callout group for this Callout.',
+  })
+  group?: CalloutGroup;
 }

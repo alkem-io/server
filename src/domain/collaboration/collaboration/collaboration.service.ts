@@ -201,6 +201,11 @@ export class CollaborationService {
       this.hasAgentAccessToCallout(callout, agentInfo)
     );
 
+    // Filter by Callout group
+    const availableCallouts = args.groups
+      ? readableCallouts.filter(callout => args.groups?.includes(callout.group))
+      : readableCallouts;
+
     // parameter order: (a) by IDs (b) by activity (c) shuffle (d) sort order
     // (a) by IDs, results in order specified by IDs
     if (args.IDs) {
@@ -208,9 +213,9 @@ export class CollaborationService {
       for (const calloutID of args.IDs) {
         let callout;
         if (calloutID.length === UUID_LENGTH)
-          callout = readableCallouts.find(callout => callout.id === calloutID);
+          callout = availableCallouts.find(callout => callout.id === calloutID);
         else
-          callout = readableCallouts.find(
+          callout = availableCallouts.find(
             callout => callout.nameID === calloutID
           );
 
@@ -226,10 +231,10 @@ export class CollaborationService {
 
     // (b) by activity. First get the activity for all callouts + sort by it; shuffle does not make sense.
     if (args.sortByActivity) {
-      for (const callout of readableCallouts) {
+      for (const callout of availableCallouts) {
         callout.activity = await this.calloutService.getActivityCount(callout);
       }
-      const sortedCallouts = readableCallouts.sort((a, b) =>
+      const sortedCallouts = availableCallouts.sort((a, b) =>
         a.activity < b.activity ? 1 : -1
       );
       if (args.limit) {
@@ -241,13 +246,13 @@ export class CollaborationService {
     // (c) shuffle
     if (args.shuffle) {
       // No need to sort
-      return limitAndShuffle(readableCallouts, args.limit, args.shuffle);
+      return limitAndShuffle(availableCallouts, args.limit, args.shuffle);
     }
 
     // (d) by sort order
-    let results = readableCallouts;
+    let results = availableCallouts;
     if (args.limit) {
-      results = limitAndShuffle(readableCallouts, args.limit, false);
+      results = limitAndShuffle(availableCallouts, args.limit, false);
     }
 
     const sortedCallouts = results.sort((a, b) =>

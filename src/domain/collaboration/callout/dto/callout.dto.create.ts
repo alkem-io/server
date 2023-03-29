@@ -7,6 +7,7 @@ import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.creat
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
+import { CalloutGroup } from '@common/enums/callout.group';
 
 @InputType()
 export class CreateCalloutInput {
@@ -31,6 +32,12 @@ export class CreateCalloutInput {
     description: 'State of the callout.',
   })
   state!: CalloutState;
+
+  @Field(() => CalloutGroup, {
+    nullable: true,
+    description: 'Set callout group for this Callout.',
+  })
+  group?: CalloutGroup;
 
   @Field(() => Number, {
     nullable: true,
