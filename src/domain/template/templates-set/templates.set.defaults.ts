@@ -1,12 +1,12 @@
-import { LifecycleType } from '@common/enums/lifecycle.type';
-import { challengeLifecycleConfigDefault } from './templates.set.default.lifecycle.challenge';
-import { opportunityLifecycleConfigDefault } from './templates.set.default.lifecycle.opportunity';
+import { InnovationFlowType } from '@common/enums/innovation.flow.type';
+import { challengeInnovationFlowConfigDefault } from './templates.set.default.innovation.flow.challenge';
+import { opportunityInnovationFlowConfigDefault } from './templates.set.default.innovation.flow.opportunity';
 
 export const templatesSetDefaults: any = {
-  aspects: [
+  posts: [
     {
-      info: {
-        title: 'knowledge',
+      profile: {
+        displayName: 'knowledge',
         description: 'To share relevant knowledge, building blocks etc.',
         tags: [],
       },
@@ -14,10 +14,10 @@ export const templatesSetDefaults: any = {
       defaultDescription: 'Please describe the knowledge that is relevant.',
     },
     {
-      info: {
-        title: 'stakeholder persona',
+      profile: {
+        displayName: 'stakeholder persona',
         description:
-          'To share a relevant persona, who would be either actively engaged, impacted by results, needs to informed, supportive etc',
+          'To share a relevant persona, who would be either actively engaged, impacted by results, needs to profilermed, supportive etc',
         tags: [],
       },
       type: 'stakeholder persona',
@@ -25,8 +25,8 @@ export const templatesSetDefaults: any = {
         'Please describe the stakeholder persona that is relevant.',
     },
     {
-      info: {
-        title: 'related initiative',
+      profile: {
+        displayName: 'related initiative',
         description:
           'Other initiatives that are relevant, be they similar in nature, supporting or just to be aware of.',
         tags: [],
@@ -36,8 +36,8 @@ export const templatesSetDefaults: any = {
         'Please describe the related initiative that is relevant.',
     },
     {
-      info: {
-        title: 'idea',
+      profile: {
+        displayName: 'idea',
         description:
           'Ideas that are later elicited and can be used to make progress.',
         tags: [],
@@ -46,34 +46,34 @@ export const templatesSetDefaults: any = {
       defaultDescription: 'Please describe the idea that is relevant.',
     },
     {
-      info: {
-        title: 'other',
+      profile: {
+        displayName: 'other',
         description:
           'Any other relevant information that can contribute to make progress.',
         tags: [],
       },
       type: 'other',
-      defaultDescription: 'Please describe the aspect that you wish to share.',
+      defaultDescription: 'Please describe the post that you wish to share.',
     },
   ],
-  lifecycles: [
+  innovationFlows: [
     {
-      info: {
-        title: 'Default Challenge lifecycle',
-        description: 'Default Challenge lifecycle',
+      profile: {
+        displayName: 'Default Challenge innovationFlow',
+        description: 'Default Challenge innovationFlow',
         tags: [],
       },
-      type: LifecycleType.CHALLENGE,
-      definition: JSON.stringify(challengeLifecycleConfigDefault),
+      type: InnovationFlowType.CHALLENGE,
+      definition: JSON.stringify(challengeInnovationFlowConfigDefault),
     },
     {
-      info: {
-        title: 'Default Opportunity lifecycle',
-        description: 'Default Opportunity lifecycle',
+      profile: {
+        displayName: 'Default Opportunity innovationFlow',
+        description: 'Default Opportunity innovationFlow',
         tags: [],
       },
-      type: LifecycleType.OPPORTUNITY,
-      definition: JSON.stringify(opportunityLifecycleConfigDefault),
+      type: InnovationFlowType.OPPORTUNITY,
+      definition: JSON.stringify(opportunityInnovationFlowConfigDefault),
     },
   ],
 };

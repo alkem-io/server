@@ -10,6 +10,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
     AuthorizationModule,
     AuthorizationPolicyModule,
     OrganizationModule,
+    ProfileModule,
     AgentModule,
     TypeOrmModule.forFeature([InnovationPack]),
   ],

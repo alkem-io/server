@@ -9,12 +9,14 @@ const emptyCanvasValue =
 export const collaborationDefaults: any = {
   callouts: [
     {
+      nameID: 'hub-welcome',
       type: CalloutType.COMMENTS,
       communityType: CommunityType.HUB,
-      displayName: 'Welcome, please introduce yourself to the community!',
-      nameID: 'hub-welcome',
-      description:
-        'Please share a few words about yourself to help the community get to know each other. What brings you to this Hub and motivates you to work on these Challenges?',
+      profile: {
+        displayName: 'Welcome, please introduce yourself to the community!',
+        description:
+          'Please share a few words about yourself to help the community get to know each other. What brings you to this Hub and motivates you to work on these Challenges?',
+      },
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 1,
@@ -22,33 +24,39 @@ export const collaborationDefaults: any = {
     {
       type: CalloutType.COMMENTS,
       communityType: CommunityType.CHALLENGE,
-      displayName: 'Why do you care about this Challenge?',
+      profile: {
+        displayName: 'Why do you care about this Challenge?',
+        description:
+          'Please share why this Challenge is important to you as well as any relevant thoughts, experience or expertise.',
+      },
       nameID: 'challenge-welcome',
-      description:
-        'Please share why this Challenge is important to you as well as any relevant thoughts, experience or expertise.',
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 1,
     },
     {
       type: CalloutType.COMMENTS,
-      displayName: 'Suggestions, Questions, and Feedback',
+      profile: {
+        displayName: 'Suggestions, Questions, and Feedback',
+        description: 'Please share it here :)',
+      },
       nameID: 'suggestions',
-      description: 'Please share it here :)',
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 3,
     },
     {
       type: CalloutType.CARD,
-      displayName: 'Contribute',
+      profile: {
+        displayName: 'Contribute',
+        description:
+          'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own card, or comment on aspects added by others.',
+      },
       nameID: `${CalloutType.CARD}-default`,
-      description:
-        'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own card, or comment on aspects added by others.',
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 5,
-      cardTemplate: {
+      postTemplate: {
         type: 'contribution',
         defaultDescription:
           'Please share your contribution. The more details the better!',
@@ -61,17 +69,19 @@ export const collaborationDefaults: any = {
     },
     {
       type: CalloutType.CANVAS,
-      displayName: 'Collaborate visually',
+      profile: {
+        displayName: 'Collaborate visually',
+        description:
+          'Collaborate visually using Canvases. Create a new Canvas from a template, or explore Canvases already created.',
+      },
       nameID: `${CalloutType.CANVAS}-default`,
-      description:
-        'Collaborate visually using Canvases. Create a new Canvas from a template, or explore Canvases already created.',
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 10,
-      canvasTemplate: {
+      whiteboardTemplate: {
         value: emptyCanvasValue,
-        info: {
-          title: 'blank canvas',
+        profile: {
+          displayName: 'blank canvas',
           description: 'A blank canvas to be worked further.',
         },
       },

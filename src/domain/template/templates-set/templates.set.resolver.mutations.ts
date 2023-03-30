@@ -3,144 +3,146 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { TemplatesSetService } from './templates.set.service';
-import { IAspectTemplate } from '../aspect-template/aspect.template.interface';
+import { IPostTemplate } from '../post-template/post.template.interface';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { CreateAspectTemplateOnTemplatesSetInput } from './dto/aspect.template.dto.create.on.templates.set';
-import { ICanvasTemplate } from '../canvas-template/canvas.template.interface';
-import { CreateCanvasTemplateOnTemplatesSetInput } from './dto/canvas.template.dto.create.on.templates.set';
-import { AspectTemplateAuthorizationService } from '../aspect-template/aspect.template.service.authorization';
-import { CanvasTemplateAuthorizationService } from '../canvas-template/canvas.template.service.authorization';
-import { CreateLifecycleTemplateOnTemplatesSetInput } from './dto/lifecycle.template.dto.create.on.templates.set';
-import { ILifecycleTemplate } from '../lifecycle-template/lifecycle.template.interface';
-import { LifecycleTemplateAuthorizationService } from '../lifecycle-template/lifecycle.template.service.authorization';
-import { LifecycleTemplateService } from '../lifecycle-template/lifecycle.template.service';
+import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
+import { PostTemplateAuthorizationService } from '../post-template/post.template.service.authorization';
+import { WhiteboardTemplateAuthorizationService } from '../whiteboard-template/whiteboard.template.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { DeleteLifecycleTemplateInput } from './dto/lifecycle.template.dto.delete.on.templates.set';
+import { InnovationFlowTemplateService } from '../innovation-flow-template/innovation.flow.template.service';
+import { InnovationFlowTemplateAuthorizationService } from '../innovation-flow-template/innovation.flow.template.service.authorization';
+import { CreateWhiteboardTemplateOnTemplatesSetInput } from './dto/whiteboard.template.dto.create.on.templates.set';
+import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
+import { DeleteInnovationFlowTemplateInput } from './dto/innovation.flow.template.dto.delete.on.templates.set';
+import { CreateInnovationFlowTemplateOnTemplatesSetInput } from './dto/innovation.flow.template.dto.create.on.templates.set';
+import { CreatePostTemplateOnTemplatesSetInput } from './dto/post.template.dto.create.on.templates.set';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private templatesSetService: TemplatesSetService,
-    private lifecycleTemplateService: LifecycleTemplateService,
-    private aspectTemplateAuthorizationService: AspectTemplateAuthorizationService,
-    private canvasTemplateAuthorizationService: CanvasTemplateAuthorizationService,
-    private lifecycleTemplateAuthorizationService: LifecycleTemplateAuthorizationService,
+    private innovationFlowTemplateService: InnovationFlowTemplateService,
+    private postTemplateAuthorizationService: PostTemplateAuthorizationService,
+    private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
+    private innovationFlowTemplateAuthorizationService: InnovationFlowTemplateAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IAspectTemplate, {
-    description: 'Creates a new AspectTemplate on the specified TemplatesSet.',
+  @Mutation(() => IPostTemplate, {
+    description: 'Creates a new PostTemplate on the specified TemplatesSet.',
   })
-  async createAspectTemplate(
+  async createPostTemplate(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('aspectTemplateInput')
-    aspectTemplateInput: CreateAspectTemplateOnTemplatesSetInput
-  ): Promise<IAspectTemplate> {
+    @Args('postTemplateInput')
+    postTemplateInput: CreatePostTemplateOnTemplatesSetInput
+  ): Promise<IPostTemplate> {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
-      aspectTemplateInput.templatesSetID,
+      postTemplateInput.templatesSetID,
       {
-        relations: ['aspectTemplates'],
+        relations: ['postTemplates'],
       }
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       templatesSet.authorization,
       AuthorizationPrivilege.CREATE,
-      `templates set create aspect template: ${templatesSet.id}`
+      `templates set create post template: ${templatesSet.id}`
     );
-    const aspectTemplate = await this.templatesSetService.createAspectTemplate(
+    const postTemplate = await this.templatesSetService.createPostTemplate(
       templatesSet,
-      aspectTemplateInput
+      postTemplateInput
     );
-    await this.aspectTemplateAuthorizationService.applyAuthorizationPolicy(
-      aspectTemplate,
+    await this.postTemplateAuthorizationService.applyAuthorizationPolicy(
+      postTemplate,
       templatesSet.authorization
     );
-    return aspectTemplate;
+    return postTemplate;
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ICanvasTemplate, {
-    description: 'Creates a new CanvasTemplate on the specified TemplatesSet.',
-  })
-  async createCanvasTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('canvasTemplateInput')
-    canvasTemplateInput: CreateCanvasTemplateOnTemplatesSetInput
-  ): Promise<ICanvasTemplate> {
-    const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
-      canvasTemplateInput.templatesSetID,
-      {
-        relations: ['canvasTemplates'],
-      }
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      templatesSet.authorization,
-      AuthorizationPrivilege.CREATE,
-      `templates set create canvas template: ${templatesSet.id}`
-    );
-    const canvasTemplate = await this.templatesSetService.createCanvasTemplate(
-      templatesSet,
-      canvasTemplateInput
-    );
-    await this.canvasTemplateAuthorizationService.applyAuthorizationPolicy(
-      canvasTemplate,
-      templatesSet.authorization
-    );
-    return canvasTemplate;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => ILifecycleTemplate, {
+  @Mutation(() => IWhiteboardTemplate, {
     description:
-      'Creates a new LifecycleTemplate on the specified TemplatesSet.',
+      'Creates a new WhiteboardTemplate on the specified TemplatesSet.',
   })
-  async createLifecycleTemplate(
+  async createWhiteboardTemplate(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('lifecycleTemplateInput')
-    lifecycleTemplateInput: CreateLifecycleTemplateOnTemplatesSetInput
-  ): Promise<ILifecycleTemplate> {
+    @Args('whiteboardTemplateInput')
+    whiteboardTemplateInput: CreateWhiteboardTemplateOnTemplatesSetInput
+  ): Promise<IWhiteboardTemplate> {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
-      lifecycleTemplateInput.templatesSetID,
+      whiteboardTemplateInput.templatesSetID,
       {
-        relations: ['lifecycleTemplates'],
+        relations: ['whiteboardTemplates'],
       }
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       templatesSet.authorization,
       AuthorizationPrivilege.CREATE,
-      `templates set create lifecycle template: ${templatesSet.id}`
+      `templates set create whiteboard template: ${templatesSet.id}`
     );
-    const lifecycleTemplate =
+    const whiteboardTemplate =
+      await this.templatesSetService.createWhiteboardTemplate(
+        templatesSet,
+        whiteboardTemplateInput
+      );
+    await this.whiteboardTemplateAuthorizationService.applyAuthorizationPolicy(
+      whiteboardTemplate,
+      templatesSet.authorization
+    );
+    return whiteboardTemplate;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IInnovationFlowTemplate, {
+    description:
+      'Creates a new InnovationFlowTemplate on the specified TemplatesSet.',
+  })
+  async createInnovationFlowTemplate(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('innovationFlowTemplateInput')
+    innovationFlowTemplateInput: CreateInnovationFlowTemplateOnTemplatesSetInput
+  ): Promise<IInnovationFlowTemplate> {
+    const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
+      innovationFlowTemplateInput.templatesSetID,
+      {
+        relations: ['innovationFlowTemplates'],
+      }
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      templatesSet.authorization,
+      AuthorizationPrivilege.CREATE,
+      `templates set create innovationFlow template: ${templatesSet.id}`
+    );
+    const innovationFlowTemplate =
       await this.templatesSetService.createInnovationFlowTemplate(
         templatesSet,
-        lifecycleTemplateInput
+        innovationFlowTemplateInput
       );
-    await this.lifecycleTemplateAuthorizationService.applyAuthorizationPolicy(
-      lifecycleTemplate,
+    await this.innovationFlowTemplateAuthorizationService.applyAuthorizationPolicy(
+      innovationFlowTemplate,
       templatesSet.authorization
     );
-    return lifecycleTemplate;
+    return innovationFlowTemplate;
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ILifecycleTemplate, {
-    description: 'Deletes the specified LifecycleTemplate.',
+  @Mutation(() => IInnovationFlowTemplate, {
+    description: 'Deletes the specified InnovationFlowTemplate.',
   })
-  async deleteLifecycleTemplate(
+  async deleteInnovationFlowTemplate(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteLifecycleTemplateInput
-  ): Promise<ILifecycleTemplate> {
+    @Args('deleteData') deleteData: DeleteInnovationFlowTemplateInput
+  ): Promise<IInnovationFlowTemplate> {
     const innovationFlowTemplate =
-      await this.lifecycleTemplateService.getLifecycleTemplateOrFail(
+      await this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
         deleteData.ID,
         {
           relations: ['templatesSet'],
@@ -150,7 +152,7 @@ export class TemplatesSetResolverMutations {
       agentInfo,
       innovationFlowTemplate.authorization,
       AuthorizationPrivilege.DELETE,
-      `lifecycle template delete: ${innovationFlowTemplate.id}`
+      `innovationFlow template delete: ${innovationFlowTemplate.id}`
     );
     const templatesSet = innovationFlowTemplate.templatesSet;
     if (!templatesSet) {

@@ -6,7 +6,6 @@ import { ICommunity } from '@domain/community/community/community.interface';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
-import { IProfile } from '@domain/common/profile';
 
 @ObjectType('IBaseChallenge')
 export abstract class IBaseChallenge extends INameable {
@@ -18,7 +17,6 @@ export abstract class IBaseChallenge extends INameable {
   collaboration?: ICollaboration;
   context?: IContext;
   community?: ICommunity;
-  profile!: IProfile;
   lifecycle?: ILifecycle;
   preferenceSet?: IPreferenceSet;
 }

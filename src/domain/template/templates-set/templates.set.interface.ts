@@ -1,16 +1,16 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ObjectType } from '@nestjs/graphql';
-import { IAspectTemplate } from '../aspect-template/aspect.template.interface';
-import { ICanvasTemplate } from '../canvas-template/canvas.template.interface';
-import { ILifecycleTemplate } from '../lifecycle-template/lifecycle.template.interface';
+import { IPostTemplate } from '../post-template/post.template.interface';
+import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
+import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
 
 @ObjectType('TemplatesSet')
 export abstract class ITemplatesSet extends IAuthorizable {
-  aspectTemplates?: IAspectTemplate[];
+  postTemplates?: IPostTemplate[];
 
-  canvasTemplates?: ICanvasTemplate[];
+  whiteboardTemplates?: IWhiteboardTemplate[];
 
-  lifecycleTemplates?: ILifecycleTemplate[];
+  innovationFlowTemplates?: IInnovationFlowTemplate[];
 
   policy!: string;
 }

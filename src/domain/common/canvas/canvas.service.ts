@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
 import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-} from '@common/exceptions';
+  FindOneOptions,
+  FindOptionsRelationByString,
+  Repository,
+} from 'typeorm';
+import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Canvas } from './canvas.entity';
 import { ICanvas } from './canvas.interface';
@@ -15,8 +16,10 @@ import { UpdateCanvasInput } from './dto/canvas.dto.update';
 import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { AgentInfo } from '@core/authentication';
-import { VisualService } from '@domain/common/visual/visual.service';
-import { IVisual } from '@src/domain/common/visual/visual.interface';
+import { IProfile } from '../profile/profile.interface';
+import { ProfileService } from '../profile/profile.service';
+import { VisualType } from '@common/enums/visual.type';
+import { IVisual } from '../visual';
 
 @Injectable()
 export class CanvasService {
@@ -25,7 +28,7 @@ export class CanvasService {
     private canvasRepository: Repository<Canvas>,
     private canvasCheckoutService: CanvasCheckoutService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private visualService: VisualService
+    private profileService: ProfileService
   ) {}
 
   async createCanvas(
@@ -36,6 +39,14 @@ export class CanvasService {
     canvas.authorization = new AuthorizationPolicy();
     canvas.createdBy = userID;
 
+    canvas.profile = await this.profileService.createProfile(
+      canvasData.profileData
+    );
+    await this.profileService.addVisualOnProfile(
+      canvas.profile,
+      VisualType.CARD
+    );
+
     // get the id assigned
     const savedCanvas = await this.save(canvas);
 
@@ -43,15 +54,13 @@ export class CanvasService {
       canvasID: savedCanvas.id,
     });
 
-    canvas.preview = await this.visualService.createVisualBannerNarrow();
-
     return await this.save(canvas);
   }
 
   async getCanvasOrFail(
     canvasID: string,
     options?: FindOneOptions<Canvas>
-  ): Promise<Canvas | never> {
+  ): Promise<ICanvas | never> {
     const canvas = await this.canvasRepository.findOne({
       where: {
         id: canvasID,
@@ -68,11 +77,15 @@ export class CanvasService {
 
   async deleteCanvas(canvasID: string): Promise<ICanvas> {
     const canvas = await this.getCanvasOrFail(canvasID, {
-      relations: ['checkout'],
+      relations: ['checkout', 'profile'],
     });
 
     if (canvas.checkout) {
       await this.canvasCheckoutService.delete(canvas.checkout.id);
+    }
+
+    if (canvas.profile) {
+      await this.profileService.deleteProfile(canvas.profile.id);
     }
 
     if (canvas.authorization) {
@@ -85,39 +98,70 @@ export class CanvasService {
   }
 
   async updateCanvas(
-    canvas: ICanvas,
+    canvasInput: ICanvas,
     updateCanvasData: UpdateCanvasInput,
     agentInfo: AgentInfo
   ): Promise<ICanvas> {
-    const checkout = await this.getCanvasCheckout(canvas);
+    const canvas = await this.getCanvasOrFail(canvasInput.id, {
+      relations: ['checkout', 'profile'],
+    });
+    if (!canvas.checkout) {
+      throw new EntityNotFoundException(
+        `Canvas not initialised: ${canvas.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+
     // Before updating the canvas contents check the user doing it has it checked out
     if (updateCanvasData.value && updateCanvasData.value !== canvas.value) {
       await this.canvasCheckoutService.isUpdateAllowedOrFail(
-        checkout,
+        canvas.checkout,
         agentInfo
       );
     }
-    const updatedCanvas = this.updateCanvasEntity(canvas, updateCanvasData);
-    return await this.save(updatedCanvas);
-  }
-
-  updateCanvasEntity(
-    canvas: ICanvas | undefined,
-    updateCanvasData: UpdateCanvasInput
-  ): ICanvas {
-    if (!canvas)
-      throw new EntityNotFoundException(
-        'No Canvas loaded',
-        LogContext.CHALLENGES
-      );
-    if (updateCanvasData.displayName)
-      canvas.displayName = updateCanvasData.displayName;
     if (updateCanvasData.value) canvas.value = updateCanvasData.value;
-    return canvas;
+    if (updateCanvasData.profileData) {
+      canvas.profile = await this.profileService.updateProfile(
+        canvas.profile,
+        updateCanvasData.profileData
+      );
+    }
+    return await this.save(canvas);
   }
 
   async save(canvas: ICanvas): Promise<ICanvas> {
     return await this.canvasRepository.save(canvas);
+  }
+
+  public async getProfile(
+    canvas: ICanvas,
+    relations: FindOptionsRelationByString = []
+  ): Promise<IProfile> {
+    const canvasLoaded = await this.getCanvasOrFail(canvas.id, {
+      relations: ['profile', ...relations],
+    });
+    if (!canvasLoaded.profile)
+      throw new EntityNotFoundException(
+        `Canvas profile not initialised: ${canvas.id}`,
+        LogContext.COLLABORATION
+      );
+
+    return canvasLoaded.profile;
+  }
+
+  public async getVisualPreview(canvas: ICanvas): Promise<IVisual> {
+    const profile = await this.getProfile(canvas);
+    const preview = await this.profileService.getVisual(
+      profile,
+      VisualType.CARD
+    );
+    if (!preview)
+      throw new EntityNotFoundException(
+        `Canvas preview visual not initialised: ${canvas.id}`,
+        LogContext.COLLABORATION
+      );
+
+    return preview;
   }
 
   async getCanvasCheckout(canvas: ICanvas): Promise<ICanvasCheckout> {
@@ -145,19 +189,6 @@ export class CanvasService {
       );
 
     return canvasWithCheckout.checkout;
-  }
-
-  async getPreview(canvas: ICanvas): Promise<IVisual> {
-    const canvasWithPreview = await this.getCanvasOrFail(canvas.id, {
-      relations: ['preview'],
-    });
-    if (!canvasWithPreview.preview) {
-      throw new EntityNotInitializedException(
-        `Canvas not initialized: ${canvas.id}`,
-        LogContext.CONTEXT
-      );
-    }
-    return canvasWithPreview.preview;
   }
 
   async getCanvasesInCalloutCount(calloutId: string): Promise<number> {

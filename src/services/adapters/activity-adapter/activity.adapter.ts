@@ -112,7 +112,7 @@ export class ActivityAdapter {
 
     const callout = eventData.callout;
     const collaborationID = await this.getCollaborationIdForCallout(callout.id);
-    const description = `[${callout.displayName}] - ${callout.description}`;
+    const description = `[${callout.profile.displayName}] - ${callout.profile.description}`;
     const activity = await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
@@ -183,7 +183,7 @@ export class ActivityAdapter {
     const canvas = eventData.canvas;
     const collaborationID = await this.getCollaborationIdForCanvas(canvas.id);
 
-    const description = `[${canvas.displayName}]`;
+    const description = `[${canvas.profile.displayName}]`;
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,

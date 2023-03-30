@@ -28,7 +28,11 @@ export class HttpExceptionsFilter implements ExceptionFilter {
 
     if (exception.getContext) context = exception.getContext();
 
-    this.logger.error(exception.message, exception.stack, context);
+    this.logger.error(
+      exception.message,
+      JSON.stringify(exception.stack),
+      context
+    );
 
     return exception;
   }

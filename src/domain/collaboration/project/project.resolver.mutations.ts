@@ -2,17 +2,15 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
 import { ProjectService } from './project.service';
-import {
-  UpdateProjectInput,
-  IProject,
-  DeleteProjectInput,
-  ProjectEventInput,
-} from '@domain/collaboration/project';
+import { IProject } from '@domain/collaboration/project';
 import { ProjectLifecycleOptionsProvider } from './project.lifecycle.options.provider';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
+import { DeleteProjectInput } from './dto/project.dto.delete';
+import { UpdateProjectInput } from './dto/project.dto.update';
+import { ProjectEventInput } from './dto/project.dto.event';
 @Resolver()
 export class ProjectResolverMutations {
   constructor(

@@ -11,7 +11,7 @@ export abstract class IAuthorizationPolicyRuleCredential {
   grantedPrivileges!: AuthorizationPrivilege[];
 
   @Field(() => Boolean)
-  inheritable!: boolean;
+  cascade!: boolean;
 
   @Field(() => String, { nullable: true })
   name!: string;

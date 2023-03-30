@@ -14,13 +14,14 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { CommentsModule } from '@domain/communication/comments/comments.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
-import { AspectTemplateModule } from '@domain/template/aspect-template/aspect.template.module';
-import { CanvasTemplateModule } from '@domain/template/canvas-template/canvas.template.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { ProfileModule } from '@domain/common/profile/profile.module';
+import { PostTemplateModule } from '@domain/template/post-template/post.template.module';
+import { WhiteboardTemplateModule } from '@domain/template/whiteboard-template/whiteboard.template.module';
 
 @Module({
   imports: [
@@ -37,8 +38,9 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
     EntityResolverModule,
     UserModule,
     NamingModule,
-    AspectTemplateModule,
-    CanvasTemplateModule,
+    ProfileModule,
+    PostTemplateModule,
+    WhiteboardTemplateModule,
     MessagingModule,
     TypeOrmModule.forFeature([Callout]),
   ],

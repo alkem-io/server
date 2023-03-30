@@ -81,7 +81,7 @@ export class CanvasResolverMutations {
       agentInfo,
       canvas.authorization,
       AuthorizationPrivilege.UPDATE_CANVAS,
-      `update Canvas: ${canvas.displayName}`
+      `update Canvas: ${canvas.nameID}`
     );
 
     if (canvas.value === canvasData.value) {
@@ -122,7 +122,7 @@ export class CanvasResolverMutations {
     this.elasticService.calloutCanvasEdited(
       {
         id: canvas.id,
-        name: canvas.displayName,
+        name: canvas.nameID,
         hub: hubID,
       },
       {
@@ -147,7 +147,7 @@ export class CanvasResolverMutations {
       agentInfo,
       canvas.authorization,
       AuthorizationPrivilege.DELETE,
-      `delete Canvas: ${canvas.displayName}`
+      `delete Canvas: ${canvas.nameID}`
     );
 
     return await this.canvasService.deleteCanvas(canvas.id);

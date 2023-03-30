@@ -6,23 +6,25 @@ import { ICanvasCheckout } from '../canvas-checkout/canvas.checkout.interface';
 import { ICanvas } from './canvas.interface';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@src/core/authorization/graphql.guard';
-import { IVisual } from '@src/domain/common/visual/visual.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
+import { IProfile } from '../profile/profile.interface';
 import { Loader } from '@core/dataloader/decorators';
 import {
-  CanvasVisualLoaderCreator,
   CheckoutLoaderCreator,
+  ProfileLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
+import { CanvasService } from './canvas.service';
 
 @Resolver(() => ICanvas)
 export class CanvasResolverFields {
   constructor(
+    private canvasService: CanvasService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -64,6 +66,20 @@ export class CanvasResolverFields {
     }
   }
 
+  @UseGuards(GraphqlGuard)
+  @ResolveField('profile', () => IProfile, {
+    nullable: false,
+    description: 'The Profile for this Canvas.',
+  })
+  @Profiling.api
+  async profile(
+    @Parent() canvas: ICanvas,
+    @Loader(ProfileLoaderCreator, { parentClassRef: Canvas })
+    loader: ILoader<IProfile>
+  ): Promise<IProfile> {
+    return loader.load(canvas.id);
+  }
+
   @ResolveField('checkout', () => ICanvasCheckout, {
     nullable: true,
     description: 'The checkout out state of this Canvas.',
@@ -74,19 +90,6 @@ export class CanvasResolverFields {
     @Loader(CheckoutLoaderCreator, { parentClassRef: Canvas })
     loader: ILoader<ICanvasCheckout>
   ) {
-    return loader.load(canvas.id);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('preview', () => IVisual, {
-    nullable: true,
-    description: 'The preview image for this Canvas.',
-  })
-  @Profiling.api
-  async preview(
-    @Parent() canvas: ICanvas,
-    @Loader(CanvasVisualLoaderCreator) loader: ILoader<IVisual>
-  ): Promise<IVisual> {
     return loader.load(canvas.id);
   }
 }

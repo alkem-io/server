@@ -1,41 +1,37 @@
 import { Column, Entity, OneToMany } from 'typeorm';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { ITemplatesSet } from './templates.set.interface';
-import { AspectTemplate } from '../aspect-template/aspect.template.entity';
-import { CanvasTemplate } from '../canvas-template/canvas.template.entity';
-import { LifecycleTemplate } from '../lifecycle-template/lifecycle.template.entity';
+import { PostTemplate } from '../post-template/post.template.entity';
+import { WhiteboardTemplate } from '../whiteboard-template/whiteboard.template.entity';
+import { InnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.entity';
 
 @Entity()
 export class TemplatesSet extends AuthorizableEntity implements ITemplatesSet {
-  @OneToMany(
-    () => AspectTemplate,
-    aspectTemplate => aspectTemplate.templatesSet,
-    {
-      eager: false,
-      cascade: true,
-    }
-  )
-  aspectTemplates?: AspectTemplate[];
+  @OneToMany(() => PostTemplate, postTemplate => postTemplate.templatesSet, {
+    eager: false,
+    cascade: true,
+  })
+  postTemplates?: PostTemplate[];
 
   @OneToMany(
-    () => CanvasTemplate,
-    canvasTemplate => canvasTemplate.templatesSet,
+    () => WhiteboardTemplate,
+    whiteboardTemplate => whiteboardTemplate.templatesSet,
     {
       eager: false,
       cascade: true,
     }
   )
-  canvasTemplates?: CanvasTemplate[];
+  whiteboardTemplates?: WhiteboardTemplate[];
 
   @OneToMany(
-    () => LifecycleTemplate,
-    lifecycleTemplate => lifecycleTemplate.templatesSet,
+    () => InnovationFlowTemplate,
+    innovationFlowTemplate => innovationFlowTemplate.templatesSet,
     {
       eager: false,
       cascade: true,
     }
   )
-  lifecycleTemplates?: LifecycleTemplate[];
+  innovationFlowTemplates?: InnovationFlowTemplate[];
 
   @Column('text')
   policy!: string;

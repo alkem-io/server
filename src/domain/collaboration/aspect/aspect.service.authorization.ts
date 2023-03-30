@@ -59,21 +59,6 @@ export class AspectAuthorizationService {
     aspect.authorization = this.appendCredentialRules(aspect, communityPolicy);
 
     // cascade
-    if (aspect.banner) {
-      aspect.banner.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          aspect.banner.authorization,
-          aspect.authorization
-        );
-    }
-    if (aspect.bannerNarrow) {
-      aspect.bannerNarrow.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          aspect.bannerNarrow.authorization,
-          aspect.authorization
-        );
-    }
-
     aspect.profile = await this.aspectService.getProfile(aspect);
     aspect.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
@@ -132,7 +117,7 @@ export class AspectAuthorizationService {
         credentials,
         CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD
       );
-    adminsMoveCardRule.inheritable = false;
+    adminsMoveCardRule.cascade = false;
     newRules.push(adminsMoveCardRule);
 
     const updatedAuthorization =

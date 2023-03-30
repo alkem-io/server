@@ -1,17 +1,17 @@
-mutation updateAspectTemplate($aspectTemplateInput: UpdateAspectTemplateInput!) {
-  updateAspectTemplate(aspectTemplateInput: $aspectTemplateInput) {
-    info {
-      title
+mutation updatePostTemplate($postTemplateInput: UpdatePostTemplateInput!) {
+  updatePostTemplate(postTemplateInput: $postTemplateInput) {
+    profile {
+      displayName
     }
   }
 }
 
 Variables:
 {
-  "aspectTemplateInput": {
+  "postTemplateInput": {
       "ID": "uuid",
-      "info": {
-        "title": "wow",
+      "profile": {
+        "displayName": "wow",
         "description": "wow this is great",
         "tags": ["Tag 1", "Tag 2"]
       },

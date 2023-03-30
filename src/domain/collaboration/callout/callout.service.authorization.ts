@@ -16,17 +16,18 @@ import {
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
-import { AspectTemplateAuthorizationService } from '@domain/template/aspect-template/aspect.template.service.authorization';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CanvasTemplateAuthorizationService } from '@domain/template/canvas-template/canvas.template.service.authorization';
 import {
   CREDENTIAL_RULE_CALLOUT_CREATED_BY,
   CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS,
   POLICY_RULE_CALLOUT_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
 } from '@common/constants';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { PostTemplateAuthorizationService } from '@domain/template/post-template/post.template.service.authorization';
+import { WhiteboardTemplateAuthorizationService } from '@domain/template/whiteboard-template/whiteboard.template.service.authorization';
 @Injectable()
 export class CalloutAuthorizationService {
   constructor(
@@ -34,8 +35,9 @@ export class CalloutAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
-    private aspectTemplateAuthorizationService: AspectTemplateAuthorizationService,
-    private canvasTemplateAuthorizationService: CanvasTemplateAuthorizationService,
+    private postTemplateAuthorizationService: PostTemplateAuthorizationService,
+    private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
+    private profileAuthorizationService: ProfileAuthorizationService,
     private commentsAuthorizationService: CommentsAuthorizationService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
@@ -70,6 +72,13 @@ export class CalloutAuthorizationService {
       );
     }
 
+    callout.profile = await this.calloutService.getProfile(callout);
+    callout.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        callout.profile,
+        callout.authorization
+      );
+
     callout.canvases = await this.calloutService.getCanvasesFromCallout(
       callout
     );
@@ -91,23 +100,23 @@ export class CalloutAuthorizationService {
         );
     }
 
-    callout.cardTemplate = await this.calloutService.getCardTemplateFromCallout(
+    callout.postTemplate = await this.calloutService.getPostTemplateFromCallout(
       callout.id
     );
-    if (callout.cardTemplate) {
-      callout.cardTemplate =
-        await this.aspectTemplateAuthorizationService.applyAuthorizationPolicy(
-          callout.cardTemplate,
+    if (callout.postTemplate) {
+      callout.postTemplate =
+        await this.postTemplateAuthorizationService.applyAuthorizationPolicy(
+          callout.postTemplate,
           callout.authorization
         );
     }
 
-    callout.canvasTemplate =
-      await this.calloutService.getCanvasTemplateFromCallout(callout.id);
-    if (callout.canvasTemplate) {
-      callout.canvasTemplate =
-        await this.canvasTemplateAuthorizationService.applyAuthorizationPolicy(
-          callout.canvasTemplate,
+    callout.whiteboardTemplate =
+      await this.calloutService.getWhiteboardTemplateFromCallout(callout.id);
+    if (callout.whiteboardTemplate) {
+      callout.whiteboardTemplate =
+        await this.whiteboardTemplateAuthorizationService.applyAuthorizationPolicy(
+          callout.whiteboardTemplate,
           callout.authorization
         );
     }
@@ -153,7 +162,7 @@ export class CalloutAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS
       );
-    calloutPublishUpdate.inheritable = false;
+    calloutPublishUpdate.cascade = false;
     newRules.push(calloutPublishUpdate);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(

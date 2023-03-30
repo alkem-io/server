@@ -1,22 +1,11 @@
-import { LONG_TEXT_LENGTH } from '@common/constants';
 import { CalloutState } from '@common/enums/callout.state';
-import { UpdateNameableInputOld } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update.old';
-import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
-import { IsOptional, MaxLength } from 'class-validator';
-import { UpdateCalloutCanvasTemplateInput } from './callout.dto.update.canvasTemplate';
-import { UpdateCalloutCardTemplateInput } from './callout.dto.update.cardTemplate';
+import { UpdateCalloutWhiteboardTemplateInput } from './callout.dto.update.whiteboardTemplate';
+import { UpdateCalloutPostTemplateInput } from './callout.dto.update.postTemplate';
 
 @InputType()
-export class UpdateCalloutInput extends UpdateNameableInputOld {
-  @Field(() => Markdown, {
-    nullable: true,
-    description: 'Callout description.',
-  })
-  @IsOptional()
-  @MaxLength(LONG_TEXT_LENGTH)
-  description?: string;
-
+export class UpdateCalloutInput extends UpdateNameableInput {
   @Field(() => CalloutState, {
     nullable: true,
     description: 'State of the callout.',
@@ -29,15 +18,15 @@ export class UpdateCalloutInput extends UpdateNameableInputOld {
   })
   sortOrder!: number;
 
-  @Field(() => UpdateCalloutCardTemplateInput, {
+  @Field(() => UpdateCalloutPostTemplateInput, {
     nullable: true,
     description: 'CardTemplate data for this Callout.',
   })
-  cardTemplate?: UpdateCalloutCardTemplateInput;
+  postTemplate?: UpdateCalloutPostTemplateInput;
 
-  @Field(() => UpdateCalloutCanvasTemplateInput, {
+  @Field(() => UpdateCalloutWhiteboardTemplateInput, {
     nullable: true,
     description: 'CanvasTemplate data for this Callout.',
   })
-  canvasTemplate?: UpdateCalloutCanvasTemplateInput;
+  whiteboardTemplate?: UpdateCalloutWhiteboardTemplateInput;
 }

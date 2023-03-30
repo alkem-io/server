@@ -104,7 +104,9 @@ export class CalloutResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('data') data: SendMessageOnCalloutInput
   ): Promise<IMessage> {
-    const callout = await this.calloutService.getCalloutOrFail(data.calloutID);
+    const callout = await this.calloutService.getCalloutOrFail(data.calloutID, {
+      relations: ['profile'],
+    });
 
     if (callout.type !== CalloutType.COMMENTS) {
       throw new NotSupportedException(
@@ -181,7 +183,7 @@ export class CalloutResolverMutations {
         originEntity: {
           id: callout.id,
           nameId: callout.nameID,
-          displayName: callout.displayName,
+          displayName: callout.profile.displayName,
         },
         commentType: CommentType.DISCUSSION,
       };
@@ -196,7 +198,7 @@ export class CalloutResolverMutations {
     this.elasticService.calloutCommentCreated(
       {
         id: callout.id,
-        name: callout.displayName,
+        name: callout.nameID,
         hub: hubID,
       },
       {
@@ -237,7 +239,8 @@ export class CalloutResolverMutations {
     @Args('calloutData') calloutData: UpdateCalloutVisibilityInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
-      calloutData.calloutID
+      calloutData.calloutID,
+      { relations: ['profile'] }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -262,7 +265,7 @@ export class CalloutResolverMutations {
         if (calloutData.sendNotification) {
           const notificationInput: NotificationInputCalloutPublished = {
             triggeredBy: agentInfo.userID,
-            callout: savedCallout,
+            callout: callout,
           };
           await this.notificationAdapter.calloutPublished(notificationInput);
         }
@@ -443,7 +446,7 @@ export class CalloutResolverMutations {
       this.elasticService.calloutCanvasCreated(
         {
           id: canvas.id,
-          name: canvas.displayName,
+          name: canvas.nameID,
           hub: hubID,
         },
         {

@@ -11,7 +11,7 @@ import {
   CreateProjectInput,
   ProjectEventInput,
   UpdateProjectInput,
-} from '@domain/collaboration/project';
+} from '@domain/collaboration/project/dto';
 import { CreateRelationInput } from '@domain/collaboration/relation/relation.dto.create';
 import { CreateUserInput, UpdateUserInput } from '@domain/community/user/dto';
 import { ValidationException } from '@common/exceptions';
@@ -54,16 +54,16 @@ import { UpdateAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.u
 import { UpdateCanvasDirectInput } from '@domain/common/canvas/dto/canvas.dto.update.direct';
 import { UpdateDiscussionInput } from '@domain/communication/discussion/dto/discussion.dto.update';
 import { UpdateEcosystemModelInput } from '@domain/context/ecosystem-model/dto/ecosystem-model.dto.update';
-import { CreateAspectTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/aspect.template.dto.create.on.templates.set';
-import { CreateCanvasTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/canvas.template.dto.create.on.templates.set';
-import { UpdateAspectTemplateInput } from '@domain/template/aspect-template/dto/aspect.template.dto.update';
-import { UpdateCanvasTemplateInput } from '@domain/template/canvas-template/dto/canvas.template.dto.update';
 import { DeleteFileInput } from '@domain/common/file-manager/file.manager.dto.delete';
 import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
 import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
 import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
 import { UpdateCommunityApplicationFormInput } from '@domain/community/community/dto/community.dto.update.application.form';
+import { CreatePostTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/post.template.dto.create.on.templates.set';
+import { CreateWhiteboardTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/whiteboard.template.dto.create.on.templates.set';
+import { UpdatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.update';
+import { UpdateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.update';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -83,9 +83,9 @@ export class BaseHandler extends AbstractHandler {
       CreateActorGroupInput,
       CreateActorInput,
       CreateAspectOnCalloutInput,
-      CreateAspectTemplateOnTemplatesSetInput,
+      CreatePostTemplateOnTemplatesSetInput,
       CreateCanvasOnCalloutInput,
-      CreateCanvasTemplateOnTemplatesSetInput,
+      CreateWhiteboardTemplateOnTemplatesSetInput,
       CreateChallengeOnHubInput,
       CreateChallengeOnChallengeInput,
       CreateOpportunityInput,
@@ -100,7 +100,7 @@ export class BaseHandler extends AbstractHandler {
       CreateCalendarEventOnCalendarInput,
       UpdateActorInput,
       UpdateAspectInput,
-      UpdateAspectTemplateInput,
+      UpdatePostTemplateInput,
       UpdateCommunityApplicationFormInput,
       UpdateHubInput,
       UpdateOrganizationInput,
@@ -112,7 +112,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateProfileInput,
       UpdateProjectInput,
       UpdateCanvasDirectInput,
-      UpdateCanvasTemplateInput,
+      UpdateWhiteboardTemplateInput,
       UpdateDiscussionInput,
       UpdateEcosystemModelInput,
       CommunityApplyInput,
