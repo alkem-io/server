@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { escapeString } from './utils/escape-string';
-import { LifecycleType } from '@common/enums/lifecycle.type';
+import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 
 export class lifecycleTemplate1657204515370 implements MigrationInterface {
   name = 'lifecycleTemplate1657204515370';
@@ -193,13 +193,13 @@ const opportunityLifecycleConfigDefault: any = {
 
 const defaultLifecycles: any = [
   {
-    type: LifecycleType.CHALLENGE,
+    type: InnovationFlowType.CHALLENGE,
     definition: challengeLifecycleConfigDefault,
     title: 'Default Challenge lifecycle',
     description: 'Default Challenge lifecycle',
   },
   {
-    type: LifecycleType.OPPORTUNITY,
+    type: InnovationFlowType.OPPORTUNITY,
     definition: opportunityLifecycleConfigDefault,
     title: 'Default Opportunity lifecycle',
     description: 'Default Challenge lifecycle',

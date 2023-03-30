@@ -11,7 +11,7 @@ query variables:
   {
     "challengeID": "uuid",
     "nameID": "balance-grid",
-    "lifecycleTemplate": "EXTENDED",
+    "innovationFlowTemplate": "EXTENDED",
     "profileData": {
       "displayName": "Balance the grid",
       "tagline": "How might we incentivize consumers to communicate energy demand and production to allow all stakeholders to balance the grid?",

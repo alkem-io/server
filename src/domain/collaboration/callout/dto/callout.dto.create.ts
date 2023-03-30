@@ -1,12 +1,13 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
-import { CreateAspectTemplateInput } from '@domain/template/aspect-template/dto/aspect.template.dto.create';
-import { CreateCanvasTemplateInput } from '@domain/template/canvas-template/dto/canvas.template.dto.create';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { CreatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.create';
+import { CreateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
+
 
 @InputType()
 export class CreateCalloutInput {
@@ -38,15 +39,15 @@ export class CreateCalloutInput {
   })
   sortOrder!: number;
 
-  @Field(() => CreateAspectTemplateInput, {
+  @Field(() => CreatePostTemplateInput, {
     nullable: true,
-    description: 'CardTemplate data for Card Callouts.',
+    description: 'PostTemplate data for Card Callouts.',
   })
-  cardTemplate?: CreateAspectTemplateInput;
+  postTemplate?: CreatePostTemplateInput;
 
-  @Field(() => CreateCanvasTemplateInput, {
+  @Field(() => CreateWhiteboardTemplateInput, {
     nullable: true,
-    description: 'CardTemplate data for Card Callouts.',
+    description: 'WhiteboardTemplate data for whiteboard Callouts.',
   })
-  canvasTemplate?: CreateCanvasTemplateInput;
+  whiteboardTemplate?: CreateWhiteboardTemplateInput;
 }
