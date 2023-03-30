@@ -15,7 +15,6 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Comments } from '@domain/communication/comments/comments.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { CalloutGroup } from '@common/enums/callout.group';
 import { PostTemplate } from '@domain/template/post-template/post.template.entity';
 import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
 
@@ -33,11 +32,11 @@ export class Callout extends NameableEntity implements ICallout {
   @Column('text', { nullable: false, default: CalloutVisibility.DRAFT })
   visibility!: CalloutVisibility;
 
-  @Column('text', {
-    nullable: false,
-    default: CalloutGroup.KNOWLEDGE_GROUP_2,
+  @Column('varchar', {
+    nullable: true,
+    length: 32,
   })
-  group = CalloutGroup.KNOWLEDGE_GROUP_2;
+  group?: string;
 
   @OneToMany(() => Canvas, canvas => canvas.callout, {
     eager: false,

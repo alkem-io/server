@@ -7,8 +7,6 @@ import { Type } from 'class-transformer';
 import { CreatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.create';
 import { CreateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { CalloutGroup } from '@common/enums/callout.group';
-
 
 @InputType()
 export class CreateCalloutInput {
@@ -34,11 +32,11 @@ export class CreateCalloutInput {
   })
   state!: CalloutState;
 
-  @Field(() => CalloutGroup, {
+  @Field(() => String, {
     nullable: true,
     description: 'Set callout group for this Callout.',
   })
-  group?: CalloutGroup;
+  group?: string;
 
   @Field(() => Number, {
     nullable: true,

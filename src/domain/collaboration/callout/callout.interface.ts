@@ -6,7 +6,6 @@ import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { IComments } from '@domain/communication/comments/comments.interface';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
-import { CalloutGroup } from '@common/enums/callout.group';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 
@@ -27,11 +26,11 @@ export abstract class ICallout extends INameable {
   })
   visibility!: CalloutVisibility;
 
-  @Field(() => CalloutGroup, {
-    nullable: false,
+  @Field(() => String, {
+    nullable: true,
     description: 'Callout group.',
   })
-  group!: CalloutGroup;
+  group?: string;
 
   @Field(() => [IAspect], {
     nullable: true,

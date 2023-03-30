@@ -203,7 +203,9 @@ export class CollaborationService {
 
     // Filter by Callout group
     const availableCallouts = args.groups
-      ? readableCallouts.filter(callout => args.groups?.includes(callout.group))
+      ? readableCallouts.filter(
+          callout => callout.group && args.groups?.includes(callout.group)
+        )
       : readableCallouts;
 
     // parameter order: (a) by IDs (b) by activity (c) shuffle (d) sort order
