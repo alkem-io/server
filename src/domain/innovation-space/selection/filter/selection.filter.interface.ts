@@ -1,11 +1,11 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
-import { SelectionFilterType } from '@domain/innovation-space/selection.filter.type.enum';
+import { SelectionFilterType } from './selection.filter.type.enum';
 
 @ObjectType({
   description: 'Filter used to filter the data for the Innovation space',
 })
-export class ISelectionFilter extends IBaseAlkemio {
+export abstract class ISelectionFilter extends IBaseAlkemio {
   @Field(() => SelectionFilterType, {
     description:
       'Type of the selection filter, which will also give a hint how to parse its value',

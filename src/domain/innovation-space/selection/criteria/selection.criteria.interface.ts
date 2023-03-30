@@ -1,13 +1,13 @@
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { SelectionCriteriaType } from './selection.criteria.type';
-import { ISelectionFilter } from './selection.filter.interface';
+import { ISelectionFilter } from '../filter/selection.filter.interface';
+import { SelectionCriteriaType } from './selection.criteria.type.enum';
 
 @ObjectType('SelectionCriteria')
-export class ISelectionCriteria extends IBaseAlkemio {
+export abstract class ISelectionCriteria extends IBaseAlkemio {
   @Field(() => [ISelectionFilter])
   filters!: ISelectionFilter[];
 
-  @Field(() => String)
+  @Field(() => SelectionCriteriaType)
   type!: SelectionCriteriaType;
 }

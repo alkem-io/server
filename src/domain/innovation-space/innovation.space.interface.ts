@@ -1,12 +1,12 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { INameable } from '@domain/common/entity/nameable-entity';
 import { IOrganization } from '@src/domain';
-import { ISelectionCriteria } from './selection.criteria.interface';
 import { InnovationSpaceType } from './innovation.space.type.enum';
-import { IBranding } from './branding.interface';
+import { IBranding } from './branding/branding.interface';
+import { ISelectionCriteria } from './selection/criteria/selection.criteria.interface';
 
 @ObjectType('InnovationSpace')
-export class IInnovationSpace extends INameable {
+export abstract class IInnovationSpace extends INameable {
   @Field(() => ISelectionCriteria, {
     description: 'The criteria based on which the data is filtered',
   })
@@ -25,8 +25,9 @@ export class IInnovationSpace extends INameable {
 
   @Field(() => IBranding, {
     description: 'The branding for this Innovation space',
+    nullable: true,
   })
-  branding!: IBranding;
+  branding?: IBranding;
 
   @Field(() => IOrganization, {
     description:
