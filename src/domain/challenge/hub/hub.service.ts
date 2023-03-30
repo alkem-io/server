@@ -275,6 +275,10 @@ export class HubService {
     return hub.visibility;
   }
 
+  public async getHubsForInnovationSpace(innovationSpaceId: string) {
+
+  }
+
   async getHubs(args: HubsQueryArgs): Promise<IHub[]> {
     const visibilities = this.hubsFilterService.getAllowedVisibilities(
       args.filter
