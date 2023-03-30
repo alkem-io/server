@@ -94,6 +94,8 @@ export class DiscussionResolverMutations {
     const discussion = await this.discussionService.getDiscussionOrFail(
       messageData.discussionID
     );
+
+    const oldCredentialRules = discussion.authorization?.credentialRules;
     // The choice was made **not** to wrap every message in an AuthorizationPolicy.
     // So we also allow users who sent the message in question to remove the message by
     // extending the authorization policy in memory but do not persist it.
@@ -108,6 +110,9 @@ export class DiscussionResolverMutations {
       AuthorizationPrivilege.DELETE,
       `communication delete message: ${discussion.title}`
     );
+
+    if (discussion.authorization && oldCredentialRules)
+      discussion.authorization.credentialRules = oldCredentialRules;
 
     const result = await this.discussionService.removeMessageFromDiscussion(
       discussion,
