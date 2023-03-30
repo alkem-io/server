@@ -9,10 +9,7 @@ export class SelectionCriteria
   extends BaseAlkemioEntity
   implements ISelectionCriteria
 {
-  @OneToMany(() => SelectionFilter, filter => filter.id, {
-    eager: false,
-    cascade: false,
-  })
+  @OneToMany(() => SelectionFilter, filter => filter.id)
   filters!: SelectionFilter[];
 
   @Column()
