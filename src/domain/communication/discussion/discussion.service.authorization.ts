@@ -91,7 +91,8 @@ export class DiscussionAuthorizationService {
 
   async extendAuthorizationPolicyForMessageSender(
     discussion: IDiscussion,
-    messageID: string
+    messageID: string,
+    authorizationPolicy: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
@@ -118,7 +119,7 @@ export class DiscussionAuthorizationService {
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        discussion.authorization,
+        authorizationPolicy,
         newRules
       );
 

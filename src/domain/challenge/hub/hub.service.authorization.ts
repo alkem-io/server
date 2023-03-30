@@ -259,9 +259,11 @@ export class HubAuthorizationService {
 
     hub.timeline = await this.hubService.getTimelineOrFail(hub.id);
     // Extend with contributor rules + then send into apply
-    const clonedAuthorization: IAuthorizationPolicy = JSON.parse(
-      JSON.stringify(hub.authorization)
-    );
+    const clonedAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        hub.authorization
+      );
+
     const extendedAuthorizationContributors =
       this.collaborationAuthorizationService.appendCredentialRulesForContributors(
         clonedAuthorization,
