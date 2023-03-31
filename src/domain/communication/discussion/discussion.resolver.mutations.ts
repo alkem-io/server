@@ -21,11 +21,13 @@ import { SUBSCRIPTION_DISCUSSION_MESSAGE } from '@common/constants/providers';
 import { CommunicationDiscussionUpdated } from '../communication/dto/communication.dto.event.discussion.updated';
 import { getRandomId } from '@src/common/utils';
 import { DiscussionMessageReceivedPayload } from './dto/discussion.message.received.payload';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Resolver()
 export class DiscussionResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private discussionService: DiscussionService,
     private discussionAuthorizationService: DiscussionAuthorizationService,
     @Inject(SUBSCRIPTION_DISCUSSION_MESSAGE)
@@ -94,13 +96,19 @@ export class DiscussionResolverMutations {
     const discussion = await this.discussionService.getDiscussionOrFail(
       messageData.discussionID
     );
+
     // The choice was made **not** to wrap every message in an AuthorizationPolicy.
     // So we also allow users who sent the message in question to remove the message by
-    // extending the authorization policy in memory but do not persist it.
+    // cloning the authorization policy and then extending but not persisting it.
+    const clonedAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        discussion.authorization
+      );
     const extendedAuthorization =
       await this.discussionAuthorizationService.extendAuthorizationPolicyForMessageSender(
         discussion,
-        messageData.messageID
+        messageData.messageID,
+        clonedAuthorization
       );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
