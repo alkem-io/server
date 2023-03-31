@@ -32,6 +32,12 @@ export class Callout extends NameableEntity implements ICallout {
   @Column('text', { nullable: false, default: CalloutVisibility.DRAFT })
   visibility!: CalloutVisibility;
 
+  @Column('varchar', {
+    nullable: true,
+    length: 32,
+  })
+  group?: string;
+
   @OneToMany(() => Canvas, canvas => canvas.callout, {
     eager: false,
     cascade: true,
