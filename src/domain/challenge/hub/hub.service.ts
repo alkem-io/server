@@ -275,8 +275,11 @@ export class HubService {
     return hub.visibility;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async getHubsForInnovationSpace(innovationSpaceId: string) {
-
+    return await this.hubRepository.findBy({
+      visibility: HubVisibility.DEMO,
+    });
   }
 
   async getHubs(args: HubsQueryArgs): Promise<IHub[]> {

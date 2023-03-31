@@ -19,7 +19,11 @@ export class HubResolverQueries {
     @InnovationSpace() innovationSpaceId: string | undefined,
     @Args({ nullable: true }) args: HubsQueryArgs
   ): Promise<IHub[]> {
-    return await this.hubService.getHubs(args);
+    if (!innovationSpaceId) {
+      return await this.hubService.getHubs(args);
+    }
+
+    return await this.hubService.getHubsForInnovationSpace(innovationSpaceId);
   }
 
   @Query(() => IHub, {
