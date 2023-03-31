@@ -176,6 +176,16 @@ export class AuthorizationPolicyService {
     return await this.authorizationPolicyRepository.save(authorizationPolicy);
   }
 
+  cloneAuthorizationPolicy(
+    originalAuthorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    this.validateAuthorization(originalAuthorization);
+    const clonedAuthorization: IAuthorizationPolicy = JSON.parse(
+      JSON.stringify(originalAuthorization)
+    );
+    return clonedAuthorization;
+  }
+
   validateAuthorization(
     authorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
