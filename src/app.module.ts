@@ -52,6 +52,7 @@ import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
+import { InnovationSpaceModule } from '@domain/innovation-space/innovation.space.module';
 
 @Module({
   imports: [
@@ -205,6 +206,7 @@ import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
     FileManagerModule,
     GeoLocationModule,
     ElasticsearchModule,
+    InnovationSpaceModule,
   ],
   controllers: [AppController],
   providers: [

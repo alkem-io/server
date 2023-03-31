@@ -53,14 +53,14 @@ import { challengeCommunityPolicy } from './challenge.community.policy';
 import { challengeCommunityApplicationForm } from './challenge.community.application.form';
 import { UpdateChallengeInnovationFlowInput } from './dto/challenge.dto.update.innovation.flow';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { LifecycleTemplateService } from '@domain/template/lifecycle-template/lifecycle.template.service';
-import { LifecycleType } from '@common/enums/lifecycle.type';
+import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 
 @Injectable()
 export class ChallengeService {
@@ -71,7 +71,7 @@ export class ChallengeService {
     private projectService: ProjectService,
     private baseChallengeService: BaseChallengeService,
     private lifecycleService: LifecycleService,
-    private lifecycleTemplateService: LifecycleTemplateService,
+    private innovationFlowTemplateService: InnovationFlowTemplateService,
     private organizationService: OrganizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
@@ -90,16 +90,16 @@ export class ChallengeService {
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
     if (challengeData.innovationFlowTemplateID) {
-      await this.lifecycleTemplateService.validateLifecycleDefinitionOrFail(
+      await this.innovationFlowTemplateService.validateInnovationFlowDefinitionOrFail(
         challengeData.innovationFlowTemplateID,
         hubID,
-        LifecycleType.CHALLENGE
+        InnovationFlowType.CHALLENGE
       );
     } else {
       challengeData.innovationFlowTemplateID =
-        await this.lifecycleTemplateService.getDefaultLifecycleTemplateId(
+        await this.innovationFlowTemplateService.getDefaultInnovationFlowTemplateId(
           hubID,
-          LifecycleType.CHALLENGE
+          InnovationFlowType.CHALLENGE
         );
     }
 
@@ -147,10 +147,10 @@ export class ChallengeService {
       );
 
     const machineConfig: ILifecycleDefinition =
-      await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
+      await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
         challengeData.innovationFlowTemplateID,
         hubID,
-        LifecycleType.CHALLENGE
+        InnovationFlowType.CHALLENGE
       );
 
     challenge.lifecycle = await this.lifecycleService.createLifecycle(
@@ -174,6 +174,12 @@ export class ChallengeService {
         challenge.community,
         agentInfo.userID,
         CommunityRole.MEMBER
+      );
+
+      await this.communityService.assignUserToRole(
+        challenge.community,
+        agentInfo.userID,
+        CommunityRole.LEAD
       );
 
       await this.assignChallengeAdmin({
@@ -226,10 +232,10 @@ export class ChallengeService {
     }
 
     const machineConfig: ILifecycleDefinition =
-      await this.lifecycleTemplateService.getLifecycleDefinitionFromTemplate(
+      await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
         challengeData.innovationFlowTemplateID,
         this.getHubID(challenge),
-        LifecycleType.CHALLENGE
+        InnovationFlowType.CHALLENGE
       );
 
     challenge.lifecycle.machineDef = JSON.stringify(machineConfig);

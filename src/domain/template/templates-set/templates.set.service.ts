@@ -11,18 +11,18 @@ import { LogContext } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TemplatesSet } from './templates.set.entity';
 import { ITemplatesSet } from './templates.set.interface';
-import { IAspectTemplate } from '../aspect-template/aspect.template.interface';
-import { AspectTemplateService } from '../aspect-template/aspect.template.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { templatesSetDefaults } from './templates.set.defaults';
-import { CreateAspectTemplateInput } from '../aspect-template/dto/aspect.template.dto.create';
-import { CanvasTemplateService } from '../canvas-template/canvas.template.service';
-import { ICanvasTemplate } from '../canvas-template/canvas.template.interface';
-import { CreateCanvasTemplateInput } from '../canvas-template/dto/canvas.template.dto.create';
-import { ILifecycleTemplate } from '../lifecycle-template/lifecycle.template.interface';
-import { CreateInnovationFlowTemplateInput } from '../lifecycle-template/dto/lifecycle.template.dto.create';
-import { LifecycleTemplateService } from '../lifecycle-template/lifecycle.template.service';
 import { ITemplatesSetPolicy } from '../templates-set-policy/templates.set.policy.interface';
+import { PostTemplateService } from '../post-template/post.template.service';
+import { WhiteboardTemplateService } from '../whiteboard-template/whiteboard.template.service';
+import { InnovationFlowTemplateService } from '../innovation-flow-template/innovation.flow.template.service';
+import { IPostTemplate } from '../post-template/post.template.interface';
+import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
+import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
+import { CreatePostTemplateInput } from '../post-template/dto/post.template.dto.create';
+import { CreateWhiteboardTemplateInput } from '../whiteboard-template/dto/whiteboard.template.dto.create';
+import { CreateInnovationFlowTemplateInput } from '../innovation-flow-template/dto/innovation.flow.template.dto.create';
 
 @Injectable()
 export class TemplatesSetService {
@@ -30,9 +30,9 @@ export class TemplatesSetService {
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(TemplatesSet)
     private templatesSetRepository: Repository<TemplatesSet>,
-    private aspectTemplateService: AspectTemplateService,
-    private canvasTemplateService: CanvasTemplateService,
-    private lifecycleTemplateService: LifecycleTemplateService,
+    private postTemplateService: PostTemplateService,
+    private whiteboardTemplateService: WhiteboardTemplateService,
+    private innovationFlowTemplateService: InnovationFlowTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -43,25 +43,24 @@ export class TemplatesSetService {
     const templatesSet: ITemplatesSet = TemplatesSet.create();
     templatesSet.authorization = new AuthorizationPolicy();
     templatesSet.policy = this.convertPolicy(policy);
-    templatesSet.aspectTemplates = [];
-    templatesSet.canvasTemplates = [];
-    templatesSet.lifecycleTemplates = [];
+    templatesSet.postTemplates = [];
+    templatesSet.whiteboardTemplates = [];
+    templatesSet.innovationFlowTemplates = [];
 
     if (addDefaults) {
-      for (const aspectTemplateDefault of templatesSetDefaults.aspects) {
-        const aspectTemplate =
-          await this.aspectTemplateService.createAspectTemplate(
-            aspectTemplateDefault
-          );
-        templatesSet.aspectTemplates.push(aspectTemplate);
+      for (const postTemplateDefault of templatesSetDefaults.posts) {
+        const postTemplate = await this.postTemplateService.createPostTemplate(
+          postTemplateDefault
+        );
+        templatesSet.postTemplates.push(postTemplate);
       }
 
-      for (const lifecycleTemplateDefault of templatesSetDefaults.lifecycles) {
-        const lifecycleTemplate =
-          await this.lifecycleTemplateService.createInnovationFLowTemplate(
-            lifecycleTemplateDefault
+      for (const innovationFlowTemplateDefault of templatesSetDefaults.innovationFlows) {
+        const innovationFlowTemplate =
+          await this.innovationFlowTemplateService.createInnovationFLowTemplate(
+            innovationFlowTemplateDefault
           );
-        templatesSet.lifecycleTemplates.push(lifecycleTemplate);
+        templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);
       }
     }
 
@@ -88,29 +87,31 @@ export class TemplatesSetService {
     const templatesSet = await this.getTemplatesSetOrFail(templatesSetID, {
       relations: [
         'authorization',
-        'aspectTemplates',
-        'canvasTemplates',
-        'lifecycleTemplates',
+        'postTemplates',
+        'whiteboardTemplates',
+        'innovationFlowTemplates',
       ],
     });
 
     if (templatesSet.authorization)
       await this.authorizationPolicyService.delete(templatesSet.authorization);
 
-    if (templatesSet.aspectTemplates) {
-      for (const aspectTemplate of templatesSet.aspectTemplates) {
-        await this.aspectTemplateService.deleteAspectTemplate(aspectTemplate);
+    if (templatesSet.postTemplates) {
+      for (const postTemplate of templatesSet.postTemplates) {
+        await this.postTemplateService.deletePostTemplate(postTemplate);
       }
     }
-    if (templatesSet.canvasTemplates) {
-      for (const canvasTemplate of templatesSet.canvasTemplates) {
-        await this.canvasTemplateService.deleteCanvasTemplate(canvasTemplate);
+    if (templatesSet.whiteboardTemplates) {
+      for (const whiteboardTemplate of templatesSet.whiteboardTemplates) {
+        await this.whiteboardTemplateService.deleteWhiteboardTemplate(
+          whiteboardTemplate
+        );
       }
     }
-    if (templatesSet.lifecycleTemplates) {
-      for (const lifecycleTemplate of templatesSet.lifecycleTemplates) {
-        await this.lifecycleTemplateService.deleteLifecycleTemplate(
-          lifecycleTemplate
+    if (templatesSet.innovationFlowTemplates) {
+      for (const innovationFlowTemplate of templatesSet.innovationFlowTemplates) {
+        await this.innovationFlowTemplateService.deleteInnovationFlowTemplate(
+          innovationFlowTemplate
         );
       }
     }
@@ -119,49 +120,39 @@ export class TemplatesSetService {
     );
   }
 
-  async getAspectTemplates(
+  async getPostTemplates(
     templatesSet: ITemplatesSet
-  ): Promise<IAspectTemplate[]> {
+  ): Promise<IPostTemplate[]> {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['aspectTemplates', 'aspectTemplates.profile'],
+        relations: ['postTemplates', 'postTemplates.profile'],
       }
     );
-    if (!templatesSetPopulated.aspectTemplates) {
+    if (!templatesSetPopulated.postTemplates) {
       throw new EntityNotInitializedException(
         `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
         LogContext.TEMPLATES
       );
     }
-    return templatesSetPopulated.aspectTemplates;
+    return templatesSetPopulated.postTemplates;
   }
 
-  public getAspectTemplate(
+  public getPostTemplate(
     templateId: string,
     templatesSetId: string
-  ): Promise<IAspectTemplate> {
-    return this.aspectTemplateService.getAspectTemplateOrFail(templateId, {
+  ): Promise<IPostTemplate> {
+    return this.postTemplateService.getPostTemplateOrFail(templateId, {
       relations: ['templatesSet', 'profile'],
       where: { templatesSet: { id: templatesSetId } },
     });
   }
 
-  public getCanvasTemplate(
+  public getWhiteboardTemplate(
     templateId: string,
     templatesSetId: string
-  ): Promise<ICanvasTemplate> {
-    return this.canvasTemplateService.getCanvasTemplateOrFail(templateId, {
-      relations: ['templatesSet', 'profile'],
-      where: { templatesSet: { id: templatesSetId } },
-    });
-  }
-
-  public getLifecycleTemplate(
-    templateId: string,
-    templatesSetId: string
-  ): Promise<ILifecycleTemplate> {
-    return this.lifecycleTemplateService.getLifecycleTemplateOrFail(
+  ): Promise<IWhiteboardTemplate> {
+    return this.whiteboardTemplateService.getWhiteboardTemplateOrFail(
       templateId,
       {
         relations: ['templatesSet', 'profile'],
@@ -170,85 +161,102 @@ export class TemplatesSetService {
     );
   }
 
-  async createAspectTemplate(
-    templatesSet: ITemplatesSet,
-    aspectTemplateInput: CreateAspectTemplateInput
-  ): Promise<IAspectTemplate> {
-    const newTemplateType = aspectTemplateInput.type;
-    templatesSet.aspectTemplates = await this.getAspectTemplates(templatesSet);
+  public getInnovationFlowTemplate(
+    templateId: string,
+    templatesSetId: string
+  ): Promise<IInnovationFlowTemplate> {
+    return this.innovationFlowTemplateService.getInnovationFlowTemplateOrFail(
+      templateId,
+      {
+        relations: ['templatesSet', 'profile'],
+        where: { templatesSet: { id: templatesSetId } },
+      }
+    );
+  }
 
-    const existingType = templatesSet.aspectTemplates.find(
+  async createPostTemplate(
+    templatesSet: ITemplatesSet,
+    postTemplateInput: CreatePostTemplateInput
+  ): Promise<IPostTemplate> {
+    const newTemplateType = postTemplateInput.type;
+    templatesSet.postTemplates = await this.getPostTemplates(templatesSet);
+
+    const existingType = templatesSet.postTemplates.find(
       template => template.type === newTemplateType
     );
     if (existingType) {
       throw new ValidationException(
-        `AspectTemplate with the provided type already exists: ${newTemplateType}`,
+        `PostTemplate with the provided type already exists: ${newTemplateType}`,
         LogContext.CONTEXT
       );
     }
-    const aspectTemplate =
-      await this.aspectTemplateService.createAspectTemplate(
-        aspectTemplateInput
-      );
-    templatesSet.aspectTemplates.push(aspectTemplate);
+    const postTemplate = await this.postTemplateService.createPostTemplate(
+      postTemplateInput
+    );
+    templatesSet.postTemplates.push(postTemplate);
     await this.templatesSetRepository.save(templatesSet);
-    return aspectTemplate;
+    return postTemplate;
   }
 
-  async getCanvasTemplates(
+  async getWhiteboardTemplates(
     templatesSet: ITemplatesSet
-  ): Promise<ICanvasTemplate[]> {
+  ): Promise<IWhiteboardTemplate[]> {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['canvasTemplates', 'canvasTemplates.profile'],
+        relations: ['whiteboardTemplates', 'whiteboardTemplates.profile'],
       }
     );
-    if (!templatesSetPopulated.canvasTemplates) {
+    if (!templatesSetPopulated.whiteboardTemplates) {
       throw new EntityNotInitializedException(
         `TemplatesSet not initialized: ${templatesSetPopulated.id}`,
         LogContext.TEMPLATES
       );
     }
-    return templatesSetPopulated.canvasTemplates;
+    return templatesSetPopulated.whiteboardTemplates;
   }
 
-  async createCanvasTemplate(
+  async createWhiteboardTemplate(
     templatesSet: ITemplatesSet,
-    canvasTemplateInput: CreateCanvasTemplateInput
-  ): Promise<ICanvasTemplate> {
-    const canvasTemplate =
-      await this.canvasTemplateService.createCanvasTemplate(
-        canvasTemplateInput
+    whiteboardTemplateInput: CreateWhiteboardTemplateInput
+  ): Promise<IWhiteboardTemplate> {
+    const whiteboardTemplate =
+      await this.whiteboardTemplateService.createWhiteboardTemplate(
+        whiteboardTemplateInput
       );
-    templatesSet.canvasTemplates = await this.getCanvasTemplates(templatesSet);
-    templatesSet.canvasTemplates.push(canvasTemplate);
+    templatesSet.whiteboardTemplates = await this.getWhiteboardTemplates(
+      templatesSet
+    );
+    templatesSet.whiteboardTemplates.push(whiteboardTemplate);
     await this.templatesSetRepository.save(templatesSet);
-    return canvasTemplate;
+    return whiteboardTemplate;
   }
 
   async getInnovationFlowTemplates(
     templatesSet: ITemplatesSet
-  ): Promise<ILifecycleTemplate[]> {
+  ): Promise<IInnovationFlowTemplate[]> {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['lifecycleTemplates', 'lifecycleTemplates.profile'],
+        relations: [
+          'innovationFlowTemplates',
+          'innovationFlowTemplates.profile',
+        ],
       }
     );
-    if (!templatesSetPopulated.lifecycleTemplates) {
+    if (!templatesSetPopulated.innovationFlowTemplates) {
       throw new EntityNotInitializedException(
         `TemplatesSet not initialized with innovation flow templates: ${templatesSetPopulated.id}`,
         LogContext.TEMPLATES
       );
     }
-    return templatesSetPopulated.lifecycleTemplates;
+    return templatesSetPopulated.innovationFlowTemplates;
   }
 
   async deleteInnovationFlowTemplate(
-    innovationFlowTemplate: ILifecycleTemplate,
+    innovationFlowTemplate: IInnovationFlowTemplate,
     templatesSet: ITemplatesSet
-  ): Promise<ILifecycleTemplate> {
+  ): Promise<IInnovationFlowTemplate> {
     const innovationFlowTemplates = await this.getInnovationFlowTemplates(
       templatesSet
     );
@@ -259,11 +267,11 @@ export class TemplatesSetService {
 
     if (typeCount <= policy.minInnovationFlow) {
       throw new ValidationException(
-        `Cannot delete last lifecycle template: ${innovationFlowTemplate.id} of type ${innovationFlowTemplate.type} from templateSet: ${templatesSet.id}!`,
+        `Cannot delete last innovationFlow template: ${innovationFlowTemplate.id} of type ${innovationFlowTemplate.type} from templateSet: ${templatesSet.id}!`,
         LogContext.LIFECYCLE
       );
     }
-    return await this.lifecycleTemplateService.deleteLifecycleTemplate(
+    return await this.innovationFlowTemplateService.deleteInnovationFlowTemplate(
       innovationFlowTemplate
     );
   }
@@ -271,15 +279,14 @@ export class TemplatesSetService {
   async createInnovationFlowTemplate(
     templatesSet: ITemplatesSet,
     innovationFlowTemplateInput: CreateInnovationFlowTemplateInput
-  ): Promise<ILifecycleTemplate> {
+  ): Promise<IInnovationFlowTemplate> {
     const innovationFlowTemplate =
-      await this.lifecycleTemplateService.createInnovationFLowTemplate(
+      await this.innovationFlowTemplateService.createInnovationFLowTemplate(
         innovationFlowTemplateInput
       );
-    templatesSet.lifecycleTemplates = await this.getInnovationFlowTemplates(
-      templatesSet
-    );
-    templatesSet.lifecycleTemplates.push(innovationFlowTemplate);
+    templatesSet.innovationFlowTemplates =
+      await this.getInnovationFlowTemplates(templatesSet);
+    templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return innovationFlowTemplate;
   }

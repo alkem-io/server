@@ -1,0 +1,15 @@
+mutation deleteWhiteboardTemplate($deleteData: DeleteWhiteboardTemplateInput!) {
+  deleteWhiteboardTemplate(deleteData: $deleteData) {
+    profile {
+      displayName
+    }
+    id
+  }
+}
+
+Variables:
+{
+  "deleteData": {
+      "ID": "uuid"
+  }
+}

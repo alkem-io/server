@@ -28,7 +28,7 @@ import { IUserGroup } from '@domain/community/user-group';
 import { IContext } from '@domain/context/context';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { challengeLifecycleConfigDefault } from '@domain/template/templates-set/templates.set.default.lifecycle.challenge';
+import { challengeInnovationFlowConfigDefault } from '@domain/template/templates-set/templates.set.default.innovation.flow.challenge';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, In, Repository } from 'typeorm';
@@ -55,8 +55,7 @@ import { PreferenceType } from '@common/enums/preference.type';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { ILifecycleTemplate } from '@domain/template/lifecycle-template/lifecycle.template.interface';
-import { LifecycleType } from '@common/enums/lifecycle.type';
+import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
 import { HubsQueryArgs } from './dto/hub.args.query.hubs';
 import { HubVisibility } from '@common/enums/hub.visibility';
@@ -66,6 +65,7 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
 
 @Injectable()
 export class HubService {
@@ -133,7 +133,7 @@ export class HubService {
 
     // Lifecycle
 
-    const machineConfig: any = challengeLifecycleConfigDefault;
+    const machineConfig: any = challengeInnovationFlowConfigDefault;
     hub.lifecycle = await this.lifecycleService.createLifecycle(
       hub.id,
       machineConfig
@@ -411,7 +411,7 @@ export class HubService {
 
   async getTemplatesSetOrFail(hubId: string): Promise<ITemplatesSet> {
     const hubWithTemplates = await this.getHubOrFail(hubId, {
-      relations: ['templatesSet', 'templatesSet.aspectTemplates'],
+      relations: ['templatesSet', 'templatesSet.postTemplates'],
     });
     const templatesSet = hubWithTemplates.templatesSet;
 
@@ -630,8 +630,8 @@ export class HubService {
 
   async getDefaultInnovationFlowTemplate(
     hubId: string,
-    lifecycleType: LifecycleType
-  ): Promise<ILifecycleTemplate> {
+    lifecycleType: InnovationFlowType
+  ): Promise<IInnovationFlowTemplate> {
     const hub = await this.getHubOrFail(hubId, {
       relations: ['templateSet'],
     });

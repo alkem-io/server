@@ -21,7 +21,6 @@ import { ProjectModule } from '@domain/collaboration/project/project.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
-import { LifecycleTemplateModule } from '@domain/template/lifecycle-template/lifecycle.template.module';
 import { ChallengeResolverSubscriptions } from './challenge.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
@@ -29,6 +28,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
+import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 
 @Module({
   imports: [
@@ -46,7 +46,7 @@ import { LoaderCreatorModule } from '@core/dataloader/creators';
     OrganizationModule,
     NamingModule,
     LifecycleModule,
-    LifecycleTemplateModule,
+    InnovationFlowTemplateModule,
     PlatformAuthorizationPolicyModule,
     ProjectModule,
     UserModule,
