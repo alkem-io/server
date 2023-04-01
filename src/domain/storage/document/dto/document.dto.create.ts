@@ -3,6 +3,7 @@ import { NAMEID_LENGTH } from '@src/common/constants';
 import { IsOptional, MaxLength } from 'class-validator';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
+import { MimeFileType } from '@common/enums/mime.file.type';
 
 @InputType()
 export class CreateDocumentInput extends CreateNameableInput {
@@ -18,4 +19,10 @@ export class CreateDocumentInput extends CreateNameableInput {
   @Field(() => [String], { nullable: true })
   @IsOptional()
   tags?: string[];
+
+  createdBy!: string;
+
+  mimeType!: MimeFileType;
+
+  size!: number;
 }

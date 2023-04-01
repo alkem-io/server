@@ -54,7 +54,7 @@ import { UpdateAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.u
 import { UpdateCanvasDirectInput } from '@domain/common/canvas/dto/canvas.dto.update.direct';
 import { UpdateDiscussionInput } from '@domain/communication/discussion/dto/discussion.dto.update';
 import { UpdateEcosystemModelInput } from '@domain/context/ecosystem-model/dto/ecosystem-model.dto.update';
-import { DeleteFileInput } from '@domain/common/file-manager/file.manager.dto.delete';
+import { DeleteFileInput } from '@domain/storage/file-manager/file.manager.dto.delete';
 import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
 import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
 import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';

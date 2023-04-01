@@ -143,7 +143,12 @@ export class HubService {
     );
 
     hub.timeline = await this.timelineService.createTimeline();
-    hub.storageSpace = await this.storageSpaceService.createStorageSpace();
+
+    // And set up the storage space
+    hub.storageSpace = await this.storageSpaceService.createStorageSpace(
+      this.storageSpaceService.visualAllowedMimeTypes(),
+      5242880
+    );
 
     // save before assigning host in case that fails
     const savedHub = await this.hubRepository.save(hub);

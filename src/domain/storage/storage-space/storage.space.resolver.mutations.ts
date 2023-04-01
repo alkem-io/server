@@ -23,7 +23,7 @@ export class StorageSpaceResolverMutations {
     description: 'Create a new Document on the Storage.',
   })
   @Profiling.api
-  async createEventOnStorage(
+  async createDocumentOnStorageSpace(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('documentData') documentData: CreateDocumentOnStorageSpaceInput
   ): Promise<IDocument> {

@@ -13,7 +13,7 @@ import {
 } from '@common/enums';
 import { DocumentService } from './document.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CREDENTIAL_RULE_CALENDAR_EVENT_CREATED_BY } from '@common/constants/authorization/credential.rule.constants';
+import { CREDENTIAL_RULE_DOCUMENT_CREATED_BY } from '@common/constants/authorization/credential.rule.constants';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 
 @Injectable()
@@ -33,7 +33,7 @@ export class DocumentAuthorizationService {
     const document = await this.documentService.getDocumentOrFail(
       documentInput.id,
       {
-        relations: ['comments', 'profile'],
+        relations: ['profile'],
       }
     );
     document.authorization =
@@ -80,7 +80,7 @@ export class DocumentAuthorizationService {
             resourceID: document.createdBy,
           },
         ],
-        CREDENTIAL_RULE_CALENDAR_EVENT_CREATED_BY
+        CREDENTIAL_RULE_DOCUMENT_CREATED_BY
       );
     newRules.push(manageCreatedDocumentPolicy);
 

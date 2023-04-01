@@ -2,6 +2,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { DocumentModule } from '../document/document.module';
 import { StorageSpace } from './storage.space.entity';
@@ -16,6 +17,7 @@ import { StorageSpaceAuthorizationService } from './storage.space.service.author
     NamingModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
+    IpfsModule,
     TypeOrmModule.forFeature([StorageSpace]),
   ],
   providers: [

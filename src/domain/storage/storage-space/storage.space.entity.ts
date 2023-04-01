@@ -1,5 +1,6 @@
+import { MimeFileType } from '@common/enums/mime.file.type';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Entity, OneToMany } from 'typeorm';
+import { Column, Entity, OneToMany } from 'typeorm';
 import { Document } from '../document/document.entity';
 import { IStorageSpace } from './storage.space.interface';
 
@@ -9,5 +10,11 @@ export class StorageSpace extends AuthorizableEntity implements IStorageSpace {
     eager: false,
     cascade: true,
   })
-  documents?: Document[];
+  documents!: Document[];
+
+  @Column('simple-array')
+  allowedMimeTypes!: MimeFileType[];
+
+  @Column('int')
+  maxAllowedFileSize!: number;
 }

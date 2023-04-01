@@ -19,6 +19,8 @@ import { StorageSpace } from './storage.space.entity';
 import { IStorageSpace } from './storage.space.interface';
 import { CreateDocumentOnStorageSpaceInput } from './dto/storage.space.dto.create.document';
 import { StorageSpaceArgsDocuments } from './dto/storage.space..args.documents';
+import { MimeFileType } from '@common/enums/mime.file.type';
+import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
 
 @Injectable()
 export class StorageSpaceService {
@@ -27,15 +29,21 @@ export class StorageSpaceService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private namingService: NamingService,
+    private ipfsService: IpfsService,
     @InjectRepository(StorageSpace)
     private storageSpaceRepository: Repository<StorageSpace>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async createStorageSpace(): Promise<IStorageSpace> {
+  public async createStorageSpace(
+    allowedMimeTypes: MimeFileType[],
+    maxAllowedFileSize: number
+  ): Promise<IStorageSpace> {
     const storage: IStorageSpace = new StorageSpace();
     storage.authorization = new AuthorizationPolicy();
     storage.documents = [];
+    storage.allowedMimeTypes = allowedMimeTypes;
+    storage.maxAllowedFileSize = maxAllowedFileSize;
 
     return await this.storageSpaceRepository.save(storage);
   }
@@ -131,23 +139,23 @@ export class StorageSpaceService {
     const storageLoaded = await this.getStorageSpaceOrFail(storage.id, {
       relations: ['documents'],
     });
-    const allEvents = storageLoaded.documents;
-    if (!allEvents)
+    const allDocuments = storageLoaded.documents;
+    if (!allDocuments)
       throw new EntityNotFoundException(
         `Space not initialised, no documents: ${storage.id}`,
         LogContext.CALENDAR
       );
 
     // First filter the documents the current user has READ privilege to
-    const readableEvents = allEvents.filter(document =>
-      this.hasAgentAccessToEvent(document, agentInfo)
+    const readableDocuments = allDocuments.filter(document =>
+      this.hasAgentAccessToDocument(document, agentInfo)
     );
 
     // (a) by IDs, results in order specified by IDs
     if (args.IDs) {
       const results: IDocument[] = [];
       for (const documentID of args.IDs) {
-        const document = readableEvents.find(
+        const document = readableDocuments.find(
           e => e.id === documentID || e.nameID === documentID
         );
 
@@ -163,13 +171,26 @@ export class StorageSpaceService {
 
     // (b) limit number of results
     if (args.limit) {
-      return limitAndShuffle(readableEvents, args.limit, false);
+      return limitAndShuffle(readableDocuments, args.limit, false);
     }
 
-    return readableEvents;
+    return readableDocuments;
   }
 
-  private hasAgentAccessToEvent(
+  public visualAllowedMimeTypes(): MimeFileType[] {
+    return [
+      MimeFileType.JPEG,
+      MimeFileType.JPG,
+      MimeFileType.GIF,
+      MimeFileType.PNG,
+      MimeFileType.PNG,
+      MimeFileType.SVG,
+      MimeFileType.WEBP,
+      MimeFileType.XPNG,
+    ];
+  }
+
+  private hasAgentAccessToDocument(
     document: IDocument,
     agentInfo: AgentInfo
   ): boolean {
@@ -178,5 +199,11 @@ export class StorageSpaceService {
       document.authorization,
       AuthorizationPrivilege.READ
     );
+  }
+  private validateMimeTypes(
+    storageSpace: IStorageSpace,
+    mimeType: MimeFileType
+  ): boolean {
+    return storageSpace.allowedMimeTypes.includes(mimeType);
   }
 }
