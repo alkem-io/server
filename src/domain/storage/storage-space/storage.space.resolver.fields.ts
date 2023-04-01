@@ -46,7 +46,7 @@ export class StorageSpaceResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('documents', () => [IDocument], {
-    nullable: true,
+    nullable: false,
     description: 'The list of Documents for this StorageSpace.',
   })
   async documents(
@@ -54,7 +54,6 @@ export class StorageSpaceResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) args: StorageSpaceArgsDocuments
   ) {
-    return;
     return await this.storageSpaceService.getDocumentsArgs(
       storageSpace,
       args,

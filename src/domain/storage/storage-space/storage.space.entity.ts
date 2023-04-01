@@ -16,5 +16,5 @@ export class StorageSpace extends AuthorizableEntity implements IStorageSpace {
   allowedMimeTypes!: MimeFileType[];
 
   @Column('int')
-  maxAllowedFileSize!: number;
+  maxFileSize!: number;
 }

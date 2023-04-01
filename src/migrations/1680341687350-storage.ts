@@ -22,7 +22,7 @@ export class storage1680341687350 implements MigrationInterface {
                   \`version\` int NOT NULL,
                   \`authorizationId\` char(36) NULL,
                   \`allowedMimeTypes\` TEXT NULL,
-                  \`maxSize\` int NULL,
+                  \`maxFileSize\` int NULL,
                     UNIQUE INDEX \`REL_77994efc5eb5936ed70f2c55903\` (\`authorizationId\`),
                     PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );

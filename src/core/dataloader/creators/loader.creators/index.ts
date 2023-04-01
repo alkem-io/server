@@ -18,6 +18,7 @@ export * from './checkout.loader.creator';
 export * from './visual.loader.creator';
 
 export * from './hub/hub.templates.set.loader.creator';
+export * from './hub/hub.storage.space.loader.creator';
 export * from './hub/hub.timeline.loader.creator';
 
 export * from './journey/journey.lifecycle.loader.creator';

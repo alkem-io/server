@@ -7,7 +7,7 @@ import { IDocument } from '../document/document.interface';
 export abstract class IStorageSpace extends IAuthorizable {
   documents!: IDocument[];
 
-  @Field(() => [MimeFileType], {
+  @Field(() => [String], {
     description: 'Mime types allowed to be stored on this StorageSpace.',
   })
   allowedMimeTypes!: MimeFileType[];
@@ -15,5 +15,5 @@ export abstract class IStorageSpace extends IAuthorizable {
   @Field(() => Number, {
     description: 'Maximum allowed file size on this StorageSpace.',
   })
-  maxAllowedFileSize!: number;
+  maxFileSize!: number;
 }

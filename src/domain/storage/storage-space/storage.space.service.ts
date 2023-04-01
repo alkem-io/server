@@ -55,7 +55,7 @@ export class StorageSpaceService {
     storage.authorization = new AuthorizationPolicy();
     storage.documents = [];
     storage.allowedMimeTypes = allowedMimeTypes;
-    storage.maxAllowedFileSize = maxAllowedFileSize;
+    storage.maxFileSize = maxAllowedFileSize;
 
     return await this.storageSpaceRepository.save(storage);
   }
@@ -95,7 +95,10 @@ export class StorageSpaceService {
     return storageSpace;
   }
 
-  public async getDocuments(storage: IStorageSpace): Promise<IDocument[]> {
+  public async getDocuments(storageInput: IStorageSpace): Promise<IDocument[]> {
+    const storage = await this.getStorageSpaceOrFail(storageInput.id, {
+      relations: ['documents'],
+    });
     const documents = storage.documents;
     if (!documents)
       throw new EntityNotFoundException(

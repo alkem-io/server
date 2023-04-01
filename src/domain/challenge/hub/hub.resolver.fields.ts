@@ -26,7 +26,6 @@ import { IAgent } from '@domain/agent/agent';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { IPreference } from '@domain/common/preference/preference.interface';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
@@ -53,7 +52,6 @@ export class HubResolverFields {
     private authorizationService: AuthorizationService,
     private groupService: UserGroupService,
     private applicationService: ApplicationService,
-    private preferenceSetService: PreferenceSetService,
     private hubService: HubService
   ) {}
 
