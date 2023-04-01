@@ -16,9 +16,12 @@ export class Document extends NameableEntity implements IDocument {
   })
   storageSpace!: StorageSpace;
 
-  @Column('text', { default: '' })
+  @Column('varchar', { length: 36, default: '' })
   mimeType!: MimeFileType;
 
   @Column('int')
   size!: number;
+
+  @Column('varchar', { length: 128, default: '' })
+  externalID!: string;
 }

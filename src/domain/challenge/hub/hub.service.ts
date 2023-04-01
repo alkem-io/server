@@ -146,8 +146,8 @@ export class HubService {
 
     // And set up the storage space
     hub.storageSpace = await this.storageSpaceService.createStorageSpace(
-      this.storageSpaceService.visualAllowedMimeTypes(),
-      5242880
+      this.storageSpaceService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
+      this.storageSpaceService.DEFAULT_MAX_ALLOWED_FILE_SIZE
     );
 
     // save before assigning host in case that fails

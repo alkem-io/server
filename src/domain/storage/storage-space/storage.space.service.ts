@@ -21,9 +21,21 @@ import { CreateDocumentOnStorageSpaceInput } from './dto/storage.space.dto.creat
 import { StorageSpaceArgsDocuments } from './dto/storage.space..args.documents';
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
-
 @Injectable()
 export class StorageSpaceService {
+  DEFAULT_MAX_ALLOWED_FILE_SIZE = 5242880;
+
+  DEFAULT_VISUAL_ALLOWED_MIME_TYPES: MimeFileType[] = [
+    MimeFileType.JPEG,
+    MimeFileType.JPG,
+    MimeFileType.GIF,
+    MimeFileType.PNG,
+    MimeFileType.PNG,
+    MimeFileType.SVG,
+    MimeFileType.WEBP,
+    MimeFileType.XPNG,
+  ];
+
   constructor(
     private documentService: DocumentService,
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -175,19 +187,6 @@ export class StorageSpaceService {
     }
 
     return readableDocuments;
-  }
-
-  public visualAllowedMimeTypes(): MimeFileType[] {
-    return [
-      MimeFileType.JPEG,
-      MimeFileType.JPG,
-      MimeFileType.GIF,
-      MimeFileType.PNG,
-      MimeFileType.PNG,
-      MimeFileType.SVG,
-      MimeFileType.WEBP,
-      MimeFileType.XPNG,
-    ];
   }
 
   private hasAgentAccessToDocument(

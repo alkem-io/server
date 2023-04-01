@@ -1,6 +1,16 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
+const allowedTypes = [
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/svg+xml',
+  'image/webp',
+];
+
+const maxAllowedFileSize = 5242880;
+
 export class storage1680341687350 implements MigrationInterface {
   name = 'storage1680341687350';
 
@@ -11,6 +21,8 @@ export class storage1680341687350 implements MigrationInterface {
                  \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                   \`version\` int NOT NULL,
                   \`authorizationId\` char(36) NULL,
+                  \`allowedMimeTypes\` TEXT NULL,
+                  \`maxSize\` int NULL,
                     UNIQUE INDEX \`REL_77994efc5eb5936ed70f2c55903\` (\`authorizationId\`),
                     PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
@@ -37,8 +49,12 @@ export class storage1680341687350 implements MigrationInterface {
                       \`nameID\` varchar(36) NOT NULL,
                       \`storageSpaceId\` char(36) NULL,
                       \`profileId\` char(36) NULL,
-                        PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+                      \`mimeType\` varchar(36) NULL,
+                      \`size\` int NULL,
+                      \`externalID\` varchar(128) NULL,
+                      PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
+
     await queryRunner.query(
       `ALTER TABLE \`document\` ADD CONSTRAINT \`FK_11155901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
@@ -66,7 +82,7 @@ export class storage1680341687350 implements MigrationInterface {
         `INSERT INTO authorization_policy VALUES ('${storageSpaceAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
       );
       await queryRunner.query(
-        `INSERT INTO storage_space (id, createdDate, updatedDate, version, authorizationId) VALUES ('${storageSpaceID}', NOW(), NOW(), 1, '${storageSpaceAuthID}', )`
+        `INSERT INTO storage_space (id, createdDate, updatedDate, version, authorizationId, allowedMimeTypes, maxFileSize) VALUES ('${storageSpaceID}', NOW(), NOW(), 1, '${storageSpaceAuthID}', '${allowedTypes}', '${maxAllowedFileSize}' )`
       );
       await queryRunner.query(
         `UPDATE hub SET storageSpaceId = '${storageSpaceID}' WHERE id = '${hub.id}'`

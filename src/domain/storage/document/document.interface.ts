@@ -18,4 +18,6 @@ export abstract class IDocument extends INameable {
     description: 'Size of the Document.',
   })
   size!: number;
+
+  externalID!: string;
 }
