@@ -8,12 +8,12 @@ export class Document extends NameableEntity implements IDocument {
   @Column('varchar', { length: 36, nullable: true })
   createdBy!: string;
 
-  @ManyToOne(() => Storage, storage => storage.documents, {
+  @ManyToOne(() => StorageSpace, storage => storage.documents, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  storage?: StorageSpace;
+  storageSpace?: StorageSpace;
 
   constructor() {
     super();

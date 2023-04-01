@@ -27,7 +27,7 @@ export class StorageSpaceResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('documentData') documentData: CreateDocumentOnStorageSpaceInput
   ): Promise<IDocument> {
-    const storage = await this.storageService.getStorageOrFail(
+    const storage = await this.storageService.getStorageSpaceOrFail(
       documentData.storageID
     );
 

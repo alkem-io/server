@@ -4,7 +4,7 @@ import { IStorageSpace } from '../storage-space/storage.space.interface';
 
 @ObjectType('Document')
 export abstract class IDocument extends INameable {
-  storage?: IStorageSpace;
+  storageSpace?: IStorageSpace;
 
   createdBy!: string;
 }

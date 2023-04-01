@@ -4,6 +4,7 @@ import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
+import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
 
 @ObjectType('Hub')
 export abstract class IHub extends IBaseChallenge {
@@ -18,4 +19,6 @@ export abstract class IHub extends IBaseChallenge {
   templatesSet?: ITemplatesSet;
 
   timeline?: ITimeline;
+
+  storageSpace?: IStorageSpace;
 }

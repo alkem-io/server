@@ -5,8 +5,8 @@ import { IStorageSpace } from './storage.space.interface';
 
 @Entity()
 export class StorageSpace extends AuthorizableEntity implements IStorageSpace {
-  @OneToMany(() => Document, document => document.storage, {
-    eager: true,
+  @OneToMany(() => Document, document => document.storageSpace, {
+    eager: false,
     cascade: true,
   })
   documents?: Document[];

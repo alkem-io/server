@@ -66,6 +66,8 @@ import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
+import { StorageSpaceService } from '@domain/storage/storage-space/storage.space.service';
+import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
 
 @Injectable()
 export class HubService {
@@ -84,6 +86,7 @@ export class HubService {
     private hubsFilterService: HubFilterService,
     private timelineService: TimelineService,
     private templatesSetService: TemplatesSetService,
+    private storageSpaceService: StorageSpaceService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -140,6 +143,7 @@ export class HubService {
     );
 
     hub.timeline = await this.timelineService.createTimeline();
+    hub.storageSpace = await this.storageSpaceService.createStorageSpace();
 
     // save before assigning host in case that fails
     const savedHub = await this.hubRepository.save(hub);
@@ -224,6 +228,7 @@ export class HubService {
         'templatesSet',
         'timeline',
         'profile',
+        'storageSpace',
       ],
     });
 
@@ -258,6 +263,10 @@ export class HubService {
 
     if (hub.timeline) {
       await this.timelineService.deleteTimeline(hub.timeline.id);
+    }
+
+    if (hub.storageSpace) {
+      await this.storageSpaceService.deleteStorageSpace(hub.storageSpace.id);
     }
 
     const result = await this.hubRepository.remove(hub as Hub);
@@ -439,6 +448,22 @@ export class HubService {
     }
 
     return timeline;
+  }
+
+  async getStorageSpaceOrFail(hubId: string): Promise<IStorageSpace> {
+    const hubWithStorageSpace = await this.getHubOrFail(hubId, {
+      relations: ['storageSpace'],
+    });
+    const storageSpace = hubWithStorageSpace.storageSpace;
+
+    if (!storageSpace) {
+      throw new EntityNotFoundException(
+        `Unable to find storagespace for hub with nameID: ${hubWithStorageSpace.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return storageSpace;
   }
 
   async getPreferenceSetOrFail(hubId: string): Promise<IPreferenceSet> {

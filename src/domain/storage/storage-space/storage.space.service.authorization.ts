@@ -13,28 +13,28 @@ export class StorageSpaceAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private documentAuthorizationService: DocumentAuthorizationService,
-    private storage: StorageSpaceService,
+    private storageSpaceService: StorageSpaceService,
     @InjectRepository(StorageSpace)
     private storageRepository: Repository<StorageSpace>
   ) {}
 
   async applyAuthorizationPolicy(
-    storage: IStorageSpace,
+    storageSpace: IStorageSpace,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IStorageSpace> {
     // Ensure always applying from a clean state
-    storage.authorization = this.authorizationPolicyService.reset(
-      storage.authorization
+    storageSpace.authorization = this.authorizationPolicyService.reset(
+      storageSpace.authorization
     );
-    storage.authorization =
+    storageSpace.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        storage.authorization,
+        storageSpace.authorization,
         parentAuthorization
       );
 
     // Cascade down
     const storagePropagated = await this.propagateAuthorizationToChildEntities(
-      storage
+      storageSpace
     );
 
     return await this.storageRepository.save(storagePropagated);
@@ -43,7 +43,7 @@ export class StorageSpaceAuthorizationService {
   private async propagateAuthorizationToChildEntities(
     storage: IStorageSpace
   ): Promise<IStorageSpace> {
-    storage.documents = await this.storage.getDocuments(storage);
+    storage.documents = await this.storageSpaceService.getDocuments(storage);
     for (const document of storage.documents) {
       await this.documentAuthorizationService.applyAuthorizationPolicy(
         document,

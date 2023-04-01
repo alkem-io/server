@@ -8,7 +8,6 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -33,7 +32,7 @@ export class StorageSpaceService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async createStorage(): Promise<IStorageSpace> {
+  public async createStorageSpace(): Promise<IStorageSpace> {
     const storage: IStorageSpace = new StorageSpace();
     storage.authorization = new AuthorizationPolicy();
     storage.documents = [];
@@ -41,8 +40,8 @@ export class StorageSpaceService {
     return await this.storageRepository.save(storage);
   }
 
-  async deleteStorage(storageID: string): Promise<IStorageSpace> {
-    const storage = await this.getStorageOrFail(storageID, {
+  async deleteStorageSpace(storageID: string): Promise<IStorageSpace> {
+    const storage = await this.getStorageSpaceOrFail(storageID, {
       relations: ['documents'],
     });
 
@@ -60,7 +59,7 @@ export class StorageSpaceService {
     return await this.storageRepository.remove(storage as StorageSpace);
   }
 
-  async getStorageOrFail(
+  async getStorageSpaceOrFail(
     storageID: string,
     options?: FindOneOptions<StorageSpace>
   ): Promise<IStorageSpace | never> {
@@ -70,7 +69,7 @@ export class StorageSpaceService {
     });
     if (!storage)
       throw new EntityNotFoundException(
-        `Storage not found: ${storageID}`,
+        `StorageSpace not found: ${storageID}`,
         LogContext.CALENDAR
       );
     return storage;
@@ -91,12 +90,12 @@ export class StorageSpaceService {
     documentData: CreateDocumentOnStorageSpaceInput,
     userID: string
   ): Promise<IDocument> {
-    const storage = await this.getStorageOrFail(documentData.storageID, {
+    const storage = await this.getStorageSpaceOrFail(documentData.storageID, {
       relations: ['documents'],
     });
     if (!storage.documents)
       throw new EntityNotInitializedException(
-        `Storage (${storage}) not initialised`,
+        `StorageSpace (${storage}) not initialised`,
         LogContext.CALENDAR
       );
 
@@ -124,26 +123,18 @@ export class StorageSpaceService {
     return document;
   }
 
-  public async getCommunityPolicy(
-    collaborationID: string
-  ): Promise<ICommunityPolicy> {
-    return await this.namingService.getCommunityPolicyForCollaboration(
-      collaborationID
-    );
-  }
-
   public async getDocumentsArgs(
     storage: IStorageSpace,
     args: StorageSpaceArgsDocuments,
     agentInfo: AgentInfo
   ): Promise<IDocument[]> {
-    const storageLoaded = await this.getStorageOrFail(storage.id, {
+    const storageLoaded = await this.getStorageSpaceOrFail(storage.id, {
       relations: ['documents'],
     });
     const allEvents = storageLoaded.documents;
     if (!allEvents)
       throw new EntityNotFoundException(
-        `Storage not initialised, no documents: ${storage.id}`,
+        `Space not initialised, no documents: ${storage.id}`,
         LogContext.CALENDAR
       );
 
@@ -162,7 +153,7 @@ export class StorageSpaceService {
 
         if (!document)
           throw new EntityNotFoundException(
-            `Document with requested ID (${documentID}) not located within current Storage: ${storage.id}`,
+            `Document with requested ID (${documentID}) not located within current StorageSpace: ${storage.id}`,
             LogContext.CALENDAR
           );
         results.push(document);
