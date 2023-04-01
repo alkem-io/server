@@ -19,9 +19,9 @@ import { StorageSpaceAuthorizationService } from './storage.space.service.author
     TypeOrmModule.forFeature([StorageSpace]),
   ],
   providers: [
-    StorageSpaceResolverMutations,
     StorageSpaceResolverFields,
     StorageSpaceService,
+    StorageSpaceResolverMutations,
     StorageSpaceAuthorizationService,
   ],
   exports: [StorageSpaceService, StorageSpaceAuthorizationService],

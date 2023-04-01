@@ -28,7 +28,7 @@ export class StorageSpaceService {
     private authorizationService: AuthorizationService,
     private namingService: NamingService,
     @InjectRepository(StorageSpace)
-    private storageRepository: Repository<StorageSpace>,
+    private storageSpaceRepository: Repository<StorageSpace>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -37,7 +37,7 @@ export class StorageSpaceService {
     storage.authorization = new AuthorizationPolicy();
     storage.documents = [];
 
-    return await this.storageRepository.save(storage);
+    return await this.storageSpaceRepository.save(storage);
   }
 
   async deleteStorageSpace(storageID: string): Promise<IStorageSpace> {
@@ -56,23 +56,23 @@ export class StorageSpaceService {
       }
     }
 
-    return await this.storageRepository.remove(storage as StorageSpace);
+    return await this.storageSpaceRepository.remove(storage as StorageSpace);
   }
 
   async getStorageSpaceOrFail(
-    storageID: string,
+    storageSpaceID: string,
     options?: FindOneOptions<StorageSpace>
   ): Promise<IStorageSpace | never> {
-    const storage = await this.storageRepository.findOne({
-      where: { id: storageID },
+    const storageSpace = await this.storageSpaceRepository.findOne({
+      where: { id: storageSpaceID },
       ...options,
     });
-    if (!storage)
+    if (!storageSpace)
       throw new EntityNotFoundException(
-        `StorageSpace not found: ${storageID}`,
+        `StorageSpace not found: ${storageSpaceID}`,
         LogContext.CALENDAR
       );
-    return storage;
+    return storageSpace;
   }
 
   public async getDocuments(storage: IStorageSpace): Promise<IDocument[]> {
@@ -118,7 +118,7 @@ export class StorageSpaceService {
       userID
     );
     storage.documents.push(document);
-    await this.storageRepository.save(storage);
+    await this.storageSpaceRepository.save(storage);
 
     return document;
   }

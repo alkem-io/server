@@ -41,16 +41,18 @@ export class StorageSpaceAuthorizationService {
   }
 
   private async propagateAuthorizationToChildEntities(
-    storage: IStorageSpace
+    storageSpace: IStorageSpace
   ): Promise<IStorageSpace> {
-    storage.documents = await this.storageSpaceService.getDocuments(storage);
-    for (const document of storage.documents) {
+    storageSpace.documents = await this.storageSpaceService.getDocuments(
+      storageSpace
+    );
+    for (const document of storageSpace.documents) {
       await this.documentAuthorizationService.applyAuthorizationPolicy(
         document,
-        storage.authorization
+        storageSpace.authorization
       );
     }
 
-    return storage;
+    return storageSpace;
   }
 }

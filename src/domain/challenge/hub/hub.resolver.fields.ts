@@ -44,6 +44,8 @@ import {
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
+import { HubStorageSpaceLoaderCreator } from '@core/dataloader/creators/loader.creators/hub/hub.storage.space.loader.creator';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -140,6 +142,19 @@ export class HubResolverFields {
     @Parent() hub: Hub,
     @Loader(HubTimelineLoaderCreator) loader: ILoader<ITimeline>
   ): Promise<ITimeline> {
+    return loader.load(hub.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('storageSpace', () => IStorageSpace, {
+    nullable: true,
+    description: 'The StorageSpace with documents in use by this Hub',
+  })
+  @UseGuards(GraphqlGuard)
+  async storageSpace(
+    @Parent() hub: Hub,
+    @Loader(HubStorageSpaceLoaderCreator) loader: ILoader<IStorageSpace>
+  ): Promise<IStorageSpace> {
     return loader.load(hub.id);
   }
 
