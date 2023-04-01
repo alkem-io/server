@@ -1,7 +1,6 @@
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { ContextModule } from '@domain/context/context/context.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
-import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Hub } from '@domain/challenge/hub/hub.entity';
@@ -34,6 +33,7 @@ import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
+import { StorageSpaceModule } from '@domain/storage/storage-space/storage.space.module';
 
 @Module({
   imports: [
@@ -51,7 +51,7 @@ import { LoaderCreatorModule } from '@core/dataloader/creators';
     PlatformAuthorizationPolicyModule,
     ProjectModule,
     OrganizationModule,
-    TagsetModule,
+    StorageSpaceModule,
     UserGroupModule,
     ApplicationModule,
     UserModule,
