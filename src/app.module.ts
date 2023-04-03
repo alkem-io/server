@@ -23,7 +23,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { AdminCommunicationModule } from '@platform/admin/communication/admin.communication.module';
 import { AppController } from '@src/app.controller';
-import { AppService } from '@src/app.service';
 import { WinstonConfigService } from '@src/config/winston.config';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { SearchModule } from '@services/api/search/search.module';
@@ -54,6 +53,8 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationSpaceModule } from '@domain/innovation-space/innovation.space.module';
 import { StorageAccessController } from '@services/api-rest/storage-access/storage.access.controller';
+import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
+import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 
 @Module({
   imports: [
@@ -208,10 +209,14 @@ import { StorageAccessController } from '@services/api-rest/storage-access/stora
     GeoLocationModule,
     ElasticsearchModule,
     InnovationSpaceModule,
+    SsiCredentialFlowModule,
   ],
-  controllers: [AppController, StorageAccessController],
+  controllers: [
+    AppController,
+    StorageAccessController,
+    SsiCredentialFlowController,
+  ],
   providers: [
-    AppService,
     {
       provide: APP_INTERCEPTOR,
       useClass: DataLoaderInterceptor,
