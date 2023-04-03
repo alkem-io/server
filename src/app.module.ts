@@ -53,7 +53,7 @@ import { PlatformModule } from '@platform/platfrom/platform.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationSpaceModule } from '@domain/innovation-space/innovation.space.module';
-import { StorageAccessController } from '@services/api/storage-access/storage.access.controller';
+import { StorageAccessController } from '@services/api-rest/storage-access/storage.access.controller';
 
 @Module({
   imports: [
