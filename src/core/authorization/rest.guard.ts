@@ -31,7 +31,7 @@ export class RestGuard extends AuthGuard([
   ): boolean | Promise<boolean> | Observable<boolean> {
     const request = context.switchToHttp().getRequest();
     this.logger.verbose?.(
-      `Request received: ${JSON.stringify(request)}`,
+      `Request received: ${JSON.stringify(request.headers)}`,
       LogContext.AUTH
     );
     return true;
