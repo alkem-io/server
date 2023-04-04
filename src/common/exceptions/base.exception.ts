@@ -1,10 +1,12 @@
-import { ApolloError } from 'apollo-server-express';
+import { GraphQLError } from 'graphql';
 import { LogContext, AlkemioErrorStatus } from '@common/enums';
 
-export class BaseException extends ApolloError {
+export class BaseException extends GraphQLError {
   private context: LogContext;
   constructor(error: string, context: LogContext, code?: AlkemioErrorStatus) {
-    super(error, code?.toLocaleString());
+    super(error, {
+      extensions: { code: code?.toLocaleString() },
+    });
     this.context = context;
   }
 
