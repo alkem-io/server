@@ -7,6 +7,7 @@ const allowedTypes = [
   'image/jpg',
   'image/svg+xml',
   'image/webp',
+  'application/pdf',
 ];
 
 const maxAllowedFileSize = 5242880;
@@ -23,19 +24,12 @@ export class storage1680341687350 implements MigrationInterface {
                   \`authorizationId\` char(36) NULL,
                   \`allowedMimeTypes\` TEXT NULL,
                   \`maxFileSize\` int NULL,
+                  \`parentStorageSpaceId\` char(36) NULL,
                     UNIQUE INDEX \`REL_77994efc5eb5936ed70f2c55903\` (\`authorizationId\`),
                     PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
       `ALTER TABLE \`storage_space\` ADD CONSTRAINT \`FK_77755901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-
-    await queryRunner.query(
-      'ALTER TABLE `hub` ADD `storageSpaceId` char(36) NULL'
-    );
-
-    await queryRunner.query(
-      `ALTER TABLE \`hub\` ADD CONSTRAINT \`FK_11991450cf75dc486700ca034c6\` FOREIGN KEY (\`storageSpaceId\`) REFERENCES \`storage_space\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     // Create calendar_events
@@ -70,22 +64,89 @@ export class storage1680341687350 implements MigrationInterface {
       `ALTER TABLE \`document\` ADD CONSTRAINT \`FK_11155450cf75dc486700ca034c6\` FOREIGN KEY (\`storageSpaceId\`) REFERENCES \`storage_space\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
+    await this.addStorageSpaceRelation(
+      queryRunner,
+      'FK_11991450cf75dc486700ca034c6',
+      'hub'
+    );
+    await this.addStorageSpaceRelation(
+      queryRunner,
+      'FK_21991450cf75dc486700ca034c6',
+      'challenge'
+    );
+    await this.addStorageSpaceRelation(
+      queryRunner,
+      'FK_31991450cf75dc486700ca034c6',
+      'user'
+    );
+    await this.addStorageSpaceRelation(
+      queryRunner,
+      'FK_41991450cf75dc486700ca034c6',
+      'organization'
+    );
+
     const hubs: { id: string }[] = await queryRunner.query(
       `SELECT id FROM hub`
     );
     for (const hub of hubs) {
-      // create calendar instance with authorization
-      const storageSpaceAuthID = randomUUID();
-      const storageSpaceID = randomUUID();
+      await this.createStorageSpaceAndLink(
+        queryRunner,
+        'hub',
+        hub.id,
+        allowedTypes,
+        maxAllowedFileSize,
+        ''
+      );
+    }
 
-      await queryRunner.query(
-        `INSERT INTO authorization_policy VALUES ('${storageSpaceAuthID}', NOW(), NOW(), 1, '', '', 0, '')`
+    const users: { id: string }[] = await queryRunner.query(
+      `SELECT id FROM user`
+    );
+    for (const user of users) {
+      await this.createStorageSpaceAndLink(
+        queryRunner,
+        'user',
+        user.id,
+        allowedTypes,
+        maxAllowedFileSize,
+        ''
       );
-      await queryRunner.query(
-        `INSERT INTO storage_space (id, createdDate, updatedDate, version, authorizationId, allowedMimeTypes, maxFileSize) VALUES ('${storageSpaceID}', NOW(), NOW(), 1, '${storageSpaceAuthID}', '${allowedTypes}', '${maxAllowedFileSize}' )`
+    }
+
+    const organizations: { id: string }[] = await queryRunner.query(
+      `SELECT id FROM organization`
+    );
+    for (const organization of organizations) {
+      await this.createStorageSpaceAndLink(
+        queryRunner,
+        'organization',
+        organization.id,
+        allowedTypes,
+        maxAllowedFileSize,
+        ''
       );
-      await queryRunner.query(
-        `UPDATE hub SET storageSpaceId = '${storageSpaceID}' WHERE id = '${hub.id}'`
+    }
+
+    const challenges: { id: string; hubID: string }[] = await queryRunner.query(
+      `SELECT id, hubID FROM challenge`
+    );
+    for (const challenge of challenges) {
+      const hubs: { id: string; storageSpaceId: string }[] =
+        await queryRunner.query(
+          `SELECT id, storageSpaceId FROM hub WHERE (id = '${challenge.hubID}}');
+      }`
+        );
+      if (hubs.length !== 1) {
+        throw new Error(`Found challenge without hubID set: ${challenge.id}`);
+      }
+      const hub = hubs[0];
+      await this.createStorageSpaceAndLink(
+        queryRunner,
+        'challenge',
+        challenge.id,
+        allowedTypes,
+        maxAllowedFileSize,
+        hub.storageSpaceId
       );
     }
   }
@@ -95,10 +156,7 @@ export class storage1680341687350 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `storage_space` DROP FOREIGN KEY `FK_77755901817dd09d5906537e088`'
     );
-    // hub ==> storage_space
-    await queryRunner.query(
-      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_11991450cf75dc486700ca034c6`'
-    );
+
     // document ==> authorization
     await queryRunner.query(
       'ALTER TABLE `document` DROP FOREIGN KEY `FK_11155901817dd09d5906537e088`'
@@ -116,11 +174,87 @@ export class storage1680341687350 implements MigrationInterface {
       'ALTER TABLE `document` DROP FOREIGN KEY `FK_11155450cf75dc486700ca034c6`'
     );
 
-    // note: do not bother to cascade delete on new entities
+    await this.removeStorageSpaceRelation(
+      queryRunner,
+      'FK_11991450cf75dc486700ca034c6',
+      'hub'
+    );
+    await this.removeStorageSpaceRelation(
+      queryRunner,
+      'FK_21991450cf75dc486700ca034c6',
+      'challenge'
+    );
+    await this.removeStorageSpaceRelation(
+      queryRunner,
+      'FK_31991450cf75dc486700ca034c6',
+      'user'
+    );
+    await this.removeStorageSpaceRelation(
+      queryRunner,
+      'FK_41991450cf75dc486700ca034c6',
+      'organization'
+    );
 
     await queryRunner.query('DROP TABLE `storage_space`');
     await queryRunner.query('DROP TABLE `document`');
+  }
 
-    await queryRunner.query('ALTER TABLE `hub` DROP COLUMN `storageSpaceId`');
+  public async addStorageSpaceRelation(
+    queryRunner: QueryRunner,
+    fk: string,
+    entityTable: string
+  ): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE \`${entityTable}\` ADD \`storageSpaceId\` char(36) NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`${entityTable}\` ADD CONSTRAINT \`${fk}\` FOREIGN KEY (\`storageSpaceId\`) REFERENCES \`storage_space\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+  }
+
+  public async removeStorageSpaceRelation(
+    queryRunner: QueryRunner,
+    fk: string,
+    entityTable: string
+  ): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE ${entityTable} DROP FOREIGN KEY ${fk}`
+    );
+    await queryRunner.query(
+      `ALTER TABLE ${entityTable} DROP COLUMN storageSpaceId`
+    );
+  }
+
+  private async createStorageSpaceAndLink(
+    queryRunner: QueryRunner,
+    entityTable: string,
+    entityID: string,
+    allowedMimeTypes: string[],
+    maxFileSize: number,
+    parentStorageSpaceID: string
+  ): Promise<string> {
+    const newStorageSpaceID = randomUUID();
+    const storageSpaceAuthID = randomUUID();
+
+    await queryRunner.query(
+      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
+        ('${storageSpaceAuthID}',
+        1, '', '', 0, '')`
+    );
+
+    await queryRunner.query(
+      `INSERT INTO storage_space (id, version, authorizationId, allowedMimeTypes, maxFileSize, parentStorageSpaceId)
+            VALUES ('${newStorageSpaceID}',
+                    '1',
+                    '${storageSpaceAuthID}',
+                    '${allowedMimeTypes}',
+                    ${maxFileSize},
+                    '${parentStorageSpaceID}')`
+    );
+
+    await queryRunner.query(
+      `UPDATE \`${entityTable}\` SET storageSpaceId = '${newStorageSpaceID}' WHERE (id = '${entityID}')`
+    );
+    return newStorageSpaceID;
   }
 }
