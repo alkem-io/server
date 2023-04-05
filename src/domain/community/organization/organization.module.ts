@@ -17,7 +17,6 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { OrganizationVerificationModule } from '../organization-verification/organization.verification.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
-import { OrganizationDataloaderService } from './organization.dataloader.service';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 
 @Module({
@@ -38,16 +37,11 @@ import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/p
   ],
   providers: [
     OrganizationService,
-    OrganizationDataloaderService,
     OrganizationAuthorizationService,
     OrganizationResolverQueries,
     OrganizationResolverMutations,
     OrganizationResolverFields,
   ],
-  exports: [
-    OrganizationService,
-    OrganizationDataloaderService,
-    OrganizationAuthorizationService,
-  ],
+  exports: [OrganizationService, OrganizationAuthorizationService],
 })
 export class OrganizationModule {}
