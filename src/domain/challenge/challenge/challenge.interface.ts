@@ -1,10 +1,13 @@
 import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
+import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
 @ObjectType('Challenge')
 export abstract class IChallenge extends IBaseChallenge {
   childChallenges?: IChallenge[];
   opportunities?: IOpportunity[];
+
+  storageSpace?: IStorageSpace;
 
   @Field(() => String, {
     description: 'The ID of the containing Hub.',

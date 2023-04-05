@@ -2,13 +2,14 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
+import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { CreateInnovationPackOnLibraryInput } from './dto/library.dto.create.innovation.pack';
 import { Library } from './library.entity';
 import { ILibrary } from './library.interface';
@@ -23,8 +24,10 @@ export class LibraryService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async getLibraryOrFail(): Promise<ILibrary> {
-    const library = (await this.libraryRepository.find({ take: 1 }))?.[0];
+  async getLibraryOrFail(options?: FindOneOptions<Library>): Promise<ILibrary> {
+    const library = (
+      await this.libraryRepository.find({ take: 1, ...options })
+    )?.[0];
     if (!library)
       throw new EntityNotFoundException(
         'No Library found!',
@@ -77,5 +80,21 @@ export class LibraryService {
     await this.libraryRepository.save(library);
 
     return innovationPack;
+  }
+
+  async getStorageSpace(libraryInput: ILibrary): Promise<IStorageSpace> {
+    const library = await this.getLibraryOrFail({
+      relations: ['storageSpace'],
+    });
+    const storageSpace = library.storageSpace;
+
+    if (!storageSpace) {
+      throw new EntityNotFoundException(
+        `Unable to find storage space for Library: ${libraryInput.id}`,
+        LogContext.LIBRARY
+      );
+    }
+
+    return storageSpace;
   }
 }

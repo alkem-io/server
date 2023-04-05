@@ -12,6 +12,7 @@ import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entit
 import { PreferenceSet } from '@domain/common/preference-set';
 import { IChallenge } from './challenge.interface';
 import { BaseChallenge } from '../base-challenge/base.challenge.entity';
+import { StorageSpace } from '@domain/storage/storage-space/storage.space.entity';
 
 @Entity()
 export class Challenge extends BaseChallenge implements IChallenge {
@@ -51,6 +52,14 @@ export class Challenge extends BaseChallenge implements IChallenge {
   })
   @JoinColumn()
   preferenceSet?: PreferenceSet;
+
+  @OneToOne(() => StorageSpace, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  storageSpace?: StorageSpace;
 
   constructor() {
     super();

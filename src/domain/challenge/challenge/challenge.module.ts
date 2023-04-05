@@ -29,6 +29,7 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
+import { StorageSpaceModule } from '@domain/storage/storage-space/storage.space.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-t
     ElasticsearchModule,
     TypeOrmModule.forFeature([Challenge]),
     LoaderCreatorModule,
+    StorageSpaceModule,
   ],
   providers: [
     ChallengeService,

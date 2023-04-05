@@ -77,12 +77,18 @@ export class storage1680341687350 implements MigrationInterface {
     await this.addStorageSpaceRelation(
       queryRunner,
       'FK_31991450cf75dc486700ca034c6',
-      'user'
+      'platform'
     );
     await this.addStorageSpaceRelation(
       queryRunner,
       'FK_41991450cf75dc486700ca034c6',
-      'organization'
+      'library'
+    );
+
+    // Allow every profile to know the StorageSpace to use
+    // TODO: enforce this to be a valid value or not? What happens if storagespace is deleted?
+    await queryRunner.query(
+      `ALTER TABLE \`profile\` ADD \`storageSpaceId\` char(36) NULL`
     );
 
     const hubs: { id: string }[] = await queryRunner.query(
@@ -93,34 +99,6 @@ export class storage1680341687350 implements MigrationInterface {
         queryRunner,
         'hub',
         hub.id,
-        allowedTypes,
-        maxAllowedFileSize,
-        ''
-      );
-    }
-
-    const users: { id: string }[] = await queryRunner.query(
-      `SELECT id FROM user`
-    );
-    for (const user of users) {
-      await this.createStorageSpaceAndLink(
-        queryRunner,
-        'user',
-        user.id,
-        allowedTypes,
-        maxAllowedFileSize,
-        ''
-      );
-    }
-
-    const organizations: { id: string }[] = await queryRunner.query(
-      `SELECT id FROM organization`
-    );
-    for (const organization of organizations) {
-      await this.createStorageSpaceAndLink(
-        queryRunner,
-        'organization',
-        organization.id,
         allowedTypes,
         maxAllowedFileSize,
         ''
@@ -149,6 +127,32 @@ export class storage1680341687350 implements MigrationInterface {
         hub.storageSpaceId
       );
     }
+
+    const platforms: { id: string }[] = await queryRunner.query(
+      `SELECT id FROM platform`
+    );
+    const platform = platforms[0];
+    const platformStorageSpaceId = await this.createStorageSpaceAndLink(
+      queryRunner,
+      'platform',
+      platform.id,
+      allowedTypes,
+      maxAllowedFileSize,
+      ''
+    );
+
+    const libraries: { id: string }[] = await queryRunner.query(
+      `SELECT id FROM library`
+    );
+    const library = libraries[0];
+    await this.createStorageSpaceAndLink(
+      queryRunner,
+      'library',
+      library.id,
+      allowedTypes,
+      maxAllowedFileSize,
+      platformStorageSpaceId
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

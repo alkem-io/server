@@ -1,16 +1,21 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
-import { Args, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege } from '@src/common/decorators';
 import { ILibrary } from './library.interface';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
+import { LibraryService } from './library.service';
 
 @Resolver(() => ILibrary)
 export class LibraryResolverFields {
-  constructor(private innovationPackService: InnovationPackService) {}
+  constructor(
+    private innovationPackService: InnovationPackService,
+    private libraryService: LibraryService
+  ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('innovationPack', () => IInnovationPack, {
@@ -28,5 +33,15 @@ export class LibraryResolverFields {
     ID: string
   ): Promise<IInnovationPack> {
     return await this.innovationPackService.getInnovationPackOrFail(ID);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('storageSpace', () => IStorageSpace, {
+    nullable: true,
+    description: 'The StorageSpace with documents in use by this User',
+  })
+  @UseGuards(GraphqlGuard)
+  async storageSpace(@Parent() library: ILibrary): Promise<IStorageSpace> {
+    return await this.libraryService.getStorageSpace(library);
   }
 }

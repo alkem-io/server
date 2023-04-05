@@ -16,4 +16,6 @@ export abstract class IStorageSpace extends IAuthorizable {
     description: 'Maximum allowed file size on this StorageSpace.',
   })
   maxFileSize!: number;
+
+  parentStorageSpace?: IStorageSpace;
 }

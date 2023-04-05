@@ -24,9 +24,11 @@ import {
   PreferencesLoaderCreator,
   AgentLoaderCreator,
   ProfileLoaderCreator,
+  ChallengeStorageSpaceLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -83,6 +85,19 @@ export class ChallengeResolverFields {
     @Loader(ProfileLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<IProfile>
   ) {
+    return loader.load(challenge.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('storageSpace', () => IStorageSpace, {
+    nullable: true,
+    description: 'The StorageSpace with documents in use by this Challenge',
+  })
+  @UseGuards(GraphqlGuard)
+  async storageSpace(
+    @Parent() challenge: Challenge,
+    @Loader(ChallengeStorageSpaceLoaderCreator) loader: ILoader<IStorageSpace>
+  ): Promise<IStorageSpace> {
     return loader.load(challenge.id);
   }
 

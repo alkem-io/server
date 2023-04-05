@@ -1,6 +1,6 @@
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { Document } from '../document/document.entity';
 import { IStorageSpace } from './storage.space.interface';
 
@@ -11,6 +11,14 @@ export class StorageSpace extends AuthorizableEntity implements IStorageSpace {
     cascade: true,
   })
   documents!: Document[];
+
+  // The parent StorageSpace can have many child StorageSpces; the relationship is controlled by the child.
+  @ManyToOne(() => StorageSpace, {
+    eager: false,
+    cascade: false,
+    onDelete: 'SET NULL',
+  })
+  parentStorageSpace?: StorageSpace;
 
   @Column('simple-array')
   allowedMimeTypes!: MimeFileType[];

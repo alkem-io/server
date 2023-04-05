@@ -61,6 +61,7 @@ import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
+import { StorageSpaceService } from '@domain/storage/storage-space/storage.space.service';
 
 @Injectable()
 export class ChallengeService {
@@ -75,6 +76,7 @@ export class ChallengeService {
     private organizationService: OrganizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
+    private storageSpaceService: StorageSpaceService,
     private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -130,6 +132,10 @@ export class ChallengeService {
 
     await this.challengeRepository.save(challenge);
 
+    challenge.storageSpace = await this.storageSpaceService.createStorageSpace(
+      this.storageSpaceService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
+      this.storageSpaceService.DEFAULT_MAX_ALLOWED_FILE_SIZE
+    );
     // set immediate community parent + resourceID
     if (challenge.community) {
       challenge.community.parentID = challenge.id;
