@@ -5,11 +5,12 @@ import {
   Inject,
   LoggerService,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { INNOVATION_SPACE_INJECT_TOKEN } from '@common/constants';
 import { InnovationSpaceService } from '@domain/innovation-space/innovation.space.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 
 const SUBDOMAIN_GROUP = 'subdomain';
 /***
@@ -27,17 +28,26 @@ const SUBDOMAIN_REGEX = new RegExp(
 );
 
 export class InnovationSpaceInterceptor implements NestInterceptor {
+  private readonly innovationSpaceHeader: string;
+
   constructor(
     private readonly innovationSpaceService: InnovationSpaceService,
+    private readonly configService: ConfigService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
-  ) {}
+  ) {
+    this.innovationSpaceHeader = this.configService.get(
+      ConfigurationTypes.INNOVATION_SPACE
+    )?.header;
+  }
 
   async intercept(context: ExecutionContext, next: CallHandler) {
     const ctx =
       GqlExecutionContext.create(context).getContext<IGraphQLContext>();
 
-    const host = ctx.req.headers['myhost'] as string | undefined;
+    const host = ctx.req.headers[this.innovationSpaceHeader] as
+      | string
+      | undefined;
 
     if (!host) {
       return next.handle();
