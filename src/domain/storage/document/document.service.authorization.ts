@@ -14,14 +14,11 @@ import {
 import { DocumentService } from './document.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_DOCUMENT_CREATED_BY } from '@common/constants/authorization/credential.rule.constants';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-
 @Injectable()
 export class DocumentAuthorizationService {
   constructor(
     private documentService: DocumentService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private profileAuthorizationService: ProfileAuthorizationService,
     @InjectRepository(Document)
     private documentRepository: Repository<Document>
   ) {}
@@ -45,10 +42,10 @@ export class DocumentAuthorizationService {
     // Extend to give the user creating the document more rights
     document.authorization = this.appendCredentialRules(document);
 
-    if (document.profile) {
-      document.profile =
-        await this.profileAuthorizationService.applyAuthorizationPolicy(
-          document.profile,
+    if (document.tagset) {
+      document.tagset.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          document.tagset.authorization,
           document.authorization
         );
     }

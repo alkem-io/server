@@ -7,15 +7,15 @@ import { DocumentResolverMutations } from './document.resolver.mutations';
 import { DocumentService } from './document.service';
 import { DocumentResolverFields } from './document.resolver.fields';
 import { DocumentAuthorizationService } from './document.service.authorization';
+import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { UserModule } from '@domain/community/user/user.module';
-import { ProfileModule } from '@domain/common/profile/profile.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
+    TagsetModule,
     UserModule,
-    ProfileModule,
     TypeOrmModule.forFeature([Document]),
   ],
   providers: [

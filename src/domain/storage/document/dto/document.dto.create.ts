@@ -1,20 +1,17 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { NAMEID_LENGTH } from '@src/common/constants';
-import { IsOptional, MaxLength } from 'class-validator';
-import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
+import { IsOptional, MaxLength, MinLength } from 'class-validator';
 import { MimeFileType } from '@common/enums/mime.file.type';
+import { SMALL_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
 
 @InputType()
-export class CreateDocumentInput extends CreateNameableInput {
-  // Override
-  @Field(() => NameID, {
-    nullable: true,
-    description: 'A readable identifier, unique within the containing scope.',
+export class CreateDocumentInput {
+  @Field({
+    nullable: false,
+    description: 'The display name for the Document.',
   })
-  @MaxLength(NAMEID_LENGTH)
-  @IsOptional()
-  nameID!: string;
+  @MinLength(3)
+  @MaxLength(SMALL_TEXT_LENGTH)
+  displayName!: string;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()

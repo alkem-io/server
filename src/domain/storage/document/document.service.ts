@@ -11,15 +11,14 @@ import { UpdateDocumentInput } from './dto/document.dto.update';
 import { CreateDocumentInput } from './dto/document.dto.create';
 import { Document } from './document.entity';
 import { IDocument } from './document.interface';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { IProfile } from '@domain/common/profile/profile.interface';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
 
 @Injectable()
 export class DocumentService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private profileService: ProfileService,
+    private tagsetService: TagsetService,
     @InjectRepository(Document)
     private documentRepository: Repository<Document>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -30,13 +29,11 @@ export class DocumentService {
     userID: string
   ): Promise<Document> {
     const document: IDocument = Document.create(documentInput);
-    document.profile = await this.profileService.createProfile(
-      documentInput.profileData
-    );
-    await this.profileService.addTagsetOnProfile(document.profile, {
+    document.tagset = await this.tagsetService.createTagset({
       name: RestrictedTagsetNames.DEFAULT,
       tags: documentInput.tags || [],
     });
+
     document.authorization = new AuthorizationPolicy();
     document.createdBy = userID;
 
@@ -48,13 +45,13 @@ export class DocumentService {
   ): Promise<IDocument> {
     const documentID = deleteData.ID;
     const document = await this.getDocumentOrFail(documentID, {
-      relations: ['profile'],
+      relations: ['tagset'],
     });
     if (document.authorization) {
       await this.authorizationPolicyService.delete(document.authorization);
     }
-    if (document.profile) {
-      await this.profileService.deleteProfile(document.profile.id);
+    if (document.tagset) {
+      await this.tagsetService.removeTagset(document.tagset.id);
     }
 
     const result = await this.documentRepository.remove(document as Document);
@@ -86,16 +83,15 @@ export class DocumentService {
     });
 
     // Copy over the received data
-    if (documentData.profileData) {
-      if (!document.profile) {
+    if (documentData.tagset) {
+      if (!document.tagset) {
         throw new EntityNotFoundException(
           `Document not initialised: ${document.id}`,
           LogContext.CALENDAR
         );
       }
-      document.profile = await this.profileService.updateProfile(
-        document.profile,
-        documentData.profileData
+      document.tagset = await this.tagsetService.updateTagset(
+        documentData.tagset
       );
     }
 
@@ -106,18 +102,5 @@ export class DocumentService {
 
   public async saveDocument(document: IDocument): Promise<IDocument> {
     return await this.documentRepository.save(document);
-  }
-
-  public async getProfile(document: IDocument): Promise<IProfile> {
-    const documentLoaded = await this.getDocumentOrFail(document.id, {
-      relations: ['profile'],
-    });
-    if (!documentLoaded.profile)
-      throw new EntityNotFoundException(
-        `Card profile not initialised for document: ${document.id}`,
-        LogContext.CALENDAR
-      );
-
-    return documentLoaded.profile;
   }
 }

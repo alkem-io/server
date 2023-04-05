@@ -2,7 +2,6 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { ValidationException } from '@common/exceptions/validation.exception';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -10,7 +9,6 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IDocument } from '../document/document.interface';
@@ -20,7 +18,6 @@ import { IStorageSpace } from './storage.space.interface';
 import { CreateDocumentOnStorageSpaceInput } from './dto/storage.space.dto.create.document';
 import { StorageSpaceArgsDocuments } from './dto/storage.space..args.documents';
 import { MimeFileType } from '@common/enums/mime.file.type';
-import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
 @Injectable()
 export class StorageSpaceService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 5242880;
@@ -40,8 +37,6 @@ export class StorageSpaceService {
     private documentService: DocumentService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
-    private namingService: NamingService,
-    private ipfsService: IpfsService,
     @InjectRepository(StorageSpace)
     private storageSpaceRepository: Repository<StorageSpace>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -122,20 +117,6 @@ export class StorageSpaceService {
         LogContext.CALENDAR
       );
 
-    if (documentData.nameID && documentData.nameID.length > 0) {
-      const documentWithNameID = storage.documents.find(
-        e => e.nameID === documentData.nameID
-      );
-      if (documentWithNameID)
-        throw new ValidationException(
-          `Unable to create Document: the provided nameID is already taken: ${documentData.nameID}`,
-          LogContext.CALENDAR
-        );
-    } else {
-      documentData.nameID = this.namingService.createNameID(
-        `${documentData.profileData?.displayName}`
-      );
-    }
     const document = await this.documentService.createDocument(
       documentData,
       userID
@@ -170,9 +151,7 @@ export class StorageSpaceService {
     if (args.IDs) {
       const results: IDocument[] = [];
       for (const documentID of args.IDs) {
-        const document = readableDocuments.find(
-          e => e.id === documentID || e.nameID === documentID
-        );
+        const document = readableDocuments.find(e => e.id === documentID);
 
         if (!document)
           throw new EntityNotFoundException(

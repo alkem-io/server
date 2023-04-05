@@ -64,6 +64,8 @@ import { CreatePostTemplateOnTemplatesSetInput } from '@domain/template/template
 import { CreateWhiteboardTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/whiteboard.template.dto.create.on.templates.set';
 import { UpdatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.update';
 import { UpdateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.update';
+import { CreateDocumentInput } from '@domain/storage/document/dto/document.dto.create';
+import { UpdateDocumentInput } from '@domain/storage/document';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -83,6 +85,7 @@ export class BaseHandler extends AbstractHandler {
       CreateActorGroupInput,
       CreateActorInput,
       CreateAspectOnCalloutInput,
+      CreateDocumentInput,
       CreatePostTemplateOnTemplatesSetInput,
       CreateCanvasOnCalloutInput,
       CreateWhiteboardTemplateOnTemplatesSetInput,
@@ -100,6 +103,7 @@ export class BaseHandler extends AbstractHandler {
       CreateCalendarEventOnCalendarInput,
       UpdateActorInput,
       UpdateAspectInput,
+      UpdateDocumentInput,
       UpdatePostTemplateInput,
       UpdateCommunityApplicationFormInput,
       UpdateHubInput,

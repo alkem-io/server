@@ -32,7 +32,7 @@ export class DocumentResolverMutations {
       agentInfo,
       document.authorization,
       AuthorizationPrivilege.DELETE,
-      `delete document: ${document.nameID}`
+      `delete document: ${document.displayName}`
     );
     return await this.documentService.deleteDocument(deleteData);
   }
@@ -52,7 +52,7 @@ export class DocumentResolverMutations {
       agentInfo,
       document.authorization,
       AuthorizationPrivilege.UPDATE,
-      `update document: ${document.nameID}`
+      `update document: ${document.displayName}`
     );
     return await this.documentService.updateDocument(documentData);
   }

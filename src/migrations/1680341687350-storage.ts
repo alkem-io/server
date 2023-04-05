@@ -40,9 +40,9 @@ export class storage1680341687350 implements MigrationInterface {
                      \`createdBy\` char(36) NULL,
                       \`version\` int NOT NULL,
                       \`authorizationId\` char(36) NULL,
-                      \`nameID\` varchar(36) NOT NULL,
                       \`storageSpaceId\` char(36) NULL,
-                      \`profileId\` char(36) NULL,
+                      \`displayName\` varchar(255) NULL,
+                      \`tagsetId\` char(36) NULL,
                       \`mimeType\` varchar(36) NULL,
                       \`size\` int NULL,
                       \`externalID\` varchar(128) NULL,
@@ -53,7 +53,7 @@ export class storage1680341687350 implements MigrationInterface {
       `ALTER TABLE \`document\` ADD CONSTRAINT \`FK_11155901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`document\` ADD CONSTRAINT \`FK_222838434c7198a323ea6f475fb\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`document\` ADD CONSTRAINT \`FK_222838434c7198a323ea6f475fb\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       `ALTER TABLE \`document\` ADD CONSTRAINT \`FK_3337f26ca267009fcf514e0e726\` FOREIGN KEY (\`createdBy\`) REFERENCES \`user\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -145,7 +145,7 @@ export class storage1680341687350 implements MigrationInterface {
       `SELECT id FROM library`
     );
     const library = libraries[0];
-    await this.createStorageSpaceAndLink(
+    const libraryStorageSpace = await this.createStorageSpaceAndLink(
       queryRunner,
       'library',
       library.id,
