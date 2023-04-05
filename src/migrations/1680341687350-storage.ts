@@ -201,6 +201,11 @@ export class storage1680341687350 implements MigrationInterface {
 
     await queryRunner.query('DROP TABLE `storage_space`');
     await queryRunner.query('DROP TABLE `document`');
+
+    // TODO: enforce this to be a valid value or not? What happens if storagespace is deleted?
+    await queryRunner.query(
+      `ALTER TABLE \`profile\` DROP COLUMN \`storageSpaceId\``
+    );
   }
 
   public async addStorageSpaceRelation(
