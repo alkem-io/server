@@ -8,7 +8,6 @@ import { CreatePostTemplateInput } from '@domain/template/post-template/dto/post
 import { CreateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 
-
 @InputType()
 export class CreateCalloutInput {
   @Field(() => CreateProfileInput, { nullable: false })
@@ -32,6 +31,12 @@ export class CreateCalloutInput {
     description: 'State of the callout.',
   })
   state!: CalloutState;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Set callout group for this Callout.',
+  })
+  group?: string;
 
   @Field(() => Number, {
     nullable: true,

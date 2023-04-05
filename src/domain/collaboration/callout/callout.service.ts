@@ -231,6 +231,8 @@ export class CalloutService {
         );
     }
 
+    if (calloutUpdateData.group) callout.group = calloutUpdateData.group;
+
     return await this.calloutRepository.save(callout);
   }
 

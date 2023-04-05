@@ -33,4 +33,11 @@ export class CollaborationArgsCallouts {
     nullable: true,
   })
   sortByActivity?: boolean;
+
+  @Field(() => [String], {
+    name: 'groups',
+    description: 'Return only Callouts from this group.',
+    nullable: true,
+  })
+  groups?: string[];
 }

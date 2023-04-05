@@ -29,4 +29,10 @@ export class UpdateCalloutInput extends UpdateNameableInput {
     description: 'CanvasTemplate data for this Callout.',
   })
   whiteboardTemplate?: UpdateCalloutWhiteboardTemplateInput;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Set callout group for this Callout.',
+  })
+  group?: string;
 }

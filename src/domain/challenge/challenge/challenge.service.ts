@@ -176,6 +176,12 @@ export class ChallengeService {
         CommunityRole.MEMBER
       );
 
+      await this.communityService.assignUserToRole(
+        challenge.community,
+        agentInfo.userID,
+        CommunityRole.LEAD
+      );
+
       await this.assignChallengeAdmin({
         userID: agentInfo.userID,
         challengeID: challenge.id,

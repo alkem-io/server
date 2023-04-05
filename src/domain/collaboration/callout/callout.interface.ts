@@ -26,6 +26,12 @@ export abstract class ICallout extends INameable {
   })
   visibility!: CalloutVisibility;
 
+  @Field(() => String, {
+    nullable: true,
+    description: 'Callout group.',
+  })
+  group?: string;
+
   @Field(() => [IAspect], {
     nullable: true,
     description: 'The Aspects associated with this Callout.',
