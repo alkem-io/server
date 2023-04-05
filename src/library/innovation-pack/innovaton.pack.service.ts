@@ -28,6 +28,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
+import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 
 @Injectable()
 export class InnovationPackService {
@@ -55,6 +56,10 @@ export class InnovationPackService {
       innovationPack.profile,
       VisualType.CARD
     );
+    await this.profileService.addTagsetOnProfile(innovationPack.profile, {
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: [],
+    });
 
     innovationPack.templatesSet =
       await this.templatesSetService.createTemplatesSet(
