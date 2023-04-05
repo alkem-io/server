@@ -191,12 +191,12 @@ export class storage1680341687350 implements MigrationInterface {
     await this.removeStorageSpaceRelation(
       queryRunner,
       'FK_31991450cf75dc486700ca034c6',
-      'user'
+      'platform'
     );
     await this.removeStorageSpaceRelation(
       queryRunner,
       'FK_41991450cf75dc486700ca034c6',
-      'organization'
+      'library'
     );
 
     await queryRunner.query('DROP TABLE `storage_space`');
