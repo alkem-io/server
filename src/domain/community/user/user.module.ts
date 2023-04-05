@@ -18,7 +18,6 @@ import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { ConfigModule } from '@nestjs/config';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PreferenceModule } from '@domain/common/preference';
-import { UserDataloaderService } from './user.dataloader.service';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
@@ -54,10 +53,9 @@ import {
     UserResolverMutations,
     UserResolverQueries,
     UserResolverFields,
-    UserDataloaderService,
     AgentLoaderCreator,
     ProfileLoaderCreator,
   ],
-  exports: [UserService, UserDataloaderService, UserAuthorizationService],
+  exports: [UserService, UserAuthorizationService],
 })
 export class UserModule {}
