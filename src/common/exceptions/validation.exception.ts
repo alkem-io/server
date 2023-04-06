@@ -1,5 +1,5 @@
-import { UserInputError } from 'apollo-server-express';
 import { LogContext } from '@common/enums';
+import { UserInputError } from './user.input.error';
 
 export class ValidationException extends UserInputError {
   private context: LogContext;

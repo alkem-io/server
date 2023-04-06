@@ -1,11 +1,15 @@
-import { ApolloError } from 'apollo-server-express';
+import { GraphQLError } from 'graphql';
 import { LogContext, AlkemioErrorStatus } from '@common/enums';
 
-export class IpfsUploadFailedException extends ApolloError {
+export class IpfsUploadFailedException extends GraphQLError {
   private context: LogContext;
 
   constructor(message = 'Ipfs upload file failed!') {
-    super(message, AlkemioErrorStatus.IPFS_UPLOAD_FAILED);
+    super(message, {
+      extensions: {
+        code: AlkemioErrorStatus.IPFS_UPLOAD_FAILED,
+      },
+    });
     this.context = LogContext.IPFS;
   }
 

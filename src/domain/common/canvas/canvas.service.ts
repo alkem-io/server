@@ -20,6 +20,7 @@ import { IProfile } from '../profile/profile.interface';
 import { ProfileService } from '../profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { IVisual } from '../visual';
+import { RestrictedTagsetNames } from '../tagset/tagset.entity';
 
 @Injectable()
 export class CanvasService {
@@ -42,10 +43,18 @@ export class CanvasService {
     canvas.profile = await this.profileService.createProfile(
       canvasData.profileData
     );
+    await this.profileService.addTagsetOnProfile(canvas.profile, {
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: [],
+    });
     await this.profileService.addVisualOnProfile(
       canvas.profile,
       VisualType.CARD
     );
+    await this.profileService.addTagsetOnProfile(canvas.profile, {
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: [],
+    });
 
     // get the id assigned
     const savedCanvas = await this.save(canvas);

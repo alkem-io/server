@@ -27,6 +27,8 @@ import { DeleteInnovationPackInput } from './dto/innovationPack.dto.delete';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { VisualType } from '@common/enums/visual.type';
+import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 
 @Injectable()
 export class InnovationPackService {
@@ -50,6 +52,19 @@ export class InnovationPackService {
     innovationPack.profile = await this.profileService.createProfile(
       innovationPackData.profileData
     );
+    await this.profileService.addVisualOnProfile(
+      innovationPack.profile,
+      VisualType.CARD
+    );
+    await this.profileService.addTagsetOnProfile(innovationPack.profile, {
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: [],
+    });
+
+    await this.profileService.addTagsetOnProfile(innovationPack.profile, {
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: innovationPackData.tags ?? [],
+    });
 
     innovationPack.templatesSet =
       await this.templatesSetService.createTemplatesSet(

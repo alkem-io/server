@@ -84,7 +84,7 @@ export class ProfileResolverFields {
     );
     if (!defaultTagset) {
       throw new EntityNotFoundException(
-        `Unable to locate DEFAULT tagset: ${profile.id}`,
+        `Unable to locate DEFAULT tagset for profile: ${profile.id}`,
         LogContext.COMMUNITY
       );
     }

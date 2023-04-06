@@ -2,7 +2,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
-import { ValidateNested } from 'class-validator';
+import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.create';
 import { CreateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.create';
@@ -55,4 +55,8 @@ export class CreateCalloutInput {
     description: 'WhiteboardTemplate data for whiteboard Callouts.',
   })
   whiteboardTemplate?: CreateWhiteboardTemplateInput;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  tags?: string[];
 }

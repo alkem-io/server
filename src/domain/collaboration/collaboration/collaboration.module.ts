@@ -9,7 +9,6 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { CollaborationResolverMutations } from '@domain/collaboration/collaboration/collaboration.resolver.mutations';
 import { CollaborationResolverFields } from '@domain/collaboration/collaboration/collaboration.resolver.fields';
 import { RelationModule } from '@domain/collaboration/relation/relation.module';
-import { CollaborationDataloaderService } from './collaboration.dataloader.service';
 import { CollaborationAuthorizationService } from './collaboration.service.authorization';
 import { CanvasModule } from '@domain/common/canvas/canvas.module';
 import { AspectModule } from '../aspect/aspect.module';
@@ -42,12 +41,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     CollaborationResolverMutations,
     CollaborationResolverQueries,
     CollaborationResolverFields,
-    CollaborationDataloaderService,
   ],
-  exports: [
-    CollaborationService,
-    CollaborationDataloaderService,
-    CollaborationAuthorizationService,
-  ],
+  exports: [CollaborationService, CollaborationAuthorizationService],
 })
 export class CollaborationModule {}
