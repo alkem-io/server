@@ -61,6 +61,11 @@ export class InnovationPackService {
       tags: [],
     });
 
+    await this.profileService.addTagsetOnProfile(innovationPack.profile, {
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: innovationPackData.tags ?? [],
+    });
+
     innovationPack.templatesSet =
       await this.templatesSetService.createTemplatesSet(
         {

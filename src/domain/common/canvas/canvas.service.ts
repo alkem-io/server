@@ -43,6 +43,10 @@ export class CanvasService {
     canvas.profile = await this.profileService.createProfile(
       canvasData.profileData
     );
+    await this.profileService.addTagsetOnProfile(canvas.profile, {
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: [],
+    });
     await this.profileService.addVisualOnProfile(
       canvas.profile,
       VisualType.CARD
