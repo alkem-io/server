@@ -56,10 +56,6 @@ export class InnovationPackService {
       innovationPack.profile,
       VisualType.CARD
     );
-    await this.profileService.addTagsetOnProfile(innovationPack.profile, {
-      name: RestrictedTagsetNames.DEFAULT,
-      tags: [],
-    });
 
     await this.profileService.addTagsetOnProfile(innovationPack.profile, {
       name: RestrictedTagsetNames.DEFAULT,
