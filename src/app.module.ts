@@ -52,6 +52,7 @@ import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
+import { InnovationSpaceInterceptor } from '@common/interceptors';
 import { InnovationSpaceModule } from '@domain/innovation-space/innovation.space.module';
 
 @Module({
@@ -214,6 +215,10 @@ import { InnovationSpaceModule } from '@domain/innovation-space/innovation.space
     {
       provide: APP_INTERCEPTOR,
       useClass: DataLoaderInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: InnovationSpaceInterceptor,
     },
     {
       provide: APP_FILTER,

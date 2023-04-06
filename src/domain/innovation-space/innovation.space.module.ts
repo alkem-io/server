@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
-import { InnovationSpaceResolverQueries } from './innovation.space.resolver.queries';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { InnovationSpaceService } from './innovation.space.service';
+import { InnovationSpace } from './innovation.space.entity';
 
 @Module({
-  imports: [],
-  providers: [InnovationSpaceResolverQueries],
+  imports: [TypeOrmModule.forFeature([InnovationSpace])],
+  providers: [InnovationSpaceService],
+  exports: [InnovationSpaceService],
 })
 export class InnovationSpaceModule {}

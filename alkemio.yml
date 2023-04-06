@@ -68,6 +68,9 @@ security:
     # Cors allowed headers.
     allowed_headers: ${CORS_ALLOWED_HEADERS}:Origin,X-Requested-With,Content-Type,Accept,Authorization
 
+innovation_space:
+  header: ${INNOVATION_SPACE_HEADER}:myhost
+
 ## identity ##
 
 # Defines all authentication and authorization configuration.
