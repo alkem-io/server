@@ -1,5 +1,5 @@
-import { ForbiddenError } from 'apollo-server-express';
 import { LogContext } from '@common/enums';
+import { ForbiddenError } from './forbidden.error';
 
 export class ForbiddenException extends ForbiddenError {
   private context: LogContext;
