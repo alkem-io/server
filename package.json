@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.46.1",
+  "version": "0.46.3",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -40,11 +40,15 @@
   },
   "overrides": {
     "fs-capacitor": "6.2.0",
-    "jsonwebtoken": "9.0.0"
+    "jsonwebtoken": "9.0.0",
+    "@nestjs/schematics": {
+      "typescript": "4.7.4"
+    }
   },
   "dependencies": {
     "@alkemio/matrix-adapter-lib": "^0.1.3",
     "@alkemio/notifications-lib": "^0.2.7",
+    "@apollo/server": "^4.6.0",
     "@elastic/elasticsearch": "^8.4.0",
     "@nestjs/apollo": "^10.0.6",
     "@nestjs/axios": "^0.0.3",
@@ -61,7 +65,6 @@
     "ajv": "^8.11.0",
     "amqp-connection-manager": "^3.7.0",
     "amqplib": "^0.8.0",
-    "apollo-server-express": "^3.6.3",
     "cache-manager": "^3.4.4",
     "cache-manager-redis-store": "^2.0.0",
     "cids": "^1.1.9",
@@ -70,7 +73,7 @@
     "cookie-parser": "^1.4.6",
     "cross-env": "^7.0.3",
     "dataloader": "^2.2.2",
-    "graphql": "^15.8.0",
+    "graphql": "^16.6.0",
     "graphql-amqp-subscriptions": "^1.2.0",
     "graphql-subscriptions": "^2.0.0",
     "graphql-type-json": "^0.3.2",
@@ -127,7 +130,7 @@
     "supertest": "^6.1.4",
     "ts-jest": "^29.0.3",
     "ts-node": "^10.9.1",
-    "typescript": "4.3.5"
+    "typescript": "4.7.4"
   },
   "_moduleAliases": {
     "@src": "./dist"

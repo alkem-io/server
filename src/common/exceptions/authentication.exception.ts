@@ -1,5 +1,5 @@
-import { AuthenticationError } from 'apollo-server-express';
 import { LogContext } from '@common/enums';
+import { AuthenticationError } from './authentication.error';
 
 export class AuthenticationException extends AuthenticationError {
   private context: LogContext;
