@@ -141,6 +141,14 @@ http:
       entryPoints:
         - 'web'
 
+    api-private-rest:
+      rule: 'PathPrefix(`/api/private/rest`)'
+      service: 'oathkeeper-proxy'
+      middlewares:
+        - strip-api-private-prefix
+      entryPoints:
+        - 'web'
+
     kratos-public:
       rule: 'PathPrefix(`/identity/ory/kratos/public`)'
       service: 'kratos-public'

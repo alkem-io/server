@@ -22,8 +22,10 @@ export class StorageAccessController {
   @Get('storage')
   async storage(@CurrentUser() agentInfo: AgentInfo) {
     this.logger.verbose?.(
-      `retrieved the current agent inf22o: ${agentInfo}`,
+      `retrieved the current agent info: ${agentInfo}`,
       LogContext.STORAGE_ACCESS
     );
+
+    return 'hello storage';
   }
 }

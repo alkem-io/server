@@ -1,14 +1,9 @@
-import {
-  Injectable,
-  Inject,
-  LoggerService,
-  ExecutionContext,
-} from '@nestjs/common';
+import { Injectable, Inject, LoggerService } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthenticationException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
-import { Observable } from 'rxjs';
+import { AgentInfo } from '@core/authentication';
 
 @Injectable()
 export class RestGuard extends AuthGuard([
@@ -21,33 +16,20 @@ export class RestGuard extends AuthGuard([
     super();
   }
 
-  // // Need to override base method for graphql requests
-  // getRequest(context: ExecutionContext) {
-  //   return context.switchToHttp().getRequest();
-  // }
-
-  canActivate(
-    context: ExecutionContext
-  ): boolean | Promise<boolean> | Observable<boolean> {
-    const request = context.switchToHttp().getRequest();
-    this.logger.verbose?.(
-      `Request received: ${JSON.stringify(request.headers)}`,
-      LogContext.AUTH
-    );
-    return true;
-  }
-
-  handleRequest(
+  handleRequest<T extends AgentInfo>(
     err: any,
-    agentInfo: any,
+    agentInfo: T,
     _: any,
     _context: any,
     _status?: any
-  ) {
+  ): T {
     if (err) {
       this.logger.error(`error: ${err}`, LogContext.AUTH);
       throw new AuthenticationException(err);
     }
+
+    // authorize the access to the requested resource...
+
     return agentInfo;
   }
 }
