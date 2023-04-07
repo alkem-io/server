@@ -83,7 +83,7 @@ const setMap = (
 };
 
 const credentialTypeToRole = (type: AuthorizationCredential): CommunityRole => {
-  const roleMap = {
+  const roleMap: Partial<Record<AuthorizationCredential, CommunityRole>> = {
     [AuthorizationCredential.HUB_ADMIN]: CommunityRole.ADMIN,
     [AuthorizationCredential.CHALLENGE_ADMIN]: CommunityRole.ADMIN,
     [AuthorizationCredential.OPPORTUNITY_ADMIN]: CommunityRole.ADMIN,
@@ -102,14 +102,7 @@ const credentialTypeToRole = (type: AuthorizationCredential): CommunityRole => {
     [AuthorizationCredential.ORGANIZATION_OWNER]: CommunityRole.OWNER,
 
     [AuthorizationCredential.USER_GROUP_MEMBER]: CommunityRole.MEMBER,
-
-    [AuthorizationCredential.GLOBAL_ADMIN]: undefined,
-    [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY]: undefined,
-    [AuthorizationCredential.GLOBAL_ADMIN_HUBS]: undefined,
-    [AuthorizationCredential.GLOBAL_REGISTERED]: undefined,
-    [AuthorizationCredential.USER_SELF_MANAGEMENT]: undefined,
-    [AuthorizationCredential.INNOVATION_PACK_PROVIDER]: undefined,
-  } as const;
+  };
 
   const role = roleMap[type];
 

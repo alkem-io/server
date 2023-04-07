@@ -23,3 +23,4 @@ export * from './user.authorization.service.mock';
 export * from './user.group.service.mock';
 export * from './user.service.mock';
 export * from './winston.provider.mock';
+export * from './entity.manager.provider.mock';

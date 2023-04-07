@@ -6,7 +6,6 @@ import { Opportunity } from '@domain/collaboration/opportunity';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
 
-// todo can be refactored
 export const getUserRolesEntityData = async (
   entityManager: EntityManager,
   hubIds: string[],

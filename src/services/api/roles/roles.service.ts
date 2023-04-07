@@ -2,10 +2,8 @@ import { EntityManager } from 'typeorm';
 import { Inject, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { HubService } from '@domain/challenge/hub/hub.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserService } from '@domain/community/user/user.service';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { LogContext } from '@common/enums';
 import { ICommunity } from '@domain/community/community';
@@ -28,8 +26,6 @@ export class RolesService {
   constructor(
     @InjectEntityManager() private entityManager: EntityManager,
     private userService: UserService,
-    private userGroupService: UserGroupService,
-    private hubService: HubService,
     private challengeService: ChallengeService,
     private applicationService: ApplicationService,
     private communityService: CommunityService,
