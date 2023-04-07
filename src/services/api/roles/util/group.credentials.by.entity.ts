@@ -1,6 +1,5 @@
 import { ICredential } from '@src/domain';
-import { AuthorizationCredential } from '@common/enums';
-import { CommunityRole } from '@common/enums/community.role';
+import { AuthorizationCredential, CredentialRole } from '@common/enums';
 
 export type EntityCredentialType =
   | 'hubs'
@@ -11,7 +10,7 @@ export type EntityCredentialType =
 
 export type CredentialMap = Map<
   EntityCredentialType,
-  Map<string, CommunityRole[]>
+  Map<string, CredentialRole[]>
 >;
 
 /***
@@ -82,26 +81,28 @@ const setMap = (
   );
 };
 
-const credentialTypeToRole = (type: AuthorizationCredential): CommunityRole => {
-  const roleMap: Partial<Record<AuthorizationCredential, CommunityRole>> = {
-    [AuthorizationCredential.HUB_ADMIN]: CommunityRole.ADMIN,
-    [AuthorizationCredential.CHALLENGE_ADMIN]: CommunityRole.ADMIN,
-    [AuthorizationCredential.OPPORTUNITY_ADMIN]: CommunityRole.ADMIN,
-    [AuthorizationCredential.ORGANIZATION_ADMIN]: CommunityRole.ADMIN,
+const credentialTypeToRole = (
+  type: AuthorizationCredential
+): CredentialRole => {
+  const roleMap: Partial<Record<AuthorizationCredential, CredentialRole>> = {
+    [AuthorizationCredential.HUB_ADMIN]: CredentialRole.ADMIN,
+    [AuthorizationCredential.CHALLENGE_ADMIN]: CredentialRole.ADMIN,
+    [AuthorizationCredential.OPPORTUNITY_ADMIN]: CredentialRole.ADMIN,
+    [AuthorizationCredential.ORGANIZATION_ADMIN]: CredentialRole.ADMIN,
 
-    [AuthorizationCredential.HUB_HOST]: CommunityRole.HOST,
+    [AuthorizationCredential.HUB_HOST]: CredentialRole.HOST,
 
-    [AuthorizationCredential.CHALLENGE_LEAD]: CommunityRole.LEAD,
-    [AuthorizationCredential.OPPORTUNITY_LEAD]: CommunityRole.LEAD,
+    [AuthorizationCredential.CHALLENGE_LEAD]: CredentialRole.LEAD,
+    [AuthorizationCredential.OPPORTUNITY_LEAD]: CredentialRole.LEAD,
 
-    [AuthorizationCredential.HUB_MEMBER]: CommunityRole.MEMBER,
-    [AuthorizationCredential.CHALLENGE_MEMBER]: CommunityRole.MEMBER,
-    [AuthorizationCredential.OPPORTUNITY_MEMBER]: CommunityRole.MEMBER,
+    [AuthorizationCredential.HUB_MEMBER]: CredentialRole.MEMBER,
+    [AuthorizationCredential.CHALLENGE_MEMBER]: CredentialRole.MEMBER,
+    [AuthorizationCredential.OPPORTUNITY_MEMBER]: CredentialRole.MEMBER,
 
-    [AuthorizationCredential.ORGANIZATION_ASSOCIATE]: CommunityRole.ASSOCIATE,
-    [AuthorizationCredential.ORGANIZATION_OWNER]: CommunityRole.OWNER,
+    [AuthorizationCredential.ORGANIZATION_ASSOCIATE]: CredentialRole.ASSOCIATE,
+    [AuthorizationCredential.ORGANIZATION_OWNER]: CredentialRole.OWNER,
 
-    [AuthorizationCredential.USER_GROUP_MEMBER]: CommunityRole.MEMBER,
+    [AuthorizationCredential.USER_GROUP_MEMBER]: CredentialRole.MEMBER,
   };
 
   const role = roleMap[type];
