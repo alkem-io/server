@@ -15,7 +15,13 @@ export class RestGuard extends AuthGuard([
   ) {
     super();
   }
+  /**
+     if *canActive* is defined the authorization WILL NOT GO through the defined strategies, and use the code here instead.
+     if **handleRequest* is defined WILL USE the defined strategies
 
+     *handleRequest* is used to extend the error handling or how the request iis handled
+     Based on the GraphqlGuard, this guard must also execute an authorization rule against the access resource
+   */
   handleRequest<T extends AgentInfo>(
     err: any,
     agentInfo: T,
