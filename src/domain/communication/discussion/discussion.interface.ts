@@ -1,9 +1,9 @@
 import { DiscussionCategory } from '@common/enums/communication.discussion.category';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IRoomable } from '../room/roomable.interface';
+import { IRoomableNameable } from '../room/roomable.nameable.interface';
 
 @ObjectType('Discussion')
-export abstract class IDiscussion extends IRoomable {
+export abstract class IDiscussion extends IRoomableNameable {
   @Field(() => String, {
     description: 'The title of the Discussion.',
   })
