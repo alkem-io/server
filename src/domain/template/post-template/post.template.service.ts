@@ -21,10 +21,15 @@ export class PostTemplateService {
   ) {}
 
   async createPostTemplate(
-    postTemplateData: CreatePostTemplateInput
+    postTemplateData: CreatePostTemplateInput,
+    storageSpaceID: string
   ): Promise<IPostTemplate> {
     const postTemplate: IPostTemplate = PostTemplate.create(postTemplateData);
-    await this.templateBaseService.initialise(postTemplate, postTemplateData);
+    await this.templateBaseService.initialise(
+      postTemplate,
+      postTemplateData,
+      storageSpaceID
+    );
 
     return await this.postTemplateRepository.save(postTemplate);
   }

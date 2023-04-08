@@ -121,21 +121,23 @@ export class ChallengeService {
 
     challenge.opportunities = [];
 
+    challenge.storageSpace = await this.storageSpaceService.createStorageSpace(
+      this.storageSpaceService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
+      this.storageSpaceService.DEFAULT_MAX_ALLOWED_FILE_SIZE
+    );
+
     await this.baseChallengeService.initialise(
       challenge,
       challengeData,
       hubID,
       CommunityType.CHALLENGE,
       challengeCommunityPolicy,
-      challengeCommunityApplicationForm
+      challengeCommunityApplicationForm,
+      challenge.storageSpace.id
     );
 
     await this.challengeRepository.save(challenge);
 
-    challenge.storageSpace = await this.storageSpaceService.createStorageSpace(
-      this.storageSpaceService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
-      this.storageSpaceService.DEFAULT_MAX_ALLOWED_FILE_SIZE
-    );
     // set immediate community parent + resourceID
     if (challenge.community) {
       challenge.community.parentID = challenge.id;
@@ -594,9 +596,16 @@ export class ChallengeService {
     const challenge = await this.getChallengeOrFail(
       opportunityData.challengeID,
       {
-        relations: ['opportunities', 'community'],
+        relations: ['storageSpace', 'opportunities', 'community'],
       }
     );
+
+    if (!challenge.storageSpace) {
+      throw new EntityNotInitializedException(
+        'Unable to find StorageSpace for Challenge',
+        LogContext.CHALLENGES
+      );
+    }
 
     const hubID = this.getHubID(challenge);
     await this.baseChallengeService.isNameAvailableOrFail(
@@ -607,6 +616,7 @@ export class ChallengeService {
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
       hubID,
+      challenge.storageSpace.id,
       agentInfo
     );
 

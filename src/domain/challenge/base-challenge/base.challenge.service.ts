@@ -56,7 +56,8 @@ export class BaseChallengeService {
     hubID: string,
     communityType: CommunityType,
     communityPolicy: ICommunityPolicyDefinition,
-    applicationFormData: CreateFormInput
+    applicationFormData: CreateFormInput,
+    storageSpaceID: string
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
     await this.isNameAvailableOrFail(baseChallengeData.nameID, hubID);
@@ -78,6 +79,7 @@ export class BaseChallengeService {
     }
 
     baseChallenge.profile = await this.profileService.createProfile(
+      storageSpaceID,
       baseChallengeData.profileData
     );
     await this.profileService.addTagsetOnProfile(baseChallenge.profile, {
@@ -104,7 +106,8 @@ export class BaseChallengeService {
     baseChallenge.collaboration =
       await this.collaborationService.createCollaboration(
         communityType,
-        communicationGroupID
+        communicationGroupID,
+        storageSpaceID
       );
 
     baseChallenge.agent = await this.agentService.createAgent({

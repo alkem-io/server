@@ -30,6 +30,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     CalloutModule,
     CommunityPolicyModule,
     NamingModule,
+    EntityResolverModule,
     RelationModule,
     CanvasModule,
     AspectModule,

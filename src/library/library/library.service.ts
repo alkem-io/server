@@ -52,11 +52,13 @@ export class LibraryService {
   public async createInnovationPack(
     innovationPackData: CreateInnovationPackOnLibraryInput
   ): Promise<IInnovationPack> {
-    const library = await this.getLibraryOrFail();
-    if (!library.innovationPacks)
+    const library = await this.getLibraryOrFail({
+      relations: ['storageSpace'],
+    });
+    if (!library.innovationPacks || !library.storageSpace)
       throw new EntityNotInitializedException(
         `Library (${library}) not initialised`,
-        LogContext.CONTEXT
+        LogContext.LIBRARY
       );
 
     if (innovationPackData.nameID && innovationPackData.nameID.length > 0) {
@@ -75,7 +77,10 @@ export class LibraryService {
     }
 
     const innovationPack =
-      await this.innovationPackService.createInnovationPack(innovationPackData);
+      await this.innovationPackService.createInnovationPack(
+        innovationPackData,
+        library.storageSpace.id
+      );
     library.innovationPacks.push(innovationPack);
     await this.libraryRepository.save(library);
 

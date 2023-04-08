@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { OrganizationService } from './organization.service';
 import { OrganizationResolverMutations } from './organization.resolver.mutations';
-import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organization } from '@domain/community/organization';
 import { OrganizationResolverFields } from './organization.resolver.fields';
@@ -18,6 +17,7 @@ import { OrganizationVerificationModule } from '../organization-verification/org
 import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
   imports: [
@@ -27,7 +27,7 @@ import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/p
     OrganizationVerificationModule,
     UserModule,
     UserGroupModule,
-    TagsetModule,
+    EntityResolverModule,
     NamingModule,
     PlatformAuthorizationPolicyModule,
     ProfileModule,

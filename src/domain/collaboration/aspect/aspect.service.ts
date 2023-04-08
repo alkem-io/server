@@ -35,10 +35,12 @@ export class AspectService {
   public async createAspect(
     aspectInput: CreateAspectInput,
     userID: string,
-    communicationGroupID: string
+    communicationGroupID: string,
+    storageSpaceID: string
   ): Promise<IAspect> {
     const aspect: IAspect = Aspect.create(aspectInput);
     aspect.profile = await this.profileService.createProfile(
+      storageSpaceID,
       aspectInput.profileData
     );
     await this.profileService.addVisualOnProfile(

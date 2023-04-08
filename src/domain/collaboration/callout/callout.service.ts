@@ -64,6 +64,7 @@ export class CalloutService {
   public async createCallout(
     calloutData: CreateCalloutInput,
     communicationGroupID: string,
+    storageSpaceID: string,
     userID?: string
   ): Promise<ICallout> {
     if (calloutData.type == CalloutType.CARD && !calloutData.postTemplate) {
@@ -95,6 +96,7 @@ export class CalloutService {
     };
     const callout: ICallout = Callout.create(calloutCreationData);
     callout.profile = await this.profileService.createProfile(
+      storageSpaceID,
       calloutData.profile
     );
 
@@ -105,13 +107,15 @@ export class CalloutService {
 
     if (calloutData.type == CalloutType.CARD && postTemplateData) {
       callout.postTemplate = await this.postTemplateService.createPostTemplate(
-        postTemplateData
+        postTemplateData,
+        storageSpaceID
       );
     }
     if (calloutData.type == CalloutType.CANVAS && whiteboardTemplateData) {
       callout.whiteboardTemplate =
         await this.whiteboardTemplateService.createWhiteboardTemplate(
-          whiteboardTemplateData
+          whiteboardTemplateData,
+          storageSpaceID
         );
     }
 
@@ -368,9 +372,9 @@ export class CalloutService {
   ): Promise<IAspect> {
     const calloutID = aspectData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['aspects', 'aspects.profile'],
+      relations: ['profile', 'aspects', 'aspects.profile'],
     });
-    if (!callout.aspects)
+    if (!callout.aspects || !callout.profile)
       throw new EntityNotInitializedException(
         `Callout (${calloutID}) not initialised`,
         LogContext.COLLABORATION
@@ -385,7 +389,8 @@ export class CalloutService {
     const aspect = await this.aspectService.createAspect(
       aspectData,
       userID,
-      communicationGroupID
+      communicationGroupID,
+      callout.profile.storageSpaceId
     );
     callout.aspects.push(aspect);
     await this.calloutRepository.save(callout);
@@ -420,7 +425,7 @@ export class CalloutService {
   ): Promise<ICanvas> {
     const calloutID = canvasData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['canvases'],
+      relations: ['profile', 'canvases'],
     });
     if (!callout.canvases)
       throw new EntityNotInitializedException(
@@ -436,7 +441,8 @@ export class CalloutService {
         value: canvasData.value,
         profileData: canvasData.profileData,
       },
-      userID
+      userID,
+      callout.profile.storageSpaceId
     );
     callout.canvases.push(canvas);
     await this.calloutRepository.save(callout);

@@ -52,6 +52,7 @@ import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { VisualType } from '@common/enums/visual.type';
+import { StorageSpaceResolverService } from '@services/infrastructure/entity-resolver/storage.space.resolver.service';
 
 @Injectable()
 export class OrganizationService {
@@ -62,6 +63,7 @@ export class OrganizationService {
     private agentService: AgentService,
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
+    private storageSpaceResolverService: StorageSpaceResolverService,
     private preferenceSetService: PreferenceSetService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
@@ -78,10 +80,13 @@ export class OrganizationService {
     await this.checkDisplayNameOrFail(
       organizationData.profileData?.displayName
     );
+    const storageSpaceID =
+      await this.storageSpaceResolverService.getStorageSpaceIdForContributors();
 
     const organization: IOrganization = Organization.create(organizationData);
     organization.authorization = new AuthorizationPolicy();
     organization.profile = await this.profileService.createProfile(
+      storageSpaceID,
       organizationData.profileData
     );
     await this.profileService.addTagsetOnProfile(organization.profile, {
@@ -483,10 +488,13 @@ export class OrganizationService {
     const organization = await this.getOrganizationOrFail(orgID, {
       relations: ['groups', 'groups.profile'],
     });
+    const storageSpaceID =
+      await this.storageSpaceResolverService.getStorageSpaceIdForContributors();
 
     const group = await this.userGroupService.addGroupWithName(
       organization,
-      groupName
+      groupName,
+      storageSpaceID
     );
     await this.organizationRepository.save(organization);
 

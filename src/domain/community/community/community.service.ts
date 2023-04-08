@@ -51,6 +51,7 @@ import { FormService } from '@domain/common/form/form.service';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
+import { StorageSpaceResolverService } from '@services/infrastructure/entity-resolver/storage.space.resolver.service';
 
 @Injectable()
 export class CommunityService {
@@ -64,6 +65,7 @@ export class CommunityService {
     private applicationService: ApplicationService,
     private communicationService: CommunicationService,
     private formService: FormService,
+    private storageSpaceResolverService: StorageSpaceResolverService,
     private communityPolicyService: CommunityPolicyService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
@@ -112,9 +114,15 @@ export class CommunityService {
       relations: ['groups'],
     });
 
+    const storageSpaceID =
+      await this.storageSpaceResolverService.getStorageSpaceIdForCommunityOrFail(
+        community.id
+      );
+
     const group = await this.userGroupService.addGroupWithName(
       community,
       groupName,
+      storageSpaceID,
       community.hubID
     );
     await this.communityRepository.save(community);

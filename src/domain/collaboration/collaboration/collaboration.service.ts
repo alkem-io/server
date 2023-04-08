@@ -28,6 +28,7 @@ import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
+import { StorageSpaceResolverService } from '@services/infrastructure/entity-resolver/storage.space.resolver.service';
 
 @Injectable()
 export class CollaborationService {
@@ -37,6 +38,7 @@ export class CollaborationService {
     private calloutService: CalloutService,
     private namingService: NamingService,
     private relationService: RelationService,
+    private storageSpaceResolverService: StorageSpaceResolverService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
     @InjectEntityManager('default')
@@ -45,7 +47,8 @@ export class CollaborationService {
 
   async createCollaboration(
     communityType: CommunityType,
-    communicationGroupID: string
+    communicationGroupID: string,
+    storageSpaceID: string
   ): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
     collaboration.authorization = new AuthorizationPolicy();
@@ -64,7 +67,8 @@ export class CollaborationService {
       ) {
         const callout = await this.calloutService.createCallout(
           calloutDefault,
-          communicationGroupID
+          communicationGroupID,
+          storageSpaceID
         );
         // default callouts are already published
         callout.visibility = CalloutVisibility.PUBLISHED;
@@ -167,9 +171,15 @@ export class CollaborationService {
       await this.namingService.getCommunicationGroupIdFromCollaborationId(
         collaboration.id
       );
+
+    const storageSpaceID =
+      await this.storageSpaceResolverService.getStorageSpaceIdForCollaborationOrFail(
+        collaboration.id
+      );
     const callout = await this.calloutService.createCallout(
       calloutData,
       communicationGroupID,
+      storageSpaceID,
       userID
     );
     collaboration.callouts.push(callout);

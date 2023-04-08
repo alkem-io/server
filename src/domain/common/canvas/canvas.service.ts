@@ -34,13 +34,15 @@ export class CanvasService {
 
   async createCanvas(
     canvasData: CreateCanvasInput,
-    userID: string
+    userID: string,
+    storageSpaceID: string
   ): Promise<ICanvas> {
     const canvas: ICanvas = Canvas.create({ ...canvasData });
     canvas.authorization = new AuthorizationPolicy();
     canvas.createdBy = userID;
 
     canvas.profile = await this.profileService.createProfile(
+      storageSpaceID,
       canvasData.profileData
     );
     await this.profileService.addVisualOnProfile(

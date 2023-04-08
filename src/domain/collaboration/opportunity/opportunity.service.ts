@@ -69,6 +69,7 @@ export class OpportunityService {
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
     hubID: string,
+    storageSpaceID: string,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     // Validate incoming data
@@ -106,7 +107,8 @@ export class OpportunityService {
       hubID,
       CommunityType.OPPORTUNITY,
       opportunityCommunityPolicy,
-      opportunityCommunityApplicationForm
+      opportunityCommunityApplicationForm,
+      storageSpaceID
     );
 
     await this.opportunityRepository.save(opportunity);

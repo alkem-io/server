@@ -1,5 +1,4 @@
 import { ContextModule } from '@domain/context/context/context.module';
-import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Challenge } from './challenge.entity';
@@ -43,7 +42,6 @@ import { StorageSpaceModule } from '@domain/storage/storage-space/storage.space.
     CommunityModule,
     CommunityPolicyModule,
     OpportunityModule,
-    TagsetModule,
     OrganizationModule,
     NamingModule,
     LifecycleModule,

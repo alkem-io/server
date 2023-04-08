@@ -286,24 +286,6 @@ export class HubResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('groupsWithTag', () => [IUserGroup], {
-    nullable: false,
-    description: 'All groups on this Hub that have the provided tag',
-  })
-  @Profiling.api
-  async groupsWithTag(
-    @Parent() hub: Hub,
-    @Args('tag') tag: string
-  ): Promise<IUserGroup[]> {
-    return await this.groupService.getGroupsWithTag(tag, {
-      where: {
-        hubID: hub.id,
-      },
-    });
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('group', () => IUserGroup, {
     nullable: false,
     description: 'The user group with the specified id anywhere in the hub',

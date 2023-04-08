@@ -101,6 +101,12 @@ export class HubService {
     // default to active hub
     hub.visibility = HubVisibility.ACTIVE;
 
+    // Set up the storage space as that is needed for Profile
+    hub.storageSpace = await this.storageSpaceService.createStorageSpace(
+      this.storageSpaceService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
+      this.storageSpaceService.DEFAULT_MAX_ALLOWED_FILE_SIZE
+    );
+
     // remove context before saving as want to control that creation
     hub.context = undefined;
     await this.hubRepository.save(hub);
@@ -110,7 +116,8 @@ export class HubService {
       hub.id,
       CommunityType.HUB,
       hubCommunityPolicy,
-      hubCommunityApplicationForm
+      hubCommunityApplicationForm,
+      hub.storageSpace.id
     );
 
     // set immediate community parent and  community policy
@@ -131,7 +138,8 @@ export class HubService {
       {
         minInnovationFlow: 1,
       },
-      true
+      true,
+      hub.storageSpace.id
     );
 
     // Lifecycle
@@ -143,12 +151,6 @@ export class HubService {
     );
 
     hub.timeline = await this.timelineService.createTimeline();
-
-    // And set up the storage space
-    hub.storageSpace = await this.storageSpaceService.createStorageSpace(
-      this.storageSpaceService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
-      this.storageSpaceService.DEFAULT_MAX_ALLOWED_FILE_SIZE
-    );
 
     // save before assigning host in case that fails
     const savedHub = await this.hubRepository.save(hub);
