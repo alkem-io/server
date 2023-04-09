@@ -62,6 +62,7 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { StorageSpaceService } from '@domain/storage/storage-space/storage.space.service';
+import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
 
 @Injectable()
 export class ChallengeService {
@@ -745,6 +746,25 @@ export class ChallengeService {
     }
 
     return preferenceSet;
+  }
+
+  async getStorageSpaceOrFail(challengeId: string): Promise<IStorageSpace> {
+    const challengeWithStorageSpace = await this.getChallengeOrFail(
+      challengeId,
+      {
+        relations: ['storageSpace'],
+      }
+    );
+    const storageSpace = challengeWithStorageSpace.storageSpace;
+
+    if (!storageSpace) {
+      throw new EntityNotFoundException(
+        `Unable to find storagespace for Challenge with nameID: ${challengeWithStorageSpace.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return storageSpace;
   }
 
   async assignChallengeAdmin(
