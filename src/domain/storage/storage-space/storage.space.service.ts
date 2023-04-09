@@ -88,14 +88,20 @@ export class StorageSpaceService {
     storageSpaceID: string,
     options?: FindOneOptions<StorageSpace>
   ): Promise<IStorageSpace | never> {
-    const storageSpace = await this.storageSpaceRepository.findOne({
+    if (!storageSpaceID) {
+      throw new EntityNotFoundException(
+        `StorageSpace not found: ${storageSpaceID}`,
+        LogContext.STORAGE_SPACE
+      );
+    }
+    const storageSpace = await this.storageSpaceRepository.findOneOrFail({
       where: { id: storageSpaceID },
       ...options,
     });
     if (!storageSpace)
       throw new EntityNotFoundException(
         `StorageSpace not found: ${storageSpaceID}`,
-        LogContext.CALENDAR
+        LogContext.STORAGE_SPACE
       );
     return storageSpace;
   }
@@ -108,7 +114,7 @@ export class StorageSpaceService {
     if (!documents)
       throw new EntityNotFoundException(
         `Undefined storage documents found: ${storage.id}`,
-        LogContext.CALENDAR
+        LogContext.STORAGE_SPACE
       );
 
     return documents;
@@ -145,13 +151,13 @@ export class StorageSpaceService {
     if (!storage.documents)
       throw new EntityNotInitializedException(
         `StorageSpace (${storage}) not initialised`,
-        LogContext.CALENDAR
+        LogContext.STORAGE_SPACE
       );
 
     if (!(await this.validateMimeTypes(storage, mimeType))) {
       throw new ValidationException(
         `Invalid Mime Type specified for storage space '${mimeType}'- allowed types: ${storageSpace.allowedMimeTypes}.`,
-        LogContext.STORAGE_ACCESS
+        LogContext.STORAGE_SPACE
       );
     }
 
@@ -172,7 +178,7 @@ export class StorageSpaceService {
     storage.documents.push(document);
     this.logger.verbose?.(
       `Uploaded document '${document.externalID}' on storage space: ${storageSpace.id}`,
-      LogContext.STORAGE_ACCESS
+      LogContext.STORAGE_SPACE
     );
     await this.storageSpaceRepository.save(storage);
 
@@ -242,7 +248,7 @@ export class StorageSpaceService {
     if (!allDocuments)
       throw new EntityNotFoundException(
         `Space not initialised, no documents: ${storage.id}`,
-        LogContext.CALENDAR
+        LogContext.STORAGE_SPACE
       );
 
     // First filter the documents the current user has READ privilege to
@@ -259,7 +265,7 @@ export class StorageSpaceService {
         if (!document)
           throw new EntityNotFoundException(
             `Document with requested ID (${documentID}) not located within current StorageSpace: ${storage.id}`,
-            LogContext.CALENDAR
+            LogContext.STORAGE_SPACE
           );
         results.push(document);
       }

@@ -55,7 +55,7 @@ export class DocumentService {
     } catch (error) {
       this.logger.error(
         `Unable to delete underlying file for document '${documentID}': ${error}`,
-        LogContext.STORAGE_ACCESS
+        LogContext.STORAGE_SPACE
       );
     }
 
