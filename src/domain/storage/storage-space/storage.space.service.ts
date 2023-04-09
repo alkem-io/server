@@ -12,6 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IDocument } from '../document/document.interface';
+import { Document } from '../document/document.entity';
 import { DocumentService } from '../document/document.service';
 import { StorageSpace } from './storage.space.entity';
 import { IStorageSpace } from './storage.space.interface';
@@ -23,7 +24,6 @@ import { ValidationException } from '@common/exceptions';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { streamToBuffer } from '@common/utils';
-import { UpdateVisualInput } from '@domain/common/visual/dto/visual.dto.update';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
 @Injectable()
 export class StorageSpaceService {
@@ -47,6 +47,8 @@ export class StorageSpaceService {
     private visualService: VisualService,
     @InjectRepository(StorageSpace)
     private storageSpaceRepository: Repository<StorageSpace>,
+    @InjectRepository(Document)
+    private documentRepository: Repository<Document>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -154,16 +156,16 @@ export class StorageSpaceService {
     }
 
     // Upload the document
+    const size = buffer.length;
     const externalID = await this.documentService.uploadFile(buffer, filename);
 
     const createDocumentInput: CreateDocumentInput = {
       mimeType: mimeType as MimeFileType,
       externalID: externalID,
       displayName: filename,
-      size: 0, // TODO: detect and set this!
+      size: size,
       createdBy: userID,
     };
-
     const document = await this.documentService.createDocument(
       createDocumentInput
     );
@@ -184,7 +186,7 @@ export class StorageSpaceService {
     fileName: string,
     mimetype: string,
     userID: string
-  ): Promise<IVisual> {
+  ): Promise<IDocument> {
     this.visualService.validateMimeType(visual, mimetype);
 
     if (!readStream)
@@ -195,9 +197,8 @@ export class StorageSpaceService {
 
     const buffer = await streamToBuffer(readStream);
 
-    const { imageHeight, imageWidth } = await this.visualService.getImageSize(
-      buffer
-    );
+    const { imageHeight, imageWidth } =
+      await this.visualService.getImageDimensions(buffer);
     this.visualService.validateImageWidth(visual, imageWidth);
     this.visualService.validateImageHeight(visual, imageHeight);
 
@@ -209,17 +210,24 @@ export class StorageSpaceService {
         mimetype,
         userID
       );
-      const uri = this.documentService.getPubliclyAccessibleURL(document);
-      const updateData: UpdateVisualInput = {
-        visualID: visual.id,
-        uri: uri,
-      };
-      return await this.visualService.updateVisual(updateData);
+      return document;
     } catch (error: any) {
       throw new IpfsUploadFailedException(
         `Ipfs upload of ${fileName} failed! Error: ${error.message}`
       );
     }
+  }
+
+  public async size(storage: IStorageSpace): Promise<number> {
+    const documentsSize = await this.documentRepository
+      .createQueryBuilder('document')
+      .where('document.storageSpaceId = :storageSpaceId', {
+        storageSpaceId: storage.id,
+      })
+      .addSelect('SUM(size)', 'totalSize')
+      .getRawOne();
+
+    return documentsSize.totalSize;
   }
 
   public async getFilteredDocuments(

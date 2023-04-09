@@ -10,7 +10,7 @@ import { UpdateVisualInput } from '@domain/common/visual/dto/visual.dto.update';
 import { CreateVisualInput } from '@domain/common/visual/dto/visual.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { getImageSize } from '@common/utils';
+import { getImageDimensions } from '@common/utils';
 import { Visual } from './visual.entity';
 import { IVisual } from './visual.interface';
 import { DeleteVisualInput } from './dto/visual.dto.delete';
@@ -80,8 +80,8 @@ export class VisualService {
     return await this.visualRepository.save(visual);
   }
 
-  public async getImageSize(buffer: Buffer) {
-    return getImageSize(buffer);
+  public async getImageDimensions(buffer: Buffer) {
+    return getImageDimensions(buffer);
   }
 
   public validateMimeType(visual: IVisual, mimeType: string) {

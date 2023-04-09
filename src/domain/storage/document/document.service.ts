@@ -50,7 +50,14 @@ export class DocumentService {
       relations: ['tagset'],
     });
     // Delete the underlying document
-    await this.removeFile(document.externalID);
+    try {
+      await this.removeFile(document.externalID);
+    } catch (error) {
+      this.logger.error(
+        `Unable to delete underlying file for document '${documentID}': ${error}`,
+        LogContext.STORAGE_ACCESS
+      );
+    }
 
     if (document.authorization) {
       await this.authorizationPolicyService.delete(document.authorization);

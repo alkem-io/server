@@ -60,4 +60,14 @@ export class StorageSpaceResolverFields {
       agentInfo
     );
   }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('size', () => Number, {
+    nullable: false,
+    description: 'The aggregate size of all Documents for this StorageSpace.',
+  })
+  async size(@Parent() storageSpace: IStorageSpace) {
+    return await this.storageSpaceService.size(storageSpace);
+  }
 }

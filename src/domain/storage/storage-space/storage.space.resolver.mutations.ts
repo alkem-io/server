@@ -13,6 +13,7 @@ import { IVisual } from '@domain/common/visual/visual.interface';
 import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upload.image';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { DocumentService } from '../document/document.service';
+import { UpdateVisualInput } from '@domain/common/visual/dto/visual.dto.update';
 
 @Resolver()
 export class StorageSpaceResolverMutations {
@@ -59,7 +60,7 @@ export class StorageSpaceResolverMutations {
     //   `visual image upload on storage space: ${visual.id}`
     // );
     const readStream = createReadStream();
-    const updatedVisual = await this.storageSpaceService.uploadImageOnVisual(
+    const visualDocument = await this.storageSpaceService.uploadImageOnVisual(
       visual,
       storageSpace,
       readStream,
@@ -68,7 +69,16 @@ export class StorageSpaceResolverMutations {
       agentInfo.userID
     );
 
-    return updatedVisual;
+    // Ensure authorization is updated
+    await this.documentAuthorizationService.applyAuthorizationPolicy(
+      visualDocument,
+      storageSpace.authorization
+    );
+    const updateData: UpdateVisualInput = {
+      visualID: visual.id,
+      uri: this.documentService.getPubliclyAccessibleURL(visualDocument),
+    };
+    return await this.visualService.updateVisual(updateData);
   }
 
   @UseGuards(GraphqlGuard)

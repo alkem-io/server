@@ -11,6 +11,7 @@ import { StorageSpaceService } from './storage.space.service';
 import { StorageSpaceAuthorizationService } from './storage.space.service.authorization';
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { Document } from '../document/document.entity';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     VisualModule,
     EntityResolverModule,
     TypeOrmModule.forFeature([StorageSpace]),
+    TypeOrmModule.forFeature([Document]),
   ],
   providers: [
     StorageSpaceResolverFields,
