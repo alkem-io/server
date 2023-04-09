@@ -53,7 +53,7 @@ export class StorageSpaceResolverService {
 
     throw new StorageSpaceNotFoundException(
       `Unable to find StorageSpace for Collaboration: ${collaborationID}`,
-      LogContext.STORAGE_ACCESS
+      LogContext.STORAGE_SPACE
     );
   }
 
@@ -86,7 +86,7 @@ export class StorageSpaceResolverService {
 
     throw new StorageSpaceNotFoundException(
       `Unable to find StorageSpace for Community: ${communityID}`,
-      LogContext.STORAGE_ACCESS
+      LogContext.STORAGE_SPACE
     );
   }
 
@@ -108,7 +108,7 @@ export class StorageSpaceResolverService {
 
     throw new StorageSpaceNotFoundException(
       `Unable to find StorageSpace for Calendar: ${calendarID}`,
-      LogContext.STORAGE_ACCESS
+      LogContext.STORAGE_SPACE
     );
   }
 
@@ -141,7 +141,7 @@ export class StorageSpaceResolverService {
 
     throw new StorageSpaceNotFoundException(
       `Unable to find StorageSpace for TemplatesSet: ${templatesSetID}`,
-      LogContext.STORAGE_ACCESS
+      LogContext.STORAGE_SPACE
     );
   }
 
@@ -157,7 +157,7 @@ export class StorageSpaceResolverService {
 
     throw new StorageSpaceNotFoundException(
       'Unable to find StorageSpace for Contributors',
-      LogContext.STORAGE_ACCESS
+      LogContext.STORAGE_SPACE
     );
   }
 
@@ -177,7 +177,7 @@ export class StorageSpaceResolverService {
 
     throw new StorageSpaceNotFoundException(
       'Unable to find StorageSpace for Visual',
-      LogContext.STORAGE_ACCESS
+      LogContext.STORAGE_SPACE
     );
   }
 }
