@@ -12,8 +12,8 @@ const allowedTypes = [
 
 const maxAllowedFileSize = 5242880;
 
-export class storage1680341687350 implements MigrationInterface {
-  name = 'storage1680341687350';
+export class storage1680602779999 implements MigrationInterface {
+  name = 'storage1680602779999';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create storage space entity
