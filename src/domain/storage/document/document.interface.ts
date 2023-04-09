@@ -22,7 +22,7 @@ export abstract class IDocument extends IAuthorizable {
 
   createdBy!: string;
 
-  @Field(() => [MimeFileType], {
+  @Field(() => MimeFileType, {
     description: 'Mime type for this Document.',
   })
   mimeType!: MimeFileType;

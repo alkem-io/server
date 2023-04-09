@@ -34,6 +34,7 @@ export class DocumentResolverMutations {
       AuthorizationPrivilege.DELETE,
       `delete document: ${document.displayName}`
     );
+
     return await this.documentService.deleteDocument(deleteData);
   }
 

@@ -6,14 +6,12 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { IDocument } from './document.interface';
-import { DocumentService } from './document.service';
 
 @Resolver(() => IDocument)
 export class DocumentResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private documentService: DocumentService,
     private userService: UserService
   ) {}
 

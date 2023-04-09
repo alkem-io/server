@@ -7,6 +7,7 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { StorageSpaceNotFoundException } from '@common/exceptions/storage.space.not.found.exception';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { Platform } from '@platform/platfrom/platform.entity';
+import { Visual } from '@domain/common/visual/visual.entity';
 
 @Injectable()
 export class StorageSpaceResolverService {
@@ -18,7 +19,9 @@ export class StorageSpaceResolverService {
     @InjectRepository(InnovationPack)
     private innovationPackepository: Repository<InnovationPack>,
     @InjectRepository(Platform)
-    private platformRepository: Repository<Platform>
+    private platformRepository: Repository<Platform>,
+    @InjectRepository(Visual)
+    private visualRepository: Repository<Visual>
   ) {}
 
   public async getStorageSpaceIdForCollaborationOrFail(
@@ -145,7 +148,7 @@ export class StorageSpaceResolverService {
   public async getStorageSpaceIdForContributors(): Promise<string> {
     const platform = await this.platformRepository
       .createQueryBuilder('platform')
-      .leftJoinAndSelect('hub.storageSpace', 'storageSpace')
+      .leftJoinAndSelect('platform.storageSpace', 'storageSpace')
       .getOne();
 
     if (platform && platform.storageSpace) {
@@ -154,6 +157,26 @@ export class StorageSpaceResolverService {
 
     throw new StorageSpaceNotFoundException(
       'Unable to find StorageSpace for Contributors',
+      LogContext.STORAGE_ACCESS
+    );
+  }
+
+  public async getStorageSpaceIdForVisual(visualID: string): Promise<string> {
+    const visual = await this.visualRepository
+      .createQueryBuilder('visual')
+      .leftJoinAndSelect('visual.profile', 'profile')
+      .where('visual.id = :id')
+      .setParameters({ id: `${visualID}` })
+      .getOne();
+
+    if (visual && visual.profile) {
+      return visual.profile.storageSpaceId;
+    }
+
+    // tbd: deal with Branding entity here
+
+    throw new StorageSpaceNotFoundException(
+      'Unable to find StorageSpace for Visual',
       LogContext.STORAGE_ACCESS
     );
   }

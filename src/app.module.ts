@@ -46,7 +46,6 @@ import { ActivityLogModule } from '@services/api/activity-log/activity.log.modul
 import { MessageModule } from '@domain/communication/message/message.module';
 import { LibraryModule } from '@library/library/library.module';
 import { AspectMoveModule } from '@domain/collaboration/aspect/aspect.move.module';
-import { FileManagerModule } from '@domain/storage/file-manager/file.manager.module';
 import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
@@ -205,7 +204,6 @@ import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/
     LibraryModule,
     PlatformModule,
     AspectMoveModule,
-    FileManagerModule,
     GeoLocationModule,
     ElasticsearchModule,
     InnovationSpaceModule,

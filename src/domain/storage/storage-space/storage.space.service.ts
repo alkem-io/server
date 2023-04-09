@@ -15,9 +15,16 @@ import { IDocument } from '../document/document.interface';
 import { DocumentService } from '../document/document.service';
 import { StorageSpace } from './storage.space.entity';
 import { IStorageSpace } from './storage.space.interface';
-import { CreateDocumentOnStorageSpaceInput } from './dto/storage.space.dto.create.document';
 import { StorageSpaceArgsDocuments } from './dto/storage.space..args.documents';
 import { MimeFileType } from '@common/enums/mime.file.type';
+import { CreateDocumentInput } from '../document/dto/document.dto.create';
+import { ReadStream } from 'fs';
+import { ValidationException } from '@common/exceptions';
+import { IVisual } from '@domain/common/visual/visual.interface';
+import { VisualService } from '@domain/common/visual/visual.service';
+import { streamToBuffer } from '@common/utils';
+import { UpdateVisualInput } from '@domain/common/visual/dto/visual.dto.update';
+import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
 @Injectable()
 export class StorageSpaceService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 5242880;
@@ -37,6 +44,7 @@ export class StorageSpaceService {
     private documentService: DocumentService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
+    private visualService: VisualService,
     @InjectRepository(StorageSpace)
     private storageSpaceRepository: Repository<StorageSpace>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -104,11 +112,32 @@ export class StorageSpaceService {
     return documents;
   }
 
-  public async createDocument(
-    documentData: CreateDocumentOnStorageSpaceInput,
+  public async uploadFileAsDocument(
+    storageSpace: IStorageSpace,
+    readStream: ReadStream,
+    filename: string,
+    mimeType: string,
     userID: string
   ): Promise<IDocument> {
-    const storage = await this.getStorageSpaceOrFail(documentData.storageID, {
+    const buffer = await streamToBuffer(readStream);
+
+    return await this.uploadFileAsDocumentFromBuffer(
+      storageSpace,
+      buffer,
+      filename,
+      mimeType,
+      userID
+    );
+  }
+
+  private async uploadFileAsDocumentFromBuffer(
+    storageSpace: IStorageSpace,
+    buffer: Buffer,
+    filename: string,
+    mimeType: string,
+    userID: string
+  ): Promise<IDocument> {
+    const storage = await this.getStorageSpaceOrFail(storageSpace.id, {
       relations: ['documents'],
     });
     if (!storage.documents)
@@ -117,17 +146,83 @@ export class StorageSpaceService {
         LogContext.CALENDAR
       );
 
+    if (!(await this.validateMimeTypes(storage, mimeType))) {
+      throw new ValidationException(
+        `Invalid Mime Type specified for storage space '${mimeType}'- allowed types: ${storageSpace.allowedMimeTypes}.`,
+        LogContext.STORAGE_ACCESS
+      );
+    }
+
+    // Upload the document
+    const externalID = await this.documentService.uploadFile(buffer, filename);
+
+    const createDocumentInput: CreateDocumentInput = {
+      mimeType: mimeType as MimeFileType,
+      externalID: externalID,
+      displayName: filename,
+      size: 0, // TODO: detect and set this!
+      createdBy: userID,
+    };
+
     const document = await this.documentService.createDocument(
-      documentData,
-      userID
+      createDocumentInput
     );
     storage.documents.push(document);
+    this.logger.verbose?.(
+      `Uploaded document '${document.externalID}' on storage space: ${storageSpace.id}`,
+      LogContext.STORAGE_ACCESS
+    );
     await this.storageSpaceRepository.save(storage);
 
     return document;
   }
 
-  public async getDocumentsArgs(
+  async uploadImageOnVisual(
+    visual: IVisual,
+    storageSpace: IStorageSpace,
+    readStream: ReadStream,
+    fileName: string,
+    mimetype: string,
+    userID: string
+  ): Promise<IVisual> {
+    this.visualService.validateMimeType(visual, mimetype);
+
+    if (!readStream)
+      throw new ValidationException(
+        'Readstream should be defined!',
+        LogContext.COMMUNITY
+      );
+
+    const buffer = await streamToBuffer(readStream);
+
+    const { imageHeight, imageWidth } = await this.visualService.getImageSize(
+      buffer
+    );
+    this.visualService.validateImageWidth(visual, imageWidth);
+    this.visualService.validateImageHeight(visual, imageHeight);
+
+    try {
+      const document = await this.uploadFileAsDocumentFromBuffer(
+        storageSpace,
+        buffer,
+        fileName,
+        mimetype,
+        userID
+      );
+      const uri = this.documentService.getPubliclyAccessibleURL(document);
+      const updateData: UpdateVisualInput = {
+        visualID: visual.id,
+        uri: uri,
+      };
+      return await this.visualService.updateVisual(updateData);
+    } catch (error: any) {
+      throw new IpfsUploadFailedException(
+        `Ipfs upload of ${fileName} failed! Error: ${error.message}`
+      );
+    }
+  }
+
+  public async getFilteredDocuments(
     storage: IStorageSpace,
     args: StorageSpaceArgsDocuments,
     agentInfo: AgentInfo
@@ -181,10 +276,14 @@ export class StorageSpaceService {
       AuthorizationPrivilege.READ
     );
   }
+
   private validateMimeTypes(
     storageSpace: IStorageSpace,
-    mimeType: MimeFileType
+    mimeType: string
   ): boolean {
-    return storageSpace.allowedMimeTypes.includes(mimeType);
+    const result = Object.values(storageSpace.allowedMimeTypes).includes(
+      mimeType as MimeFileType
+    );
+    return result;
   }
 }

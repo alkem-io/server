@@ -54,7 +54,6 @@ import { UpdateAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.u
 import { UpdateCanvasDirectInput } from '@domain/common/canvas/dto/canvas.dto.update.direct';
 import { UpdateDiscussionInput } from '@domain/communication/discussion/dto/discussion.dto.update';
 import { UpdateEcosystemModelInput } from '@domain/context/ecosystem-model/dto/ecosystem-model.dto.update';
-import { DeleteFileInput } from '@domain/storage/file-manager/file.manager.dto.delete';
 import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
 import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create.callout';
 import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';
@@ -65,7 +64,11 @@ import { CreateWhiteboardTemplateOnTemplatesSetInput } from '@domain/template/te
 import { UpdatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.update';
 import { UpdateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.update';
 import { CreateDocumentInput } from '@domain/storage/document/dto/document.dto.create';
-import { UpdateDocumentInput } from '@domain/storage/document';
+import {
+  DeleteDocumentInput,
+  UpdateDocumentInput,
+} from '@domain/storage/document';
+import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upload.image';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -101,6 +104,7 @@ export class BaseHandler extends AbstractHandler {
       CreateReferenceOnProfileInput,
       CreateTagsetOnProfileInput,
       CreateCalendarEventOnCalendarInput,
+      DeleteDocumentInput,
       UpdateActorInput,
       UpdateAspectInput,
       UpdateDocumentInput,
@@ -119,9 +123,9 @@ export class BaseHandler extends AbstractHandler {
       UpdateWhiteboardTemplateInput,
       UpdateDiscussionInput,
       UpdateEcosystemModelInput,
+      VisualUploadImageInput,
       CommunityApplyInput,
       CommunicationCreateDiscussionInput,
-      DeleteFileInput,
       SendMessageOnCalloutInput,
       CreateCalloutOnCollaborationInput,
     ];

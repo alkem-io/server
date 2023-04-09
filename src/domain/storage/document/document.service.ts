@@ -13,29 +13,31 @@ import { Document } from './document.entity';
 import { IDocument } from './document.interface';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
+import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
+import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
 
 @Injectable()
 export class DocumentService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private tagsetService: TagsetService,
+    private ipfsAdapter: IpfsService,
     @InjectRepository(Document)
     private documentRepository: Repository<Document>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   public async createDocument(
-    documentInput: CreateDocumentInput,
-    userID: string
+    documentInput: CreateDocumentInput
   ): Promise<Document> {
-    const document: IDocument = Document.create(documentInput);
+    const document: IDocument = Document.create({ ...documentInput });
     document.tagset = await this.tagsetService.createTagset({
       name: RestrictedTagsetNames.DEFAULT,
-      tags: documentInput.tags || [],
+      tags: [],
     });
 
     document.authorization = new AuthorizationPolicy();
-    document.createdBy = userID;
 
     return await this.documentRepository.save(document);
   }
@@ -47,6 +49,9 @@ export class DocumentService {
     const document = await this.getDocumentOrFail(documentID, {
       relations: ['tagset'],
     });
+    // Delete the underlying document
+    await this.removeFile(document.externalID);
+
     if (document.authorization) {
       await this.authorizationPolicyService.delete(document.authorization);
     }
@@ -74,7 +79,6 @@ export class DocumentService {
       );
     return document;
   }
-
   public async updateDocument(
     documentData: UpdateDocumentInput
   ): Promise<IDocument> {
@@ -102,5 +106,35 @@ export class DocumentService {
 
   public async saveDocument(document: IDocument): Promise<IDocument> {
     return await this.documentRepository.save(document);
+  }
+
+  public getPubliclyAccessibleURL(document: IDocument): string {
+    return this.ipfsAdapter.createIpfsClientEndPoint(document.externalID);
+  }
+
+  private async removeFile(CID: string): Promise<boolean> {
+    try {
+      await this.ipfsAdapter.unpinFile(CID);
+      await this.ipfsAdapter.garbageCollect();
+    } catch (error) {
+      throw new IpfsDeleteFailedException(
+        `Ipfs removing file at path ${CID} failed! Error: ${
+          (error as Error).message ?? String(error)
+        }`
+      );
+    }
+    return true;
+  }
+
+  public async uploadFile(buffer: Buffer, fileName: string): Promise<string> {
+    try {
+      return await this.ipfsAdapter.uploadFileFromBufferCID(buffer);
+    } catch (error) {
+      throw new IpfsUploadFailedException(
+        `Ipfs upload of ${fileName} failed! Error: ${
+          (error as Error).message ?? String(error)
+        }`
+      );
+    }
   }
 }

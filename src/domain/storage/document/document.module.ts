@@ -9,6 +9,7 @@ import { DocumentResolverFields } from './document.resolver.fields';
 import { DocumentAuthorizationService } from './document.service.authorization';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { UserModule } from '@domain/community/user/user.module';
+import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { UserModule } from '@domain/community/user/user.module';
     AuthorizationModule,
     TagsetModule,
     UserModule,
+    IpfsModule,
     TypeOrmModule.forFeature([Document]),
   ],
   providers: [

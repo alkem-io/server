@@ -9,6 +9,8 @@ import { StorageSpaceResolverFields } from './storage.space.resolver.fields';
 import { StorageSpaceResolverMutations } from './storage.space.resolver.mutations';
 import { StorageSpaceService } from './storage.space.service';
 import { StorageSpaceAuthorizationService } from './storage.space.service.authorization';
+import { VisualModule } from '@domain/common/visual/visual.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { StorageSpaceAuthorizationService } from './storage.space.service.author
     AuthorizationModule,
     AuthorizationPolicyModule,
     IpfsModule,
+    VisualModule,
+    EntityResolverModule,
     TypeOrmModule.forFeature([StorageSpace]),
   ],
   providers: [

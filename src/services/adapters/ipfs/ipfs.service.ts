@@ -42,12 +42,32 @@ export class IpfsService {
   }
 
   public async uploadFileFromBuffer(buffer: Buffer): Promise<string> {
+    const CID = await this.uploadFileFromBufferCID(buffer);
+    return this.createIpfsClientEndPoint(CID);
+  }
+
+  // returns the CID only
+  public async uploadFileFromBufferCID(buffer: Buffer): Promise<string> {
     const res = await this.ipfsClient.add(buffer, { pin: true });
     this.logger.verbose?.(
       `Uploaded file with CID: ${res.path}`,
       LogContext.IPFS
     );
-    return `${this.ipfsClientEndpoint}/${res.path}`;
+    return res.path;
+  }
+
+  public createIpfsClientEndPoint(CID: string): string {
+    return `${this.ipfsClientEndpoint}/${CID}`;
+  }
+
+  // Returns the CID that was uploaded
+  public async Raw(buffer: Buffer): Promise<string> {
+    const res = await this.ipfsClient.add(buffer, { pin: true });
+    this.logger.verbose?.(
+      `Uploaded file with CID: ${res.path}`,
+      LogContext.IPFS
+    );
+    return `${res.path}`;
   }
 
   public async unpinFile(CID: string): Promise<CID> {

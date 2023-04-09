@@ -12,6 +12,7 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { Platform } from '@platform/platfrom/platform.entity';
+import { Visual } from '@domain/common/visual';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { Platform } from '@platform/platfrom/platform.entity';
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([InnovationPack]),
     TypeOrmModule.forFeature([Platform]),
+    TypeOrmModule.forFeature([Visual]),
   ],
   providers: [
     IdentityResolverService,

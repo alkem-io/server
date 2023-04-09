@@ -35,7 +35,7 @@ export class StorageSpaceResolverFields {
     })
     ID: string
   ): Promise<IDocument> {
-    const results = await this.storageSpaceService.getDocumentsArgs(
+    const results = await this.storageSpaceService.getFilteredDocuments(
       storageSpace,
       { IDs: [ID] },
       agentInfo
@@ -54,7 +54,7 @@ export class StorageSpaceResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args({ nullable: true }) args: StorageSpaceArgsDocuments
   ) {
-    return await this.storageSpaceService.getDocumentsArgs(
+    return await this.storageSpaceService.getFilteredDocuments(
       storageSpace,
       args,
       agentInfo
