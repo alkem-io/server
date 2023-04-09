@@ -47,10 +47,12 @@ export class StorageSpaceAuthorizationService {
       storageSpace
     );
     for (const document of storageSpace.documents) {
-      await this.documentAuthorizationService.applyAuthorizationPolicy(
-        document,
-        storageSpace.authorization
-      );
+      document.authorization = (
+        await this.documentAuthorizationService.applyAuthorizationPolicy(
+          document,
+          storageSpace.authorization
+        )
+      ).authorization;
     }
 
     return storageSpace;
