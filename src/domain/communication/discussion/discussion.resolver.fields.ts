@@ -9,6 +9,10 @@ import { DiscussionService } from './discussion.service';
 import { IDiscussion } from './discussion.interface';
 import { IMessage } from '../message/message.interface';
 import { Discussion } from './discussion.entity';
+import { Loader } from '@core/dataloader/decorators';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { ProfileLoaderCreator } from '@core/dataloader/creators';
 
 @Resolver(() => IDiscussion)
 export class DiscussionResolverFields {
@@ -57,5 +61,19 @@ export class DiscussionResolverFields {
     }
 
     return createdBy;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('profile', () => IProfile, {
+    nullable: false,
+    description: 'The Profile for this Discussion.',
+  })
+  @Profiling.api
+  async profile(
+    @Parent() discussion: IDiscussion,
+    @Loader(ProfileLoaderCreator, { parentClassRef: Discussion })
+    loader: ILoader<IProfile>
+  ): Promise<IProfile> {
+    return loader.load(discussion.id);
   }
 }

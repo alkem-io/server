@@ -26,6 +26,8 @@ import { CommunicationSendMessageToOrganizationInput } from './dto/communication
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { NotificationInputCommunityLeadsMessage } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.leads.message';
 import { CommunicationSendMessageToCommunityLeadsInput } from './dto/communication.dto.send.message.community.leads';
+import { ValidationException } from '@common/exceptions/validation.exception';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 
 @Resolver()
 export class CommunicationResolverMutations {
@@ -33,6 +35,7 @@ export class CommunicationResolverMutations {
     private authorizationService: AuthorizationService,
     private notificationAdapter: NotificationAdapter,
     private communicationService: CommunicationService,
+    private namingService: NamingService,
     private discussionAuthorizationService: DiscussionAuthorizationService,
     private discussionService: DiscussionService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
@@ -59,6 +62,17 @@ export class CommunicationResolverMutations {
       AuthorizationPrivilege.CREATE_DISCUSSION,
       `create discussion on communication: ${communication.id}`
     );
+
+    const displayNameAvailable =
+      await this.namingService.isDiscussionDisplayNameAvailableInCommunication(
+        createData.profile.displayName,
+        communication.id
+      );
+    if (!displayNameAvailable)
+      throw new ValidationException(
+        `Unable to create Discussion: the provided displayName is already taken: ${createData.profile.displayName}`,
+        LogContext.CHALLENGES
+      );
 
     const discussion = await this.communicationService.createDiscussion(
       createData,

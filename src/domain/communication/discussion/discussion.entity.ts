@@ -5,29 +5,8 @@ import { RoomableNameableEntity } from '../room/roomable.nameable.entity';
 
 @Entity()
 export class Discussion extends RoomableNameableEntity implements IDiscussion {
-  constructor(
-    communicationGroupID: string,
-    displayName: string,
-    title?: string,
-    description?: string,
-    category?: string
-  ) {
-    super(communicationGroupID, displayName);
-    this.title = title || '';
-    this.category = category || '';
-    this.description = description || '';
-    this.commentsCount = 0;
-    this.createdBy = '';
-  }
-
-  @Column('text', { nullable: false })
-  title!: string;
-
   @Column('text', { nullable: false })
   category!: string;
-
-  @Column('text', { nullable: false })
-  description!: string;
 
   @Column('int', { nullable: false })
   commentsCount!: number;

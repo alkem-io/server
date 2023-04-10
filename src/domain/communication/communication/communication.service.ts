@@ -159,11 +159,11 @@ export class CommunicationService {
     userID: string,
     userCommunicationID: string
   ): Promise<IDiscussion> {
-    const title = discussionData.title;
+    const displayName = discussionData.profile.displayName;
     const communicationID = discussionData.communicationID;
 
     this.logger.verbose?.(
-      `[Discussion] Adding discussion (${title}) to Communication (${communicationID})`,
+      `[Discussion] Adding discussion (${displayName}) to Communication (${communicationID})`,
       LogContext.COMMUNICATION
     );
 
@@ -183,10 +183,10 @@ export class CommunicationService {
       discussionData,
       communication.communicationGroupID,
       userID,
-      `${communication.displayName}-discussion-${discussionData.title}`
+      communication.displayName
     );
     this.logger.verbose?.(
-      `[Discussion] Room created (${title}) and membership replicated from Updates (${communicationID})`,
+      `[Discussion] Room created (${displayName}) and membership replicated from Updates (${communicationID})`,
       LogContext.COMMUNICATION
     );
 

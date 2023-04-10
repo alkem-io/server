@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Discussion } from './discussion.entity';
@@ -8,7 +8,6 @@ import { IDiscussion } from './discussion.interface';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
 import { CommunicationRoomResult } from '../room/dto/communication.dto.room.result';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { RoomService } from '../room/room.service';
 import { CommunicationCreateDiscussionInput } from '../communication/dto/communication.dto.create.discussion';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -16,14 +15,18 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
 import { RoomRemoveMessageInput } from '../room/dto/room.dto.remove.message';
 import { IMessage } from '../message/message.interface';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 
 @Injectable()
 export class DiscussionService {
   constructor(
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
-    private communicationAdapter: CommunicationAdapter,
+    private profileService: ProfileService,
     private roomService: RoomService,
+    private namingService: NamingService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -31,18 +34,28 @@ export class DiscussionService {
     discussionData: CommunicationCreateDiscussionInput,
     communicationGroupID: string,
     userID: string,
-    displayName: string
+    communicationDisplayName: string
   ): Promise<IDiscussion> {
-    const discussion = new Discussion(
-      communicationGroupID,
-      `${displayName}-discussion-${discussionData.title}`,
-      discussionData.title,
-      discussionData.description,
-      discussionData.category
+    const discussionNameID = this.namingService.createNameID(
+      `${discussionData.profile.displayName}`
     );
+    const discussionCreationData = {
+      ...discussionData,
+      nameID: discussionNameID,
+    };
+    const discussion: IDiscussion = Discussion.create(discussionCreationData);
+    discussion.profile = await this.profileService.createProfile(
+      discussionData.profile
+    );
+
+    await this.profileService.addTagsetOnProfile(discussion.profile, {
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: discussionData.tags || [],
+    });
+
     discussion.authorization = new AuthorizationPolicy();
     discussion.communicationGroupID = communicationGroupID;
-    discussion.displayName = `${displayName}-discussion-${discussion.title}`;
+    discussion.displayName = `${communicationDisplayName}-discussion-${discussion.profile.displayName}`;
     discussion.createdBy = userID;
     discussion.commentsCount = 0;
     await this.save(discussion);
@@ -56,7 +69,13 @@ export class DiscussionService {
     deleteData: DeleteDiscussionInput
   ): Promise<IDiscussion> {
     const discussionID = deleteData.ID;
-    const discussion = await this.getDiscussionOrFail(discussionID);
+    const discussion = await this.getDiscussionOrFail(discussionID, {
+      relations: ['profile'],
+    });
+
+    if (discussion.profile) {
+      await this.profileService.deleteProfile(discussion.profile.id);
+    }
 
     const result = await this.discussionRepository.remove(
       discussion as Discussion
@@ -66,9 +85,13 @@ export class DiscussionService {
     return result;
   }
 
-  async getDiscussionOrFail(discussionID: string): Promise<IDiscussion> {
-    const discussion = await this.discussionRepository.findOneBy({
-      id: discussionID,
+  async getDiscussionOrFail(
+    discussionID: string,
+    options?: FindOneOptions<Discussion>
+  ): Promise<IDiscussion> {
+    const discussion = await this.discussionRepository.findOne({
+      where: { id: discussionID },
+      ...options,
     });
     if (!discussion)
       throw new EntityNotFoundException(
@@ -79,7 +102,12 @@ export class DiscussionService {
   }
 
   async deleteDiscussion(discussionID: string): Promise<IDiscussion> {
-    const discussion = await this.getDiscussionOrFail(discussionID);
+    const discussion = await this.getDiscussionOrFail(discussionID, {
+      relations: ['profile'],
+    });
+    if (discussion.profile) {
+      await this.profileService.deleteProfile(discussion.profile.id);
+    }
     const result = await this.discussionRepository.remove(
       discussion as Discussion
     );
@@ -91,12 +119,15 @@ export class DiscussionService {
     discussion: IDiscussion,
     updateDiscussionData: UpdateDiscussionInput
   ): Promise<IDiscussion> {
-    if (updateDiscussionData.title)
-      discussion.title = updateDiscussionData.title;
+    if (updateDiscussionData.profileData) {
+      discussion.profile = await this.profileService.updateProfile(
+        discussion.profile,
+        updateDiscussionData.profileData
+      );
+    }
     if (updateDiscussionData.category)
       discussion.category = updateDiscussionData.category;
-    if (updateDiscussionData.description)
-      discussion.description = updateDiscussionData.description;
+
     return await this.save(discussion);
   }
 

@@ -6,11 +6,11 @@ export abstract class RoomableNameableEntity
   extends NameableEntity
   implements IRoomableNameable
 {
-  constructor(communicationGroupID: string, displayName: string) {
+  constructor() {
     super();
     this.communicationRoomID = '';
-    this.communicationGroupID = communicationGroupID || '';
-    this.displayName = displayName || '';
+    this.communicationGroupID = '';
+    this.displayName = '';
   }
 
   @Column()
