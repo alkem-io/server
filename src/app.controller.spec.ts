@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import {
   MockWinstonProvider,
   MockGeoLocationService,
-  MockAppService,
+  MockSsiCredentialFlowService,
 } from '@test/mocks';
 import { AppController } from './app.controller';
 
@@ -12,7 +12,11 @@ describe('AppController', () => {
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
-      providers: [MockWinstonProvider, MockAppService, MockGeoLocationService],
+      providers: [
+        MockWinstonProvider,
+        MockSsiCredentialFlowService,
+        MockGeoLocationService,
+      ],
     }).compile();
 
     appController = app.get<AppController>(AppController);
