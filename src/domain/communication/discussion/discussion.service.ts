@@ -18,6 +18,7 @@ import { IMessage } from '../message/message.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
+import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 
 @Injectable()
 export class DiscussionService {
@@ -89,10 +90,21 @@ export class DiscussionService {
     discussionID: string,
     options?: FindOneOptions<Discussion>
   ): Promise<IDiscussion> {
-    const discussion = await this.discussionRepository.findOne({
-      where: { id: discussionID },
-      ...options,
-    });
+    let discussion: IDiscussion | null = null;
+    if (discussionID.length === UUID_LENGTH) {
+      discussion = await this.discussionRepository.findOne({
+        where: { id: discussionID },
+        ...options,
+      });
+    }
+    if (!discussion) {
+      // look up based on nameID
+      discussion = await this.discussionRepository.findOne({
+        where: { nameID: discussionID },
+        ...options,
+      });
+    }
+
     if (!discussion)
       throw new EntityNotFoundException(
         `Not able to locate Discussion with the specified ID: ${discussionID}`,
