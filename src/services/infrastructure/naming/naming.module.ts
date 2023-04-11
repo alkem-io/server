@@ -11,6 +11,7 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { CalendarEvent } from '@domain/timeline/event';
+import { Discussion } from '@domain/communication/discussion/discussion.entity';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { CalendarEvent } from '@domain/timeline/event';
     TypeOrmModule.forFeature([Collaboration]),
     TypeOrmModule.forFeature([Community]),
     TypeOrmModule.forFeature([CalendarEvent]),
+    TypeOrmModule.forFeature([Discussion]),
   ],
   providers: [NamingService],
   exports: [NamingService],
