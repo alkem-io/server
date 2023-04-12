@@ -257,6 +257,15 @@ export class UserService {
     defaults.set(UserPreferenceType.NOTIFICATION_ORGANIZATION_MENTION, 'true');
     defaults.set(UserPreferenceType.NOTIFICATION_ORGANIZATION_MESSAGE, 'true');
 
+    defaults.set(
+      UserPreferenceType.NOTIFICATION_FORUM_DISCUSSION_CREATED,
+      'false'
+    );
+    defaults.set(
+      UserPreferenceType.NOTIFICATION_FORUM_DISCUSSION_COMMENT,
+      'true'
+    );
+
     return defaults;
   }
 
