@@ -1,4 +1,6 @@
+import { ALT_TEXT_LENGTH } from '@common/constants';
 import { InputType, Field } from '@nestjs/graphql';
+import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
 export class VisualUploadImageInput {
@@ -6,5 +8,7 @@ export class VisualUploadImageInput {
   visualID!: string;
 
   @Field({ nullable: true })
+  @IsOptional()
+  @MaxLength(ALT_TEXT_LENGTH)
   alternativeText?: string;
 }
