@@ -29,7 +29,7 @@ export class Visual extends AuthorizableEntity implements IVisual {
   @Column('simple-array')
   allowedTypes: string[];
 
-  @Column('text', { nullable: true })
+  @Column('varchar', { length: 120, nullable: true })
   alternativeText?: string;
 
   @ManyToOne(() => Profile, profile => profile.visuals, {
