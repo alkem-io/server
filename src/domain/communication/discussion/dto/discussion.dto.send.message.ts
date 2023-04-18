@@ -1,4 +1,4 @@
-import { MID_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
+import { LONG_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
 import { UUID } from '@domain/common/scalars';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { Field, InputType } from '@nestjs/graphql';
@@ -15,6 +15,6 @@ export class DiscussionSendMessageInput extends RoomSendMessageInput {
     nullable: false,
     description: 'The message being sent',
   })
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(LONG_TEXT_LENGTH)
   message!: string;
 }
