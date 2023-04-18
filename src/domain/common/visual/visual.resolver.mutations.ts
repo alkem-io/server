@@ -42,7 +42,8 @@ export class VisualResolverMutations {
       visual,
       readStream,
       filename,
-      mimetype
+      mimetype,
+      uploadData.alternativeText
     );
 
     return updatedProfile;
