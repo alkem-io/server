@@ -2,6 +2,7 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { IVisual } from './visual.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
+import { ALT_TEXT_LENGTH } from '@common/constants';
 
 @Entity()
 export class Visual extends AuthorizableEntity implements IVisual {
@@ -28,6 +29,9 @@ export class Visual extends AuthorizableEntity implements IVisual {
 
   @Column('simple-array')
   allowedTypes: string[];
+
+  @Column('varchar', { length: ALT_TEXT_LENGTH, nullable: true })
+  alternativeText?: string;
 
   @ManyToOne(() => Profile, profile => profile.visuals, {
     eager: false,
