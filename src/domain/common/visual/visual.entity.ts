@@ -29,6 +29,9 @@ export class Visual extends AuthorizableEntity implements IVisual {
   @Column('simple-array')
   allowedTypes: string[];
 
+  @Column('text', { default: '' })
+  alternativeText!: string;
+
   @ManyToOne(() => Profile, profile => profile.visuals, {
     eager: false,
     cascade: false,

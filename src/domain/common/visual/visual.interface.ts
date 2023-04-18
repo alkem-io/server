@@ -36,4 +36,7 @@ export abstract class IVisual extends IAuthorizable {
 
   @Field(() => [String])
   allowedTypes!: string[];
+
+  @Field(() => String)
+  alternativeText!: string;
 }

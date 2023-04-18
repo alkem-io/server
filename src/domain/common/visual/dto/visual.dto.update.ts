@@ -1,4 +1,6 @@
+import { SMALL_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
 import { Field, InputType } from '@nestjs/graphql';
+import { IsOptional, MaxLength } from 'class-validator';
 
 @InputType()
 export class UpdateVisualInput {
@@ -7,4 +9,9 @@ export class UpdateVisualInput {
 
   @Field({ nullable: false })
   uri!: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @MaxLength(SMALL_TEXT_LENGTH)
+  alternativeText?: string;
 }
