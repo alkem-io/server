@@ -47,7 +47,7 @@
   },
   "dependencies": {
     "@alkemio/matrix-adapter-lib": "^0.1.3",
-    "@alkemio/notifications-lib": "^0.3.0",
+    "@alkemio/notifications-lib": "^0.3.1",
     "@apollo/server": "^4.6.0",
     "@elastic/elasticsearch": "^8.4.0",
     "@nestjs/apollo": "^10.0.6",
