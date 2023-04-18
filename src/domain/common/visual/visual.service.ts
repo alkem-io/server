@@ -90,7 +90,7 @@ export class VisualService {
     readStream: ReadStream,
     fileName: string,
     mimetype: string,
-    altText: string
+    altText: string | undefined
   ): Promise<IVisual> {
     this.validateMimeType(visual, mimetype);
 

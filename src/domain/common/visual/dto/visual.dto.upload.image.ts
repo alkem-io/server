@@ -5,6 +5,6 @@ export class VisualUploadImageInput {
   @Field({ nullable: false })
   visualID!: string;
 
-  @Field({ nullable: false })
-  alternativeText!: string;
+  @Field({ nullable: true })
+  alternativeText?: string;
 }
