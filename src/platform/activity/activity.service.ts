@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Activity } from './activity.entity';
@@ -57,27 +57,21 @@ export class ActivityService {
     return await this.save(activity);
   }
 
-  async getActivityForCollaboration(
-    collaborationID: string,
+  async getActivityForCollaborations(
+    collaborationIDs: string[],
     limit?: number,
     visibility = true
   ): Promise<IActivity[]> {
-    const entries: IActivity[] = await this.activityRepository
-      .createQueryBuilder('activity')
-      .where('collaborationID = :collaborationID')
-      .andWhere('visibility = :visibility')
-      .setParameters({
-        collaborationID: collaborationID,
+    return this.activityRepository.find({
+      where: {
+        collaborationID: In(collaborationIDs),
         visibility: visibility,
-      })
-      .orderBy('createdDate', 'DESC')
-      .getMany();
-
-    if (limit) {
-      return entries.slice(0, limit);
-    }
-
-    return entries;
+      },
+      order: {
+        createdDate: 'DESC',
+      },
+      take: limit,
+    });
   }
 
   async getActivityForMessage(messageID: string): Promise<IActivity | null> {

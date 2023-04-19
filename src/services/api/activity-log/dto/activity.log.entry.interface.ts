@@ -1,5 +1,5 @@
 import { Field, InterfaceType } from '@nestjs/graphql';
-import { UUID } from '@domain/common/scalars';
+import { NameID, UUID } from '@domain/common/scalars';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ActivityEventType } from '@common/enums/activity.event.type';
@@ -80,4 +80,21 @@ export abstract class IActivityLogEntry {
     description: 'The text details for this Activity.',
   })
   description?: string;
+
+  @Field(() => Boolean, {
+    description:
+      'Indicates if this Activity happened on a child Collaboration. Child results can be included via the "includeChild" parameter.',
+    defaultValue: false,
+  })
+  child?: boolean;
+
+  @Field(() => NameID, {
+    description: 'The nameID of the parent',
+  })
+  parentNameID!: string;
+
+  @Field(() => String, {
+    description: 'The display name of the parent',
+  })
+  parentDisplayName!: string;
 }

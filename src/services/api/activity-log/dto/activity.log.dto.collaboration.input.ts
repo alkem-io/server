@@ -10,11 +10,16 @@ export class ActivityLogInput {
   })
   collaborationID!: string;
 
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Include entries happened on child Collaborations.',
+  })
+  includeChild?: string;
+
   @Field(() => Float, {
-    name: 'limit',
+    nullable: true,
     description:
       'The number of ActivityLog entries to return; if omitted return all.',
-    nullable: true,
   })
   limit?: number;
 }

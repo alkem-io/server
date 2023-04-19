@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Resolver, Query } from '@nestjs/graphql';
 import { ActivityLogService } from './activity.log.service';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -10,10 +10,14 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { LogContext } from '@common/enums';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Resolver()
 export class ActivityLogResolverQueries {
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
     private activityLogService: ActivityLogService,
     private authorizationService: AuthorizationService,
     private collaborationService: CollaborationService,
@@ -31,10 +35,19 @@ export class ActivityLogResolverQueries {
     @Args('queryData', { type: () => ActivityLogInput, nullable: false })
     queryData: ActivityLogInput
   ): Promise<IActivityLogEntry[]> {
+    // can agent read users
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
+      `Collaboration activity query: ${agentInfo.email}`
+    );
+    // does collaboration exist
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(
         queryData.collaborationID
       );
+    // can agent read the collaboration
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       collaboration.authorization,
@@ -42,12 +55,28 @@ export class ActivityLogResolverQueries {
       `Collaboration activity query: ${agentInfo.email}`
     );
 
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.READ_USERS,
-      `Collaboration activity query: ${agentInfo.email}`
+    if (queryData.includeChild) {
+      // get all child collaborations
+      const childCollaborations =
+        await this.collaborationService.getChildCollaborationsOrFail(
+          queryData.collaborationID
+        );
+      // todo can agent read every collaboration
+      // ...
+
+      // get activities for all collaborations
+      return this.activityLogService.activityLog(
+        queryData,
+        childCollaborations
+      );
+    }
+
+    this.logger.verbose?.(
+      `Querying activityLog by user ${
+        agentInfo.userID
+      } + terms: ${JSON.stringify(queryData)}`,
+      LogContext.ACTIVITY
     );
-    return await this.activityLogService.activityLog(queryData, agentInfo);
+    return this.activityLogService.activityLog(queryData);
   }
 }
