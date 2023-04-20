@@ -46,8 +46,9 @@ export class VisualService {
 
   async updateVisual(visualData: UpdateVisualInput): Promise<IVisual> {
     const visual = await this.getVisualOrFail(visualData.visualID);
-    if (visualData.uri || visualData.uri === '') {
-      visual.uri = visualData.uri;
+    visual.uri = visualData.uri;
+    if (visualData.alternativeText !== undefined) {
+      visual.alternativeText = visualData.alternativeText;
     }
 
     return await this.visualRepository.save(visual);
@@ -88,7 +89,8 @@ export class VisualService {
     visual: IVisual,
     readStream: ReadStream,
     fileName: string,
-    mimetype: string
+    mimetype: string,
+    altText: string | undefined
   ): Promise<IVisual> {
     this.validateMimeType(visual, mimetype);
 
@@ -109,6 +111,7 @@ export class VisualService {
       const updateData: UpdateVisualInput = {
         visualID: visual.id,
         uri: uri,
+        alternativeText: altText,
       };
       return await this.updateVisual(updateData);
     } catch (error: any) {

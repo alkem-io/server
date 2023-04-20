@@ -428,8 +428,8 @@ export class NotificationPayloadBuilder {
       discussion: {
         id: discussion.id,
         createdBy: discussion.createdBy,
-        title: discussion.title,
-        description: discussion.description,
+        title: discussion.profile.displayName,
+        description: discussion.profile.description,
       },
       journey: journeyPayload,
     };

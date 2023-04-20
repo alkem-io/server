@@ -1,9 +1,10 @@
-import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 import { DiscussionCategory } from '@common/enums/communication.discussion.category';
+import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
 
-import { MaxLength, IsOptional } from 'class-validator';
+import { IsOptional, ValidateNested } from 'class-validator';
 
 @InputType()
 export class CommunicationCreateDiscussionInput {
@@ -14,12 +15,10 @@ export class CommunicationCreateDiscussionInput {
   })
   communicationID!: string;
 
-  @Field(() => String, {
-    nullable: false,
-    description: 'The title for the Discussion',
-  })
-  @MaxLength(SMALL_TEXT_LENGTH)
-  title!: string;
+  @Field(() => CreateProfileInput, { nullable: false })
+  @ValidateNested({ each: true })
+  @Type(() => CreateProfileInput)
+  profile!: CreateProfileInput;
 
   @Field(() => DiscussionCategory, {
     nullable: false,
@@ -27,11 +26,7 @@ export class CommunicationCreateDiscussionInput {
   })
   category!: string;
 
-  @Field(() => String, {
-    nullable: true,
-    description: 'The description for the Discussion',
-  })
+  @Field(() => [String], { nullable: true })
   @IsOptional()
-  @MaxLength(MID_TEXT_LENGTH)
-  description?: string;
+  tags?: string[];
 }

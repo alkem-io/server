@@ -1,6 +1,9 @@
 mutation createDiscussion($createData: CommunicationCreateDiscussionInput!) {
   createDiscussion(createData: $createData) {
-    title,
+    profile {
+      displayName,
+      description
+    },
     category
   }
 }
@@ -8,9 +11,11 @@ mutation createDiscussion($createData: CommunicationCreateDiscussionInput!) {
 Variables:
 {
   "createData": {
-      "communicationID": "uuid",
-      "title": "some title",
-      "description": "text",
-      "category": "GENERAL"
+    "communicationID": "f5478869-958e-429c-b146-c0dda0a9eb38",
+    "profile": {
+      "displayName":  "some new title",
+      "description": "text"
+    },
+    "category": "PLATFORM_FUNCTIONALITIES"
   }
 }

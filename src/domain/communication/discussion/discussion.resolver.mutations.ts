@@ -44,13 +44,14 @@ export class DiscussionResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IMessage> {
     const discussion = await this.discussionService.getDiscussionOrFail(
-      messageData.discussionID
+      messageData.discussionID,
+      { relations: ['profile'] }
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       discussion.authorization,
       AuthorizationPrivilege.CREATE_COMMENT,
-      `discussion send message: ${discussion.title}`
+      `discussion send message: ${discussion.profile.displayName}`
     );
     const discussionMessage =
       await this.discussionService.sendMessageToDiscussion(
@@ -94,7 +95,8 @@ export class DiscussionResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
     const discussion = await this.discussionService.getDiscussionOrFail(
-      messageData.discussionID
+      messageData.discussionID,
+      { relations: ['profile'] }
     );
 
     // The choice was made **not** to wrap every message in an AuthorizationPolicy.
@@ -114,7 +116,7 @@ export class DiscussionResolverMutations {
       agentInfo,
       extendedAuthorization,
       AuthorizationPrivilege.DELETE,
-      `communication delete message: ${discussion.title}`
+      `communication delete message: ${discussion.profile.displayName}`
     );
 
     const result = await this.discussionService.removeMessageFromDiscussion(
@@ -166,7 +168,10 @@ export class DiscussionResolverMutations {
     @Args('updateData') updateData: UpdateDiscussionInput
   ): Promise<IDiscussion> {
     const discussion = await this.discussionService.getDiscussionOrFail(
-      updateData.ID
+      updateData.ID,
+      {
+        relations: ['profile'],
+      }
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
