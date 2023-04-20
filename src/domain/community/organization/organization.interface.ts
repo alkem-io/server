@@ -4,6 +4,7 @@ import { IGroupable } from '@domain/common/interfaces/groupable.interface';
 import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
 import { IPreferenceSet } from '@domain/common/preference-set';
 import { IContributor } from '../contributor/contributor.interface';
+import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
 
 @ObjectType('Organization', {
   implements: () => [IGroupable],
@@ -41,4 +42,5 @@ export class IOrganization extends IContributor {
   verification?: IOrganizationVerification;
 
   preferenceSet?: IPreferenceSet;
+  storageSpace?: IStorageSpace;
 }

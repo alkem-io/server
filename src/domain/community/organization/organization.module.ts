@@ -18,6 +18,7 @@ import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { StorageSpaceModule } from '@domain/storage/storage-space/storage.space.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     ProfileModule,
     PreferenceModule,
     PreferenceSetModule,
+    StorageSpaceModule,
     TypeOrmModule.forFeature([Organization]),
   ],
   providers: [

@@ -84,6 +84,11 @@ export class storage1681736452222 implements MigrationInterface {
       'FK_41991450cf75dc486700ca034c6',
       'library'
     );
+    await this.addStorageSpaceRelation(
+      queryRunner,
+      'FK_51991450cf75dc486700ca034c6',
+      'organization'
+    );
 
     // Allow every profile to know the StorageSpace to use
     // TODO: enforce this to be a valid value or not? What happens if storagespace is deleted?
@@ -197,6 +202,11 @@ export class storage1681736452222 implements MigrationInterface {
       queryRunner,
       'FK_41991450cf75dc486700ca034c6',
       'library'
+    );
+    await this.removeStorageSpaceRelation(
+      queryRunner,
+      'FK_51991450cf75dc486700ca034c6',
+      'organization'
     );
 
     await queryRunner.query('DROP TABLE `storage_space`');

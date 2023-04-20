@@ -23,6 +23,7 @@ import {
 import { Visual } from '@domain/common/visual';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
+import { StorageSpaceUploadFileInput } from './dto/storage.space.dto.upload.file';
 
 @Resolver()
 export class StorageSpaceResolverMutations {
@@ -108,12 +109,12 @@ export class StorageSpaceResolverMutations {
   @Profiling.api
   async uploadFileOnReference(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('uploadData') uploadData: VisualUploadImageInput,
+    @Args('uploadData') uploadData: StorageSpaceUploadFileInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
   ): Promise<IReference> {
     const reference = await this.referenceService.getReferenceOrFail(
-      uploadData.visualID,
+      uploadData.referenceID,
       {
         relations: ['profile'],
       }

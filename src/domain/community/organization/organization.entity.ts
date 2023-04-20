@@ -12,6 +12,7 @@ import { IOrganization } from './organization.interface';
 import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
 import { PreferenceSet } from '@domain/common/preference-set';
 import { Contributor } from '../contributor/contributor.entity';
+import { StorageSpace } from '@domain/storage/storage-space/storage.space.entity';
 
 @Entity()
 export class Organization
@@ -57,6 +58,14 @@ export class Organization
   })
   @JoinColumn()
   preferenceSet?: PreferenceSet;
+
+  @OneToOne(() => StorageSpace, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  storageSpace?: StorageSpace;
 
   constructor() {
     super();

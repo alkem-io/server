@@ -9,7 +9,11 @@ import { IOrganization } from '@domain/community/organization';
 import { IUserGroup } from '@domain/community/user-group';
 import { IUser } from '@domain/community/user';
 import { IProfile } from '@domain/common/profile';
-import { CurrentUser, Profiling } from '@common/decorators';
+import {
+  AuthorizationAgentPrivilege,
+  CurrentUser,
+  Profiling,
+} from '@common/decorators';
 import { IAgent } from '@domain/agent/agent';
 import { UUID } from '@domain/common/scalars';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
@@ -23,9 +27,11 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Loader } from '@core/dataloader/decorators';
 import {
   AgentLoaderCreator,
+  OrganizationStorageSpaceLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
@@ -219,6 +225,20 @@ export class OrganizationResolverFields {
     @Loader(AgentLoaderCreator, { parentClassRef: Organization })
     loader: ILoader<IAgent>
   ): Promise<IAgent> {
+    return loader.load(organization.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('storageSpace', () => IStorageSpace, {
+    nullable: true,
+    description: 'The StorageSpace with documents in use by this Organization',
+  })
+  @UseGuards(GraphqlGuard)
+  async storageSpace(
+    @Parent() organization: Organization,
+    @Loader(OrganizationStorageSpaceLoaderCreator)
+    loader: ILoader<IStorageSpace>
+  ): Promise<IStorageSpace> {
     return loader.load(organization.id);
   }
 

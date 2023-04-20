@@ -52,6 +52,8 @@ import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { VisualType } from '@common/enums/visual.type';
+import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
+import { StorageSpaceService } from '@domain/storage/storage-space/storage.space.service';
 
 @Injectable()
 export class OrganizationService {
@@ -63,6 +65,7 @@ export class OrganizationService {
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
     private preferenceSetService: PreferenceSetService,
+    private storageSpaceService: StorageSpaceService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -81,6 +84,12 @@ export class OrganizationService {
 
     const organization: IOrganization = Organization.create(organizationData);
     organization.authorization = new AuthorizationPolicy();
+
+    organization.storageSpace =
+      await this.storageSpaceService.createStorageSpace(
+        this.storageSpaceService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
+        this.storageSpaceService.DEFAULT_MAX_ALLOWED_FILE_SIZE
+      );
     organization.profile = await this.profileService.createProfile(
       organizationData.profileData
     );
@@ -548,6 +557,25 @@ export class OrganizationService {
     }
 
     return preferenceSet;
+  }
+
+  async getStorageSpaceOrFail(organizationID: string): Promise<IStorageSpace> {
+    const organizationWithStorageSpace = await this.getOrganizationOrFail(
+      organizationID,
+      {
+        relations: ['storageSpace'],
+      }
+    );
+    const storageSpace = organizationWithStorageSpace.storageSpace;
+
+    if (!storageSpace) {
+      throw new EntityNotFoundException(
+        `Unable to find storageSpace for Organization with nameID: ${organizationWithStorageSpace.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return storageSpace;
   }
 
   async organizationsWithCredentials(
