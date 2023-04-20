@@ -22,7 +22,6 @@ import { CommunityResolverQueries } from './community.resolver.queries';
 import { CommunityService } from './community.service';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { FormModule } from '@domain/common/form/form.module';
-import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
   imports: [
@@ -39,7 +38,6 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     CommunityPolicyModule,
     LifecycleModule,
     AgentModule,
-    EntityResolverModule,
     FormModule,
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,

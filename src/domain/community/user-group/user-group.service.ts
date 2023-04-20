@@ -39,7 +39,6 @@ export class UserGroupService {
 
   async createUserGroup(
     userGroupData: CreateUserGroupInput,
-    storageSpaceID: string,
     hubID = ''
   ): Promise<IUserGroup> {
     const group = UserGroup.create({ ...userGroupData, hubID });
@@ -47,7 +46,6 @@ export class UserGroupService {
     group.authorization = new AuthorizationPolicy();
 
     (group as IUserGroup).profile = await this.profileService.createProfile(
-      storageSpaceID,
       userGroupData.profileData
     );
     const savedUserGroup = await this.userGroupRepository.save(group);
@@ -208,7 +206,6 @@ export class UserGroupService {
   async addGroupWithName(
     groupable: IGroupable,
     name: string,
-    storageSpaceID: string,
     hubID?: string
   ): Promise<IUserGroup> {
     // Check if the group already exists, if so log a warning
@@ -225,7 +222,6 @@ export class UserGroupService {
         name: name,
         parentID: groupable.id,
       },
-      storageSpaceID,
       hubID
     );
     await groupable.groups?.push(newGroup);

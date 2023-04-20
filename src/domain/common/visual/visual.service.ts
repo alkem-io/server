@@ -42,8 +42,9 @@ export class VisualService {
 
   async updateVisual(visualData: UpdateVisualInput): Promise<IVisual> {
     const visual = await this.getVisualOrFail(visualData.visualID);
-    if (visualData.uri || visualData.uri === '') {
-      visual.uri = visualData.uri;
+    visual.uri = visualData.uri;
+    if (visualData.alternativeText !== undefined) {
+      visual.alternativeText = visualData.alternativeText;
     }
 
     return await this.visualRepository.save(visual);

@@ -33,11 +33,5 @@ export abstract class IProfile extends IAuthorizable {
 
   location?: ILocation;
 
-  // storage space used by this Profile.  Not exposed
-  // on api but stored on Profile as that is where we access
-  // storage space used for visual image uploads and file
-  // attachments uploads
-  storageSpaceId!: string;
-
   restrictedTagsetNames?: string[];
 }

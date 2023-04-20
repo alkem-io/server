@@ -23,7 +23,6 @@ import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.
 import { CreatePostTemplateInput } from '../post-template/dto/post.template.dto.create';
 import { CreateWhiteboardTemplateInput } from '../whiteboard-template/dto/whiteboard.template.dto.create';
 import { CreateInnovationFlowTemplateInput } from '../innovation-flow-template/dto/innovation.flow.template.dto.create';
-import { StorageSpaceResolverService } from '@services/infrastructure/entity-resolver/storage.space.resolver.service';
 
 @Injectable()
 export class TemplatesSetService {
@@ -33,15 +32,13 @@ export class TemplatesSetService {
     private templatesSetRepository: Repository<TemplatesSet>,
     private postTemplateService: PostTemplateService,
     private whiteboardTemplateService: WhiteboardTemplateService,
-    private storageSpaceResolverService: StorageSpaceResolverService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createTemplatesSet(
     policy: ITemplatesSetPolicy,
-    addDefaults: boolean,
-    storageSpaceID: string
+    addDefaults: boolean
   ): Promise<ITemplatesSet> {
     const templatesSet: ITemplatesSet = TemplatesSet.create();
     templatesSet.authorization = new AuthorizationPolicy();
@@ -53,8 +50,7 @@ export class TemplatesSetService {
     if (addDefaults) {
       for (const postTemplateDefault of templatesSetDefaults.posts) {
         const postTemplate = await this.postTemplateService.createPostTemplate(
-          postTemplateDefault,
-          storageSpaceID
+          postTemplateDefault
         );
         templatesSet.postTemplates.push(postTemplate);
       }
@@ -62,8 +58,7 @@ export class TemplatesSetService {
       for (const innovationFlowTemplateDefault of templatesSetDefaults.innovationFlows) {
         const innovationFlowTemplate =
           await this.innovationFlowTemplateService.createInnovationFLowTemplate(
-            innovationFlowTemplateDefault,
-            storageSpaceID
+            innovationFlowTemplateDefault
           );
         templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);
       }
@@ -195,13 +190,8 @@ export class TemplatesSetService {
         LogContext.CONTEXT
       );
     }
-    const storageSpaceID =
-      await this.storageSpaceResolverService.getStorageSpaceIdForTemplatesSetOrFail(
-        templatesSet.id
-      );
     const postTemplate = await this.postTemplateService.createPostTemplate(
-      postTemplateInput,
-      storageSpaceID
+      postTemplateInput
     );
     templatesSet.postTemplates.push(postTemplate);
     await this.templatesSetRepository.save(templatesSet);
@@ -230,14 +220,9 @@ export class TemplatesSetService {
     templatesSet: ITemplatesSet,
     whiteboardTemplateInput: CreateWhiteboardTemplateInput
   ): Promise<IWhiteboardTemplate> {
-    const storageSpaceID =
-      await this.storageSpaceResolverService.getStorageSpaceIdForTemplatesSetOrFail(
-        templatesSet.id
-      );
     const whiteboardTemplate =
       await this.whiteboardTemplateService.createWhiteboardTemplate(
-        whiteboardTemplateInput,
-        storageSpaceID
+        whiteboardTemplateInput
       );
     templatesSet.whiteboardTemplates = await this.getWhiteboardTemplates(
       templatesSet
@@ -295,14 +280,9 @@ export class TemplatesSetService {
     templatesSet: ITemplatesSet,
     innovationFlowTemplateInput: CreateInnovationFlowTemplateInput
   ): Promise<IInnovationFlowTemplate> {
-    const storageSpaceID =
-      await this.storageSpaceResolverService.getStorageSpaceIdForTemplatesSetOrFail(
-        templatesSet.id
-      );
     const innovationFlowTemplate =
       await this.innovationFlowTemplateService.createInnovationFLowTemplate(
-        innovationFlowTemplateInput,
-        storageSpaceID
+        innovationFlowTemplateInput
       );
     templatesSet.innovationFlowTemplates =
       await this.getInnovationFlowTemplates(templatesSet);

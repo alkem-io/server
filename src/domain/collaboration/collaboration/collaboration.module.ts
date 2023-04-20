@@ -21,7 +21,6 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 
 @Module({
   imports: [
-    EntityResolverModule,
     ElasticsearchModule,
     ActivityAdapterModule,
     NotificationAdapterModule,

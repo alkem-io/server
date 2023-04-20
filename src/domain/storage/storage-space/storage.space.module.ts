@@ -12,6 +12,7 @@ import { StorageSpaceAuthorizationService } from './storage.space.service.author
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { Document } from '../document/document.entity';
+import { ReferenceModule } from '@domain/common/reference/reference.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { Document } from '../document/document.entity';
     IpfsModule,
     VisualModule,
     EntityResolverModule,
+    ReferenceModule,
     TypeOrmModule.forFeature([StorageSpace]),
     TypeOrmModule.forFeature([Document]),
   ],

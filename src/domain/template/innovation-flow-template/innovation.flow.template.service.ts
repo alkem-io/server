@@ -22,15 +22,13 @@ export class InnovationFlowTemplateService {
   ) {}
 
   async createInnovationFLowTemplate(
-    innovationFlowTemplateData: CreateInnovationFlowTemplateInput,
-    storageSpaceID: string
+    innovationFlowTemplateData: CreateInnovationFlowTemplateInput
   ): Promise<IInnovationFlowTemplate> {
     const innovationFlowTemplate: IInnovationFlowTemplate =
       InnovationFlowTemplate.create(innovationFlowTemplateData);
     await this.templateBaseService.initialise(
       innovationFlowTemplate,
-      innovationFlowTemplateData,
-      storageSpaceID
+      innovationFlowTemplateData
     );
 
     return await this.innovationFlowTemplateRepository.save(

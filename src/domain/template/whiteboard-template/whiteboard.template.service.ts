@@ -23,8 +23,7 @@ export class WhiteboardTemplateService {
   ) {}
 
   async createWhiteboardTemplate(
-    whiteboardTemplateData: CreateWhiteboardTemplateInput,
-    storageSpaceID: string
+    whiteboardTemplateData: CreateWhiteboardTemplateInput
   ): Promise<IWhiteboardTemplate> {
     const whiteboardTemplate: IWhiteboardTemplate = WhiteboardTemplate.create(
       whiteboardTemplateData
@@ -32,8 +31,7 @@ export class WhiteboardTemplateService {
     const result: IWhiteboardTemplate =
       await this.templateBaseService.initialise(
         whiteboardTemplate,
-        whiteboardTemplateData,
-        storageSpaceID
+        whiteboardTemplateData
       );
 
     // Allow specifying a Whiteboard to use as a base if no value is set

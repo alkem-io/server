@@ -43,12 +43,6 @@ export class Profile extends AuthorizableEntity implements IProfile {
   @JoinColumn()
   location?: Location;
 
-  @Column('char', {
-    nullable: true,
-    length: 36,
-  })
-  storageSpaceId!: string;
-
   restrictedTagsetNames?: string[];
 
   // Constructor

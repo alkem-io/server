@@ -15,6 +15,7 @@ import { RoomModule } from '../room/room.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
     CommunicationAdapterModule,
     EntityResolverModule,
     PlatformAuthorizationPolicyModule,
+    NamingModule,
     TypeOrmModule.forFeature([Communication]),
   ],
   providers: [

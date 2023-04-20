@@ -64,7 +64,6 @@ export class CalloutService {
   public async createCallout(
     calloutData: CreateCalloutInput,
     communicationGroupID: string,
-    storageSpaceID: string,
     userID?: string
   ): Promise<ICallout> {
     if (calloutData.type == CalloutType.CARD && !calloutData.postTemplate) {
@@ -96,7 +95,6 @@ export class CalloutService {
     };
     const callout: ICallout = Callout.create(calloutCreationData);
     callout.profile = await this.profileService.createProfile(
-      storageSpaceID,
       calloutData.profile
     );
 
@@ -107,15 +105,13 @@ export class CalloutService {
 
     if (calloutData.type == CalloutType.CARD && postTemplateData) {
       callout.postTemplate = await this.postTemplateService.createPostTemplate(
-        postTemplateData,
-        storageSpaceID
+        postTemplateData
       );
     }
     if (calloutData.type == CalloutType.CANVAS && whiteboardTemplateData) {
       callout.whiteboardTemplate =
         await this.whiteboardTemplateService.createWhiteboardTemplate(
-          whiteboardTemplateData,
-          storageSpaceID
+          whiteboardTemplateData
         );
     }
 
@@ -389,8 +385,7 @@ export class CalloutService {
     const aspect = await this.aspectService.createAspect(
       aspectData,
       userID,
-      communicationGroupID,
-      callout.profile.storageSpaceId
+      communicationGroupID
     );
     callout.aspects.push(aspect);
     await this.calloutRepository.save(callout);
@@ -441,8 +436,7 @@ export class CalloutService {
         value: canvasData.value,
         profileData: canvasData.profileData,
       },
-      userID,
-      callout.profile.storageSpaceId
+      userID
     );
     callout.canvases.push(canvas);
     await this.calloutRepository.save(callout);

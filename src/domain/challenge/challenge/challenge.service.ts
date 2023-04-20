@@ -133,8 +133,7 @@ export class ChallengeService {
       hubID,
       CommunityType.CHALLENGE,
       challengeCommunityPolicy,
-      challengeCommunityApplicationForm,
-      challenge.storageSpace.id
+      challengeCommunityApplicationForm
     );
 
     await this.challengeRepository.save(challenge);

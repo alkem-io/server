@@ -20,7 +20,6 @@ import { Calendar } from './calendar.entity';
 import { ICalendar } from './calendar.interface';
 import { CalendarArgsEvents } from './dto/calendar.args.events';
 import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
-import { StorageSpaceResolverService } from '@services/infrastructure/entity-resolver/storage.space.resolver.service';
 
 @Injectable()
 export class CalendarService {
@@ -29,7 +28,6 @@ export class CalendarService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private namingService: NamingService,
-    private storageSpaceResolverService: StorageSpaceResolverService,
     @InjectRepository(Calendar)
     private calendarRepository: Repository<Calendar>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -127,16 +125,10 @@ export class CalendarService {
         calendar.id
       );
 
-    const storageSpaceID =
-      await this.storageSpaceResolverService.getStorageSpaceIdForCalendarOrFail(
-        calendar.id
-      );
-
     const calendarEvent = await this.calendarEventService.createCalendarEvent(
       calendarEventData,
       userID,
-      communicationGroupID,
-      storageSpaceID
+      communicationGroupID
     );
     calendar.events.push(calendarEvent);
     await this.calendarRepository.save(calendar);

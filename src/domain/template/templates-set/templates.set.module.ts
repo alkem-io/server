@@ -11,7 +11,6 @@ import { TemplatesSetResolverFields } from './templates.set.resolver.fields';
 import { TemplatesSetResolverMutations } from './templates.set.resolver.mutations';
 import { TemplatesSetService } from './templates.set.service';
 import { TemplatesSetAuthorizationService } from './templates.set.service.authorization';
-import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
   imports: [
@@ -20,7 +19,6 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     PostTemplateModule,
     WhiteboardTemplateModule,
     InnovationFlowTemplateModule,
-    EntityResolverModule,
     TemplateBaseModule,
     TypeOrmModule.forFeature([TemplatesSet]),
   ],

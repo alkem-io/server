@@ -19,13 +19,11 @@ export class TemplateBaseService {
 
   async initialise(
     baseTemplate: ITemplateBase,
-    baseTemplateData: CreateTemplateBaseInput,
-    storageSpaceID: string
+    baseTemplateData: CreateTemplateBaseInput
   ): Promise<ITemplateBase> {
     baseTemplate.authorization = new AuthorizationPolicy();
 
     baseTemplate.profile = await this.profileService.createProfile(
-      storageSpaceID,
       baseTemplateData.profile
     );
     await this.profileService.addTagsetOnProfile(baseTemplate.profile, {

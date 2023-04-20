@@ -43,15 +43,13 @@ export class InnovationPackService {
   ) {}
 
   async createInnovationPack(
-    innovationPackData: CreateInnovationPackInput,
-    storageSpaceID: string
+    innovationPackData: CreateInnovationPackInput
   ): Promise<IInnovationPack> {
     const innovationPack: IInnovationPack =
       InnovationPack.create(innovationPackData);
     innovationPack.authorization = new AuthorizationPolicy();
 
     innovationPack.profile = await this.profileService.createProfile(
-      storageSpaceID,
       innovationPackData.profileData
     );
     await this.profileService.addVisualOnProfile(
@@ -69,8 +67,7 @@ export class InnovationPackService {
         {
           minInnovationFlow: 0,
         },
-        false,
-        storageSpaceID
+        false
       );
 
     // save before assigning host in case that fails

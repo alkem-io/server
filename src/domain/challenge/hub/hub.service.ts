@@ -116,8 +116,7 @@ export class HubService {
       hub.id,
       CommunityType.HUB,
       hubCommunityPolicy,
-      hubCommunityApplicationForm,
-      hub.storageSpace.id
+      hubCommunityApplicationForm
     );
 
     // set immediate community parent and  community policy
@@ -138,8 +137,7 @@ export class HubService {
       {
         minInnovationFlow: 1,
       },
-      true,
-      hub.storageSpace.id
+      true
     );
 
     // Lifecycle

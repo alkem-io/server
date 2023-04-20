@@ -30,13 +30,11 @@ export class CalendarEventService {
   public async createCalendarEvent(
     calendarEventInput: CreateCalendarEventInput,
     userID: string,
-    communicationGroupID: string,
-    storageSpaceId: string
+    communicationGroupID: string
   ): Promise<CalendarEvent> {
     const calendarEvent: ICalendarEvent =
       CalendarEvent.create(calendarEventInput);
     calendarEvent.profile = await this.profileService.createProfile(
-      storageSpaceId,
       calendarEventInput.profileData
     );
     await this.profileService.addTagsetOnProfile(calendarEvent.profile, {

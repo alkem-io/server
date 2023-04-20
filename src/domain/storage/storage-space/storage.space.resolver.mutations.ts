@@ -14,6 +14,8 @@ import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upl
 import { VisualService } from '@domain/common/visual/visual.service';
 import { DocumentService } from '../document/document.service';
 import { UpdateVisualInput } from '@domain/common/visual/dto/visual.dto.update';
+import { ReferenceService } from '@domain/common/reference/reference.service';
+import { IReference, UpdateReferenceInput } from '@domain/common/reference';
 
 @Resolver()
 export class StorageSpaceResolverMutations {
@@ -23,7 +25,8 @@ export class StorageSpaceResolverMutations {
     private documentAuthorizationService: DocumentAuthorizationService,
     private storageSpaceResolverService: StorageSpaceResolverService,
     private documentService: DocumentService,
-    private visualService: VisualService
+    private visualService: VisualService,
+    private referenceService: ReferenceService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -82,19 +85,29 @@ export class StorageSpaceResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => String, {
-    description: 'Create a new Document on the Storage.',
+  @Mutation(() => IReference, {
+    description:
+      'Create a new Document on the Storage and return the value as part of the returned Reference.',
   })
   @Profiling.api
-  async uploadFile(
+  async uploadFileOnReference(
     @CurrentUser() agentInfo: AgentInfo,
+    @Args('uploadData') uploadData: VisualUploadImageInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
-  ): Promise<string> {
+  ): Promise<IReference> {
+    const reference = await this.referenceService.getReferenceOrFail(
+      uploadData.visualID
+    );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      reference.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `reference file upload: ${reference.id}`
+    );
     // Todo: this needs to pick up the right storage space based on the Profile for a Reference
     // To test out the functionality it is using the contributors one for now
-    const storageId =
-      await this.storageSpaceResolverService.getStorageSpaceIdForContributors();
+    const storageId = ''; // TODO TODO
     const storageSpace = await this.storageSpaceService.getStorageSpaceOrFail(
       storageId
     );
@@ -122,7 +135,10 @@ export class StorageSpaceResolverMutations {
         storageSpace.authorization
       );
 
-    // Todo: this should return the Document, for now return the URL to be compatible with old usage
-    return this.documentService.getPubliclyAccessibleURL(documentAuthorized);
+    const updateData: UpdateReferenceInput = {
+      ID: reference.id,
+      uri: this.documentService.getPubliclyAccessibleURL(documentAuthorized),
+    };
+    return await this.referenceService.updateReference(updateData);
   }
 }

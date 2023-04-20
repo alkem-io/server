@@ -62,7 +62,6 @@ import { CommunityMemberCredentials } from './dto/user.dto.community.member.cred
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { VisualType } from '@common/enums/visual.type';
-import { StorageSpaceResolverService } from '@services/infrastructure/entity-resolver/storage.space.resolver.service';
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
@@ -74,7 +73,6 @@ export class UserService {
     private roomService: RoomService,
     private namingService: NamingService,
     private agentService: AgentService,
-    private storageSpaceResolverService: StorageSpaceResolverService,
     private preferenceSetService: PreferenceSetService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -106,16 +104,11 @@ export class UserService {
 
     const user: IUser = User.create(userData);
     user.authorization = new AuthorizationPolicy();
-    const storageSpaceID =
-      await this.storageSpaceResolverService.getStorageSpaceIdForContributors();
 
     const profileData = await this.extendProfileDataWithReferences(
       userData.profileData
     );
-    user.profile = await this.profileService.createProfile(
-      storageSpaceID,
-      profileData
-    );
+    user.profile = await this.profileService.createProfile(profileData);
 
     // Set the visuals
     let avatarURL = profileData?.avatarURL;
@@ -263,6 +256,15 @@ export class UserService {
     defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_MESSAGE, 'true');
     defaults.set(UserPreferenceType.NOTIFICATION_ORGANIZATION_MENTION, 'true');
     defaults.set(UserPreferenceType.NOTIFICATION_ORGANIZATION_MESSAGE, 'true');
+
+    defaults.set(
+      UserPreferenceType.NOTIFICATION_FORUM_DISCUSSION_CREATED,
+      'false'
+    );
+    defaults.set(
+      UserPreferenceType.NOTIFICATION_FORUM_DISCUSSION_COMMENT,
+      'true'
+    );
 
     return defaults;
   }

@@ -23,6 +23,7 @@ import { IUpdates } from '../updates/updates.interface';
 import { RoomService } from '../room/room.service';
 import { DiscussionCategory } from '@common/enums/communication.discussion.category';
 import { CommunicationDiscussionCategoryException } from '@common/exceptions/communication.discussion.category.exception';
+import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 
 @Injectable()
 export class CommunicationService {
@@ -159,11 +160,11 @@ export class CommunicationService {
     userID: string,
     userCommunicationID: string
   ): Promise<IDiscussion> {
-    const title = discussionData.title;
+    const displayName = discussionData.profile.displayName;
     const communicationID = discussionData.communicationID;
 
     this.logger.verbose?.(
-      `[Discussion] Adding discussion (${title}) to Communication (${communicationID})`,
+      `[Discussion] Adding discussion (${displayName}) to Communication (${communicationID})`,
       LogContext.COMMUNICATION
     );
 
@@ -183,10 +184,10 @@ export class CommunicationService {
       discussionData,
       communication.communicationGroupID,
       userID,
-      `${communication.displayName}-discussion-${discussionData.title}`
+      communication.displayName
     );
     this.logger.verbose?.(
-      `[Discussion] Room created (${title}) and membership replicated from Updates (${communicationID})`,
+      `[Discussion] Room created (${displayName}) and membership replicated from Updates (${communicationID})`,
       LogContext.COMMUNICATION
     );
 
@@ -234,9 +235,19 @@ export class CommunicationService {
     discussionID: string
   ): Promise<IDiscussion> {
     const discussions = await this.getDiscussions(communication);
-    const discussion = discussions.find(
-      discussion => discussion.id === discussionID
-    );
+    let discussion: IDiscussion | undefined;
+    if (discussionID.length === UUID_LENGTH) {
+      discussion = discussions.find(
+        discussion => discussion.id === discussionID
+      );
+    }
+    if (!discussion) {
+      // look up based on nameID
+      discussion = discussions.find(
+        discussion => discussion.nameID === discussionID
+      );
+    }
+
     if (!discussion) {
       throw new EntityNotFoundException(
         `Unable to find Discussion with ID: ${discussionID}`,

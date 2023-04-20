@@ -107,8 +107,7 @@ export class OpportunityService {
       hubID,
       CommunityType.OPPORTUNITY,
       opportunityCommunityPolicy,
-      opportunityCommunityApplicationForm,
-      storageSpaceID
+      opportunityCommunityApplicationForm
     );
 
     await this.opportunityRepository.save(opportunity);
