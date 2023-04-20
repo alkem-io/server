@@ -61,13 +61,28 @@ export class ActivityLogResolverQueries {
         await this.collaborationService.getChildCollaborationsOrFail(
           queryData.collaborationID
         );
-      // todo can agent read every collaboration
-      // ...
-
+      // can agent read each collaboration
+      const childCollaborationIds: string[] = [];
+      for (const childCollaboration of childCollaborations) {
+        try {
+          await this.authorizationService.grantAccessOrFail(
+            agentInfo,
+            childCollaboration.authorization,
+            AuthorizationPrivilege.READ,
+            `Collaboration activity query: ${agentInfo.email}`
+          );
+          childCollaborationIds.push(childCollaboration.id);
+        } catch (e) {
+          this.logger?.warn(
+            `User ${agentInfo.userID} is not able to read child collaboration ${childCollaboration.id}`,
+            LogContext.COLLABORATION
+          );
+        }
+      }
       // get activities for all collaborations
       return this.activityLogService.activityLog(
         queryData,
-        childCollaborations
+        childCollaborationIds
       );
     }
 

@@ -95,7 +95,6 @@ export class ActivityLogService {
       );
 
       if (!parentDetails) {
-        // todo better exception
         throw new Error(
           `Unable to resolve parent details of ${rawActivity.collaborationID}`
         );

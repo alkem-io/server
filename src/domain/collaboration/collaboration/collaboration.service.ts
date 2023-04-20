@@ -99,7 +99,7 @@ export class CollaborationService {
 
   public async getChildCollaborationsOrFail(
     collaborationID: string
-  ): Promise<string[] | never> {
+  ): Promise<ICollaboration[] | never> {
     // check if exists
     await this.getCollaborationOrFail(collaborationID);
 
@@ -132,7 +132,7 @@ export class CollaborationService {
             LogContext.COLLABORATION
           );
         }
-        return challenge.collaboration.id;
+        return challenge.collaboration;
       });
     }
 
@@ -160,7 +160,7 @@ export class CollaborationService {
             LogContext.COLLABORATION
           );
         }
-        return opp.collaboration.id;
+        return opp.collaboration;
       });
     }
 
