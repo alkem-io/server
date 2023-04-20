@@ -15,7 +15,14 @@ import { VisualService } from '@domain/common/visual/visual.service';
 import { DocumentService } from '../document/document.service';
 import { UpdateVisualInput } from '@domain/common/visual/dto/visual.dto.update';
 import { ReferenceService } from '@domain/common/reference/reference.service';
-import { IReference, UpdateReferenceInput } from '@domain/common/reference';
+import {
+  IReference,
+  Reference,
+  UpdateReferenceInput,
+} from '@domain/common/reference';
+import { Visual } from '@domain/common/visual';
+import { EntityNotInitializedException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 @Resolver()
 export class StorageSpaceResolverMutations {
@@ -40,7 +47,10 @@ export class StorageSpaceResolverMutations {
     { createReadStream, filename, mimetype }: FileUpload
   ): Promise<IVisual> {
     const visual = await this.visualService.getVisualOrFail(
-      uploadData.visualID
+      uploadData.visualID,
+      {
+        relations: ['profile'],
+      }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -48,14 +58,20 @@ export class StorageSpaceResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `visual image upload: ${visual.id}`
     );
-    // Also check that the acting agent is allowed to upload
+    const profile = (visual as Visual).profile;
+    if (!profile)
+      throw new EntityNotInitializedException(
+        `Unable to find profile for Visual: ${visual.id}`,
+        LogContext.STORAGE_SPACE
+      );
     const storageSpaceId =
-      await this.storageSpaceResolverService.getStorageSpaceIdForVisual(
-        visual.id
+      await this.storageSpaceResolverService.getStorageSpaceIdForProfile(
+        profile.id
       );
     const storageSpace = await this.storageSpaceService.getStorageSpaceOrFail(
       storageSpaceId
     );
+    // Also check that the acting agent is allowed to upload
     // this.authorizationService.grantAccessOrFail(
     //   agentInfo,
     //   storageSpace.authorization,
@@ -97,7 +113,10 @@ export class StorageSpaceResolverMutations {
     { createReadStream, filename, mimetype }: FileUpload
   ): Promise<IReference> {
     const reference = await this.referenceService.getReferenceOrFail(
-      uploadData.visualID
+      uploadData.visualID,
+      {
+        relations: ['profile'],
+      }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -105,11 +124,20 @@ export class StorageSpaceResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `reference file upload: ${reference.id}`
     );
-    // Todo: this needs to pick up the right storage space based on the Profile for a Reference
-    // To test out the functionality it is using the contributors one for now
-    const storageId = ''; // TODO TODO
+
+    const profile = (reference as Reference).profile;
+    if (!profile)
+      throw new EntityNotInitializedException(
+        `Unable to find profile for Reference: ${reference.id}`,
+        LogContext.STORAGE_SPACE
+      );
+
+    const storageSpaceId =
+      await this.storageSpaceResolverService.getStorageSpaceIdForProfile(
+        profile.id
+      );
     const storageSpace = await this.storageSpaceService.getStorageSpaceOrFail(
-      storageId
+      storageSpaceId
     );
 
     this.authorizationService.grantAccessOrFail(

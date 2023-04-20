@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   ValidationException,
@@ -65,9 +65,13 @@ export class VisualService {
     };
   }
 
-  async getVisualOrFail(visualID: string): Promise<IVisual> {
-    const visual = await this.visualRepository.findOneBy({
-      id: visualID,
+  async getVisualOrFail(
+    visualID: string,
+    options?: FindOneOptions<Visual>
+  ): Promise<IVisual> {
+    const visual = await this.visualRepository.findOne({
+      where: { id: visualID },
+      ...options,
     });
     if (!visual)
       throw new EntityNotFoundException(
