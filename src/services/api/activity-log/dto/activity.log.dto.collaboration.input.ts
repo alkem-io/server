@@ -1,5 +1,6 @@
 import { UUID } from '@domain/common/scalars';
 import { Field, Float, InputType } from '@nestjs/graphql';
+import { ActivityEventType } from '@common/enums/activity.event.type';
 
 @InputType()
 export class ActivityLogInput {
@@ -17,4 +18,11 @@ export class ActivityLogInput {
     nullable: true,
   })
   limit?: number;
+
+  @Field(() => [ActivityEventType], {
+    nullable: true,
+    description:
+      'Which activity types to include in the results. Returns all by default.',
+  })
+  types?: ActivityEventType[];
 }

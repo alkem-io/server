@@ -47,7 +47,8 @@ export class ActivityLogService {
     // Get all raw activities; limit is used to determine the amount of results
     const rawActivities =
       await this.activityService.getActivityForCollaboration(
-        queryData.collaborationID
+        queryData.collaborationID,
+        queryData.types
       );
 
     // Convert results until have enough
