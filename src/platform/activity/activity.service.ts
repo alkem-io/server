@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Activity } from './activity.entity';
@@ -9,6 +9,7 @@ import { CreateActivityInput } from './dto/activity.dto.create';
 import { ensureMaxLength } from '@common/utils';
 import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ActivityEventType } from '@common/enums/activity.event.type';
 
 @Injectable()
 export class ActivityService {
@@ -59,6 +60,7 @@ export class ActivityService {
 
   async getActivityForCollaboration(
     collaborationID: string,
+    types?: ActivityEventType[],
     limit?: number,
     visibility = true
   ): Promise<IActivity[]> {
@@ -66,6 +68,7 @@ export class ActivityService {
       .createQueryBuilder('activity')
       .where('collaborationID = :collaborationID')
       .andWhere('visibility = :visibility')
+      .andWhere(types && types.length > 0 ? { type: In(types) } : {})
       .setParameters({
         collaborationID: collaborationID,
         visibility: visibility,

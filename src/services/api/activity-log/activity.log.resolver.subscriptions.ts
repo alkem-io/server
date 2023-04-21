@@ -6,7 +6,7 @@ import { AgentInfo } from '@src/core/authentication/agent-info';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ActivityCreatedSubscriptionPayload } from './dto/subscriptions/activity.log.dto.activity.created.subscription.payload';
-import { ActivityCreatedSubscriptionArgs } from './dto/subscriptions/activity.log.activity.created.subscription.args';
+import { ActivityCreatedSubscriptionInput } from './dto/subscriptions/activity.log.activity.created.subscription.input';
 import { ActivityCreatedSubscriptionResult } from './dto/subscriptions/activity.created.dto';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
@@ -29,7 +29,7 @@ export class ActivityLogResolverSubscriptions {
   @UseGuards(GraphqlGuard)
   @TypedSubscription<
     ActivityCreatedSubscriptionPayload,
-    ActivityCreatedSubscriptionArgs
+    { input: ActivityCreatedSubscriptionInput }
   >(() => ActivityCreatedSubscriptionResult, {
     async resolve(
       this: ActivityLogResolverSubscriptions,
@@ -40,7 +40,7 @@ export class ActivityLogResolverSubscriptions {
       const agentInfo = context.req.user;
       const logMsgPrefix = `[New activity subscription] - [${agentInfo.email}] -`;
       this.logger.verbose?.(
-        `${logMsgPrefix} sending out event for new activity on Collaboration: ${args.collaborationID} `,
+        `${logMsgPrefix} sending out event for new activity on Collaboration: ${args.input.collaborationID} `,
         LogContext.SUBSCRIPTIONS
       );
 
@@ -69,7 +69,8 @@ export class ActivityLogResolverSubscriptions {
       );
 
       const isSameCollaboration =
-        payload.activity.collaborationID === variables.collaborationID;
+        payload.activity.collaborationID === variables.input.collaborationID &&
+        Boolean(variables.input.types?.includes(payload.activity.type));
       this.logger.verbose?.(
         `${logMsgPrefix} Filter result is ${isSameCollaboration}`,
         LogContext.SUBSCRIPTIONS
@@ -82,25 +83,26 @@ export class ActivityLogResolverSubscriptions {
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
       nullable: false,
+      name: 'input',
     })
-    args: ActivityCreatedSubscriptionArgs
+    input: ActivityCreatedSubscriptionInput
   ) {
     const logMsgPrefix = '[New activity subscription] - ';
     this.logger.verbose?.(
-      `${logMsgPrefix} User ${agentInfo.email} subscribed for new activities on Collaboration: ${args.collaborationID}`,
+      `${logMsgPrefix} User ${agentInfo.email} subscribed for new activities on Collaboration: ${input.collaborationID}`,
       LogContext.SUBSCRIPTIONS
     );
     // validate args
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(
-        args.collaborationID
+        input.collaborationID
       );
     // authorize
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       collaboration.authorization,
       AuthorizationPrivilege.READ,
-      `subscription to new activities on Collaboration: ${args.collaborationID}`
+      `subscription to new activities on Collaboration: ${input.collaborationID}`
     );
     // subscribe
     return this.subscriptionReadService.subscribeToActivities();

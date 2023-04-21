@@ -1,23 +1,14 @@
+import { Field, InputType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
-import { Field, Float, InputType } from '@nestjs/graphql';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 
 @InputType()
-export class ActivityLogInput {
+export class ActivityCreatedSubscriptionInput {
   @Field(() => UUID, {
     nullable: false,
-    description:
-      'Display the activityLog results for the specified Collaboration.',
+    description: 'The collaboration on which to subscribe for new activity',
   })
   collaborationID!: string;
-
-  @Field(() => Float, {
-    name: 'limit',
-    description:
-      'The number of ActivityLog entries to return; if omitted return all.',
-    nullable: true,
-  })
-  limit?: number;
 
   @Field(() => [ActivityEventType], {
     nullable: true,
