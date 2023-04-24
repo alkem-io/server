@@ -40,28 +40,36 @@ export class StorageSpaceResolverService {
 
     switch (result.type) {
       case ProfileType.USER:
-        //;
+        // to go onto platform storage space
         break;
       case ProfileType.OPPORTUNITY:
-        //;
+        // to go onto challenge storage space
         break;
       case ProfileType.CALLOUT:
-        //;
+        // to go onto hub / challenge storage space
         break;
       case ProfileType.POST:
-        //
+        // to go onto hub / challenge storage space
         break;
       case ProfileType.WHITEBOARD:
-        //
+        // to go onto hub / challenge storage space
         break;
       case ProfileType.INNOVATION_PACK:
-        //
+        // to go onto platform storage space
         break;
+
+      // Note: templates are part of a templates set, so first get the templates set,
+      // then determine if in a Hub or a InnovationPack
+      // If on a Hub, then use that storage space
+      // If on a InnovationPack then use the Platform storage space
       case ProfileType.WHITEBOARD_TEMPLATE:
-        //
+        // to go onto hub / platform template
         break;
       case ProfileType.POST_TEMPLATE:
-        //
+        // to go onto hub / platform template
+        break;
+      case ProfileType.INNOVATION_FLOW_TEMPLATE:
+        // to go onto hub / platform template
         break;
       default:
         throw new StorageSpaceNotFoundException(
@@ -152,4 +160,5 @@ enum ProfileType {
   CALLOUT = 'callout',
   INNOVATION_PACK = 'innovation_pack',
   DISCUSSION = 'discussion',
+  INNOVATION_FLOW_TEMPLATE = 'innovation_flow_template',
 }
