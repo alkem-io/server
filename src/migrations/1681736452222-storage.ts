@@ -18,7 +18,7 @@ export class storage1681736452222 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create storage space entity
     await queryRunner.query(
-      `CREATE TABLE \`storage_space\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+      `CREATE TABLE \`storage_bucket\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                  \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                   \`version\` int NOT NULL,
                   \`authorizationId\` char(36) NULL,
@@ -29,7 +29,7 @@ export class storage1681736452222 implements MigrationInterface {
                     PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
-      `ALTER TABLE \`storage_space\` ADD CONSTRAINT \`FK_77755901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`storage_bucket\` ADD CONSTRAINT \`FK_77755901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     // Create calendar_events
@@ -61,7 +61,7 @@ export class storage1681736452222 implements MigrationInterface {
 
     // Link documents to storage space
     await queryRunner.query(
-      `ALTER TABLE \`document\` ADD CONSTRAINT \`FK_11155450cf75dc486700ca034c6\` FOREIGN KEY (\`storageBucketId\`) REFERENCES \`storage_space\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`document\` ADD CONSTRAINT \`FK_11155450cf75dc486700ca034c6\` FOREIGN KEY (\`storageBucketId\`) REFERENCES \`storage_bucket\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     await this.addStorageBucketRelation(
@@ -160,9 +160,9 @@ export class storage1681736452222 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // storage_space ==> authorization
+    // storage_bucket ==> authorization
     await queryRunner.query(
-      'ALTER TABLE `storage_space` DROP FOREIGN KEY `FK_77755901817dd09d5906537e088`'
+      'ALTER TABLE `storage_bucket` DROP FOREIGN KEY `FK_77755901817dd09d5906537e088`'
     );
 
     // document ==> authorization
@@ -177,7 +177,7 @@ export class storage1681736452222 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `document` DROP FOREIGN KEY `FK_3337f26ca267009fcf514e0e726`'
     );
-    // document ==> storage_space
+    // document ==> storage_bucket
     await queryRunner.query(
       'ALTER TABLE `document` DROP FOREIGN KEY `FK_11155450cf75dc486700ca034c6`'
     );
@@ -208,7 +208,7 @@ export class storage1681736452222 implements MigrationInterface {
       'organization'
     );
 
-    await queryRunner.query('DROP TABLE `storage_space`');
+    await queryRunner.query('DROP TABLE `storage_bucket`');
     await queryRunner.query('DROP TABLE `document`');
 
     // TODO: enforce this to be a valid value or not? What happens if storagebucket is deleted?
@@ -226,7 +226,7 @@ export class storage1681736452222 implements MigrationInterface {
       `ALTER TABLE \`${entityTable}\` ADD \`storageBucketId\` char(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`${entityTable}\` ADD CONSTRAINT \`${fk}\` FOREIGN KEY (\`storageBucketId\`) REFERENCES \`storage_space\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`${entityTable}\` ADD CONSTRAINT \`${fk}\` FOREIGN KEY (\`storageBucketId\`) REFERENCES \`storage_bucket\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
   }
 
@@ -261,7 +261,7 @@ export class storage1681736452222 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `INSERT INTO storage_space (id, version, authorizationId, allowedMimeTypes, maxFileSize, parentStorageBucketId)
+      `INSERT INTO storage_bucket (id, version, authorizationId, allowedMimeTypes, maxFileSize, parentStorageBucketId)
             VALUES ('${newStorageBucketID}',
                     '1',
                     '${storageBucketAuthID}',

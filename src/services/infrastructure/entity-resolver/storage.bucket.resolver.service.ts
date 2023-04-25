@@ -13,7 +13,9 @@ export class StorageBucketResolverService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async getStorageBucketIdForProfile(profileID: string): Promise<string> {
+  public async getStorageBucketIdForProfile(
+    profileID: string
+  ): Promise<string> {
     // First iterate over all the entity types that have storage spaces directly
     const directStorageBucketEntities = ['hub', 'challenge', 'organization'];
     for (const entityName of directStorageBucketEntities) {
@@ -133,6 +135,7 @@ export class StorageBucketResolverService {
       'post_template',
       'whiteboard_template',
       'innovation_flow_template',
+      'discussion',
     ];
 
     for (const entityName of indirectProfileEntries) {
