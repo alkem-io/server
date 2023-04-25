@@ -12,6 +12,7 @@ import { DiscussionResolverMutations } from './discussion.resolver.mutations';
 import { DiscussionResolverSubscriptions } from './discussion.resolver.subscriptions';
 import { DiscussionService } from './discussion.service';
 import { DiscussionAuthorizationService } from './discussion.service.authorization';
+import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { DiscussionAuthorizationService } from './discussion.service.authorizati
     AuthorizationPolicyModule,
     ProfileModule,
     NamingModule,
+    NotificationAdapterModule,
   ],
   providers: [
     DiscussionService,
