@@ -61,8 +61,8 @@ import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
-import { StorageBucketService } from '@domain/storage/storage-space/storage.space.service';
-import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.space.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.space.interface';
 
 @Injectable()
 export class ChallengeService {
@@ -122,10 +122,11 @@ export class ChallengeService {
 
     challenge.opportunities = [];
 
-    challenge.storageBucket = await this.storageBucketService.createStorageBucket(
-      this.storageBucketService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
-      this.storageBucketService.DEFAULT_MAX_ALLOWED_FILE_SIZE
-    );
+    challenge.storageBucket =
+      await this.storageBucketService.createStorageBucket(
+        this.storageBucketService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
+        this.storageBucketService.DEFAULT_MAX_ALLOWED_FILE_SIZE
+      );
 
     await this.baseChallengeService.initialise(
       challenge,

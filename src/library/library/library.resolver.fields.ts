@@ -7,7 +7,7 @@ import { ILibrary } from './library.interface';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
-import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.space.interface';
 import { LibraryService } from './library.service';
 
 @Resolver(() => ILibrary)

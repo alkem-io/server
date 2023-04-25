@@ -16,7 +16,7 @@ import {
   LogContext,
 } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { StorageBucketAuthorizationService } from '@domain/storage/storage-space/storage.space.service.authorization';
+import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.space.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {

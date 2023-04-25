@@ -28,7 +28,7 @@ import {
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.space.interface';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {

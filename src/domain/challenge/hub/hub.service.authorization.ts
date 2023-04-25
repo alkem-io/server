@@ -40,7 +40,7 @@ import {
   CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_HUB_HOST_ASSOCIATES_JOIN,
 } from '@common/constants';
-import { StorageBucketAuthorizationService } from '@domain/storage/storage-space/storage.space.service.authorization';
+import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.space.service.authorization';
 
 @Injectable()
 export class HubAuthorizationService {

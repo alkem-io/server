@@ -12,7 +12,7 @@ import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entit
 import { PreferenceSet } from '@domain/common/preference-set';
 import { IChallenge } from './challenge.interface';
 import { BaseChallenge } from '../base-challenge/base.challenge.entity';
-import { StorageBucket } from '@domain/storage/storage-space/storage.space.entity';
+import { StorageBucket } from '@domain/storage/storage-bucket/storage.space.entity';
 
 @Entity()
 export class Challenge extends BaseChallenge implements IChallenge {

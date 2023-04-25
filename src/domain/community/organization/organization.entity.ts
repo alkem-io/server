@@ -12,7 +12,7 @@ import { IOrganization } from './organization.interface';
 import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
 import { PreferenceSet } from '@domain/common/preference-set';
 import { Contributor } from '../contributor/contributor.entity';
-import { StorageBucket } from '@domain/storage/storage-space/storage.space.entity';
+import { StorageBucket } from '@domain/storage/storage-bucket/storage.space.entity';
 
 @Entity()
 export class Organization

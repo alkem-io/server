@@ -69,9 +69,8 @@ export class StorageBucketResolverMutations {
       await this.storageBucketResolverService.getStorageBucketIdForProfile(
         profile.id
       );
-    const storageBucket = await this.storageBucketService.getStorageBucketOrFail(
-      storageBucketId
-    );
+    const storageBucket =
+      await this.storageBucketService.getStorageBucketOrFail(storageBucketId);
     // Also check that the acting agent is allowed to upload
     // this.authorizationService.grantAccessOrFail(
     //   agentInfo,
@@ -137,9 +136,8 @@ export class StorageBucketResolverMutations {
       await this.storageBucketResolverService.getStorageBucketIdForProfile(
         profile.id
       );
-    const storageBucket = await this.storageBucketService.getStorageBucketOrFail(
-      storageBucketId
-    );
+    const storageBucket =
+      await this.storageBucketService.getStorageBucketOrFail(storageBucketId);
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,

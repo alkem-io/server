@@ -4,7 +4,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
-import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.space.interface';
 import { ILibrary } from '@library/library/library.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';

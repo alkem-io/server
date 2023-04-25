@@ -1,5 +1,5 @@
 import { ICommunication } from '@domain/communication/communication/communication.interface';
-import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.space.interface';
 import { ILibrary } from '@library/library/library.interface';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IPlatform } from './platform.interface';

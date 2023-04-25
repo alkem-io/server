@@ -66,8 +66,8 @@ import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
-import { StorageBucketService } from '@domain/storage/storage-space/storage.space.service';
-import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.space.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.space.interface';
 
 @Injectable()
 export class HubService {

@@ -28,7 +28,7 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
-import { StorageBucketModule } from '@domain/storage/storage-space/storage.space.module';
+import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.space.module';
 
 @Module({
   imports: [

@@ -1,6 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IDocument } from './document.interface';
-import { StorageBucket } from '../storage-space/storage.space.entity';
+import { StorageBucket } from '../storage-bucket/storage.space.entity';
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Tagset } from '@domain/common/tagset';
