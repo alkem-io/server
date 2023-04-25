@@ -1,5 +1,5 @@
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
-import { StorageBucket } from '@domain/storage/storage-bucket/storage.space.entity';
+import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { ILibrary } from './library.interface';

@@ -52,8 +52,8 @@ import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { VisualType } from '@common/enums/visual.type';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.space.interface';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.space.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 
 @Injectable()
 export class OrganizationService {

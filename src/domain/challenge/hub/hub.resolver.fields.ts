@@ -43,7 +43,7 @@ import {
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { HubStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/hub/hub.storage.space.loader.creator';
 
 @Resolver(() => IHub)

@@ -6,7 +6,7 @@ import { Updates } from '@domain/communication/updates/updates.entity';
 import { IdentityResolverService } from './identity.resolver.service';
 import { CommunityResolverService } from './community.resolver.service';
 import { Community } from '@domain/community/community/community.entity';
-import { StorageBucketResolverService } from './storage.space.resolver.service';
+import { StorageBucketResolverService } from './storage.bucket.resolver.service';
 import { Communication } from '@domain/communication/communication/communication.entity';
 
 @Module({

@@ -7,7 +7,7 @@ import { LibraryService } from './library.service';
 import { ILibrary } from './library.interface';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.space.service.authorization';
+import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 
 @Injectable()
 export class LibraryAuthorizationService {

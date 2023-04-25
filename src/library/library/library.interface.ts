@@ -1,5 +1,5 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 

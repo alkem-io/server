@@ -24,11 +24,11 @@ import {
   PreferencesLoaderCreator,
   AgentLoaderCreator,
   ProfileLoaderCreator,
-  ChallengeStorageBucketLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { ChallengeStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/challenge/challenge.storage.space.loader.creator';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {

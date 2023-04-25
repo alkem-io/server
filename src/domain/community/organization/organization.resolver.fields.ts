@@ -27,11 +27,11 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Loader } from '@core/dataloader/decorators';
 import {
   AgentLoaderCreator,
-  OrganizationStorageBucketLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { OrganizationStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/organization/organization.storage.space.loader.creator';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
