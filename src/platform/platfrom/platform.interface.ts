@@ -1,6 +1,6 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
-import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
 import { ILibrary } from '@library/library/library.interface';
 import { ObjectType } from '@nestjs/graphql';
 
@@ -9,5 +9,5 @@ export abstract class IPlatform extends IAuthorizable {
   communication?: ICommunication;
   library?: ILibrary;
 
-  storageSpace!: IStorageSpace;
+  storageBucket!: IStorageBucket;
 }

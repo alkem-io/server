@@ -1,7 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
-import { StorageSpaceModule } from '@domain/storage/storage-space/storage.space.module';
+import { StorageBucketModule } from '@domain/storage/storage-space/storage.space.module';
 import { LibraryModule } from '@library/library/library.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -20,7 +20,7 @@ import { PlatformAuthorizationService } from './platform.service.authorization';
     CommunicationModule,
     PlatformAuthorizationPolicyModule,
     LibraryModule,
-    StorageSpaceModule,
+    StorageBucketModule,
     TypeOrmModule.forFeature([Platform]),
   ],
   providers: [

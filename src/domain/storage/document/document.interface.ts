@@ -1,12 +1,12 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IStorageSpace } from '../storage-space/storage.space.interface';
+import { IStorageBucket } from '../storage-space/storage.space.interface';
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 
 @ObjectType('Document')
 export abstract class IDocument extends IAuthorizable {
-  storageSpace!: IStorageSpace;
+  storageBucket!: IStorageBucket;
 
   @Field(() => ITagset, {
     nullable: false,

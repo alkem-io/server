@@ -14,9 +14,9 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { IDocument } from '../document/document.interface';
 import { Document } from '../document/document.entity';
 import { DocumentService } from '../document/document.service';
-import { StorageSpace } from './storage.space.entity';
-import { IStorageSpace } from './storage.space.interface';
-import { StorageSpaceArgsDocuments } from './dto/storage.space..args.documents';
+import { StorageBucket } from './storage.space.entity';
+import { IStorageBucket } from './storage.space.interface';
+import { StorageBucketArgsDocuments } from './dto/storage.space..args.documents';
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { CreateDocumentInput } from '../document/dto/document.dto.create';
 import { ReadStream } from 'fs';
@@ -26,7 +26,7 @@ import { VisualService } from '@domain/common/visual/visual.service';
 import { streamToBuffer } from '@common/utils';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
 @Injectable()
-export class StorageSpaceService {
+export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 5242880;
 
   DEFAULT_VISUAL_ALLOWED_MIME_TYPES: MimeFileType[] = [
@@ -45,28 +45,28 @@ export class StorageSpaceService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private visualService: VisualService,
-    @InjectRepository(StorageSpace)
-    private storageSpaceRepository: Repository<StorageSpace>,
+    @InjectRepository(StorageBucket)
+    private storageBucketRepository: Repository<StorageBucket>,
     @InjectRepository(Document)
     private documentRepository: Repository<Document>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async createStorageSpace(
+  public async createStorageBucket(
     allowedMimeTypes: MimeFileType[],
     maxAllowedFileSize: number
-  ): Promise<IStorageSpace> {
-    const storage: IStorageSpace = new StorageSpace();
+  ): Promise<IStorageBucket> {
+    const storage: IStorageBucket = new StorageBucket();
     storage.authorization = new AuthorizationPolicy();
     storage.documents = [];
     storage.allowedMimeTypes = allowedMimeTypes;
     storage.maxFileSize = maxAllowedFileSize;
 
-    return await this.storageSpaceRepository.save(storage);
+    return await this.storageBucketRepository.save(storage);
   }
 
-  async deleteStorageSpace(storageID: string): Promise<IStorageSpace> {
-    const storage = await this.getStorageSpaceOrFail(storageID, {
+  async deleteStorageBucket(storageID: string): Promise<IStorageBucket> {
+    const storage = await this.getStorageBucketOrFail(storageID, {
       relations: ['documents'],
     });
 
@@ -81,33 +81,33 @@ export class StorageSpaceService {
       }
     }
 
-    return await this.storageSpaceRepository.remove(storage as StorageSpace);
+    return await this.storageBucketRepository.remove(storage as StorageBucket);
   }
 
-  async getStorageSpaceOrFail(
-    storageSpaceID: string,
-    options?: FindOneOptions<StorageSpace>
-  ): Promise<IStorageSpace | never> {
-    if (!storageSpaceID) {
+  async getStorageBucketOrFail(
+    storageBucketID: string,
+    options?: FindOneOptions<StorageBucket>
+  ): Promise<IStorageBucket | never> {
+    if (!storageBucketID) {
       throw new EntityNotFoundException(
-        `StorageSpace not found: ${storageSpaceID}`,
+        `StorageBucket not found: ${storageBucketID}`,
         LogContext.STORAGE_SPACE
       );
     }
-    const storageSpace = await this.storageSpaceRepository.findOneOrFail({
-      where: { id: storageSpaceID },
+    const storageBucket = await this.storageBucketRepository.findOneOrFail({
+      where: { id: storageBucketID },
       ...options,
     });
-    if (!storageSpace)
+    if (!storageBucket)
       throw new EntityNotFoundException(
-        `StorageSpace not found: ${storageSpaceID}`,
+        `StorageBucket not found: ${storageBucketID}`,
         LogContext.STORAGE_SPACE
       );
-    return storageSpace;
+    return storageBucket;
   }
 
-  public async getDocuments(storageInput: IStorageSpace): Promise<IDocument[]> {
-    const storage = await this.getStorageSpaceOrFail(storageInput.id, {
+  public async getDocuments(storageInput: IStorageBucket): Promise<IDocument[]> {
+    const storage = await this.getStorageBucketOrFail(storageInput.id, {
       relations: ['documents'],
     });
     const documents = storage.documents;
@@ -121,7 +121,7 @@ export class StorageSpaceService {
   }
 
   public async uploadFileAsDocument(
-    storageSpace: IStorageSpace,
+    storageBucket: IStorageBucket,
     readStream: ReadStream,
     filename: string,
     mimeType: string,
@@ -130,7 +130,7 @@ export class StorageSpaceService {
     const buffer = await streamToBuffer(readStream);
 
     return await this.uploadFileAsDocumentFromBuffer(
-      storageSpace,
+      storageBucket,
       buffer,
       filename,
       mimeType,
@@ -139,24 +139,24 @@ export class StorageSpaceService {
   }
 
   private async uploadFileAsDocumentFromBuffer(
-    storageSpace: IStorageSpace,
+    storageBucket: IStorageBucket,
     buffer: Buffer,
     filename: string,
     mimeType: string,
     userID: string
   ): Promise<IDocument> {
-    const storage = await this.getStorageSpaceOrFail(storageSpace.id, {
+    const storage = await this.getStorageBucketOrFail(storageBucket.id, {
       relations: ['documents'],
     });
     if (!storage.documents)
       throw new EntityNotInitializedException(
-        `StorageSpace (${storage}) not initialised`,
+        `StorageBucket (${storage}) not initialised`,
         LogContext.STORAGE_SPACE
       );
 
     if (!(await this.validateMimeTypes(storage, mimeType))) {
       throw new ValidationException(
-        `Invalid Mime Type specified for storage space '${mimeType}'- allowed types: ${storageSpace.allowedMimeTypes}.`,
+        `Invalid Mime Type specified for storage space '${mimeType}'- allowed types: ${storageBucket.allowedMimeTypes}.`,
         LogContext.STORAGE_SPACE
       );
     }
@@ -177,17 +177,17 @@ export class StorageSpaceService {
     );
     storage.documents.push(document);
     this.logger.verbose?.(
-      `Uploaded document '${document.externalID}' on storage space: ${storageSpace.id}`,
+      `Uploaded document '${document.externalID}' on storage space: ${storageBucket.id}`,
       LogContext.STORAGE_SPACE
     );
-    await this.storageSpaceRepository.save(storage);
+    await this.storageBucketRepository.save(storage);
 
     return document;
   }
 
   async uploadImageOnVisual(
     visual: IVisual,
-    storageSpace: IStorageSpace,
+    storageBucket: IStorageBucket,
     readStream: ReadStream,
     fileName: string,
     mimetype: string,
@@ -210,7 +210,7 @@ export class StorageSpaceService {
 
     try {
       const document = await this.uploadFileAsDocumentFromBuffer(
-        storageSpace,
+        storageBucket,
         buffer,
         fileName,
         mimetype,
@@ -224,11 +224,11 @@ export class StorageSpaceService {
     }
   }
 
-  public async size(storage: IStorageSpace): Promise<number> {
+  public async size(storage: IStorageBucket): Promise<number> {
     const documentsSize = await this.documentRepository
       .createQueryBuilder('document')
-      .where('document.storageSpaceId = :storageSpaceId', {
-        storageSpaceId: storage.id,
+      .where('document.storageBucketId = :storageBucketId', {
+        storageBucketId: storage.id,
       })
       .addSelect('SUM(size)', 'totalSize')
       .getRawOne();
@@ -237,11 +237,11 @@ export class StorageSpaceService {
   }
 
   public async getFilteredDocuments(
-    storage: IStorageSpace,
-    args: StorageSpaceArgsDocuments,
+    storage: IStorageBucket,
+    args: StorageBucketArgsDocuments,
     agentInfo: AgentInfo
   ): Promise<IDocument[]> {
-    const storageLoaded = await this.getStorageSpaceOrFail(storage.id, {
+    const storageLoaded = await this.getStorageBucketOrFail(storage.id, {
       relations: ['documents'],
     });
     const allDocuments = storageLoaded.documents;
@@ -264,7 +264,7 @@ export class StorageSpaceService {
 
         if (!document)
           throw new EntityNotFoundException(
-            `Document with requested ID (${documentID}) not located within current StorageSpace: ${storage.id}`,
+            `Document with requested ID (${documentID}) not located within current StorageBucket: ${storage.id}`,
             LogContext.STORAGE_SPACE
           );
         results.push(document);
@@ -292,10 +292,10 @@ export class StorageSpaceService {
   }
 
   private validateMimeTypes(
-    storageSpace: IStorageSpace,
+    storageBucket: IStorageBucket,
     mimeType: string
   ): boolean {
-    const result = Object.values(storageSpace.allowedMimeTypes).includes(
+    const result = Object.values(storageBucket.allowedMimeTypes).includes(
       mimeType as MimeFileType
     );
     return result;

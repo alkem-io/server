@@ -2,22 +2,22 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
 import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { StorageSpaceNotFoundException } from '@common/exceptions/storage.space.not.found.exception';
+import { StorageBucketNotFoundException } from '@common/exceptions/storage.space.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
-export class StorageSpaceResolverService {
+export class StorageBucketResolverService {
   constructor(
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  public async getStorageSpaceIdForProfile(profileID: string): Promise<string> {
+  public async getStorageBucketIdForProfile(profileID: string): Promise<string> {
     // First iterate over all the entity types that have storage spaces directly
-    const directStorageSpaceEntities = ['hub', 'challenge', 'organization'];
-    for (const entityName of directStorageSpaceEntities) {
-      const match = await this.getDirectStorageSpaceForProfile(
+    const directStorageBucketEntities = ['hub', 'challenge', 'organization'];
+    for (const entityName of directStorageBucketEntities) {
+      const match = await this.getDirectStorageBucketForProfile(
         profileID,
         entityName
       );
@@ -27,8 +27,8 @@ export class StorageSpaceResolverService {
     // Check the other places where a profile could be used
     const result = await this.getProfileType(profileID);
     if (!result) {
-      throw new StorageSpaceNotFoundException(
-        `Unable to find StorageSpace for Profile with ID: ${profileID}`,
+      throw new StorageBucketNotFoundException(
+        `Unable to find StorageBucket for Profile with ID: ${profileID}`,
         LogContext.STORAGE_SPACE
       );
     }
@@ -72,7 +72,7 @@ export class StorageSpaceResolverService {
         // to go onto hub / platform template
         break;
       default:
-        throw new StorageSpaceNotFoundException(
+        throw new StorageBucketNotFoundException(
           `Unrecognized profile type: ${result.type}`,
           LogContext.STORAGE_SPACE
         );
@@ -80,20 +80,20 @@ export class StorageSpaceResolverService {
     return '';
   }
 
-  private async getDirectStorageSpaceForProfile(
+  private async getDirectStorageBucketForProfile(
     profileID: string,
     entityName: string
   ): Promise<string | undefined> {
-    const query = `SELECT \`${entityName}\`.\`id\` as \`entityId\`, \`${entityName}\`.\`storageSpaceId\` as \`storageSpaceId\`
+    const query = `SELECT \`${entityName}\`.\`id\` as \`entityId\`, \`${entityName}\`.\`storageBucketId\` as \`storageBucketId\`
     FROM \`${entityName}\` WHERE \`${entityName}\`.\`profileId\` = '${profileID}'`;
 
     const [result]: {
       entityId: string;
-      storageSpaceId: string;
+      storageBucketId: string;
     }[] = await this.entityManager.connection.query(query);
 
     if (result) {
-      return result.storageSpaceId;
+      return result.storageBucketId;
     }
 
     return undefined;
@@ -108,7 +108,7 @@ export class StorageSpaceResolverService {
     console.log(query);
     const [result]: {
       entityId: string;
-      storageSpaceId: string;
+      storageBucketId: string;
     }[] = await this.entityManager.connection.query(query);
 
     if (result) {

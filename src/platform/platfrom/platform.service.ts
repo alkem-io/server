@@ -4,7 +4,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
-import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
 import { ILibrary } from '@library/library/library.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -94,19 +94,19 @@ export class PlatformService {
     return communication;
   }
 
-  async getStorageSpace(platformInput: ILibrary): Promise<IStorageSpace> {
+  async getStorageBucket(platformInput: ILibrary): Promise<IStorageBucket> {
     const platform = await this.getPlatformOrFail({
-      relations: ['storageSpace'],
+      relations: ['storageBucket'],
     });
-    const storageSpace = platform.storageSpace;
+    const storageBucket = platform.storageBucket;
 
-    if (!storageSpace) {
+    if (!storageBucket) {
       throw new EntityNotFoundException(
         `Unable to find storage space for Platform: ${platformInput.id}`,
         LogContext.LIBRARY
       );
     }
 
-    return storageSpace;
+    return storageBucket;
   }
 }

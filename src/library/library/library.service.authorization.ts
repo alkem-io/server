@@ -7,14 +7,14 @@ import { LibraryService } from './library.service';
 import { ILibrary } from './library.interface';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { StorageSpaceAuthorizationService } from '@domain/storage/storage-space/storage.space.service.authorization';
+import { StorageBucketAuthorizationService } from '@domain/storage/storage-space/storage.space.service.authorization';
 
 @Injectable()
 export class LibraryAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
-    private storageSpaceAuthorizationService: StorageSpaceAuthorizationService,
+    private storageBucketAuthorizationService: StorageBucketAuthorizationService,
     private libraryService: LibraryService,
     @InjectRepository(Library)
     private libraryRepository: Repository<Library>
@@ -55,10 +55,10 @@ export class LibraryAuthorizationService {
       );
     }
 
-    library.storageSpace = await this.libraryService.getStorageSpace(library);
-    library.storageSpace =
-      await this.storageSpaceAuthorizationService.applyAuthorizationPolicy(
-        library.storageSpace,
+    library.storageBucket = await this.libraryService.getStorageBucket(library);
+    library.storageBucket =
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+        library.storageBucket,
         library.authorization
       );
 

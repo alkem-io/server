@@ -7,7 +7,7 @@ import { ILibrary } from './library.interface';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
-import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
 import { LibraryService } from './library.service';
 
 @Resolver(() => ILibrary)
@@ -36,12 +36,12 @@ export class LibraryResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('storageSpace', () => IStorageSpace, {
+  @ResolveField('storageBucket', () => IStorageBucket, {
     nullable: true,
-    description: 'The StorageSpace with documents in use by this User',
+    description: 'The StorageBucket with documents in use by this User',
   })
   @UseGuards(GraphqlGuard)
-  async storageSpace(@Parent() library: ILibrary): Promise<IStorageSpace> {
-    return await this.libraryService.getStorageSpace(library);
+  async storageBucket(@Parent() library: ILibrary): Promise<IStorageBucket> {
+    return await this.libraryService.getStorageBucket(library);
   }
 }

@@ -2,7 +2,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { InnovationPackService } from '@library/innovation-pack/innovaton.pack.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -53,9 +53,9 @@ export class LibraryService {
     innovationPackData: CreateInnovationPackOnLibraryInput
   ): Promise<IInnovationPack> {
     const library = await this.getLibraryOrFail({
-      relations: ['storageSpace'],
+      relations: ['storageBucket'],
     });
-    if (!library.innovationPacks || !library.storageSpace)
+    if (!library.innovationPacks || !library.storageBucket)
       throw new EntityNotInitializedException(
         `Library (${library}) not initialised`,
         LogContext.LIBRARY
@@ -84,19 +84,19 @@ export class LibraryService {
     return innovationPack;
   }
 
-  async getStorageSpace(libraryInput: ILibrary): Promise<IStorageSpace> {
+  async getStorageBucket(libraryInput: ILibrary): Promise<IStorageBucket> {
     const library = await this.getLibraryOrFail({
-      relations: ['storageSpace'],
+      relations: ['storageBucket'],
     });
-    const storageSpace = library.storageSpace;
+    const storageBucket = library.storageBucket;
 
-    if (!storageSpace) {
+    if (!storageBucket) {
       throw new EntityNotFoundException(
         `Unable to find storage space for Library: ${libraryInput.id}`,
         LogContext.LIBRARY
       );
     }
 
-    return storageSpace;
+    return storageBucket;
   }
 }

@@ -69,7 +69,7 @@ export class OpportunityService {
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
     hubID: string,
-    storageSpaceID: string,
+    storageBucketID: string,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     // Validate incoming data

@@ -33,7 +33,7 @@ import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
-import { StorageSpaceModule } from '@domain/storage/storage-space/storage.space.module';
+import { StorageBucketModule } from '@domain/storage/storage-space/storage.space.module';
 
 @Module({
   imports: [
@@ -51,7 +51,7 @@ import { StorageSpaceModule } from '@domain/storage/storage-space/storage.space.
     PlatformAuthorizationPolicyModule,
     ProjectModule,
     OrganizationModule,
-    StorageSpaceModule,
+    StorageBucketModule,
     UserGroupModule,
     ApplicationModule,
     UserModule,

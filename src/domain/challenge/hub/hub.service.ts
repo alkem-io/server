@@ -66,8 +66,8 @@ import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
-import { StorageSpaceService } from '@domain/storage/storage-space/storage.space.service';
-import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
+import { StorageBucketService } from '@domain/storage/storage-space/storage.space.service';
+import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
 
 @Injectable()
 export class HubService {
@@ -86,7 +86,7 @@ export class HubService {
     private hubsFilterService: HubFilterService,
     private timelineService: TimelineService,
     private templatesSetService: TemplatesSetService,
-    private storageSpaceService: StorageSpaceService,
+    private storageBucketService: StorageBucketService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -102,9 +102,9 @@ export class HubService {
     hub.visibility = HubVisibility.ACTIVE;
 
     // Set up the storage space as that is needed for Profile
-    hub.storageSpace = await this.storageSpaceService.createStorageSpace(
-      this.storageSpaceService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
-      this.storageSpaceService.DEFAULT_MAX_ALLOWED_FILE_SIZE
+    hub.storageBucket = await this.storageBucketService.createStorageBucket(
+      this.storageBucketService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
+      this.storageBucketService.DEFAULT_MAX_ALLOWED_FILE_SIZE
     );
 
     // remove context before saving as want to control that creation
@@ -233,7 +233,7 @@ export class HubService {
         'templatesSet',
         'timeline',
         'profile',
-        'storageSpace',
+        'storageBucket',
       ],
     });
 
@@ -270,8 +270,8 @@ export class HubService {
       await this.timelineService.deleteTimeline(hub.timeline.id);
     }
 
-    if (hub.storageSpace) {
-      await this.storageSpaceService.deleteStorageSpace(hub.storageSpace.id);
+    if (hub.storageBucket) {
+      await this.storageBucketService.deleteStorageBucket(hub.storageBucket.id);
     }
 
     const result = await this.hubRepository.remove(hub as Hub);
@@ -455,20 +455,20 @@ export class HubService {
     return timeline;
   }
 
-  async getStorageSpaceOrFail(hubId: string): Promise<IStorageSpace> {
-    const hubWithStorageSpace = await this.getHubOrFail(hubId, {
-      relations: ['storageSpace'],
+  async getStorageBucketOrFail(hubId: string): Promise<IStorageBucket> {
+    const hubWithStorageBucket = await this.getHubOrFail(hubId, {
+      relations: ['storageBucket'],
     });
-    const storageSpace = hubWithStorageSpace.storageSpace;
+    const storageBucket = hubWithStorageBucket.storageBucket;
 
-    if (!storageSpace) {
+    if (!storageBucket) {
       throw new EntityNotFoundException(
-        `Unable to find storagespace for hub with nameID: ${hubWithStorageSpace.nameID}`,
+        `Unable to find storagebucket for hub with nameID: ${hubWithStorageBucket.nameID}`,
         LogContext.COMMUNITY
       );
     }
 
-    return storageSpace;
+    return storageBucket;
   }
 
   async getPreferenceSetOrFail(hubId: string): Promise<IPreferenceSet> {

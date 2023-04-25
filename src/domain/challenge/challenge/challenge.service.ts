@@ -61,8 +61,8 @@ import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
-import { StorageSpaceService } from '@domain/storage/storage-space/storage.space.service';
-import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
+import { StorageBucketService } from '@domain/storage/storage-space/storage.space.service';
+import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
 
 @Injectable()
 export class ChallengeService {
@@ -77,7 +77,7 @@ export class ChallengeService {
     private organizationService: OrganizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
-    private storageSpaceService: StorageSpaceService,
+    private storageBucketService: StorageBucketService,
     private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -122,9 +122,9 @@ export class ChallengeService {
 
     challenge.opportunities = [];
 
-    challenge.storageSpace = await this.storageSpaceService.createStorageSpace(
-      this.storageSpaceService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
-      this.storageSpaceService.DEFAULT_MAX_ALLOWED_FILE_SIZE
+    challenge.storageBucket = await this.storageBucketService.createStorageBucket(
+      this.storageBucketService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
+      this.storageBucketService.DEFAULT_MAX_ALLOWED_FILE_SIZE
     );
 
     await this.baseChallengeService.initialise(
@@ -596,13 +596,13 @@ export class ChallengeService {
     const challenge = await this.getChallengeOrFail(
       opportunityData.challengeID,
       {
-        relations: ['storageSpace', 'opportunities', 'community'],
+        relations: ['storageBucket', 'opportunities', 'community'],
       }
     );
 
-    if (!challenge.storageSpace) {
+    if (!challenge.storageBucket) {
       throw new EntityNotInitializedException(
-        'Unable to find StorageSpace for Challenge',
+        'Unable to find StorageBucket for Challenge',
         LogContext.CHALLENGES
       );
     }
@@ -616,7 +616,7 @@ export class ChallengeService {
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
       hubID,
-      challenge.storageSpace.id,
+      challenge.storageBucket.id,
       agentInfo
     );
 
@@ -747,23 +747,23 @@ export class ChallengeService {
     return preferenceSet;
   }
 
-  async getStorageSpaceOrFail(challengeId: string): Promise<IStorageSpace> {
-    const challengeWithStorageSpace = await this.getChallengeOrFail(
+  async getStorageBucketOrFail(challengeId: string): Promise<IStorageBucket> {
+    const challengeWithStorageBucket = await this.getChallengeOrFail(
       challengeId,
       {
-        relations: ['storageSpace'],
+        relations: ['storageBucket'],
       }
     );
-    const storageSpace = challengeWithStorageSpace.storageSpace;
+    const storageBucket = challengeWithStorageBucket.storageBucket;
 
-    if (!storageSpace) {
+    if (!storageBucket) {
       throw new EntityNotFoundException(
-        `Unable to find storagespace for Challenge with nameID: ${challengeWithStorageSpace.nameID}`,
+        `Unable to find storagebucket for Challenge with nameID: ${challengeWithStorageBucket.nameID}`,
         LogContext.COMMUNITY
       );
     }
 
-    return storageSpace;
+    return storageBucket;
   }
 
   async assignChallengeAdmin(

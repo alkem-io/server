@@ -2,7 +2,7 @@ import { UUID_NAMEID } from '@domain/common/scalars';
 import { ArgsType, Field, Float } from '@nestjs/graphql';
 
 @ArgsType()
-export class StorageSpaceArgsDocuments {
+export class StorageBucketArgsDocuments {
   @Field(() => [UUID_NAMEID], {
     name: 'IDs',
     description: 'The IDs or NAMEIDS of the Documents to return',

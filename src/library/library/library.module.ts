@@ -1,6 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { StorageSpaceModule } from '@domain/storage/storage-space/storage.space.module';
+import { StorageBucketModule } from '@domain/storage/storage-space/storage.space.module';
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -17,7 +17,7 @@ import { LibraryAuthorizationService } from './library.service.authorization';
     NamingModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
-    StorageSpaceModule,
+    StorageBucketModule,
     TypeOrmModule.forFeature([Library]),
   ],
   providers: [

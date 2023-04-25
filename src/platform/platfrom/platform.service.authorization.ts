@@ -16,7 +16,7 @@ import {
   LogContext,
 } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { StorageSpaceAuthorizationService } from '@domain/storage/storage-space/storage.space.service.authorization';
+import { StorageBucketAuthorizationService } from '@domain/storage/storage-space/storage.space.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -26,7 +26,7 @@ export class PlatformAuthorizationService {
     private libraryAuthorizationService: LibraryAuthorizationService,
     private communicationAuthorizationService: CommunicationAuthorizationService,
     private platformService: PlatformService,
-    private storageSpaceAuthorizationService: StorageSpaceAuthorizationService,
+    private storageBucketAuthorizationService: StorageBucketAuthorizationService,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>
   ) {}
@@ -72,12 +72,12 @@ export class PlatformAuthorizationService {
       );
     }
 
-    platform.storageSpace = await this.platformService.getStorageSpace(
+    platform.storageBucket = await this.platformService.getStorageBucket(
       platform
     );
-    platform.storageSpace =
-      await this.storageSpaceAuthorizationService.applyAuthorizationPolicy(
-        platform.storageSpace,
+    platform.storageBucket =
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+        platform.storageBucket,
         platform.authorization
       );
     return platform;

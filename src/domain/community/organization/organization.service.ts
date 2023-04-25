@@ -52,8 +52,8 @@ import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { VisualType } from '@common/enums/visual.type';
-import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
-import { StorageSpaceService } from '@domain/storage/storage-space/storage.space.service';
+import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
+import { StorageBucketService } from '@domain/storage/storage-space/storage.space.service';
 
 @Injectable()
 export class OrganizationService {
@@ -65,7 +65,7 @@ export class OrganizationService {
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
     private preferenceSetService: PreferenceSetService,
-    private storageSpaceService: StorageSpaceService,
+    private storageBucketService: StorageBucketService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -85,10 +85,10 @@ export class OrganizationService {
     const organization: IOrganization = Organization.create(organizationData);
     organization.authorization = new AuthorizationPolicy();
 
-    organization.storageSpace =
-      await this.storageSpaceService.createStorageSpace(
-        this.storageSpaceService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
-        this.storageSpaceService.DEFAULT_MAX_ALLOWED_FILE_SIZE
+    organization.storageBucket =
+      await this.storageBucketService.createStorageBucket(
+        this.storageBucketService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
+        this.storageBucketService.DEFAULT_MAX_ALLOWED_FILE_SIZE
       );
     organization.profile = await this.profileService.createProfile(
       organizationData.profileData
@@ -559,23 +559,25 @@ export class OrganizationService {
     return preferenceSet;
   }
 
-  async getStorageSpaceOrFail(organizationID: string): Promise<IStorageSpace> {
-    const organizationWithStorageSpace = await this.getOrganizationOrFail(
+  async getStorageBucketOrFail(
+    organizationID: string
+  ): Promise<IStorageBucket> {
+    const organizationWithStorageBucket = await this.getOrganizationOrFail(
       organizationID,
       {
-        relations: ['storageSpace'],
+        relations: ['storageBucket'],
       }
     );
-    const storageSpace = organizationWithStorageSpace.storageSpace;
+    const storageBucket = organizationWithStorageBucket.storageBucket;
 
-    if (!storageSpace) {
+    if (!storageBucket) {
       throw new EntityNotFoundException(
-        `Unable to find storageSpace for Organization with nameID: ${organizationWithStorageSpace.nameID}`,
+        `Unable to find storageBucket for Organization with nameID: ${organizationWithStorageBucket.nameID}`,
         LogContext.COMMUNITY
       );
     }
 
-    return storageSpace;
+    return storageBucket;
   }
 
   async organizationsWithCredentials(

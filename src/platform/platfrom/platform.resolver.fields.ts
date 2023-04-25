@@ -1,5 +1,5 @@
 import { ICommunication } from '@domain/communication/communication/communication.interface';
-import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
 import { ILibrary } from '@library/library/library.interface';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IPlatform } from './platform.interface';
@@ -29,12 +29,12 @@ export class PlatformResolverFields {
     return result;
   }
 
-  @ResolveField('storageSpace', () => IStorageSpace, {
+  @ResolveField('storageBucket', () => IStorageBucket, {
     nullable: true,
     description:
-      'The StorageSpace with documents in use by Users + Organizations on the Platform.',
+      'The StorageBucket with documents in use by Users + Organizations on the Platform.',
   })
-  async storageSpace(@Parent() platform: IPlatform): Promise<IStorageSpace> {
-    return await this.platformService.getStorageSpace(platform);
+  async storageBucket(@Parent() platform: IPlatform): Promise<IStorageBucket> {
+    return await this.platformService.getStorageBucket(platform);
   }
 }

@@ -1,6 +1,6 @@
 import { Resolver } from '@nestjs/graphql';
-import { IStorageSpace } from './storage.space.interface';
-import { StorageSpaceService } from './storage.space.service';
+import { IStorageBucket } from './storage.space.interface';
+import { StorageBucketService } from './storage.space.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
@@ -12,11 +12,11 @@ import { Args, Parent, ResolveField } from '@nestjs/graphql';
 import { IDocument } from '../document/document.interface';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { UUID_NAMEID } from '@domain/common/scalars';
-import { StorageSpaceArgsDocuments } from './dto/storage.space..args.documents';
+import { StorageBucketArgsDocuments } from './dto/storage.space..args.documents';
 
-@Resolver(() => IStorageSpace)
-export class StorageSpaceResolverFields {
-  constructor(private storageSpaceService: StorageSpaceService) {}
+@Resolver(() => IStorageBucket)
+export class StorageBucketResolverFields {
+  constructor(private storageBucketService: StorageBucketService) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('document', () => IDocument, {
@@ -25,7 +25,7 @@ export class StorageSpaceResolverFields {
   })
   @UseGuards(GraphqlGuard)
   async document(
-    @Parent() storageSpace: IStorageSpace,
+    @Parent() storageBucket: IStorageBucket,
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
       name: 'ID',
@@ -35,8 +35,8 @@ export class StorageSpaceResolverFields {
     })
     ID: string
   ): Promise<IDocument> {
-    const results = await this.storageSpaceService.getFilteredDocuments(
-      storageSpace,
+    const results = await this.storageBucketService.getFilteredDocuments(
+      storageBucket,
       { IDs: [ID] },
       agentInfo
     );
@@ -47,15 +47,15 @@ export class StorageSpaceResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('documents', () => [IDocument], {
     nullable: false,
-    description: 'The list of Documents for this StorageSpace.',
+    description: 'The list of Documents for this StorageBucket.',
   })
   async documents(
-    @Parent() storageSpace: IStorageSpace,
+    @Parent() storageBucket: IStorageBucket,
     @CurrentUser() agentInfo: AgentInfo,
-    @Args({ nullable: true }) args: StorageSpaceArgsDocuments
+    @Args({ nullable: true }) args: StorageBucketArgsDocuments
   ) {
-    return await this.storageSpaceService.getFilteredDocuments(
-      storageSpace,
+    return await this.storageBucketService.getFilteredDocuments(
+      storageBucket,
       args,
       agentInfo
     );
@@ -65,9 +65,9 @@ export class StorageSpaceResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('size', () => Number, {
     nullable: false,
-    description: 'The aggregate size of all Documents for this StorageSpace.',
+    description: 'The aggregate size of all Documents for this StorageBucket.',
   })
-  async size(@Parent() storageSpace: IStorageSpace) {
-    return await this.storageSpaceService.size(storageSpace);
+  async size(@Parent() storageBucket: IStorageBucket) {
+    return await this.storageBucketService.size(storageBucket);
   }
 }

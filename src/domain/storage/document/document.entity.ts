@@ -1,6 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IDocument } from './document.interface';
-import { StorageSpace } from '../storage-space/storage.space.entity';
+import { StorageBucket } from '../storage-space/storage.space.entity';
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Tagset } from '@domain/common/tagset';
@@ -10,12 +10,12 @@ export class Document extends AuthorizableEntity implements IDocument {
   @Column('varchar', { length: 36, nullable: true })
   createdBy!: string;
 
-  @ManyToOne(() => StorageSpace, storage => storage.documents, {
+  @ManyToOne(() => StorageBucket, storage => storage.documents, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  storageSpace!: StorageSpace;
+  storageBucket!: StorageBucket;
 
   @OneToOne(() => Tagset, {
     eager: true,

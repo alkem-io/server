@@ -5,10 +5,10 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { StorageSpaceService } from './storage.space.service';
+import { StorageBucketService } from './storage.space.service';
 import { DocumentAuthorizationService } from '../document/document.service.authorization';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
-import { StorageSpaceResolverService } from '@services/infrastructure/entity-resolver/storage.space.resolver.service';
+import { StorageBucketResolverService } from '@services/infrastructure/entity-resolver/storage.space.resolver.service';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upload.image';
 import { VisualService } from '@domain/common/visual/visual.service';
@@ -23,15 +23,15 @@ import {
 import { Visual } from '@domain/common/visual';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { StorageSpaceUploadFileInput } from './dto/storage.space.dto.upload.file';
+import { StorageBucketUploadFileInput } from './dto/storage.space.dto.upload.file';
 
 @Resolver()
-export class StorageSpaceResolverMutations {
+export class StorageBucketResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private storageSpaceService: StorageSpaceService,
+    private storageBucketService: StorageBucketService,
     private documentAuthorizationService: DocumentAuthorizationService,
-    private storageSpaceResolverService: StorageSpaceResolverService,
+    private storageBucketResolverService: StorageBucketResolverService,
     private documentService: DocumentService,
     private visualService: VisualService,
     private referenceService: ReferenceService
@@ -65,24 +65,24 @@ export class StorageSpaceResolverMutations {
         `Unable to find profile for Visual: ${visual.id}`,
         LogContext.STORAGE_SPACE
       );
-    const storageSpaceId =
-      await this.storageSpaceResolverService.getStorageSpaceIdForProfile(
+    const storageBucketId =
+      await this.storageBucketResolverService.getStorageBucketIdForProfile(
         profile.id
       );
-    const storageSpace = await this.storageSpaceService.getStorageSpaceOrFail(
-      storageSpaceId
+    const storageBucket = await this.storageBucketService.getStorageBucketOrFail(
+      storageBucketId
     );
     // Also check that the acting agent is allowed to upload
     // this.authorizationService.grantAccessOrFail(
     //   agentInfo,
-    //   storageSpace.authorization,
+    //   storageBucket.authorization,
     //   AuthorizationPrivilege.FILE_UPLOAD,
     //   `visual image upload on storage space: ${visual.id}`
     // );
     const readStream = createReadStream();
-    const visualDocument = await this.storageSpaceService.uploadImageOnVisual(
+    const visualDocument = await this.storageBucketService.uploadImageOnVisual(
       visual,
-      storageSpace,
+      storageBucket,
       readStream,
       filename,
       mimetype,
@@ -92,7 +92,7 @@ export class StorageSpaceResolverMutations {
     // Ensure authorization is updated
     await this.documentAuthorizationService.applyAuthorizationPolicy(
       visualDocument,
-      storageSpace.authorization
+      storageBucket.authorization
     );
     const updateData: UpdateVisualInput = {
       visualID: visual.id,
@@ -109,7 +109,7 @@ export class StorageSpaceResolverMutations {
   @Profiling.api
   async uploadFileOnReference(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('uploadData') uploadData: StorageSpaceUploadFileInput,
+    @Args('uploadData') uploadData: StorageBucketUploadFileInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
   ): Promise<IReference> {
@@ -133,25 +133,25 @@ export class StorageSpaceResolverMutations {
         LogContext.STORAGE_SPACE
       );
 
-    const storageSpaceId =
-      await this.storageSpaceResolverService.getStorageSpaceIdForProfile(
+    const storageBucketId =
+      await this.storageBucketResolverService.getStorageBucketIdForProfile(
         profile.id
       );
-    const storageSpace = await this.storageSpaceService.getStorageSpaceOrFail(
-      storageSpaceId
+    const storageBucket = await this.storageBucketService.getStorageBucketOrFail(
+      storageBucketId
     );
 
     this.authorizationService.grantAccessOrFail(
       agentInfo,
-      storageSpace.authorization,
+      storageBucket.authorization,
       AuthorizationPrivilege.READ, //FILE_UPLOAD,
-      `create document on storage: ${storageSpace.id}`
+      `create document on storage: ${storageBucket.id}`
     );
 
     const readStream = createReadStream();
 
-    const document = await this.storageSpaceService.uploadFileAsDocument(
-      storageSpace,
+    const document = await this.storageBucketService.uploadFileAsDocument(
+      storageBucket,
       readStream,
       filename,
       mimetype,
@@ -161,7 +161,7 @@ export class StorageSpaceResolverMutations {
     const documentAuthorized =
       await this.documentAuthorizationService.applyAuthorizationPolicy(
         document,
-        storageSpace.authorization
+        storageBucket.authorization
       );
 
     const updateData: UpdateReferenceInput = {

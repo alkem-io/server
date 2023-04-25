@@ -3,20 +3,20 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
 @Injectable()
-export class ChallengeStorageSpaceLoaderCreator
-  implements DataLoaderCreator<IStorageSpace[]>
+export class ChallengeStorageBucketLoaderCreator
+  implements DataLoaderCreator<IStorageBucket[]>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<IStorageSpace[]>) {
+  create(options?: DataLoaderCreatorOptions<IStorageBucket[]>) {
     return createTypedRelationDataLoader(
       this.manager,
       Challenge,
-      { storageSpace: true },
+      { storageBucket: true },
       this.constructor.name,
       options
     );

@@ -27,11 +27,11 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Loader } from '@core/dataloader/decorators';
 import {
   AgentLoaderCreator,
-  OrganizationStorageSpaceLoaderCreator,
+  OrganizationStorageBucketLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IStorageSpace } from '@domain/storage/storage-space/storage.space.interface';
+import { IStorageBucket } from '@domain/storage/storage-space/storage.space.interface';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
@@ -229,16 +229,16 @@ export class OrganizationResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('storageSpace', () => IStorageSpace, {
+  @ResolveField('storageBucket', () => IStorageBucket, {
     nullable: true,
-    description: 'The StorageSpace with documents in use by this Organization',
+    description: 'The StorageBucket with documents in use by this Organization',
   })
   @UseGuards(GraphqlGuard)
-  async storageSpace(
+  async storageBucket(
     @Parent() organization: Organization,
-    @Loader(OrganizationStorageSpaceLoaderCreator)
-    loader: ILoader<IStorageSpace>
-  ): Promise<IStorageSpace> {
+    @Loader(OrganizationStorageBucketLoaderCreator)
+    loader: ILoader<IStorageBucket>
+  ): Promise<IStorageBucket> {
     return loader.load(organization.id);
   }
 

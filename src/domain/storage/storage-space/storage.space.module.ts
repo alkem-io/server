@@ -4,11 +4,11 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
 import { DocumentModule } from '../document/document.module';
-import { StorageSpace } from './storage.space.entity';
-import { StorageSpaceResolverFields } from './storage.space.resolver.fields';
-import { StorageSpaceResolverMutations } from './storage.space.resolver.mutations';
-import { StorageSpaceService } from './storage.space.service';
-import { StorageSpaceAuthorizationService } from './storage.space.service.authorization';
+import { StorageBucket } from './storage.space.entity';
+import { StorageBucketResolverFields } from './storage.space.resolver.fields';
+import { StorageBucketResolverMutations } from './storage.space.resolver.mutations';
+import { StorageBucketService } from './storage.space.service';
+import { StorageBucketAuthorizationService } from './storage.space.service.authorization';
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { Document } from '../document/document.entity';
@@ -23,15 +23,15 @@ import { ReferenceModule } from '@domain/common/reference/reference.module';
     VisualModule,
     EntityResolverModule,
     ReferenceModule,
-    TypeOrmModule.forFeature([StorageSpace]),
+    TypeOrmModule.forFeature([StorageBucket]),
     TypeOrmModule.forFeature([Document]),
   ],
   providers: [
-    StorageSpaceResolverFields,
-    StorageSpaceService,
-    StorageSpaceResolverMutations,
-    StorageSpaceAuthorizationService,
+    StorageBucketResolverFields,
+    StorageBucketService,
+    StorageBucketResolverMutations,
+    StorageBucketAuthorizationService,
   ],
-  exports: [StorageSpaceService, StorageSpaceAuthorizationService],
+  exports: [StorageBucketService, StorageBucketAuthorizationService],
 })
-export class StorageSpaceModule {}
+export class StorageBucketModule {}

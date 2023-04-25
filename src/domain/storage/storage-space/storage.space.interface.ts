@@ -3,19 +3,19 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IDocument } from '../document/document.interface';
 
-@ObjectType('StorageSpace')
-export abstract class IStorageSpace extends IAuthorizable {
+@ObjectType('StorageBucket')
+export abstract class IStorageBucket extends IAuthorizable {
   documents!: IDocument[];
 
   @Field(() => [String], {
-    description: 'Mime types allowed to be stored on this StorageSpace.',
+    description: 'Mime types allowed to be stored on this StorageBucket.',
   })
   allowedMimeTypes!: MimeFileType[];
 
   @Field(() => Number, {
-    description: 'Maximum allowed file size on this StorageSpace.',
+    description: 'Maximum allowed file size on this StorageBucket.',
   })
   maxFileSize!: number;
 
-  parentStorageSpace?: IStorageSpace;
+  parentStorageBucket?: IStorageBucket;
 }
