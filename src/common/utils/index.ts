@@ -6,3 +6,4 @@ export * from './email.util';
 export * from './string.util';
 export * from './random.id.generator.util';
 export * from './stringify.util';
+export * from './getJourneyByCollaboration';
