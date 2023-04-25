@@ -1,8 +1,9 @@
 import { Inject, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager, EntityTarget } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
 import { LogContext } from '@common/enums';
-import { AgentInfo } from '@core/authentication/agent-info';
 import { ActivityService } from '@src/platform/activity/activity.service';
 import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 import { UserService } from '@domain/community/user/user.service';
@@ -18,6 +19,10 @@ import ActivityLogBuilderService, {
 } from '@services/api/activity-log/activity.log.builder.service';
 import { UpdatesService } from '@domain/communication/updates/updates.service';
 import { IActivity } from '@platform/activity/activity.interface';
+import { getJourneyByCollaboration } from '@common/utils';
+import { Hub } from '@domain/challenge/hub/hub.entity';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { Opportunity } from '@domain/collaboration/opportunity';
 
 export class ActivityLogService {
   constructor(
@@ -30,30 +35,32 @@ export class ActivityLogService {
     private opportunityService: OpportunityService,
     private updatesService: UpdatesService,
     private communityService: CommunityService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @InjectEntityManager()
+    private readonly entityManager: EntityManager
   ) {}
 
   async activityLog(
     queryData: ActivityLogInput,
-    agentInfo: AgentInfo
+    childCollaborations: string[] = []
   ): Promise<IActivityLogEntry[]> {
-    this.logger.verbose?.(
-      `Querying activityLog by user ${
-        agentInfo.userID
-      } + terms: ${JSON.stringify(queryData)}`,
-      LogContext.ACTIVITY
-    );
-
     // Get all raw activities; limit is used to determine the amount of results
     const rawActivities =
-      await this.activityService.getActivityForCollaboration(
-        queryData.collaborationID,
-        queryData.types
+      await this.activityService.getActivityForCollaborations(
+        [queryData.collaborationID, ...childCollaborations],
+        { types: queryData.types }
       );
+
+    const updatedChildActivities = rawActivities.map(x =>
+      childCollaborations.includes(x.collaborationID)
+        ? { ...x, child: true }
+        : x
+    );
 
     // Convert results until have enough
     const results: IActivityLogEntry[] = [];
-    for (const rawActivity of rawActivities) {
+    for (const rawActivity of updatedChildActivities) {
       if (!queryData.limit || queryData.limit > results.length) {
         const result = await this.convertRawActivityToResult(rawActivity);
         if (result) {
@@ -82,6 +89,17 @@ export class ActivityLogService {
       const userTriggeringActivity = await this.userService.getUserOrFail(
         rawActivity.triggeredBy
       );
+
+      const parentDetails = await this.getParentDetailsByCollaboration(
+        rawActivity.collaborationID
+      );
+
+      if (!parentDetails) {
+        throw new Error(
+          `Unable to resolve parent details of ${rawActivity.collaborationID}`
+        );
+      }
+
       const activityLogEntryBase: IActivityLogEntry = {
         id: rawActivity.id,
         triggeredBy: userTriggeringActivity,
@@ -89,6 +107,9 @@ export class ActivityLogService {
         type: rawActivity.type,
         description: rawActivity.description,
         collaborationID: rawActivity.collaborationID,
+        child: rawActivity.child,
+        parentNameID: parentDetails.nameID,
+        parentDisplayName: parentDetails.displayName,
       };
       const activityBuilder: IActivityLogBuilder =
         new ActivityLogBuilderService(
@@ -112,5 +133,40 @@ export class ActivityLogService {
         LogContext.ACTIVITY
       );
     }
+  }
+
+  private async getParentDetailsByCollaboration(
+    collaborationID: string
+  ): Promise<{ nameID: string; displayName: string } | undefined> {
+    const { hubId, challengeId, opportunityId } =
+      await getJourneyByCollaboration(this.entityManager, collaborationID);
+
+    const getDetails = async (
+      entity: EntityTarget<Hub | Challenge | Opportunity>,
+      id: string
+    ) => {
+      const result = await this.entityManager.findOneOrFail(entity, {
+        where: { id },
+        relations: { profile: true },
+      });
+      return {
+        displayName: result.profile.displayName,
+        nameID: result.nameID,
+      };
+    };
+
+    if (hubId) {
+      return getDetails(Hub, hubId);
+    }
+
+    if (challengeId) {
+      return getDetails(Challenge, challengeId);
+    }
+
+    if (opportunityId) {
+      return getDetails(Opportunity, opportunityId);
+    }
+
+    return undefined;
   }
 }
