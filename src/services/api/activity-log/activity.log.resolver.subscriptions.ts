@@ -51,11 +51,17 @@ export class ActivityLogResolverSubscriptions {
           createdDate: new Date(payload.activity.createdDate),
         });
 
+      if (activityLogEntry) {
+        // the activity is a child if the activity collaboration and the requested collaboration (parent) are different
+        activityLogEntry.child =
+          payload.activity.collaborationID !== args.input.collaborationID;
+      }
+
       return {
         activity: activityLogEntry,
       };
     },
-    filter(
+    async filter(
       this: ActivityLogResolverSubscriptions,
       payload,
       variables,
@@ -68,8 +74,20 @@ export class ActivityLogResolverSubscriptions {
         LogContext.SUBSCRIPTIONS
       );
 
+      const collaborationsIds = [variables.input.collaborationID];
+
+      if (variables.input.includeChild) {
+        // note: may cause performance issues in the future
+        // get all child collaborations and authorize them
+        const childCollaborations = await this.getAuthorizedChildCollaborations(
+          agentInfo,
+          variables.input.collaborationID
+        );
+        collaborationsIds.push(...childCollaborations);
+      }
+
       const isSameCollaboration =
-        payload.activity.collaborationID === variables.input.collaborationID &&
+        collaborationsIds.includes(payload.activity.collaborationID) &&
         Boolean(variables.input.types?.includes(payload.activity.type));
       this.logger.verbose?.(
         `${logMsgPrefix} Filter result is ${isSameCollaboration}`,
@@ -106,5 +124,35 @@ export class ActivityLogResolverSubscriptions {
     );
     // subscribe
     return this.subscriptionReadService.subscribeToActivities();
+  }
+
+  private async getAuthorizedChildCollaborations(
+    agentInfo: AgentInfo,
+    collaborationID: string
+  ) {
+    const childCollaborations =
+      await this.collaborationService.getChildCollaborationsOrFail(
+        collaborationID
+      );
+    const childCollaborationIds: string[] = [];
+    // can agent read each collaboration
+    for (const childCollaboration of childCollaborations) {
+      try {
+        await this.authorizationService.grantAccessOrFail(
+          agentInfo,
+          childCollaboration.authorization,
+          AuthorizationPrivilege.READ,
+          `Collaboration activity query: ${agentInfo.email}`
+        );
+        childCollaborationIds.push(childCollaboration.id);
+      } catch (e) {
+        this.logger?.warn(
+          `User ${agentInfo.userID} is not able to read child collaboration ${childCollaboration.id}`,
+          LogContext.COLLABORATION
+        );
+      }
+    }
+
+    return childCollaborationIds;
   }
 }
