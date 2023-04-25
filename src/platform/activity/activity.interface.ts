@@ -48,7 +48,7 @@ export abstract class IActivity extends IBaseAlkemio {
     nullable: false,
     description: 'The event type for this Activity.',
   })
-  type!: string;
+  type!: ActivityEventType;
 
   @Field(() => Boolean, {
     description:

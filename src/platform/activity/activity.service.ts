@@ -9,6 +9,7 @@ import { CreateActivityInput } from './dto/activity.dto.create';
 import { ensureMaxLength } from '@common/utils';
 import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ActivityEventType } from '@common/enums/activity.event.type';
 
 @Injectable()
 export class ActivityService {
@@ -59,13 +60,18 @@ export class ActivityService {
 
   async getActivityForCollaborations(
     collaborationIDs: string[],
-    limit?: number,
-    visibility = true
+    options?: {
+      types?: ActivityEventType[];
+      limit?: number;
+      visibility?: boolean;
+    }
   ): Promise<IActivity[]> {
+    const { types, visibility = true, limit } = options ?? {};
     return this.activityRepository.find({
       where: {
         collaborationID: In(collaborationIDs),
         visibility: visibility,
+        type: types && types.length > 0 ? In(types) : undefined,
       },
       order: {
         createdDate: 'DESC',

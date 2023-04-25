@@ -47,10 +47,10 @@ export class ActivityLogService {
   ): Promise<IActivityLogEntry[]> {
     // Get all raw activities; limit is used to determine the amount of results
     const rawActivities =
-      await this.activityService.getActivityForCollaborations([
-        queryData.collaborationID,
-        ...childCollaborations,
-      ]);
+      await this.activityService.getActivityForCollaborations(
+        [queryData.collaborationID, ...childCollaborations],
+        { types: queryData.types }
+      );
 
     const updatedChildActivities = rawActivities.map(x =>
       childCollaborations.includes(x.collaborationID)
