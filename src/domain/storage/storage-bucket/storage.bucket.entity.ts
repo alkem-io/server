@@ -2,7 +2,7 @@ import { MimeFileType } from '@common/enums/mime.file.type';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { Document } from '../document/document.entity';
-import { IStorageBucket } from './storage.space.interface';
+import { IStorageBucket } from './storage.bucket.interface';
 
 @Entity()
 export class StorageBucket extends AuthorizableEntity implements IStorageBucket {

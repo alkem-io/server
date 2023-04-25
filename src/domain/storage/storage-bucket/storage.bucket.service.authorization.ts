@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { StorageBucket } from './storage.space.entity';
-import { StorageBucketService } from './storage.space.service';
-import { IStorageBucket } from './storage.space.interface';
+import { StorageBucket } from './storage.bucket.entity';
+import { StorageBucketService } from './storage.bucket.service';
+import { IStorageBucket } from './storage.bucket.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { DocumentAuthorizationService } from '../document/document.service.authorization';
 

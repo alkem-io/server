@@ -14,9 +14,9 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { IDocument } from '../document/document.interface';
 import { Document } from '../document/document.entity';
 import { DocumentService } from '../document/document.service';
-import { StorageBucket } from './storage.space.entity';
-import { IStorageBucket } from './storage.space.interface';
-import { StorageBucketArgsDocuments } from './dto/storage.space..args.documents';
+import { StorageBucket } from './storage.bucket.entity';
+import { IStorageBucket } from './storage.bucket.interface';
+import { StorageBucketArgsDocuments } from './dto/storage.bucket.args.documents';
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { CreateDocumentInput } from '../document/dto/document.dto.create';
 import { ReadStream } from 'fs';
@@ -106,7 +106,9 @@ export class StorageBucketService {
     return storageBucket;
   }
 
-  public async getDocuments(storageInput: IStorageBucket): Promise<IDocument[]> {
+  public async getDocuments(
+    storageInput: IStorageBucket
+  ): Promise<IDocument[]> {
     const storage = await this.getStorageBucketOrFail(storageInput.id, {
       relations: ['documents'],
     });

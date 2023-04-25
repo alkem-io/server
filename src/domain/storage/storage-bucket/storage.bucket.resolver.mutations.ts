@@ -5,7 +5,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { StorageBucketService } from './storage.space.service';
+import { StorageBucketService } from './storage.bucket.service';
 import { DocumentAuthorizationService } from '../document/document.service.authorization';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { StorageBucketResolverService } from '@services/infrastructure/entity-resolver/storage.space.resolver.service';
@@ -23,7 +23,7 @@ import {
 import { Visual } from '@domain/common/visual';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
-import { StorageBucketUploadFileInput } from './dto/storage.space.dto.upload.file';
+import { StorageBucketUploadFileInput } from './dto/storage.bucket.dto.upload.file';
 
 @Resolver()
 export class StorageBucketResolverMutations {
