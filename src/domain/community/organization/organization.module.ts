@@ -19,6 +19,7 @@ import { PreferenceSetModule } from '@domain/common/preference-set/preference.se
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { OrganizationStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/organization/organization.storage.space.loader.creator';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
     OrganizationResolverQueries,
     OrganizationResolverMutations,
     OrganizationResolverFields,
+    OrganizationStorageBucketLoaderCreator,
   ],
   exports: [OrganizationService, OrganizationAuthorizationService],
 })

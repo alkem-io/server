@@ -29,6 +29,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { ChallengeStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/challenge/challenge.storage.space.loader.creator';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
     ChallengeResolverFields,
     ChallengeLifecycleOptionsProvider,
     ChallengeResolverSubscriptions,
+    ChallengeStorageBucketLoaderCreator,
   ],
   exports: [ChallengeService, ChallengeAuthorizationService],
 })

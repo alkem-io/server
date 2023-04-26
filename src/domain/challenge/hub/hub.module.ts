@@ -34,6 +34,7 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { HubStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/hub/hub.storage.space.loader.creator';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
     HubResolverQueries,
     HubResolverMutations,
     HubResolverSubscriptions,
+    HubStorageBucketLoaderCreator,
   ],
   exports: [HubService, HubAuthorizationService],
 })
