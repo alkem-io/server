@@ -17,8 +17,7 @@ export class StorageBucketResolverService {
     profileID: string
   ): Promise<string> {
     // First iterate over all the entity types that have storage spaces directly
-    const directStorageBucketEntities = ['hub', 'challenge', 'organization'];
-    for (const entityName of directStorageBucketEntities) {
+    for (const entityName of Object.values(DirectStorageBucketEntityType)) {
       const match = await this.getDirectStorageBucketForProfile(
         profileID,
         entityName
@@ -85,7 +84,7 @@ export class StorageBucketResolverService {
 
   private async getDirectStorageBucketForProfile(
     profileID: string,
-    entityName: string
+    entityName: DirectStorageBucketEntityType
   ): Promise<string | undefined> {
     const query = `SELECT \`${entityName}\`.\`id\` as \`entityId\`, \`${entityName}\`.\`storageBucketId\` as \`storageBucketId\`
     FROM \`${entityName}\` WHERE \`${entityName}\`.\`profileId\` = '${profileID}'`;
@@ -259,4 +258,10 @@ enum ProfileType {
   INNOVATION_PACK = 'innovation_pack',
   DISCUSSION = 'discussion',
   INNOVATION_FLOW_TEMPLATE = 'innovation_flow_template',
+}
+
+enum DirectStorageBucketEntityType {
+  HUB = 'hub',
+  CHALLENGE = 'challenge',
+  ORGANIZATION = 'organization',
 }
