@@ -26,7 +26,6 @@ import { IAgent } from '@domain/agent/agent';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { IPreference } from '@domain/common/preference/preference.interface';
-import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
@@ -44,6 +43,8 @@ import {
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { HubStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/hub/hub.storage.space.loader.creator';
 
 @Resolver(() => IHub)
 export class HubResolverFields {
@@ -51,7 +52,6 @@ export class HubResolverFields {
     private authorizationService: AuthorizationService,
     private groupService: UserGroupService,
     private applicationService: ApplicationService,
-    private preferenceSetService: PreferenceSetService,
     private hubService: HubService
   ) {}
 
@@ -140,6 +140,19 @@ export class HubResolverFields {
     @Parent() hub: Hub,
     @Loader(HubTimelineLoaderCreator) loader: ILoader<ITimeline>
   ): Promise<ITimeline> {
+    return loader.load(hub.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('storageBucket', () => IStorageBucket, {
+    nullable: true,
+    description: 'The StorageBucket with documents in use by this Hub',
+  })
+  @UseGuards(GraphqlGuard)
+  async storageBucket(
+    @Parent() hub: Hub,
+    @Loader(HubStorageBucketLoaderCreator) loader: ILoader<IStorageBucket>
+  ): Promise<IStorageBucket> {
     return loader.load(hub.id);
   }
 
@@ -268,24 +281,6 @@ export class HubResolverFields {
   async groups(@Parent() hub: Hub): Promise<IUserGroup[]> {
     return await this.groupService.getGroups({
       where: { hubID: hub.id },
-    });
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('groupsWithTag', () => [IUserGroup], {
-    nullable: false,
-    description: 'All groups on this Hub that have the provided tag',
-  })
-  @Profiling.api
-  async groupsWithTag(
-    @Parent() hub: Hub,
-    @Args('tag') tag: string
-  ): Promise<IUserGroup[]> {
-    return await this.groupService.getGroupsWithTag(tag, {
-      where: {
-        hubID: hub.id,
-      },
     });
   }
 

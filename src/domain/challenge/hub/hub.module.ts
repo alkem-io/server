@@ -1,7 +1,6 @@
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { ContextModule } from '@domain/context/context/context.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
-import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Hub } from '@domain/challenge/hub/hub.entity';
@@ -34,6 +33,8 @@ import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
+import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { HubStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/hub/hub.storage.space.loader.creator';
 
 @Module({
   imports: [
@@ -51,7 +52,7 @@ import { LoaderCreatorModule } from '@core/dataloader/creators';
     PlatformAuthorizationPolicyModule,
     ProjectModule,
     OrganizationModule,
-    TagsetModule,
+    StorageBucketModule,
     UserGroupModule,
     ApplicationModule,
     UserModule,
@@ -73,6 +74,7 @@ import { LoaderCreatorModule } from '@core/dataloader/creators';
     HubResolverQueries,
     HubResolverMutations,
     HubResolverSubscriptions,
+    HubStorageBucketLoaderCreator,
   ],
   exports: [HubService, HubAuthorizationService],
 })

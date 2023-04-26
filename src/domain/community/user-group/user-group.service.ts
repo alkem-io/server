@@ -13,7 +13,6 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { UserGroup, IUserGroup } from '@domain/community/user-group';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IProfile } from '@domain/common/profile';
@@ -32,7 +31,6 @@ export class UserGroupService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private userService: UserService,
     private profileService: ProfileService,
-    private tagsetService: TagsetService,
     private agentService: AgentService,
     @InjectRepository(UserGroup)
     private userGroupRepository: Repository<UserGroup>,
@@ -241,26 +239,6 @@ export class UserGroupService {
     conditions?: FindManyOptions<UserGroup>
   ): Promise<IUserGroup[]> {
     return (await this.userGroupRepository.find(conditions)) || [];
-  }
-
-  async getGroupsWithTag(
-    tagFilter: string,
-    conditions?: FindManyOptions<UserGroup>
-  ): Promise<IUserGroup[]> {
-    const groups = await this.getGroups(conditions);
-    return groups.filter(g => {
-      if (!tagFilter) {
-        return true;
-      }
-
-      if (!g.profile) return false;
-
-      const tagset = this.tagsetService.defaultTagset(g.profile);
-
-      return (
-        tagset !== undefined && this.tagsetService.hasTag(tagset, tagFilter)
-      );
-    });
   }
 
   getProfile(userGroup: IUserGroup): IProfile {

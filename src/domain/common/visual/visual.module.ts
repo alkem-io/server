@@ -5,7 +5,6 @@ import { AuthorizationPolicyModule } from '../authorization-policy/authorization
 import { Visual } from './visual.entity';
 import { VisualResolverMutations } from './visual.resolver.mutations';
 import { VisualService } from './visual.service';
-import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
 import { VisualAuthorizationService } from './visual.service.authorization';
 
 @Module({
@@ -13,7 +12,6 @@ import { VisualAuthorizationService } from './visual.service.authorization';
     AuthorizationPolicyModule,
     AuthorizationModule,
     TypeOrmModule.forFeature([Visual]),
-    IpfsModule,
   ],
   providers: [
     VisualResolverMutations,
