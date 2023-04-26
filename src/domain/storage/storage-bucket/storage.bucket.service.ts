@@ -235,6 +235,7 @@ export class StorageBucketService {
       .addSelect('SUM(size)', 'totalSize')
       .getRawOne();
 
+    if (!documentsSize || !documentsSize.totalSize) return 0;
     return documentsSize.totalSize;
   }
 
