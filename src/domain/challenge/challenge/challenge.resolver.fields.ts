@@ -27,6 +27,8 @@ import {
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { ChallengeStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/challenge/challenge.storage.space.loader.creator';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -83,6 +85,19 @@ export class ChallengeResolverFields {
     @Loader(ProfileLoaderCreator, { parentClassRef: Challenge })
     loader: ILoader<IProfile>
   ) {
+    return loader.load(challenge.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('storageBucket', () => IStorageBucket, {
+    nullable: true,
+    description: 'The StorageBucket with documents in use by this Challenge',
+  })
+  @UseGuards(GraphqlGuard)
+  async storageBucket(
+    @Parent() challenge: Challenge,
+    @Loader(ChallengeStorageBucketLoaderCreator) loader: ILoader<IStorageBucket>
+  ): Promise<IStorageBucket> {
     return loader.load(challenge.id);
   }
 

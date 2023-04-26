@@ -1,5 +1,4 @@
 import { ContextModule } from '@domain/context/context/context.module';
-import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Challenge } from './challenge.entity';
@@ -29,6 +28,8 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
+import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { ChallengeStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/challenge/challenge.storage.space.loader.creator';
 
 @Module({
   imports: [
@@ -42,7 +43,6 @@ import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-t
     CommunityModule,
     CommunityPolicyModule,
     OpportunityModule,
-    TagsetModule,
     OrganizationModule,
     NamingModule,
     LifecycleModule,
@@ -55,6 +55,7 @@ import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-t
     ElasticsearchModule,
     TypeOrmModule.forFeature([Challenge]),
     LoaderCreatorModule,
+    StorageBucketModule,
   ],
   providers: [
     ChallengeService,
@@ -63,6 +64,7 @@ import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-t
     ChallengeResolverFields,
     ChallengeLifecycleOptionsProvider,
     ChallengeResolverSubscriptions,
+    ChallengeStorageBucketLoaderCreator,
   ],
   exports: [ChallengeService, ChallengeAuthorizationService],
 })

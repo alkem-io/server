@@ -40,6 +40,7 @@ import {
   CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_HUB_HOST_ASSOCIATES_JOIN,
 } from '@common/constants';
+import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -54,6 +55,7 @@ export class HubAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private communityPolicyService: CommunityPolicyService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
+    private storageBucketAuthorizationService: StorageBucketAuthorizationService,
     private hubService: HubService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>
@@ -254,6 +256,13 @@ export class HubAuthorizationService {
     hub.templatesSet =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
         hub.templatesSet,
+        hub.authorization
+      );
+
+    hub.storageBucket = await this.hubService.getStorageBucketOrFail(hub.id);
+    hub.storageBucket =
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+        hub.storageBucket,
         hub.authorization
       );
 

@@ -2,12 +2,8 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
-export class AppService {
+export class SsiCredentialFlowService {
   constructor(private readonly agentService: AgentService) {}
-
-  getHello(): string {
-    return 'Hello Alkemio!';
-  }
 
   async completeCredentialRequestInteractionJolocom(
     nonce: string,
