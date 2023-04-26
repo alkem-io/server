@@ -60,16 +60,6 @@ export class IpfsService {
     return `${this.ipfsClientEndpoint}/${CID}`;
   }
 
-  // Returns the CID that was uploaded
-  public async Raw(buffer: Buffer): Promise<string> {
-    const res = await this.ipfsClient.add(buffer, { pin: true });
-    this.logger.verbose?.(
-      `Uploaded file with CID: ${res.path}`,
-      LogContext.IPFS
-    );
-    return `${res.path}`;
-  }
-
   public async unpinFile(CID: string): Promise<CID> {
     this.logger.verbose?.(`Unpinning file from CID: ${CID}`, LogContext.IPFS);
 
