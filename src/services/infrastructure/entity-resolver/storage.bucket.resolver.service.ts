@@ -42,37 +42,38 @@ export class StorageBucketResolverService {
 
     switch (result.type) {
       case ProfileType.USER:
-        // to go onto platform storage space
-        break;
+        return await this.getPlatformStorageBucketId();
       case ProfileType.OPPORTUNITY:
-        // to go onto challenge storage space
-        break;
+        return await this.getStorageBucketIdForOpportunity(result.entityID);
       case ProfileType.CALLOUT:
-        // to go onto hub / challenge storage space
-        break;
+        return await this.getStorageBucketIdForCallout(result.entityID);
       case ProfileType.POST:
-        // to go onto hub / challenge storage space
-        break;
+        return await this.getStorageBucketIdForCalloutType(
+          result.entityID,
+          'aspect'
+        );
       case ProfileType.WHITEBOARD:
-        // to go onto hub / challenge storage space
-        break;
+        return await this.getStorageBucketIdForCalloutType(
+          result.entityID,
+          'canvas'
+        );
       case ProfileType.INNOVATION_PACK:
-        // to go onto platform storage space
-        break;
-
-      // Note: templates are part of a templates set, so first get the templates set,
-      // then determine if in a Hub or a InnovationPack
-      // If on a Hub, then use that storage space
-      // If on a InnovationPack then use the Platform storage space
+        return await this.getPlatformStorageBucketId();
       case ProfileType.WHITEBOARD_TEMPLATE:
-        // to go onto hub / platform template
-        break;
+        return await this.getStorageBucketIdForTemplate(
+          result.entityID,
+          'whiteboard_template'
+        );
       case ProfileType.POST_TEMPLATE:
-        // to go onto hub / platform template
-        break;
+        return await this.getStorageBucketIdForTemplate(
+          result.entityID,
+          'post_template'
+        );
       case ProfileType.INNOVATION_FLOW_TEMPLATE:
-        // to go onto hub / platform template
-        break;
+        return await this.getStorageBucketIdForTemplate(
+          result.entityID,
+          'innovation_flow_template'
+        );
       default:
         throw new StorageBucketNotFoundException(
           `Unrecognized profile type: ${result.type}`,
@@ -103,11 +104,10 @@ export class StorageBucketResolverService {
 
   private async getEntityForProfile(
     profileID: string,
-    entityName: string
+    entityName: ProfileType
   ): Promise<ProfileResult | undefined> {
     const query = `SELECT \`${entityName}\`.\`id\` as \`entityId\`
     FROM \`${entityName}\` WHERE \`${entityName}\`.\`profileId\` = '${profileID}'`;
-    console.log(query);
     const [result]: {
       entityId: string;
       storageBucketId: string;
@@ -126,31 +126,126 @@ export class StorageBucketResolverService {
   private async getProfileType(
     profileID: string
   ): Promise<ProfileResult | undefined> {
-    const indirectProfileEntries = [
-      'user',
-      'opportunity',
-      'callout',
-      'aspect',
-      'canvas',
-      'post_template',
-      'whiteboard_template',
-      'innovation_flow_template',
-      'discussion',
-    ];
-
-    for (const entityName of indirectProfileEntries) {
+    for (const entityName of Object.values(ProfileType)) {
       const match = await this.getEntityForProfile(profileID, entityName);
       if (match) return match;
     }
 
     return undefined;
   }
+
+  private async getPlatformStorageBucketId(): Promise<string> {
+    const query = `SELECT \`storageBucketId\`
+    FROM \`platform\` LIMIT 1`;
+    const [result]: {
+      storageBucketId: string;
+    }[] = await this.entityManager.connection.query(query);
+    return result.storageBucketId;
+  }
+
+  private async getStorageBucketIdForOpportunity(
+    opportunityId: string
+  ): Promise<string> {
+    const query = `SELECT \`storageBucketId\` FROM \`challenge\`
+    LEFT JOIN \`opportunity\` ON \`challenge\`.\`id\` = \`opportunity\`.\`challengeId\`
+    WHERE \`opportunity\`.\`id\`='${opportunityId}'`;
+    const [result]: {
+      storageBucketId: string;
+    }[] = await this.entityManager.connection.query(query);
+    return result.storageBucketId;
+  }
+
+  private async getStorageBucketIdForCallout(
+    calloutId: string
+  ): Promise<string> {
+    let query = `SELECT \`storageBucketId\` FROM \`challenge\`
+    LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`challenge\`.\`collaborationId\`
+    LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+    WHERE \`callout\`.\`id\`='${calloutId}'`;
+    let [result]: {
+      storageBucketId: string;
+    }[] = await this.entityManager.connection.query(query);
+
+    if (result && result.storageBucketId) return result.storageBucketId;
+
+    query = `SELECT \`storageBucketId\` FROM \`hub\`
+    LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`hub\`.\`collaborationId\`
+    LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+    WHERE \`callout\`.\`id\`='${calloutId}'`;
+    [result] = await this.entityManager.connection.query(query);
+
+    return result.storageBucketId;
+  }
+
+  private async getStorageBucketIdForCalloutType(
+    entityId: string,
+    calloutType: CalloutType
+  ): Promise<string> {
+    let query = `SELECT \`storageBucketId\` FROM \`challenge\`
+    LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`challenge\`.\`collaborationId\`
+    LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+    LEFT JOIN \`${calloutType}\` ON \`${calloutType}\`.\`calloutId\` = \`callout\`.\`id\`
+    WHERE \`${calloutType}\`.\`id\`='${entityId}'`;
+    let [result]: {
+      storageBucketId: string;
+    }[] = await this.entityManager.connection.query(query);
+
+    if (result && result.storageBucketId) return result.storageBucketId;
+
+    query = `SELECT \`storageBucketId\` FROM \`hub\`
+    LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`hub\`.\`collaborationId\`
+    LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+    LEFT JOIN \`${calloutType}\` ON \`${calloutType}\`.\`calloutId\` = \`callout\`.\`id\`
+    WHERE \`${calloutType}\`.\`id\`='${entityId}'`;
+    [result] = await this.entityManager.connection.query(query);
+
+    return result.storageBucketId;
+  }
+
+  private async getStorageBucketIdForTemplate(
+    templateId: string,
+    templateType: TemplateType
+  ): Promise<string | never> {
+    let query = `SELECT \`templatesSetId\` FROM \`${templateType}\`
+  WHERE \`${templateType}\`.\`id\`='${templateId}'`;
+    let [result]: {
+      templatesSetId: string;
+      storageBucketId: string;
+    }[] = await this.entityManager.connection.query(query);
+
+    if (result) {
+      if (!result.templatesSetId) {
+        return this.getPlatformStorageBucketId();
+      } else {
+        query = `SELECT \`storageBucketId\` FROM \`hub\`
+      WHERE \`hub\`.\`templatesSetId\`='${result.templatesSetId}'`;
+        [result] = await this.entityManager.connection.query(query);
+
+        if (result) return result.storageBucketId;
+        else {
+          return this.getPlatformStorageBucketId();
+        }
+      }
+    }
+
+    throw new StorageBucketNotFoundException(
+      `Could not find storage bucket for whiteboard template with id: ${templateId}`,
+      LogContext.STORAGE_SPACE
+    );
+  }
 }
 
 type ProfileResult = {
-  type: string;
+  type: ProfileType;
   entityID: string;
 };
+
+type TemplateType =
+  | 'whiteboard_template'
+  | 'post_template'
+  | 'innovation_flow_template';
+
+type CalloutType = 'aspect' | 'canvas';
 
 // Note: enum values must match the name of the underlying table
 enum ProfileType {
