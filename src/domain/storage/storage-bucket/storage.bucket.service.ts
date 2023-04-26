@@ -34,7 +34,7 @@ export class StorageBucketService {
     MimeFileType.JPG,
     MimeFileType.GIF,
     MimeFileType.PNG,
-    MimeFileType.PNG,
+    MimeFileType.PDF,
     MimeFileType.SVG,
     MimeFileType.WEBP,
     MimeFileType.XPNG,

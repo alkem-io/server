@@ -3,6 +3,8 @@ import { randomUUID } from 'crypto';
 
 const allowedTypes = [
   'image/png',
+  'image/x-png',
+  'image/gif',
   'image/jpeg',
   'image/jpg',
   'image/svg+xml',
