@@ -73,6 +73,8 @@ export class StorageBucketResolverService {
           result.entityID,
           'innovation_flow_template'
         );
+      case ProfileType.DISCUSSION:
+        return await this.getStorageBucketIdForDiscussion(result.entityID);
       default:
         throw new StorageBucketNotFoundException(
           `Unrecognized profile type: ${result.type}`,
@@ -231,6 +233,22 @@ export class StorageBucketResolverService {
       `Could not find storage bucket for whiteboard template with id: ${templateId}`,
       LogContext.STORAGE_SPACE
     );
+  }
+
+  private async getStorageBucketIdForDiscussion(
+    discussionId: string
+  ): Promise<string> {
+    const query = `SELECT \`storageBucketId\` FROM \`hub\`
+    LEFT JOIN \`communication\` ON \`communication\`.\`hubID\` = \`hub\`.\`id\`
+    LEFT JOIN \`discussion\` ON \`discussion\`.\`communicationId\` = \`communication\`.\`id\`
+    WHERE \`discussion\`.\`id\`='${discussionId}'`;
+    const [result]: {
+      storageBucketId: string;
+    }[] = await this.entityManager.connection.query(query);
+
+    if (result && result.storageBucketId) return result.storageBucketId;
+
+    return this.getPlatformStorageBucketId();
   }
 }
 
