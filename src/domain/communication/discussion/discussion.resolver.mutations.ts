@@ -22,6 +22,10 @@ import { CommunicationDiscussionUpdated } from '../communication/dto/communicati
 import { getRandomId } from '@src/common/utils';
 import { DiscussionMessageReceivedPayload } from './dto/discussion.message.received.payload';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { getMentionsFromText } from '../messaging/get.mentions.from.text';
+import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
+import { CommentType } from '@common/enums/comment.type';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 
 @Resolver()
 export class DiscussionResolverMutations {
@@ -30,6 +34,7 @@ export class DiscussionResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private discussionService: DiscussionService,
     private discussionAuthorizationService: DiscussionAuthorizationService,
+    private notificationAdapter: NotificationAdapter,
     @Inject(SUBSCRIPTION_DISCUSSION_MESSAGE)
     private readonly subscriptionDiscussionMessage: PubSubEngine
   ) {}
@@ -81,6 +86,21 @@ export class DiscussionResolverMutations {
       SubscriptionType.COMMUNICATION_DISCUSSION_UPDATED,
       subscriptionPayloadUpdate
     );
+
+    const mentions = getMentionsFromText(discussionMessage.message);
+    const entityMentionsNotificationInput: NotificationInputEntityMentions = {
+      triggeredBy: agentInfo.userID,
+      comment: discussionMessage.message,
+      commentsId: discussion.id,
+      mentions,
+      originEntity: {
+        id: discussion.id,
+        nameId: discussion.nameID,
+        displayName: discussion.profile.displayName,
+      },
+      commentType: CommentType.FORUM_DISCUSSION,
+    };
+    this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
 
     return discussionMessage;
   }
