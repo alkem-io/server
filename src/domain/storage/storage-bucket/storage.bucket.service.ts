@@ -53,8 +53,8 @@ export class StorageBucketService {
   ) {}
 
   public async createStorageBucket(
-    allowedMimeTypes: MimeFileType[],
-    maxAllowedFileSize: number
+    allowedMimeTypes = this.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
+    maxAllowedFileSize = this.DEFAULT_MAX_ALLOWED_FILE_SIZE
   ): Promise<IStorageBucket> {
     const storage: IStorageBucket = new StorageBucket();
     storage.authorization = new AuthorizationPolicy();
@@ -91,7 +91,7 @@ export class StorageBucketService {
     if (!storageBucketID) {
       throw new EntityNotFoundException(
         `StorageBucket not found: ${storageBucketID}`,
-        LogContext.STORAGE_SPACE
+        LogContext.STORAGE_BUCKET
       );
     }
     const storageBucket = await this.storageBucketRepository.findOneOrFail({
@@ -101,7 +101,7 @@ export class StorageBucketService {
     if (!storageBucket)
       throw new EntityNotFoundException(
         `StorageBucket not found: ${storageBucketID}`,
-        LogContext.STORAGE_SPACE
+        LogContext.STORAGE_BUCKET
       );
     return storageBucket;
   }
@@ -116,7 +116,7 @@ export class StorageBucketService {
     if (!documents)
       throw new EntityNotFoundException(
         `Undefined storage documents found: ${storage.id}`,
-        LogContext.STORAGE_SPACE
+        LogContext.STORAGE_BUCKET
       );
 
     return documents;
@@ -153,13 +153,13 @@ export class StorageBucketService {
     if (!storage.documents)
       throw new EntityNotInitializedException(
         `StorageBucket (${storage}) not initialised`,
-        LogContext.STORAGE_SPACE
+        LogContext.STORAGE_BUCKET
       );
 
     if (!(await this.validateMimeTypes(storage, mimeType))) {
       throw new ValidationException(
         `Invalid Mime Type specified for storage space '${mimeType}'- allowed types: ${storageBucket.allowedMimeTypes}.`,
-        LogContext.STORAGE_SPACE
+        LogContext.STORAGE_BUCKET
       );
     }
 
@@ -180,7 +180,7 @@ export class StorageBucketService {
     storage.documents.push(document);
     this.logger.verbose?.(
       `Uploaded document '${document.externalID}' on storage space: ${storageBucket.id}`,
-      LogContext.STORAGE_SPACE
+      LogContext.STORAGE_BUCKET
     );
     await this.storageBucketRepository.save(storage);
 
@@ -251,7 +251,7 @@ export class StorageBucketService {
     if (!allDocuments)
       throw new EntityNotFoundException(
         `Space not initialised, no documents: ${storage.id}`,
-        LogContext.STORAGE_SPACE
+        LogContext.STORAGE_BUCKET
       );
 
     // First filter the documents the current user has READ privilege to
@@ -268,7 +268,7 @@ export class StorageBucketService {
         if (!document)
           throw new EntityNotFoundException(
             `Document with requested ID (${documentID}) not located within current StorageBucket: ${storage.id}`,
-            LogContext.STORAGE_SPACE
+            LogContext.STORAGE_BUCKET
           );
         results.push(document);
       }

@@ -86,10 +86,7 @@ export class OrganizationService {
     organization.authorization = new AuthorizationPolicy();
 
     organization.storageBucket =
-      await this.storageBucketService.createStorageBucket(
-        this.storageBucketService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
-        this.storageBucketService.DEFAULT_MAX_ALLOWED_FILE_SIZE
-      );
+      await this.storageBucketService.createStorageBucket();
     organization.profile = await this.profileService.createProfile(
       organizationData.profileData
     );

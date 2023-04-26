@@ -58,7 +58,7 @@ export class DocumentAuthorizationService {
     if (!authorization)
       throw new EntityNotInitializedException(
         `Authorization definition not found for Document: ${document.id}`,
-        LogContext.CALENDAR
+        LogContext.STORAGE_ACCESS
       );
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];

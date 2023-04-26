@@ -30,13 +30,13 @@ export class StorageBucketResolverService {
     if (!result) {
       throw new StorageBucketNotFoundException(
         `Unable to find StorageBucket for Profile with ID: ${profileID}`,
-        LogContext.STORAGE_SPACE
+        LogContext.STORAGE_BUCKET
       );
     }
 
     this.logger.verbose?.(
       `Profile with id '${profileID}' identified as type: ${result.type}`,
-      LogContext.STORAGE_SPACE
+      LogContext.STORAGE_BUCKET
     );
 
     switch (result.type) {
@@ -78,7 +78,7 @@ export class StorageBucketResolverService {
       default:
         throw new StorageBucketNotFoundException(
           `Unrecognized profile type: ${result.type}`,
-          LogContext.STORAGE_SPACE
+          LogContext.STORAGE_BUCKET
         );
     }
     return '';
@@ -231,7 +231,7 @@ export class StorageBucketResolverService {
 
     throw new StorageBucketNotFoundException(
       `Could not find storage bucket for whiteboard template with id: ${templateId}`,
-      LogContext.STORAGE_SPACE
+      LogContext.STORAGE_BUCKET
     );
   }
 

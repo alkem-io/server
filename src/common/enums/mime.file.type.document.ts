@@ -1,9 +1,9 @@
 import { registerEnumType } from '@nestjs/graphql';
 
-export enum MimeFileTypeDocument {
+export enum MimeTypeDocument {
   PDF = 'application/pdf',
 }
 
-registerEnumType(MimeFileTypeDocument, {
+registerEnumType(MimeTypeDocument, {
   name: 'MimeTypeDocument',
 });

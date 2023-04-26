@@ -123,10 +123,7 @@ export class ChallengeService {
     challenge.opportunities = [];
 
     challenge.storageBucket =
-      await this.storageBucketService.createStorageBucket(
-        this.storageBucketService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
-        this.storageBucketService.DEFAULT_MAX_ALLOWED_FILE_SIZE
-      );
+      await this.storageBucketService.createStorageBucket();
 
     await this.baseChallengeService.initialise(
       challenge,

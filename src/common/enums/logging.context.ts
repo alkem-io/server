@@ -25,7 +25,7 @@ export enum LogContext {
   SSI = 'ssi',
   SSI_WALLET_MANAGER = 'ssi-wallet-mgr',
   SSI_SOVRHD = 'ssi-sovrhd',
-  STORAGE_SPACE = 'storage-space',
+  STORAGE_BUCKET = 'storage-bucket',
   STORAGE_ACCESS = 'storage-access',
   REQUESTS = 'requests',
   PLATFORM = 'platform',

@@ -1,6 +1,6 @@
 import { registerEnumType } from '@nestjs/graphql';
 
-export enum MimeFileTypeVisual {
+export enum MimeTypeVisual {
   BMP = 'image/bmp',
   JPG = 'image/jpg',
   JPEG = 'image/jpeg',
@@ -11,6 +11,6 @@ export enum MimeFileTypeVisual {
   SVG = 'image/svg+xml',
 }
 
-registerEnumType(MimeFileTypeVisual, {
+registerEnumType(MimeTypeVisual, {
   name: 'MimeTypeVisual',
 });

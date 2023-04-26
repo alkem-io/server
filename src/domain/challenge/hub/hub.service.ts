@@ -102,10 +102,7 @@ export class HubService {
     hub.visibility = HubVisibility.ACTIVE;
 
     // Set up the storage space as that is needed for Profile
-    hub.storageBucket = await this.storageBucketService.createStorageBucket(
-      this.storageBucketService.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
-      this.storageBucketService.DEFAULT_MAX_ALLOWED_FILE_SIZE
-    );
+    hub.storageBucket = await this.storageBucketService.createStorageBucket();
 
     // remove context before saving as want to control that creation
     hub.context = undefined;

@@ -63,7 +63,7 @@ export class StorageBucketResolverMutations {
     if (!profile)
       throw new EntityNotInitializedException(
         `Unable to find profile for Visual: ${visual.id}`,
-        LogContext.STORAGE_SPACE
+        LogContext.STORAGE_BUCKET
       );
     const storageBucketId =
       await this.storageBucketResolverService.getStorageBucketIdForProfile(
@@ -129,7 +129,7 @@ export class StorageBucketResolverMutations {
     if (!profile)
       throw new EntityNotInitializedException(
         `Unable to find profile for Reference: ${reference.id}`,
-        LogContext.STORAGE_SPACE
+        LogContext.STORAGE_BUCKET
       );
 
     const storageBucketId =

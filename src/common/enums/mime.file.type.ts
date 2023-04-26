@@ -1,13 +1,13 @@
 import { registerEnumType } from '@nestjs/graphql';
-import { MimeFileTypeDocument } from './mime.file.type.document';
-import { MimeFileTypeVisual } from './mime.file.type.visual';
+import { MimeTypeDocument } from './mime.file.type.document';
+import { MimeTypeVisual } from './mime.file.type.visual';
 
 export const MimeFileType = {
-  ...MimeFileTypeDocument,
-  ...MimeFileTypeVisual,
+  ...MimeTypeDocument,
+  ...MimeTypeVisual,
 };
 
-export type MimeFileType = MimeFileTypeVisual | MimeFileTypeDocument;
+export type MimeFileType = MimeTypeVisual | MimeTypeDocument;
 
 registerEnumType(MimeFileType, {
   name: 'MimeType',
