@@ -67,6 +67,7 @@ export class ActivityLogResolverSubscriptions {
       variables,
       context
     ) {
+      const { types = [], collaborationID, includeChild } = variables.input;
       const agentInfo = context.req.user;
       const logMsgPrefix = `[New activity subscription] - [${agentInfo.email}] -`;
       this.logger.verbose?.(
@@ -74,21 +75,28 @@ export class ActivityLogResolverSubscriptions {
         LogContext.SUBSCRIPTIONS
       );
 
-      const collaborationsIds = [variables.input.collaborationID];
+      const collaborationsIds = [collaborationID];
 
-      if (variables.input.includeChild) {
+      if (includeChild) {
         // note: may cause performance issues in the future
         // get all child collaborations and authorize them
         const childCollaborations = await this.getAuthorizedChildCollaborations(
           agentInfo,
-          variables.input.collaborationID
+          collaborationID
         );
         collaborationsIds.push(...childCollaborations);
       }
 
+      const activityInSubscribedCollaboration = collaborationsIds.includes(
+        payload.activity.collaborationID
+      );
+      // if types is empty, return all types
+      const activityOfSubscribedType = types.length
+        ? Boolean(types.includes(payload.activity.type))
+        : true;
+
       const isSameCollaboration =
-        collaborationsIds.includes(payload.activity.collaborationID) &&
-        Boolean(variables.input.types?.includes(payload.activity.type));
+        activityInSubscribedCollaboration && activityOfSubscribedType;
       this.logger.verbose?.(
         `${logMsgPrefix} Filter result is ${isSameCollaboration}`,
         LogContext.SUBSCRIPTIONS
