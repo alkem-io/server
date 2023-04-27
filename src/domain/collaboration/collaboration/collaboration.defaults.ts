@@ -20,6 +20,7 @@ export const collaborationDefaults: any = {
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 1,
+      group: 'KNOWLEDGE',
     },
     {
       type: CalloutType.COMMENTS,
@@ -33,6 +34,7 @@ export const collaborationDefaults: any = {
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 1,
+      group: 'KNOWLEDGE',
     },
     {
       type: CalloutType.COMMENTS,
@@ -44,6 +46,7 @@ export const collaborationDefaults: any = {
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 3,
+      group: 'KNOWLEDGE',
     },
     {
       type: CalloutType.CARD,
@@ -66,6 +69,7 @@ export const collaborationDefaults: any = {
             'To share contributions with detailed explanations how they help.',
         },
       },
+      group: 'KNOWLEDGE',
     },
     {
       type: CalloutType.CANVAS,
@@ -85,6 +89,7 @@ export const collaborationDefaults: any = {
           description: 'A blank canvas to be worked further.',
         },
       },
+      group: 'KNOWLEDGE',
     },
   ],
 };
