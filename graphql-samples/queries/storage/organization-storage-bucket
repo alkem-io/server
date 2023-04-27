@@ -1,0 +1,11 @@
+query organizations {
+  organizations {
+    storageBucket {
+      size
+      documents {
+        displayName
+        size
+      }
+    }
+  }
+}

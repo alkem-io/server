@@ -52,6 +52,8 @@ import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { VisualType } from '@common/enums/visual.type';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 
 @Injectable()
 export class OrganizationService {
@@ -63,6 +65,7 @@ export class OrganizationService {
     private userGroupService: UserGroupService,
     private profileService: ProfileService,
     private preferenceSetService: PreferenceSetService,
+    private storageBucketService: StorageBucketService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -81,6 +84,9 @@ export class OrganizationService {
 
     const organization: IOrganization = Organization.create(organizationData);
     organization.authorization = new AuthorizationPolicy();
+
+    organization.storageBucket =
+      await this.storageBucketService.createStorageBucket();
     organization.profile = await this.profileService.createProfile(
       organizationData.profileData
     );
@@ -548,6 +554,27 @@ export class OrganizationService {
     }
 
     return preferenceSet;
+  }
+
+  async getStorageBucketOrFail(
+    organizationID: string
+  ): Promise<IStorageBucket> {
+    const organizationWithStorageBucket = await this.getOrganizationOrFail(
+      organizationID,
+      {
+        relations: ['storageBucket'],
+      }
+    );
+    const storageBucket = organizationWithStorageBucket.storageBucket;
+
+    if (!storageBucket) {
+      throw new EntityNotFoundException(
+        `Unable to find storageBucket for Organization with nameID: ${organizationWithStorageBucket.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return storageBucket;
   }
 
   async organizationsWithCredentials(

@@ -22,6 +22,7 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
 } from '@common/constants';
+import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 
 @Injectable()
 export class OrganizationAuthorizationService {
@@ -33,6 +34,7 @@ export class OrganizationAuthorizationService {
     private organizationVerificationAuthorizationService: OrganizationVerificationAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
+    private storageBucketAuthorizationService: StorageBucketAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>
@@ -60,6 +62,14 @@ export class OrganizationAuthorizationService {
           organization.authorization
         );
     }
+
+    organization.storageBucket =
+      await this.organizationService.getStorageBucketOrFail(organization.id);
+    organization.storageBucket =
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+        organization.storageBucket,
+        organization.authorization
+      );
 
     organization.agent = await this.organizationService.getAgent(organization);
     organization.agent.authorization =

@@ -240,6 +240,7 @@ export class CollaborationService {
       await this.namingService.getCommunicationGroupIdFromCollaborationId(
         collaboration.id
       );
+
     const callout = await this.calloutService.createCallout(
       calloutData,
       communicationGroupID,

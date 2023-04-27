@@ -1,11 +1,12 @@
 import { ValueProvider } from '@nestjs/common';
 import { PublicPart } from '../utils/public-part';
-import { AppService } from '@src/app.service';
+import { SsiCredentialFlowService } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.service';
 
-export const MockAppService: ValueProvider<PublicPart<AppService>> = {
-  provide: AppService,
+export const MockSsiCredentialFlowService: ValueProvider<
+  PublicPart<SsiCredentialFlowService>
+> = {
+  provide: SsiCredentialFlowService,
   useValue: {
-    getHello: jest.fn(),
     completeCredentialRequestInteractionJolocom: jest.fn(),
     completeCredentialRequestInteractionSovrhd: jest.fn(),
     completeCredentialOfferInteraction: jest.fn(),

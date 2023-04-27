@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import {
   EntityNotFoundException,
   ValidationException,
@@ -10,13 +10,10 @@ import { UpdateVisualInput } from '@domain/common/visual/dto/visual.dto.update';
 import { CreateVisualInput } from '@domain/common/visual/dto/visual.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { ReadStream } from 'fs';
-import { streamToBuffer, getImageSize } from '@common/utils';
+import { getImageDimensions } from '@common/utils';
 import { Visual } from './visual.entity';
 import { IVisual } from './visual.interface';
 import { DeleteVisualInput } from './dto/visual.dto.delete';
-import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
-import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
 
 @Injectable()
 export class VisualService {
@@ -26,8 +23,7 @@ export class VisualService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Visual)
-    private visualRepository: Repository<Visual>,
-    private ipfsService: IpfsService
+    private visualRepository: Repository<Visual>
   ) {}
 
   async createVisual(
@@ -69,9 +65,13 @@ export class VisualService {
     };
   }
 
-  async getVisualOrFail(visualID: string): Promise<IVisual> {
-    const visual = await this.visualRepository.findOneBy({
-      id: visualID,
+  async getVisualOrFail(
+    visualID: string,
+    options?: FindOneOptions<Visual>
+  ): Promise<IVisual> {
+    const visual = await this.visualRepository.findOne({
+      where: { id: visualID },
+      ...options,
     });
     if (!visual)
       throw new EntityNotFoundException(
@@ -85,43 +85,11 @@ export class VisualService {
     return await this.visualRepository.save(visual);
   }
 
-  async uploadAvatar(
-    visual: IVisual,
-    readStream: ReadStream,
-    fileName: string,
-    mimetype: string,
-    altText: string | undefined
-  ): Promise<IVisual> {
-    this.validateMimeType(visual, mimetype);
-
-    if (!readStream)
-      throw new ValidationException(
-        'Readstream should be defined!',
-        LogContext.COMMUNITY
-      );
-
-    const buffer = await streamToBuffer(readStream);
-
-    const { imageHeight, imageWidth } = await getImageSize(buffer);
-    this.validateImageWidth(visual, imageWidth);
-    this.validateImageHeight(visual, imageHeight);
-
-    try {
-      const uri = await this.ipfsService.uploadFileFromBuffer(buffer);
-      const updateData: UpdateVisualInput = {
-        visualID: visual.id,
-        uri: uri,
-        alternativeText: altText,
-      };
-      return await this.updateVisual(updateData);
-    } catch (error: any) {
-      throw new IpfsUploadFailedException(
-        `Ipfs upload of ${fileName} failed! Error: ${error.message}`
-      );
-    }
+  public async getImageDimensions(buffer: Buffer) {
+    return getImageDimensions(buffer);
   }
 
-  private validateMimeType(visual: IVisual, mimeType: string) {
+  public validateMimeType(visual: IVisual, mimeType: string) {
     if (!visual.allowedTypes.includes(mimeType)) {
       throw new ValidationException(
         `Image upload type (${mimeType}) not in allowed mime types: ${visual.allowedTypes}`,
@@ -130,7 +98,7 @@ export class VisualService {
     }
   }
 
-  private validateImageWidth(visual: IVisual, imageWidth: number) {
+  public validateImageWidth(visual: IVisual, imageWidth: number) {
     if (imageWidth < visual.minWidth || imageWidth > visual.maxWidth)
       throw new ValidationException(
         `Upload image has a width resolution of '${imageWidth}' which is not in the allowed range of ${visual.minWidth} - ${visual.maxWidth} pixels!`,
@@ -138,7 +106,7 @@ export class VisualService {
       );
   }
 
-  private validateImageHeight(visual: IVisual, imageHeight: number) {
+  public validateImageHeight(visual: IVisual, imageHeight: number) {
     if (imageHeight < visual.minHeight || imageHeight > visual.maxHeight)
       throw new ValidationException(
         `Upload image has a height resolution of '${imageHeight}' which is not in the allowed range of ${visual.minHeight} - ${visual.maxHeight} pixels!`,
