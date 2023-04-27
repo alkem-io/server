@@ -5,6 +5,7 @@ export enum CalloutType {
   CANVAS = 'canvas',
   COMMENTS = 'comments',
   LINK_COLLECTION = 'link-collection',
+  WHITEBOARD = 'WHITEBOARD',
 }
 
 registerEnumType(CalloutType, {
