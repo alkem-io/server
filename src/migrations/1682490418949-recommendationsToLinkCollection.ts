@@ -8,6 +8,10 @@ export class recommendationsToLinkCollection1682490418949
   name = 'recommendationsToLinkCollection1682490418949';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE \`profile\` DROP COLUMN \`storageBucketId\``
+    );
+
     const references: { contextRecommendationId: string }[] =
       await queryRunner.query(`
         SELECT contextRecommendationId FROM reference WHERE contextRecommendationId IS NOT NULL
