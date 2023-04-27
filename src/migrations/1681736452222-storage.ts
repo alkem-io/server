@@ -1,19 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { randomUUID } from 'crypto';
-
-const allowedTypes = [
-  'image/png',
-  'image/x-png',
-  'image/gif',
-  'image/jpeg',
-  'image/jpg',
-  'image/svg+xml',
-  'image/webp',
-  'application/pdf',
-];
-
-const maxAllowedFileSize = 5242880;
-
+import { addStorageBucketRelation, allowedTypes, createStorageBucketAndLink, maxAllowedFileSize, removeStorageBucketAuths, removeStorageBucketRelation } from './utils/storage/storage-bucket-utils';
 export class storage1681736452222 implements MigrationInterface {
   name = 'storage1681736452222';
 
@@ -66,31 +52,32 @@ export class storage1681736452222 implements MigrationInterface {
       `ALTER TABLE \`document\` ADD CONSTRAINT \`FK_11155450cf75dc486700ca034c6\` FOREIGN KEY (\`storageBucketId\`) REFERENCES \`storage_bucket\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
-    await this.addStorageBucketRelation(
+    await addStorageBucketRelation(
       queryRunner,
       'FK_11991450cf75dc486700ca034c6',
       'hub'
     );
-    await this.addStorageBucketRelation(
+    await addStorageBucketRelation(
       queryRunner,
       'FK_21991450cf75dc486700ca034c6',
       'challenge'
     );
-    await this.addStorageBucketRelation(
+    await addStorageBucketRelation(
       queryRunner,
       'FK_31991450cf75dc486700ca034c6',
       'platform'
     );
-    await this.addStorageBucketRelation(
+    await addStorageBucketRelation(
       queryRunner,
       'FK_41991450cf75dc486700ca034c6',
       'library'
     );
-    await this.addStorageBucketRelation(
+    await addStorageBucketRelation(
       queryRunner,
       'FK_51991450cf75dc486700ca034c6',
       'organization'
     );
+
 
     // Allow every profile to know the StorageBucket to use
     // TODO: enforce this to be a valid value or not? What happens if storagebucket is deleted?
@@ -102,7 +89,7 @@ export class storage1681736452222 implements MigrationInterface {
       `SELECT id FROM hub`
     );
     for (const hub of hubs) {
-      await this.createStorageBucketAndLink(
+      await createStorageBucketAndLink(
         queryRunner,
         'hub',
         hub.id,
@@ -124,7 +111,7 @@ export class storage1681736452222 implements MigrationInterface {
         throw new Error(`Found challenge without hubID set: ${challenge.id}`);
       }
       const hub = hubs[0];
-      await this.createStorageBucketAndLink(
+      await createStorageBucketAndLink(
         queryRunner,
         'challenge',
         challenge.id,
@@ -138,7 +125,7 @@ export class storage1681736452222 implements MigrationInterface {
       `SELECT id FROM platform`
     );
     const platform = platforms[0];
-    const platformStorageBucketId = await this.createStorageBucketAndLink(
+    const platformStorageBucketId = await createStorageBucketAndLink(
       queryRunner,
       'platform',
       platform.id,
@@ -151,7 +138,7 @@ export class storage1681736452222 implements MigrationInterface {
       `SELECT id FROM library`
     );
     const library = libraries[0];
-    const libraryStorageBucket = await this.createStorageBucketAndLink(
+    const libraryStorageBucket = await createStorageBucketAndLink(
       queryRunner,
       'library',
       library.id,
@@ -184,31 +171,36 @@ export class storage1681736452222 implements MigrationInterface {
       'ALTER TABLE `document` DROP FOREIGN KEY `FK_11155450cf75dc486700ca034c6`'
     );
 
-    await this.removeStorageBucketRelation(
+    await removeStorageBucketAuths(
+      queryRunner,
+      ['hub', 'challenge', 'platform', 'library', 'organization']
+    )
+    await removeStorageBucketRelation(
       queryRunner,
       'FK_11991450cf75dc486700ca034c6',
       'hub'
     );
-    await this.removeStorageBucketRelation(
+    await removeStorageBucketRelation(
       queryRunner,
       'FK_21991450cf75dc486700ca034c6',
       'challenge'
     );
-    await this.removeStorageBucketRelation(
+    await removeStorageBucketRelation(
       queryRunner,
       'FK_31991450cf75dc486700ca034c6',
       'platform'
     );
-    await this.removeStorageBucketRelation(
+    await removeStorageBucketRelation(
       queryRunner,
       'FK_41991450cf75dc486700ca034c6',
       'library'
     );
-    await this.removeStorageBucketRelation(
+    await removeStorageBucketRelation(
       queryRunner,
       'FK_51991450cf75dc486700ca034c6',
       'organization'
     );
+
 
     await queryRunner.query('DROP TABLE `storage_bucket`');
     await queryRunner.query('DROP TABLE `document`');
@@ -219,62 +211,4 @@ export class storage1681736452222 implements MigrationInterface {
     );
   }
 
-  public async addStorageBucketRelation(
-    queryRunner: QueryRunner,
-    fk: string,
-    entityTable: string
-  ): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE \`${entityTable}\` ADD \`storageBucketId\` char(36) NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`${entityTable}\` ADD CONSTRAINT \`${fk}\` FOREIGN KEY (\`storageBucketId\`) REFERENCES \`storage_bucket\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-  }
-
-  public async removeStorageBucketRelation(
-    queryRunner: QueryRunner,
-    fk: string,
-    entityTable: string
-  ): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE ${entityTable} DROP FOREIGN KEY ${fk}`
-    );
-    await queryRunner.query(
-      `ALTER TABLE ${entityTable} DROP COLUMN storageBucketId`
-    );
-  }
-
-  private async createStorageBucketAndLink(
-    queryRunner: QueryRunner,
-    entityTable: string,
-    entityID: string,
-    allowedMimeTypes: string[],
-    maxFileSize: number,
-    parentStorageBucketID: string
-  ): Promise<string> {
-    const newStorageBucketID = randomUUID();
-    const storageBucketAuthID = randomUUID();
-
-    await queryRunner.query(
-      `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
-        ('${storageBucketAuthID}',
-        1, '', '', 0, '')`
-    );
-
-    await queryRunner.query(
-      `INSERT INTO storage_bucket (id, version, authorizationId, allowedMimeTypes, maxFileSize, parentStorageBucketId)
-            VALUES ('${newStorageBucketID}',
-                    '1',
-                    '${storageBucketAuthID}',
-                    '${allowedMimeTypes}',
-                    ${maxFileSize},
-                    '${parentStorageBucketID}')`
-    );
-
-    await queryRunner.query(
-      `UPDATE \`${entityTable}\` SET storageBucketId = '${newStorageBucketID}' WHERE (id = '${entityID}')`
-    );
-    return newStorageBucketID;
-  }
 }
