@@ -14,7 +14,6 @@ import {
 import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { UpdateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.update';
-import { DeleteTagsetInput } from '@domain/common/tagset/dto/tagset.dto.delete';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 
@@ -44,8 +43,7 @@ export class TagsetService {
     return tagset as ITagset;
   }
 
-  async removeTagset(deleteData: DeleteTagsetInput): Promise<ITagset> {
-    const tagsetID = deleteData.ID;
+  async removeTagset(tagsetID: string): Promise<ITagset> {
     const tagset = await this.getTagsetOrFail(tagsetID);
     if (tagset.authorization)
       await this.authorizationPolicyService.delete(tagset.authorization);

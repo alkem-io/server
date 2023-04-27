@@ -9,6 +9,7 @@ import { CalendarResolverFields } from './calendar.resolver.fields';
 import { CalendarResolverMutations } from './calendar.resolver.mutations';
 import { CalendarService } from './calendar.service';
 import { CalendarAuthorizationService } from './calendar.service.authorization';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { CalendarAuthorizationService } from './calendar.service.authorization';
     NamingModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
+    EntityResolverModule,
     TypeOrmModule.forFeature([Calendar]),
   ],
   providers: [

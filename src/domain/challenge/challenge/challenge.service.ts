@@ -61,6 +61,8 @@ import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class ChallengeService {
@@ -75,6 +77,7 @@ export class ChallengeService {
     private organizationService: OrganizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
+    private storageBucketService: StorageBucketService,
     private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -118,6 +121,9 @@ export class ChallengeService {
     challenge.childChallenges = [];
 
     challenge.opportunities = [];
+
+    challenge.storageBucket =
+      await this.storageBucketService.createStorageBucket();
 
     await this.baseChallengeService.initialise(
       challenge,
@@ -588,9 +594,16 @@ export class ChallengeService {
     const challenge = await this.getChallengeOrFail(
       opportunityData.challengeID,
       {
-        relations: ['opportunities', 'community'],
+        relations: ['storageBucket', 'opportunities', 'community'],
       }
     );
+
+    if (!challenge.storageBucket) {
+      throw new EntityNotInitializedException(
+        'Unable to find StorageBucket for Challenge',
+        LogContext.CHALLENGES
+      );
+    }
 
     const hubID = this.getHubID(challenge);
     await this.baseChallengeService.isNameAvailableOrFail(
@@ -601,6 +614,7 @@ export class ChallengeService {
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
       hubID,
+      challenge.storageBucket.id,
       agentInfo
     );
 
@@ -729,6 +743,25 @@ export class ChallengeService {
     }
 
     return preferenceSet;
+  }
+
+  async getStorageBucketOrFail(challengeId: string): Promise<IStorageBucket> {
+    const challengeWithStorageBucket = await this.getChallengeOrFail(
+      challengeId,
+      {
+        relations: ['storageBucket'],
+      }
+    );
+    const storageBucket = challengeWithStorageBucket.storageBucket;
+
+    if (!storageBucket) {
+      throw new EntityNotFoundException(
+        `Unable to find storagebucket for Challenge with nameID: ${challengeWithStorageBucket.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return storageBucket;
   }
 
   async assignChallengeAdmin(
