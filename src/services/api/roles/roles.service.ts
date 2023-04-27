@@ -13,7 +13,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { ICredential } from '@domain/agent/credential/credential.interface';
-import { IApplication } from '@domain/community';
+import { IApplication } from '@domain/community/application';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { HubFilterService } from '@services/infrastructure/hub-filter/hub.filter.service';
 import { RolesUserInput } from './dto/roles.dto.input.user';

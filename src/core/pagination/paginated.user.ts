@@ -1,5 +1,5 @@
 import { ObjectType } from '@nestjs/graphql';
-import { IUser } from '@src/domain';
+import { IUser } from '@src/domain/community/user';
 import { RelayStylePaginate } from './relay.style.paginated.type';
 import { Paginate } from './paginated.type';
 
