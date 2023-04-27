@@ -56,4 +56,22 @@ export class StorageAccessController {
     );
     return contents;
   }
+
+  @UseGuards(RestGuard)
+  @Get('documents/:id')
+  async documents(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Param('id') id: string
+  ): Promise<AsyncIterable<Uint8Array>> {
+    const document = await this.documentService.getDocumentOrFail(id);
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      document.authorization,
+      AuthorizationPrivilege.READ,
+      `Read document: ${document.displayName}`
+    );
+
+    return this.documentService.getDocumentContents(document);
+  }
 }
