@@ -17,8 +17,8 @@ export const createCallout = async (
   const calloutId = await randomUUID();
 
   await queryRunner.query(`
-    INSERT INTO callout(id, createdDate, updatedDate, version, nameID, type, state, visibility, authorizationId, collaborationId, sortOrder, publishedDate, profileId, \`group\`) VALUES
-    ('${calloutId}', NOW(), NOW(), 1, '${nameID}', '${type}', 'open', 'draft', '${authId}', '${collaborationID}', 10, NOW(), '${profileId}', 'knowledge')
+    INSERT INTO callout(id, version, nameID, type, authorizationId, collaborationId, sortOrder, profileId, \`group\`) VALUES
+    ('${calloutId}', 1, '${nameID}', '${type}', '${authId}', '${collaborationID}', 10, '${profileId}', 'knowledge')
   `);
 
   await updateCallout(collaborationID, type);

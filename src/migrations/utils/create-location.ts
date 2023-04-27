@@ -6,7 +6,7 @@ export const createLocation = async (queryRunner: QueryRunner) => {
 
   await queryRunner.query(`
     INSERT INTO location VALUES
-    ('${id}', NOW(), NOW(), 1, '', '', '' ,'' ,'' ,'')
+    ('${id}', DEFAULT, DEFAULT, 1, '', '', DEFAULT ,DEFAULT, DEFAULT, DEFAULT)
   `);
 
   return id;

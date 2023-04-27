@@ -135,9 +135,14 @@ export class recommendationsToLinkCollection1682490418949
       }
 
       await queryRunner.query(`
-          UPDATE reference SET contextRecommendationId = '${contextId}'
-          WHERE profileId = '${profileId}'
-        `);
+        UPDATE reference SET contextRecommendationId = '${contextId}'
+        WHERE profileId = '${profileId}'
+      `);
     }
+    // drop all link-collection callouts
+    //NOTE: not all data related to these callout is deleted
+    await queryRunner.query(
+      `DELETE FROM callout WHERE type = '${CalloutType.LINK_COLLECTION}'`
+    );
   }
 }

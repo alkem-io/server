@@ -11,7 +11,7 @@ export const createProfile = async (queryRunner: QueryRunner) => {
 
   await queryRunner.query(`
     INSERT INTO profile VALUES
-    ('${profileId}', NOW(), NOW(), 1, NULL, '${authId}', '${locationId}', NULL, NULL)
+    ('${profileId}', DEFAULT, DEFAULT, 1, DEFAULT, '${authId}', '${locationId}', DEFAULT, DEFAULT)
   `);
 
   return profileId;
