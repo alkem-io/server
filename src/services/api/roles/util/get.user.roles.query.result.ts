@@ -1,7 +1,7 @@
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity';
-import { Organization } from '@src/domain';
+import { Organization } from '@src/domain/community/organization';
 import { RolesResultHub } from '../dto/roles.dto.result.hub';
 import { RolesResultCommunity } from '../dto/roles.dto.result.community';
 import { RolesResultOrganization } from '../dto/roles.dto.result.organization';

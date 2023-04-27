@@ -12,7 +12,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IHub } from './hub.interface';
 import { Hub } from './hub.entity';
 import { HubPreferenceType } from '@common/enums/hub.preference.type';
-import { IOrganization } from '@domain/community';
+import { IOrganization } from '@domain/community/organization';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
