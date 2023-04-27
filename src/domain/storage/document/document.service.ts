@@ -86,6 +86,13 @@ export class DocumentService {
       );
     return document;
   }
+
+  public async getDocumentContents(
+    document: IDocument
+  ): Promise<AsyncIterable<Uint8Array> | never> {
+    return this.ipfsAdapter.getFileContents(document.externalID);
+  }
+
   public async updateDocument(
     documentData: UpdateDocumentInput
   ): Promise<IDocument> {

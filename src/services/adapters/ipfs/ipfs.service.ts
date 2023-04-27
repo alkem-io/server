@@ -56,6 +56,36 @@ export class IpfsService {
     return res.path;
   }
 
+  public async getFileContents(
+    CID: string
+  ): Promise<AsyncIterable<Uint8Array>> {
+    const contentIterable = this.ipfsClient.cat(CID);
+
+    await this.testFileDownload(contentIterable);
+
+    return contentIterable;
+  }
+
+  private async testFileDownload(contentIterable: AsyncIterable<Uint8Array>) {
+    // Pipe the content to a writable file stream
+    const fileStream = fs.createWriteStream('test.png');
+
+    // Iterate over the content chunks and write them to the output file
+    for await (const chunk of contentIterable) {
+      fileStream.write(chunk);
+    }
+
+    // Close the writable file stream and log the success message
+    fileStream.end();
+    fileStream.on('finish', () => {
+      console.log('File downloaded successfully:', 'test.png');
+    });
+
+    fileStream.on('error', error => {
+      console.error('Error downloading file:', error);
+    });
+  }
+
   public createIpfsClientEndPoint(CID: string): string {
     return `${this.ipfsClientEndpoint}/${CID}`;
   }
