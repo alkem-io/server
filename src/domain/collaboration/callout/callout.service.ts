@@ -368,9 +368,9 @@ export class CalloutService {
   ): Promise<IAspect> {
     const calloutID = aspectData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['aspects', 'aspects.profile'],
+      relations: ['profile', 'aspects', 'aspects.profile'],
     });
-    if (!callout.aspects)
+    if (!callout.aspects || !callout.profile)
       throw new EntityNotInitializedException(
         `Callout (${calloutID}) not initialised`,
         LogContext.COLLABORATION
@@ -420,7 +420,7 @@ export class CalloutService {
   ): Promise<ICanvas> {
     const calloutID = canvasData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['canvases'],
+      relations: ['profile', 'canvases'],
     });
     if (!callout.canvases)
       throw new EntityNotInitializedException(

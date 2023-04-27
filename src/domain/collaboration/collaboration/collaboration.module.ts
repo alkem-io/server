@@ -21,7 +21,6 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 
 @Module({
   imports: [
-    EntityResolverModule,
     ElasticsearchModule,
     ActivityAdapterModule,
     NotificationAdapterModule,
@@ -30,6 +29,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     CalloutModule,
     CommunityPolicyModule,
     NamingModule,
+    EntityResolverModule,
     RelationModule,
     CanvasModule,
     AspectModule,

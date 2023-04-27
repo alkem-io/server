@@ -6,6 +6,7 @@ import { PreferenceSet } from '@domain/common/preference-set/preference.set.enti
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { Timeline } from '@domain/timeline/timeline/timeline.entity';
+import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
 @Entity()
 export class Hub extends BaseChallenge implements IHub {
   @Column('varchar', {
@@ -44,6 +45,14 @@ export class Hub extends BaseChallenge implements IHub {
   })
   @JoinColumn()
   timeline?: Timeline;
+
+  @OneToOne(() => StorageBucket, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  storageBucket?: StorageBucket;
 
   constructor() {
     super();

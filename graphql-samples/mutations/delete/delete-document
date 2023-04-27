@@ -1,0 +1,12 @@
+mutation deleteDocument($deleteData: DeleteDocumentInput!) {
+  deleteDocument(deleteData: $deleteData) {
+    id
+  }
+}
+
+Variables:
+{
+  "deleteData": {
+    "ID": "uuid"
+  }
+}

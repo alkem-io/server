@@ -14,6 +14,7 @@
       "tagline": "",
       "description": "",
       "displayName": "admin alkemio",
+      "storageSpaceId": "storageSpaceId",
       "authorization": {
         "anonymousReadAccess": false,
         "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"user-self\",\"resourceID\":\"b69f82a1-bc7d-486c-85f9-e7ac6e689f4e\",\"grantedPrivileges\":[\"create\",\"read\",\"update\"],\"cascade\":true}]",

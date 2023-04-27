@@ -49,7 +49,12 @@ export class GraphqlGuard extends AuthGuard([
     }
     return context.switchToHttp().getRequest();
   }
+  /**
+   if *canActive* is defined the authorization WILL NOT GO through the defined strategies, and use the code here instead.
+   if **handleRequest* is defined WILL USE the defined strategies
 
+   *handleRequest* is used to extend the error handling or how the request is handled
+ */
   handleRequest(
     err: any,
     agentInfo: any,
