@@ -44,6 +44,7 @@ import { WhiteboardTemplateService } from '@domain/template/whiteboard-template/
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
+import { VisualType } from '@common/enums/visual.type';
 
 @Injectable()
 export class CalloutService {
@@ -141,6 +142,10 @@ export class CalloutService {
           profileData: calloutData.whiteboard.profileData,
         },
         userID
+      );
+      await this.profileService.addVisualOnProfile(
+        canvas.profile,
+        VisualType.BANNER
       );
       callout.canvases = [canvas];
       await this.calloutRepository.save(callout);
