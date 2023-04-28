@@ -5,9 +5,18 @@ import {
   WhereExpressionBuilder,
 } from 'typeorm';
 
+/***
+ * Applies filtering based on fields of T
+ * @param query
+ * @param filter
+ * @param bindOperator Defines weather 'AND' or 'OR' operator is used to bind the filter statement
+ * with the other 'WHERE' statements before it in the query.
+ * Defaults to 'AND'.
+ */
 export const applyFiltering = <T>(
   query: SelectQueryBuilder<T>,
-  filter: any
+  filter: any,
+  bindOperator: 'and' | 'or' = 'and'
 ) => {
   const filterKeys = Object.keys(filter);
 
@@ -16,7 +25,7 @@ export const applyFiltering = <T>(
   }
 
   // build the filter with WHERE in brackets
-  query.andWhere(
+  query[bindOperator === 'and' ? 'andWhere' : 'orWhere'](
     new Brackets(qb =>
       filterKeys.forEach(x => addWhereClause(qb, x, filter[x]))
     )
