@@ -90,7 +90,10 @@ export class DocumentService {
   public async getDocumentContents(
     document: IDocument
   ): Promise<AsyncIterable<Uint8Array> | never> {
-    return this.ipfsAdapter.getFileContents(document.externalID);
+    return this.ipfsAdapter.getFileContents(
+      document.externalID,
+      document.displayName
+    );
   }
 
   public async updateDocument(
