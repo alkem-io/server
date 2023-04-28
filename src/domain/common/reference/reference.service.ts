@@ -127,15 +127,4 @@ export class ReferenceService {
   async saveReference(reference: IReference): Promise<IReference> {
     return await this.referenceRepository.save(reference);
   }
-
-  public async isRecommendation(reference: IReference): Promise<boolean> {
-    const referenceEntry = await this.entityManager.findOneBy(Reference, {
-      id: reference.id,
-    });
-
-    if (referenceEntry?.contextRecommendation) {
-      return true;
-    }
-    return false;
-  }
 }

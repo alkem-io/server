@@ -205,7 +205,6 @@ export class storage1681736452222 implements MigrationInterface {
     await queryRunner.query('DROP TABLE `storage_bucket`');
     await queryRunner.query('DROP TABLE `document`');
 
-    // TODO: enforce this to be a valid value or not? What happens if storagebucket is deleted?
     await queryRunner.query(
       `ALTER TABLE \`profile\` DROP COLUMN \`storageBucketId\``
     );
