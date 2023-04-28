@@ -4,7 +4,7 @@ import { Hub } from '@domain/challenge/hub/hub.entity';
 import { IProject } from '@domain/collaboration/project';
 import { INVP } from '@domain/common/nvp';
 import { UUID, UUID_NAMEID } from '@domain/common/scalars';
-import { IOrganization } from '@domain/community';
+import { IOrganization } from '@domain/community/organization';
 import { IApplication } from '@domain/community/application';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ICommunity } from '@domain/community/community';

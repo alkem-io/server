@@ -1,7 +1,7 @@
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { IUser, User } from '@src/domain';
+import { IUser, User } from '@src/domain/community/user';
 import { createTypedSimpleDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 

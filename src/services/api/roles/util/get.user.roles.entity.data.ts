@@ -1,5 +1,5 @@
 import { EntityManager, EntityTarget, FindManyOptions, In } from 'typeorm';
-import { Organization } from '@src/domain';
+import { Organization } from '@src/domain/community/organization';
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity';

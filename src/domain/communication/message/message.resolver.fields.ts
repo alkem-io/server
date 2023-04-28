@@ -2,7 +2,7 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IMessage } from './message.interface';
 import { LogContext } from '@common/enums/logging.context';
 import { UserService } from '@domain/community/user/user.service';
-import { IUser } from '@domain/community';
+import { IUser } from '@domain/community/user';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
