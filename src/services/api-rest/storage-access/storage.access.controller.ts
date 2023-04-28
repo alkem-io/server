@@ -47,7 +47,6 @@ export class StorageAccessController {
 
     res.setHeader('Content-Type', `${document.mimeType}`);
     await this.documentService.getDocumentContents(document);
-
     const tempFilePath = join(process.cwd(), document.displayName);
     const file = createReadStream(tempFilePath);
     // Add the callback when the stream ends
@@ -61,11 +60,12 @@ export class StorageAccessController {
         // Delete the file
         await fs.unlink(tempFilePath);
         this.logger.verbose?.(
-          `The file has been streamed and temp file cleaned up successfully.:: ${document.displayName}`,
+          `The file ${document.displayName} has been streamed and temp file cleaned up successfully.`,
           LogContext.STORAGE_ACCESS
         );
       }
     });
+
     return new StreamableFile(file);
   }
 }
