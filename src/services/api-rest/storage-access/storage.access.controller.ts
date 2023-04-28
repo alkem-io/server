@@ -4,6 +4,7 @@ import {
   Inject,
   LoggerService,
   Param,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -13,6 +14,7 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { RestGuard } from '@core/authorization/rest.guard';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import type { Response } from 'express';
 
 @Controller('/rest/storage')
 export class StorageAccessController {
@@ -38,7 +40,8 @@ export class StorageAccessController {
   @Get('document/:id')
   async document(
     @CurrentUser() agentInfo: AgentInfo,
-    @Param('id') id: string
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response
   ): Promise<AsyncIterable<Uint8Array>> {
     const document = await this.documentService.getDocumentOrFail(id);
 
@@ -49,28 +52,9 @@ export class StorageAccessController {
       `Read document: ${document.displayName}`
     );
 
-    const contents = await this.documentService.getDocumentContents(document);
-    this.logger.verbose?.(
-      `Contents: ${JSON.stringify(contents)}`,
-      LogContext.STORAGE_ACCESS
-    );
-    return contents;
-  }
-
-  @UseGuards(RestGuard)
-  @Get('documents/:id')
-  async documents(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Param('id') id: string
-  ): Promise<AsyncIterable<Uint8Array>> {
-    const document = await this.documentService.getDocumentOrFail(id);
-
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      document.authorization,
-      AuthorizationPrivilege.READ,
-      `Read document: ${document.displayName}`
-    );
+    res.header({
+      'Content-Type': `${document.mimeType}`,
+    });
 
     return this.documentService.getDocumentContents(document);
   }
