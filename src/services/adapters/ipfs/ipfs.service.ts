@@ -56,50 +56,15 @@ export class IpfsService {
     return res.path;
   }
 
-  public async getFileContents(
-    CID: string,
-    fileName: string
-  ): Promise<AsyncIterable<Uint8Array>> {
-    const contentIterable = this.ipfsClient.cat(CID);
-    await this.downloadFile(contentIterable, fileName);
-
-    return contentIterable;
-  }
-
-  private async downloadFile(
-    contentIterable: AsyncIterable<Uint8Array>,
-    fileName: string
-  ) {
-    // Pipe the content to a writable file stream
-    const fileStream = fs.createWriteStream(fileName);
-
-    // Iterate over the content chunks and write them to the output file
-    for await (const chunk of contentIterable) {
-      fileStream.write(chunk);
-    }
-
-    // Close the writable file stream and log the success message
-    fileStream.end();
-    fileStream.on('finish', () => {
-      this.logger.verbose?.(
-        `'File downloaded successfully: ${fileName}`,
-        LogContext.STORAGE_BUCKET
-      );
-    });
-
-    fileStream.on('error', error => {
-      this.logger.error(
-        `Error downloading file: ${fileName}. Error: ${error}`,
-        LogContext.STORAGE_BUCKET
-      );
-    });
+  public getFileContents(CID: string): AsyncIterable<Uint8Array> | never {
+    return this.ipfsClient.cat(CID);
   }
 
   public createIpfsClientEndPoint(CID: string): string {
     return `${this.ipfsClientEndpoint}/${CID}`;
   }
 
-  public async unpinFile(CID: string): Promise<CID> {
+  public unpinFile(CID: string): Promise<CID> {
     this.logger.verbose?.(`Unpinning file from CID: ${CID}`, LogContext.IPFS);
 
     try {
