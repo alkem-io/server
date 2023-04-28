@@ -10,8 +10,8 @@ export const createProfile = async (queryRunner: QueryRunner) => {
   const profileId = randomUUID();
 
   await queryRunner.query(`
-    INSERT INTO profile VALUES
-    ('${profileId}', DEFAULT, DEFAULT, 1, DEFAULT, '${authId}', '${locationId}', DEFAULT, DEFAULT)
+    INSERT INTO profile (id, version, authorizationId, locationId) VALUES
+    ('${profileId}', 1, '${authId}', '${locationId}')
   `);
 
   return profileId;
