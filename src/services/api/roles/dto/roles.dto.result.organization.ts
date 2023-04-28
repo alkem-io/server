@@ -1,4 +1,4 @@
-import { IOrganization } from '@domain/community';
+import { IOrganization } from '@domain/community/organization';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { RolesResult as RolesResult } from './roles.dto.result';
 
