@@ -16,4 +16,10 @@ export class ActivityCreatedSubscriptionInput {
       'Which activity types to include in the results. Returns all by default.',
   })
   types?: ActivityEventType[];
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Include activities happened on child Collaborations.',
+  })
+  includeChild?: boolean;
 }

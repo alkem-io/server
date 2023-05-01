@@ -9,7 +9,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IComments } from '@domain/communication/comments/comments.interface';
-import { IUser } from '@domain/community';
+import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { ICalendarEvent } from './event.interface';
 import { CalendarEventService } from './event.service';

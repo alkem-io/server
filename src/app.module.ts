@@ -23,7 +23,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { AdminCommunicationModule } from '@platform/admin/communication/admin.communication.module';
 import { AppController } from '@src/app.controller';
-import { AppService } from '@src/app.service';
 import { WinstonConfigService } from '@src/config/winston.config';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { SearchModule } from '@services/api/search/search.module';
@@ -47,12 +46,15 @@ import { ActivityLogModule } from '@services/api/activity-log/activity.log.modul
 import { MessageModule } from '@domain/communication/message/message.module';
 import { LibraryModule } from '@library/library/library.module';
 import { AspectMoveModule } from '@domain/collaboration/aspect/aspect.move.module';
-import { FileManagerModule } from '@domain/common/file-manager/file.manager.module';
 import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationSpaceModule } from '@domain/innovation-space/innovation.space.module';
+import { StorageAccessController } from '@services/api-rest/storage-access/storage.access.controller';
+import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
+import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
+import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
 
 @Module({
   imports: [
@@ -203,14 +205,14 @@ import { InnovationSpaceModule } from '@domain/innovation-space/innovation.space
     LibraryModule,
     PlatformModule,
     AspectMoveModule,
-    FileManagerModule,
     GeoLocationModule,
     ElasticsearchModule,
     InnovationSpaceModule,
+    SsiCredentialFlowModule,
+    StorageAccessModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, SsiCredentialFlowController],
   providers: [
-    AppService,
     {
       provide: APP_INTERCEPTOR,
       useClass: DataLoaderInterceptor,

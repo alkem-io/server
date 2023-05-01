@@ -602,7 +602,7 @@ export class UserService {
           .setParameters({ term: `%${displayName}%` });
 
       if (rest) {
-        applyFiltering(qb, rest);
+        applyFiltering(qb, rest, 'or');
       }
     }
 

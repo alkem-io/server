@@ -1,7 +1,8 @@
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { IUser } from '@domain/community';
+import { IUser } from '@domain/community/user';
 import { Field } from '@nestjs/graphql';
+import { NameID } from '@domain/common/scalars';
 
 export abstract class IActivityLogEntryBase {
   @Field(() => UUID, {
@@ -39,4 +40,21 @@ export abstract class IActivityLogEntryBase {
     description: 'The text details for this Activity.',
   })
   description?: string;
+
+  @Field(() => Boolean, {
+    defaultValue: false,
+    description:
+      'Indicates if this Activity happened on a child Collaboration. Child results can be included via the "includeChild" parameter.',
+  })
+  child?: boolean;
+
+  @Field(() => NameID, {
+    description: 'The nameID of the parent',
+  })
+  parentNameID!: string;
+
+  @Field(() => String, {
+    description: 'The display name of the parent',
+  })
+  parentDisplayName!: string;
 }

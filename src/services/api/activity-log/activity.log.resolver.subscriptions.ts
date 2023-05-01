@@ -51,16 +51,23 @@ export class ActivityLogResolverSubscriptions {
           createdDate: new Date(payload.activity.createdDate),
         });
 
+      if (activityLogEntry) {
+        // the activity is a child if the activity collaboration and the requested collaboration (parent) are different
+        activityLogEntry.child =
+          payload.activity.collaborationID !== args.input.collaborationID;
+      }
+
       return {
         activity: activityLogEntry,
       };
     },
-    filter(
+    async filter(
       this: ActivityLogResolverSubscriptions,
       payload,
       variables,
       context
     ) {
+      const { types = [], collaborationID, includeChild } = variables.input;
       const agentInfo = context.req.user;
       const logMsgPrefix = `[New activity subscription] - [${agentInfo.email}] -`;
       this.logger.verbose?.(
@@ -68,9 +75,28 @@ export class ActivityLogResolverSubscriptions {
         LogContext.SUBSCRIPTIONS
       );
 
+      const collaborationsIds = [collaborationID];
+
+      if (includeChild) {
+        // note: may cause performance issues in the future
+        // get all child collaborations and authorize them
+        const childCollaborations = await this.getAuthorizedChildCollaborations(
+          agentInfo,
+          collaborationID
+        );
+        collaborationsIds.push(...childCollaborations);
+      }
+
+      const activityInSubscribedCollaboration = collaborationsIds.includes(
+        payload.activity.collaborationID
+      );
+      // if types is empty, return all types
+      const activityOfSubscribedType = types.length
+        ? Boolean(types.includes(payload.activity.type))
+        : true;
+
       const isSameCollaboration =
-        payload.activity.collaborationID === variables.input.collaborationID &&
-        Boolean(variables.input.types?.includes(payload.activity.type));
+        activityInSubscribedCollaboration && activityOfSubscribedType;
       this.logger.verbose?.(
         `${logMsgPrefix} Filter result is ${isSameCollaboration}`,
         LogContext.SUBSCRIPTIONS
@@ -106,5 +132,35 @@ export class ActivityLogResolverSubscriptions {
     );
     // subscribe
     return this.subscriptionReadService.subscribeToActivities();
+  }
+
+  private async getAuthorizedChildCollaborations(
+    agentInfo: AgentInfo,
+    collaborationID: string
+  ) {
+    const childCollaborations =
+      await this.collaborationService.getChildCollaborationsOrFail(
+        collaborationID
+      );
+    const childCollaborationIds: string[] = [];
+    // can agent read each collaboration
+    for (const childCollaboration of childCollaborations) {
+      try {
+        await this.authorizationService.grantAccessOrFail(
+          agentInfo,
+          childCollaboration.authorization,
+          AuthorizationPrivilege.READ,
+          `Collaboration activity query: ${agentInfo.email}`
+        );
+        childCollaborationIds.push(childCollaboration.id);
+      } catch (e) {
+        this.logger?.warn(
+          `User ${agentInfo.userID} is not able to read child collaboration ${childCollaboration.id}`,
+          LogContext.COLLABORATION
+        );
+      }
+    }
+
+    return childCollaborationIds;
   }
 }

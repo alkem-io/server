@@ -40,17 +40,6 @@ export class ContextAuthorizationService {
         context.ecosystemModel
       );
 
-    context.recommendations = await this.contextService.getRecommendations(
-      context
-    );
-    for (const recommendation of context.recommendations) {
-      recommendation.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          recommendation.authorization,
-          context.authorization
-        );
-    }
-
     return await this.contextRepository.save(context);
   }
 }
