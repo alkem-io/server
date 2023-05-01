@@ -61,7 +61,6 @@ export class BootstrapService {
       await this.ensureHubSingleton();
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
-      this.ensureCommunicationRoomsCreated();
       this.platformService.ensureCommunicationCreated();
     } catch (error: any) {
       throw new BootstrapException(error.message);
@@ -199,15 +198,6 @@ export class BootstrapService {
     const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
     if (ssiEnabled) {
       await this.agentService.ensureDidsCreated();
-    }
-  }
-
-  ensureCommunicationRoomsCreated() {
-    const communicationsEnabled = this.configService.get(
-      ConfigurationTypes.COMMUNICATIONS
-    ).enabled;
-    if (communicationsEnabled) {
-      this.communicationService.ensureCommunicationRoomsCreated();
     }
   }
 

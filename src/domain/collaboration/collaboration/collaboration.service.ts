@@ -47,8 +47,7 @@ export class CollaborationService {
   ) {}
 
   async createCollaboration(
-    communityType: CommunityType,
-    communicationGroupID: string
+    communityType: CommunityType
   ): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
     collaboration.authorization = new AuthorizationPolicy();
@@ -65,10 +64,7 @@ export class CollaborationService {
         !communityTypeForDefault ||
         communityTypeForDefault === communityType
       ) {
-        const callout = await this.calloutService.createCallout(
-          calloutDefault,
-          communicationGroupID
-        );
+        const callout = await this.calloutService.createCallout(calloutDefault);
         // default callouts are already published
         callout.visibility = CalloutVisibility.PUBLISHED;
         savedCollaboration.callouts?.push(callout);
@@ -236,14 +232,8 @@ export class CollaborationService {
         LogContext.CHALLENGES
       );
 
-    const communicationGroupID =
-      await this.namingService.getCommunicationGroupIdFromCollaborationId(
-        collaboration.id
-      );
-
     const callout = await this.calloutService.createCallout(
       calloutData,
-      communicationGroupID,
       userID
     );
     collaboration.callouts.push(callout);

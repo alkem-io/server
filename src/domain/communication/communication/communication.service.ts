@@ -59,96 +59,12 @@ export class CommunicationService {
 
     // save to get the id assigned
     await this.save(communication);
-    const communicationGroupID = await this.initializeCommunicationsGroup(
-      communication
-    );
-    if (communicationGroupID) {
-      communication.communicationGroupID = communicationGroupID;
-    }
 
     communication.updates = await this.updatesService.createUpdates(
-      communication.communicationGroupID,
       `${displayName}-Updates`
     );
 
     return await this.communicationRepository.save(communication);
-  }
-
-  async ensureCommunicationRoomsCreated(): Promise<void> {
-    // find any communications without a group
-    // Then load data to do the sorting
-    const communicationsWithoutGroups = await this.communicationRepository
-      .createQueryBuilder('communication')
-      .where('communicationGroupID = :id')
-      .setParameters({ id: '' })
-      .getMany();
-
-    communicationsWithoutGroups.forEach(async communicationWithoutGroup => {
-      // Load through normal mechanism to pick up eager loading, discussions
-      const communication = await this.getCommunicationOrFail(
-        communicationWithoutGroup.id,
-        {
-          relations: ['discussions', 'updates'],
-        }
-      );
-      this.logger.warn?.(
-        `Identified communication (${communication.id}) without communicationGroup set`,
-        LogContext.COMMUNICATION
-      );
-      const communicationGroupID = await this.initializeCommunicationsGroup(
-        communication
-      );
-      if (communicationGroupID) {
-        communication.communicationGroupID = communicationGroupID;
-      }
-
-      const updates = await this.getUpdates(communication);
-      updates.communicationGroupID = communication.communicationGroupID;
-      await this.roomService.initializeCommunicationRoom(updates);
-
-      const discussions = await this.getDiscussions(communication);
-      for (const discussion of discussions) {
-        discussion.communicationGroupID = communication.communicationGroupID;
-        await this.roomService.initializeCommunicationRoom(discussion);
-      }
-      await this.save(communication);
-    });
-  }
-
-  async initializeCommunicationsGroup(
-    communication: ICommunication
-  ): Promise<string | undefined> {
-    if (!this.communicationsEnabled) {
-      // not enabled, just return
-      return undefined;
-    }
-    if (communication.communicationGroupID === '') {
-      try {
-        const communicationGroupID =
-          await this.communicationAdapter.createCommunityGroup(
-            communication.id,
-            communication.displayName
-          );
-        return communicationGroupID;
-      } catch (error: any) {
-        if (error?.message?.includes('Group already exists')) {
-          const existingGroupID =
-            await this.communicationAdapter.convertMatrixLocalGroupIdToMatrixID(
-              communication.id
-            );
-          this.logger.warn?.(
-            `Group for Communication (${communication.displayName}) already exists: ${error} - returning existing ID: ${existingGroupID}`,
-            LogContext.COMMUNICATION
-          );
-          return existingGroupID;
-        }
-        this.logger.error?.(
-          `Unable to initialize group for Communication (${communication.displayName}): ${error}`,
-          LogContext.COMMUNICATION
-        );
-      }
-    }
-    return undefined;
   }
 
   async save(communication: ICommunication): Promise<ICommunication> {
@@ -182,7 +98,6 @@ export class CommunicationService {
 
     const discussion = await this.discussionService.createDiscussion(
       discussionData,
-      communication.communicationGroupID,
       userID,
       communication.displayName
     );
@@ -309,7 +224,6 @@ export class CommunicationService {
   ): Promise<boolean> {
     const communicationRoomIDs = await this.getRoomsUsed(communication);
     await this.communicationAdapter.grantUserAccesToRooms(
-      communication.communicationGroupID,
       communicationRoomIDs,
       communicationUserID
     );

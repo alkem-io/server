@@ -24,11 +24,8 @@ export class UpdatesService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createUpdates(
-    communicationGroupID: string,
-    displayName: string
-  ): Promise<IUpdates> {
-    const updates = new Updates(communicationGroupID, displayName);
+  async createUpdates(displayName: string): Promise<IUpdates> {
+    const updates = new Updates(displayName);
     updates.authorization = new AuthorizationPolicy();
     updates.communicationRoomID =
       await this.roomService.initializeCommunicationRoom(updates);

@@ -8,7 +8,6 @@ import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
 import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { LogContext } from '@common/enums';
-import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Community } from '@domain/community/community';
 import {
@@ -202,15 +201,6 @@ export class NamingService {
     return UUID.REGEX.test(uuid);
   }
 
-  async getCommunicationGroupIdFromCollaborationId(
-    collaborationID: string
-  ): Promise<string> {
-    const communityID = await this.getCommunityIdFromCollaborationId(
-      collaborationID
-    );
-    return await this.getCommunicationGroupIdFromCommunityId(communityID);
-  }
-
   async getCommunityIdFromCollaborationId(collaborationID: string) {
     const [result]: {
       communityId: string;
@@ -227,101 +217,6 @@ export class NamingService {
       `
     );
     return result.communityId;
-  }
-
-  public async getCommunicationGroupIdForCalendarOrFail(
-    calendarID: string
-  ): Promise<string> {
-    const hub = await this.hubRepository
-      .createQueryBuilder('hub')
-      .leftJoinAndSelect('hub.community', 'community')
-      .leftJoinAndSelect('community.communication', 'communication')
-      .leftJoinAndSelect('hub.timeline', 'timeline')
-      .leftJoinAndSelect('timeline.calendar', 'calendar')
-      .where('calendar.id = :calendarID')
-      .setParameters({
-        calendarID: `${calendarID}`,
-      })
-      .getOne();
-    const communication = hub?.community?.communication;
-    if (communication) {
-      return communication.communicationGroupID;
-    }
-    throw new EntityNotFoundException(
-      `Unable to find Communication for Calendar: ${calendarID}`,
-      LogContext.CALENDAR
-    );
-  }
-
-  async getCommunicationGroupIdFromCommunityId(
-    communicationID: string
-  ): Promise<string> {
-    const community = await this.communityRepository
-      .createQueryBuilder('community')
-      .leftJoinAndSelect('community.communication', 'communication')
-      .where('community.id = :id')
-      .setParameters({ id: `${communicationID}` })
-      .getOne();
-    if (!community || !community.communication) {
-      throw new EntityNotInitializedException(
-        `Unable to identify Community for collaboration ${communicationID}!`,
-        LogContext.COMMUNITY
-      );
-    }
-    return community.communication.communicationGroupID;
-  }
-
-  async getCommunicationGroupIdForCallout(calloutID: string): Promise<string> {
-    const hub = await this.hubRepository
-      .createQueryBuilder('hub')
-      .leftJoinAndSelect('hub.community', 'community')
-      .leftJoinAndSelect('community.communication', 'communication')
-      .leftJoinAndSelect('hub.collaboration', 'collaboration')
-      .innerJoinAndSelect('collaboration.callouts', 'callout')
-      .where('callout.id = :id')
-      .setParameters({ id: `${calloutID}` })
-      .getOne();
-    if (hub) {
-      const communicationGroupID =
-        hub.community?.communication?.communicationGroupID;
-      return communicationGroupID || '';
-    }
-    // not on an hub, try challenge
-    const challenge = await this.challengeRepository
-      .createQueryBuilder('challenge')
-      .leftJoinAndSelect('challenge.community', 'community')
-      .leftJoinAndSelect('community.communication', 'communication')
-      .leftJoinAndSelect('challenge.collaboration', 'collaboration')
-      .innerJoinAndSelect('collaboration.callouts', 'callout')
-      .where('callout.id = :id')
-      .setParameters({ id: `${calloutID}` })
-      .getOne();
-    if (challenge) {
-      const communicationGroupID =
-        challenge.community?.communication?.communicationGroupID;
-      return communicationGroupID || '';
-    }
-
-    // and finally try on opportunity
-    const opportunity = await this.opportunityRepository
-      .createQueryBuilder('opportunity')
-      .leftJoinAndSelect('opportunity.community', 'community')
-      .leftJoinAndSelect('community.communication', 'communication')
-      .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
-      .innerJoinAndSelect('collaboration.callouts', 'callout')
-      .where('callout.id = :id')
-      .setParameters({ id: `${calloutID}` })
-      .getOne();
-    if (opportunity) {
-      const communicationGroupID =
-        opportunity.community?.communication?.communicationGroupID;
-      return communicationGroupID || '';
-    }
-
-    throw new RelationshipNotFoundException(
-      `Unable to find the communication ID for the provided callout: ${calloutID}`,
-      LogContext.CONTEXT
-    );
   }
 
   createNameID(base: string, useRandomSuffix = true): string {

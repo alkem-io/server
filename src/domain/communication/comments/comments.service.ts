@@ -24,11 +24,8 @@ export class CommentsService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createComments(
-    communicationGroupID: string,
-    displayName: string
-  ): Promise<IComments> {
-    const comments = new Comments(communicationGroupID, displayName);
+  async createComments(displayName: string): Promise<IComments> {
+    const comments = new Comments(displayName);
     comments.authorization = new AuthorizationPolicy();
     comments.communicationRoomID =
       await this.roomService.initializeCommunicationRoom(comments);
