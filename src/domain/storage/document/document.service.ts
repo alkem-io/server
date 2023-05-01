@@ -1,3 +1,4 @@
+import { Readable } from 'stream';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -82,10 +83,15 @@ export class DocumentService {
     if (!document)
       throw new EntityNotFoundException(
         `Not able to locate document with the specified ID: ${documentID}`,
-        LogContext.CALENDAR
+        LogContext.STORAGE_BUCKET
       );
     return document;
   }
+
+  public getDocumentContents(document: IDocument): Readable {
+    return Readable.from(this.ipfsAdapter.getFileContents(document.externalID));
+  }
+
   public async updateDocument(
     documentData: UpdateDocumentInput
   ): Promise<IDocument> {
