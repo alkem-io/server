@@ -3,13 +3,10 @@ import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { SelectionCriteria } from './selection/criteria/selection.criteria.entity';
 import { InnovationSpaceType } from './innovation.space.type.enum';
 import { Branding } from './branding/branding.entity';
-import { IInnovationSpace } from './innovation.space.interface';
+import { IInnovationHub } from './innovation.space.interface';
 
 @Entity()
-export class InnovationSpace
-  extends NameableEntity
-  implements IInnovationSpace
-{
+export class InnovationSpace extends NameableEntity implements IInnovationHub {
   @OneToOne(() => SelectionCriteria)
   @JoinColumn()
   selectionCriteria!: SelectionCriteria;

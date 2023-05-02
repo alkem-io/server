@@ -1,9 +1,11 @@
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { ILibrary } from '@library/library/library.interface';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IPlatform } from './platform.interface';
 import { PlatformService } from './platform.service';
+import { IInnovationHub } from '@domain/innovation-space/innovation.space.interface';
+import { InnovationHubArgsQuery } from '@domain/innovation-space/dto';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -36,5 +38,22 @@ export class PlatformResolverFields {
   })
   async storageBucket(@Parent() platform: IPlatform): Promise<IStorageBucket> {
     return await this.platformService.getStorageBucket(platform);
+  }
+
+  @ResolveField(() => [IInnovationHub], {
+    description: 'List of Innovation Hubs on the platform',
+  })
+  public async innovationHubs(): Promise<IInnovationHub[]> {
+    return [];
+  }
+
+  @ResolveField(() => IInnovationHub, {
+    description: 'Details about an Innovation Hubs on the platform',
+  })
+  public async innovationHub(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    @Args({ nullable: false }) args: InnovationHubArgsQuery
+  ): Promise<IInnovationHub> {
+    return { id: 'mock' } as IInnovationHub;
   }
 }

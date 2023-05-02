@@ -4,8 +4,8 @@ import { InnovationSpaceType } from './innovation.space.type.enum';
 import { IBranding } from './branding/branding.interface';
 import { ISelectionCriteria } from './selection/criteria/selection.criteria.interface';
 
-@ObjectType('InnovationSpace')
-export abstract class IInnovationSpace extends INameable {
+@ObjectType('InnovationHub')
+export abstract class IInnovationHub extends INameable {
   @Field(() => ISelectionCriteria, {
     description: 'The criteria based on which the data is filtered',
   })

@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
-import { InnovationSpaceResolverQueries } from './innovation.space.resolver.queries';
 
 @Module({
   imports: [],
-  providers: [InnovationSpaceResolverQueries],
+  providers: [],
 })
 export class InnovationSpaceModule {}
