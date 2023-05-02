@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { CalloutType } from '../../types/callout.type';
 import { createProfile } from '../create-profile';
 import { createAuthPolicy } from '../create-authorization-policy';
+import { updateToLinkCallout } from './update-to-link-callout';
 
 type CalloutOptions = {
   collaborationId: string;
