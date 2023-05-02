@@ -17,19 +17,23 @@ export const createCallout = async (
   const calloutId = await randomUUID();
 
   await queryRunner.query(`
-    INSERT INTO callout(id, version, nameID, type, authorizationId, collaborationId, sortOrder, profileId, \`group\`) VALUES
-    ('${calloutId}', 1, '${nameID}', '${type}', '${authId}', '${collaborationID}', 10, '${profileId}', 'knowledge')
+    INSERT INTO callout(id, version, nameID, type, authorizationId, collaborationId, sortOrder, profileId) VALUES
+    ('${calloutId}', 1, '${nameID}', '${type}', '${authId}', '${collaborationID}', 10, '${profileId}')
   `);
 
-  await updateCallout(collaborationID, type);
+  await updateCallout(queryRunner, calloutId, type);
 
   return { authId, profileId, calloutId };
 };
 
-const updateCallout = (calloutId: string, type: CalloutType) => {
+const updateCallout = (
+  queryRunner: QueryRunner,
+  calloutId: string,
+  type: CalloutType
+) => {
   switch (type) {
     case CalloutType.LINK_COLLECTION:
-      return updateToLinkCallout(calloutId);
+      return updateToLinkCallout(queryRunner, calloutId);
     default:
       throw new Error(`'${type}' handler not implemented!`);
   }
