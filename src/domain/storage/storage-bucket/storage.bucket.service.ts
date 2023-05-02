@@ -121,7 +121,6 @@ export class StorageBucketService {
 
     return documents;
   }
-
   public async uploadFileAsDocument(
     storageBucket: IStorageBucket,
     readStream: ReadStream,

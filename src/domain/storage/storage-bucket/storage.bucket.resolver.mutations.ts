@@ -168,4 +168,13 @@ export class StorageBucketResolverMutations {
     };
     return await this.referenceService.updateReference(updateData);
   }
+
+  @Mutation(() => Boolean, {
+    description: 'Migrate all data',
+  })
+  @Profiling.api
+  async migrate(@CurrentUser() agentInfo: AgentInfo): Promise<boolean> {
+    await this.storageBucketResolverService.migrate();
+    return true;
+  }
 }

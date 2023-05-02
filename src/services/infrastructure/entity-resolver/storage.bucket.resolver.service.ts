@@ -4,6 +4,8 @@ import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { StorageBucketNotFoundException } from '@common/exceptions/storage.bucket.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { replaceRegex } from '@common/utils/replace.regex';
+import { Reference } from '@domain/common/reference';
 
 @Injectable()
 export class StorageBucketResolverService {
@@ -15,7 +17,7 @@ export class StorageBucketResolverService {
 
   public async getStorageBucketIdForProfile(
     profileID: string
-  ): Promise<string> {
+  ): Promise<string | never> {
     // First iterate over all the entity types that have storage spaces directly
     for (const entityName of Object.values(DirectStorageBucketEntityType)) {
       const match = await this.getDirectStorageBucketForProfile(
@@ -81,7 +83,6 @@ export class StorageBucketResolverService {
           LogContext.STORAGE_BUCKET
         );
     }
-    return '';
   }
 
   private async getDirectStorageBucketForProfile(
@@ -249,6 +250,17 @@ export class StorageBucketResolverService {
     if (result && result.storageBucketId) return result.storageBucketId;
 
     return this.getPlatformStorageBucketId();
+  }
+
+  public async migrate(): Promise<boolean> {
+    await replaceRegex(
+      this.entityManager,
+      Reference,
+      'uri',
+      '^https?://([a-zA-Z0-9-]+(?:.[a-zA-Z0-9-]+)*)/ipfs/(Qm[a-zA-Z0-9]{44})$',
+      () => 'test'
+    );
+    return true;
   }
 }
 
