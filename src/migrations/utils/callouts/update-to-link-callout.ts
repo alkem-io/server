@@ -1,8 +1,3 @@
-import { QueryRunner } from 'typeorm';
-
-export const updateToLinkCallout = async (
-  queryRunner: QueryRunner,
-  id: string
-) => {
+export const updateToLinkCallout = async (id: string) => {
   return id;
 };

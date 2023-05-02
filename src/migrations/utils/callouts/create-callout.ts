@@ -48,7 +48,7 @@ const updateCallout = (
 ) => {
   switch (type) {
     case CalloutType.LINK_COLLECTION:
-      return updateToLinkCallout(queryRunner, calloutId);
+      return updateToLinkCallout(calloutId);
     default:
       throw new Error(`'${type}' handler not implemented!`);
   }
