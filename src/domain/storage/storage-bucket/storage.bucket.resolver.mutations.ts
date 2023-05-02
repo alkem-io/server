@@ -79,6 +79,7 @@ export class StorageBucketResolverMutations {
     //   `visual image upload on storage space: ${visual.id}`
     // );
     const readStream = createReadStream();
+
     const visualDocument = await this.storageBucketService.uploadImageOnVisual(
       visual,
       storageBucket,
@@ -88,6 +89,7 @@ export class StorageBucketResolverMutations {
       agentInfo.userID
     );
 
+    visualDocument.anonymousReadAccess = true;
     // Ensure authorization is updated
     await this.documentAuthorizationService.applyAuthorizationPolicy(
       visualDocument,

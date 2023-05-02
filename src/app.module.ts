@@ -54,6 +54,7 @@ import { InnovationSpaceModule } from '@domain/innovation-space/innovation.space
 import { StorageAccessController } from '@services/api-rest/storage-access/storage.access.controller';
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
+import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
 
 @Module({
   imports: [
@@ -208,12 +209,9 @@ import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/
     ElasticsearchModule,
     InnovationSpaceModule,
     SsiCredentialFlowModule,
+    StorageAccessModule,
   ],
-  controllers: [
-    AppController,
-    StorageAccessController,
-    SsiCredentialFlowController,
-  ],
+  controllers: [AppController, SsiCredentialFlowController],
   providers: [
     {
       provide: APP_INTERCEPTOR,
