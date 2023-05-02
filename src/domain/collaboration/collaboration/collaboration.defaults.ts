@@ -39,6 +39,18 @@ export const collaborationDefaults: any = {
     {
       type: CalloutType.COMMENTS,
       profile: {
+        displayName: 'Recommended by the Host',
+        description: 'Please find below quick start links.',
+      },
+      nameID: 'recommendations',
+      visibility: CalloutVisibility.PUBLISHED,
+      state: CalloutState.CLOSED,
+      sortOrder: 3,
+      group: 'RECOMMENDATIONS',
+    },
+    {
+      type: CalloutType.COMMENTS,
+      profile: {
         displayName: 'Suggestions, Questions, and Feedback',
         description: 'Please share it here :)',
       },
