@@ -8,6 +8,10 @@ export class recommendationsToLinkCollection1682490418949
   name = 'recommendationsToLinkCollection1682490418949';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE \`profile\` DROP COLUMN \`storageBucketId\``
+    );
+
     const references: { contextRecommendationId: string }[] =
       await queryRunner.query(`
         SELECT contextRecommendationId FROM reference WHERE contextRecommendationId IS NOT NULL
@@ -76,6 +80,9 @@ export class recommendationsToLinkCollection1682490418949
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE \`profile\` ADD \`storageBucketId\` char(36) NULL`
+    );
     // WARNING
     // we cannot diff between what was a reference attached to a callout and a link attached to a link collection callout
     // all the old references attached to callouts and all the migrated recommendations will now be migrated to recommendations
