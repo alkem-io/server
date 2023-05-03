@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto';
+import { QueryRunner } from 'typeorm';
 import { createLocation } from './create-location';
 import { createAuthPolicy } from './create-authorization-policy';
-import { QueryRunner } from 'typeorm';
-import { createTagset } from '@src/migrations/utils/create-tagset';
+import { createTagset } from './create-tagset';
 
 type ProfileOptions = {
   displayName?: string;

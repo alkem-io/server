@@ -1,9 +1,15 @@
 import { QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { CalloutType } from '../../types/callout.type';
 import { createProfile } from '../create-profile';
 import { createAuthPolicy } from '../create-authorization-policy';
 import { updateToLinkCallout } from './update-to-link-callout';
+
+enum CalloutType {
+  CARD = 'card',
+  CANVAS = 'canvas',
+  COMMENTS = 'comments',
+  LINK_COLLECTION = 'link-collection',
+}
 
 type CalloutOptions = {
   collaborationId: string;

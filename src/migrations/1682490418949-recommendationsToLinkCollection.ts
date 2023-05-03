@@ -1,8 +1,21 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { createCallout } from './utils/callouts/create-callout';
-import { CalloutType } from './types/callout.type';
-import { CalloutState } from './types/callout-state';
-import { CalloutVisibility } from './types/callout-visiblity';
+
+enum CalloutType {
+  CARD = 'card',
+  CANVAS = 'canvas',
+  COMMENTS = 'comments',
+  LINK_COLLECTION = 'link-collection',
+}
+enum CalloutState {
+  OPEN = 'open',
+  CLOSED = 'closed',
+  ARCHIVED = 'archived',
+}
+enum CalloutVisibility {
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
+}
 
 export class recommendationsToLinkCollection1682490418949
   implements MigrationInterface
