@@ -1,11 +1,12 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
-import { EntityManager } from 'typeorm';
+import { EntityManager, ObjectType } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { StorageBucketNotFoundException } from '@common/exceptions/storage.bucket.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { replaceRegex } from '@common/utils/replace.regex';
 import { Reference } from '@domain/common/reference';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 
 @Injectable()
 export class StorageBucketResolverService {
@@ -28,7 +29,7 @@ export class StorageBucketResolverService {
     }
 
     // Check the other places where a profile could be used
-    const result = await this.getProfileType(profileID);
+    const result = await getProfileType(profileID, this.entityManager);
     if (!result) {
       throw new StorageBucketNotFoundException(
         `Unable to find StorageBucket for Profile with ID: ${profileID}`,
@@ -99,38 +100,6 @@ export class StorageBucketResolverService {
 
     if (result) {
       return result.storageBucketId;
-    }
-
-    return undefined;
-  }
-
-  private async getEntityForProfile(
-    profileID: string,
-    entityName: ProfileType
-  ): Promise<ProfileResult | undefined> {
-    const query = `SELECT \`${entityName}\`.\`id\` as \`entityId\`
-    FROM \`${entityName}\` WHERE \`${entityName}\`.\`profileId\` = '${profileID}'`;
-    const [result]: {
-      entityId: string;
-      storageBucketId: string;
-    }[] = await this.entityManager.connection.query(query);
-
-    if (result) {
-      return {
-        type: entityName,
-        entityID: result.entityId,
-      };
-    }
-
-    return undefined;
-  }
-
-  private async getProfileType(
-    profileID: string
-  ): Promise<ProfileResult | undefined> {
-    for (const entityName of Object.values(ProfileType)) {
-      const match = await this.getEntityForProfile(profileID, entityName);
-      if (match) return match;
     }
 
     return undefined;
@@ -257,11 +226,92 @@ export class StorageBucketResolverService {
       this.entityManager,
       Reference,
       'uri',
-      '^https?://([a-zA-Z0-9-]+(?:.[a-zA-Z0-9-]+)*)/ipfs/(Qm[a-zA-Z0-9]{44})$',
-      () => 'test'
+      '^https?:\\/\\/([a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*)\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
+      replaceIpfsWithDocument
     );
     return true;
   }
+}
+
+async function getDocumentProfileType(
+  profileID: string,
+  entityManager: EntityManager
+): Promise<ProfileResult | never> {
+  // Check the other places where a profile could be used
+  const result = await getProfileType(profileID, entityManager);
+  console.log(JSON.stringify(result));
+  if (!result) {
+    throw new StorageBucketNotFoundException(
+      `Unable to find StorageBucket for Profile with ID: ${profileID}`,
+      LogContext.STORAGE_BUCKET
+    );
+  }
+  return result;
+}
+
+async function getProfileType(
+  profileID: string,
+  entityManager: EntityManager
+): Promise<ProfileResult | undefined> {
+  for (const entityName of Object.values(ProfileType)) {
+    const match = await getEntityForProfile(
+      profileID,
+      entityName,
+      entityManager
+    );
+    if (match) return match;
+  }
+
+  return undefined;
+}
+
+async function getEntityForProfile(
+  profileID: string,
+  entityName: ProfileType,
+  entityManager: EntityManager
+): Promise<ProfileResult | undefined> {
+  const query = `SELECT \`${entityName}\`.\`id\` as \`entityId\`
+  FROM \`${entityName}\` WHERE \`${entityName}\`.\`profileId\` = '${profileID}'`;
+  const [result]: {
+    entityId: string;
+    storageBucketId: string;
+  }[] = await entityManager.connection.query(query);
+
+  if (result) {
+    return {
+      type: entityName,
+      entityID: result.entityId,
+    };
+  }
+
+  return undefined;
+}
+
+async function replaceIpfsWithDocument<T extends BaseAlkemioEntity>(
+  entityManager: EntityManager,
+  entityClass: ObjectType<T>,
+  regex: RegExp,
+  matchedText: string,
+  row: any
+): Promise<string> {
+  const entity = await entityManager.findOne(entityClass, {
+    where: {
+      id: row.id,
+    },
+    relations: ['profile'],
+  });
+
+  const profileID = (entity as any).profile?.id;
+  const profileType = await getDocumentProfileType(profileID, entityManager);
+
+  // matchedText.replace(regex, (match, group1, group2) => {
+  //   if (group2) {
+  //     return group1 + replacement;
+  //   }
+  //   return match;
+  // });
+
+  return '';
 }
 
 type ProfileResult = {

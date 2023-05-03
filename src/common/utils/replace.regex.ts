@@ -1,34 +1,43 @@
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { EntityManager, ObjectType } from 'typeorm';
 
-type ReplacementCallback = (matchedText: string) => string;
+type ReplacementCallback<T extends BaseAlkemioEntity> = (
+  entityManager: EntityManager,
+  entityClass: ObjectType<T>,
+  regexp: RegExp,
+  matchedText: string,
+  row: any
+) => Promise<string>;
 
 export async function replaceRegex<T extends BaseAlkemioEntity>(
   entityManager: EntityManager,
   entityClass: ObjectType<T>,
   columnName: string,
   regex: string,
-  replacementCallback: ReplacementCallback
+  replacementCallback: ReplacementCallback<T>
 ): Promise<any> {
-  console.log('match');
   const queryBuilder = entityManager.connection
     .getRepository(entityClass)
     .createQueryBuilder();
   const escapedColumn = queryBuilder.escape(columnName);
-
   // Fetch all rows with the matching regex
   const rows = await queryBuilder
     .select()
-    .where(`${escapedColumn} REGEXP :regex`)
+    .where(`${columnName} REGEXP :regex`)
     .setParameters({ regex })
     .getMany();
 
   // Update each row with the replaced text
   for (const row of rows) {
-    console.log('match');
-    const matchedText = (row as any)[columnName].match(new RegExp(regex))[0];
-    const replacementText = replacementCallback(matchedText);
-    console.log('match');
+    const regExp = new RegExp(regex);
+    const matchedText = (row as any)[columnName].match(regExp)[0];
+    const replacementText = await replacementCallback(
+      entityManager,
+      entityClass,
+      regExp,
+      matchedText,
+      row
+    );
     await queryBuilder
       .update(entityClass)
       .set({
