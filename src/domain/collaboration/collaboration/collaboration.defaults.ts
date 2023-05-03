@@ -37,7 +37,7 @@ export const collaborationDefaults: any = {
       group: 'HOME_2',
     },
     {
-      type: CalloutType.COMMENTS,
+      type: CalloutType.LINK_COLLECTION,
       profile: {
         displayName: 'Recommended by the Host',
         description: 'Please find below quick start links.',
