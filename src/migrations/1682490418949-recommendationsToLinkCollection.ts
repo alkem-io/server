@@ -1,6 +1,21 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { createCallout } from '@src/migrations/utils/callouts/create-callout';
-import { CalloutType } from '@src/migrations/types/callout.type';
+import { createCallout } from './utils/callouts/create-callout';
+
+enum CalloutType {
+  CARD = 'card',
+  CANVAS = 'canvas',
+  COMMENTS = 'comments',
+  LINK_COLLECTION = 'link-collection',
+}
+enum CalloutState {
+  OPEN = 'open',
+  CLOSED = 'closed',
+  ARCHIVED = 'archived',
+}
+enum CalloutVisibility {
+  DRAFT = 'draft',
+  PUBLISHED = 'published',
+}
 
 export class recommendationsToLinkCollection1682490418949
   implements MigrationInterface
@@ -58,12 +73,14 @@ export class recommendationsToLinkCollection1682490418949
         );
       }
 
-      const { profileId } = await createCallout(
-        queryRunner,
+      const { profileId } = await createCallout(queryRunner, {
         collaborationId,
-        CalloutType.LINK_COLLECTION,
-        'link-collection'
-      );
+        type: CalloutType.LINK_COLLECTION,
+        nameID: 'link-collection',
+        state: CalloutState.CLOSED,
+        visibility: CalloutVisibility.PUBLISHED,
+        group: 'HOME_0',
+      });
 
       await queryRunner.query(`
           UPDATE reference SET profileId = '${profileId}'
