@@ -1,11 +1,3 @@
-import { QueryRunner } from 'typeorm';
-
-export const updateToLinkCallout = async (
-  queryRunner: QueryRunner,
-  id: string
-) => {
-  return queryRunner.query(
-    `UPDATE callout SET \`group\` = 'HOME_0'
-     WHERE id = '${id}'`
-  );
+export const updateToLinkCallout = async (id: string) => {
+  return id;
 };
