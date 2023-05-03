@@ -30,7 +30,7 @@ export class CreateProfileInput {
     description: 'A memorable short description for this entity.',
   })
   @IsOptional()
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   tagline?: string;
 
   @Field(() => Markdown, { nullable: true })
