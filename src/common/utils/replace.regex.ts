@@ -4,7 +4,7 @@ import { EntityManager, ObjectType } from 'typeorm';
 type ReplacementCallback<T extends BaseAlkemioEntity> = (
   entityManager: EntityManager,
   entityClass: ObjectType<T>,
-  regexp: RegExp,
+  regex: RegExp,
   matchedText: string,
   row: any
 ) => Promise<string>;
