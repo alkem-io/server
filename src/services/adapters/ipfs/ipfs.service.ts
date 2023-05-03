@@ -56,11 +56,15 @@ export class IpfsService {
     return res.path;
   }
 
+  public getFileContents(CID: string): AsyncIterable<Uint8Array> | never {
+    return this.ipfsClient.cat(CID);
+  }
+
   public createIpfsClientEndPoint(CID: string): string {
     return `${this.ipfsClientEndpoint}/${CID}`;
   }
 
-  public async unpinFile(CID: string): Promise<CID> {
+  public unpinFile(CID: string): Promise<CID> {
     this.logger.verbose?.(`Unpinning file from CID: ${CID}`, LogContext.IPFS);
 
     try {
