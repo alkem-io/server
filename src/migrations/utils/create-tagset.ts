@@ -4,9 +4,16 @@ import { createAuthPolicy } from './create-authorization-policy';
 
 type TagsetOptions = {
   tags?: string[];
-  name?: string;
+  name?: RestrictedTagsetNames;
   profileId?: string;
 };
+
+enum RestrictedTagsetNames {
+  DEFAULT = 'default',
+  SKILLS = 'skills',
+  CAPABILITIES = 'capabilities',
+  KEYWORDS = 'keywords',
+}
 
 export const createTagset = async (
   queryRunner: QueryRunner,
