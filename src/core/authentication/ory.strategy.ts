@@ -3,7 +3,7 @@ import {
   ConfigurationTypes,
   LogContext,
 } from '@common/enums';
-import { TokenException } from '@common/exceptions';
+import { AuthenticationException, TokenException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy } from '@nestjs/passport';
@@ -44,7 +44,7 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
 
     if (!payload.session) {
       this.logger.verbose?.('No Ory Kratos session', LogContext.AUTH);
-      return null;
+      return this.authService.createAgentInfo();
     }
 
     if (checkIfTokenHasExpired(payload.exp)) {
