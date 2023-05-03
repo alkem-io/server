@@ -6,7 +6,6 @@ import {
   ValidateNested,
 } from 'class-validator';
 import {
-  MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
   VERY_LONG_TEXT_LENGTH,
 } from '@src/common/constants';
@@ -28,7 +27,7 @@ export class UpdateProfileInput {
     description: 'A memorable short description for this entity.',
   })
   @IsOptional()
-  @MaxLength(MID_TEXT_LENGTH)
+  @MaxLength(SMALL_TEXT_LENGTH)
   tagline?: string;
 
   @Field(() => Markdown, { nullable: true })
