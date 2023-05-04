@@ -1,9 +1,11 @@
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
+import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
 import { EntityManager, ObjectType } from 'typeorm';
 
 type ReplacementCallback<T extends BaseAlkemioEntity> = (
   entityManager: EntityManager,
   entityClass: ObjectType<T>,
+  ipfsService: IpfsService,
   regex: RegExp,
   matchedText: string,
   row: any
@@ -12,6 +14,7 @@ type ReplacementCallback<T extends BaseAlkemioEntity> = (
 export async function replaceRegex<T extends BaseAlkemioEntity>(
   entityManager: EntityManager,
   entityClass: ObjectType<T>,
+  ipfsService: IpfsService,
   columnName: string,
   regex: string,
   replacementCallback: ReplacementCallback<T>
@@ -34,6 +37,7 @@ export async function replaceRegex<T extends BaseAlkemioEntity>(
     const replacementText = await replacementCallback(
       entityManager,
       entityClass,
+      ipfsService,
       regExp,
       matchedText,
       row

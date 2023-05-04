@@ -176,7 +176,7 @@ export class StorageBucketResolverMutations {
   })
   @Profiling.api
   async migrate(@CurrentUser() agentInfo: AgentInfo): Promise<boolean> {
-    await this.storageBucketResolverService.migrate();
+    await this.storageBucketResolverService.migrate(agentInfo);
     return true;
   }
 }

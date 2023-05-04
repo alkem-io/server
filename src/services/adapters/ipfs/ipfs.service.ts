@@ -60,6 +60,14 @@ export class IpfsService {
     return this.ipfsClient.cat(CID);
   }
 
+  public async getBufferByCID(CID: string): Promise<Buffer> {
+    const chunks = [];
+    for await (const chunk of this.ipfsClient.cat(CID)) {
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
+  }
+
   public createIpfsClientEndPoint(CID: string): string {
     return `${this.ipfsClientEndpoint}/${CID}`;
   }

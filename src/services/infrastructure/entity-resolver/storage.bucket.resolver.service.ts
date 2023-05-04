@@ -7,13 +7,18 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { replaceRegex } from '@common/utils/replace.regex';
 import { Reference } from '@domain/common/reference';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
+import { AgentInfo } from '@core/authentication';
+import { fromBuffer } from 'file-type';
+import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
 
 @Injectable()
 export class StorageBucketResolverService {
   constructor(
     @InjectEntityManager('default')
     private entityManager: EntityManager,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private ipfsService: IpfsService
   ) {}
 
   public async getStorageBucketIdForProfile(
@@ -63,12 +68,14 @@ export class StorageBucketResolverService {
 
     return undefined;
   }
-  public async migrate(): Promise<boolean> {
+  public async migrate(agentInfo: AgentInfo): Promise<boolean> {
     await replaceRegex(
       this.entityManager,
       Reference,
+      this.ipfsService,
       'uri',
-      '^https?:\\/\\/([a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*)(\\/ipfs\\/Qm[a-zA-Z0-9]{44})$',
+      // '(^https?:\\/\\/[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*)\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
+      '^(https?:\\/\\/)([a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*|localhost)(:\\d+)?\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
       replaceIpfsWithDocument
     );
     return true;
@@ -311,10 +318,10 @@ async function getEntityForProfile(
 
   return undefined;
 }
-
 async function replaceIpfsWithDocument<T extends BaseAlkemioEntity>(
   entityManager: EntityManager,
   entityClass: ObjectType<T>,
+  ipfsService: IpfsService,
   regex: RegExp,
   matchedText: string,
   row: any
@@ -334,16 +341,25 @@ async function replaceIpfsWithDocument<T extends BaseAlkemioEntity>(
   );
 
   let updatedURI = matchedText;
+  let CID = '';
+  console.log(matchedText);
   const replacement =
     '/api/private/rest/storage/document/5379b41c-29a3-4980-89b9-7f97b8251b2e';
   matchedText.replace(regex, (match, group1, group2) => {
     if (group2) {
+      CID = group2;
       updatedURI = group1 + replacement;
       return group1 + replacement;
     }
     return match;
   });
 
+  console.log(2);
+  const fileContents = await ipfsService.getBufferByCID(CID);
+  console.log(3);
+  const fileType = await fromBuffer(fileContents);
+  console.log(4);
+  console.log(fileType);
   return updatedURI;
 }
 
