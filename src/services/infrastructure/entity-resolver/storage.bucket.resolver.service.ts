@@ -132,6 +132,15 @@ async function getStorageBucketIdForCallout(
   WHERE \`callout\`.\`id\`='${calloutId}'`;
   [result] = await entityManager.connection.query(query);
 
+  query = `SELECT \`storageBucketId\` FROM \`challenge\`
+  LEFT JOIN \`opportunity\` ON \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
+  LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
+  LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+  WHERE \`callout\`.\`id\`='${calloutId}'`;
+  [result] = await entityManager.connection.query(query);
+
+  if (result && result.storageBucketId) return result.storageBucketId;
+
   return result.storageBucketId;
 }
 
@@ -157,6 +166,16 @@ async function getStorageBucketIdForCalloutType(
   LEFT JOIN \`${calloutType}\` ON \`${calloutType}\`.\`calloutId\` = \`callout\`.\`id\`
   WHERE \`${calloutType}\`.\`id\`='${entityId}'`;
   [result] = await entityManager.connection.query(query);
+
+  query = `SELECT \`storageBucketId\` FROM \`challenge\`
+  LEFT JOIN \`opportunity\` ON \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
+  LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
+  LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+  LEFT JOIN \`${calloutType}\` ON \`${calloutType}\`.\`calloutId\` = \`callout\`.\`id\`
+  WHERE \`${calloutType}\`.\`id\`='${entityId}'`;
+  [result] = await entityManager.connection.query(query);
+
+  if (result && result.storageBucketId) return result.storageBucketId;
 
   return result.storageBucketId;
 }
@@ -208,16 +227,6 @@ async function getStorageBucketIdForDiscussion(
 
   if (result && result.storageBucketId) return result.storageBucketId;
 
-    query = `SELECT \`storageBucketId\` FROM \`challenge\`
-    LEFT JOIN \`opportunity\` ON \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
-    LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
-    LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
-    WHERE \`callout\`.\`id\`='${calloutId}'`;
-    [result] = await this.entityManager.connection.query(query);
-
-    if (result && result.storageBucketId) return result.storageBucketId;
-
-    return result.storageBucketId;
   return getPlatformStorageBucketId(entityManager);
 }
 
