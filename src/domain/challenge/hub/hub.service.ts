@@ -31,7 +31,7 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { challengeInnovationFlowConfigDefault } from '@domain/template/templates-set/templates.set.default.innovation.flow.challenge';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, In, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Hub } from './hub.entity';
@@ -392,6 +392,12 @@ export class HubService {
         challengeAndOpportunitiesCount += challenge.opportunities.length;
     }
     return challengeAndOpportunitiesCount;
+  }
+
+  async getHubsById(hubIds: string[], options?: FindManyOptions) {
+    return this.hubRepository.find({
+      where: { id: In(hubIds) },
+    });
   }
 
   async getHubOrFail(

@@ -50,8 +50,7 @@ import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
-import { InnovationSpaceModule } from '@domain/innovation-space/innovation.space.module';
-import { StorageAccessController } from '@services/api-rest/storage-access/storage.access.controller';
+import { InnovationHubModule } from '@domain/innovation-hub';
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
@@ -207,7 +206,7 @@ import { StorageAccessModule } from '@services/api-rest/storage-access/storage.a
     AspectMoveModule,
     GeoLocationModule,
     ElasticsearchModule,
-    InnovationSpaceModule,
+    InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
   ],
