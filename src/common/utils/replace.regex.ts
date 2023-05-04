@@ -1,4 +1,6 @@
+import { AgentInfo } from '@core/authentication';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
 import { EntityManager, ObjectType } from 'typeorm';
 
@@ -6,6 +8,8 @@ type ReplacementCallback<T extends BaseAlkemioEntity> = (
   entityManager: EntityManager,
   entityClass: ObjectType<T>,
   ipfsService: IpfsService,
+  storageBucketService: StorageBucketService,
+  agentInfo: AgentInfo,
   regex: RegExp,
   matchedText: string,
   row: any
@@ -15,6 +19,8 @@ export async function replaceRegex<T extends BaseAlkemioEntity>(
   entityManager: EntityManager,
   entityClass: ObjectType<T>,
   ipfsService: IpfsService,
+  storageBucketService: StorageBucketService,
+  agentInfo: AgentInfo,
   columnName: string,
   regex: string,
   replacementCallback: ReplacementCallback<T>
@@ -38,6 +44,8 @@ export async function replaceRegex<T extends BaseAlkemioEntity>(
       entityManager,
       entityClass,
       ipfsService,
+      storageBucketService,
+      agentInfo,
       regExp,
       matchedText,
       row

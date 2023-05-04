@@ -10,6 +10,8 @@ import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { AgentInfo } from '@core/authentication';
 import { fromBuffer } from 'file-type';
 import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { MimeTypeNotFoundException } from '@common/exceptions/mime.type.not.found.exception';
 
 @Injectable()
 export class StorageBucketResolverService {
@@ -18,7 +20,8 @@ export class StorageBucketResolverService {
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private ipfsService: IpfsService
+    private ipfsService: IpfsService,
+    private storageBucketService: StorageBucketService
   ) {}
 
   public async getStorageBucketIdForProfile(
@@ -73,9 +76,12 @@ export class StorageBucketResolverService {
       this.entityManager,
       Reference,
       this.ipfsService,
+      this.storageBucketService,
+      agentInfo,
       'uri',
+      'http:\\/\\/localhost:3000\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
       // '(^https?:\\/\\/[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*)\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
-      '^(https?:\\/\\/)([a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*|localhost)(:\\d+)?\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
+      // '^(https?:\\/\\/)([a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*|localhost)(:\\d+)?\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
       replaceIpfsWithDocument
     );
     return true;
@@ -322,6 +328,8 @@ async function replaceIpfsWithDocument<T extends BaseAlkemioEntity>(
   entityManager: EntityManager,
   entityClass: ObjectType<T>,
   ipfsService: IpfsService,
+  storageBucketService: StorageBucketService,
+  agentInfo: AgentInfo,
   regex: RegExp,
   matchedText: string,
   row: any
@@ -335,31 +343,51 @@ async function replaceIpfsWithDocument<T extends BaseAlkemioEntity>(
 
   const profileID = (entity as any).profile?.id;
   const profileResult = await getDocumentProfileType(profileID, entityManager);
-  const storageBucket = await getStorageBucketIdForProfileResult(
+  const storageBucketId = await getStorageBucketIdForProfileResult(
     entityManager,
     profileResult
+  );
+
+  const storageBucket = await storageBucketService.getStorageBucketOrFail(
+    storageBucketId
   );
 
   let updatedURI = matchedText;
   let CID = '';
   console.log(matchedText);
-  const replacement =
-    '/api/private/rest/storage/document/5379b41c-29a3-4980-89b9-7f97b8251b2e';
+  let replacement = '';
   matchedText.replace(regex, (match, group1, group2) => {
-    if (group2) {
-      CID = group2;
+    if (group1) {
+      CID = group1;
       updatedURI = group1 + replacement;
       return group1 + replacement;
     }
     return match;
   });
 
-  console.log(2);
+  console.log(CID);
+
   const fileContents = await ipfsService.getBufferByCID(CID);
-  console.log(3);
   const fileType = await fromBuffer(fileContents);
-  console.log(4);
   console.log(fileType);
+
+  if (!fileType?.mime)
+    throw new MimeTypeNotFoundException(
+      `Mime type not found for document with CID ${CID}`,
+      LogContext.STORAGE_BUCKET
+    );
+
+  console.log(JSON.stringify(agentInfo));
+  const document = await storageBucketService.uploadFileAsDocumentFromBuffer(
+    storageBucket,
+    fileContents,
+    CID,
+    fileType?.mime,
+    agentInfo.userID
+  );
+
+  replacement = `/api/private/rest/storage/document/${document.id}`;
+
   return updatedURI;
 }
 

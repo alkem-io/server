@@ -1,5 +1,5 @@
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Document } from './document.entity';
@@ -16,7 +16,7 @@ import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
     AuthorizationPolicyModule,
     AuthorizationModule,
     TagsetModule,
-    UserModule,
+    forwardRef(() => UserModule),
     IpfsModule,
     TypeOrmModule.forFeature([Document]),
   ],

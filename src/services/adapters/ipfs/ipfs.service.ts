@@ -61,6 +61,7 @@ export class IpfsService {
   }
 
   public async getBufferByCID(CID: string): Promise<Buffer> {
+    console.log(CID);
     const chunks = [];
     for await (const chunk of this.ipfsClient.cat(CID)) {
       chunks.push(chunk);

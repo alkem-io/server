@@ -1,5 +1,5 @@
 import { User } from '@domain/community/user/user.entity';
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { Updates } from '@domain/communication/updates/updates.entity';
@@ -9,6 +9,7 @@ import { Community } from '@domain/community/community/community.entity';
 import { StorageBucketResolverService } from './storage.bucket.resolver.service';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
+import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
     TypeOrmModule.forFeature([Community]),
     TypeOrmModule.forFeature([Communication]),
     IpfsModule,
+    forwardRef(() => StorageBucketModule),
   ],
   providers: [
     IdentityResolverService,

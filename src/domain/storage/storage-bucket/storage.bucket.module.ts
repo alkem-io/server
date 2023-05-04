@@ -1,6 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
 import { DocumentModule } from '../document/document.module';
@@ -21,7 +21,7 @@ import { ReferenceModule } from '@domain/common/reference/reference.module';
     AuthorizationPolicyModule,
     IpfsModule,
     VisualModule,
-    EntityResolverModule,
+    forwardRef(() => EntityResolverModule),
     ReferenceModule,
     TypeOrmModule.forFeature([StorageBucket]),
     TypeOrmModule.forFeature([Document]),

@@ -171,6 +171,7 @@ export class StorageBucketResolverMutations {
     return await this.referenceService.updateReference(updateData);
   }
 
+  @UseGuards(GraphqlGuard)
   @Mutation(() => Boolean, {
     description: 'Migrate all data',
   })
