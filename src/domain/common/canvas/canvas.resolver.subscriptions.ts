@@ -13,6 +13,7 @@ import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { UnableToSubscribeException } from '@common/exceptions';
 
 @Resolver()
 export class CanvasResolverSubscriptions {
@@ -84,34 +85,31 @@ export class CanvasResolverSubscriptions {
     @Args({
       name: 'canvasIDs',
       type: () => [UUID],
-      description:
-        'The IDs of the Canvases to subscribe to; if omitted subscribe to all Canvas content updates.',
-      nullable: true,
+      description: 'The IDs of the Canvases to subscribe to.',
+      nullable: false,
     })
     canvasIDs: string[]
   ) {
-    if (canvasIDs) {
-      this.logger.verbose?.(
-        `[UpdateMsg] User (${agentInfo.email}) subscribing to the following updates: ${canvasIDs}`,
+    if (!canvasIDs.length) {
+      throw new UnableToSubscribeException(
+        'You need to provide at least one canvas ID',
         LogContext.SUBSCRIPTIONS
       );
-      for (const canvasID of canvasIDs) {
-        // check the user has the READ privilege
-        const canvas = await this.canvasService.getCanvasOrFail(canvasID);
-        await this.authorizationService.grantAccessOrFail(
-          agentInfo,
-          canvas.authorization,
-          AuthorizationPrivilege.READ,
-          `subscription to canvas content update of: ${canvas.nameID}`
-        );
-      }
-    } else {
-      this.logger.verbose?.(
-        `User (${agentInfo.email}) subscribing to all canvases content update`,
-        LogContext.SUBSCRIPTIONS
+    }
+
+    this.logger.verbose?.(
+      `[UpdateMsg] User (${agentInfo.email}) subscribing to the following updates: ${canvasIDs}`,
+      LogContext.SUBSCRIPTIONS
+    );
+    for (const canvasID of canvasIDs) {
+      // check the user has the READ privilege
+      const canvas = await this.canvasService.getCanvasOrFail(canvasID);
+      await this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        canvas.authorization,
+        AuthorizationPrivilege.READ,
+        `subscription to canvas content update of: ${canvas.nameID}`
       );
-      // Todo: either disable this option or find a way to do this once in this method and pass the resulting
-      // array of discussionIDs to the filter call
     }
 
     return this.subscriptionCanvasContent.asyncIterator(

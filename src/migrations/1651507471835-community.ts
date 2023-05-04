@@ -6,7 +6,20 @@ import {
 } from '@domain/challenge';
 import { opportunityCommunityPolicy } from '@domain/collaboration/opportunity';
 import { AuthorizationCredential } from '@common/enums';
-import { CommunityPolicy } from './types/community.policy';
+import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+
+type CommunityPolicy = {
+  member: CommunityPolicyRole;
+  lead: CommunityPolicyRole;
+};
+
+type CommunityPolicyRole = {
+  credential: CredentialDefinition;
+  minUser: number;
+  maxUser: number;
+  minOrg: number;
+  maxOrg: number;
+};
 
 export class community1651507471835 implements MigrationInterface {
   name = 'community1651507471835';
