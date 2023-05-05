@@ -89,7 +89,6 @@ export class StorageBucketResolverMutations {
       agentInfo.userID
     );
 
-    visualDocument.anonymousReadAccess = true;
     // Ensure authorization is updated
     await this.documentAuthorizationService.applyAuthorizationPolicy(
       visualDocument,
