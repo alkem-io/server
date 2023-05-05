@@ -12,7 +12,8 @@ type ReplacementCallback<T extends BaseAlkemioEntity> = (
   agentInfo: AgentInfo,
   regex: RegExp,
   matchedText: string,
-  row: any
+  row: any,
+  anonymousReadAccess: boolean
 ) => Promise<string>;
 
 export async function replaceRegex<T extends BaseAlkemioEntity>(
@@ -23,6 +24,7 @@ export async function replaceRegex<T extends BaseAlkemioEntity>(
   agentInfo: AgentInfo,
   columnName: string,
   regex: string,
+  anonymousReadAccess: boolean,
   replacementCallback: ReplacementCallback<T>
 ): Promise<any> {
   const queryBuilder = entityManager.connection
@@ -48,7 +50,8 @@ export async function replaceRegex<T extends BaseAlkemioEntity>(
       agentInfo,
       regExp,
       matchedText,
-      row
+      row,
+      anonymousReadAccess
     );
     await queryBuilder
       .update(entityClass)

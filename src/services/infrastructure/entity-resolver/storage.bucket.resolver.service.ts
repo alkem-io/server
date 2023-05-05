@@ -12,6 +12,7 @@ import { fromBuffer } from 'file-type';
 import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { MimeTypeNotFoundException } from '@common/exceptions/mime.type.not.found.exception';
+import { Visual } from '@domain/common/visual';
 
 @Injectable()
 export class StorageBucketResolverService {
@@ -29,9 +30,10 @@ export class StorageBucketResolverService {
   ): Promise<string | never> {
     // First iterate over all the entity types that have storage spaces directly
     for (const entityName of Object.values(DirectStorageBucketEntityType)) {
-      const match = await this.getDirectStorageBucketForProfile(
+      const match = await getDirectStorageBucketForProfile(
         profileID,
-        entityName
+        entityName,
+        this.entityManager
       );
       if (match) return match;
     }
@@ -53,24 +55,6 @@ export class StorageBucketResolverService {
     return getStorageBucketIdForProfileResult(this.entityManager, result);
   }
 
-  private async getDirectStorageBucketForProfile(
-    profileID: string,
-    entityName: DirectStorageBucketEntityType
-  ): Promise<string | undefined> {
-    const query = `SELECT \`${entityName}\`.\`id\` as \`entityId\`, \`${entityName}\`.\`storageBucketId\` as \`storageBucketId\`
-    FROM \`${entityName}\` WHERE \`${entityName}\`.\`profileId\` = '${profileID}'`;
-
-    const [result]: {
-      entityId: string;
-      storageBucketId: string;
-    }[] = await this.entityManager.connection.query(query);
-
-    if (result) {
-      return result.storageBucketId;
-    }
-
-    return undefined;
-  }
   public async migrate(agentInfo: AgentInfo): Promise<boolean> {
     await replaceRegex(
       this.entityManager,
@@ -81,11 +65,44 @@ export class StorageBucketResolverService {
       'uri',
       // 'http:\\/\\/localhost:3000\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
       '(^https?:\\/\\/[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*)\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
-      // '^(https?:\\/\\/)([a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*|localhost)(:\\d+)?\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
+      false,
+      replaceIpfsWithDocument
+    );
+
+    await replaceRegex(
+      this.entityManager,
+      Visual,
+      this.ipfsService,
+      this.storageBucketService,
+      agentInfo,
+      'uri',
+      // 'http:\\/\\/localhost:3000\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
+      '(^https?:\\/\\/[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*)\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
+      true,
       replaceIpfsWithDocument
     );
     return true;
   }
+}
+
+async function getDirectStorageBucketForProfile(
+  profileID: string,
+  entityName: DirectStorageBucketEntityType,
+  entityManager: EntityManager
+): Promise<string | undefined> {
+  const query = `SELECT \`${entityName}\`.\`id\` as \`entityId\`, \`${entityName}\`.\`storageBucketId\` as \`storageBucketId\`
+  FROM \`${entityName}\` WHERE \`${entityName}\`.\`profileId\` = '${profileID}'`;
+
+  const [result]: {
+    entityId: string;
+    storageBucketId: string;
+  }[] = await entityManager.connection.query(query);
+
+  if (result) {
+    return result.storageBucketId;
+  }
+
+  return undefined;
 }
 
 async function getPlatformStorageBucketId(
@@ -349,7 +366,8 @@ async function replaceIpfsWithDocument<T extends BaseAlkemioEntity>(
   agentInfo: AgentInfo,
   regex: RegExp,
   matchedText: string,
-  row: any
+  row: any,
+  anonymousReadAccess: boolean
 ): Promise<string> {
   const entity = await entityManager.findOne(entityClass, {
     where: {
@@ -359,11 +377,35 @@ async function replaceIpfsWithDocument<T extends BaseAlkemioEntity>(
   });
 
   const profileID = (entity as any).profile?.id;
-  const profileResult = await getDocumentProfileType(profileID, entityManager);
-  const storageBucketId = await getStorageBucketIdForProfileResult(
-    entityManager,
-    profileResult
-  );
+
+  let storageBucketId: string | undefined = undefined;
+  // First iterate over all the entity types that have storage spaces directly
+  for (const entityName of Object.values(DirectStorageBucketEntityType)) {
+    storageBucketId = await getDirectStorageBucketForProfile(
+      profileID,
+      entityName,
+      entityManager
+    );
+
+    if (storageBucketId) break;
+  }
+  if (!storageBucketId) {
+    const profileResult = await getDocumentProfileType(
+      profileID,
+      entityManager
+    );
+
+    storageBucketId = await getStorageBucketIdForProfileResult(
+      entityManager,
+      profileResult
+    );
+  }
+
+  if (!storageBucketId)
+    throw new StorageBucketNotFoundException(
+      `Unable to find StorageBucket for Profile with ID: ${profileID}`,
+      LogContext.STORAGE_BUCKET
+    );
 
   const storageBucket = await storageBucketService.getStorageBucketOrFail(
     storageBucketId
@@ -395,7 +437,8 @@ async function replaceIpfsWithDocument<T extends BaseAlkemioEntity>(
     fileContents,
     CID,
     fileType?.mime,
-    agentInfo.userID
+    agentInfo.userID,
+    anonymousReadAccess
   );
 
   replacement = baseURL + `/api/private/rest/storage/document/${document.id}`;
