@@ -39,6 +39,7 @@ import {
   createCalloutURL,
   createCardURL,
   createCalendarEventURL,
+  createForumDiscussionUrl,
 } from '@alkemio/notifications-lib';
 
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
@@ -428,8 +429,8 @@ export class NotificationPayloadBuilder {
       discussion: {
         id: discussion.id,
         createdBy: discussion.createdBy,
-        title: discussion.title,
-        description: discussion.description,
+        title: discussion.profile.displayName,
+        description: discussion.profile.description,
       },
       journey: journeyPayload,
     };
@@ -666,7 +667,7 @@ export class NotificationPayloadBuilder {
 
       if (!community) {
         throw new NotificationEventException(
-          `Could not acquire community from comments with id: ${commentsId}`,
+          `Could not acquire community from callout with id: ${originEntityId}`,
           LogContext.NOTIFICATIONS
         );
       }
@@ -723,7 +724,7 @@ export class NotificationPayloadBuilder {
 
       if (!community) {
         throw new NotificationEventException(
-          `Could not acquire community from comments with id: ${commentsId}`,
+          `Could not acquire community from calendar event with id: ${originEntityId}`,
           LogContext.NOTIFICATIONS
         );
       }
@@ -733,7 +734,14 @@ export class NotificationPayloadBuilder {
       return createCalendarEventURL(journeyUrl, originEntityNameId);
     }
 
-    return endpoint;
+    if (commentType === CommentType.FORUM_DISCUSSION) {
+      return createForumDiscussionUrl(endpoint, originEntityNameId);
+    }
+
+    throw new NotificationEventException(
+      `Comment of type: ${commentType} does not exist.`,
+      LogContext.NOTIFICATIONS
+    );
   }
 
   private async buildJourneyPayload(

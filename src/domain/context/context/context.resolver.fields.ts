@@ -6,7 +6,6 @@ import { IEcosystemModel } from '@domain/context/ecosystem-model';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { IReference } from '@domain/common/reference/reference.interface';
 
 @Resolver(() => IContext)
 export class ContextResolverFields {
@@ -21,16 +20,5 @@ export class ContextResolverFields {
   @Profiling.api
   async ecosystemModel(@Parent() context: Context) {
     return await this.contextService.getEcosystemModel(context);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('recommendations', () => [IReference], {
-    nullable: true,
-    description: 'The Recommendations for this Context.',
-  })
-  @Profiling.api
-  async recommendations(@Parent() context: Context) {
-    return await this.contextService.getRecommendations(context);
   }
 }

@@ -1,0 +1,22 @@
+query hubs {
+  hubs {
+    storageBucket
+    {
+      size
+      documents
+      {
+        displayName
+        size
+      }
+    }
+    storageBucket
+    {
+      size
+      documents
+      {
+        displayName
+        size
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IOrganization } from '@src/domain';
+import { IOrganization } from '@src/domain/community/organization';
 
 @InputType()
 export class OrganizationFilterInput implements Partial<IOrganization> {

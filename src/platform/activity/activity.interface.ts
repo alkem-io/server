@@ -48,7 +48,14 @@ export abstract class IActivity extends IBaseAlkemio {
     nullable: false,
     description: 'The event type for this Activity.',
   })
-  type!: string;
+  type!: ActivityEventType;
+
+  @Field(() => Boolean, {
+    description:
+      'Indicates if this Activity happened on a child Collaboration. Child results can be included via the "includeChild" parameter.',
+    defaultValue: false,
+  })
+  child?: boolean;
 
   messageID?: string;
   visibility!: boolean;

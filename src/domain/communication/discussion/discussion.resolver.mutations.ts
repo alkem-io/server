@@ -22,6 +22,10 @@ import { CommunicationDiscussionUpdated } from '../communication/dto/communicati
 import { getRandomId } from '@src/common/utils';
 import { DiscussionMessageReceivedPayload } from './dto/discussion.message.received.payload';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { getMentionsFromText } from '../messaging/get.mentions.from.text';
+import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
+import { CommentType } from '@common/enums/comment.type';
+import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 
 @Resolver()
 export class DiscussionResolverMutations {
@@ -30,6 +34,7 @@ export class DiscussionResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private discussionService: DiscussionService,
     private discussionAuthorizationService: DiscussionAuthorizationService,
+    private notificationAdapter: NotificationAdapter,
     @Inject(SUBSCRIPTION_DISCUSSION_MESSAGE)
     private readonly subscriptionDiscussionMessage: PubSubEngine
   ) {}
@@ -44,13 +49,14 @@ export class DiscussionResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IMessage> {
     const discussion = await this.discussionService.getDiscussionOrFail(
-      messageData.discussionID
+      messageData.discussionID,
+      { relations: ['profile'] }
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       discussion.authorization,
       AuthorizationPrivilege.CREATE_COMMENT,
-      `discussion send message: ${discussion.title}`
+      `discussion send message: ${discussion.profile.displayName}`
     );
     const discussionMessage =
       await this.discussionService.sendMessageToDiscussion(
@@ -81,6 +87,21 @@ export class DiscussionResolverMutations {
       subscriptionPayloadUpdate
     );
 
+    const mentions = getMentionsFromText(discussionMessage.message);
+    const entityMentionsNotificationInput: NotificationInputEntityMentions = {
+      triggeredBy: agentInfo.userID,
+      comment: discussionMessage.message,
+      commentsId: discussion.id,
+      mentions,
+      originEntity: {
+        id: discussion.id,
+        nameId: discussion.nameID,
+        displayName: discussion.profile.displayName,
+      },
+      commentType: CommentType.FORUM_DISCUSSION,
+    };
+    this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
+
     return discussionMessage;
   }
 
@@ -94,7 +115,8 @@ export class DiscussionResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
     const discussion = await this.discussionService.getDiscussionOrFail(
-      messageData.discussionID
+      messageData.discussionID,
+      { relations: ['profile'] }
     );
 
     // The choice was made **not** to wrap every message in an AuthorizationPolicy.
@@ -114,7 +136,7 @@ export class DiscussionResolverMutations {
       agentInfo,
       extendedAuthorization,
       AuthorizationPrivilege.DELETE,
-      `communication delete message: ${discussion.title}`
+      `communication delete message: ${discussion.profile.displayName}`
     );
 
     const result = await this.discussionService.removeMessageFromDiscussion(
@@ -166,7 +188,10 @@ export class DiscussionResolverMutations {
     @Args('updateData') updateData: UpdateDiscussionInput
   ): Promise<IDiscussion> {
     const discussion = await this.discussionService.getDiscussionOrFail(
-      updateData.ID
+      updateData.ID,
+      {
+        relations: ['profile'],
+      }
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,

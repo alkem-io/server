@@ -21,6 +21,7 @@ import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
 import { Collaboration } from '@domain/collaboration/collaboration';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Discussion } from '@domain/communication/discussion/discussion.entity';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -42,6 +43,8 @@ export class NamingService {
     private calloutRepository: Repository<Callout>,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
+    @InjectRepository(Discussion)
+    private discussionRepository: Repository<Discussion>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @InjectEntityManager('default')
@@ -165,6 +168,28 @@ export class NamingService {
       );
     }
     return collaboration.id;
+  }
+
+  async isDiscussionDisplayNameAvailableInCommunication(
+    displayName: string,
+    communicationID: string
+  ): Promise<boolean> {
+    const query = this.discussionRepository
+      .createQueryBuilder('discussion')
+      .leftJoinAndSelect('discussion.communication', 'communication')
+      .leftJoinAndSelect('discussion.profile', 'profile')
+      .where('communication.id = :id')
+      .andWhere('profile.displayName = :displayName')
+      .setParameters({
+        id: `${communicationID}`,
+        displayName: `${displayName}`,
+      });
+    const discussionsWithDisplayName = await query.getOne();
+    if (discussionsWithDisplayName) {
+      return false;
+    }
+
+    return true;
   }
 
   isValidNameID(nameID: string): boolean {

@@ -7,7 +7,6 @@ export enum UserPreferenceType {
   NOTIFICATION_COMMUNICATION_UPDATE_SENT_ADMIN = 'NotificationCommunityUpdateSentAdmin',
   NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED = 'NotificationCommunityDiscussionCreated',
   NOTIFICATION_COMMUNICATION_DISCUSSION_CREATED_ADMIN = 'NotificationCommunityDiscussionCreatedAdmin',
-  NOTIFICATION_COMMUNICATION_DISCUSSION_RESPONSE = 'NotificationCommunityDiscussionResponse',
   NOTIFICATION_USER_SIGN_UP = 'NotificationUserSignUp',
   NOTIFICATION_USER_REMOVED = 'NotificationUserRemoved',
   NOTIFICATION_COMMUNITY_REVIEW_SUBMITTED = 'NotificationCommunityReviewSubmitted',
@@ -26,6 +25,8 @@ export enum UserPreferenceType {
   NOTIFICATION_COMMUNICATION_MESSAGE = 'NotificationCommunicationMessage',
   NOTIFICATION_ORGANIZATION_MENTION = 'NotificationOrganizationMention',
   NOTIFICATION_ORGANIZATION_MESSAGE = 'NotificationOrganizationMessage',
+  NOTIFICATION_FORUM_DISCUSSION_CREATED = 'NotificationForumDiscussionCreated',
+  NOTIFICATION_FORUM_DISCUSSION_COMMENT = 'NotificationForumDiscussionComment',
 }
 
 registerEnumType(UserPreferenceType, {

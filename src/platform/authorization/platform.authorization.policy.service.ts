@@ -82,6 +82,7 @@ export class PlatformAuthorizationPolicyService {
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.GRANT,
         ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,

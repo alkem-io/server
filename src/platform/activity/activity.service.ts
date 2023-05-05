@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Activity } from './activity.entity';
@@ -9,6 +9,7 @@ import { CreateActivityInput } from './dto/activity.dto.create';
 import { ensureMaxLength } from '@common/utils';
 import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ActivityEventType } from '@common/enums/activity.event.type';
 
 @Injectable()
 export class ActivityService {
@@ -57,27 +58,26 @@ export class ActivityService {
     return await this.save(activity);
   }
 
-  async getActivityForCollaboration(
-    collaborationID: string,
-    limit?: number,
-    visibility = true
-  ): Promise<IActivity[]> {
-    const entries: IActivity[] = await this.activityRepository
-      .createQueryBuilder('activity')
-      .where('collaborationID = :collaborationID')
-      .andWhere('visibility = :visibility')
-      .setParameters({
-        collaborationID: collaborationID,
-        visibility: visibility,
-      })
-      .orderBy('createdDate', 'DESC')
-      .getMany();
-
-    if (limit) {
-      return entries.slice(0, limit);
+  async getActivityForCollaborations(
+    collaborationIDs: string[],
+    options?: {
+      types?: ActivityEventType[];
+      limit?: number;
+      visibility?: boolean;
     }
-
-    return entries;
+  ): Promise<IActivity[]> {
+    const { types, visibility = true, limit } = options ?? {};
+    return this.activityRepository.find({
+      where: {
+        collaborationID: In(collaborationIDs),
+        visibility: visibility,
+        type: types && types.length > 0 ? In(types) : undefined,
+      },
+      order: {
+        createdDate: 'DESC',
+      },
+      take: limit,
+    });
   }
 
   async getActivityForMessage(messageID: string): Promise<IActivity | null> {

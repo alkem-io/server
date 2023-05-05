@@ -12,7 +12,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IHub } from './hub.interface';
 import { Hub } from './hub.entity';
 import { HubPreferenceType } from '@common/enums/hub.preference.type';
-import { IOrganization } from '@domain/community';
+import { IOrganization } from '@domain/community/organization';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
@@ -40,6 +40,7 @@ import {
   CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_HUB_HOST_ASSOCIATES_JOIN,
 } from '@common/constants';
+import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 
 @Injectable()
 export class HubAuthorizationService {
@@ -54,6 +55,7 @@ export class HubAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private communityPolicyService: CommunityPolicyService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
+    private storageBucketAuthorizationService: StorageBucketAuthorizationService,
     private hubService: HubService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>
@@ -254,6 +256,13 @@ export class HubAuthorizationService {
     hub.templatesSet =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
         hub.templatesSet,
+        hub.authorization
+      );
+
+    hub.storageBucket = await this.hubService.getStorageBucketOrFail(hub.id);
+    hub.storageBucket =
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+        hub.storageBucket,
         hub.authorization
       );
 

@@ -43,6 +43,7 @@ import { PostTemplateService } from '@domain/template/post-template/post.templat
 import { WhiteboardTemplateService } from '@domain/template/whiteboard-template/whiteboard.template.service';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
+import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 
 @Injectable()
 export class CalloutService {
@@ -96,6 +97,12 @@ export class CalloutService {
     callout.profile = await this.profileService.createProfile(
       calloutData.profile
     );
+
+    await this.profileService.addTagsetOnProfile(callout.profile, {
+      name: RestrictedTagsetNames.DEFAULT,
+      tags: calloutData.tags || [],
+    });
+
     if (calloutData.type == CalloutType.CARD && postTemplateData) {
       callout.postTemplate = await this.postTemplateService.createPostTemplate(
         postTemplateData
@@ -361,9 +368,9 @@ export class CalloutService {
   ): Promise<IAspect> {
     const calloutID = aspectData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['aspects', 'aspects.profile'],
+      relations: ['profile', 'aspects', 'aspects.profile'],
     });
-    if (!callout.aspects)
+    if (!callout.aspects || !callout.profile)
       throw new EntityNotInitializedException(
         `Callout (${calloutID}) not initialised`,
         LogContext.COLLABORATION
@@ -413,7 +420,7 @@ export class CalloutService {
   ): Promise<ICanvas> {
     const calloutID = canvasData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['canvases'],
+      relations: ['profile', 'canvases'],
     });
     if (!callout.canvases)
       throw new EntityNotInitializedException(

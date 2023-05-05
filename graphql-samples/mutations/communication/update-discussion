@@ -1,6 +1,9 @@
 mutation updateDiscussion($updateData: UpdateDiscussionInput!) {
   updateDiscussion(updateData: $updateData) {
-    title,
+    profile {
+      displayName,
+      description
+    },
     category
   }
 }

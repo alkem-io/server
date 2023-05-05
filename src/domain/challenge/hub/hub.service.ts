@@ -66,6 +66,8 @@ import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class HubService {
@@ -84,6 +86,7 @@ export class HubService {
     private hubsFilterService: HubFilterService,
     private timelineService: TimelineService,
     private templatesSetService: TemplatesSetService,
+    private storageBucketService: StorageBucketService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -97,6 +100,9 @@ export class HubService {
     const hub: IHub = Hub.create(hubData);
     // default to active hub
     hub.visibility = HubVisibility.ACTIVE;
+
+    // Set up the storage space as that is needed for Profile
+    hub.storageBucket = await this.storageBucketService.createStorageBucket();
 
     // remove context before saving as want to control that creation
     hub.context = undefined;
@@ -224,6 +230,7 @@ export class HubService {
         'templatesSet',
         'timeline',
         'profile',
+        'storageBucket',
       ],
     });
 
@@ -258,6 +265,10 @@ export class HubService {
 
     if (hub.timeline) {
       await this.timelineService.deleteTimeline(hub.timeline.id);
+    }
+
+    if (hub.storageBucket) {
+      await this.storageBucketService.deleteStorageBucket(hub.storageBucket.id);
     }
 
     const result = await this.hubRepository.remove(hub as Hub);
@@ -446,6 +457,22 @@ export class HubService {
     }
 
     return timeline;
+  }
+
+  async getStorageBucketOrFail(hubId: string): Promise<IStorageBucket> {
+    const hubWithStorageBucket = await this.getHubOrFail(hubId, {
+      relations: ['storageBucket'],
+    });
+    const storageBucket = hubWithStorageBucket.storageBucket;
+
+    if (!storageBucket) {
+      throw new EntityNotFoundException(
+        `Unable to find storagebucket for hub with nameID: ${hubWithStorageBucket.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return storageBucket;
   }
 
   async getPreferenceSetOrFail(hubId: string): Promise<IPreferenceSet> {

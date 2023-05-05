@@ -12,7 +12,6 @@ export const MockUserGroupService: ValueProvider<PublicPart<UserGroupService>> =
       addGroupWithName: jest.fn(),
       getMembers: jest.fn(),
       getGroups: jest.fn(),
-      getGroupsWithTag: jest.fn(),
       getProfile: jest.fn(),
     },
   };

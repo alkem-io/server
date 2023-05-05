@@ -35,6 +35,7 @@ import {
   CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_APPLY,
   CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_JOIN,
 } from '@common/constants';
+import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -47,6 +48,7 @@ export class ChallengeAuthorizationService {
     private communityPolicyService: CommunityPolicyService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private preferenceSetService: PreferenceSetService,
+    private storageBucketAuthorizationService: StorageBucketAuthorizationService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
   ) {}
@@ -138,6 +140,14 @@ export class ChallengeAuthorizationService {
           challenge.authorization
         );
     }
+
+    challenge.storageBucket =
+      await this.challengeService.getStorageBucketOrFail(challenge.id);
+    challenge.storageBucket =
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+        challenge.storageBucket,
+        challenge.authorization
+      );
 
     return await this.challengeRepository.save(challenge);
   }

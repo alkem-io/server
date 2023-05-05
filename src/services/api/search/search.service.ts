@@ -59,7 +59,7 @@ const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
 const TERM_MINIMUM_LENGTH = 2;
 const SCORE_INCREMENT = 10;
-const RESULTS_LIMIT = 10;
+const RESULTS_LIMIT = 8;
 
 class Match {
   key = 0;

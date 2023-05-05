@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { OrganizationService } from './organization.service';
 import { OrganizationResolverMutations } from './organization.resolver.mutations';
-import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Organization } from '@domain/community/organization';
 import { OrganizationResolverFields } from './organization.resolver.fields';
@@ -17,8 +16,10 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { OrganizationVerificationModule } from '../organization-verification/organization.verification.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
-import { OrganizationDataloaderService } from './organization.dataloader.service';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { OrganizationStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/organization/organization.storage.space.loader.creator';
 
 @Module({
   imports: [
@@ -28,26 +29,23 @@ import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/p
     OrganizationVerificationModule,
     UserModule,
     UserGroupModule,
-    TagsetModule,
+    EntityResolverModule,
     NamingModule,
     PlatformAuthorizationPolicyModule,
     ProfileModule,
     PreferenceModule,
     PreferenceSetModule,
+    StorageBucketModule,
     TypeOrmModule.forFeature([Organization]),
   ],
   providers: [
     OrganizationService,
-    OrganizationDataloaderService,
     OrganizationAuthorizationService,
     OrganizationResolverQueries,
     OrganizationResolverMutations,
     OrganizationResolverFields,
+    OrganizationStorageBucketLoaderCreator,
   ],
-  exports: [
-    OrganizationService,
-    OrganizationDataloaderService,
-    OrganizationAuthorizationService,
-  ],
+  exports: [OrganizationService, OrganizationAuthorizationService],
 })
 export class OrganizationModule {}

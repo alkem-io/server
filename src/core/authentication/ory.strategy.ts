@@ -3,7 +3,7 @@ import {
   ConfigurationTypes,
   LogContext,
 } from '@common/enums';
-import { TokenException } from '@common/exceptions';
+import { AuthenticationException, TokenException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy } from '@nestjs/passport';
@@ -38,7 +38,7 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
     });
   }
 
-  async validate(payload: KratosPayload): Promise<AgentInfo> {
+  async validate(payload: KratosPayload): Promise<AgentInfo | null> {
     this.logger.verbose?.('Ory Strategy: Kratos payload', LogContext.AUTH);
     this.logger.verbose?.(payload, LogContext.AUTH);
 

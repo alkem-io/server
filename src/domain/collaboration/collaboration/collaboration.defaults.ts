@@ -20,6 +20,7 @@ export const collaborationDefaults: any = {
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 1,
+      group: 'COMMUNITY_1',
     },
     {
       type: CalloutType.COMMENTS,
@@ -33,6 +34,19 @@ export const collaborationDefaults: any = {
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 1,
+      group: 'HOME_2',
+    },
+    {
+      type: CalloutType.LINK_COLLECTION,
+      profile: {
+        displayName: 'Recommended by the Host',
+        description: 'Please find below quick start links.',
+      },
+      nameID: 'recommendations',
+      visibility: CalloutVisibility.PUBLISHED,
+      state: CalloutState.CLOSED,
+      sortOrder: 3,
+      group: 'HOME_0',
     },
     {
       type: CalloutType.COMMENTS,
@@ -44,6 +58,7 @@ export const collaborationDefaults: any = {
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 3,
+      group: 'HOME_2',
     },
     {
       type: CalloutType.CARD,
@@ -66,6 +81,7 @@ export const collaborationDefaults: any = {
             'To share contributions with detailed explanations how they help.',
         },
       },
+      group: 'KNOWLEDGE',
     },
     {
       type: CalloutType.CANVAS,
@@ -85,6 +101,7 @@ export const collaborationDefaults: any = {
           description: 'A blank canvas to be worked further.',
         },
       },
+      group: 'KNOWLEDGE',
     },
   ],
 };

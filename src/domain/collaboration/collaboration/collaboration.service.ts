@@ -28,6 +28,9 @@ import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
+import { Hub } from '@domain/challenge/hub/hub.entity';
+import { getJourneyByCollaboration } from '@common/utils';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
 @Injectable()
 export class CollaborationService {
@@ -92,6 +95,76 @@ export class CollaborationService {
         LogContext.CONTEXT
       );
     return collaboration;
+  }
+
+  public async getChildCollaborationsOrFail(
+    collaborationID: string
+  ): Promise<ICollaboration[] | never> {
+    // check if exists
+    await this.getCollaborationOrFail(collaborationID);
+
+    const { hubId, challengeId } = await getJourneyByCollaboration(
+      this.entityManager,
+      collaborationID
+    );
+
+    if (hubId) {
+      const hub = await this.entityManager.findOneOrFail(Hub, {
+        where: { id: hubId },
+        relations: {
+          challenges: {
+            collaboration: true,
+          },
+        },
+      });
+
+      if (!hub.challenges) {
+        throw new EntityNotInitializedException(
+          `Challenges not found on Hub ${hubId}`,
+          LogContext.COLLABORATION
+        );
+      }
+
+      return hub.challenges?.map(challenge => {
+        if (!challenge.collaboration) {
+          throw new EntityNotInitializedException(
+            `Collaboration not found on challenge ${challenge.id}`,
+            LogContext.COLLABORATION
+          );
+        }
+        return challenge.collaboration;
+      });
+    }
+
+    if (challengeId) {
+      const challenge = await this.entityManager.findOneOrFail(Challenge, {
+        where: { id: challengeId },
+        relations: {
+          opportunities: {
+            collaboration: true,
+          },
+        },
+      });
+
+      if (!challenge.opportunities) {
+        throw new EntityNotInitializedException(
+          `Opportunities not found on challenge ${challengeId}`,
+          LogContext.COLLABORATION
+        );
+      }
+
+      return challenge.opportunities?.map(opp => {
+        if (!opp.collaboration) {
+          throw new EntityNotInitializedException(
+            `Collaboration not found on opportunity ${opp.id}`,
+            LogContext.COLLABORATION
+          );
+        }
+        return opp.collaboration;
+      });
+    }
+
+    return [];
   }
 
   public async deleteCollaboration(
@@ -167,6 +240,7 @@ export class CollaborationService {
       await this.namingService.getCommunicationGroupIdFromCollaborationId(
         collaboration.id
       );
+
     const callout = await this.calloutService.createCallout(
       calloutData,
       communicationGroupID,

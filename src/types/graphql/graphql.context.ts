@@ -12,6 +12,6 @@ declare global {
   } & {
     // dataloader creators will also be added here lazily
     // and should not be accessed directly but with the Loader decorator with class ref
-    [key: string]: Promise<ILoader<unknown>>;
+    [key: string]: Promise<ILoader<unknown>> | undefined;
   };
 }
