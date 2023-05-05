@@ -20,11 +20,11 @@ export class InnovationHubAuthorizationService {
     hub.authorization = this.authorizationPolicyService.reset(
       hub.authorization
     );
-    hub.authorization.anonymousReadAccess = false;
     hub.authorization =
       this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         hub.authorization
       );
+    hub.authorization.anonymousReadAccess = true;
     // todo apply more auth
 
     return this.hubRepository.save(hub);
