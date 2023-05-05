@@ -79,8 +79,8 @@ export class StorageBucketResolverService {
       this.storageBucketService,
       agentInfo,
       'uri',
-      'http:\\/\\/localhost:3000\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
-      // '(^https?:\\/\\/[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*)\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
+      // 'http:\\/\\/localhost:3000\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
+      '(^https?:\\/\\/[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*)\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
       // '^(https?:\\/\\/)([a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*|localhost)(:\\d+)?\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
       replaceIpfsWithDocument
     );
@@ -131,6 +131,7 @@ async function getStorageBucketIdForCallout(
   LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
   WHERE \`callout\`.\`id\`='${calloutId}'`;
   [result] = await entityManager.connection.query(query);
+  if (result && result.storageBucketId) return result.storageBucketId;
 
   query = `SELECT \`storageBucketId\` FROM \`challenge\`
   LEFT JOIN \`opportunity\` ON \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
@@ -138,8 +139,6 @@ async function getStorageBucketIdForCallout(
   LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
   WHERE \`callout\`.\`id\`='${calloutId}'`;
   [result] = await entityManager.connection.query(query);
-
-  if (result && result.storageBucketId) return result.storageBucketId;
 
   return result.storageBucketId;
 }
@@ -166,6 +165,7 @@ async function getStorageBucketIdForCalloutType(
   LEFT JOIN \`${calloutType}\` ON \`${calloutType}\`.\`calloutId\` = \`callout\`.\`id\`
   WHERE \`${calloutType}\`.\`id\`='${entityId}'`;
   [result] = await entityManager.connection.query(query);
+  if (result && result.storageBucketId) return result.storageBucketId;
 
   query = `SELECT \`storageBucketId\` FROM \`challenge\`
   LEFT JOIN \`opportunity\` ON \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
@@ -174,8 +174,6 @@ async function getStorageBucketIdForCalloutType(
   LEFT JOIN \`${calloutType}\` ON \`${calloutType}\`.\`calloutId\` = \`callout\`.\`id\`
   WHERE \`${calloutType}\`.\`id\`='${entityId}'`;
   [result] = await entityManager.connection.query(query);
-
-  if (result && result.storageBucketId) return result.storageBucketId;
 
   return result.storageBucketId;
 }
@@ -371,24 +369,20 @@ async function replaceIpfsWithDocument<T extends BaseAlkemioEntity>(
     storageBucketId
   );
 
-  let updatedURI = matchedText;
+  let baseURL = '';
   let CID = '';
-  console.log(matchedText);
   let replacement = '';
   matchedText.replace(regex, (match, group1, group2) => {
-    if (group1) {
-      CID = group1;
-      updatedURI = group1 + replacement;
+    if (group2) {
+      CID = group2;
+      baseURL = group1;
       return group1 + replacement;
     }
     return match;
   });
 
-  console.log(CID);
-
   const fileContents = await ipfsService.getBufferByCID(CID);
   const fileType = await fromBuffer(fileContents);
-  console.log(fileType);
 
   if (!fileType?.mime)
     throw new MimeTypeNotFoundException(
@@ -396,7 +390,6 @@ async function replaceIpfsWithDocument<T extends BaseAlkemioEntity>(
       LogContext.STORAGE_BUCKET
     );
 
-  console.log(JSON.stringify(agentInfo));
   const document = await storageBucketService.uploadFileAsDocumentFromBuffer(
     storageBucket,
     fileContents,
@@ -405,9 +398,8 @@ async function replaceIpfsWithDocument<T extends BaseAlkemioEntity>(
     agentInfo.userID
   );
 
-  replacement = `/api/private/rest/storage/document/${document.id}`;
-
-  return updatedURI;
+  replacement = baseURL + `/api/private/rest/storage/document/${document.id}`;
+  return replacement;
 }
 
 type ProfileResult = {
