@@ -3,4 +3,4 @@ export * from './profiling.decorator';
 export * from './authorization.agent.privilege';
 export * from './typed.subscription';
 export * from './headers.decorator';
-export * from './innovation.space.decoration';
+export * from './innovation.hub.decoration';

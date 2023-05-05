@@ -31,7 +31,7 @@ const SUBDOMAIN_REGEX = new RegExp(
  * Injects the Innovation Hub in the execution context, if matched with the subdomain
  */
 export class InnovationHubInterceptor implements NestInterceptor {
-  private readonly innovationSpaceHeader: string;
+  private readonly innovationHubHeader: string;
 
   constructor(
     private readonly innovationHubService: InnovationHubService,
@@ -39,7 +39,7 @@ export class InnovationHubInterceptor implements NestInterceptor {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    this.innovationSpaceHeader = this.configService.get(
+    this.innovationHubHeader = this.configService.get(
       ConfigurationTypes.INNOVATION_HUB
     )?.header;
   }
@@ -48,7 +48,7 @@ export class InnovationHubInterceptor implements NestInterceptor {
     const ctx =
       GqlExecutionContext.create(context).getContext<IGraphQLContext>();
 
-    const host = ctx.req.headers[this.innovationSpaceHeader] as
+    const host = ctx.req.headers[this.innovationHubHeader] as
       | string
       | undefined;
 

@@ -35,6 +35,7 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { HubStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/hub/hub.storage.space.loader.creator';
+import { InnovationHub } from '@domain/innovation-hub';
 
 @Module({
   imports: [
@@ -65,7 +66,7 @@ import { HubStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.
     HubFilterModule,
     ElasticsearchModule,
     LoaderCreatorModule,
-    TypeOrmModule.forFeature([Hub]),
+    TypeOrmModule.forFeature([Hub, InnovationHub]),
   ],
   providers: [
     HubService,

@@ -11,8 +11,8 @@ import { ChallengeService } from '@domain/challenge/challenge/challenge.service'
 import {
   CreateHubInput,
   DeleteHubInput,
-  hubCommunityPolicy,
   hubCommunityApplicationForm,
+  hubCommunityPolicy,
 } from '@domain/challenge/hub';
 import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
@@ -68,6 +68,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { InnovationHub, InnovationHubType } from '@domain/innovation-hub';
 
 @Injectable()
 export class HubService {
@@ -287,10 +288,29 @@ export class HubService {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public async getHubsForInnovationSpace(innovationSpaceId: string) {
-    return await this.hubRepository.findBy({
-      visibility: HubVisibility.DEMO,
-    });
+  public getHubsForInnovationHub({
+    type,
+    hubListFilter,
+    hubVisibilityFilter,
+  }: InnovationHub) {
+    if (type === InnovationHubType.VISIBILITY) {
+      return this.hubRepository.findBy({
+        visibility: HubVisibility.DEMO,
+      });
+    }
+
+    if (type === InnovationHubType.LIST) {
+      return this.hubRepository.findBy([
+        {
+          id: '1',
+        },
+        {
+          id: '2',
+        },
+      ]);
+    }
+
+    return [];
   }
 
   async getHubs(args: HubsQueryArgs): Promise<IHub[]> {
