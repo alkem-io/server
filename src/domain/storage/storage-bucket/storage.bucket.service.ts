@@ -145,7 +145,8 @@ export class StorageBucketService {
     buffer: Buffer,
     filename: string,
     mimeType: string,
-    userID: string
+    userID: string,
+    anonymousReadAccess = false
   ): Promise<IDocument> {
     const storage = await this.getStorageBucketOrFail(storageBucket.id, {
       relations: ['documents'],
@@ -173,6 +174,7 @@ export class StorageBucketService {
       displayName: filename,
       size: size,
       createdBy: userID,
+      anonymousReadAccess,
     };
     const document = await this.documentService.createDocument(
       createDocumentInput
@@ -216,7 +218,8 @@ export class StorageBucketService {
         buffer,
         fileName,
         mimetype,
-        userID
+        userID,
+        true
       );
       return document;
     } catch (error: any) {
