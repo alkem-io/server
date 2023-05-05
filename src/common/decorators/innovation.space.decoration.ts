@@ -1,12 +1,12 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { INNOVATION_SPACE_INJECT_TOKEN } from '@common/constants';
+import { INNOVATION_HUB_INJECT_TOKEN } from '@common/constants';
 
 export const InnovationSpace = createParamDecorator(
   (data, context: ExecutionContext) => {
     const ctx =
       GqlExecutionContext.create(context).getContext<IGraphQLContext>();
 
-    return ctx[INNOVATION_SPACE_INJECT_TOKEN];
+    return ctx[INNOVATION_HUB_INJECT_TOKEN];
   }
 );

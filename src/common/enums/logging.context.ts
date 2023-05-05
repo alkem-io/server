@@ -36,5 +36,5 @@ export enum LogContext {
   FILE_MANAGER = 'file-manager',
   GEO = 'geo',
   CALENDAR = 'calendar',
-  INNOVATION_SPACE = 'innovation-space',
+  INNOVATION_HUB = 'innovation-hub',
 }

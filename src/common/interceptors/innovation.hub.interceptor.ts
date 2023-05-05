@@ -1,16 +1,16 @@
 import {
-  ExecutionContext,
-  NestInterceptor,
   CallHandler,
+  ExecutionContext,
   Inject,
   LoggerService,
+  NestInterceptor,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { INNOVATION_SPACE_INJECT_TOKEN } from '@common/constants';
-import { InnovationSpaceService } from '@domain/innovation-space/innovation.space.service';
+import { INNOVATION_HUB_INJECT_TOKEN } from '@common/constants';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConfigurationTypes, LogContext } from '@common/enums';
+import { InnovationHubService } from '@domain/innovation-hub';
 
 const SUBDOMAIN_GROUP = 'subdomain';
 /***
@@ -27,17 +27,20 @@ const SUBDOMAIN_REGEX = new RegExp(
   `https?:\/\/(?<${SUBDOMAIN_GROUP}>\\w+)\\.\\w+\\.\\w+`
 );
 
-export class InnovationSpaceInterceptor implements NestInterceptor {
+/***
+ * Injects the Innovation Hub in the execution context, if matched with the subdomain
+ */
+export class InnovationHubInterceptor implements NestInterceptor {
   private readonly innovationSpaceHeader: string;
 
   constructor(
-    private readonly innovationSpaceService: InnovationSpaceService,
+    private readonly innovationHubService: InnovationHubService,
     private readonly configService: ConfigService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
     this.innovationSpaceHeader = this.configService.get(
-      ConfigurationTypes.INNOVATION_SPACE
+      ConfigurationTypes.INNOVATION_HUB
     )?.header;
   }
 
@@ -61,14 +64,14 @@ export class InnovationSpaceInterceptor implements NestInterceptor {
 
     try {
       // subDomain used to match 1:1 the nameID of an Innovation space
-      const innovationSpace =
-        await this.innovationSpaceService.getInnovationSpaceOrFail(subDomain);
-
-      ctx[INNOVATION_SPACE_INJECT_TOKEN] = innovationSpace.id;
+      ctx[INNOVATION_HUB_INJECT_TOKEN] =
+        await this.innovationHubService.getInnovationHubOrFail({
+          subdomain: subDomain,
+        });
     } catch (e) {
       this.logger.warn(
-        `${this.constructor.name} unable to find Innovation space with nameID '${subDomain}'`,
-        LogContext.INNOVATION_SPACE
+        `${this.constructor.name} unable to find Innovation Hub with subdomain '${subDomain}'`,
+        LogContext.INNOVATION_HUB
       );
     }
 

@@ -50,9 +50,8 @@ import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
-import { InnovationSpaceInterceptor } from '@common/interceptors';
-import { InnovationSpaceModule } from '@domain/innovation-space/innovation.space.module';
-import { StorageAccessController } from '@services/api-rest/storage-access/storage.access.controller';
+import { InnovationHubInterceptor } from '@common/interceptors';
+import { InnovationHubModule } from '@domain/innovation-hub';
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
@@ -208,7 +207,7 @@ import { StorageAccessModule } from '@services/api-rest/storage-access/storage.a
     AspectMoveModule,
     GeoLocationModule,
     ElasticsearchModule,
-    InnovationSpaceModule,
+    InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
   ],
@@ -220,7 +219,7 @@ import { StorageAccessModule } from '@services/api-rest/storage-access/storage.a
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: InnovationSpaceInterceptor,
+      useClass: InnovationHubInterceptor,
     },
     {
       provide: APP_FILTER,

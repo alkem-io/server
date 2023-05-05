@@ -1,1 +1,1 @@
-export * from './innovation.space.interceptor';
+export * from './innovation.hub.interceptor';
