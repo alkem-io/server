@@ -175,6 +175,15 @@ export class StorageBucketResolverService {
     WHERE \`callout\`.\`id\`='${calloutId}'`;
     [result] = await this.entityManager.connection.query(query);
 
+    if (result && result.storageBucketId) return result.storageBucketId;
+
+    query = `SELECT \`storageBucketId\` FROM \`challenge\`
+    LEFT JOIN \`opportunity\` ON \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
+    LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
+    LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+    WHERE \`callout\`.\`id\`='${calloutId}'`;
+    [result] = await this.entityManager.connection.query(query);
+
     return result.storageBucketId;
   }
 
@@ -195,6 +204,16 @@ export class StorageBucketResolverService {
 
     query = `SELECT \`storageBucketId\` FROM \`hub\`
     LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`hub\`.\`collaborationId\`
+    LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+    LEFT JOIN \`${calloutType}\` ON \`${calloutType}\`.\`calloutId\` = \`callout\`.\`id\`
+    WHERE \`${calloutType}\`.\`id\`='${entityId}'`;
+    [result] = await this.entityManager.connection.query(query);
+
+    if (result && result.storageBucketId) return result.storageBucketId;
+
+    query = `SELECT \`storageBucketId\` FROM \`challenge\`
+    LEFT JOIN \`opportunity\` ON \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
+    LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`opportunity\`.\`collaborationId\`
     LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
     LEFT JOIN \`${calloutType}\` ON \`${calloutType}\`.\`calloutId\` = \`callout\`.\`id\`
     WHERE \`${calloutType}\`.\`id\`='${entityId}'`;
