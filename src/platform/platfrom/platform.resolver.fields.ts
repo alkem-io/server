@@ -19,9 +19,7 @@ export class PlatformResolverFields {
     description: 'The Innovation Library for the platform',
   })
   library(): Promise<ILibrary> {
-    return this.platformService.getLibraryOrFail([
-      'library.innovationPacks',
-    ]);
+    return this.platformService.getLibraryOrFail(['library.innovationPacks']);
   }
 
   @ResolveField('communication', () => ICommunication, {
@@ -55,6 +53,6 @@ export class PlatformResolverFields {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Args({ nullable: false }) args: InnovationHubArgsQuery
   ): Promise<IInnovationHub> {
-    return Promise.resolve({ id: 'mock' } as IInnovationHub);
+    return this.innovationHubService.getInnovationHubOrFail(args);
   }
 }

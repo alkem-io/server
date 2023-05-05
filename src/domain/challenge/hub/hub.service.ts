@@ -394,9 +394,13 @@ export class HubService {
     return challengeAndOpportunitiesCount;
   }
 
-  async getHubsById(hubIds: string[], options?: FindManyOptions) {
+  async getHubsById(hubIds: string[], options?: FindManyOptions<Hub>) {
     return this.hubRepository.find({
-      where: { id: In(hubIds) },
+      ...options,
+      where: {
+        ...options?.where,
+        id: In(hubIds),
+      },
     });
   }
 
