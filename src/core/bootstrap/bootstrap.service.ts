@@ -26,6 +26,8 @@ import { AdminAuthorizationService } from '@platform/admin/authorization/admin.a
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { PlatformService } from '@platform/platfrom/platform.service';
 import { CreateHubInput } from '@domain/challenge/hub/dto/hub.dto.create';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
 
 @Injectable()
 export class BootstrapService {
@@ -41,6 +43,8 @@ export class BootstrapService {
     private platformService: PlatformService,
     private communicationService: CommunicationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
+    private platformAuthorizationService: PlatformAuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -61,6 +65,7 @@ export class BootstrapService {
       await this.ensureHubSingleton();
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
+      await this.ensureAuthorizationsPopulated();
       this.ensureCommunicationRoomsCreated();
       this.platformService.ensureCommunicationCreated();
     } catch (error: any) {
@@ -199,6 +204,23 @@ export class BootstrapService {
     const ssiEnabled = this.configService.get(ConfigurationTypes.SSI).enabled;
     if (ssiEnabled) {
       await this.agentService.ensureDidsCreated();
+    }
+  }
+
+  async ensureAuthorizationsPopulated() {
+    const platform = await this.platformService.getPlatformOrFail();
+    const authorization = this.authorizationPolicyService.validateAuthorization(
+      platform.authorization
+    );
+    const credentialRules =
+      this.authorizationPolicyService.getCredentialRules(authorization);
+    // Assume that zero rules means that the policy has not been reset
+    if (credentialRules.length == 0) {
+      this.logger.verbose?.(
+        '=== Identified that platform authorization had not been reset; resetting now ===',
+        LogContext.BOOTSTRAP
+      );
+      await this.platformAuthorizationService.applyAuthorizationPolicy();
     }
   }
 
