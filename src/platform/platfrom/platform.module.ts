@@ -30,6 +30,6 @@ import { PlatformAuthorizationService } from './platform.service.authorization';
     PlatformService,
     PlatformAuthorizationService,
   ],
-  exports: [PlatformService],
+  exports: [PlatformService, PlatformAuthorizationService],
 })
 export class PlatformModule {}

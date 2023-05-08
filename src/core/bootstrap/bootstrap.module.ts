@@ -9,6 +9,7 @@ import { AdminAuthorizationModule } from '@platform/admin/authorization/admin.au
 import { BootstrapService } from './bootstrap.service';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { PlatformModule } from '@platform/platfrom/platform.module';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 
 @Module({
@@ -19,6 +20,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     UserModule,
     AdminAuthorizationModule,
     PlatformModule,
+    PlatformAuthorizationPolicyModule,
     CommunicationModule,
     OrganizationModule,
     TypeOrmModule.forFeature([Hub]),
