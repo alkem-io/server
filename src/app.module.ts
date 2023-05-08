@@ -55,6 +55,7 @@ import { StorageAccessController } from '@services/api-rest/storage-access/stora
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
+import { AdminStorageModule } from '@platform/admin/storage/admin.storage.module';
 
 @Module({
   imports: [
@@ -197,6 +198,7 @@ import { StorageAccessModule } from '@services/api-rest/storage-access/storage.a
     KonfigModule,
     IpfsModule,
     AdminCommunicationModule,
+    AdminStorageModule,
     AgentModule,
     MessageModule,
     RegistrationModule,
@@ -211,7 +213,11 @@ import { StorageAccessModule } from '@services/api-rest/storage-access/storage.a
     SsiCredentialFlowModule,
     StorageAccessModule,
   ],
-  controllers: [AppController, SsiCredentialFlowController],
+  controllers: [
+    AppController,
+    SsiCredentialFlowController,
+    StorageAccessController,
+  ],
   providers: [
     {
       provide: APP_INTERCEPTOR,

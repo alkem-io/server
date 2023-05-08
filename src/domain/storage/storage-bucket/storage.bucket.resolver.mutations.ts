@@ -169,14 +169,4 @@ export class StorageBucketResolverMutations {
     };
     return await this.referenceService.updateReference(updateData);
   }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => Boolean, {
-    description: 'Migrate all data',
-  })
-  @Profiling.api
-  async migrate(@CurrentUser() agentInfo: AgentInfo): Promise<boolean> {
-    await this.storageBucketResolverService.migrate(agentInfo);
-    return true;
-  }
 }
