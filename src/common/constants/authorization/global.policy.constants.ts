@@ -6,3 +6,5 @@ export const GLOBAL_POLICY_ADMIN_COMMUNICATION_READ =
   'globalPolicy-adminCommunicationRead';
 export const GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS =
   'globalPolicy-conversionGlobalAdmins';
+export const GLOBAL_POLICY_ADMIN_STORAGE_GRANT =
+  'globalPolicy-adminStorageGrant';
