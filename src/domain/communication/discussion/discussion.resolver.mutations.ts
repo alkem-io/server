@@ -26,6 +26,7 @@ import { getMentionsFromText } from '../messaging/get.mentions.from.text';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
 import { CommentType } from '@common/enums/comment.type';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
+import { NotificationInputForumDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.forum.discussion.comment';
 
 @Resolver()
 export class DiscussionResolverMutations {
@@ -101,6 +102,16 @@ export class DiscussionResolverMutations {
       commentType: CommentType.FORUM_DISCUSSION,
     };
     this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
+
+    const forumDiscussionCommentNotificationInput: NotificationInputForumDiscussionComment =
+      {
+        triggeredBy: agentInfo.userID,
+        discussion,
+        commentSent: discussionMessage,
+      };
+    this.notificationAdapter.forumDiscussionComment(
+      forumDiscussionCommentNotificationInput
+    );
 
     return discussionMessage;
   }
