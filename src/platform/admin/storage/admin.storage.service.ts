@@ -84,8 +84,7 @@ export class AdminStorageService {
       storageBucketId =
         await this.storageBucketResolverService.getDirectStorageBucketForProfile(
           profileID,
-          entityName,
-          entityManager
+          entityName
         );
 
       if (storageBucketId) break;
@@ -93,13 +92,11 @@ export class AdminStorageService {
     if (!storageBucketId) {
       const profileResult =
         await this.storageBucketResolverService.getDocumentProfileType(
-          profileID,
-          entityManager
+          profileID
         );
 
       storageBucketId =
         await this.storageBucketResolverService.getStorageBucketIdForProfileResult(
-          entityManager,
           profileResult
         );
     }
