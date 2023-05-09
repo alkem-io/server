@@ -68,7 +68,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { InnovationHub, InnovationHubType } from '@domain/innovation-hub';
+import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 
 @Injectable()
 export class HubService {
@@ -295,7 +295,7 @@ export class HubService {
   }: InnovationHub) {
     if (type === InnovationHubType.VISIBILITY) {
       return this.hubRepository.findBy({
-        visibility: HubVisibility.DEMO,
+        visibility: hubVisibilityFilter as HubVisibility,
       });
     }
 

@@ -3,7 +3,7 @@ import { Field, InputType } from '@nestjs/graphql';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity';
-import { InnovationHubType } from '@domain/innovation-hub';
+import { InnovationHubType } from '@domain/innovation-hub/types';
 import { SUBDOMAIN_LENGTH } from '@common/constants';
 import { SUBDOMAIN_REGEX } from '@core/validation';
 

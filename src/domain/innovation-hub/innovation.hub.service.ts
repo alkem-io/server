@@ -11,7 +11,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset';
 import { VisualType } from '@common/enums/visual.type';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { IInnovationHub, InnovationHub, InnovationHubType } from './';
+import { IInnovationHub, InnovationHub, InnovationHubType } from './types';
 import { CreateInnovationHubInput } from './dto';
 import { InnovationHubAuthorizationService } from './innovation.hub.service.authorization';
 

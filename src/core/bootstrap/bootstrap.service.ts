@@ -33,10 +33,8 @@ import { CommunicationService } from '@domain/communication/communication/commun
 import { PlatformService } from '@platform/platfrom/platform.service';
 import { CreateHubInput } from '@domain/challenge/hub/dto/hub.dto.create';
 import { HubVisibility } from '@common/enums/hub.visibility';
-import {
-  InnovationHubService,
-  InnovationHubType,
-} from '@domain/innovation-hub';
+import { InnovationHubType } from '@domain/innovation-hub/types';
+import { InnovationHubService } from '@domain/innovation-hub';
 import { CreateInnovationHubInput } from '@domain/innovation-hub/dto';
 
 @Injectable()

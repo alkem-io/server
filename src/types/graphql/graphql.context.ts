@@ -3,7 +3,7 @@ import { DATA_LOADER_CTX_INJECT_TOKEN } from '@core/dataloader/data.loader.injec
 import { DataLoaderContextEntry } from '@core/dataloader/interceptors';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { INNOVATION_HUB_INJECT_TOKEN } from '@common/constants';
-import { InnovationHub } from '@domain/innovation-hub';
+import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 
 declare global {
   type IGraphQLContext = {

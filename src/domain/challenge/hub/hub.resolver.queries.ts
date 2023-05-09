@@ -8,7 +8,7 @@ import { UUID_NAMEID } from '@domain/common/scalars';
 import { HubService } from './hub.service';
 import { IHub } from './hub.interface';
 import { HubsQueryArgs } from './dto/hub.args.query.hubs';
-import { InnovationHub } from '@domain/innovation-hub';
+import { InnovationHub } from '@domain/innovation-hub/types';
 
 @Resolver()
 export class HubResolverQueries {
