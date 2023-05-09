@@ -1,9 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import {
-  AuthorizationCredential,
-  LogContext,
-  UserPreferenceType,
-} from '@common/enums';
+import { LogContext, UserPreferenceType } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -764,13 +760,6 @@ export class UserService {
   ): Promise<IUser[]> {
     const credResourceID = credentialCriteria.resourceID || '';
 
-    if (
-      credentialCriteria.type ===
-        AuthorizationCredential.USER_SELF_MANAGEMENT &&
-      !credentialCriteria.resourceID
-    ) {
-      return await this.userRepository.findBy({ serviceProfile: false });
-    }
     return this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.agent', 'agent')
