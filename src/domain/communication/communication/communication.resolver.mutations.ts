@@ -17,7 +17,7 @@ import { CommunicationDiscussionUpdated } from './dto/communication.dto.event.di
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { NotificationInputDiscussionCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.created';
+import { NotificationInputForumDiscussionCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.created';
 import { COMMUNICATION_PLATFORM_HUBID } from '@common/constants';
 import { NotificationInputUserMessage } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.message';
 import { CommunicationSendMessageToUserInput } from './dto/communication.dto.send.message.user';
@@ -86,13 +86,13 @@ export class CommunicationResolverMutations {
       communication.authorization
     );
 
-    if (communication.hubID !== COMMUNICATION_PLATFORM_HUBID) {
+    if (communication.hubID === COMMUNICATION_PLATFORM_HUBID) {
       // Send the notification
-      const notificationInput: NotificationInputDiscussionCreated = {
+      const notificationInput: NotificationInputForumDiscussionCreated = {
         triggeredBy: agentInfo.userID,
         discussion: discussion,
       };
-      await this.notificationAdapter.discussionCreated(notificationInput);
+      await this.notificationAdapter.forumDiscussionCreated(notificationInput);
     }
 
     // Send out the subscription event

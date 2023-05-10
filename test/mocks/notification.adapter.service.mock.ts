@@ -12,7 +12,7 @@ export const MockNotificationAdapter: ValueProvider<
     collaborationInterest: jest.fn(),
     aspectComment: jest.fn(),
     updateSent: jest.fn(),
-    discussionCreated: jest.fn(),
+    forumDiscussionCreated: jest.fn(),
     applicationCreated: jest.fn(),
     communityContextReview: jest.fn(),
     communityNewMember: jest.fn(),

@@ -759,6 +759,7 @@ export class UserService {
     limit?: number
   ): Promise<IUser[]> {
     const credResourceID = credentialCriteria.resourceID || '';
+
     return this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.agent', 'agent')
