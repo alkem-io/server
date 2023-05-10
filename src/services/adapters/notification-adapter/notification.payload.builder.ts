@@ -26,7 +26,7 @@ import {
   CommunityNewMemberPayload,
   CommunicationUpdateEventPayload,
   CollaborationContextReviewSubmittedPayload,
-  CommunicationDiscussionCreatedEventPayload,
+  PlatformForumDiscussionCreatedEventPayload,
   CommunicationUserMessageEventPayload,
   CommunicationOrganizationMessageEventPayload,
   CommunicationCommunityLeadsMessageEventPayload,
@@ -34,6 +34,7 @@ import {
   CommunicationOrganizationMentionEventPayload,
   CommunityApplicationCreatedEventPayload,
   CollaborationDiscussionCommentEventPayload,
+  PlatformForumDiscussionCommentEventPayload,
   CollaborationCanvasCreatedEventPayload,
   createJourneyURL,
   createCalloutURL,
@@ -306,6 +307,30 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
+  async buildCommentCreatedOnForumDiscussionPayload(
+    discussion: IDiscussion,
+    message: IMessage
+  ): Promise<PlatformForumDiscussionCommentEventPayload> {
+    const endpoint = this.configService.get(
+      ConfigurationTypes.HOSTING
+    )?.endpoint_cluster;
+    const discussionUrl = createForumDiscussionUrl(endpoint, discussion.nameID);
+    const payload: PlatformForumDiscussionCommentEventPayload = {
+      triggeredBy: message.sender,
+      discussion: {
+        displayName: discussion.profile.displayName,
+        createdBy: discussion.createdBy,
+        url: discussionUrl,
+      },
+      comment: {
+        message: message.message,
+        createdBy: message.sender,
+      },
+    };
+
+    return payload;
+  }
+
   async buildCommunityNewMemberPayload(
     triggeredBy: string,
     userID: string,
@@ -415,24 +440,21 @@ export class NotificationPayloadBuilder {
     };
   }
 
-  async buildCommunicationDiscussionCreatedNotificationPayload(
+  async buildPlatformForumDiscussionCreatedNotificationPayload(
     discussion: IDiscussion
-  ): Promise<CommunicationDiscussionCreatedEventPayload> {
-    const community =
-      await this.communityResolverService.getCommunityFromDiscussionOrFail(
-        discussion.id
-      );
-
-    const journeyPayload = await this.buildJourneyPayload(community);
-    const payload: CommunicationDiscussionCreatedEventPayload = {
+  ): Promise<PlatformForumDiscussionCreatedEventPayload> {
+    const endpoint = this.configService.get(
+      ConfigurationTypes.HOSTING
+    )?.endpoint_cluster;
+    const discussionUrl = createForumDiscussionUrl(endpoint, discussion.nameID);
+    const payload: PlatformForumDiscussionCreatedEventPayload = {
       triggeredBy: discussion.createdBy,
       discussion: {
         id: discussion.id,
         createdBy: discussion.createdBy,
-        title: discussion.profile.displayName,
-        description: discussion.profile.description,
+        displayName: discussion.profile.displayName,
+        url: discussionUrl,
       },
-      journey: journeyPayload,
     };
 
     return payload;
