@@ -60,6 +60,8 @@ export class InnovationHubInterceptor implements NestInterceptor {
 
     const subDomain = SUBDOMAIN_REGEX.exec(host)?.groups?.[SUBDOMAIN_GROUP];
 
+    this.logger.verbose?.(`subdomain: ${subDomain}`);
+
     if (!subDomain) {
       return next.handle();
     }
@@ -76,6 +78,10 @@ export class InnovationHubInterceptor implements NestInterceptor {
         LogContext.INNOVATION_HUB
       );
     }
+
+    this.logger.verbose?.(
+      `subdomain: ${JSON.stringify(ctx[INNOVATION_HUB_INJECT_TOKEN])}`
+    );
 
     return next.handle();
   }
