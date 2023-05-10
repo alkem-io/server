@@ -10,7 +10,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { NotificationEventType } from '@alkemio/notifications-lib';
 import { NotificationInputCollaborationInterest } from './dto/notification.dto.input.collaboration.interest';
 import { NotificationInputUpdateSent } from './dto/notification.dto.input.update.sent';
-import { NotificationInputDiscussionCreated } from './dto/notification.dto.input.discussion.created';
+import { NotificationInputForumDiscussionCreated } from './dto/notification.dto.input.discussion.created';
 import { NotificationInputCommunityApplication } from './dto/notification.dto.input.community.application';
 import { NotificationInputCommunityNewMember } from './dto/notification.dto.input.community.new.member';
 import { NotificationInputCommunityContextReview } from './dto/notification.dto.input.community.context.review';
@@ -26,6 +26,7 @@ import { NotificationInputCommunityLeadsMessage } from './dto/notification.dto.i
 import { NotificationInputEntityMention } from './dto/notification.dto.input.entity.mention';
 import { NotificationInputEntityMentions } from './dto/notification.dto.input.entity.mentions';
 import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
+import { NotificationInputForumDiscussionComment } from './dto/notification.dto.input.forum.discussion.comment';
 
 @Injectable()
 export class NotificationAdapter {
@@ -127,6 +128,22 @@ export class NotificationAdapter {
     this.notificationsClient.emit<number>(event, payload);
   }
 
+  public async forumDiscussionComment(
+    eventData: NotificationInputForumDiscussionComment
+  ): Promise<void> {
+    const event = NotificationEventType.PLATFORM_FORUM_DISCUSSION_COMMENT;
+    this.logEventTriggered(eventData, event);
+
+    // build notification payload
+    const payload =
+      await this.notificationPayloadBuilder.buildCommentCreatedOnForumDiscussionPayload(
+        eventData.discussion,
+        eventData.commentSent
+      );
+    // send notification event
+    this.notificationsClient.emit<number>(event, payload);
+  }
+
   public async updateSent(
     eventData: NotificationInputUpdateSent
   ): Promise<void> {
@@ -142,14 +159,14 @@ export class NotificationAdapter {
     this.notificationsClient.emit<number>(event, notificationsPayload);
   }
 
-  public async discussionCreated(
-    eventData: NotificationInputDiscussionCreated
+  public async forumDiscussionCreated(
+    eventData: NotificationInputForumDiscussionCreated
   ): Promise<void> {
-    const event = NotificationEventType.COMMUNICATION_DISCUSSION_CREATED;
+    const event = NotificationEventType.PLATFORM_FORUM_DISCUSSION_CREATED;
     this.logEventTriggered(eventData, event);
     // Emit the events to notify others
     const payload =
-      await this.notificationPayloadBuilder.buildCommunicationDiscussionCreatedNotificationPayload(
+      await this.notificationPayloadBuilder.buildPlatformForumDiscussionCreatedNotificationPayload(
         eventData.discussion
       );
     this.notificationsClient.emit<number>(event, payload);

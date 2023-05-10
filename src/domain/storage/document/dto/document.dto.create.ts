@@ -10,4 +10,6 @@ export class CreateDocumentInput {
   size!: number;
 
   externalID!: string;
+
+  anonymousReadAccess!: boolean;
 }
