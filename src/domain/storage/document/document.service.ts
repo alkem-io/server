@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { ConfigurationTypes, LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DeleteDocumentInput } from './dto/documentdto.delete';
@@ -17,10 +17,12 @@ import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
 import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class DocumentService {
   constructor(
+    private configService: ConfigService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private tagsetService: TagsetService,
     private ipfsAdapter: IpfsService,
@@ -122,7 +124,13 @@ export class DocumentService {
   }
 
   public getPubliclyAccessibleURL(document: IDocument): string {
-    return this.ipfsAdapter.createIpfsClientEndPoint(document.externalID);
+    const endpoint_cluster = this.configService.get(
+      ConfigurationTypes.HOSTING
+    )?.endpoint_cluster;
+    const private_rest_api_route = this.configService.get(
+      ConfigurationTypes.HOSTING
+    )?.path_api_private_rest;
+    return `${endpoint_cluster}${private_rest_api_route}/storage/document/${document.id}`;
   }
 
   private async removeFile(CID: string): Promise<boolean> {
