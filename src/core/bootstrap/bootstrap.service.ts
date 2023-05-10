@@ -66,8 +66,8 @@ export class BootstrapService {
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
       await this.ensureAuthorizationsPopulated();
-      this.ensureCommunicationRoomsCreated();
       this.platformService.ensureCommunicationCreated();
+      this.ensureCommunicationRoomsCreated();
     } catch (error: any) {
       throw new BootstrapException(error.message);
     }
