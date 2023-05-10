@@ -9,6 +9,7 @@ export enum MimeTypeVisual {
   GIF = 'image/gif',
   WEBP = 'image/webp',
   SVG = 'image/svg+xml',
+  AVIF = 'image/avif',
 }
 
 registerEnumType(MimeTypeVisual, {

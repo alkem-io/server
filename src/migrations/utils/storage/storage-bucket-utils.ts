@@ -84,6 +84,7 @@ export const allowedTypes = [
   'image/jpg',
   'image/svg+xml',
   'image/webp',
+  'image/avif',
   'application/pdf',
 ];
 
