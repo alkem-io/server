@@ -3,6 +3,7 @@ import { AuthorizationCredential, LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  NotSupportedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -31,13 +32,7 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { challengeInnovationFlowConfigDefault } from '@domain/template/templates-set/templates.set.default.innovation.flow.challenge';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  FindManyOptions,
-  FindOneOptions,
-  FindOptionsWhere,
-  In,
-  Repository,
-} from 'typeorm';
+import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Hub } from './hub.entity';
@@ -293,12 +288,11 @@ export class HubService {
     return hub.visibility;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public getHubsForInnovationHub({
     type,
     hubListFilter,
     hubVisibilityFilter,
-  }: InnovationHub) {
+  }: InnovationHub): Promise<Hub[]> | never {
     if (type === InnovationHubType.VISIBILITY) {
       return this.hubRepository.findBy({
         visibility: hubVisibilityFilter as HubVisibility,
@@ -306,13 +300,51 @@ export class HubService {
     }
 
     if (type === InnovationHubType.LIST) {
-      const whereStatement = (hubListFilter as Array<string>).flatMap<
-        FindOptionsWhere<InnovationHub>
-      >(hubIdOrNameId => [{ id: hubIdOrNameId }, { nameID: hubIdOrNameId }]);
-      return this.hubRepository.findBy(whereStatement);
+      return this.hubRepository.findBy([
+        { id: In(hubListFilter as Array<string>) },
+        { nameID: In(hubListFilter as Array<string>) },
+      ]);
     }
 
-    return [];
+    throw new NotSupportedException(
+      `Unsupported Innovation Hub type: '${type}'`,
+      LogContext.INNOVATION_HUB
+    );
+  }
+
+  /***
+   * Checks if hubs exists against a list of IDs and NameIDs
+   * @param nameIdsOrIds
+   * @returns  <i>true</i> if all hubs exist; list of id or nameId of the hubs that doesn't otherwise
+   */
+  public async hubsExist(nameIdsOrIds: string[]): Promise<true | string[]> {
+    if (!nameIdsOrIds.length) {
+      return true;
+    }
+
+    const hubs = await this.hubRepository.find({
+      where: [{ id: In(nameIdsOrIds) }, { nameID: In(nameIdsOrIds) }],
+      select: {
+        id: true,
+        nameID: true,
+      },
+    });
+
+    if (!hubs.length) {
+      return nameIdsOrIds;
+    }
+
+    const notExist = [...nameIdsOrIds];
+
+    hubs.forEach(hub => {
+      const asd = nameIdsOrIds.findIndex(x => x === hub.id || x === hub.nameID);
+
+      if (asd >= -1) {
+        notExist.splice(asd, 1);
+      }
+    });
+
+    return notExist.length > 0 ? notExist : true;
   }
 
   async getHubs(args: HubsQueryArgs): Promise<IHub[]> {

@@ -296,7 +296,15 @@ export class BootstrapService {
         subdomain: input.subdomain,
       });
     } catch (e) {
-      return this.innovationHubService.create(input);
+      try {
+        return await this.innovationHubService.createOrFail(input);
+      } catch (e) {
+        const err = e as Error;
+        this.logger.error(
+          `Error caught while bootstrapping Innovation Hub of type '${input.type}': ${err.message}`,
+          LogContext.BOOTSTRAP
+        );
+      }
     }
 
     return;
