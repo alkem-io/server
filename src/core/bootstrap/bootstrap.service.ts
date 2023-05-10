@@ -81,7 +81,7 @@ export class BootstrapService {
       this.ensureCommunicationRoomsCreated();
       await this.ensureDemoInnovationHub();
       await this.ensureListInnovationHub();
-      this.platformService.ensureCommunicationCreated();
+      await this.platformService.ensureCommunicationCreated();
       // reset auth as last in the actions
       await this.ensureAuthorizationsPopulated();
     } catch (error: any) {
