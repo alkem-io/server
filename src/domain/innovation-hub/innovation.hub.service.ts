@@ -28,7 +28,7 @@ export class InnovationHubService {
     input: CreateInnovationHubInput
   ): Promise<IInnovationHub> {
     try {
-      tryValidateCreateInput(input);
+      validateCreateInput(input);
     } catch (e) {
       const err = e as Error;
       throw new ValidationException(
@@ -117,7 +117,7 @@ export class InnovationHubService {
   }
 }
 
-const tryValidateCreateInput = ({
+const validateCreateInput = ({
   type,
   hubListFilter,
   hubVisibilityFilter,

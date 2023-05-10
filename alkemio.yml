@@ -29,6 +29,12 @@ hosting:
   #
   path_api_public_rest: ${PATH_API_PUBLIC_REST}:/api/public/rest
 
+
+  # The path from the end point for all private api rest requests.
+  # It is combined with the `endpoint` above to provide the full path for incoming requests targeting the public Rest api.
+  #
+  path_api_private_rest: ${PATH_API_PRIVATE_REST}:/api/private/rest
+
   # Support for subscriptions enabled or not. These require a WebSocket connection
   subscriptions:
     enabled: ${SUBSCRIPTIONS_ENABLED}:false
