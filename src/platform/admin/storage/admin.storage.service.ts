@@ -35,6 +35,7 @@ export class AdminStorageService {
       Reference,
       this.ipfsService,
       this.storageBucketService,
+      this.storageBucketResolverService,
       agentInfo,
       'uri',
       // 'http:\\/\\/localhost:3000\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
@@ -48,6 +49,7 @@ export class AdminStorageService {
       Visual,
       this.ipfsService,
       this.storageBucketService,
+      this.storageBucketResolverService,
       agentInfo,
       'uri',
       // 'http:\\/\\/localhost:3000\\/ipfs\\/(Qm[a-zA-Z0-9]{44})$',
@@ -63,6 +65,7 @@ export class AdminStorageService {
     entityClass: ObjectType<T>,
     ipfsService: IpfsService,
     storageBucketService: StorageBucketService,
+    storageBucketResolverService: StorageBucketResolverService,
     agentInfo: AgentInfo,
     regex: RegExp,
     matchedText: string,
@@ -82,7 +85,7 @@ export class AdminStorageService {
     // First iterate over all the entity types that have storage spaces directly
     for (const entityName of Object.values(DirectStorageBucketEntityType)) {
       storageBucketId =
-        await this.storageBucketResolverService.getDirectStorageBucketForProfile(
+        await storageBucketResolverService.getDirectStorageBucketForProfile(
           profileID,
           entityName
         );
@@ -91,12 +94,10 @@ export class AdminStorageService {
     }
     if (!storageBucketId) {
       const profileResult =
-        await this.storageBucketResolverService.getDocumentProfileType(
-          profileID
-        );
+        await storageBucketResolverService.getDocumentProfileType(profileID);
 
       storageBucketId =
-        await this.storageBucketResolverService.getStorageBucketIdForProfileResult(
+        await storageBucketResolverService.getStorageBucketIdForProfileResult(
           profileResult
         );
     }
