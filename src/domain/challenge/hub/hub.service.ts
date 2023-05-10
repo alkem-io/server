@@ -455,13 +455,22 @@ export class HubService {
     return challengeAndOpportunitiesCount;
   }
 
-  async getHubsById(hubIds: string[], options?: FindManyOptions<Hub>) {
+  async getHubsById(hubIdsOrNameIds: string[], options?: FindManyOptions<Hub>) {
     return this.hubRepository.find({
       ...options,
-      where: {
-        ...options?.where,
-        id: In(hubIds),
-      },
+      where: options?.where
+        ? Array.isArray(options.where)
+          ? [
+              { id: In(hubIdsOrNameIds) },
+              { nameID: In(hubIdsOrNameIds) },
+              ...options.where,
+            ]
+          : [
+              { id: In(hubIdsOrNameIds) },
+              { nameID: In(hubIdsOrNameIds) },
+              options.where,
+            ]
+        : [{ id: In(hubIdsOrNameIds) }, { nameID: In(hubIdsOrNameIds) }],
     });
   }
 
