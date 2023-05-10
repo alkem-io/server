@@ -15,7 +15,7 @@ export abstract class ICanvas extends INameable {
   @Field(() => Date)
   createdDate!: Date;
 
-  createdBy!: string;
+  createdBy?: string;
 
   checkout?: ICanvasCheckout;
 

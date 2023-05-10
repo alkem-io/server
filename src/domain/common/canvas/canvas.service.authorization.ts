@@ -68,23 +68,25 @@ export class CanvasAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const manageCanvasCreatedByPolicy =
-      this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
-        [
-          {
-            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-            resourceID: canvas.createdBy,
-          },
-        ],
-        CREDENTIAL_RULE_CANVAS_CREATED_BY
-      );
-    newRules.push(manageCanvasCreatedByPolicy);
+    if (canvas.createdBy) {
+      const manageCanvasCreatedByPolicy =
+        this.authorizationPolicyService.createCredentialRule(
+          [
+            AuthorizationPrivilege.CREATE,
+            AuthorizationPrivilege.READ,
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.DELETE,
+          ],
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: canvas.createdBy,
+            },
+          ],
+          CREDENTIAL_RULE_CANVAS_CREATED_BY
+        );
+      newRules.push(manageCanvasCreatedByPolicy);
+    }
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
