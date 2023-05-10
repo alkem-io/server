@@ -73,6 +73,7 @@
     "cookie-parser": "^1.4.6",
     "cross-env": "^7.0.3",
     "dataloader": "^2.2.2",
+    "file-type": "^16.5.3",
     "graphql": "^16.6.0",
     "graphql-amqp-subscriptions": "^1.2.0",
     "graphql-subscriptions": "^2.0.0",

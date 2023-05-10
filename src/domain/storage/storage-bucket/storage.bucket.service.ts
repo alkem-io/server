@@ -121,7 +121,6 @@ export class StorageBucketService {
 
     return documents;
   }
-
   public async uploadFileAsDocument(
     storageBucket: IStorageBucket,
     readStream: ReadStream,
@@ -140,7 +139,7 @@ export class StorageBucketService {
     );
   }
 
-  private async uploadFileAsDocumentFromBuffer(
+  public async uploadFileAsDocumentFromBuffer(
     storageBucket: IStorageBucket,
     buffer: Buffer,
     filename: string,
