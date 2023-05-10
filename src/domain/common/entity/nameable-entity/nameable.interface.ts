@@ -12,5 +12,6 @@ export abstract class INameable extends IAuthorizable {
   })
   nameID!: string;
 
+  // exposed through a field resolver
   profile!: IProfile;
 }

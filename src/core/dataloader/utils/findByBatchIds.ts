@@ -52,7 +52,7 @@ export const findByBatchIds = async <
     ? () => ({} as TResult)
     : (key: string) =>
         new EntityNotFoundException(
-          `Could not load relation '${topLevelRelation}' for ${classRef.name}:${key}`,
+          `Could not load relation '${topLevelRelation}' for ${classRef.name}: ${key}`,
           LogContext.DATA_LOADER
         );
 

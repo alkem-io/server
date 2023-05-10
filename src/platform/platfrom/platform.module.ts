@@ -12,6 +12,7 @@ import { PlatformResolverMutations } from './platform.resolver.mutations';
 import { PlatformResolverQueries } from './platform.resolver.queries';
 import { PlatformService } from './platform.service';
 import { PlatformAuthorizationService } from './platform.service.authorization';
+import { InnovationHubModule } from '@domain/innovation-hub';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PlatformAuthorizationService } from './platform.service.authorization';
     PlatformAuthorizationPolicyModule,
     LibraryModule,
     StorageBucketModule,
+    InnovationHubModule,
     TypeOrmModule.forFeature([Platform]),
   ],
   providers: [

@@ -9,6 +9,7 @@ import { AdminAuthorizationModule } from '@platform/admin/authorization/admin.au
 import { BootstrapService } from './bootstrap.service';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { PlatformModule } from '@platform/platfrom/platform.module';
+import { InnovationHubModule } from '@domain/innovation-hub';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PlatformModule } from '@platform/platfrom/platform.module';
     CommunicationModule,
     OrganizationModule,
     TypeOrmModule.forFeature([Hub]),
+    InnovationHubModule,
   ],
   providers: [BootstrapService],
   exports: [BootstrapService],
