@@ -48,6 +48,8 @@ export class InnovationHubInterceptor implements NestInterceptor {
     const ctx =
       GqlExecutionContext.create(context).getContext<IGraphQLContext>();
 
+    this.logger.verbose?.(`header: ${JSON.stringify(ctx.req.headers)}`);
+
     const host = ctx.req.headers[this.innovationHubHeader] as
       | string
       | undefined;
