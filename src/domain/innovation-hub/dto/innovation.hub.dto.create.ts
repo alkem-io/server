@@ -1,9 +1,9 @@
 import { IsOptional, Matches, MaxLength, MinLength } from 'class-validator';
 import { Field, InputType } from '@nestjs/graphql';
 import { HubVisibility } from '@common/enums/hub.visibility';
-import { UUID_NAMEID } from '@domain/common/scalars';
+import { UUID } from '@domain/common/scalars';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity';
-import { InnovationHubType } from '@domain/innovation-hub';
+import { InnovationHubType } from '@domain/innovation-hub/types';
 import { SUBDOMAIN_LENGTH } from '@common/constants';
 import { SUBDOMAIN_REGEX } from '@core/validation';
 
@@ -18,7 +18,7 @@ export class CreateInnovationHubInput extends CreateNameableInput {
   @Field(() => String, {
     description: 'The subdomain to associate the Innovation Hub with.',
   })
-  subdomain!: string; // todo validate regex
+  subdomain!: string;
 
   @Field(() => InnovationHubType, {
     description: 'The type of Innovation Hub.',
@@ -26,7 +26,7 @@ export class CreateInnovationHubInput extends CreateNameableInput {
   type!: InnovationHubType;
 
   @IsOptional()
-  @Field(() => [UUID_NAMEID], {
+  @Field(() => [UUID], {
     nullable: true,
     description: `A list of Hubs to include in this Innovation Hub. Only valid when type '${InnovationHubType.LIST}' is used.`,
   })

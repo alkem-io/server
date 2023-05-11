@@ -11,9 +11,10 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset';
 import { VisualType } from '@common/enums/visual.type';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { IInnovationHub, InnovationHub, InnovationHubType } from './';
+import { IInnovationHub, InnovationHub, InnovationHubType } from './types';
 import { CreateInnovationHubInput } from './dto';
 import { InnovationHubAuthorizationService } from './innovation.hub.service.authorization';
+import { HubService } from '@domain/challenge/hub/hub.service';
 
 @Injectable()
 export class InnovationHubService {
@@ -21,14 +22,15 @@ export class InnovationHubService {
     @InjectRepository(InnovationHub)
     private readonly hubRepo: Repository<InnovationHub>,
     private readonly profileService: ProfileService,
-    private readonly authService: InnovationHubAuthorizationService
+    private readonly authService: InnovationHubAuthorizationService,
+    private readonly spaceService: HubService
   ) {}
 
-  public async create(
+  public async createOrFail(
     input: CreateInnovationHubInput
-  ): Promise<IInnovationHub> {
+  ): Promise<IInnovationHub | never> {
     try {
-      validateCreateInput(input);
+      await this.validateCreateInput(input);
     } catch (e) {
       const err = e as Error;
       throw new ValidationException(
@@ -39,8 +41,6 @@ export class InnovationHubService {
 
     const hub: IInnovationHub = InnovationHub.create(input);
     hub.authorization = new AuthorizationPolicy();
-
-    // todo: validate hubs input
 
     hub.profile = await this.profileService.createProfile(input.profileData);
 
@@ -74,11 +74,11 @@ export class InnovationHubService {
     const { id, subdomain } = args;
 
     const hub = await this.hubRepo.findOne({
-      where: {
-        ...options?.where,
-        id,
-        subdomain,
-      },
+      where: options?.where
+        ? Array.isArray(options.where)
+          ? [{ id }, { subdomain }, ...options.where]
+          : [{ id }, { subdomain }, options.where]
+        : [{ id }, { subdomain }],
       ...options,
     });
 
@@ -115,40 +115,50 @@ export class InnovationHubService {
 
     return hub.hubListFilter;
   }
+
+  private async validateCreateInput({
+    type,
+    hubListFilter,
+    hubVisibilityFilter,
+  }: CreateInnovationHubInput): Promise<true | never> {
+    if (type === InnovationHubType.LIST) {
+      if (!hubListFilter || !hubListFilter.length) {
+        throw new Error(
+          `At least one Hub needs to provided for Innovation Hub of type '${InnovationHubType.LIST}'`
+        );
+      }
+
+      if (hubVisibilityFilter) {
+        throw new Error(
+          `Visibility filter not applicable for Innovation Hub of type '${InnovationHubType.LIST}'`
+        );
+      }
+      // validate hubs
+      const trueOrList = await this.spaceService.hubsExist(hubListFilter);
+
+      if (Array.isArray(trueOrList)) {
+        throw new Error(
+          `Hubs with the following identifiers not found: '${trueOrList.join(
+            ','
+          )}'`
+        );
+      }
+    }
+
+    if (type === InnovationHubType.VISIBILITY) {
+      if (!hubVisibilityFilter) {
+        throw new Error(
+          `A visibility needs to be provided for Innovation Hub of type '${InnovationHubType.VISIBILITY}'`
+        );
+      }
+
+      if (hubListFilter && hubListFilter.length) {
+        throw new Error(
+          `List of Hubs not applicable for Innovation Hub of type '${InnovationHubType.VISIBILITY}'`
+        );
+      }
+    }
+
+    return true;
+  }
 }
-
-const validateCreateInput = ({
-  type,
-  hubListFilter,
-  hubVisibilityFilter,
-}: CreateInnovationHubInput): true | never => {
-  if (type === InnovationHubType.LIST) {
-    if (!hubListFilter || !hubListFilter.length) {
-      throw new Error(
-        `At least one Hub needs to provided for Innovation Hub of type '${InnovationHubType.LIST}'`
-      );
-    }
-
-    if (hubVisibilityFilter) {
-      throw new Error(
-        `Visibility filter not applicable for Innovation Hub of type '${InnovationHubType.LIST}'`
-      );
-    }
-  }
-
-  if (type === InnovationHubType.VISIBILITY) {
-    if (!hubVisibilityFilter) {
-      throw new Error(
-        `A visibility needs to be provided for Innovation Hub of type '${InnovationHubType.VISIBILITY}'`
-      );
-    }
-
-    if (hubListFilter && hubListFilter.length) {
-      throw new Error(
-        `List of Hubs not applicable for Innovation Hub of type '${InnovationHubType.VISIBILITY}'`
-      );
-    }
-  }
-
-  return true;
-};

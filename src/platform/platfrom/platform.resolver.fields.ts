@@ -3,7 +3,8 @@ import { ILibrary } from '@library/library/library.interface';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { InnovationHubArgsQuery } from '@domain/innovation-hub/dto';
-import { IInnovationHub, InnovationHubService } from '@domain/innovation-hub';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { IPlatform } from './platform.interface';
 import { PlatformService } from './platform.service';
 

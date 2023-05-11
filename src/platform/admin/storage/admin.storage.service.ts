@@ -17,6 +17,8 @@ import {
   DirectStorageBucketEntityType,
   StorageBucketResolverService,
 } from '@services/infrastructure/entity-resolver/storage.bucket.resolver.service';
+import { IpfsFileNotFoundException } from '@common/exceptions/ipfs.file.not.found.exception';
+import { EntityNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class AdminStorageService {
@@ -71,7 +73,7 @@ export class AdminStorageService {
     matchedText: string,
     row: any,
     anonymousReadAccess: boolean
-  ): Promise<string> {
+  ): Promise<string | never> {
     const entity = await entityManager.findOne(entityClass, {
       where: {
         id: row.id,
@@ -80,6 +82,11 @@ export class AdminStorageService {
     });
 
     const profileID = (entity as any).profile?.id;
+    if (!profileID)
+      throw new EntityNotFoundException(
+        `Unable to find Profile for entity ${entityClass} with ID: ${row.id}`,
+        LogContext.STORAGE_BUCKET
+      );
 
     let storageBucketId: string | undefined = undefined;
     // First iterate over all the entity types that have storage spaces directly
@@ -125,6 +132,12 @@ export class AdminStorageService {
     });
 
     const fileContents = await ipfsService.getBufferByCID(CID);
+    if (!fileContents)
+      throw new IpfsFileNotFoundException(
+        `IPFS file with CID ${CID} not found!`,
+        LogContext.STORAGE_BUCKET
+      );
+
     const fileType = await fromBuffer(fileContents);
 
     if (!fileType?.mime)

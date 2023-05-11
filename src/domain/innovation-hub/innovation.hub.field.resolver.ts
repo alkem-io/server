@@ -17,12 +17,16 @@ export class InnovationHubFieldResolver {
     private spaceService: HubService
   ) {}
 
-  @ResolveField(() => [IHub])
-  public async hubListFilter(@Parent() hub: IInnovationHub): Promise<IHub[]> {
+  @ResolveField(() => [IHub], {
+    nullable: true,
+  })
+  public async hubListFilter(
+    @Parent() hub: IInnovationHub
+  ): Promise<IHub[] | undefined> {
     const filter = await this.hubService.getSpaceListFilterOrFail(hub.id);
 
     if (!filter) {
-      return [];
+      return undefined;
     }
 
     return this.spaceService.getHubsById(filter);

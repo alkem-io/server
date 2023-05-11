@@ -3,6 +3,7 @@ import { AuthorizationCredential, LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  NotSupportedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -11,8 +12,8 @@ import { ChallengeService } from '@domain/challenge/challenge/challenge.service'
 import {
   CreateHubInput,
   DeleteHubInput,
-  hubCommunityPolicy,
   hubCommunityApplicationForm,
+  hubCommunityPolicy,
 } from '@domain/challenge/hub';
 import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
@@ -68,6 +69,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 
 @Injectable()
 export class HubService {
@@ -286,6 +288,61 @@ export class HubService {
     return hub.visibility;
   }
 
+  public getSpacesForInnovationHub({
+    type,
+    hubListFilter,
+    hubVisibilityFilter,
+  }: InnovationHub): Promise<Hub[]> | never {
+    if (type === InnovationHubType.VISIBILITY) {
+      return this.hubRepository.findBy({
+        visibility: hubVisibilityFilter as HubVisibility,
+      });
+    }
+
+    if (type === InnovationHubType.LIST) {
+      return this.hubRepository.findBy([
+        { id: In(hubListFilter as Array<string>) },
+      ]);
+    }
+
+    throw new NotSupportedException(
+      `Unsupported Innovation Hub type: '${type}'`,
+      LogContext.INNOVATION_HUB
+    );
+  }
+
+  /***
+   * Checks if Hubs exists against a list of IDs
+   * @param ids List of Hub ids
+   * @returns  <i>true</i> if all Hubs exist; list of ids of the Hubs that doesn't, otherwise
+   */
+  public async hubsExist(ids: string[]): Promise<true | string[]> {
+    if (!ids.length) {
+      return true;
+    }
+
+    const hubs = await this.hubRepository.find({
+      where: { id: In(ids) },
+      select: { id: true },
+    });
+
+    if (!hubs.length) {
+      return ids;
+    }
+
+    const notExist = [...ids];
+
+    hubs.forEach(hub => {
+      const idIndex = ids.findIndex(x => x === hub.id);
+
+      if (idIndex >= -1) {
+        notExist.splice(idIndex, 1);
+      }
+    });
+
+    return notExist.length > 0 ? notExist : true;
+  }
+
   async getHubs(args: HubsQueryArgs): Promise<IHub[]> {
     const visibilities = this.hubsFilterService.getAllowedVisibilities(
       args.filter
@@ -394,13 +451,22 @@ export class HubService {
     return challengeAndOpportunitiesCount;
   }
 
-  async getHubsById(hubIds: string[], options?: FindManyOptions<Hub>) {
+  async getHubsById(hubIdsOrNameIds: string[], options?: FindManyOptions<Hub>) {
     return this.hubRepository.find({
       ...options,
-      where: {
-        ...options?.where,
-        id: In(hubIds),
-      },
+      where: options?.where
+        ? Array.isArray(options.where)
+          ? [
+              { id: In(hubIdsOrNameIds) },
+              { nameID: In(hubIdsOrNameIds) },
+              ...options.where,
+            ]
+          : [
+              { id: In(hubIdsOrNameIds) },
+              { nameID: In(hubIdsOrNameIds) },
+              options.where,
+            ]
+        : [{ id: In(hubIdsOrNameIds) }, { nameID: In(hubIdsOrNameIds) }],
     });
   }
 
