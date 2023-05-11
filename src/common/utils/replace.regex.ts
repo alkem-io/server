@@ -16,7 +16,7 @@ type ReplacementCallback<T extends BaseAlkemioEntity> = (
   matchedText: string,
   row: any,
   anonymousReadAccess: boolean
-) => Promise<string>;
+) => Promise<string | never>;
 
 export async function replaceRegex<T extends BaseAlkemioEntity>(
   entityManager: EntityManager,
@@ -43,28 +43,30 @@ export async function replaceRegex<T extends BaseAlkemioEntity>(
 
   // Update each row with the replaced text
   for (const row of rows) {
-    const regExp = new RegExp(regex);
-    const matchedText = (row as any)[columnName].match(regExp)[0];
-    const replacementText = await replacementCallback(
-      entityManager,
-      entityClass,
-      ipfsService,
-      storageBucketService,
-      storageBucketResolverService,
-      agentInfo,
-      regExp,
-      matchedText,
-      row,
-      anonymousReadAccess
-    );
-    await queryBuilder
-      .update(entityClass)
-      .set({
-        [columnName]: () =>
-          `REGEXP_REPLACE(${escapedColumn}, :regex, :replacementText)`,
-      } as any)
-      .setParameters({ regex, replacementText })
-      .where('id = :id', { id: row.id })
-      .execute();
+    try {
+      const regExp = new RegExp(regex);
+      const matchedText = (row as any)[columnName].match(regExp)[0];
+      const replacementText = await replacementCallback(
+        entityManager,
+        entityClass,
+        ipfsService,
+        storageBucketService,
+        storageBucketResolverService,
+        agentInfo,
+        regExp,
+        matchedText,
+        row,
+        anonymousReadAccess
+      );
+      await queryBuilder
+        .update(entityClass)
+        .set({
+          [columnName]: () =>
+            `REGEXP_REPLACE(${escapedColumn}, :regex, :replacementText)`,
+        } as any)
+        .setParameters({ regex, replacementText })
+        .where('id = :id', { id: row.id })
+        .execute();
+    } catch (error) {}
   }
 }
