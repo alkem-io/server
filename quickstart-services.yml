@@ -139,7 +139,7 @@ services:
 
   synapse:
     container_name: alkemio_dev_synapse
-    image: matrixdotorg/synapse:v1.39.0
+    image: matrixdotorg/synapse:v1.82.0
     depends_on:
       - postgres
     restart: always
