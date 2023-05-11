@@ -5,11 +5,13 @@ import { IProfile, Profile } from '@domain/common/profile';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from './profile.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { VisualAuthorizationService } from '../visual/visual.service.authorization';
 
 @Injectable()
 export class ProfileAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private visualAuthorizationService: VisualAuthorizationService,
     private profileService: ProfileService,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>
@@ -54,11 +56,12 @@ export class ProfileAuthorizationService {
     }
     if (profile.visuals) {
       for (const visual of profile.visuals) {
-        visual.authorization =
-          this.authorizationPolicyService.inheritParentAuthorization(
-            visual.authorization,
+        const visualWithAuth =
+          await this.visualAuthorizationService.applyAuthorizationPolicy(
+            visual,
             profile.authorization
           );
+        visual.authorization = visualWithAuth.authorization;
       }
     }
     return await this.profileRepository.save(profile);
