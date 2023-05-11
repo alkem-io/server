@@ -139,9 +139,13 @@ export class CalloutService {
       calloutData.type == CalloutType.SINGLE_WHITEBOARD &&
       calloutData.whiteboard
     ) {
+      const calloutNameID = this.namingService.createNameID(
+        `${calloutData.whiteboard.profileData.displayName}`
+      );
+
       const canvas = await this.canvasService.createCanvas(
         {
-          nameID: calloutData.whiteboard.nameID,
+          nameID: calloutNameID,
           value: calloutData.whiteboard.value,
           profileData: calloutData.whiteboard.profileData,
         },
@@ -151,8 +155,8 @@ export class CalloutService {
         canvas.profile,
         VisualType.BANNER
       );
-      callout.canvases = [canvas];
-      await this.calloutRepository.save(callout);
+      savedCallout.canvases = [canvas];
+      await this.calloutRepository.save(savedCallout);
     }
 
     return savedCallout;
