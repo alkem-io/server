@@ -48,8 +48,6 @@ export class InnovationHubInterceptor implements NestInterceptor {
     const ctx =
       GqlExecutionContext.create(context).getContext<IGraphQLContext>();
 
-    this.logger.verbose?.(`header: ${JSON.stringify(ctx.req.headers)}`);
-
     const host = ctx.req.headers[this.innovationHubHeader] as
       | string
       | undefined;
@@ -60,14 +58,11 @@ export class InnovationHubInterceptor implements NestInterceptor {
 
     const subDomain = SUBDOMAIN_REGEX.exec(host)?.groups?.[SUBDOMAIN_GROUP];
 
-    this.logger.verbose?.(`subdomain: ${subDomain}`);
-
     if (!subDomain) {
       return next.handle();
     }
 
     try {
-      // subDomain used to match 1:1 the nameID of an Innovation space
       ctx[INNOVATION_HUB_INJECT_TOKEN] =
         await this.innovationHubService.getInnovationHubOrFail({
           subdomain: subDomain,
@@ -78,10 +73,6 @@ export class InnovationHubInterceptor implements NestInterceptor {
         LogContext.INNOVATION_HUB
       );
     }
-
-    this.logger.verbose?.(
-      `subdomain: ${JSON.stringify(ctx[INNOVATION_HUB_INJECT_TOKEN])}`
-    );
 
     return next.handle();
   }

@@ -300,17 +300,26 @@ export class BootstrapService {
   }
 
   public async ensureListInnovationHub() {
-    return this.createInnovationHub({
-      nameID: DEFAULT_INNOVATION_HUB_LIST_NAMEID,
-      subdomain: DEFAULT_INNOVATION_HUB_LIST_SUBDOMAIN,
-      type: InnovationHubType.LIST,
-      hubListFilter: [DEFAULT_HUB_NAMEID],
-      profileData: {
-        displayName: DEFAULT_INNOVATION_HUB_LIST_DISPLAY_NAME,
-        description: 'An Innovation Hub to demonstrate filtering by visibility',
-        tagline: 'An Innovation Hub to demonstrate filtering by visibility',
-      },
-    });
+    try {
+      const defaultHub = await this.hubService.getHubOrFail(DEFAULT_HUB_NAMEID);
+      return this.createInnovationHub({
+        nameID: DEFAULT_INNOVATION_HUB_LIST_NAMEID,
+        subdomain: DEFAULT_INNOVATION_HUB_LIST_SUBDOMAIN,
+        type: InnovationHubType.LIST,
+        hubListFilter: [defaultHub.id],
+        profileData: {
+          displayName: DEFAULT_INNOVATION_HUB_LIST_DISPLAY_NAME,
+          description:
+            'An Innovation Hub to demonstrate filtering by visibility',
+          tagline: 'An Innovation Hub to demonstrate filtering by visibility',
+        },
+      });
+    } catch (e) {
+      return this.logger.error(
+        `Unable to create List Innovation Hub because the Default Hub with nameID: '${DEFAULT_HUB_NAMEID}' is not found`,
+        LogContext.BOOTSTRAP
+      );
+    }
   }
 
   private async createInnovationHub(input: CreateInnovationHubInput) {

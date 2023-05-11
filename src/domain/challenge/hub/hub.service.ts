@@ -302,7 +302,6 @@ export class HubService {
     if (type === InnovationHubType.LIST) {
       return this.hubRepository.findBy([
         { id: In(hubListFilter as Array<string>) },
-        { nameID: In(hubListFilter as Array<string>) },
       ]);
     }
 
@@ -313,34 +312,31 @@ export class HubService {
   }
 
   /***
-   * Checks if hubs exists against a list of IDs and NameIDs
-   * @param nameIdsOrIds
-   * @returns  <i>true</i> if all hubs exist; list of id or nameId of the hubs that doesn't otherwise
+   * Checks if Hubs exists against a list of IDs
+   * @param ids List of Hub ids
+   * @returns  <i>true</i> if all Hubs exist; list of ids of the Hubs that doesn't, otherwise
    */
-  public async hubsExist(nameIdsOrIds: string[]): Promise<true | string[]> {
-    if (!nameIdsOrIds.length) {
+  public async hubsExist(ids: string[]): Promise<true | string[]> {
+    if (!ids.length) {
       return true;
     }
 
     const hubs = await this.hubRepository.find({
-      where: [{ id: In(nameIdsOrIds) }, { nameID: In(nameIdsOrIds) }],
-      select: {
-        id: true,
-        nameID: true,
-      },
+      where: { id: In(ids) },
+      select: { id: true },
     });
 
     if (!hubs.length) {
-      return nameIdsOrIds;
+      return ids;
     }
 
-    const notExist = [...nameIdsOrIds];
+    const notExist = [...ids];
 
     hubs.forEach(hub => {
-      const asd = nameIdsOrIds.findIndex(x => x === hub.id || x === hub.nameID);
+      const idIndex = ids.findIndex(x => x === hub.id);
 
-      if (asd >= -1) {
-        notExist.splice(asd, 1);
+      if (idIndex >= -1) {
+        notExist.splice(idIndex, 1);
       }
     });
 
