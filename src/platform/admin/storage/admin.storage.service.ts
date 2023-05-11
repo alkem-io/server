@@ -18,6 +18,7 @@ import {
   StorageBucketResolverService,
 } from '@services/infrastructure/entity-resolver/storage.bucket.resolver.service';
 import { IpfsFileNotFoundException } from '@common/exceptions/ipfs.file.not.found.exception';
+import { EntityNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class AdminStorageService {
@@ -81,6 +82,11 @@ export class AdminStorageService {
     });
 
     const profileID = (entity as any).profile?.id;
+    if (!profileID)
+      throw new EntityNotFoundException(
+        `Unable to find Profile for entity ${entityClass} with ID: ${row.id}`,
+        LogContext.STORAGE_BUCKET
+      );
 
     let storageBucketId: string | undefined = undefined;
     // First iterate over all the entity types that have storage spaces directly
