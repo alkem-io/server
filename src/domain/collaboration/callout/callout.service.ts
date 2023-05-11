@@ -44,6 +44,7 @@ import { WhiteboardTemplateService } from '@domain/template/whiteboard-template/
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
+import { VisualType } from '@common/enums/visual.type';
 
 @Injectable()
 export class CalloutService {
@@ -73,7 +74,14 @@ export class CalloutService {
       calloutData.type == CalloutType.CANVAS &&
       !calloutData.whiteboardTemplate
     ) {
-      throw new Error('Please provide a canvas template');
+      throw new Error('Please provide a whiteboard template');
+    }
+
+    if (
+      calloutData.type == CalloutType.SINGLE_WHITEBOARD &&
+      !calloutData.whiteboard
+    ) {
+      throw new Error('Please provide a whiteboard');
     }
 
     if (!calloutData.sortOrder) {
@@ -125,6 +133,26 @@ export class CalloutService {
         `callout-comments-${savedCallout.nameID}`
       );
       return await this.calloutRepository.save(savedCallout);
+    }
+
+    if (
+      calloutData.type == CalloutType.SINGLE_WHITEBOARD &&
+      calloutData.whiteboard
+    ) {
+      const canvas = await this.canvasService.createCanvas(
+        {
+          nameID: calloutData.whiteboard.nameID,
+          value: calloutData.whiteboard.value,
+          profileData: calloutData.whiteboard.profileData,
+        },
+        userID
+      );
+      await this.profileService.addVisualOnProfile(
+        canvas.profile,
+        VisualType.BANNER
+      );
+      callout.canvases = [canvas];
+      await this.calloutRepository.save(callout);
     }
 
     return savedCallout;
@@ -417,6 +445,12 @@ export class CalloutService {
         `Callout (${calloutID}) not initialised`,
         LogContext.COLLABORATION
       );
+
+    if (callout.type == CalloutType.SINGLE_WHITEBOARD && callout.canvases[0]) {
+      throw new Error(
+        'Whiteboard Callout cannot have more than one whiteboard'
+      );
+    }
 
     this.setNameIdOnCanvasData(canvasData, callout);
 

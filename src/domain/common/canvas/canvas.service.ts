@@ -34,7 +34,7 @@ export class CanvasService {
 
   async createCanvas(
     canvasData: CreateCanvasInput,
-    userID: string
+    userID?: string
   ): Promise<ICanvas> {
     const canvas: ICanvas = Canvas.create({ ...canvasData });
     canvas.authorization = new AuthorizationPolicy();

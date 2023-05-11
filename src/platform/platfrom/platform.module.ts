@@ -32,6 +32,6 @@ import { InnovationHubModule } from '@domain/innovation-hub';
     PlatformService,
     PlatformAuthorizationService,
   ],
-  exports: [PlatformService],
+  exports: [PlatformService, PlatformAuthorizationService],
 })
 export class PlatformModule {}
