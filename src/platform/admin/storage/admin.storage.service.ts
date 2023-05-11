@@ -17,6 +17,7 @@ import {
   DirectStorageBucketEntityType,
   StorageBucketResolverService,
 } from '@services/infrastructure/entity-resolver/storage.bucket.resolver.service';
+import { IpfsFileNotFoundException } from '@common/exceptions/ipfs.file.not.found.exception';
 
 @Injectable()
 export class AdminStorageService {
@@ -71,7 +72,7 @@ export class AdminStorageService {
     matchedText: string,
     row: any,
     anonymousReadAccess: boolean
-  ): Promise<string> {
+  ): Promise<string | never> {
     const entity = await entityManager.findOne(entityClass, {
       where: {
         id: row.id,
@@ -125,6 +126,12 @@ export class AdminStorageService {
     });
 
     const fileContents = await ipfsService.getBufferByCID(CID);
+    if (!fileContents)
+      throw new IpfsFileNotFoundException(
+        `IPFS file with CID ${CID} not found!`,
+        LogContext.STORAGE_BUCKET
+      );
+
     const fileType = await fromBuffer(fileContents);
 
     if (!fileType?.mime)
