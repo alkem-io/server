@@ -69,6 +69,8 @@ export class CollaborationService {
           calloutDefault,
           communicationGroupID
         );
+        // default callouts are already published
+        callout.visibility = CalloutVisibility.PUBLISHED;
         savedCollaboration.callouts?.push(callout);
       }
     }

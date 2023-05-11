@@ -153,8 +153,8 @@ export class CalloutService {
         canvas.profile,
         VisualType.BANNER
       );
-      callout.canvases = [canvas];
-      await this.calloutRepository.save(callout);
+      savedCallout.canvases = [canvas];
+      await this.calloutRepository.save(savedCallout);
     }
 
     return savedCallout;
