@@ -75,7 +75,7 @@ security:
     allowed_headers: ${CORS_ALLOWED_HEADERS}:Origin,X-Requested-With,Content-Type,Accept,Authorization
 
 innovation_hub:
-  header: ${INNOVATION_HUB_HEADER}:myhost
+  header: ${INNOVATION_HUB_HEADER}:origin
 
 ## identity ##
 
