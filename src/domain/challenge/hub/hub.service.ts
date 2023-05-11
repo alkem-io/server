@@ -288,7 +288,7 @@ export class HubService {
     return hub.visibility;
   }
 
-  public getHubsForInnovationHub({
+  public getSpacesForInnovationHub({
     type,
     hubListFilter,
     hubVisibilityFilter,

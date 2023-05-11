@@ -27,7 +27,7 @@ export class HubResolverQueries {
       return await this.hubService.getHubs(args);
     }
 
-    return this.hubService.getHubsForInnovationHub(innovationHub);
+    return this.hubService.getSpacesForInnovationHub(innovationHub);
   }
 
   @Query(() => IHub, {
