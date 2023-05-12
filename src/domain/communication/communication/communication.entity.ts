@@ -30,15 +30,11 @@ export class Communication
   updates?: Updates;
 
   @Column()
-  communicationGroupID!: string;
-
-  @Column()
   displayName!: string;
 
   constructor(displayName: string) {
     super();
     this.hubID = '';
-    this.communicationGroupID = '';
     this.displayName = displayName || '';
     this.discussionCategories = [];
   }

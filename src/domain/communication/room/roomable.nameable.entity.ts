@@ -9,15 +9,11 @@ export abstract class RoomableNameableEntity
   constructor() {
     super();
     this.communicationRoomID = '';
-    this.communicationGroupID = '';
     this.displayName = '';
   }
 
   @Column()
   communicationRoomID!: string;
-
-  @Column()
-  communicationGroupID!: string;
 
   @Column()
   displayName!: string;

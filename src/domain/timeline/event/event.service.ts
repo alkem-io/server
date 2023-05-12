@@ -29,8 +29,7 @@ export class CalendarEventService {
 
   public async createCalendarEvent(
     calendarEventInput: CreateCalendarEventInput,
-    userID: string,
-    communicationGroupID: string
+    userID: string
   ): Promise<CalendarEvent> {
     const calendarEvent: ICalendarEvent =
       CalendarEvent.create(calendarEventInput);
@@ -45,21 +44,8 @@ export class CalendarEventService {
     calendarEvent.createdBy = userID;
 
     calendarEvent.comments = await this.commentsService.createComments(
-      communicationGroupID,
       `calendarEvent-comments-${calendarEvent.nameID}`
     );
-
-    // const calendarEvent: ICalendarEvent = CalendarEvent.create({
-    //   ...calendarEventInput,
-    //   createdBy: userID,
-    //   authorization: new AuthorizationPolicy(),
-    //   profile: await this.profileService.createProfile(
-    //     calendarEventInput.profileData
-    //   ),
-    //   comments: await this.commentsService.createComments(
-    //     communicationGroupID,
-    //     `calendarEvent-comments-${calendarEventInput.profileData?.displayName}`
-    //   ),
 
     return await this.calendarEventRepository.save(calendarEvent);
   }
