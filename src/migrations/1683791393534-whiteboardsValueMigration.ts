@@ -13,8 +13,11 @@ export class whiteboardsValueMigration1683791393534
       const decompressedValue = await decompressText(canvas.value);
       const canvasValue = JSON.parse(decompressedValue);
       for (const element of canvasValue.elements) {
-        if (element.type === 'text' && !element.originalText) {
-          element.originalText = element.text;
+        if (element.type === 'text') {
+          if (element.originalText === undefined)
+            element.originalText = element.text;
+          if (element.containerId === undefined) element.containerId = null;
+          if (element.locked === undefined) element.locked = null;
         }
       }
       const compressedValue = await compressText(JSON.stringify(canvasValue));
@@ -31,8 +34,11 @@ export class whiteboardsValueMigration1683791393534
       const decompressedValue = await decompressText(template.value);
       const templateValue = JSON.parse(decompressedValue);
       for (const element of templateValue.elements) {
-        if (element.type === 'text' && !element.originalText) {
-          element.originalText = element.text;
+        if (element.type === 'text') {
+          if (element.originalText === undefined)
+            element.originalText = element.text;
+          if (element.containerId === undefined) element.containerId = null;
+          if (element.locked === undefined) element.locked = null;
         }
       }
       const compressedValue = await compressText(JSON.stringify(templateValue));
