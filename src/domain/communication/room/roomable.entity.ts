@@ -6,18 +6,14 @@ export abstract class RoomableEntity
   extends AuthorizableEntity
   implements IRoomable
 {
-  constructor(communicationGroupID: string, displayName: string) {
+  constructor(displayName: string) {
     super();
     this.communicationRoomID = '';
-    this.communicationGroupID = communicationGroupID || '';
     this.displayName = displayName || '';
   }
 
   @Column()
   communicationRoomID!: string;
-
-  @Column()
-  communicationGroupID!: string;
 
   @Column()
   displayName!: string;

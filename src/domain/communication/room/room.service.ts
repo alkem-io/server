@@ -54,7 +54,6 @@ export class RoomService {
     try {
       roomable.communicationRoomID =
         await this.communicationAdapter.createCommunityRoom(
-          roomable.communicationGroupID,
           roomable.displayName,
           { roomableID: roomable.id }
         );

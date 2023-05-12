@@ -16,9 +16,6 @@ export abstract class ICommunication extends IAuthorizable {
   @Field(() => [DiscussionCategory])
   discussionCategories!: string[];
 
-  // Communications related information
-  communicationGroupID!: string;
-
   constructor() {
     super();
   }
