@@ -4,22 +4,27 @@ import {
   LoggerService,
   NestMiddleware,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Request, Response, NextFunction } from 'express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import jwt_decode from 'jwt-decode';
 import { KratosPayload } from '@core/authentication/kratos.payload';
 import { AuthenticationService } from '@core/authentication/authentication.service';
-import { LogContext } from '@src/common/enums';
-
-const ORY_KRATOS_COOKIE = 'ory_kratos_session';
+import { ConfigurationTypes, LogContext } from '@src/common/enums';
 
 @Injectable()
 export class SessionExtendMiddleware implements NestMiddleware {
+  private readonly SESSION_COOKIE_NAME: string;
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private readonly authService: AuthenticationService
-  ) {}
+    private readonly authService: AuthenticationService,
+    private readonly configService: ConfigService
+  ) {
+    this.SESSION_COOKIE_NAME = this.configService.get(
+      ConfigurationTypes.IDENTITY
+    )?.authentication.providers.ory.session_cookie_name;
+  }
 
   async use(req: Request, res: Response, next: NextFunction) {
     const authorization = req.headers['authorization'];
@@ -73,7 +78,8 @@ export class SessionExtendMiddleware implements NestMiddleware {
         return next();
       }
 
-      const orySessionId: string | undefined = req.cookies[ORY_KRATOS_COOKIE];
+      const orySessionId: string | undefined =
+        req.cookies[this.SESSION_COOKIE_NAME];
       if (!orySessionId) {
         this.logger.warn?.(
           'New session cookie not sent: new session id not found'
@@ -90,7 +96,7 @@ export class SessionExtendMiddleware implements NestMiddleware {
         return next();
       }
 
-      res.cookie(ORY_KRATOS_COOKIE, orySessionId, {
+      res.cookie(this.SESSION_COOKIE_NAME, orySessionId, {
         path: '/',
         sameSite: 'lax',
         expires: new Date(newExpiry),
