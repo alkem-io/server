@@ -64,7 +64,6 @@ export class CalloutService {
 
   public async createCallout(
     calloutData: CreateCalloutInput,
-    communicationGroupID: string,
     userID?: string
   ): Promise<ICallout> {
     if (calloutData.type == CalloutType.CARD && !calloutData.postTemplate) {
@@ -131,7 +130,6 @@ export class CalloutService {
 
     if (calloutData.type === CalloutType.COMMENTS) {
       savedCallout.comments = await this.commentsService.createComments(
-        communicationGroupID,
         `callout-comments-${savedCallout.nameID}`
       );
       return await this.calloutRepository.save(savedCallout);
@@ -141,9 +139,13 @@ export class CalloutService {
       calloutData.type == CalloutType.SINGLE_WHITEBOARD &&
       calloutData.whiteboard
     ) {
+      const calloutNameID = this.namingService.createNameID(
+        `${calloutData.whiteboard.profileData.displayName}`
+      );
+
       const canvas = await this.canvasService.createCanvas(
         {
-          nameID: calloutData.whiteboard.nameID,
+          nameID: calloutNameID,
           value: calloutData.whiteboard.value,
           profileData: calloutData.whiteboard.profileData,
         },
@@ -153,8 +155,8 @@ export class CalloutService {
         canvas.profile,
         VisualType.BANNER
       );
-      callout.canvases = [canvas];
-      await this.calloutRepository.save(callout);
+      savedCallout.canvases = [canvas];
+      await this.calloutRepository.save(savedCallout);
     }
 
     return savedCallout;
@@ -406,15 +408,7 @@ export class CalloutService {
 
     await this.setNameIdOnAspectData(aspectData, callout);
 
-    // Get the communicationGroupID to use for the aspect comments
-    const communicationGroupID =
-      await this.namingService.getCommunicationGroupIdForCallout(callout.id);
-
-    const aspect = await this.aspectService.createAspect(
-      aspectData,
-      userID,
-      communicationGroupID
-    );
+    const aspect = await this.aspectService.createAspect(aspectData, userID);
     callout.aspects.push(aspect);
     await this.calloutRepository.save(callout);
     return aspect;

@@ -33,7 +33,6 @@ export class DiscussionService {
 
   async createDiscussion(
     discussionData: CommunicationCreateDiscussionInput,
-    communicationGroupID: string,
     userID: string,
     communicationDisplayName: string
   ): Promise<IDiscussion> {
@@ -55,7 +54,6 @@ export class DiscussionService {
     });
 
     discussion.authorization = new AuthorizationPolicy();
-    discussion.communicationGroupID = communicationGroupID;
     discussion.displayName = `${communicationDisplayName}-discussion-${discussion.profile.displayName}`;
     discussion.createdBy = userID;
     discussion.commentsCount = 0;

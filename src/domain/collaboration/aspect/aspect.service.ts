@@ -34,8 +34,7 @@ export class AspectService {
 
   public async createAspect(
     aspectInput: CreateAspectInput,
-    userID: string,
-    communicationGroupID: string
+    userID: string
   ): Promise<IAspect> {
     const aspect: IAspect = Aspect.create(aspectInput);
     aspect.profile = await this.profileService.createProfile(
@@ -57,7 +56,6 @@ export class AspectService {
     aspect.createdBy = userID;
 
     aspect.comments = await this.commentsService.createComments(
-      communicationGroupID,
       `aspect-comments-${aspect.nameID}`
     );
 

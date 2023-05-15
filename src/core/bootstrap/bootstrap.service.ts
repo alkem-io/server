@@ -78,7 +78,6 @@ export class BootstrapService {
       await this.ensureHubSingleton();
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
-      this.ensureCommunicationRoomsCreated();
       await this.ensureDemoInnovationHub();
       await this.ensureListInnovationHub();
       await this.platformService.ensureCommunicationCreated();
@@ -237,15 +236,6 @@ export class BootstrapService {
         LogContext.BOOTSTRAP
       );
       await this.platformAuthorizationService.applyAuthorizationPolicy();
-    }
-  }
-
-  ensureCommunicationRoomsCreated() {
-    const communicationsEnabled = this.configService.get(
-      ConfigurationTypes.COMMUNICATIONS
-    ).enabled;
-    if (communicationsEnabled) {
-      this.communicationService.ensureCommunicationRoomsCreated();
     }
   }
 

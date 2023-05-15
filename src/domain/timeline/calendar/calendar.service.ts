@@ -120,15 +120,9 @@ export class CalendarService {
       );
     }
 
-    const communicationGroupID =
-      await this.namingService.getCommunicationGroupIdForCalendarOrFail(
-        calendar.id
-      );
-
     const calendarEvent = await this.calendarEventService.createCalendarEvent(
       calendarEventData,
-      userID,
-      communicationGroupID
+      userID
     );
     calendar.events.push(calendarEvent);
     await this.calendarRepository.save(calendar);
