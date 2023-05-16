@@ -126,6 +126,7 @@ export class CalloutResolverFields {
   ): Promise<ICanvas[]> {
     return await this.calloutService.getCanvasesFromCallout(
       callout,
+      ['canvases.checkout'],
       ids,
       limit,
       shuffle
