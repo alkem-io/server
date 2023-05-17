@@ -40,8 +40,6 @@ export class whiteboardsValueMigration1683791393534
       ]);
     }
 
-    console.log('Processing whiteboard templates');
-
     const whiteboardTemplates: { id: string }[] = await queryRunner.query(
       `SELECT id from whiteboard_template`
     );
@@ -57,6 +55,8 @@ export class whiteboardsValueMigration1683791393534
       } catch (error) {
         continue;
       }
+      if(!templateValue.elements) continue;
+
       for (const element of templateValue.elements) {
         if (element.type === 'text') {
           if (element.originalText === undefined)
