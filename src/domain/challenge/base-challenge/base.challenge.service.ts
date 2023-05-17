@@ -98,14 +98,8 @@ export class BaseChallengeService {
       VisualType.CARD
     );
 
-    const communicationGroupID =
-      baseChallenge.community?.communication?.communicationGroupID || '';
-
     baseChallenge.collaboration =
-      await this.collaborationService.createCollaboration(
-        communityType,
-        communicationGroupID
-      );
+      await this.collaborationService.createCollaboration(communityType);
 
     baseChallenge.agent = await this.agentService.createAgent({
       parentDisplayID: `${baseChallenge.nameID}`,

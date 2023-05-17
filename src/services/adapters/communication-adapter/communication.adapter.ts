@@ -24,8 +24,6 @@ import { RoomDeleteMessagePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomDeleteMessageResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomMessageSenderResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomMessageSenderPayload } from '@alkemio/matrix-adapter-lib';
-import { CreateGroupPayload } from '@alkemio/matrix-adapter-lib';
-import { CreateGroupResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { CreateRoomPayload } from '@alkemio/matrix-adapter-lib';
 import { CreateRoomResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomsUserPayload } from '@alkemio/matrix-adapter-lib';
@@ -272,55 +270,7 @@ export class CommunicationAdapter {
     }
   }
 
-  convertMatrixLocalGroupIdToMatrixID(groupID: string): string {
-    const homeserverName = this.configService.get(
-      ConfigurationTypes.COMMUNICATIONS
-    )?.matrix?.homeserver_name;
-
-    return `+${groupID}:${homeserverName}`;
-  }
-
-  public async createCommunityGroup(
-    communityId: string,
-    communityName: string
-  ): Promise<string> {
-    const eventType = MatrixAdapterEventType.CREATE_GROUP;
-    // If not enabled just return an empty string
-    if (!this.enabled) {
-      return '';
-    }
-    if (!communityId || !communityName) {
-      this.logger.error?.(
-        `Attempt to register community group with empty data ${communityId}`,
-        LogContext.COMMUNICATION
-      );
-      return '';
-    }
-    const inputPayload: CreateGroupPayload = {
-      triggeredBy: '',
-      communityID: communityId,
-      communityDisplayName: communityName,
-    };
-    const eventID = this.logInputPayload(eventType, inputPayload);
-
-    const input$ = this.matrixAdapterClient.send<CreateGroupResponsePayload>(
-      { cmd: eventType },
-      inputPayload
-    );
-    return this.makeRetryableAndPromisify(input$, result => result.groupID, {
-      logging: {
-        timeoutMessage: `Creation of group for community ${communityId} failed with a timeout`,
-        retryMessage: `Retrying failed creation of group for community ${communityId}`,
-        errorMessage: 'Failed to create group: ',
-        successMessage: `Created group using communityID '${communityId}', communityName '${communityName}'`,
-        eventType,
-        eventID,
-      },
-    });
-  }
-
   async createCommunityRoom(
-    groupID: string,
     name: string,
     metadata?: Record<string, string>
   ): Promise<string> {
@@ -331,7 +281,6 @@ export class CommunicationAdapter {
     const eventType = MatrixAdapterEventType.CREATE_ROOM;
     const inputPayload: CreateRoomPayload = {
       triggeredBy: '',
-      groupID: groupID,
       roomName: name,
       metadata: metadata,
     };
@@ -347,7 +296,7 @@ export class CommunicationAdapter {
       );
       this.logResponsePayload(eventType, responseData, eventID);
       this.logger.verbose?.(
-        `Created community room on group '${groupID}'`,
+        `Created community room:'${responseData.roomID}'`,
         LogContext.COMMUNICATION
       );
       return responseData.roomID;
@@ -361,7 +310,6 @@ export class CommunicationAdapter {
   }
 
   async grantUserAccesToRooms(
-    groupID: string,
     roomIDs: string[],
     matrixUserID: string
   ): Promise<boolean> {
@@ -372,7 +320,6 @@ export class CommunicationAdapter {
     const eventType = MatrixAdapterEventType.ADD_USER_TO_ROOMS;
     const inputPayload: AddUserToRoomsPayload = {
       triggeredBy: '',
-      groupID,
       roomIDs,
       userID: matrixUserID,
     };

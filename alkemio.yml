@@ -185,6 +185,8 @@ identity:
           username: ${KRATOS_ADMIN_USERNAME}:kratos@alkem.io
           password: ${KRATOS_ADMIN_PASSWORD}:kr@t0$!!
 
+        session_cookie_name: ${KRATOS_SESSION_COOKIE_NAME}:ory_kratos_session
+
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
 monitoring:
