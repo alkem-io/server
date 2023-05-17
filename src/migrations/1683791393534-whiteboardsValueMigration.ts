@@ -24,6 +24,7 @@ export class whiteboardsValueMigration1683791393534
       } catch (error) {
         continue;
       }
+      if(!canvasValue.elements) continue;
 
       for (const element of canvasValue.elements) {
         if (element.type === 'text') {
