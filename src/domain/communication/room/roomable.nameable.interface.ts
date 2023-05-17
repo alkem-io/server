@@ -4,6 +4,5 @@ import { ObjectType } from '@nestjs/graphql';
 @ObjectType('IRoomableNameable')
 export abstract class IRoomableNameable extends INameable {
   communicationRoomID!: string;
-  communicationGroupID!: string;
   displayName!: string;
 }

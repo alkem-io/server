@@ -64,7 +64,6 @@ export class CalloutService {
 
   public async createCallout(
     calloutData: CreateCalloutInput,
-    communicationGroupID: string,
     userID?: string
   ): Promise<ICallout> {
     if (calloutData.type == CalloutType.CARD && !calloutData.postTemplate) {
@@ -131,7 +130,6 @@ export class CalloutService {
 
     if (calloutData.type === CalloutType.COMMENTS) {
       savedCallout.comments = await this.commentsService.createComments(
-        communicationGroupID,
         `callout-comments-${savedCallout.nameID}`
       );
       return await this.calloutRepository.save(savedCallout);
@@ -410,15 +408,7 @@ export class CalloutService {
 
     await this.setNameIdOnAspectData(aspectData, callout);
 
-    // Get the communicationGroupID to use for the aspect comments
-    const communicationGroupID =
-      await this.namingService.getCommunicationGroupIdForCallout(callout.id);
-
-    const aspect = await this.aspectService.createAspect(
-      aspectData,
-      userID,
-      communicationGroupID
-    );
+    const aspect = await this.aspectService.createAspect(aspectData, userID);
     callout.aspects.push(aspect);
     await this.calloutRepository.save(callout);
     return aspect;
@@ -483,12 +473,13 @@ export class CalloutService {
 
   public async getCanvasesFromCallout(
     callout: ICallout,
+    relations: FindOptionsRelationByString = [],
     canvasIDs?: string[],
     limit?: number,
     shuffle?: boolean
   ): Promise<ICanvas[]> {
     const calloutLoaded = await this.getCalloutOrFail(callout.id, {
-      relations: ['canvases'],
+      relations: ['canvases', ...relations],
     });
     if (!calloutLoaded.canvases)
       throw new EntityNotFoundException(
