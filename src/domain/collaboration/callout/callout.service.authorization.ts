@@ -80,7 +80,8 @@ export class CalloutAuthorizationService {
       );
 
     callout.canvases = await this.calloutService.getCanvasesFromCallout(
-      callout
+      callout,
+      ['canvases.checkout']
     );
     for (const canvas of callout.canvases) {
       await this.canvasAuthorizationService.applyAuthorizationPolicy(

@@ -473,12 +473,13 @@ export class CalloutService {
 
   public async getCanvasesFromCallout(
     callout: ICallout,
+    relations: FindOptionsRelationByString = [],
     canvasIDs?: string[],
     limit?: number,
     shuffle?: boolean
   ): Promise<ICanvas[]> {
     const calloutLoaded = await this.getCalloutOrFail(callout.id, {
-      relations: ['canvases'],
+      relations: ['canvases', ...relations],
     });
     if (!calloutLoaded.canvases)
       throw new EntityNotFoundException(
