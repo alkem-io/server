@@ -6,8 +6,6 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { IDocument } from './document.interface';
-import { StorageBucketResolverService } from '@services/infrastructure/entity-resolver/storage.bucket.resolver.service';
-import { IJourneyDocumentLocationResult } from './dto/document.result.dto.location';
 import { DocumentService } from './document.service';
 
 @Resolver(() => IDocument)
@@ -16,7 +14,6 @@ export class DocumentResolverFields {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private userService: UserService,
-    private storageBucketResolverService: StorageBucketResolverService,
     private documentService: DocumentService
   ) {}
 
@@ -51,23 +48,5 @@ export class DocumentResolverFields {
   })
   async uploadedDate(@Parent() document: IDocument): Promise<Date> {
     return this.documentService.getUploadedDate(document.id);
-  }
-
-  @ResolveField('location', () => IJourneyDocumentLocationResult, {
-    nullable: false,
-    description: 'The location of the storage bucket of this Document',
-  })
-  async location(
-    @Parent() document: IDocument
-  ): Promise<IJourneyDocumentLocationResult> {
-    const docWithBucket = await this.documentService.getDocumentOrFail(
-      document.id,
-      {
-        relations: ['storageBucket'],
-      }
-    );
-    return this.storageBucketResolverService.getParentJourneyForStorageBucket(
-      docWithBucket.storageBucket.id
-    );
   }
 }
