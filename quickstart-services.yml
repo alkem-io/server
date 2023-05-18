@@ -139,7 +139,7 @@ services:
 
   synapse:
     container_name: alkemio_dev_synapse
-    image: matrixdotorg/synapse:v1.39.0
+    image: matrixdotorg/synapse:v1.82.0
     depends_on:
       - postgres
     restart: always
@@ -241,7 +241,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter:v0.2.0
+    image: alkemio/matrix-adapter:v0.2.1
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
