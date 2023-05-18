@@ -4,6 +4,13 @@ import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { StorageBucketNotFoundException } from '@common/exceptions/storage.bucket.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
+import { IHub } from '@domain/challenge/hub/hub.interface';
+import { Hub } from '@domain/challenge/hub/hub.entity';
+import { EntityNotFoundException } from '@common/exceptions';
+import { IJourneyDocumentLocationResult } from '@domain/storage/document/dto/document.result.dto.location';
+import { DocumentLocationResultType } from '@common/enums/document.location.result.type';
 
 @Injectable()
 export class StorageBucketResolverService {
@@ -120,6 +127,66 @@ export class StorageBucketResolverService {
         );
     }
   }
+
+  public async getParentJourneyForStorageBucket(
+    storageBucketId: string
+  ): Promise<IJourneyDocumentLocationResult | never> {
+    let journey: IJourneyDocumentLocationResult | undefined = undefined;
+    try {
+      const hub = await this.entityManager.findOneOrFail(Hub, {
+        where: {
+          storageBucket: {
+            id: storageBucketId,
+          },
+        },
+        relations: {
+          storageBucket: true,
+        },
+      });
+      journey = {
+        hub,
+        challenge: undefined,
+        type: DocumentLocationResultType.HUB,
+      };
+    } catch (error) {
+      this.logger.verbose?.(
+        `Storage bucket with id '${storageBucketId}' is not in a Hub!`,
+        LogContext.STORAGE_BUCKET
+      );
+    }
+
+    try {
+      const challenge = await this.entityManager.findOneOrFail(Challenge, {
+        where: {
+          storageBucket: {
+            id: storageBucketId,
+          },
+        },
+        relations: {
+          storageBucket: true,
+        },
+      });
+      journey = {
+        hub: undefined,
+        challenge,
+        type: DocumentLocationResultType.CHALLENGE,
+      };
+    } catch (error) {
+      this.logger.verbose?.(
+        `Storage bucket with id '${storageBucketId}' is not in a Challenge!`,
+        LogContext.STORAGE_BUCKET
+      );
+    }
+
+    if (!journey)
+      throw new EntityNotFoundException(
+        `Parent entity for storage bucket with id ${storageBucketId} not found!`,
+        LogContext.STORAGE_BUCKET
+      );
+
+    return journey;
+  }
+
   private async getPlatformStorageBucketId(): Promise<string> {
     const query = `SELECT \`storageBucketId\`
     FROM \`platform\` LIMIT 1`;

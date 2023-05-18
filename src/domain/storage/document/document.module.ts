@@ -10,6 +10,7 @@ import { DocumentAuthorizationService } from './document.service.authorization';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
     TagsetModule,
     UserModule,
     IpfsModule,
+    EntityResolverModule,
     TypeOrmModule.forFeature([Document]),
   ],
   providers: [
