@@ -7,7 +7,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { IDocument } from './document.interface';
-import { DeleteDocumentInput } from './dto/documentdto.delete';
+import { DeleteDocumentInput } from './dto/document.dto.delete';
 import { UpdateDocumentInput } from './dto/document.dto.update';
 
 @Resolver()
