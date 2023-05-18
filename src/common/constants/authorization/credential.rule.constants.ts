@@ -60,3 +60,5 @@ export const CREDENTIAL_RULE_CALENDAR_EVENT_CREATED_BY =
   'credentialRule-calendarEventCreatedBy';
 export const CREDENTIAL_RULE_DOCUMENT_CREATED_BY =
   'credentialRule-documentCreatedBy';
+export const CREDENTIAL_RULE_LIBRARY_INNOVATION_PACK_PROVIDER_ADMIN =
+  'credentialRule-libraryInnovationPackProvider';
