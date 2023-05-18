@@ -1154,6 +1154,9 @@ url_preview_accept_language:
 #
 enable_registration: true
 
+# TODO: dangerous for when exposing outside of cluster
+enable_registration_without_verification: true
+
 # Optional account validity configuration. This allows for accounts to be denied
 # any request after a given period.
 #
