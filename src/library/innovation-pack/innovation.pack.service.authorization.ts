@@ -8,6 +8,14 @@ import { InnovationPack } from './innovation.pack.entity';
 import { TemplatesSetAuthorizationService } from '@domain/template/templates-set/templates.set.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { EntityNotInitializedException } from '@common/exceptions';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { CREDENTIAL_RULE_LIBRARY_INNOVATION_PACK_PROVIDER_ADMIN } from '@common/constants/authorization/credential.rule.constants';
 
 @Injectable()
 export class InnovationPackAuthorizationService {
@@ -33,6 +41,10 @@ export class InnovationPackAuthorizationService {
         innovationPack.authorization,
         parentAuthorization
       );
+
+    innovationPack.authorization = await this.appendCredentialRules(
+      innovationPack
+    );
 
     // Cascade down
     const innovationPackPropagated =
@@ -61,5 +73,53 @@ export class InnovationPackAuthorizationService {
       );
 
     return innovationPack;
+  }
+
+  private async appendCredentialRules(
+    innovationPack: IInnovationPack
+  ): Promise<IAuthorizationPolicy> {
+    const authorization = innovationPack.authorization;
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for InnovationPack: ${innovationPack.id}`,
+        LogContext.LIBRARY
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    const providerOrg = await this.innovationPackService.getProvider(
+      innovationPack.id
+    );
+    if (!providerOrg)
+      throw new EntityNotInitializedException(
+        `Providing organization not found for InnovationPack: ${innovationPack.id}`,
+        LogContext.LIBRARY
+      );
+
+    const providerOrgAdmins =
+      this.authorizationPolicyService.createCredentialRule(
+        [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ],
+        [
+          {
+            type: AuthorizationCredential.ORGANIZATION_ADMIN,
+            resourceID: providerOrg.id,
+          },
+        ],
+        CREDENTIAL_RULE_LIBRARY_INNOVATION_PACK_PROVIDER_ADMIN
+      );
+    newRules.push(providerOrgAdmins);
+
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
+        authorization,
+        newRules
+      );
+
+    return updatedAuthorization;
   }
 }
