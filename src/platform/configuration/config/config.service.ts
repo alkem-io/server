@@ -12,6 +12,10 @@ export class KonfigService {
   constructor(private configService: ConfigService) {}
 
   async getConfig(): Promise<IConfig> {
+    const domain = new URL(
+      this.configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
+    ).hostname;
+
     const sentryConfig = this.configService.get(
       ConfigurationTypes.MONITORING
     )?.sentry;
@@ -27,6 +31,7 @@ export class KonfigService {
         providers: await this.getAuthenticationProvidersConfig(),
       },
       platform: {
+        domain,
         environment: this.configService.get(ConfigurationTypes.HOSTING)
           ?.environment,
         terms: this.configService.get(ConfigurationTypes.PLATFORM)?.terms,
