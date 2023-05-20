@@ -138,6 +138,7 @@ export class InvitationService {
   async findInvitationsForUser(userID: string): Promise<IInvitation[]> {
     const existingInvitations = await this.invitationRepository
       .createQueryBuilder('invitation')
+      .leftJoinAndSelect('invitation.community', 'community')
       .where('invitation.invitedUser = :userID')
       .setParameters({
         userID: `${userID}`,

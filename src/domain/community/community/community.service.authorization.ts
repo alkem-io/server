@@ -16,6 +16,7 @@ import {
   CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL,
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
+  POLICY_RULE_COMMUNITY_INVITE,
 } from '@common/constants';
 
 @Injectable()
@@ -138,11 +139,12 @@ export class CommunityAuthorizationService {
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
-    // const communityJoinPrivilege = new AuthorizationPolicyRulePrivilege(
-    //   [AuthorizationPrivilege.COMMUNITY_JOIN],
-    //   AuthorizationPrivilege.GRANT
-    // );
-    // privilegeRules.push(communityJoinPrivilege);
+    const communityInvitePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.COMMUNITY_INVITE],
+      AuthorizationPrivilege.GRANT,
+      POLICY_RULE_COMMUNITY_INVITE
+    );
+    privilegeRules.push(communityInvitePrivilege);
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,

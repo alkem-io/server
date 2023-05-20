@@ -1,0 +1,12 @@
+mutation deleteUserInvitation($deleteData: DeleteInvitationInput!) {
+  deleteUserInvitation(deleteData: $deleteData) {
+    id
+  }
+}
+
+Variables:
+{
+  "deleteData": {
+    "ID": "uuid"
+  }
+}
