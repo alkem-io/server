@@ -5,18 +5,18 @@ export const invitationLifecycleConfig: ILifecycleDefinition = {
   context: {
     parentID: '',
   },
-  initial: 'new',
+  initial: 'invited',
   states: {
-    new: {
+    invited: {
       on: {
-        APPROVE: {
-          target: 'approved',
+        ACCEPT: {
+          target: 'accepted',
           cond: 'communityUpdateAuthorized',
         },
         REJECT: 'rejected',
       },
     },
-    approved: {
+    accepted: {
       type: 'final',
       entry: ['communityAddMember'],
       data: {
@@ -25,7 +25,7 @@ export const invitationLifecycleConfig: ILifecycleDefinition = {
     },
     rejected: {
       on: {
-        REOPEN: 'new',
+        REINVITE: 'invited',
         ARCHIVE: 'archived',
       },
     },
