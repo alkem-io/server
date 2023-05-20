@@ -12,6 +12,6 @@ variables:
   "invitationEventData":
   {
     "invitationID": "uuid",
-  	"eventName": "APPROVE"
+  	"eventName": "ACCEPT"
   }
 }
