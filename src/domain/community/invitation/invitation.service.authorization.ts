@@ -1,51 +1,49 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ApplicationService } from './application.service';
+import { InvitationService } from './invitation.service';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { Application } from './application.entity';
-import { IApplication } from './application.interface';
+import { Invitation } from './invitation.entity';
+import { IInvitation } from './invitation.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CREDENTIAL_RULE_COMMUNITY_USER_APPLICATION } from '@common/constants/authorization/credential.rule.constants';
+import { CREDENTIAL_RULE_COMMUNITY_USER_INVITATION } from '@common/constants/authorization/credential.rule.constants';
 
 @Injectable()
-export class ApplicationAuthorizationService {
+export class InvitationAuthorizationService {
   constructor(
-    private applicationService: ApplicationService,
+    private invitationService: InvitationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    @InjectRepository(Application)
-    private applicationRepository: Repository<Application>
+    @InjectRepository(Invitation)
+    private invitationRepository: Repository<Invitation>
   ) {}
 
   async applyAuthorizationPolicy(
-    application: IApplication,
+    invitation: IInvitation,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IApplication> {
-    application.authorization =
+  ): Promise<IInvitation> {
+    invitation.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        application.authorization,
+        invitation.authorization,
         parentAuthorization
       );
 
-    application.authorization = await this.extendAuthorizationPolicy(
-      application
-    );
+    invitation.authorization = await this.extendAuthorizationPolicy(invitation);
 
-    return await this.applicationRepository.save(application);
+    return await this.invitationRepository.save(invitation);
   }
 
   private async extendAuthorizationPolicy(
-    application: IApplication
+    invitation: IInvitation
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     // get the user
-    const user = await this.applicationService.getUser(application.id);
+    const user = await this.invitationService.getInvitedUser(invitation);
 
-    // also grant the user privileges to manage their own application
-    const userApplicationRule =
+    // also grant the user privileges to manage their own invitation
+    const userInvitationRule =
       this.authorizationPolicyService.createCredentialRule(
         [
           AuthorizationPrivilege.READ,
@@ -58,14 +56,14 @@ export class ApplicationAuthorizationService {
             resourceID: user.id,
           },
         ],
-        CREDENTIAL_RULE_COMMUNITY_USER_APPLICATION
+        CREDENTIAL_RULE_COMMUNITY_USER_INVITATION
       );
-    newRules.push(userApplicationRule);
+    newRules.push(userInvitationRule);
 
     //
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        application.authorization,
+        invitation.authorization,
         newRules
       );
 

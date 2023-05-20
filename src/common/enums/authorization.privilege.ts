@@ -25,6 +25,7 @@ export enum AuthorizationPrivilege {
   UPDATE_INNOVATION_FLOW = 'update-lifecycle',
   COMMUNITY_JOIN = 'community-join',
   COMMUNITY_APPLY = 'community-apply',
+  COMMUNITY_INVITE = 'community-invite',
   COMMUNITY_CONTEXT_REVIEW = 'community-context-review',
   CREATE_CALLOUT = 'create-callout',
   UPDATE_CALLOUT_PUBLISHER = 'update-callout-publisher',

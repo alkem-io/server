@@ -1,0 +1,17 @@
+mutation inviteForCommunityMembership($invitationData: CommunityApplyInput!) {
+  applyForCommunityMembership(invitationData: $invitationData){
+    id
+    lifecycle {
+      state
+    }
+  }
+}
+
+query variables:
+{
+  "invitationData": {
+    "communityID": "uuid",
+    "userID": "uuid"
+
+  }
+}

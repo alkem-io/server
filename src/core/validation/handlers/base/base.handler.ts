@@ -69,6 +69,7 @@ import {
   UpdateDocumentInput,
 } from '@domain/storage/document';
 import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upload.image';
+import { CommunityInviteInput } from '@domain/community/community/dto/community.dto.invite';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -125,6 +126,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateEcosystemModelInput,
       VisualUploadImageInput,
       CommunityApplyInput,
+      CommunityInviteInput,
       CommunicationCreateDiscussionInput,
       SendMessageOnCalloutInput,
       CreateCalloutOnCollaborationInput,
