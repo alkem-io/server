@@ -110,7 +110,7 @@ export class CommunityResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
-      AuthorizationPrivilege.GRANT,
+      AuthorizationPrivilege.COMMUNITY_ADD_MEMBER,
       `assign user community: ${community.displayName}`
     );
     await this.communityService.assignUserToRole(
