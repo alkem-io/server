@@ -47,7 +47,7 @@ import { InvitationService } from '../invitation/invitation.service';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation';
 import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
 import { CommunityLifecycleInvitationOptionsProvider } from './community.lifecycle.invitation.options.provider';
-import { CreateInvitationInput } from '../invitation';
+import { CreateInvitationInput, IInvitation } from '../invitation';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -379,14 +379,14 @@ export class CommunityResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IApplication, {
-    description: 'Apply to join the specified Community as a member.',
+  @Mutation(() => IInvitation, {
+    description: 'Invite the user to join the specified Community as a member.',
   })
   @Profiling.api
   async inviteForCommunityMembership(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData') invitationData: CommunityInviteInput
-  ): Promise<IApplication> {
+  ): Promise<IInvitation> {
     const community = await this.communityService.getCommunityOrFail(
       invitationData.communityID
     );
@@ -558,7 +558,7 @@ export class CommunityResolverMutations {
   @Mutation(() => IApplication, {
     description: 'Trigger an event on the Invitation.',
   })
-  async eventOnInvitation(
+  async eventOnCommunityInvitation(
     @Args('invitationEventData')
     invitationEventData: InvitationEventInput,
     @CurrentUser() agentInfo: AgentInfo
