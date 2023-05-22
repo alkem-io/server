@@ -7,7 +7,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { DeleteDocumentInput } from './dto/documentdto.delete';
+import { DeleteDocumentInput } from './dto/document.dto.delete';
 import { UpdateDocumentInput } from './dto/document.dto.update';
 import { CreateDocumentInput } from './dto/document.dto.create';
 import { Document } from './document.entity';
@@ -88,6 +88,18 @@ export class DocumentService {
         LogContext.STORAGE_BUCKET
       );
     return document;
+  }
+
+  public async getUploadedDate(documentID: string): Promise<Date> {
+    const document = await this.documentRepository.findOne({
+      where: { id: documentID },
+    });
+    if (!document)
+      throw new EntityNotFoundException(
+        `Not able to locate document with the specified ID: ${documentID}`,
+        LogContext.STORAGE_BUCKET
+      );
+    return document.createdDate;
   }
 
   public getDocumentContents(document: IDocument): Readable {
