@@ -11,7 +11,7 @@ export abstract class IInvitation extends IAuthorizable {
   community?: ICommunity;
 
   @Field(() => ILifecycle, { nullable: false })
-  lifecycle?: ILifecycle;
+  lifecycle!: ILifecycle;
 
   @Field(() => Date)
   createdDate!: Date;

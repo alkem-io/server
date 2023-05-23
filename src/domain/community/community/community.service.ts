@@ -52,8 +52,8 @@ import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { InvitationService } from '../invitation/invitation.service';
-import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { IInvitation } from '../invitation/invitation.interface';
+import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
 
 @Injectable()
 export class CommunityService {
@@ -766,8 +766,8 @@ export class CommunityService {
     return application;
   }
 
-  async createInvitation2(
-    invitationData: CreateInvitationInput
+  async createInvitation(
+    invitationData: CreateInvitationExistingUserOnCommunityInput
   ): Promise<IInvitation> {
     const { user, agent } = await this.userService.getUserAndAgent(
       invitationData.invitedUser

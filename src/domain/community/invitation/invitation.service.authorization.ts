@@ -42,14 +42,10 @@ export class InvitationAuthorizationService {
     // get the user
     const user = await this.invitationService.getInvitedUser(invitation);
 
-    // also grant the user privileges to manage their own invitation
+    // also grant the user privileges to work with their own invitation
     const userInvitationRule =
       this.authorizationPolicyService.createCredentialRule(
-        [
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
+        [AuthorizationPrivilege.READ, AuthorizationPrivilege.UPDATE],
         [
           {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,

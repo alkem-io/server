@@ -41,13 +41,13 @@ import { CommunityAuthorizationService } from './community.service.authorization
 import { CommunityType } from '@common/enums/community.type';
 import { ElasticsearchService } from '@services/external/elasticsearch';
 import { UpdateCommunityApplicationFormInput } from './dto/community.dto.update.application.form';
-import { CommunityInviteInput } from './dto/community.dto.invite';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { InvitationService } from '../invitation/invitation.service';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation';
 import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
 import { CommunityLifecycleInvitationOptionsProvider } from './community.lifecycle.invitation.options.provider';
-import { CreateInvitationInput, IInvitation } from '../invitation';
+import { IInvitation } from '../invitation';
+import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -380,12 +380,14 @@ export class CommunityResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IInvitation, {
-    description: 'Invite the user to join the specified Community as a member.',
+    description:
+      'Invite an existing User to join the specified Community as a member.',
   })
   @Profiling.api
-  async inviteForCommunityMembership(
+  async inviteExistingUserForCommunityMembership(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('invitationData') invitationData: CommunityInviteInput
+    @Args('invitationData')
+    invitationData: CreateInvitationExistingUserOnCommunityInput
   ): Promise<IInvitation> {
     const community = await this.communityService.getCommunityOrFail(
       invitationData.communityID
@@ -398,12 +400,12 @@ export class CommunityResolverMutations {
       `create invitation community: ${community.displayName}`
     );
 
-    const iniput: CreateInvitationInput = {
+    const input: CreateInvitationExistingUserOnCommunityInput = {
       communityID: community.id,
-      invitedUser: invitationData.userID,
+      invitedUser: invitationData.invitedUser,
       invitedBy: agentInfo.userID,
     };
-    const invitation = await this.communityService.createInvitation2(iniput);
+    const invitation = await this.communityService.createInvitation(input);
 
     const savedInvitation =
       await this.invitationAuthorizationService.applyAuthorizationPolicy(
@@ -415,7 +417,7 @@ export class CommunityResolverMutations {
     const notificationInput: NotificationInputCommunityInvitation = {
       triggeredBy: agentInfo.userID,
       community: community,
-      invitedUser: invitationData.userID,
+      invitedUser: invitationData.invitedUser,
     };
     await this.notificationAdapter.invitationCreated(notificationInput);
 
