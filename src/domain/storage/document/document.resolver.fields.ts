@@ -6,13 +6,15 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { IDocument } from './document.interface';
+import { DocumentService } from './document.service';
 
 @Resolver(() => IDocument)
 export class DocumentResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private userService: UserService
+    private userService: UserService,
+    private documentService: DocumentService
   ) {}
 
   @ResolveField('createdBy', () => IUser, {
@@ -38,5 +40,13 @@ export class DocumentResolverFields {
         throw e;
       }
     }
+  }
+
+  @ResolveField('uploadedDate', () => Date, {
+    nullable: false,
+    description: 'The uploaded date of this Document',
+  })
+  async uploadedDate(@Parent() document: IDocument): Promise<Date> {
+    return this.documentService.getUploadedDate(document.id);
   }
 }

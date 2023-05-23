@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -20,6 +20,14 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { AssignGlobalHubsAdminInput } from './dto/authorization.dto.assign.global.hubs.admin';
 import { RemoveGlobalHubsAdminInput } from './dto/authorization.dto.remove.global.hubs.admin';
 import { GLOBAL_POLICY_AUTHORIZATION_GRANT_GLOBAL_ADMIN } from '@common/constants/authorization/global.policy.constants';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { HubService } from '@domain/challenge/hub/hub.service';
+import { OrganizationService } from '@domain/community/organization/organization.service';
+import { UserService } from '@domain/community/user/user.service';
+import { HubAuthorizationService } from '@domain/challenge/hub/hub.service.authorization';
+import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
+import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Resolver()
 export class AdminAuthorizationResolverMutations {
@@ -27,8 +35,17 @@ export class AdminAuthorizationResolverMutations {
 
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
+    private hubAuthorizationService: HubAuthorizationService,
+    private organizationAuthorizationService: OrganizationAuthorizationService,
+    private userAuthorizationService: UserAuthorizationService,
     private authorizationService: AuthorizationService,
-    private adminAuthorizationService: AdminAuthorizationService
+    private adminAuthorizationService: AdminAuthorizationService,
+    private hubService: HubService,
+    private organizationService: OrganizationService,
+    private userService: UserService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
@@ -198,5 +215,81 @@ export class AdminAuthorizationResolverMutations {
     return await this.adminAuthorizationService.removeGlobalHubsAdmin(
       membershipData
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => Boolean, {
+    description: 'Reset the Authorization Policy on all entities',
+  })
+  @Profiling.api
+  async authorizationPolicyResetAll(
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<boolean> {
+    const platformPolicy =
+      this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      platformPolicy,
+      AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
+      `reset authorization on platform: ${agentInfo.email}`
+    );
+
+    const [hubs, organizations, users] = await Promise.all([
+      this.hubService.getAllHubs(),
+      this.organizationService.getOrganizations({}),
+      this.userService.getUsers({}),
+    ]);
+
+    const resetHubAuthPromises = hubs.map(async hub => {
+      this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        hub.authorization,
+        AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
+        `reset authorization definition: ${agentInfo.email}`
+      );
+      await this.hubAuthorizationService.applyAuthorizationPolicy(hub);
+    });
+
+    const resetOrgAuthPromises = organizations.map(async organization => {
+      this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        organization.authorization,
+        AuthorizationPrivilege.UPDATE, //// todo: replace with AUTHORIZATION_RESET once that has been granted
+        `reset authorization definition on organization: ${organization.id}`
+      );
+      await this.organizationAuthorizationService.applyAuthorizationPolicy(
+        organization
+      );
+    });
+
+    const resetUserAuthPromises = users.map(async user => {
+      this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        user.authorization,
+        AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
+        `reset authorization definition on user: ${user.id}`
+      );
+      await this.userAuthorizationService.applyAuthorizationPolicy(user);
+    });
+
+    const allPromises = [
+      ...resetHubAuthPromises,
+      ...resetOrgAuthPromises,
+      ...resetUserAuthPromises,
+    ];
+
+    const results = await Promise.allSettled(allPromises);
+
+    let res = true;
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        res = false;
+        this.logger.error(
+          `Error with promise at index ${index}: ${result.reason}`
+        );
+      }
+    });
+
+    return res;
   }
 }

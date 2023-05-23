@@ -30,14 +30,15 @@ export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 5242880;
 
   DEFAULT_VISUAL_ALLOWED_MIME_TYPES: MimeFileType[] = [
-    MimeFileType.JPEG,
     MimeFileType.JPG,
-    MimeFileType.GIF,
-    MimeFileType.PNG,
-    MimeFileType.PDF,
-    MimeFileType.SVG,
-    MimeFileType.WEBP,
+    MimeFileType.JPEG,
     MimeFileType.XPNG,
+    MimeFileType.PNG,
+    MimeFileType.GIF,
+    MimeFileType.WEBP,
+    MimeFileType.SVG,
+    MimeFileType.AVIF,
+    MimeFileType.PDF,
   ];
 
   constructor(

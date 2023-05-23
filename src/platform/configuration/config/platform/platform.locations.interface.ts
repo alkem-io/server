@@ -5,6 +5,12 @@ import { FeatureFlag } from './platform.dto.feature.flag';
 export abstract class IPlatformLocations {
   @Field(() => String, {
     nullable: false,
+    description: 'Main domain of the environment',
+  })
+  domain!: string;
+
+  @Field(() => String, {
+    nullable: false,
     description: 'Name of the environment',
   })
   environment!: string;
