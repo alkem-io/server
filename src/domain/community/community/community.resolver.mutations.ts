@@ -6,7 +6,7 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { IApplication } from '@domain/community/application';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ICommunity } from '@domain/community/community/community.interface';
-import { CommunityLifecycleApplicationOptionsProvider } from './community.lifecycle.application.options.provider';
+import { CommunityApplicationLifecycleOptionsProvider } from './community.lifecycle.application.options.provider';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -45,7 +45,7 @@ import { InvitationAuthorizationService } from '../invitation/invitation.service
 import { InvitationService } from '../invitation/invitation.service';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation';
 import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
-import { CommunityLifecycleInvitationOptionsProvider } from './community.lifecycle.invitation.options.provider';
+import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecycle.invitation.options.provider';
 import { IInvitation } from '../invitation';
 import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
 
@@ -59,9 +59,9 @@ export class CommunityResolverMutations {
     private userAuthorizationService: UserAuthorizationService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communityService: CommunityService,
-    @Inject(CommunityLifecycleApplicationOptionsProvider)
-    private communityLifecycleApplicationOptionsProvider: CommunityLifecycleApplicationOptionsProvider,
-    private communityLifecycleInvitationOptionsProvider: CommunityLifecycleInvitationOptionsProvider,
+    @Inject(CommunityApplicationLifecycleOptionsProvider)
+    private communityLifecycleApplicationOptionsProvider: CommunityApplicationLifecycleOptionsProvider,
+    private communityLifecycleInvitationOptionsProvider: CommunityInvitationLifecycleOptionsProvider,
     private applicationService: ApplicationService,
     private agentService: AgentService,
     private applicationAuthorizationService: ApplicationAuthorizationService,

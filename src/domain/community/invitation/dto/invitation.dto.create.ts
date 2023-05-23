@@ -1,8 +1,9 @@
 import { UUID_LENGTH } from '@common/constants';
 import { UUID } from '@domain/common/scalars';
-import { Field } from '@nestjs/graphql';
+import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
 
+@InputType()
 export class CreateInvitationInput {
   @Field(() => UUID, {
     nullable: false,

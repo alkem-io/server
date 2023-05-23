@@ -14,7 +14,7 @@ import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
 import { IInvitation } from '../invitation';
 
 @Injectable()
-export class CommunityLifecycleInvitationOptionsProvider {
+export class CommunityInvitationLifecycleOptionsProvider {
   constructor(
     private lifecycleService: LifecycleService,
     private communityService: CommunityService,

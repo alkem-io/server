@@ -15,7 +15,7 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { CommunityPolicyModule } from '../community-policy/community.policy.module';
 import { OrganizationModule } from '../organization/organization.module';
 import { Community } from './community.entity';
-import { CommunityLifecycleApplicationOptionsProvider } from './community.lifecycle.application.options.provider';
+import { CommunityApplicationLifecycleOptionsProvider } from './community.lifecycle.application.options.provider';
 import { CommunityResolverFields } from './community.resolver.fields';
 import { CommunityResolverMutations } from './community.resolver.mutations';
 import { CommunityResolverQueries } from './community.resolver.queries';
@@ -23,7 +23,7 @@ import { CommunityService } from './community.service';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { FormModule } from '@domain/common/form/form.module';
 import { InvitationModule } from '../invitation/invitation.module';
-import { CommunityLifecycleInvitationOptionsProvider } from './community.lifecycle.invitation.options.provider';
+import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecycle.invitation.options.provider';
 
 @Module({
   imports: [
@@ -52,8 +52,8 @@ import { CommunityLifecycleInvitationOptionsProvider } from './community.lifecyc
     CommunityResolverMutations,
     CommunityResolverQueries,
     CommunityResolverFields,
-    CommunityLifecycleApplicationOptionsProvider,
-    CommunityLifecycleInvitationOptionsProvider,
+    CommunityApplicationLifecycleOptionsProvider,
+    CommunityInvitationLifecycleOptionsProvider,
   ],
   exports: [CommunityService, CommunityAuthorizationService],
 })

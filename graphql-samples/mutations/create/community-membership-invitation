@@ -1,5 +1,5 @@
-mutation inviteForCommunityMembership($invitationData: CommunityInviteInput!) {
-  inviteForCommunityMembership(invitationData: $invitationData){
+mutation inviteExistingUserForCommunityMembership($invitationData: CreateInvitationExistingUserOnCommunityInput!) {
+  inviteExistingUserForCommunityMembership(invitationData: $invitationData){
     id
     lifecycle {
       state
@@ -11,6 +11,6 @@ query variables:
 {
   "invitationData": {
     "communityID": "uuid",
-    "userID": "uuid"
+    "invitedUser": "uuid"
   }
 }

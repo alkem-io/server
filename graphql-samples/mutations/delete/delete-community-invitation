@@ -1,4 +1,4 @@
-mutation deleteUserInvitation($deleteData: DeleteInvitationInput!) {
+mutation deleteInvitation($deleteData: DeleteInvitationInput!) {
   deleteUserInvitation(deleteData: $deleteData) {
     id
   }

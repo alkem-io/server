@@ -202,8 +202,7 @@ export class CommunityResolverFields {
   })
   @Profiling.api
   async inivitations(@Parent() community: Community): Promise<IInvitation[]> {
-    const apps = await this.communityService.getInvitations(community);
-    return apps || [];
+    return await this.communityService.getInvitations(community);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
