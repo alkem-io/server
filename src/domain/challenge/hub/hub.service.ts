@@ -377,6 +377,12 @@ export class HubService {
     return hubsResult;
   }
 
+  public async getAllHubs(): Promise<IHub[]> {
+    return this.hubRepository.find({
+      relations: ['preferenceSet', 'preferenceSet.preferences'],
+    });
+  }
+
   private async getFilteredHubsSortOrderDefault(
     allowedVisibilities: HubVisibility[],
     IDs?: string[]
