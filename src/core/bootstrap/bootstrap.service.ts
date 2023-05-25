@@ -35,10 +35,8 @@ import { CreateHubInput } from '@domain/challenge/hub/dto/hub.dto.create';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
 import { HubVisibility } from '@common/enums/hub.visibility';
-import {
-  InnovationHubService,
-  InnovationHubType,
-} from '@domain/innovation-hub';
+import { InnovationHubType } from '@domain/innovation-hub/types';
+import { InnovationHubService } from '@domain/innovation-hub';
 import { CreateInnovationHubInput } from '@domain/innovation-hub/dto';
 
 @Injectable()
@@ -292,17 +290,26 @@ export class BootstrapService {
   }
 
   public async ensureListInnovationHub() {
-    return this.createInnovationHub({
-      nameID: DEFAULT_INNOVATION_HUB_LIST_NAMEID,
-      subdomain: DEFAULT_INNOVATION_HUB_LIST_SUBDOMAIN,
-      type: InnovationHubType.LIST,
-      hubListFilter: [DEFAULT_HUB_NAMEID],
-      profileData: {
-        displayName: DEFAULT_INNOVATION_HUB_LIST_DISPLAY_NAME,
-        description: 'An Innovation Hub to demonstrate filtering by visibility',
-        tagline: 'An Innovation Hub to demonstrate filtering by visibility',
-      },
-    });
+    try {
+      const defaultHub = await this.hubService.getHubOrFail(DEFAULT_HUB_NAMEID);
+      return this.createInnovationHub({
+        nameID: DEFAULT_INNOVATION_HUB_LIST_NAMEID,
+        subdomain: DEFAULT_INNOVATION_HUB_LIST_SUBDOMAIN,
+        type: InnovationHubType.LIST,
+        hubListFilter: [defaultHub.id],
+        profileData: {
+          displayName: DEFAULT_INNOVATION_HUB_LIST_DISPLAY_NAME,
+          description:
+            'An Innovation Hub to demonstrate filtering by visibility',
+          tagline: 'An Innovation Hub to demonstrate filtering by visibility',
+        },
+      });
+    } catch (e) {
+      return this.logger.error(
+        `Unable to create List Innovation Hub because the Default Hub with nameID: '${DEFAULT_HUB_NAMEID}' is not found`,
+        LogContext.BOOTSTRAP
+      );
+    }
   }
 
   private async createInnovationHub(input: CreateInnovationHubInput) {
@@ -311,7 +318,15 @@ export class BootstrapService {
         subdomain: input.subdomain,
       });
     } catch (e) {
-      return this.innovationHubService.create(input);
+      try {
+        return await this.innovationHubService.createOrFail(input);
+      } catch (e) {
+        const err = e as Error;
+        this.logger.error(
+          `Error caught while bootstrapping Innovation Hub of type '${input.type}': ${err.message}`,
+          LogContext.BOOTSTRAP
+        );
+      }
     }
 
     return;
