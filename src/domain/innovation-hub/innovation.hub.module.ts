@@ -8,6 +8,8 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { InnovationHubResolverMutations } from './innovation.hub.resolver.mutations';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 
 @Module({
   imports: [
@@ -16,10 +18,12 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
     ProfileModule,
     PlatformAuthorizationPolicyModule,
     AuthorizationPolicyModule,
+    AuthorizationModule,
   ],
   providers: [
     InnovationHubService,
     InnovationHubFieldResolver,
+    InnovationHubResolverMutations,
     InnovationHubAuthorizationService,
   ],
   exports: [InnovationHubService, InnovationHubAuthorizationService],

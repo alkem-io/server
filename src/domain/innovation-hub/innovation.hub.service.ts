@@ -12,23 +12,25 @@ import { RestrictedTagsetNames } from '@domain/common/tagset';
 import { VisualType } from '@common/enums/visual.type';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IInnovationHub, InnovationHub, InnovationHubType } from './';
-import { CreateInnovationHubInput } from './dto';
+import { CreateInnovationHubInput, UpdateInnovationHubInput } from './dto';
 import { InnovationHubAuthorizationService } from './innovation.hub.service.authorization';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class InnovationHubService {
   constructor(
     @InjectRepository(InnovationHub)
-    private readonly hubRepo: Repository<InnovationHub>,
+    private readonly innovationHubRepository: Repository<InnovationHub>,
     private readonly profileService: ProfileService,
-    private readonly authService: InnovationHubAuthorizationService
+    private readonly authService: InnovationHubAuthorizationService,
+    private readonly authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
   public async create(
     input: CreateInnovationHubInput
   ): Promise<IInnovationHub> {
     try {
-      validateCreateInput(input);
+      validateCreateOrUpdateInput(input);
     } catch (e) {
       const err = e as Error;
       throw new ValidationException(
@@ -41,6 +43,7 @@ export class InnovationHubService {
     hub.authorization = new AuthorizationPolicy();
 
     // todo: validate hubs input
+    // what happens when a hub gets deleted?
 
     hub.profile = await this.profileService.createProfile(input.profileData);
 
@@ -54,13 +57,66 @@ export class InnovationHubService {
       VisualType.BANNER
     );
 
-    await this.hubRepo.save(hub);
+    await this.innovationHubRepository.save(hub);
 
     return this.authService.applyAuthorizationPolicyAndSave(hub);
   }
 
+  public async update(
+    input: UpdateInnovationHubInput
+  ): Promise<IInnovationHub> {
+    try {
+      validateCreateOrUpdateInput(input);
+    } catch (e) {
+      const err = e as Error;
+      throw new ValidationException(
+        `Incorrect input provided: ${err.message}`,
+        LogContext.INNOVATION_HUB
+      );
+    }
+
+    const hub: IInnovationHub = await this.getInnovationHubOrFail({
+      id: input.ID,
+    });
+
+    // todo: validate hubs input
+    // what happens when a hub gets deleted?
+
+    if (input.profileData) {
+      hub.profile = await this.profileService.updateProfile(
+        hub.profile,
+        input.profileData
+      );
+    }
+
+    return await this.innovationHubRepository.save(hub);
+  }
+
+  public async delete(innovationHubID: string): Promise<IInnovationHub> {
+    const hub = await this.getInnovationHubOrFail(
+      { id: innovationHubID },
+      {
+        relations: ['profile'],
+      }
+    );
+
+    if (hub.profile) {
+      await this.profileService.deleteProfile(hub.profile.id);
+    }
+
+    if (hub.authorization)
+      await this.authorizationPolicyService.delete(hub.authorization);
+
+    const result = await this.innovationHubRepository.remove(
+      hub as InnovationHub
+    );
+    result.id = innovationHubID;
+
+    return result;
+  }
+
   public getInnovationHubs(options?: FindManyOptions<InnovationHub>) {
-    return this.hubRepo.find(options);
+    return this.innovationHubRepository.find(options);
   }
 
   public async getInnovationHubOrFail(
@@ -73,7 +129,7 @@ export class InnovationHubService {
 
     const { id, subdomain } = args;
 
-    const hub = await this.hubRepo.findOne({
+    const hub = await this.innovationHubRepository.findOne({
       where: {
         ...options?.where,
         id,
@@ -95,7 +151,7 @@ export class InnovationHubService {
   public async getSpaceListFilterOrFail(
     hubId: string
   ): Promise<string[] | undefined | never> {
-    const hub = await this.hubRepo.findOneBy({
+    const hub = await this.innovationHubRepository.findOneBy({
       id: hubId,
     });
 
@@ -117,15 +173,15 @@ export class InnovationHubService {
   }
 }
 
-const validateCreateInput = ({
+const validateCreateOrUpdateInput = ({
   type,
   hubListFilter,
   hubVisibilityFilter,
-}: CreateInnovationHubInput): true | never => {
+}: CreateInnovationHubInput | UpdateInnovationHubInput): true | never => {
   if (type === InnovationHubType.LIST) {
     if (!hubListFilter || !hubListFilter.length) {
       throw new Error(
-        `At least one Hub needs to provided for Innovation Hub of type '${InnovationHubType.LIST}'`
+        `At least one Hub needs to be provided for Innovation Hub of type '${InnovationHubType.LIST}'`
       );
     }
 

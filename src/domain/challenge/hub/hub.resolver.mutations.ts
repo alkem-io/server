@@ -68,7 +68,7 @@ export class HubResolverMutations {
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.CREATE_HUB,
-      `updateHub: ${hubData.nameID}`
+      `create hub: ${hubData.nameID}`
     );
     const hub = await this.hubService.createHub(hubData, agentInfo);
     return await this.hubAuthorizationService.applyAuthorizationPolicy(hub);
