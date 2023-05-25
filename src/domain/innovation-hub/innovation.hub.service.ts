@@ -26,7 +26,7 @@ export class InnovationHubService {
     private readonly profileService: ProfileService,
     private readonly authService: InnovationHubAuthorizationService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
-    private readonly spaceService: HubService,
+    private readonly hubService: HubService,
     private namingService: NamingService
   ) {}
 
@@ -44,40 +44,37 @@ export class InnovationHubService {
     }
 
     const subdomainAvailable =
-      await this.namingService.isInnovationSpaceSubdomainAvailable(
+      await this.namingService.isInnovationHubSubdomainAvailable(
         createData.subdomain
       );
     if (!subdomainAvailable)
       throw new ValidationException(
-        `Unable to create Innovation Space: the provided subdomain is already taken: ${createData.subdomain}`,
+        `Unable to create Innovation Hub: the provided subdomain is already taken: ${createData.subdomain}`,
         LogContext.INNOVATION_HUB
       );
 
     if (createData.nameID && createData.nameID.length > 0) {
       const nameAvailable =
-        await this.namingService.isInnovationSpaceNameIdAvailable(
+        await this.namingService.isInnovationHubNameIdAvailable(
           createData.nameID
         );
       if (!nameAvailable)
         throw new ValidationException(
-          `Unable to create Innovation Space: the provided nameID is already taken: ${createData.nameID}`,
+          `Unable to create Innovation Hub: the provided nameID is already taken: ${createData.nameID}`,
           LogContext.INNOVATION_HUB
         );
     } else {
-      createData.nameID = this.namingService.createNameID(
-        `${createData.profileData.displayName}`
-      );
+      for (let i = 0; i < 9; i++) {
+        createData.nameID = this.namingService.createNameID(
+          `${createData.profileData.displayName}`
+        );
+        const nameAvailable =
+          await this.namingService.isInnovationHubNameIdAvailable(
+            createData.nameID
+          );
+        if (nameAvailable) break;
+      }
     }
-
-    const displayNameAvailable =
-      await this.namingService.isInnovationSpaceDisplayNameAvailable(
-        createData.profileData.displayName
-      );
-    if (!displayNameAvailable)
-      throw new ValidationException(
-        `Unable to create Innovation Space: the provided displayName is already taken: ${createData.profileData.displayName}`,
-        LogContext.INNOVATION_HUB
-      );
 
     const hub: IInnovationHub = InnovationHub.create(createData);
     hub.authorization = new AuthorizationPolicy();
@@ -234,7 +231,7 @@ export class InnovationHubService {
         );
       }
       // validate hubs
-      const trueOrList = await this.spaceService.hubsExist(hubListFilter);
+      const trueOrList = await this.hubService.hubsExist(hubListFilter);
 
       if (Array.isArray(trueOrList)) {
         throw new Error(

@@ -194,9 +194,7 @@ export class NamingService {
     return true;
   }
 
-  async isInnovationSpaceSubdomainAvailable(
-    subdomain: string
-  ): Promise<boolean> {
+  async isInnovationHubSubdomainAvailable(subdomain: string): Promise<boolean> {
     const innovationHubsCount = await this.innovationHubRepository.countBy({
       subdomain: subdomain,
     });
@@ -204,7 +202,7 @@ export class NamingService {
     return true;
   }
 
-  async isInnovationSpaceNameIdAvailable(nameID: string): Promise<boolean> {
+  async isInnovationHubNameIdAvailable(nameID: string): Promise<boolean> {
     const innovationHubsCount = await this.innovationHubRepository.countBy({
       nameID: nameID,
     });
@@ -212,7 +210,7 @@ export class NamingService {
     return true;
   }
 
-  async isInnovationSpaceDisplayNameAvailable(
+  async isInnovationHubDisplayNameAvailable(
     displayName: string
   ): Promise<boolean> {
     const query = this.innovationHubRepository

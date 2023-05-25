@@ -1,5 +1,5 @@
 mutation deleteInnovationHub($input: DeleteInnovationHubInput!) {
-  deleteInnovationSpace(deleteData: $input){
+  deleteInnovationHub(deleteData: $input){
     id
   }
 }

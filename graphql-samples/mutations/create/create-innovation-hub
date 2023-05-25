@@ -1,5 +1,5 @@
-mutation createInnovationSpace($input: CreateInnovationHubInput!){
-  createInnovationSpace(data: $input){
+mutation createInnovationHub($input: CreateInnovationHubInput!){
+  createInnovationHub(data: $input){
     id
     nameID
     profile {

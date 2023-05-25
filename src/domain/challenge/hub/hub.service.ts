@@ -330,13 +330,13 @@ export class HubService {
       return ids;
     }
 
-    let notExist = [...ids];
+    const notExist = [...ids];
 
     hubs.forEach(hub => {
-      const idIndex = ids.findIndex(x => x === hub.id);
+      const idIndex = notExist.findIndex(x => x === hub.id);
 
       if (idIndex >= -1) {
-        notExist = notExist.filter(id => id !== hub.id);
+        notExist.splice(idIndex, 1);
       }
     });
 

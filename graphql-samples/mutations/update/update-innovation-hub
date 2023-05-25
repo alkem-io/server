@@ -1,5 +1,5 @@
-mutation updateInnovationSpace($input: UpdateInnovationHubInput!){
-	updateInnovationSpace(updateData: $input){
+mutation updateInnovationHub($input: UpdateInnovationHubInput!){
+	updateInnovationHub(updateData: $input){
     id
     nameID
     profile {

@@ -22,12 +22,12 @@ export class InnovationHubResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationHub, {
-    description: 'Create Innovation Space.',
+    description: 'Create Innovation Hub.',
   })
   @Profiling.api
-  async createInnovationSpace(
+  async createInnovationHub(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('data') data: CreateInnovationHubInput
+    @Args('createData') createData: CreateInnovationHubInput
   ): Promise<IInnovationHub> {
     const authorizationPolicy =
       this.platformAuthorizationService.getPlatformAuthorizationPolicy();
@@ -35,18 +35,18 @@ export class InnovationHubResolverMutations {
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      'update innovation hub'
+      'create innovation hub'
     );
 
-    return await this.innovationHubService.createOrFail(data);
+    return await this.innovationHubService.createOrFail(createData);
   }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationHub, {
-    description: 'Update Innovation Space.',
+    description: 'Update Innovation Hub.',
   })
   @Profiling.api
-  async updateInnovationSpace(
+  async updateInnovationHub(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('updateData') updateData: UpdateInnovationHubInput
   ): Promise<IInnovationHub> {
@@ -64,10 +64,10 @@ export class InnovationHubResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IInnovationHub, {
-    description: 'Delete Innovation Space.',
+    description: 'Delete Innovation Hub.',
   })
   @Profiling.api
-  async deleteInnovationSpace(
+  async deleteInnovationHub(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteInnovationHubInput
   ): Promise<IInnovationHub> {
@@ -78,7 +78,7 @@ export class InnovationHubResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       innovationHub.authorization,
-      AuthorizationPrivilege.DELETE,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
       `delete innovation hub: ${innovationHub.id}`
     );
     return await this.innovationHubService.deleteOrFail(deleteData.ID);
