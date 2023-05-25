@@ -3,9 +3,9 @@ import { Field, InputType } from '@nestjs/graphql';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity';
-import { InnovationHubType } from '@domain/innovation-hub';
 import { SUBDOMAIN_LENGTH } from '@common/constants';
 import { SUBDOMAIN_REGEX } from '@core/validation';
+import { InnovationHubType } from '../types';
 
 @InputType()
 export class UpdateInnovationHubInput extends UpdateNameableInput {
@@ -18,9 +18,10 @@ export class UpdateInnovationHubInput extends UpdateNameableInput {
   @Field(() => String, {
     description: 'The subdomain to associate the Innovation Hub with.',
   })
-  subdomain?: string; // todo validate regex
+  subdomain?: string;
 
   @Field(() => InnovationHubType, {
+    nullable: true,
     description: 'The type of Innovation Hub.',
   })
   type?: InnovationHubType;

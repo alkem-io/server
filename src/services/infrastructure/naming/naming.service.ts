@@ -21,6 +21,7 @@ import { Collaboration } from '@domain/collaboration/collaboration';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
+import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -44,6 +45,8 @@ export class NamingService {
     private collaborationRepository: Repository<Collaboration>,
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
+    @InjectRepository(InnovationHub)
+    private innovationHubRepository: Repository<InnovationHub>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @InjectEntityManager('default')
@@ -185,6 +188,42 @@ export class NamingService {
       });
     const discussionsWithDisplayName = await query.getOne();
     if (discussionsWithDisplayName) {
+      return false;
+    }
+
+    return true;
+  }
+
+  async isInnovationSpaceSubdomainAvailable(
+    subdomain: string
+  ): Promise<boolean> {
+    const innovationHubsCount = await this.innovationHubRepository.countBy({
+      subdomain: subdomain,
+    });
+    if (innovationHubsCount > 0) return false;
+    return true;
+  }
+
+  async isInnovationSpaceNameIdAvailable(nameID: string): Promise<boolean> {
+    const innovationHubsCount = await this.innovationHubRepository.countBy({
+      nameID: nameID,
+    });
+    if (innovationHubsCount > 0) return false;
+    return true;
+  }
+
+  async isInnovationSpaceDisplayNameAvailable(
+    displayName: string
+  ): Promise<boolean> {
+    const query = this.innovationHubRepository
+      .createQueryBuilder('innovationHub')
+      .leftJoinAndSelect('innovationHub.profile', 'profile')
+      .where('profile.displayName = :displayName')
+      .setParameters({
+        displayName: `${displayName}`,
+      });
+    const innovationHubsWithDisplayName = await query.getOne();
+    if (innovationHubsWithDisplayName) {
       return false;
     }
 

@@ -38,7 +38,7 @@ export class InnovationHubResolverMutations {
       'update innovation hub'
     );
 
-    return await this.innovationHubService.create(data);
+    return await this.innovationHubService.createOrFail(data);
   }
 
   @UseGuards(GraphqlGuard)
@@ -59,7 +59,7 @@ export class InnovationHubResolverMutations {
       'update innovation hub'
     );
 
-    return await this.innovationHubService.update(updateData);
+    return await this.innovationHubService.updateOrFail(updateData);
   }
 
   @UseGuards(GraphqlGuard)
@@ -81,6 +81,6 @@ export class InnovationHubResolverMutations {
       AuthorizationPrivilege.DELETE,
       `delete innovation hub: ${innovationHub.id}`
     );
-    return await this.innovationHubService.delete(deleteData.ID);
+    return await this.innovationHubService.deleteOrFail(deleteData.ID);
   }
 }

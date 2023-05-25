@@ -10,6 +10,7 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { InnovationHubResolverMutations } from './innovation.hub.resolver.mutations';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
     PlatformAuthorizationPolicyModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
+    NamingModule,
   ],
   providers: [
     InnovationHubService,
