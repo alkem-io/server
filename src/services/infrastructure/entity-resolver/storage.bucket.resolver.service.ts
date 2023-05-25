@@ -4,6 +4,9 @@ import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { StorageBucketNotFoundException } from '@common/exceptions/storage.bucket.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { EntityNotFoundException } from '@common/exceptions';
+import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
 
 @Injectable()
 export class StorageBucketResolverService {
@@ -13,6 +16,31 @@ export class StorageBucketResolverService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  async getStorageBucketForProfile(
+    profileID: string
+  ): Promise<IStorageBucket | never> {
+    const storageBucketID = await this.getStorageBucketIdForProfile(profileID);
+
+    if (!storageBucketID) {
+      throw new EntityNotFoundException(
+        `StorageBucket not found: ${storageBucketID}`,
+        LogContext.STORAGE_BUCKET
+      );
+    }
+    const storageBucket = await this.entityManager.findOneOrFail(
+      StorageBucket,
+      {
+        where: { id: storageBucketID },
+      }
+    );
+    if (!storageBucket)
+      throw new EntityNotFoundException(
+        `StorageBucket not found: ${storageBucketID}`,
+        LogContext.STORAGE_BUCKET
+      );
+    return storageBucket;
+  }
 
   public async getStorageBucketIdForProfile(
     profileID: string
