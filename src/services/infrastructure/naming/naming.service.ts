@@ -210,24 +210,6 @@ export class NamingService {
     return true;
   }
 
-  async isInnovationHubDisplayNameAvailable(
-    displayName: string
-  ): Promise<boolean> {
-    const query = this.innovationHubRepository
-      .createQueryBuilder('innovationHub')
-      .leftJoinAndSelect('innovationHub.profile', 'profile')
-      .where('profile.displayName = :displayName')
-      .setParameters({
-        displayName: `${displayName}`,
-      });
-    const innovationHubsWithDisplayName = await query.getOne();
-    if (innovationHubsWithDisplayName) {
-      return false;
-    }
-
-    return true;
-  }
-
   isValidNameID(nameID: string): boolean {
     if (nameID.length > NameID.MAX_LENGTH) return false;
     return NameID.REGEX.test(nameID);
