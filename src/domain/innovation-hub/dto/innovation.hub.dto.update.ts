@@ -7,12 +7,6 @@ import { InnovationHubType } from '../types';
 
 @InputType()
 export class UpdateInnovationHubInput extends UpdateNameableInput {
-  @Field(() => InnovationHubType, {
-    nullable: true,
-    description: 'The type of Innovation Hub.',
-  })
-  type?: InnovationHubType;
-
   @IsOptional()
   @Field(() => [UUID_NAMEID], {
     nullable: true,

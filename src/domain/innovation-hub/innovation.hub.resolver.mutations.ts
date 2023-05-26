@@ -71,15 +71,13 @@ export class InnovationHubResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteInnovationHubInput
   ): Promise<IInnovationHub> {
-    const innovationHub =
-      await this.innovationHubService.getInnovationHubOrFail({
-        id: deleteData.ID,
-      });
+    const authorizationPolicy =
+      this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      innovationHub.authorization,
+      authorizationPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `delete innovation hub: ${innovationHub.id}`
+      'delete innovation hub'
     );
     return await this.innovationHubService.deleteOrFail(deleteData.ID);
   }

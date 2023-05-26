@@ -34,7 +34,7 @@ export class InnovationHubService {
     createData: CreateInnovationHubInput
   ): Promise<IInnovationHub | never> {
     try {
-      await this.validateCreateOrUpdateInput(createData);
+      await this.validateCreateInput(createData);
     } catch (e) {
       const err = e as Error;
       throw new ValidationException(
@@ -94,16 +94,6 @@ export class InnovationHubService {
   public async updateOrFail(
     input: UpdateInnovationHubInput
   ): Promise<IInnovationHub> {
-    try {
-      await this.validateCreateOrUpdateInput(input);
-    } catch (e) {
-      const err = e as Error;
-      throw new ValidationException(
-        `Incorrect input provided: ${err.message}`,
-        LogContext.INNOVATION_HUB
-      );
-    }
-
     const hub: IInnovationHub = await this.getInnovationHubOrFail({
       id: input.ID,
     });
@@ -121,9 +111,26 @@ export class InnovationHubService {
         hub.nameID = input.nameID;
       }
     }
-    if (input.type) hub.type = input.type;
-    if (input.hubListFilter) hub.hubListFilter = input.hubListFilter;
-    if (input.hubVisibilityFilter)
+    if (hub.type === InnovationHubType.LIST && input.hubListFilter) {
+      if (!input.hubListFilter.length) {
+        throw new Error(
+          `At least one Hub needs to be provided for Innovation Hub of type '${InnovationHubType.LIST}'`
+        );
+      }
+
+      // validate hubs
+      const trueOrList = await this.hubService.hubsExist(input.hubListFilter);
+
+      if (Array.isArray(trueOrList)) {
+        throw new Error(
+          `Hubs with the following identifiers not found: '${trueOrList.join(
+            ','
+          )}'`
+        );
+      }
+      hub.hubListFilter = input.hubListFilter;
+    }
+    if (hub.type === InnovationHubType.VISIBILITY && input.hubVisibilityFilter)
       hub.hubVisibilityFilter = input.hubVisibilityFilter;
     if (input.profileData) {
       hub.profile = await this.profileService.updateProfile(
@@ -215,13 +222,11 @@ export class InnovationHubService {
     return hub.hubListFilter;
   }
 
-  private async validateCreateOrUpdateInput({
+  private async validateCreateInput({
     type,
     hubListFilter,
     hubVisibilityFilter,
-  }: CreateInnovationHubInput | UpdateInnovationHubInput): Promise<
-    true | never
-  > {
+  }: CreateInnovationHubInput): Promise<true | never> {
     if (type === InnovationHubType.LIST) {
       if (!hubListFilter || !hubListFilter.length) {
         throw new Error(

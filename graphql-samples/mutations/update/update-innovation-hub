@@ -21,8 +21,6 @@ query variables:
 {
     "input": {
         "ID": "uuid",
-        "subdomain": "test",
-        "type": "LIST",
         "nameID": "test-space",
         "profileData": {
         "displayName": "test space"

@@ -1,5 +1,5 @@
 mutation createInnovationHub($input: CreateInnovationHubInput!){
-  createInnovationHub(data: $input){
+  createInnovationHub(createData: $input){
     id
     nameID
     profile {
