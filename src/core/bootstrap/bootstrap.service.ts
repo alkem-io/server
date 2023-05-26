@@ -18,12 +18,6 @@ import {
   DEFAULT_HOST_ORG_NAMEID,
   DEFAULT_HUB_DISPLAYNAME,
   DEFAULT_HUB_NAMEID,
-  DEFAULT_INNOVATION_HUB_DEMO_DISPLAY_NAME,
-  DEFAULT_INNOVATION_HUB_DEMO_NAMEID,
-  DEFAULT_INNOVATION_HUB_DEMO_SUBDOMAIN,
-  DEFAULT_INNOVATION_HUB_LIST_DISPLAY_NAME,
-  DEFAULT_INNOVATION_HUB_LIST_NAMEID,
-  DEFAULT_INNOVATION_HUB_LIST_SUBDOMAIN,
 } from '@common/constants';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
@@ -34,10 +28,7 @@ import { PlatformService } from '@platform/platfrom/platform.service';
 import { CreateHubInput } from '@domain/challenge/hub/dto/hub.dto.create';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
-import { HubVisibility } from '@common/enums/hub.visibility';
-import { InnovationHubType } from '@domain/innovation-hub/types';
 import { InnovationHubService } from '@domain/innovation-hub';
-import { CreateInnovationHubInput } from '@domain/innovation-hub/dto';
 
 @Injectable()
 export class BootstrapService {
@@ -76,8 +67,6 @@ export class BootstrapService {
       await this.ensureHubSingleton();
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
-      await this.ensureDemoInnovationHub();
-      await this.ensureListInnovationHub();
       await this.platformService.ensureCommunicationCreated();
       // reset auth as last in the actions
       await this.ensureAuthorizationsPopulated();
@@ -273,62 +262,5 @@ export class BootstrapService {
       const hub = await this.hubService.createHub(hubInput);
       return await this.hubAuthorizationService.applyAuthorizationPolicy(hub);
     }
-  }
-
-  public async ensureDemoInnovationHub() {
-    return this.createInnovationHub({
-      nameID: DEFAULT_INNOVATION_HUB_DEMO_NAMEID,
-      subdomain: DEFAULT_INNOVATION_HUB_DEMO_SUBDOMAIN,
-      type: InnovationHubType.VISIBILITY,
-      hubVisibilityFilter: HubVisibility.DEMO,
-      profileData: {
-        displayName: DEFAULT_INNOVATION_HUB_DEMO_DISPLAY_NAME,
-        description: 'An Innovation Hub to demonstrate filtering by visibility',
-        tagline: 'An Innovation Hub to demonstrate filtering by visibility',
-      },
-    });
-  }
-
-  public async ensureListInnovationHub() {
-    try {
-      const defaultHub = await this.hubService.getHubOrFail(DEFAULT_HUB_NAMEID);
-      return this.createInnovationHub({
-        nameID: DEFAULT_INNOVATION_HUB_LIST_NAMEID,
-        subdomain: DEFAULT_INNOVATION_HUB_LIST_SUBDOMAIN,
-        type: InnovationHubType.LIST,
-        hubListFilter: [defaultHub.id],
-        profileData: {
-          displayName: DEFAULT_INNOVATION_HUB_LIST_DISPLAY_NAME,
-          description:
-            'An Innovation Hub to demonstrate filtering by visibility',
-          tagline: 'An Innovation Hub to demonstrate filtering by visibility',
-        },
-      });
-    } catch (e) {
-      return this.logger.error(
-        `Unable to create List Innovation Hub because the Default Hub with nameID: '${DEFAULT_HUB_NAMEID}' is not found`,
-        LogContext.BOOTSTRAP
-      );
-    }
-  }
-
-  private async createInnovationHub(input: CreateInnovationHubInput) {
-    try {
-      await this.innovationHubService.getInnovationHubOrFail({
-        subdomain: input.subdomain,
-      });
-    } catch (e) {
-      try {
-        return await this.innovationHubService.createOrFail(input);
-      } catch (e) {
-        const err = e as Error;
-        this.logger.error(
-          `Error caught while bootstrapping Innovation Hub of type '${input.type}': ${err.message}`,
-          LogContext.BOOTSTRAP
-        );
-      }
-    }
-
-    return;
   }
 }

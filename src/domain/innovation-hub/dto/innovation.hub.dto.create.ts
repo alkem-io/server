@@ -1,7 +1,7 @@
 import { IsOptional, Matches, MaxLength, MinLength } from 'class-validator';
 import { Field, InputType } from '@nestjs/graphql';
 import { HubVisibility } from '@common/enums/hub.visibility';
-import { UUID } from '@domain/common/scalars';
+import { NameID, UUID } from '@domain/common/scalars';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity';
 import { InnovationHubType } from '@domain/innovation-hub/types';
 import { SUBDOMAIN_LENGTH } from '@common/constants';
@@ -38,4 +38,10 @@ export class CreateInnovationHubInput extends CreateNameableInput {
     description: `Hubs with which visibility this Innovation Hub will display. Only valid when type '${InnovationHubType.VISIBILITY}' is used.`,
   })
   hubVisibilityFilter?: HubVisibility;
+
+  @Field(() => NameID, {
+    nullable: true,
+    description: 'A readable identifier, unique within the containing scope.',
+  })
+  nameID!: string;
 }

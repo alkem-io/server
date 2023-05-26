@@ -333,7 +333,7 @@ export class HubService {
     const notExist = [...ids];
 
     hubs.forEach(hub => {
-      const idIndex = ids.findIndex(x => x === hub.id);
+      const idIndex = notExist.findIndex(x => x === hub.id);
 
       if (idIndex >= -1) {
         notExist.splice(idIndex, 1);
