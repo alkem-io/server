@@ -64,16 +64,9 @@ export class InnovationHubService {
           LogContext.INNOVATION_HUB
         );
     } else {
-      for (let i = 0; i < 9; i++) {
-        createData.nameID = this.namingService.createNameID(
-          `${createData.profileData.displayName}`
-        );
-        const nameAvailable =
-          await this.namingService.isInnovationHubNameIdAvailable(
-            createData.nameID
-          );
-        if (nameAvailable) break;
-      }
+      createData.nameID = this.namingService.createNameID(
+        `${createData.profileData.displayName}`
+      );
     }
 
     const hub: IInnovationHub = InnovationHub.create(createData);
@@ -115,12 +108,23 @@ export class InnovationHubService {
       id: input.ID,
     });
 
-    if (input.subdomain) hub.subdomain = input.subdomain;
+    if (input.nameID) {
+      if (input.nameID !== hub.nameID) {
+        const updateAllowed =
+          await this.namingService.isInnovationHubNameIdAvailable(input.nameID);
+        if (!updateAllowed) {
+          throw new ValidationException(
+            `Unable to update Innovation Hub nameID: the provided nameID '${input.nameID}' is already taken`,
+            LogContext.INNOVATION_HUB
+          );
+        }
+        hub.nameID = input.nameID;
+      }
+    }
     if (input.type) hub.type = input.type;
     if (input.hubListFilter) hub.hubListFilter = input.hubListFilter;
     if (input.hubVisibilityFilter)
       hub.hubVisibilityFilter = input.hubVisibilityFilter;
-
     if (input.profileData) {
       hub.profile = await this.profileService.updateProfile(
         hub.profile,
