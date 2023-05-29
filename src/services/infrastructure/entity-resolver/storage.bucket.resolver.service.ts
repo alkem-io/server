@@ -17,9 +17,7 @@ export class StorageBucketResolverService {
     private readonly logger: LoggerService
   ) {}
 
-  async getStorageBucketForProfile(
-    profileID: string
-  ): Promise<IStorageBucket | never> {
+  async getStorageBucketForProfile(profileID: string): Promise<IStorageBucket> {
     const storageBucketID = await this.getStorageBucketIdForProfile(profileID);
 
     if (!storageBucketID) {
@@ -44,7 +42,7 @@ export class StorageBucketResolverService {
 
   public async getStorageBucketIdForProfile(
     profileID: string
-  ): Promise<string | never> {
+  ): Promise<string> {
     // First iterate over all the entity types that have storage spaces directly
     for (const entityName of Object.values(DirectStorageBucketEntityType)) {
       const match = await this.getDirectStorageBucketForProfile(
@@ -73,7 +71,7 @@ export class StorageBucketResolverService {
 
   public async getDocumentProfileType(
     profileID: string
-  ): Promise<ProfileResult | never> {
+  ): Promise<ProfileResult> {
     // Check the other places where a profile could be used
     const result = await this.getProfileType(profileID);
     if (!result) {
@@ -160,7 +158,7 @@ export class StorageBucketResolverService {
   private async getStorageBucketIdForTemplate(
     templateId: string,
     templateType: TemplateType
-  ): Promise<string | never> {
+  ): Promise<string> {
     let query = `SELECT \`templatesSetId\` FROM \`${templateType}\`
   WHERE \`${templateType}\`.\`id\`='${templateId}'`;
     let [result]: {
