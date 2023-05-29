@@ -348,6 +348,13 @@ export class HubService {
 
     const sortedHubs = visibleHubs.sort((a, b) => {
       if (
+        a.visibility !== b.visibility &&
+        (a.visibility === HubVisibility.DEMO ||
+          b.visibility === HubVisibility.DEMO)
+      )
+        return a.visibility === HubVisibility.DEMO ? 1 : -1;
+
+      if (
         a.authorization?.anonymousReadAccess === true &&
         b.authorization?.anonymousReadAccess === false
       )
