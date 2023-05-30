@@ -11,6 +11,7 @@ import { IRoomable } from './roomable.interface';
 import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
+import { IReaction } from '../message/reaction.interface';
 
 @Injectable()
 export class RoomService {
@@ -37,10 +38,34 @@ export class RoomService {
           knownSendersMap.set(matrixUserID, alkemioUserID);
         }
         message.sender = alkemioUserID;
+        if (message.reactions)
+          message.reactions = await this.populateRoomReactionSenders(
+            message.reactions
+          );
       }
     }
 
     return rooms;
+  }
+
+  async populateRoomReactionSenders(
+    reactions: IReaction[]
+  ): Promise<IReaction[]> {
+    const knownSendersMap = new Map();
+    for (const reaction of reactions) {
+      const matrixUserID = reaction.sender;
+      let alkemioUserID = knownSendersMap.get(matrixUserID);
+      if (!alkemioUserID) {
+        alkemioUserID =
+          await this.identityResolverService.getUserIDByCommunicationsID(
+            matrixUserID
+          );
+        knownSendersMap.set(matrixUserID, alkemioUserID);
+      }
+      reaction.sender = alkemioUserID;
+    }
+
+    return reactions;
   }
 
   async initializeCommunicationRoom(roomable: IRoomable): Promise<string> {

@@ -1,13 +1,10 @@
 import { MessageID } from '@domain/common/scalars';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IReaction } from './reaction.interface';
-
-@ObjectType('Message', {
-  description:
-    'A message that was sent either as an Update or as part of a Discussion.',
+@ObjectType('Reaction', {
+  description: 'A reaction to a message.',
 })
-export class IMessage {
+export class IReaction {
   @Field(() => MessageID, {
     nullable: false,
     description: 'The id for the message event.',
@@ -16,9 +13,9 @@ export class IMessage {
 
   @Field(() => Markdown, {
     nullable: false,
-    description: 'The message being sent',
+    description: 'The reaction text',
   })
-  message!: string;
+  text!: string;
 
   sender!: string;
 
@@ -28,9 +25,9 @@ export class IMessage {
   })
   timestamp!: number;
 
-  @Field(() => [IReaction], {
+  @Field(() => MessageID, {
     nullable: false,
-    description: 'Reactions on this message',
+    description: 'The id for the message that it was reacted on.',
   })
-  reactions?: IReaction[];
+  messageId!: string;
 }
