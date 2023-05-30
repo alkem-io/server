@@ -339,7 +339,14 @@ export class HubService {
       .whereInIds(IDs)
       .getMany();
 
-    const visibleHubs = hubsDataForSorting.filter(hub => {
+    return this.filterAndSortHubs(hubsDataForSorting, allowedVisibilities);
+  }
+
+  private filterAndSortHubs(
+    hubsData: Hub[],
+    allowedVisibilities: HubVisibility[]
+  ): string[] {
+    const visibleHubs = hubsData.filter(hub => {
       return this.hubsFilterService.isVisible(
         hub.visibility,
         allowedVisibilities
