@@ -16,7 +16,7 @@ export class StorageBucketResolverService {
 
   public async getStorageBucketIdForProfile(
     profileID: string
-  ): Promise<string> {
+  ): Promise<string | never> {
     // First iterate over all the entity types that have storage spaces directly
     for (const entityName of Object.values(DirectStorageBucketEntityType)) {
       const match = await this.getDirectStorageBucketForProfile(
