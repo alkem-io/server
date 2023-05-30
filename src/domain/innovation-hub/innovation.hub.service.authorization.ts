@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { IInnovationHub, InnovationHub } from './';
+import { IInnovationHub, InnovationHub } from './types';
 
 @Injectable()
 export class InnovationHubAuthorizationService {

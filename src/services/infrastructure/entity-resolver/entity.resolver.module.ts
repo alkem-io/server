@@ -8,6 +8,7 @@ import { CommunityResolverService } from './community.resolver.service';
 import { Community } from '@domain/community/community/community.entity';
 import { StorageBucketResolverService } from './storage.bucket.resolver.service';
 import { Communication } from '@domain/communication/communication/communication.entity';
+import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { Communication } from '@domain/communication/communication/communication
     TypeOrmModule.forFeature([Updates]),
     TypeOrmModule.forFeature([Community]),
     TypeOrmModule.forFeature([Communication]),
+    TypeOrmModule.forFeature([StorageBucket]),
   ],
   providers: [
     IdentityResolverService,

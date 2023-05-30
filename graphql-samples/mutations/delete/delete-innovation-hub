@@ -1,0 +1,12 @@
+mutation deleteInnovationHub($input: DeleteInnovationHubInput!) {
+  deleteInnovationHub(deleteData: $input){
+    id
+  }
+}
+
+query variables:
+{
+  "input": {
+    "ID": "a44ed988-2b79-41d6-aba8-db3fd40e73ef"
+  }
+}
