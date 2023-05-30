@@ -27,6 +27,9 @@ import { NotificationInputEntityMentions } from '@services/adapters/notification
 import { CommentType } from '@common/enums/comment.type';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputForumDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.forum.discussion.comment';
+import { DiscussionSendMessageReplyInput } from './dto/discussion.dto.send.message.reply';
+import { DiscussionAddMessageReactionInput } from './dto/discussion.dto.add.message.reaction';
+import { DiscussionRemoveMessageReactionInput } from './dto/discussion.dto.remove.message.reaction';
 
 @Resolver()
 export class DiscussionResolverMutations {
@@ -114,6 +117,141 @@ export class DiscussionResolverMutations {
     );
 
     return discussionMessage;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IMessage, {
+    description: 'Sends a reply to a message from the specified Discussion. ',
+  })
+  @Profiling.api
+  async sendMessageReplyToDiscussion(
+    @Args('messageData') messageData: DiscussionSendMessageReplyInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IMessage> {
+    const discussion = await this.discussionService.getDiscussionOrFail(
+      messageData.discussionID,
+      { relations: ['profile'] }
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      discussion.authorization,
+      AuthorizationPrivilege.CREATE_COMMENT,
+      `discussion send message: ${discussion.profile.displayName}`
+    );
+    const discussionMessage =
+      await this.discussionService.sendMessageReplyToDiscussion(
+        discussion,
+        agentInfo.communicationID,
+        messageData
+      );
+
+    // Send the subscription event
+    const eventID = `discussion-msg-${getRandomId()}`;
+    const subscriptionPayload: DiscussionMessageReceivedPayload = {
+      eventID: eventID,
+      message: discussionMessage,
+      discussionID: discussion.id,
+    };
+    this.subscriptionDiscussionMessage.publish(
+      SubscriptionType.COMMUNICATION_DISCUSSION_MESSAGE_RECEIVED,
+      subscriptionPayload
+    );
+
+    const eventID2 = `discussion-update-${getRandomId()}`;
+    const subscriptionPayloadUpdate: CommunicationDiscussionUpdated = {
+      eventID: eventID2,
+      discussionID: discussion.id,
+    };
+    this.subscriptionDiscussionMessage.publish(
+      SubscriptionType.COMMUNICATION_DISCUSSION_UPDATED,
+      subscriptionPayloadUpdate
+    );
+
+    const mentions = getMentionsFromText(discussionMessage.message);
+    const entityMentionsNotificationInput: NotificationInputEntityMentions = {
+      triggeredBy: agentInfo.userID,
+      comment: discussionMessage.message,
+      commentsId: discussion.id,
+      mentions,
+      originEntity: {
+        id: discussion.id,
+        nameId: discussion.nameID,
+        displayName: discussion.profile.displayName,
+      },
+      commentType: CommentType.FORUM_DISCUSSION,
+    };
+    this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
+
+    const forumDiscussionCommentNotificationInput: NotificationInputForumDiscussionComment =
+      {
+        triggeredBy: agentInfo.userID,
+        discussion,
+        commentSent: discussionMessage,
+      };
+    this.notificationAdapter.forumDiscussionComment(
+      forumDiscussionCommentNotificationInput
+    );
+
+    return discussionMessage;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IMessage, {
+    description: 'Add a reaction to a message from the specified Discussion. ',
+  })
+  @Profiling.api
+  async addReactionToMessageInDiscussion(
+    @Args('messageData') messageData: DiscussionAddMessageReactionInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IMessage> {
+    const discussion = await this.discussionService.getDiscussionOrFail(
+      messageData.discussionID,
+      { relations: ['profile'] }
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      discussion.authorization,
+      AuthorizationPrivilege.CREATE_COMMENT,
+      `discussion add reaction on message in: ${discussion.profile.displayName}`
+    );
+    const discussionMessage =
+      await this.discussionService.addReactionToMessageInDiscussion(
+        discussion,
+        agentInfo.communicationID,
+        messageData
+      );
+
+    return discussionMessage;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => Boolean, {
+    description:
+      'Remove a reaction to a message from the specified Discussion. ',
+  })
+  @Profiling.api
+  async removeReactionToMessageInDiscussion(
+    @Args('messageData') messageData: DiscussionRemoveMessageReactionInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<boolean> {
+    const discussion = await this.discussionService.getDiscussionOrFail(
+      messageData.discussionID,
+      { relations: ['profile'] }
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      discussion.authorization,
+      AuthorizationPrivilege.CREATE_COMMENT,
+      `discussion remove reaction on a message in: ${discussion.profile.displayName}`
+    );
+
+    await this.discussionService.removeReactionToMessageInDiscussion(
+      discussion,
+      agentInfo.communicationID,
+      messageData
+    );
+
+    return true;
   }
 
   @UseGuards(GraphqlGuard)

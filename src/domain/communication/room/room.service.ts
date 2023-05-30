@@ -8,6 +8,9 @@ import { CommunicationRoomResult } from './dto/communication.dto.room.result';
 import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { RoomSendMessageInput } from './dto/room.dto.send.message';
 import { IRoomable } from './roomable.interface';
+import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
+import { RoomAddReactionToMessageInput } from './dto/room.add.reaction.to.message';
+import { RoomRemoveReactionToMessageInput } from './dto/room.remove.message.reaction';
 
 @Injectable()
 export class RoomService {
@@ -89,7 +92,6 @@ export class RoomService {
       roomable.communicationRoomID,
       communicationUserID
     );
-    // Todo: call this first to allow room access to complete
     const alkemioUserID =
       await this.identityResolverService.getUserIDByCommunicationsID(
         communicationUserID
@@ -102,6 +104,79 @@ export class RoomService {
 
     message.sender = alkemioUserID;
     return message;
+  }
+
+  async sendMessageReply(
+    roomable: IRoomable,
+    communicationUserID: string,
+    messageData: RoomSendMessageReplyInput
+  ): Promise<IMessage> {
+    // Ensure the user is a member of room and group so can send
+    await this.communicationAdapter.addUserToRoom(
+      roomable.communicationRoomID,
+      communicationUserID
+    );
+
+    const alkemioUserID =
+      await this.identityResolverService.getUserIDByCommunicationsID(
+        communicationUserID
+      );
+    const message = await this.communicationAdapter.sendMessageReply({
+      senderCommunicationsID: communicationUserID,
+      message: messageData.message,
+      roomID: roomable.communicationRoomID,
+      threadID: messageData.threadID,
+      lastMessageID: messageData.lastMessageID,
+    });
+
+    message.sender = alkemioUserID;
+    return message;
+  }
+
+  async addReactionToMessage(
+    roomable: IRoomable,
+    communicationUserID: string,
+    messageData: RoomAddReactionToMessageInput
+  ): Promise<IMessage> {
+    // Ensure the user is a member of room and group so can send
+    await this.communicationAdapter.addUserToRoom(
+      roomable.communicationRoomID,
+      communicationUserID
+    );
+
+    const alkemioUserID =
+      await this.identityResolverService.getUserIDByCommunicationsID(
+        communicationUserID
+      );
+    const message = await this.communicationAdapter.addReaction({
+      senderCommunicationsID: communicationUserID,
+      text: messageData.text,
+      roomID: roomable.communicationRoomID,
+      messageID: messageData.messageID,
+    });
+
+    message.sender = alkemioUserID;
+    return message;
+  }
+
+  async removeReactionToMessage(
+    roomable: IRoomable,
+    communicationUserID: string,
+    messageData: RoomRemoveReactionToMessageInput
+  ): Promise<boolean> {
+    // Ensure the user is a member of room and group so can send
+    await this.communicationAdapter.addUserToRoom(
+      roomable.communicationRoomID,
+      communicationUserID
+    );
+
+    await this.communicationAdapter.removeReaction({
+      senderCommunicationsID: communicationUserID,
+      roomID: roomable.communicationRoomID,
+      reactionID: messageData.reactionID,
+    });
+
+    return true;
   }
 
   async removeMessage(

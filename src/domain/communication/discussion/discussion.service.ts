@@ -19,6 +19,9 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
+import { RoomSendMessageReplyInput } from '../room/dto/room.dto.send.message.reply';
+import { RoomAddReactionToMessageInput } from '../room/dto/room.add.reaction.to.message';
+import { RoomRemoveReactionToMessageInput } from '../room/dto/room.remove.message.reaction';
 
 @Injectable()
 export class DiscussionService {
@@ -176,6 +179,49 @@ export class DiscussionService {
     discussion.commentsCount = discussion.commentsCount + 1;
     await this.save(discussion);
     return message;
+  }
+
+  async sendMessageReplyToDiscussion(
+    discussion: IDiscussion,
+    communicationUserID: string,
+    messageData: RoomSendMessageReplyInput
+  ): Promise<IMessage> {
+    const message = await this.roomService.sendMessageReply(
+      discussion,
+      communicationUserID,
+      messageData
+    );
+    discussion.commentsCount = discussion.commentsCount + 1;
+    await this.save(discussion);
+    return message;
+  }
+
+  async addReactionToMessageInDiscussion(
+    discussion: IDiscussion,
+    communicationUserID: string,
+    messageData: RoomAddReactionToMessageInput
+  ): Promise<IMessage> {
+    const message = await this.roomService.addReactionToMessage(
+      discussion,
+      communicationUserID,
+      messageData
+    );
+
+    return message;
+  }
+
+  async removeReactionToMessageInDiscussion(
+    discussion: IDiscussion,
+    communicationUserID: string,
+    messageData: RoomRemoveReactionToMessageInput
+  ): Promise<boolean> {
+    await this.roomService.removeReactionToMessage(
+      discussion,
+      communicationUserID,
+      messageData
+    );
+
+    return true;
   }
 
   async removeMessageFromDiscussion(
