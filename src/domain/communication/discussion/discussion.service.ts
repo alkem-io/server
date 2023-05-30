@@ -20,8 +20,8 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { RoomSendMessageReplyInput } from '../room/dto/room.dto.send.message.reply';
-import { RoomAddReactionToMessageInput } from '../room/dto/room.add.reaction.to.message';
-import { RoomRemoveReactionToMessageInput } from '../room/dto/room.remove.message.reaction';
+import { RoomAddReactionToMessageInput } from '../room/dto/room.dto.add.reaction.to.message';
+import { RoomRemoveReactionToMessageInput } from '../room/dto/room.dto.remove.message.reaction';
 
 @Injectable()
 export class DiscussionService {

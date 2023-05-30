@@ -9,8 +9,8 @@ import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { RoomSendMessageInput } from './dto/room.dto.send.message';
 import { IRoomable } from './roomable.interface';
 import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
-import { RoomAddReactionToMessageInput } from './dto/room.add.reaction.to.message';
-import { RoomRemoveReactionToMessageInput } from './dto/room.remove.message.reaction';
+import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
+import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 
 @Injectable()
 export class RoomService {
