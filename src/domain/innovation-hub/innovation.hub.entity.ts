@@ -27,7 +27,6 @@ export class InnovationHub extends NameableEntity implements IInnovationHub {
   })
   hubVisibilityFilter?: HubVisibility;
 
-  // todo: m2m ??
   @Column('simple-array', {
     nullable: true,
   })
