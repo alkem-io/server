@@ -1,0 +1,30 @@
+mutation updateInnovationHub($input: UpdateInnovationHubInput!){
+	updateInnovationHub(updateData: $input){
+    id
+    nameID
+    profile {
+      displayName
+    }
+    type
+    hubListFilter {
+      id
+      nameID
+      profile {
+        displayName
+      }
+    }
+    hubVisibilityFilter
+  }
+}
+
+query variables:
+{
+    "input": {
+        "ID": "uuid",
+        "nameID": "test-space",
+        "profileData": {
+        "displayName": "test space"
+        },
+        "hubListFilter": ["889ed0cf-4cd9-41d6-8ce0-d27b65cb149e"]
+    }  
+}
