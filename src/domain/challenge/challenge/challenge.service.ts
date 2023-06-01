@@ -2,7 +2,6 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
-  ValidationException,
 } from '@common/exceptions';
 import {
   CreateChallengeInput,
@@ -63,6 +62,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 
 @Injectable()
 export class ChallengeService {
@@ -264,13 +264,13 @@ export class ChallengeService {
 
     // Do not remove a challenge that has child challenges , require these to be individually first removed
     if (challenge.childChallenges && challenge.childChallenges.length > 0)
-      throw new ValidationException(
+      throw new OperationNotAllowedException(
         `Unable to remove challenge (${challenge.nameID}) as it contains ${challenge.childChallenges.length} child challenges`,
         LogContext.CHALLENGES
       );
 
     if (challenge.opportunities && challenge.opportunities.length > 0)
-      throw new ValidationException(
+      throw new OperationNotAllowedException(
         `Unable to remove challenge (${challenge.nameID}) as it contains ${challenge.opportunities.length} opportunities`,
         LogContext.CHALLENGES
       );

@@ -5,14 +5,13 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
-  ValidationException,
 } from '@common/exceptions';
 import {
   CreateOpportunityInput,
   IOpportunity,
   Opportunity,
-  opportunityCommunityPolicy,
   opportunityCommunityApplicationForm,
+  opportunityCommunityPolicy,
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
 import { AuthorizationCredential, LogContext } from '@common/enums';
@@ -46,6 +45,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { CreateProjectInput } from '../project/dto/project.dto.create';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { CommunityRole } from '@common/enums/community.role';
+import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 
 @Injectable()
 export class OpportunityService {
@@ -265,7 +265,7 @@ export class OpportunityService {
     // disable deletion if projects are present
     const projects = opportunity.projects;
     if (projects && projects.length > 0) {
-      throw new ValidationException(
+      throw new OperationNotAllowedException(
         `Unable to remove Opportunity (${opportunity.nameID}) as it contains ${projects.length} Projects`,
         LogContext.OPPORTUNITY
       );
