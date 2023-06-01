@@ -6,6 +6,4 @@ export class CommunicationSendMessageReplyInput {
   roomID!: string;
 
   threadID!: string;
-
-  lastMessageID!: string;
 }

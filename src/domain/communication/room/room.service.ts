@@ -151,7 +151,6 @@ export class RoomService {
       message: messageData.message,
       roomID: roomable.communicationRoomID,
       threadID: messageData.threadID,
-      lastMessageID: messageData.lastMessageID,
     });
 
     message.sender = alkemioUserID;

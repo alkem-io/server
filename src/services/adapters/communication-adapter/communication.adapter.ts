@@ -132,7 +132,6 @@ export class CommunicationAdapter {
       message: sendMessageData.message,
       senderID: sendMessageData.senderCommunicationsID,
       threadID: sendMessageData.threadID,
-      lastMessageID: sendMessageData.lastMessageID,
     };
     const eventID = this.logInputPayload(eventType, inputPayload);
 
