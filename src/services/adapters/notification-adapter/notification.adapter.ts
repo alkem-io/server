@@ -308,14 +308,14 @@ export class NotificationAdapter {
     const event = NotificationEventType.COMMUNITY_INVITATION_CREATED;
     this.logEventTriggered(eventData, event);
 
-    // const payload =
-    //   await this.notificationPayloadBuilder.buildApplicationCreatedNotificationPayload(
-    //     eventData.triggeredBy,
-    //     eventData.triggeredBy,
-    //     eventData.community
-    //   );
+    const payload =
+      await this.notificationPayloadBuilder.buildInvitationCreatedNotificationPayload(
+        eventData.triggeredBy,
+        eventData.invitedUser,
+        eventData.community
+      );
 
-    // this.notificationsClient.emit<number>(event, payload);
+    this.notificationsClient.emit<number>(event, payload);
   }
 
   public async communityNewMember(
