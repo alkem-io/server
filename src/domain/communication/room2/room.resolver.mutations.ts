@@ -32,6 +32,9 @@ import { ElasticsearchService } from '@services/external/elasticsearch';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { getMentionsFromText } from '../messaging/get.mentions.from.text';
 import { CalendarEventCommentsMessageReceived as CalendarEventRoomMessageReceived } from '@domain/timeline/event/dto/event.dto.event.message.received';
+import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
+import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
+import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -150,6 +153,61 @@ export class RoomResolverMutations {
     };
     await this.activityAdapter.messageRemoved(activityMessageRemoved);
     return messageID;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IMessage, {
+    description: 'Sends a reply to a message from the specified Room.',
+  })
+  @Profiling.api
+  async sendMessageReplyToRoom(
+    @Args('messageData') messageData: RoomSendMessageReplyInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IMessage> {
+    const room = await this.roomService.getRoomOrFail(messageData.roomID);
+    const message = await this.roomService.sendMessageReply(
+      room,
+      agentInfo.communicationID,
+      messageData
+    );
+
+    return message;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IMessage, {
+    description: 'Add a reaction to a message from the specified Room. ',
+  })
+  @Profiling.api
+  async addReactionToMessageInRoom(
+    @Args('messageData') messageData: RoomAddReactionToMessageInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IMessage> {
+    const room = await this.roomService.getRoomOrFail(messageData.roomID);
+    const message = await this.roomService.addReactionToMessage(
+      room,
+      agentInfo.communicationID,
+      messageData
+    );
+
+    return message;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IMessage, {
+    description: 'Remove a reaction on a message from the specified Room. ',
+  })
+  @Profiling.api
+  async removeReactionToMessageInRoom(
+    @Args('messageData') messageData: RoomRemoveReactionToMessageInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<boolean> {
+    const room = await this.roomService.getRoomOrFail(messageData.roomID);
+    return await this.roomService.removeReactionToMessage(
+      room,
+      agentInfo.communicationID,
+      messageData
+    );
   }
 
   private async processRoomEventsOnPost(
