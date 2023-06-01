@@ -11,7 +11,7 @@ import { IRoomable } from './roomable.interface';
 import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
-import { IReaction } from '../message/reaction.interface';
+import { IMessageReaction } from '../message.reaction/message.reaction.interface';
 
 @Injectable()
 export class RoomService {
@@ -49,8 +49,8 @@ export class RoomService {
   }
 
   async populateRoomReactionSenders(
-    reactions: IReaction[]
-  ): Promise<IReaction[]> {
+    reactions: IMessageReaction[]
+  ): Promise<IMessageReaction[]> {
     const knownSendersMap = new Map();
     for (const reaction of reactions) {
       const matrixUserID = reaction.sender;

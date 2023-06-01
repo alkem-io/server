@@ -4,13 +4,13 @@ import { Field, InputType } from '@nestjs/graphql';
 export class DiscussionAddMessageReactionInput {
   @Field(() => UUID, {
     nullable: false,
-    description: 'The Discussion the message is being sent to',
+    description: 'The Discussion the message is being reacted to',
   })
   discussionID!: string;
 
   @Field(() => String, {
     nullable: false,
-    description: 'The message being sent',
+    description: 'The reaction being sent',
   })
   // todo: emoji validation
   // @MaxLength(LONG_TEXT_LENGTH)
@@ -18,7 +18,7 @@ export class DiscussionAddMessageReactionInput {
 
   @Field(() => String, {
     nullable: false,
-    description: 'The last message in the thread',
+    description: 'The message being reacted to',
   })
   messageID!: string;
 }

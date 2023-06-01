@@ -4,10 +4,10 @@ import { Field, ObjectType } from '@nestjs/graphql';
 @ObjectType('Reaction', {
   description: 'A reaction to a message.',
 })
-export class IReaction {
+export class IMessageReaction {
   @Field(() => MessageID, {
     nullable: false,
-    description: 'The id for the message event.',
+    description: 'The id for the reaction.',
   })
   id!: string;
 
@@ -24,10 +24,4 @@ export class IReaction {
     description: 'The server timestamp in UTC',
   })
   timestamp!: number;
-
-  @Field(() => MessageID, {
-    nullable: false,
-    description: 'The id for the message that it was reacted on.',
-  })
-  messageId!: string;
 }

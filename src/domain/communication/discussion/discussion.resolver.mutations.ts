@@ -241,7 +241,7 @@ export class DiscussionResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       discussion.authorization,
-      AuthorizationPrivilege.CREATE_COMMENT,
+      AuthorizationPrivilege.DELETE,
       `discussion remove reaction on a message in: ${discussion.profile.displayName}`
     );
 

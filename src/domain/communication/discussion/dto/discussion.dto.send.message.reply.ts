@@ -6,7 +6,7 @@ import { MaxLength } from 'class-validator';
 export class DiscussionSendMessageReplyInput {
   @Field(() => UUID, {
     nullable: false,
-    description: 'The Discussion the message is being sent to',
+    description: 'The Discussion the message is being replied to',
   })
   discussionID!: string;
 
@@ -22,10 +22,4 @@ export class DiscussionSendMessageReplyInput {
     description: 'The message being replied to',
   })
   threadID!: string;
-
-  @Field(() => String, {
-    nullable: false,
-    description: 'The last message in the thread',
-  })
-  lastMessageID!: string;
 }

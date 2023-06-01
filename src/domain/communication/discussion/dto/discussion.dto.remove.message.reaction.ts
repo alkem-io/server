@@ -4,7 +4,8 @@ import { Field, InputType } from '@nestjs/graphql';
 export class DiscussionRemoveMessageReactionInput {
   @Field(() => UUID, {
     nullable: false,
-    description: 'The Discussion the message is being sent to',
+    description:
+      'The Discussion with the message whose reaction is being removed',
   })
   discussionID!: string;
 
