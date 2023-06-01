@@ -624,11 +624,7 @@ export class CommunicationAdapter {
     }
   }
 
-  public async addUserToRoom(
-    // groupID: string, according to matrix docs groups are getting deprecated
-    roomID: string,
-    matrixUserID: string
-  ) {
+  public async addUserToRoom(roomID: string, matrixUserID: string) {
     const eventType = MatrixAdapterEventType.ADD_USER_TO_ROOM;
     const inputPayload: AddUserToRoomPayload = {
       triggeredBy: '',

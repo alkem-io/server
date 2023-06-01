@@ -1,0 +1,14 @@
+mutation sendMessageReplyToRoom($messageData: SendMessageReplyInput!){
+  sendMessageReplyToRoom(messageData: $messageData){
+    id
+    message
+  }
+}
+
+{
+  "messageData: {
+    "message": "testiramo reply 1",
+    "communicationRoomID": "1a6f7bc3-bda6-4b28-b8b9-2b42770444ff",
+    "threadID": "$3a15g7wrN4CYx8GyNSJ9d1rg5NQaXREdajwRMOrYN-I"
+  }
+}

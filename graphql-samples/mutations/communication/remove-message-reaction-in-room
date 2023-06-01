@@ -1,0 +1,13 @@
+mutation removeReactionToMessageInRoom($messageData: RemoveMessageReactionInput!){
+  removeReactionToMessageInRoom(messageData: $messageData){
+    id
+    message
+  }
+}
+
+{
+  "messageData": {
+    "communicationRoomID": "string",
+    "reactionID": "$3a15g7wrN4CYx8GyNSJ9d1rg5NQaXREdajwRMOrYN-I",
+  }
+}
