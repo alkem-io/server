@@ -31,8 +31,6 @@ import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
-import { CommentsService } from '@domain/communication/comments/comments.service';
-import { IComments } from '@domain/communication/comments/comments.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
@@ -45,6 +43,9 @@ import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteb
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { VisualType } from '@common/enums/visual.type';
+import { RoomService } from '@domain/communication/room2/room.service';
+import { RoomType } from '@common/enums/room.type';
+import { IRoom } from '@domain/communication/room2/room.interface';
 
 @Injectable()
 export class CalloutService {
@@ -55,7 +56,7 @@ export class CalloutService {
     private whiteboardTemplateService: WhiteboardTemplateService,
     private canvasService: CanvasService,
     private namingService: NamingService,
-    private commentsService: CommentsService,
+    private roomService: RoomService,
     private userService: UserService,
     private profileService: ProfileService,
     @InjectRepository(Callout)
@@ -129,8 +130,9 @@ export class CalloutService {
     savedCallout.visibility = CalloutVisibility.DRAFT;
 
     if (calloutData.type === CalloutType.COMMENTS) {
-      savedCallout.comments = await this.commentsService.createComments(
-        `callout-comments-${savedCallout.nameID}`
+      savedCallout.comments = await this.roomService.createRoom(
+        `callout-comments-${savedCallout.nameID}`,
+        RoomType.POST
       );
       return await this.calloutRepository.save(savedCallout);
     }
@@ -306,7 +308,7 @@ export class CalloutService {
     }
 
     if (callout.comments) {
-      await this.commentsService.deleteComments(callout.comments);
+      await this.roomService.deleteRoom(callout.comments);
     }
 
     if (callout.postTemplate) {
@@ -353,7 +355,7 @@ export class CalloutService {
     } else {
       const comments = await this.getCommentsFromCallout(callout.id);
       if (comments) {
-        return comments.commentsCount;
+        return comments.messagesCount;
       }
     }
     return result;
@@ -606,7 +608,7 @@ export class CalloutService {
 
   public async getCommentsFromCallout(
     calloutID: string
-  ): Promise<IComments | undefined> {
+  ): Promise<IRoom | undefined> {
     const loadedCallout = await this.getCalloutOrFail(calloutID, {
       relations: ['comments'],
     });
@@ -621,6 +623,7 @@ export class CalloutService {
     });
     return loadedCallout.postTemplate;
   }
+
   public async getWhiteboardTemplateFromCallout(
     calloutID: string
   ): Promise<IWhiteboardTemplate | undefined> {

@@ -1,6 +1,6 @@
-export enum CommentType {
+export enum RoomType {
   DISCUSSION = 'discussion',
-  CARD = 'card',
+  POST = 'post',
   CALENDAR_EVENT = 'calendar_event',
   FORUM_DISCUSSION = 'forum_discussion',
 }

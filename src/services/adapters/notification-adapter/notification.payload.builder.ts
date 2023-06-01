@@ -54,7 +54,7 @@ import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { ConfigService } from '@nestjs/config/dist/config.service';
-import { CommentType } from '@common/enums/comment.type';
+import { RoomType } from '@common/enums/room.type';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -232,7 +232,7 @@ export class NotificationPayloadBuilder {
     }
 
     const community =
-      await this.communityResolverService.getCommunityFromCardCommentsOrFail(
+      await this.communityResolverService.getCommunityFromPostRoomOrFail(
         commentsId
       );
 
@@ -605,7 +605,7 @@ export class NotificationPayloadBuilder {
     originEntityId: string,
     originEntityNameId: string,
     originEntityDisplayName: string,
-    commentType: CommentType
+    commentType: RoomType
   ): Promise<CommunicationUserMentionEventPayload | undefined> {
     const userData = await this.getUserData(mentionedUserNameID);
 
@@ -642,7 +642,7 @@ export class NotificationPayloadBuilder {
     originEntityId: string,
     originEntityNameId: string,
     originEntityDisplayName: string,
-    commentType: CommentType
+    commentType: RoomType
   ): Promise<CommunicationOrganizationMentionEventPayload | undefined> {
     const orgData = await this.getOrgData(mentionedUserNameID);
 
@@ -672,7 +672,7 @@ export class NotificationPayloadBuilder {
   }
 
   private async buildCommentOriginUrl(
-    commentType: CommentType,
+    commentType: RoomType,
     originEntityId: string,
     originEntityNameId: string,
     commentsId: string
@@ -681,7 +681,7 @@ export class NotificationPayloadBuilder {
       ConfigurationTypes.HOSTING
     )?.endpoint_cluster;
 
-    if (commentType === CommentType.DISCUSSION) {
+    if (commentType === RoomType.DISCUSSION) {
       const community =
         await this.communityResolverService.getCommunityFromCalloutOrFail(
           originEntityId
@@ -699,7 +699,7 @@ export class NotificationPayloadBuilder {
       return createCalloutURL(journeyUrl, originEntityNameId);
     }
 
-    if (commentType === CommentType.CARD) {
+    if (commentType === RoomType.POST) {
       const card = await this.aspectRepository.findOne({
         where: {
           id: originEntityId,
@@ -715,7 +715,7 @@ export class NotificationPayloadBuilder {
       }
 
       const community =
-        await this.communityResolverService.getCommunityFromCardCommentsOrFail(
+        await this.communityResolverService.getCommunityFromPostRoomOrFail(
           commentsId
         );
 
@@ -738,7 +738,7 @@ export class NotificationPayloadBuilder {
       return createCardURL(journeyUrl, callout.nameID, card.nameID);
     }
 
-    if (commentType === CommentType.CALENDAR_EVENT) {
+    if (commentType === RoomType.CALENDAR_EVENT) {
       const community =
         await this.communityResolverService.getCommunityFromCalendarEventOrFail(
           originEntityId
@@ -756,7 +756,7 @@ export class NotificationPayloadBuilder {
       return createCalendarEventURL(journeyUrl, originEntityNameId);
     }
 
-    if (commentType === CommentType.FORUM_DISCUSSION) {
+    if (commentType === RoomType.FORUM_DISCUSSION) {
       return createForumDiscussionUrl(endpoint, originEntityNameId);
     }
 

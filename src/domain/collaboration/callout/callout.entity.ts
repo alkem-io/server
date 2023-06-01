@@ -13,10 +13,10 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { Comments } from '@domain/communication/comments/comments.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { PostTemplate } from '@domain/template/post-template/post.template.entity';
 import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
+import { Room } from '@domain/communication/room2';
 
 @Entity()
 export class Callout extends NameableEntity implements ICallout {
@@ -66,13 +66,13 @@ export class Callout extends NameableEntity implements ICallout {
   @JoinColumn()
   whiteboardTemplate?: WhiteboardTemplate;
 
-  @OneToOne(() => Comments, {
+  @OneToOne(() => Room, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  comments?: Comments;
+  comments?: Room;
 
   @ManyToOne(() => Collaboration, collaboration => collaboration.callouts, {
     eager: false,

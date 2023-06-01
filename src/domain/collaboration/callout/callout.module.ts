@@ -11,7 +11,6 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
 import { CalloutResolverFields } from './callout.resolver.fields';
 import { CalloutResolverSubscriptions } from './callout.resolver.subscriptions';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { CommentsModule } from '@domain/communication/comments/comments.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
@@ -22,6 +21,7 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { PostTemplateModule } from '@domain/template/post-template/post.template.module';
 import { WhiteboardTemplateModule } from '@domain/template/whiteboard-template/whiteboard.template.module';
+import { RoomModule } from '@domain/communication/room2/room.module';
 
 @Module({
   imports: [
@@ -33,7 +33,7 @@ import { WhiteboardTemplateModule } from '@domain/template/whiteboard-template/w
     AuthorizationModule,
     AspectModule,
     CanvasModule,
-    CommentsModule,
+    RoomModule,
     CommunityPolicyModule,
     EntityResolverModule,
     UserModule,

@@ -2,10 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CommentsService } from './comments.service';
-import { IComments } from './comments.interface';
+import { RoomService } from './room.service';
+import { IRoom } from './room.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { RoomService } from '../room/room.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   POLICY_RULE_COMMENTS_CREATE,
@@ -14,26 +13,25 @@ import {
 } from '@common/constants';
 
 @Injectable()
-export class CommentsAuthorizationService {
+export class RoomAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private commentsService: CommentsService,
     private roomService: RoomService
   ) {}
 
   async applyAuthorizationPolicy(
-    comments: IComments,
+    room: IRoom,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): Promise<IComments> {
-    comments.authorization =
+  ): Promise<IRoom> {
+    room.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
-        comments.authorization,
+        room.authorization,
         parentAuthorization
       );
 
-    comments.authorization = this.appendPrivilegeRules(comments.authorization);
+    room.authorization = this.appendPrivilegeRules(room.authorization);
 
-    return await this.commentsService.save(comments);
+    return await this.roomService.save(room);
   }
 
   private appendPrivilegeRules(
@@ -62,13 +60,13 @@ export class CommentsAuthorizationService {
   }
 
   async extendAuthorizationPolicyForMessageSender(
-    comments: IComments,
+    room: IRoom,
     messageID: string
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     const senderUserID = await this.roomService.getUserIdForMessage(
-      comments,
+      room,
       messageID
     );
 
@@ -89,7 +87,7 @@ export class CommentsAuthorizationService {
 
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        comments.authorization,
+        room.authorization,
         newRules
       );
 

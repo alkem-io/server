@@ -8,19 +8,20 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DeleteCalendarEventInput } from './dto/event.dto.delete';
 import { UpdateCalendarEventInput } from './dto/event.dto.update';
-import { CommentsService } from '@domain/communication/comments/comments.service';
 import { CreateCalendarEventInput } from './dto/event.dto.create';
 import { CalendarEvent } from './event.entity';
 import { ICalendarEvent } from './event.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
+import { RoomService } from '@domain/communication/room2/room.service';
+import { RoomType } from '@common/enums/room.type';
 
 @Injectable()
 export class CalendarEventService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private commentsService: CommentsService,
+    private roomService: RoomService,
     private profileService: ProfileService,
     @InjectRepository(CalendarEvent)
     private calendarEventRepository: Repository<CalendarEvent>,
@@ -43,8 +44,9 @@ export class CalendarEventService {
     calendarEvent.authorization = new AuthorizationPolicy();
     calendarEvent.createdBy = userID;
 
-    calendarEvent.comments = await this.commentsService.createComments(
-      `calendarEvent-comments-${calendarEvent.nameID}`
+    calendarEvent.comments = await this.roomService.createRoom(
+      `calendarEvent-comments-${calendarEvent.nameID}`,
+      RoomType.CALENDAR_EVENT
     );
 
     return await this.calendarEventRepository.save(calendarEvent);
@@ -64,7 +66,7 @@ export class CalendarEventService {
       await this.profileService.deleteProfile(calendarEvent.profile.id);
     }
     if (calendarEvent.comments) {
-      await this.commentsService.deleteComments(calendarEvent.comments);
+      await this.roomService.deleteRoom(calendarEvent.comments);
     }
 
     const result = await this.calendarEventRepository.remove(

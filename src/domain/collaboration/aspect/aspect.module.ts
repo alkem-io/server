@@ -3,7 +3,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { VisualModule } from '@domain/common/visual/visual.module';
-import { CommentsModule } from '@domain/communication/comments/comments.module';
 import { Aspect } from './aspect.entity';
 import { AspectResolverMutations } from './aspect.resolver.mutations';
 import { AspectService } from './aspect.service';
@@ -13,12 +12,13 @@ import { AspectResolverSubscriptions } from './aspect.resolver.subscriptions';
 import { UserModule } from '@domain/community/user/user.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
+import { RoomModule } from '@domain/communication/room2/room.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
-    CommentsModule,
+    RoomModule,
     CommunityPolicyModule,
     VisualModule,
     UserModule,

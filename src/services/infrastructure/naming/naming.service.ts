@@ -286,7 +286,7 @@ export class NamingService {
     return community.policy;
   }
 
-  async getAspectForComments(commentsID: string): Promise<IAspect | null> {
+  async getPostForRoom(commentsID: string): Promise<IAspect | null> {
     // check if this is a comment related to an aspect
 
     return await this.entityManager.findOne(Aspect, {
@@ -297,7 +297,7 @@ export class NamingService {
     });
   }
 
-  async getCalendarEventForComments(
+  async getCalendarEventForRoom(
     commentsID: string
   ): Promise<ICalendarEvent | null> {
     // check if this is a comment related to an calendar

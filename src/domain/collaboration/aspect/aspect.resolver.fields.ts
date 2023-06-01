@@ -9,22 +9,20 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { IComments } from '@domain/communication/comments/comments.interface';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { IAspect } from './aspect.interface';
-import { AspectService } from './aspect.service';
 import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
+import { IRoom } from '@domain/communication/room2/room.interface';
 
 @Resolver(() => IAspect)
 export class AspectResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private aspectService: AspectService,
     private userService: UserService
   ) {}
 
@@ -69,12 +67,12 @@ export class AspectResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('comments', () => IComments, {
+  @ResolveField('comments', () => IRoom, {
     nullable: true,
     description: 'The comments for this Aspect.',
   })
   @Profiling.api
-  async comments(@Parent() aspect: IAspect): Promise<IComments> {
+  async comments(@Parent() aspect: IAspect): Promise<IRoom> {
     if (!aspect.comments) {
       throw new EntityNotInitializedException(
         'Aspect comments not defined',

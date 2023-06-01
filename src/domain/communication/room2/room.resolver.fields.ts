@@ -4,22 +4,21 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { IMessage } from '../message/message.interface';
-import { IComments } from './comments.interface';
-import { CommentsService } from './comments.service';
+import { IRoom } from './room.interface';
+import { RoomService } from './room.service';
 
-@Resolver(() => IComments)
-export class CommentsResolverFields {
-  constructor(private commentsService: CommentsService) {}
+@Resolver(() => IRoom)
+export class RoomResolverFields {
+  constructor(private roomService: RoomService) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('messages', () => [IMessage], {
     nullable: true,
-    description: 'Messages in this Comments.',
+    description: 'Messages in this Room.',
   })
   @Profiling.api
-  async messages(@Parent() comments: IComments): Promise<IMessage[]> {
-    const commentsRoom = await this.commentsService.getCommentsRoom(comments);
-    return commentsRoom.messages;
+  async messages(@Parent() room: IRoom): Promise<IMessage[]> {
+    return await this.roomService.getMessages(room);
   }
 }

@@ -8,11 +8,11 @@ import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { IComments } from '@domain/communication/comments/comments.interface';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { ICalendarEvent } from './event.interface';
 import { CalendarEventService } from './event.service';
+import { IRoom } from '@domain/communication/room2/room.interface';
 
 @Resolver(() => ICalendarEvent)
 export class CalendarEventResolverFields {
@@ -62,12 +62,12 @@ export class CalendarEventResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('comments', () => IComments, {
+  @ResolveField('comments', () => IRoom, {
     nullable: true,
     description: 'The comments for this CalendarEvent.',
   })
   @Profiling.api
-  async comments(@Parent() calendarEvent: ICalendarEvent): Promise<IComments> {
+  async comments(@Parent() calendarEvent: ICalendarEvent): Promise<IRoom> {
     return this.calendarEventService.getComments(calendarEvent.id);
   }
 

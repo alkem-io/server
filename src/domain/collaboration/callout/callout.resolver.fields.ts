@@ -9,7 +9,6 @@ import { GraphqlGuard } from '@core/authorization';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
-import { IComments } from '@domain/communication/comments/comments.interface';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { IUser } from '@domain/community/user/user.interface';
@@ -26,6 +25,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
+import { IRoom } from '@domain/communication/room2/room.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -135,7 +135,7 @@ export class CalloutResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('comments', () => IComments, {
+  @ResolveField('comments', () => IRoom, {
     nullable: true,
     description: 'The comments for this Callout.',
   })
@@ -146,8 +146,8 @@ export class CalloutResolverFields {
       parentClassRef: Callout,
       resolveToNull: true,
     })
-    loader: ILoader<IComments>
-  ): Promise<IComments | null> {
+    loader: ILoader<IRoom>
+  ): Promise<IRoom | null> {
     return (
       loader
         .load(callout.id)

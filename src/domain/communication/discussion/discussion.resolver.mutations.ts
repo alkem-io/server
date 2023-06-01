@@ -24,7 +24,7 @@ import { DiscussionMessageReceivedPayload } from './dto/discussion.message.recei
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { getMentionsFromText } from '../messaging/get.mentions.from.text';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
-import { CommentType } from '@common/enums/comment.type';
+import { RoomType } from '@common/enums/room.type';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputForumDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.forum.discussion.comment';
 import { DiscussionSendMessageReplyInput } from './dto/discussion.dto.send.message.reply';
@@ -95,14 +95,14 @@ export class DiscussionResolverMutations {
     const entityMentionsNotificationInput: NotificationInputEntityMentions = {
       triggeredBy: agentInfo.userID,
       comment: discussionMessage.message,
-      commentsId: discussion.id,
+      roomId: discussion.id,
       mentions,
       originEntity: {
         id: discussion.id,
         nameId: discussion.nameID,
         displayName: discussion.profile.displayName,
       },
-      commentType: CommentType.FORUM_DISCUSSION,
+      commentType: RoomType.FORUM_DISCUSSION,
     };
     this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
 
@@ -171,14 +171,14 @@ export class DiscussionResolverMutations {
     const entityMentionsNotificationInput: NotificationInputEntityMentions = {
       triggeredBy: agentInfo.userID,
       comment: discussionMessage.message,
-      commentsId: discussion.id,
+      roomId: discussion.id,
       mentions,
       originEntity: {
         id: discussion.id,
         nameId: discussion.nameID,
         displayName: discussion.profile.displayName,
       },
-      commentType: CommentType.FORUM_DISCUSSION,
+      commentType: RoomType.FORUM_DISCUSSION,
     };
     this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
 

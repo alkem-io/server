@@ -1,7 +1,7 @@
-import { IComments } from '@domain/communication/comments/comments.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ICallout } from '@domain/collaboration/callout';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
+import { IRoom } from '@domain/communication/room2/room.interface';
 
 @ObjectType('Aspect')
 export abstract class IAspect extends INameable {
@@ -23,5 +23,5 @@ export abstract class IAspect extends INameable {
 
   createdBy!: string;
 
-  comments?: IComments;
+  comments?: IRoom;
 }

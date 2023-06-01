@@ -12,17 +12,17 @@ import {
   LogContext,
 } from '@common/enums';
 import { CalendarEventService } from './event.service';
-import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_CALENDAR_EVENT_CREATED_BY } from '@common/constants/authorization/credential.rule.constants';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { RoomAuthorizationService } from '@domain/communication/room2/room.service.authorization';
 
 @Injectable()
 export class CalendarEventAuthorizationService {
   constructor(
     private calendarEventService: CalendarEventService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private commentsAuthorizationService: CommentsAuthorizationService,
+    private roomAuthorizationService: RoomAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
     @InjectRepository(CalendarEvent)
     private calendarEventRepository: Repository<CalendarEvent>
@@ -49,7 +49,7 @@ export class CalendarEventAuthorizationService {
     // have rights to delete comments
     if (calendarEvent.comments) {
       calendarEvent.comments =
-        await this.commentsAuthorizationService.applyAuthorizationPolicy(
+        await this.roomAuthorizationService.applyAuthorizationPolicy(
           calendarEvent.comments,
           calendarEvent.authorization
         );

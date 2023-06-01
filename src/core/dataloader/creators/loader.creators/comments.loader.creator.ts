@@ -2,20 +2,17 @@ import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
-import { IComments } from '@domain/communication/comments/comments.interface';
-import { Comments } from '@domain/communication/comments';
 import { createTypedRelationDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
+import { IRoom } from '@domain/communication/room2/room.interface';
+import { Room } from '@domain/communication/room2';
 
 @Injectable()
-export class CommentsLoaderCreator implements DataLoaderCreator<IComments> {
+export class CommentsLoaderCreator implements DataLoaderCreator<IRoom> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
   create(
-    options?: DataLoaderCreatorOptions<
-      IComments,
-      { id: string; comments?: Comments }
-    >
+    options?: DataLoaderCreatorOptions<IRoom, { id: string; comments?: Room }>
   ) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(

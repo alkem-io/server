@@ -29,7 +29,6 @@ import {
   EntityNotInitializedException,
   NotSupportedException,
 } from '@src/common/exceptions';
-import { CommentsService } from '@domain/communication/comments/comments.service';
 import { SendMessageOnCalloutInput } from './dto/callout.dto.message.created';
 import { CalloutType } from '@common/enums/callout.type';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
@@ -49,12 +48,13 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { NotificationInputCanvasCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.canvas.created';
 import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
-import { MessagingService } from '@domain/communication/messaging/messaging.service';
-import { CommentType } from '@common/enums/comment.type';
+import { RoomType } from '@common/enums/room.type';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
 import { ElasticsearchService } from '@services/external/elasticsearch';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { getMentionsFromText } from '@domain/communication/messaging/get.mentions.from.text';
+import { RoomService } from '@domain/communication/room2/room.service';
+import { RoomSendMessageInput } from '@domain/communication/room2/dto/room.dto.send.message';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -66,10 +66,9 @@ export class CalloutResolverMutations {
     private authorizationService: AuthorizationService,
     private calloutService: CalloutService,
     private namingService: NamingService,
-    private commentsService: CommentsService,
+    private roomService: RoomService,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
-    private messagingService: MessagingService,
     @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
     private aspectCreatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_CALLOUT_MESSAGE_CREATED)
@@ -139,10 +138,14 @@ export class CalloutResolverMutations {
       `comments send message: ${comments.displayName}`
     );
 
-    const commentSent = await this.commentsService.sendCommentsMessage(
+    const messageData: RoomSendMessageInput = {
+      roomID: comments.id,
+      message: data.message,
+    };
+    const commentSent = await this.roomService.sendMessage(
       comments,
       agentInfo.communicationID,
-      { message: data.message }
+      messageData
     );
     // build subscription payload
     const subscriptionPayload: CalloutMessageReceivedPayload = {
@@ -178,14 +181,14 @@ export class CalloutResolverMutations {
       const entityMentionsNotificationInput: NotificationInputEntityMentions = {
         triggeredBy: agentInfo.userID,
         comment: commentSent.message,
-        commentsId: comments.id,
+        roomId: comments.id,
         mentions,
         originEntity: {
           id: callout.id,
           nameId: callout.nameID,
           displayName: callout.profile.displayName,
         },
-        commentType: CommentType.DISCUSSION,
+        commentType: RoomType.DISCUSSION,
       };
       this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
     }

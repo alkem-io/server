@@ -104,7 +104,7 @@ export class NotificationAdapter {
     const payload =
       await this.notificationPayloadBuilder.buildCommentCreatedOnCardPayload(
         eventData.aspect,
-        eventData.comments.id,
+        eventData.room.id,
         eventData.commentSent
       );
     // send notification event
@@ -271,7 +271,7 @@ export class NotificationAdapter {
         triggeredBy: eventData.triggeredBy,
         comment: eventData.comment,
         mentionedEntityID: mention.nameId,
-        commentsId: eventData.commentsId,
+        commentsId: eventData.roomId,
         originEntity: eventData.originEntity,
         commentType: eventData.commentType,
       };

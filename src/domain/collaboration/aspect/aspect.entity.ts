@@ -1,8 +1,8 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IAspect } from './aspect.interface';
-import { Comments } from '@domain/communication/comments';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { Room } from '@domain/communication/room2';
 
 @Entity()
 export class Aspect extends NameableEntity implements IAspect {
@@ -12,13 +12,13 @@ export class Aspect extends NameableEntity implements IAspect {
   @Column('char', { length: 36, nullable: true })
   createdBy!: string;
 
-  @OneToOne(() => Comments, {
+  @OneToOne(() => Room, {
     eager: true,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  comments?: Comments;
+  comments?: Room;
 
   @ManyToOne(() => Callout, callout => callout.aspects, {
     eager: false,

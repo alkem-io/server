@@ -15,7 +15,6 @@ import {
 } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
@@ -28,6 +27,7 @@ import {
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { PostTemplateAuthorizationService } from '@domain/template/post-template/post.template.service.authorization';
 import { WhiteboardTemplateAuthorizationService } from '@domain/template/whiteboard-template/whiteboard.template.service.authorization';
+import { RoomAuthorizationService } from '@domain/communication/room2/room.service.authorization';
 @Injectable()
 export class CalloutAuthorizationService {
   constructor(
@@ -38,7 +38,7 @@ export class CalloutAuthorizationService {
     private postTemplateAuthorizationService: PostTemplateAuthorizationService,
     private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private commentsAuthorizationService: CommentsAuthorizationService,
+    private roomAuthorizationService: RoomAuthorizationService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -95,7 +95,7 @@ export class CalloutAuthorizationService {
     );
     if (callout.comments) {
       callout.comments =
-        await this.commentsAuthorizationService.applyAuthorizationPolicy(
+        await this.roomAuthorizationService.applyAuthorizationPolicy(
           callout.comments,
           callout.authorization
         );

@@ -8,13 +8,12 @@ import { CommunicationAdapterModule } from '@services/adapters/communication-ada
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
-import { RoomModule } from '../room/room.module';
-import { Comments } from './comments.entity';
-import { CommentsResolverFields } from './comments.resolver.fields';
-import { CommentsResolverMutations } from './comments.resolver.mutations';
-import { CommentsService } from './comments.service';
-import { CommentsAuthorizationService } from './comments.service.authorization';
+import { RoomResolverFields } from './room.resolver.fields';
+import { RoomResolverMutations } from './room.resolver.mutations';
+import { RoomService } from './room.service';
+import { RoomAuthorizationService } from './room.service.authorization';
 import { MessagingModule } from '../messaging/messaging.module';
+import { Room } from './room.entity';
 
 @Module({
   imports: [
@@ -28,14 +27,14 @@ import { MessagingModule } from '../messaging/messaging.module';
     RoomModule,
     CommunicationAdapterModule,
     MessagingModule,
-    TypeOrmModule.forFeature([Comments]),
+    TypeOrmModule.forFeature([Room]),
   ],
   providers: [
-    CommentsService,
-    CommentsAuthorizationService,
-    CommentsResolverFields,
-    CommentsResolverMutations,
+    RoomService,
+    RoomAuthorizationService,
+    RoomResolverFields,
+    RoomResolverMutations,
   ],
-  exports: [CommentsService, CommentsAuthorizationService],
+  exports: [RoomService, RoomAuthorizationService],
 })
-export class CommentsModule {}
+export class RoomModule {}
