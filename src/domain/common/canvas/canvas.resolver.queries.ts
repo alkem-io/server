@@ -2,7 +2,7 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { UUID } from '@domain/common/scalars';
+import { UUID_NAMEID } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
@@ -26,7 +26,7 @@ export class CanvasResolverQueries {
   @Profiling.api
   async canvas(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('ID', { type: () => UUID }) id: string
+    @Args('ID', { type: () => UUID_NAMEID }) id: string
   ): Promise<ICanvas> {
     const canvas = await this.canvasService.getCanvasOrFail(id);
     await this.authorizationService.grantAccessOrFail(

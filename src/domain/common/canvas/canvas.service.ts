@@ -62,16 +62,34 @@ export class CanvasService {
     return await this.save(canvas);
   }
 
-  async getCanvasOrFail(
+  async getCanvasByIdOrNameId(
     canvasID: string,
     options?: FindOneOptions<Canvas>
-  ): Promise<ICanvas | never> {
-    const canvas = await this.canvasRepository.findOne({
+  ): Promise<ICanvas | null> {
+    let canvas = await this.canvasRepository.findOne({
       where: {
         id: canvasID,
       },
       ...options,
     });
+
+    if (!canvas) {
+      canvas = await this.canvasRepository.findOne({
+        where: {
+          nameID: canvasID,
+        },
+        ...options,
+      });
+    }
+
+    return canvas;
+  }
+
+  async getCanvasOrFail(
+    canvasID: string,
+    options?: FindOneOptions<Canvas>
+  ): Promise<ICanvas | never> {
+    const canvas = await this.getCanvasByIdOrNameId(canvasID, options);
     if (!canvas)
       throw new EntityNotFoundException(
         `Not able to locate Canvas with the specified ID: ${canvasID}`,
