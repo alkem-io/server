@@ -1,4 +1,4 @@
-mutation addReactionToMessageInRoom($messageData: AddMessageReactionInput!){
+mutation addReactionToMessageInRoom($messageData: RoomAddReactionToMessageInput!){
   addReactionToMessageInRoom(messageData: $messageData){
     id
     message
@@ -7,7 +7,7 @@ mutation addReactionToMessageInRoom($messageData: AddMessageReactionInput!){
 
 {
   "messageData": {
-    "communicationRoomID": "string",
+    "roomID": "string",
     "messageID": "$3a15g7wrN4CYx8GyNSJ9d1rg5NQaXREdajwRMOrYN-I",
     "text": "👏"
   }
