@@ -94,9 +94,12 @@ export class InnovationHubService {
   public async updateOrFail(
     input: UpdateInnovationHubInput
   ): Promise<IInnovationHub> {
-    const hub: IInnovationHub = await this.getInnovationHubOrFail({
-      id: input.ID,
-    });
+    const hub: IInnovationHub = await this.getInnovationHubOrFail(
+      {
+        id: input.ID,
+      },
+      { relations: ['profile'] }
+    );
 
     if (input.nameID) {
       if (input.nameID !== hub.nameID) {
