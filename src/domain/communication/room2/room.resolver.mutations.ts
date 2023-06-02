@@ -35,6 +35,8 @@ import { CalendarEventCommentsMessageReceived as CalendarEventRoomMessageReceive
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
+import { EntityNotFoundException } from '@common/exceptions';
+import { LogContext } from '@common/enums/logging.context';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -75,44 +77,58 @@ export class RoomResolverMutations {
       agentInfo.communicationID,
       messageData
     );
-    const post = await this.namingService.getPostForRoom(messageData.roomID);
-    if (post) {
-      this.processRoomEventsOnPost(post, room, commentSent, agentInfo);
-      const activityLogInput: ActivityInputAspectComment = {
-        triggeredBy: agentInfo.userID,
-        aspect: post,
-        message: commentSent,
-      };
-      this.activityAdapter.aspectComment(activityLogInput);
 
-      const { hubID } =
-        await this.communityResolverService.getCommunityFromPostRoomOrFail(
+    switch (room.type) {
+      case RoomType.POST:
+        const post = await this.namingService.getPostForRoom(
           messageData.roomID
         );
-
-      this.elasticService.calloutPostCommentCreated(
-        {
-          id: post.id,
-          name: post.profile.displayName,
-          hub: hubID,
-        },
-        {
-          id: agentInfo.userID,
-          email: agentInfo.email,
+        if (!post) {
+          throw new EntityNotFoundException(
+            `Unable to identify Post for Room: invalid global role encountered: ${room.id}`,
+            LogContext.COLLABORATION
+          );
         }
-      );
-    }
+        this.processRoomEventsOnPost(post, room, commentSent, agentInfo);
+        const activityLogInput: ActivityInputAspectComment = {
+          triggeredBy: agentInfo.userID,
+          aspect: post,
+          message: commentSent,
+        };
+        this.activityAdapter.aspectComment(activityLogInput);
 
-    const calendar = await this.namingService.getCalendarEventForRoom(
-      messageData.roomID
-    );
-    if (calendar) {
-      this.processRoomEventsOnCalendarEvent(
-        calendar,
-        room,
-        commentSent,
-        agentInfo
-      );
+        const { hubID } =
+          await this.communityResolverService.getCommunityFromPostRoomOrFail(
+            messageData.roomID
+          );
+
+        this.elasticService.calloutPostCommentCreated(
+          {
+            id: post.id,
+            name: post.profile.displayName,
+            hub: hubID,
+          },
+          {
+            id: agentInfo.userID,
+            email: agentInfo.email,
+          }
+        );
+        break;
+      case RoomType.CALENDAR_EVENT:
+        const calendar = await this.namingService.getCalendarEventForRoom(
+          messageData.roomID
+        );
+        if (calendar) {
+          this.processRoomEventsOnCalendarEvent(
+            calendar,
+            room,
+            commentSent,
+            agentInfo
+          );
+        }
+        break;
+      default:
+      // ignore for now, later likely to be an exception
     }
 
     return commentSent;
@@ -250,7 +266,7 @@ export class RoomResolverMutations {
         nameId: aspect.nameID,
         displayName: aspect.profile.displayName,
       },
-      commentType: RoomType.POST,
+      commentType: room.type as RoomType,
     };
     this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
   }
