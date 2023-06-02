@@ -3,6 +3,7 @@ import { AuthorizationCredential, LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  NotSupportedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -11,8 +12,8 @@ import { ChallengeService } from '@domain/challenge/challenge/challenge.service'
 import {
   CreateHubInput,
   DeleteHubInput,
-  hubCommunityPolicy,
   hubCommunityApplicationForm,
+  hubCommunityPolicy,
 } from '@domain/challenge/hub';
 import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
@@ -68,6 +69,8 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
+import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 
 @Injectable()
 export class HubService {
@@ -234,9 +237,9 @@ export class HubService {
       ],
     });
 
-    // Do not remove an hub that has child challenges , require these to be individually first removed
+    // Do not remove a hub that has child challenges, require these to be individually first removed
     if (hub.challenges && hub.challenges.length > 0)
-      throw new ValidationException(
+      throw new OperationNotAllowedException(
         `Unable to remove Hub (${hub.nameID}) as it contains ${hub.challenges.length} challenges`,
         LogContext.CHALLENGES
       );
@@ -284,6 +287,61 @@ export class HubService {
       );
     }
     return hub.visibility;
+  }
+
+  public getSpacesForInnovationHub({
+    type,
+    hubListFilter,
+    hubVisibilityFilter,
+  }: InnovationHub): Promise<Hub[]> | never {
+    if (type === InnovationHubType.VISIBILITY) {
+      return this.hubRepository.findBy({
+        visibility: hubVisibilityFilter as HubVisibility,
+      });
+    }
+
+    if (type === InnovationHubType.LIST) {
+      return this.hubRepository.findBy([
+        { id: In(hubListFilter as Array<string>) },
+      ]);
+    }
+
+    throw new NotSupportedException(
+      `Unsupported Innovation Hub type: '${type}'`,
+      LogContext.INNOVATION_HUB
+    );
+  }
+
+  /***
+   * Checks if Hubs exists against a list of IDs
+   * @param ids List of Hub ids
+   * @returns  <i>true</i> if all Hubs exist; list of ids of the Hubs that doesn't, otherwise
+   */
+  public async hubsExist(ids: string[]): Promise<true | string[]> {
+    if (!ids.length) {
+      return true;
+    }
+
+    const hubs = await this.hubRepository.find({
+      where: { id: In(ids) },
+      select: { id: true },
+    });
+
+    if (!hubs.length) {
+      return ids;
+    }
+
+    const notExist = [...ids];
+
+    hubs.forEach(hub => {
+      const idIndex = notExist.findIndex(x => x === hub.id);
+
+      if (idIndex >= -1) {
+        notExist.splice(idIndex, 1);
+      }
+    });
+
+    return notExist.length > 0 ? notExist : true;
   }
 
   async getHubs(args: HubsQueryArgs): Promise<IHub[]> {
@@ -339,7 +397,14 @@ export class HubService {
       .whereInIds(IDs)
       .getMany();
 
-    const visibleHubs = hubsDataForSorting.filter(hub => {
+    return this.filterAndSortHubs(hubsDataForSorting, allowedVisibilities);
+  }
+
+  private filterAndSortHubs(
+    hubsData: Hub[],
+    allowedVisibilities: HubVisibility[]
+  ): string[] {
+    const visibleHubs = hubsData.filter(hub => {
       return this.hubsFilterService.isVisible(
         hub.visibility,
         allowedVisibilities
@@ -347,6 +412,13 @@ export class HubService {
     });
 
     const sortedHubs = visibleHubs.sort((a, b) => {
+      if (
+        a.visibility !== b.visibility &&
+        (a.visibility === HubVisibility.DEMO ||
+          b.visibility === HubVisibility.DEMO)
+      )
+        return a.visibility === HubVisibility.DEMO ? 1 : -1;
+
       if (
         a.authorization?.anonymousReadAccess === true &&
         b.authorization?.anonymousReadAccess === false
@@ -400,13 +472,22 @@ export class HubService {
     return challengeAndOpportunitiesCount;
   }
 
-  async getHubsById(hubIds: string[], options?: FindManyOptions<Hub>) {
+  async getHubsById(hubIdsOrNameIds: string[], options?: FindManyOptions<Hub>) {
     return this.hubRepository.find({
       ...options,
-      where: {
-        ...options?.where,
-        id: In(hubIds),
-      },
+      where: options?.where
+        ? Array.isArray(options.where)
+          ? [
+              { id: In(hubIdsOrNameIds) },
+              { nameID: In(hubIdsOrNameIds) },
+              ...options.where,
+            ]
+          : [
+              { id: In(hubIdsOrNameIds) },
+              { nameID: In(hubIdsOrNameIds) },
+              options.where,
+            ]
+        : [{ id: In(hubIdsOrNameIds) }, { nameID: In(hubIdsOrNameIds) }],
     });
   }
 
