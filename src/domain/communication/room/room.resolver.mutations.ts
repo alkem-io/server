@@ -31,12 +31,10 @@ import { getMentionsFromText } from '../messaging/get.mentions.from.text';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums/logging.context';
 import { IRoom } from './room.interface';
 import { SUBSCRIPTION_ROOM_MESSAGE } from '@common/constants';
 import { RoomMessageReceived } from './dto/room.subscription.dto.event.message.received';
-import { RoomMessageReceivedPayload } from './dto/room.subscription.message.received.payload';
+import { NotificationInputForumDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.forum.discussion.comment';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -72,7 +70,7 @@ export class RoomResolverMutations {
       `room send message: ${room.id}`
     );
 
-    const commentSent = await this.roomService.sendMessage(
+    const messageSent = await this.roomService.sendMessage(
       room,
       agentInfo.communicationID,
       messageData
@@ -80,20 +78,15 @@ export class RoomResolverMutations {
 
     switch (room.type) {
       case RoomType.POST:
+        this.sendRoomSubscriptionMessageReceivedEvent(room, messageSent);
         const post = await this.namingService.getPostForRoom(
           messageData.roomID
         );
-        if (!post) {
-          throw new EntityNotFoundException(
-            `Unable to identify Post for Room: invalid global role encountered: ${room.id}`,
-            LogContext.COLLABORATION
-          );
-        }
-        this.processRoomEventsOnPost(post, room, commentSent, agentInfo);
+        this.processRoomEventsOnPost(post, room, messageSent, agentInfo);
         const activityLogInput: ActivityInputAspectComment = {
           triggeredBy: agentInfo.userID,
           aspect: post,
-          message: commentSent,
+          message: messageSent,
         };
         this.activityAdapter.aspectComment(activityLogInput);
 
@@ -115,73 +108,66 @@ export class RoomResolverMutations {
         );
         break;
       case RoomType.CALENDAR_EVENT:
+        this.sendRoomSubscriptionMessageReceivedEvent(room, messageSent);
         const calendar = await this.namingService.getCalendarEventForRoom(
           messageData.roomID
         );
-        if (calendar) {
-          this.processRoomEventsOnCalendarEvent(
-            calendar,
-            room,
-            commentSent,
-            agentInfo
-          );
-        }
+        this.processRoomEventsOnCalendarEvent(
+          calendar,
+          room,
+          messageSent,
+          agentInfo
+        );
+
         break;
       case RoomType.DISCUSSION:
-      // Send the subscription event
-      // const eventID = `discussion-msg-${getRandomId()}`;
-      // const subscriptionPayload: DiscussionMessageReceivedPayload = {
-      //   eventID: eventID,
-      //   message: commentSent,
-      //   discussionID: room.id,
-      // };
-      // this.subscriptionDiscussionMessage.publish(
-      //   SubscriptionType.COMMUNICATION_DISCUSSION_MESSAGE_RECEIVED,
-      //   subscriptionPayload
-      // );
+        this.sendRoomSubscriptionMessageReceivedEvent(room, messageSent);
+        const discussion = await this.namingService.getDiscussionForRoom(
+          messageData.roomID
+        );
 
-      // const eventID2 = `discussion-update-${getRandomId()}`;
-      // const subscriptionPayloadUpdate: CommunicationDiscussionUpdated = {
-      //   eventID: eventID2,
-      //   discussionID: discussion.id,
-      // };
-      // this.subscriptionDiscussionMessage.publish(
-      //   SubscriptionType.COMMUNICATION_DISCUSSION_UPDATED,
-      //   subscriptionPayloadUpdate
-      // );
+        // const eventID2 = `discussion-update-${getRandomId()}`;
+        // const subscriptionPayloadUpdate: CommunicationDiscussionUpdated = {
+        //   eventID: eventID2,
+        //   discussionID: discussion.id,
+        // };
+        // this.subscriptionDiscussionMessage.publish(
+        //   SubscriptionType.COMMUNICATION_DISCUSSION_UPDATED,
+        //   subscriptionPayloadUpdate
+        // );
 
-      // const mentions = getMentionsFromText(discussionMessage.message);
-      // const entityMentionsNotificationInput: NotificationInputEntityMentions =
-      //   {
-      //     triggeredBy: agentInfo.userID,
-      //     comment: discussionMessage.message,
-      //     roomId: discussion.id,
-      //     mentions,
-      //     originEntity: {
-      //       id: room.id,
-      //       nameId: discussion.nameID,
-      //       displayName: discussion.profile.displayName,
-      //     },
-      //     commentType: RoomType.FORUM_DISCUSSION,
-      //   };
-      // this.notificationAdapter.entityMentions(
-      //   entityMentionsNotificationInput
-      // );
+        const mentions = getMentionsFromText(messageSent.message);
+        const entityMentionsNotificationInput: NotificationInputEntityMentions =
+          {
+            triggeredBy: agentInfo.userID,
+            comment: messageSent.message,
+            roomId: room.id,
+            mentions,
+            originEntity: {
+              id: room.id,
+              nameId: discussion.nameID,
+              displayName: discussion.profile.displayName,
+            },
+            commentType: RoomType.FORUM_DISCUSSION,
+          };
+        this.notificationAdapter.entityMentions(
+          entityMentionsNotificationInput
+        );
 
-      // const forumDiscussionCommentNotificationInput: NotificationInputForumDiscussionComment =
-      //   {
-      //     triggeredBy: agentInfo.userID,
-      //     discussion,
-      //     commentSent: discussionMessage,
-      //   };
-      // this.notificationAdapter.forumDiscussionComment(
-      //   forumDiscussionCommentNotificationInput
-      // );
+        const forumDiscussionCommentNotificationInput: NotificationInputForumDiscussionComment =
+          {
+            triggeredBy: agentInfo.userID,
+            discussion,
+            commentSent: messageSent,
+          };
+        this.notificationAdapter.forumDiscussionComment(
+          forumDiscussionCommentNotificationInput
+        );
       default:
       // ignore for now, later likely to be an exception
     }
 
-    return commentSent;
+    return messageSent;
   }
 
   @UseGuards(GraphqlGuard)
@@ -283,19 +269,6 @@ export class RoomResolverMutations {
     commentSent: IMessage,
     agentInfo: AgentInfo
   ) {
-    // build subscription payload
-    const eventID = `comment-msg-${getRandomId()}`;
-    const subscriptionPayload: RoomMessageReceivedPayload = {
-      eventID: eventID,
-      message: commentSent,
-      roomID: room.id,
-    };
-    // send the subscriptions event
-    this.subscriptionRoomMessage.publish(
-      SubscriptionType.COMMUNICATION_ROOM_MESSAGE_RECEIVED,
-      subscriptionPayload
-    );
-
     // Send the notification
     const notificationInput: NotificationInputAspectComment = {
       triggeredBy: agentInfo.userID,
@@ -322,17 +295,15 @@ export class RoomResolverMutations {
     this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
   }
 
-  private processRoomEventsOnCalendarEvent(
-    calendarEvent: ICalendarEvent,
+  private sendRoomSubscriptionMessageReceivedEvent(
     room: IRoom,
-    commentSent: IMessage,
-    agentInfo: AgentInfo
+    message: IMessage
   ) {
     // build subscription payload
-    const eventID = `comment-msg-${getRandomId()}`;
+    const eventID = `room-msg-${getRandomId()}`;
     const subscriptionPayload: RoomMessageReceived = {
       eventID: eventID,
-      message: commentSent,
+      message: message,
       roomID: room.id,
     };
     // send the subscriptions event
@@ -340,7 +311,14 @@ export class RoomResolverMutations {
       SubscriptionType.COMMUNICATION_ROOM_MESSAGE_RECEIVED,
       subscriptionPayload
     );
+  }
 
+  private processRoomEventsOnCalendarEvent(
+    calendarEvent: ICalendarEvent,
+    room: IRoom,
+    commentSent: IMessage,
+    agentInfo: AgentInfo
+  ) {
     const mentions = getMentionsFromText(commentSent.message);
     const entityMentionsNotificationInput: NotificationInputEntityMentions = {
       triggeredBy: agentInfo.userID,
