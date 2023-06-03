@@ -23,7 +23,7 @@ export abstract class IAspect extends INameable {
 
   createdBy!: string;
 
-  @Field(() => ICallout, {
+  @Field(() => IRoom, {
     nullable: false,
     description: 'The comments on this Post.',
   })
