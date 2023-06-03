@@ -1,4 +1,4 @@
-import { Inject, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
 import { Args, Mutation } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
@@ -11,47 +11,24 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { MessageID } from '@domain/common/scalars';
 import { IMessage } from '../message/message.interface';
-import { PubSubEngine } from 'graphql-subscriptions';
-import { SubscriptionType } from '@common/enums/subscription.type';
 import { RoomAuthorizationService } from './room.service.authorization';
-import { getRandomId } from '@src/common/utils';
-import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { ActivityInputAspectComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.aspect.comment';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { NotificationInputAspectComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.aspect.comment';
-import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
-import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';
 import { RoomType } from '@common/enums/room.type';
-import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
-import { ElasticsearchService } from '@services/external/elasticsearch';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { getMentionsFromText } from '../messaging/get.mentions.from.text';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
-import { IRoom } from './room.interface';
-import { SUBSCRIPTION_ROOM_MESSAGE } from '@common/constants';
-import { RoomMessageReceived } from './dto/room.subscription.dto.event.message.received';
-import { NotificationInputForumDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.forum.discussion.comment';
-import { INameable } from '@domain/common/entity/nameable-entity';
-import { IDiscussion } from '../discussion/discussion.interface';
-import { NotificationInputUpdateSent } from '@services/adapters/notification-adapter/dto/notification.dto.input.update.sent';
-import { ActivityInputUpdateSent } from '@services/adapters/activity-adapter/dto/activity.dto.input.update.sent';
+import { NotSupportedException } from '@common/exceptions/not.supported.exception';
+import { LogContext } from '@common/enums/logging.context';
+import { RoomServiceEvents } from './room.service.events';
 
 @Resolver()
 export class RoomResolverMutations {
   constructor(
-    private communityResolverService: CommunityResolverService,
-    private elasticService: ElasticsearchService,
-    private activityAdapter: ActivityAdapter,
-    private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
     private roomService: RoomService,
     private namingService: NamingService,
     private roomAuthorizationService: RoomAuthorizationService,
-    @Inject(SUBSCRIPTION_ROOM_MESSAGE)
-    private readonly subscriptionRoomMessage: PubSubEngine
+    private roomServiceEvents: RoomServiceEvents
   ) {}
 
   // todo should be removed to serve per entity e.g. send aspect comment
@@ -73,13 +50,20 @@ export class RoomResolverMutations {
       `room send message: ${room.id}`
     );
 
+    if (room.type === RoomType.CALLOUT) {
+      throw new NotSupportedException(
+        'Messages for Callouts to be sent via Callouts api',
+        LogContext.COLLABORATION
+      );
+    }
+
     const message = await this.roomService.sendMessage(
       room,
       agentInfo.communicationID,
       messageData
     );
 
-    this.processMessageReceivedSubscription(room, message);
+    this.roomServiceEvents.processMessageReceivedSubscription(room, message);
 
     switch (room.type) {
       case RoomType.POST:
@@ -87,32 +71,37 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        this.processNotificationMentions(post, room, message, agentInfo);
-        this.processNotificationPostComment(post, room, message, agentInfo);
-        this.processActivityPostComment(post, message, agentInfo);
-
-        const community =
-          await this.communityResolverService.getCommunityFromPostRoomOrFail(
-            messageData.roomID
-          );
-        this.elasticService.calloutPostCommentCreated(
-          {
-            id: post.id,
-            name: post.profile.displayName,
-            hub: community.hubID,
-          },
-          {
-            id: agentInfo.userID,
-            email: agentInfo.email,
-          }
+        this.roomServiceEvents.processNotificationMentions(
+          post,
+          room,
+          message,
+          agentInfo
         );
+        this.roomServiceEvents.processNotificationPostComment(
+          post,
+          room,
+          message,
+          agentInfo
+        );
+        this.roomServiceEvents.processActivityPostComment(
+          post,
+          room,
+          message,
+          agentInfo
+        );
+
         break;
       case RoomType.CALENDAR_EVENT:
         const calendar = await this.namingService.getCalendarEventForRoom(
           messageData.roomID
         );
 
-        this.processNotificationMentions(calendar, room, message, agentInfo);
+        this.roomServiceEvents.processNotificationMentions(
+          calendar,
+          room,
+          message,
+          agentInfo
+        );
 
         break;
       case RoomType.DISCUSSION:
@@ -120,34 +109,38 @@ export class RoomResolverMutations {
           messageData.roomID
         );
 
-        this.processNotificationMentions(discussion, room, message, agentInfo);
-        this.processNotificationForumDiscussionComment(
+        this.roomServiceEvents.processNotificationMentions(
           discussion,
+          room,
+          message,
+          agentInfo
+        );
+        break;
+      case RoomType.DISCUSSION_FORUM:
+        const discussionForum = await this.namingService.getDiscussionForRoom(
+          messageData.roomID
+        );
+        this.roomServiceEvents.processNotificationMentions(
+          discussionForum,
+          room,
+          message,
+          agentInfo
+        );
+        this.roomServiceEvents.processNotificationForumDiscussionComment(
+          discussionForum,
+          message,
+          agentInfo
+        );
+        break;
+      case RoomType.UPDATES:
+        this.roomServiceEvents.processNotificationUpdateSent(room, agentInfo);
+        this.roomServiceEvents.processActivityUpdateSent(
+          room,
           message,
           agentInfo
         );
 
-      case RoomType.UPDATES:
-        this.processNotificationUpdateSent(room, agentInfo);
-        this.processActivityUpdateSent(room, message, agentInfo);
-
-        const { hubID } =
-          await this.communityResolverService.getCommunityFromUpdatesOrFail(
-            room.id
-          );
-
-        this.elasticService.updateCreated(
-          {
-            id: room.id,
-            name: '',
-            hub: hubID,
-          },
-          {
-            id: agentInfo.userID,
-            email: agentInfo.email,
-          }
-        );
-
+        break;
       default:
       // ignore for now, later likely to be an exception
     }
@@ -185,11 +178,11 @@ export class RoomResolverMutations {
       agentInfo.communicationID,
       messageData
     );
-    const activityMessageRemoved: ActivityInputMessageRemoved = {
-      triggeredBy: agentInfo.userID,
-      messageID: messageID,
-    };
-    await this.activityAdapter.messageRemoved(activityMessageRemoved);
+    await this.roomServiceEvents.processActivityMessageRemoved(
+      messageID,
+      agentInfo
+    );
+
     return messageID;
   }
 
@@ -203,6 +196,21 @@ export class RoomResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IMessage> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID);
+
+    if (room.type === RoomType.CALLOUT) {
+      throw new NotSupportedException(
+        'Messages for Callouts to be sent via Callouts api',
+        LogContext.COLLABORATION
+      );
+    }
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      room.authorization,
+      AuthorizationPrivilege.CREATE_COMMENT,
+      `room reply to message: ${room.id}`
+    );
+
     const message = await this.roomService.sendMessageReply(
       room,
       agentInfo.communicationID,
@@ -222,6 +230,14 @@ export class RoomResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IMessage> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID);
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      room.authorization,
+      AuthorizationPrivilege.CREATE_COMMENT,
+      `room add reaction to message: ${room.id}`
+    );
+
     const message = await this.roomService.addReactionToMessage(
       room,
       agentInfo.communicationID,
@@ -241,116 +257,28 @@ export class RoomResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<boolean> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID);
+
+    // The choice was made **not** to wrap every message in an AuthorizationPolicy.
+    // So we also allow users who sent the react in question to remove the reaction by
+    // extending the authorization policy in memory but do not persist it.
+
+    // Todo: to be tested, may need additional work to get this going
+    const extendedAuthorization =
+      await this.roomAuthorizationService.extendAuthorizationPolicyForMessageSender(
+        room,
+        messageData.reactionID
+      );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      extendedAuthorization,
+      AuthorizationPrivilege.DELETE,
+      `room remove reaction: ${room.id}`
+    );
+
     return await this.roomService.removeReactionToMessage(
       room,
       agentInfo.communicationID,
       messageData
     );
-  }
-
-  private processMessageReceivedSubscription(room: IRoom, message: IMessage) {
-    // build subscription payload
-    const eventID = `room-msg-${getRandomId()}`;
-    const subscriptionPayload: RoomMessageReceived = {
-      eventID: eventID,
-      message: message,
-      roomID: room.id,
-    };
-    // send the subscriptions event
-    this.subscriptionRoomMessage.publish(
-      SubscriptionType.COMMUNICATION_ROOM_MESSAGE_RECEIVED,
-      subscriptionPayload
-    );
-  }
-
-  private processNotificationMentions(
-    parentEntity: INameable,
-    room: IRoom,
-    message: IMessage,
-    agentInfo: AgentInfo
-  ) {
-    const mentions = getMentionsFromText(message.message);
-    const entityMentionsNotificationInput: NotificationInputEntityMentions = {
-      triggeredBy: agentInfo.userID,
-      comment: message.message,
-      roomId: room.id,
-      mentions,
-      originEntity: {
-        id: parentEntity.id,
-        nameId: parentEntity.nameID,
-        displayName: parentEntity.profile.displayName,
-      },
-      commentType: room.type as RoomType,
-    };
-    this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
-  }
-
-  private async processNotificationPostComment(
-    aspect: IAspect,
-    room: IRoom,
-    message: IMessage,
-    agentInfo: AgentInfo
-  ) {
-    // Send the notification
-    const notificationInput: NotificationInputAspectComment = {
-      triggeredBy: agentInfo.userID,
-      aspect: aspect,
-      room: room,
-      commentSent: message,
-    };
-    await this.notificationAdapter.aspectComment(notificationInput);
-  }
-
-  private async processNotificationForumDiscussionComment(
-    discussion: IDiscussion,
-    message: IMessage,
-    agentInfo: AgentInfo
-  ) {
-    const forumDiscussionCommentNotificationInput: NotificationInputForumDiscussionComment =
-      {
-        triggeredBy: agentInfo.userID,
-        discussion,
-        commentSent: message,
-      };
-    this.notificationAdapter.forumDiscussionComment(
-      forumDiscussionCommentNotificationInput
-    );
-  }
-
-  private async processActivityPostComment(
-    post: IAspect,
-    message: IMessage,
-    agentInfo: AgentInfo
-  ) {
-    const activityLogInput: ActivityInputAspectComment = {
-      triggeredBy: agentInfo.userID,
-      aspect: post,
-      message: message,
-    };
-    this.activityAdapter.aspectComment(activityLogInput);
-  }
-
-  private async processActivityUpdateSent(
-    updates: IRoom,
-    message: IMessage,
-    agentInfo: AgentInfo
-  ) {
-    const activityLogInput: ActivityInputUpdateSent = {
-      triggeredBy: agentInfo.userID,
-      updates: updates,
-      message: message,
-    };
-    this.activityAdapter.updateSent(activityLogInput);
-  }
-
-  private async processNotificationUpdateSent(
-    updates: IRoom,
-    agentInfo: AgentInfo
-  ) {
-    const notificationInput: NotificationInputUpdateSent = {
-      triggeredBy: agentInfo.userID,
-      updates: updates,
-    };
-    await this.notificationAdapter.updateSent(notificationInput);
   }
 }

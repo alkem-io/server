@@ -37,7 +37,8 @@ export class DiscussionService {
   async createDiscussion(
     discussionData: CommunicationCreateDiscussionInput,
     userID: string,
-    communicationDisplayName: string
+    communicationDisplayName: string,
+    roomType: RoomType
   ): Promise<IDiscussion> {
     const discussionNameID = this.namingService.createNameID(
       `${discussionData.profile.displayName}`
@@ -60,7 +61,7 @@ export class DiscussionService {
 
     discussion.comments = await this.roomService.createRoom(
       `${communicationDisplayName}-discussion-${discussion.profile.displayName}`,
-      RoomType.DISCUSSION
+      roomType
     );
 
     discussion.createdBy = userID;

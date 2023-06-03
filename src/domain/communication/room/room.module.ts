@@ -15,6 +15,7 @@ import { RoomAuthorizationService } from './room.service.authorization';
 import { MessagingModule } from '../messaging/messaging.module';
 import { Room } from './room.entity';
 import { RoomResolverSubscriptions } from './room.resolver.subscriptions';
+import { RoomServiceEvents } from './room.service.events';
 
 @Module({
   imports: [
@@ -36,7 +37,8 @@ import { RoomResolverSubscriptions } from './room.resolver.subscriptions';
     RoomResolverFields,
     RoomResolverMutations,
     RoomResolverSubscriptions,
+    RoomServiceEvents,
   ],
-  exports: [RoomService, RoomAuthorizationService],
+  exports: [RoomService, RoomServiceEvents, RoomAuthorizationService],
 })
 export class RoomModule {}

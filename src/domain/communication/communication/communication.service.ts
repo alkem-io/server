@@ -23,6 +23,7 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { RoomService } from '../room/room.service';
 import { IRoom } from '../room/room.interface';
 import { RoomType } from '@common/enums/room.type';
+import { COMMUNICATION_PLATFORM_HUBID } from '@common/constants';
 
 @Injectable()
 export class CommunicationService {
@@ -87,10 +88,15 @@ export class CommunicationService {
       );
     }
 
+    let roomType = RoomType.DISCUSSION;
+    if (this.isPlatformCommunication(communication)) {
+      roomType = RoomType.DISCUSSION_FORUM;
+    }
     const discussion = await this.discussionService.createDiscussion(
       discussionData,
       userID,
-      communication.displayName
+      communication.displayName,
+      roomType
     );
     this.logger.verbose?.(
       `[Discussion] Room created (${displayName}) and membership replicated from Updates (${communicationID})`,
@@ -118,6 +124,13 @@ export class CommunicationService {
     // );
 
     return discussion;
+  }
+
+  private isPlatformCommunication(communication: ICommunication): boolean {
+    if (communication.hubID === COMMUNICATION_PLATFORM_HUBID) {
+      return true;
+    }
+    return false;
   }
 
   async getDiscussions(communication: ICommunication): Promise<IDiscussion[]> {

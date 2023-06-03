@@ -17,15 +17,22 @@ export class room21685776282260 implements MigrationInterface {
     // Process the discussions
     const discussions: {
       id: string;
+      communicationId: string;
       communicationRoomID: string;
       commentsCount: number;
       displayName: string;
     }[] = await queryRunner.query(
-      `SELECT id, communicationRoomID, commentsCount, displayName FROM discussion`
+      `SELECT id, communicationId, communicationRoomID, commentsCount, displayName FROM discussion`
     );
+
     for (const discussion of discussions) {
       const newRoomID = randomUUID();
       const roomAuthID = randomUUID();
+
+      const roomType = this.getRoomTypeForDiscussion(
+        queryRunner,
+        discussion.communicationId
+      );
 
       await queryRunner.query(
         `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules) VALUES
@@ -40,7 +47,7 @@ export class room21685776282260 implements MigrationInterface {
                     '${roomAuthID}',
                     '${discussion.commentsCount}',
                     '${escapeString(discussion.communicationRoomID)}',
-                    'discussion',
+                    '${roomType}',
                     '${escapeString(discussion.displayName)}')`
       );
 
@@ -91,6 +98,23 @@ export class room21685776282260 implements MigrationInterface {
       `ALTER TABLE \`communication\` ADD CONSTRAINT \`FK_777750fa78a37776ad962cb7643\` FOREIGN KEY (\`updatesId\`) REFERENCES \`room\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query('DROP TABLE `updates`');
+  }
+
+  private async getRoomTypeForDiscussion(
+    queryRunner: QueryRunner,
+    communicationId: string
+  ): Promise<string> {
+    const communications: {
+      id: string;
+      hubID: string;
+    }[] = await queryRunner.query(
+      `SELECT id, hubID FROM communication WHERE (id = '${communicationId}')`
+    );
+    const communication = communications[0];
+    if (communication.hubID === 'platform') {
+      return 'discussion_forum';
+    }
+    return 'discussion';
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

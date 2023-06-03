@@ -18,10 +18,7 @@ import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service
 import { AspectAuthorizationService } from '@domain/collaboration/aspect/aspect.service.authorization';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
-import {
-  SUBSCRIPTION_CALLOUT_ASPECT_CREATED,
-  SUBSCRIPTION_ROOM_MESSAGE,
-} from '@common/constants';
+import { SUBSCRIPTION_CALLOUT_ASPECT_CREATED } from '@common/constants';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { ICallout } from './callout.interface';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
@@ -33,7 +30,6 @@ import { CalloutType } from '@common/enums/callout.type';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputAspectCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.aspect.created';
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
-import { CalloutMessageReceivedPayload } from './dto/callout.message.received.payload';
 import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { NotificationInputAspectCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.aspect.created';
@@ -42,19 +38,16 @@ import { NotificationInputCalloutPublished } from '@services/adapters/notificati
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { IMessage } from '@domain/communication/message/message.interface';
-import { getRandomId } from '@common/utils/random.id.generator.util';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { NotificationInputCanvasCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.canvas.created';
 import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
-import { RoomType } from '@common/enums/room.type';
-import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
 import { ElasticsearchService } from '@services/external/elasticsearch';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { getMentionsFromText } from '@domain/communication/messaging/get.mentions.from.text';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { SendMessageOnCalloutInput } from './dto/callout.dto.message.created';
+import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -67,12 +60,11 @@ export class CalloutResolverMutations {
     private calloutService: CalloutService,
     private namingService: NamingService,
     private roomService: RoomService,
+    private roomServiceEvents: RoomServiceEvents,
     private canvasAuthorizationService: CanvasAuthorizationService,
     private aspectAuthorizationService: AspectAuthorizationService,
     @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
-    private aspectCreatedSubscription: PubSubEngine,
-    @Inject(SUBSCRIPTION_ROOM_MESSAGE)
-    private subscriptionRoomMessage: PubSubEngine
+    private aspectCreatedSubscription: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -145,18 +137,12 @@ export class CalloutResolverMutations {
       agentInfo.communicationID,
       messageData
     );
-    // build subscription payload
-    const subscriptionPayload: CalloutMessageReceivedPayload = {
-      eventID: `callout-comment-msg-${getRandomId()}`,
-      calloutID: data.calloutID,
-      commentsID: comments.id,
-      message: commentSent,
-    };
-    // send the subscriptions event
-    this.subscriptionRoomMessage.publish(
-      SubscriptionType.COMMUNICATION_ROOM_MESSAGE_RECEIVED,
-      subscriptionPayload
+
+    this.roomServiceEvents.processMessageReceivedSubscription(
+      comments,
+      commentSent
     );
+
     if (callout.visibility === CalloutVisibility.PUBLISHED) {
       // Register the activity
       const activityLogInput: ActivityInputCalloutDiscussionComment = {
@@ -174,21 +160,12 @@ export class CalloutResolverMutations {
       };
       await this.notificationAdapter.discussionComment(notificationInput);
 
-      const mentions = getMentionsFromText(commentSent.message);
-
-      const entityMentionsNotificationInput: NotificationInputEntityMentions = {
-        triggeredBy: agentInfo.userID,
-        comment: commentSent.message,
-        roomId: comments.id,
-        mentions,
-        originEntity: {
-          id: callout.id,
-          nameId: callout.nameID,
-          displayName: callout.profile.displayName,
-        },
-        commentType: RoomType.DISCUSSION,
-      };
-      this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
+      this.roomServiceEvents.processNotificationMentions(
+        callout,
+        comments,
+        commentSent,
+        agentInfo
+      );
     }
 
     const { hubID } =

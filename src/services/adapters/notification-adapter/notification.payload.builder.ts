@@ -756,7 +756,7 @@ export class NotificationPayloadBuilder {
       return createCalendarEventURL(journeyUrl, originEntityNameId);
     }
 
-    if (commentType === RoomType.FORUM_DISCUSSION) {
+    if (commentType === RoomType.DISCUSSION_FORUM) {
       return createForumDiscussionUrl(endpoint, originEntityNameId);
     }
 
