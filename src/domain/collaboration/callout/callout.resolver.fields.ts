@@ -17,7 +17,6 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import {
   CalloutPostTemplateLoaderCreator,
   CalloutWhiteboardTemplateLoaderCreator,
-  RoomLoaderCreator,
   ProfileLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
@@ -25,7 +24,6 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
-import { IRoom } from '@domain/communication/room/room.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -130,30 +128,6 @@ export class CalloutResolverFields {
       ids,
       limit,
       shuffle
-    );
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('comments', () => IRoom, {
-    nullable: true,
-    description: 'The comments for this Callout.',
-  })
-  @Profiling.api
-  async comments(
-    @Parent() callout: ICallout,
-    @Loader(RoomLoaderCreator, {
-      parentClassRef: Callout,
-      resolveToNull: true,
-    })
-    loader: ILoader<IRoom>
-  ): Promise<IRoom | null> {
-    return (
-      loader
-        .load(callout.id)
-        // empty object is result because DataLoader does not allow to return NULL values
-        // handle the value when the result is returned
-        .then(x => (!Object.keys(x).length ? null : x))
     );
   }
 

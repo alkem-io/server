@@ -12,7 +12,6 @@ export * from './profile.loader.creator';
 export * from './preferences.loader.creator';
 export * from './agent.loader.creator';
 export * from './authorization.loader.creator';
-export * from './room.loader.creator';
 export * from './user.loader.creator';
 export * from './checkout.loader.creator';
 export * from './visual.loader.creator';

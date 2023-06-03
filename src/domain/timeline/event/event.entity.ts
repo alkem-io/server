@@ -13,12 +13,12 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   createdBy!: string;
 
   @OneToOne(() => Room, {
-    eager: false,
+    eager: true,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  comments?: Room;
+  comments!: Room;
 
   @ManyToOne(() => Calendar, calendar => calendar.events, {
     eager: false,

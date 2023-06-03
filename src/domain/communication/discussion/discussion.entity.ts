@@ -10,12 +10,12 @@ export class Discussion extends NameableEntity implements IDiscussion {
   category!: string;
 
   @OneToOne(() => Room, {
-    eager: false,
+    eager: true,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  comments?: Room;
+  comments!: Room;
 
   @Column('char', { length: 36, nullable: true })
   createdBy!: string;

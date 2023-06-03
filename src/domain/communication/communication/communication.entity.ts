@@ -27,7 +27,7 @@ export class Communication
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  updates?: Room;
+  updates!: Room;
 
   @Column()
   displayName!: string;

@@ -7,13 +7,13 @@ import { IRoom } from '@domain/communication/room/room.interface';
 export abstract class IAspect extends INameable {
   @Field(() => String, {
     description:
-      'The aspect type, e.g. knowledge, idea, stakeholder persona etc.',
+      'The Post type, e.g. knowledge, idea, stakeholder persona etc.',
   })
   type!: string;
 
   @Field(() => ICallout, {
     nullable: true,
-    description: 'The parent Callout of the Aspect',
+    description: 'The parent Callout of the Post',
   })
   callout?: ICallout;
 
@@ -23,5 +23,9 @@ export abstract class IAspect extends INameable {
 
   createdBy!: string;
 
-  comments?: IRoom;
+  @Field(() => ICallout, {
+    nullable: false,
+    description: 'The comments on this Post.',
+  })
+  comments!: IRoom;
 }

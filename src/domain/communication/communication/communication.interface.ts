@@ -7,7 +7,12 @@ import { IRoom } from '../room/room.interface';
 @ObjectType('Communication')
 export abstract class ICommunication extends IAuthorizable {
   discussions?: IDiscussion[];
-  updates?: IRoom;
+
+  @Field(() => IRoom, {
+    nullable: false,
+    description: 'The updates on this Communication.',
+  })
+  updates!: IRoom;
 
   hubID!: string;
 
@@ -15,8 +20,4 @@ export abstract class ICommunication extends IAuthorizable {
 
   @Field(() => [DiscussionCategory])
   discussionCategories!: string[];
-
-  constructor() {
-    super();
-  }
 }

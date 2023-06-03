@@ -19,7 +19,11 @@ export abstract class ICalendarEvent extends INameable {
 
   createdBy!: string;
 
-  comments?: IRoom;
+  @Field(() => IRoom, {
+    nullable: false,
+    description: 'The comments for this CalendarEvent',
+  })
+  comments!: IRoom;
 
   // The scheduling related fields
   startDate!: Date;

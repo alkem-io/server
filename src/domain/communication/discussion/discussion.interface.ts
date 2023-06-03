@@ -12,5 +12,8 @@ export abstract class IDiscussion extends INameable {
 
   createdBy!: string;
 
-  comments?: IRoom;
+  @Field(() => IRoom, {
+    description: 'The comment in this Discussion.',
+  })
+  comments!: IRoom;
 }

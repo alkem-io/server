@@ -18,7 +18,7 @@ export class Aspect extends NameableEntity implements IAspect {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  comments?: Room;
+  comments!: Room;
 
   @ManyToOne(() => Callout, callout => callout.aspects, {
     eager: false,

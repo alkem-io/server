@@ -67,12 +67,12 @@ export class Callout extends NameableEntity implements ICallout {
   whiteboardTemplate?: WhiteboardTemplate;
 
   @OneToOne(() => Room, {
-    eager: false,
+    eager: true,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  comments?: Room;
+  comments!: Room;
 
   @ManyToOne(() => Collaboration, collaboration => collaboration.callouts, {
     eager: false,

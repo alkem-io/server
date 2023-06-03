@@ -2,39 +2,22 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { Profiling } from '@src/common/decorators';
+import { LogContext } from '@common/enums';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { DiscussionService } from './discussion.service';
 import { IDiscussion } from './discussion.interface';
-import { IMessage } from '../message/message.interface';
 import { Discussion } from './discussion.entity';
 import { Loader } from '@core/dataloader/decorators';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
-import { RoomService } from '../room/room.service';
 
 @Resolver(() => IDiscussion)
 export class DiscussionResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    private discussionService: DiscussionService,
-    private roomService: RoomService
+    private readonly logger: LoggerService
   ) {}
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('messages', () => [IMessage], {
-    nullable: true,
-    description: 'Messages for this Discussion.',
-  })
-  @Profiling.api
-  async messages(@Parent() discussion: IDiscussion): Promise<IMessage[]> {
-    const room = await this.discussionService.getComments(discussion.id);
-    return await this.roomService.getMessages(room);
-  }
 
   @ResolveField('timestamp', () => Number, {
     nullable: true,

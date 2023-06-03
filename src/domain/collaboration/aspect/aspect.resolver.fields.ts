@@ -1,12 +1,9 @@
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
 import { Profiling } from '@common/decorators/profiling.decorator';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IUser } from '@domain/community/user';
@@ -16,7 +13,6 @@ import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
-import { IRoom } from '@domain/communication/room/room.interface';
 
 @Resolver(() => IAspect)
 export class AspectResolverFields {
@@ -63,22 +59,5 @@ export class AspectResolverFields {
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
     return loader.load(aspect.id);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('comments', () => IRoom, {
-    nullable: true,
-    description: 'The comments for this Aspect.',
-  })
-  @Profiling.api
-  async comments(@Parent() aspect: IAspect): Promise<IRoom> {
-    if (!aspect.comments) {
-      throw new EntityNotInitializedException(
-        'Aspect comments not defined',
-        LogContext.COLLABORATION
-      );
-    }
-    return aspect.comments;
   }
 }
