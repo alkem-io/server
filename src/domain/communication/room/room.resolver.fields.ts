@@ -14,11 +14,13 @@ export class RoomResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('messages', () => [IMessage], {
-    nullable: true,
+    nullable: false,
     description: 'Messages in this Room.',
   })
   @Profiling.api
   async messages(@Parent() room: IRoom): Promise<IMessage[]> {
-    return await this.roomService.getMessages(room);
+    const result = await this.roomService.getMessages(room);
+    if (!result) return [];
+    return result;
   }
 }
