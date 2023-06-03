@@ -13,12 +13,10 @@ import { MessageID } from '@domain/common/scalars';
 import { IMessage } from '../message/message.interface';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_ASPECT_COMMENT } from '@common/constants/providers';
 import { RoomAuthorizationService } from './room.service.authorization';
 import { getRandomId } from '@src/common/utils';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputAspectComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.aspect.comment';
-import { AspectMessageReceivedPayload } from '@domain/collaboration/aspect/dto/aspect.message.received.payload';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { NotificationInputAspectComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.aspect.comment';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
@@ -30,13 +28,15 @@ import { NotificationInputEntityMentions } from '@services/adapters/notification
 import { ElasticsearchService } from '@services/external/elasticsearch';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { getMentionsFromText } from '../messaging/get.mentions.from.text';
-import { CalendarEventCommentsMessageReceived as CalendarEventRoomMessageReceived } from '@domain/timeline/event/dto/event.dto.event.message.received';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
 import { IRoom } from './room.interface';
+import { SUBSCRIPTION_ROOM_MESSAGE } from '@common/constants';
+import { RoomMessageReceived } from './dto/room.subscription.dto.event.message.received';
+import { RoomMessageReceivedPayload } from './dto/room.subscription.message.received.payload';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -49,8 +49,8 @@ export class RoomResolverMutations {
     private roomService: RoomService,
     private namingService: NamingService,
     private roomAuthorizationService: RoomAuthorizationService,
-    @Inject(SUBSCRIPTION_ASPECT_COMMENT)
-    private readonly subscriptionAspectRoom: PubSubEngine
+    @Inject(SUBSCRIPTION_ROOM_MESSAGE)
+    private readonly subscriptionRoomMessage: PubSubEngine
   ) {}
 
   // todo should be removed to serve per entity e.g. send aspect comment
@@ -285,14 +285,14 @@ export class RoomResolverMutations {
   ) {
     // build subscription payload
     const eventID = `comment-msg-${getRandomId()}`;
-    const subscriptionPayload: AspectMessageReceivedPayload = {
+    const subscriptionPayload: RoomMessageReceivedPayload = {
       eventID: eventID,
       message: commentSent,
-      aspectID: aspect.id,
+      roomID: room.id,
     };
     // send the subscriptions event
-    this.subscriptionAspectRoom.publish(
-      SubscriptionType.ASPECT_COMMENTS_MESSAGE_RECEIVED,
+    this.subscriptionRoomMessage.publish(
+      SubscriptionType.COMMUNICATION_ROOM_MESSAGE_RECEIVED,
       subscriptionPayload
     );
 
@@ -330,14 +330,14 @@ export class RoomResolverMutations {
   ) {
     // build subscription payload
     const eventID = `comment-msg-${getRandomId()}`;
-    const subscriptionPayload: CalendarEventRoomMessageReceived = {
+    const subscriptionPayload: RoomMessageReceived = {
       eventID: eventID,
       message: commentSent,
-      calendarEventID: calendarEvent.id,
+      roomID: room.id,
     };
     // send the subscriptions event
-    this.subscriptionAspectRoom.publish(
-      SubscriptionType.CALENDAR_EVENT_COMMENTS_MESSAGE_RECEIVED,
+    this.subscriptionRoomMessage.publish(
+      SubscriptionType.COMMUNICATION_ROOM_MESSAGE_RECEIVED,
       subscriptionPayload
     );
 

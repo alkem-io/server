@@ -14,6 +14,7 @@ import { RoomService } from './room.service';
 import { RoomAuthorizationService } from './room.service.authorization';
 import { MessagingModule } from '../messaging/messaging.module';
 import { Room } from './room.entity';
+import { RoomResolverSubscriptions } from './room.resolver.subscriptions';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { Room } from './room.entity';
     RoomAuthorizationService,
     RoomResolverFields,
     RoomResolverMutations,
+    RoomResolverSubscriptions,
   ],
   exports: [RoomService, RoomAuthorizationService],
 })

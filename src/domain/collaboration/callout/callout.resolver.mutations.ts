@@ -20,7 +20,7 @@ import { SubscriptionType } from '@common/enums/subscription.type';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import {
   SUBSCRIPTION_CALLOUT_ASPECT_CREATED,
-  SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,
+  SUBSCRIPTION_ROOM_MESSAGE,
 } from '@common/constants';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { ICallout } from './callout.interface';
@@ -29,7 +29,6 @@ import {
   EntityNotInitializedException,
   NotSupportedException,
 } from '@src/common/exceptions';
-import { SendMessageOnCalloutInput } from './dto/callout.dto.message.created';
 import { CalloutType } from '@common/enums/callout.type';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputAspectCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.aspect.created';
@@ -55,6 +54,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { getMentionsFromText } from '@domain/communication/messaging/get.mentions.from.text';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
+import { SendMessageOnCalloutInput } from './dto/callout.dto.message.created';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -71,8 +71,8 @@ export class CalloutResolverMutations {
     private aspectAuthorizationService: AspectAuthorizationService,
     @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
     private aspectCreatedSubscription: PubSubEngine,
-    @Inject(SUBSCRIPTION_CALLOUT_MESSAGE_CREATED)
-    private calloutMessageCreatedSubscription: PubSubEngine
+    @Inject(SUBSCRIPTION_ROOM_MESSAGE)
+    private subscriptionRoomMessage: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -153,8 +153,8 @@ export class CalloutResolverMutations {
       message: commentSent,
     };
     // send the subscriptions event
-    this.calloutMessageCreatedSubscription.publish(
-      SubscriptionType.CALLOUT_MESSAGE_CREATED,
+    this.subscriptionRoomMessage.publish(
+      SubscriptionType.COMMUNICATION_ROOM_MESSAGE_RECEIVED,
       subscriptionPayload
     );
     if (callout.visibility === CalloutVisibility.PUBLISHED) {

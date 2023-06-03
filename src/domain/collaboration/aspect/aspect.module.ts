@@ -8,7 +8,6 @@ import { AspectResolverMutations } from './aspect.resolver.mutations';
 import { AspectService } from './aspect.service';
 import { AspectResolverFields } from './aspect.resolver.fields';
 import { AspectAuthorizationService } from './aspect.service.authorization';
-import { AspectResolverSubscriptions } from './aspect.resolver.subscriptions';
 import { UserModule } from '@domain/community/user/user.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
@@ -30,7 +29,6 @@ import { RoomModule } from '@domain/communication/room/room.module';
     AspectService,
     AspectAuthorizationService,
     AspectResolverFields,
-    AspectResolverSubscriptions,
   ],
   exports: [AspectService, AspectAuthorizationService],
 })
