@@ -1,3 +1,4 @@
+import { Emoji } from '@domain/common/scalars';
 import { MessageID } from '@domain/common/scalars/scalar.messageid';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
@@ -16,7 +17,7 @@ export class RoomAddReactionToMessageInput {
   })
   messageID!: string;
 
-  @Field(() => String, {
+  @Field(() => Emoji, {
     nullable: false,
     description: 'The reaction to the message.',
   })

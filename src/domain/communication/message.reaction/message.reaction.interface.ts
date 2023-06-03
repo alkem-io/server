@@ -1,5 +1,4 @@
-import { MessageID } from '@domain/common/scalars';
-import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { Emoji, MessageID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 @ObjectType('Reaction', {
   description: 'A reaction to a message.',
@@ -11,9 +10,9 @@ export class IMessageReaction {
   })
   id!: string;
 
-  @Field(() => Markdown, {
+  @Field(() => Emoji, {
     nullable: false,
-    description: 'The reaction text',
+    description: 'The reaction Emoji',
   })
   text!: string;
 
