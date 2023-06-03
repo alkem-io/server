@@ -16,7 +16,7 @@ import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
-import { IRoom } from '@domain/communication/room2/room.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @Resolver(() => IAspect)
 export class AspectResolverFields {

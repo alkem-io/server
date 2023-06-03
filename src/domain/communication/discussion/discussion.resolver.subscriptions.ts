@@ -81,7 +81,7 @@ export class DiscussionResolverSubscriptions {
       agentInfo,
       discussion.authorization,
       AuthorizationPrivilege.READ,
-      `subscription to discussion messages on: ${discussion.displayName}`
+      `subscription to discussion messages on: ${discussion.id}`
     );
 
     return this.subscriptionDiscussionMessage.asyncIterator(

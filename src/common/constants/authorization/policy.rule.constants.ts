@@ -8,9 +8,6 @@ export const POLICY_RULE_COMMUNICATION_CONTRIBUTE =
   'policyRule-communicateContribute';
 export const POLICY_RULE_COMMUNICATION_CREATE =
   'policyRule-communicationCreate';
-export const POLICY_RULE_DISCUSSION_CONTRIBUTE =
-  'policyRule-discussionContribute';
-export const POLICY_RULE_DISCUSSION_CREATE = 'policyRule-discussionCreate';
 export const POLICY_RULE_PLATFORM_CREATE = 'policyRule-platformCreate';
 export const POLICY_RULE_PLATFORM_DELETE = 'policyRule-platformDreate';
 export const POLICY_RULE_CALLOUT_CREATE = 'policyRule-calloutCreate';

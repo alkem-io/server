@@ -19,7 +19,7 @@ import {
 } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
+import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import {
@@ -833,7 +833,7 @@ export class UserService {
       user.communicationID
     );
 
-    await this.roomService.populateRoomMessageSenders(communityRooms);
+    await this.roomService.populateRoomsMessageSenders(communityRooms);
 
     return communityRooms;
   }
@@ -843,7 +843,7 @@ export class UserService {
       user.communicationID
     );
 
-    await this.roomService.populateRoomMessageSenders(directRooms);
+    await this.roomService.populateRoomsMessageSenders(directRooms);
 
     return directRooms;
   }

@@ -17,7 +17,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import {
   CalloutPostTemplateLoaderCreator,
   CalloutWhiteboardTemplateLoaderCreator,
-  CommentsLoaderCreator,
+  RoomLoaderCreator,
   ProfileLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
@@ -25,7 +25,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
-import { IRoom } from '@domain/communication/room2/room.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -142,7 +142,7 @@ export class CalloutResolverFields {
   @Profiling.api
   async comments(
     @Parent() callout: ICallout,
-    @Loader(CommentsLoaderCreator, {
+    @Loader(RoomLoaderCreator, {
       parentClassRef: Callout,
       resolveToNull: true,
     })

@@ -11,13 +11,15 @@ import {
   POLICY_RULE_COMMUNICATION_CONTRIBUTE,
   POLICY_RULE_COMMUNICATION_CREATE,
 } from '@common/constants';
+import { RoomAuthorizationService } from '../room/room.service.authorization';
 
 @Injectable()
 export class CommunicationAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private communicationService: CommunicationService,
-    private discussionAuthorizationService: DiscussionAuthorizationService
+    private discussionAuthorizationService: DiscussionAuthorizationService,
+    private roomAuthorizationService: RoomAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -49,9 +51,9 @@ export class CommunicationAuthorizationService {
     }
 
     communication.updates = this.communicationService.getUpdates(communication);
-    communication.updates.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        communication.updates.authorization,
+    communication.updates =
+      await this.roomAuthorizationService.applyAuthorizationPolicy(
+        communication.updates,
         communication.authorization
       );
 

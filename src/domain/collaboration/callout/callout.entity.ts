@@ -16,7 +16,7 @@ import { Collaboration } from '@domain/collaboration/collaboration/collaboration
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { PostTemplate } from '@domain/template/post-template/post.template.entity';
 import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
-import { Room } from '@domain/communication/room2';
+import { Room } from '@domain/communication/room/room.entity';
 
 @Entity()
 export class Callout extends NameableEntity implements ICallout {

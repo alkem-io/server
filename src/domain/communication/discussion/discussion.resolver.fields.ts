@@ -13,13 +13,15 @@ import { Loader } from '@core/dataloader/decorators';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { RoomService } from '../room/room.service';
 
 @Resolver(() => IDiscussion)
 export class DiscussionResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private discussionService: DiscussionService
+    private discussionService: DiscussionService,
+    private roomService: RoomService
   ) {}
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -30,10 +32,8 @@ export class DiscussionResolverFields {
   })
   @Profiling.api
   async messages(@Parent() discussion: IDiscussion): Promise<IMessage[]> {
-    const discussionRoom = await this.discussionService.getDiscussionRoom(
-      discussion
-    );
-    return discussionRoom.messages;
+    const room = await this.discussionService.getComments(discussion.id);
+    return await this.roomService.getMessages(room);
   }
 
   @ResolveField('timestamp', () => Number, {

@@ -29,12 +29,31 @@ export class RoomAuthorizationService {
         parentAuthorization
       );
 
-    room.authorization = this.appendPrivilegeRules(room.authorization);
+    room.authorization = this.allowAdminsToComment(room.authorization);
 
     return await this.roomService.save(room);
   }
 
-  private appendPrivilegeRules(
+  public allowContributorsToComment(
+    authorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    // Allow any contributor to this community to create discussions, and to send messages to the discussion
+    const contributePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.CREATE_COMMENT],
+      AuthorizationPrivilege.CONTRIBUTE,
+      POLICY_RULE_COMMENTS_CONTRIBUTE
+    );
+    privilegeRules.push(contributePrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
+  }
+
+  public allowAdminsToComment(
     authorization: IAuthorizationPolicy
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
@@ -45,13 +64,6 @@ export class RoomAuthorizationService {
       POLICY_RULE_COMMENTS_CREATE
     );
     privilegeRules.push(createPrivilege);
-
-    const contributePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.CREATE_COMMENT],
-      AuthorizationPrivilege.CONTRIBUTE,
-      POLICY_RULE_COMMENTS_CONTRIBUTE
-    );
-    privilegeRules.push(contributePrivilege);
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,

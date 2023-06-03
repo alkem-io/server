@@ -2,7 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { IAspect } from './aspect.interface';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { Room } from '@domain/communication/room2';
+import { Room } from '@domain/communication/room/room.entity';
 
 @Entity()
 export class Aspect extends NameableEntity implements IAspect {

@@ -39,8 +39,6 @@ export const CREDENTIAL_RULE_CANVAS_CREATED_BY =
 export const CREDENTIAL_RULE_CANVAS_LOCKED_BY = 'credentialRule-canvasLockedBy';
 export const CREDENTIAL_RULE_COMMENTS_MESSAGE_SENDER =
   'credentialRule-commentsMessageSender';
-export const CREDENTIAL_RULE_DISCUSSION_MESSAGE_SENDER =
-  'credentialRule-discussionMessageSender';
 export const CREDENTIAL_RULE_APPLICATION_USER_APPLICATION =
   'credentialRule-applicationUserApplication';
 export const CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL =

@@ -6,7 +6,6 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
-import { IUpdates } from '@domain/communication/updates/updates.interface';
 import { ICommunity } from '@domain/community/community';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -55,6 +54,7 @@ import { Organization } from '@domain/community/organization/organization.entity
 import { Community } from '@domain/community/community/community.entity';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { RoomType } from '@common/enums/room.type';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -370,7 +370,7 @@ export class NotificationPayloadBuilder {
 
   async buildCommunicationUpdateSentNotificationPayload(
     updateCreatorId: string,
-    updates: IUpdates
+    updates: IRoom
   ): Promise<CommunicationUpdateEventPayload> {
     const community =
       await this.communityResolverService.getCommunityFromUpdatesOrFail(

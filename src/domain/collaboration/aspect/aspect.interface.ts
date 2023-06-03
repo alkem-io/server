@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ICallout } from '@domain/collaboration/callout';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
-import { IRoom } from '@domain/communication/room2/room.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @ObjectType('Aspect')
 export abstract class IAspect extends INameable {

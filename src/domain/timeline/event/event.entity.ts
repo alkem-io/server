@@ -2,7 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { ICalendarEvent } from './event.interface';
 import { Calendar } from '../calendar/calendar.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
-import { Room } from '@domain/communication/room2';
+import { Room } from '@domain/communication/room/room.entity';
 
 @Entity()
 export class CalendarEvent extends NameableEntity implements ICalendarEvent {

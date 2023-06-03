@@ -1,27 +1,27 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, Repository } from 'typeorm';
+import {
+  FindOneOptions,
+  FindOptionsRelationByString,
+  Repository,
+} from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Discussion } from './discussion.entity';
 import { IDiscussion } from './discussion.interface';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
-import { CommunicationRoomResult } from '../room/dto/communication.dto.room.result';
 import { RoomService } from '../room/room.service';
 import { CommunicationCreateDiscussionInput } from '../communication/dto/communication.dto.create.discussion';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { RoomSendMessageInput } from '../room/dto/room.dto.send.message';
-import { RoomRemoveMessageInput } from '../room/dto/room.dto.remove.message';
-import { IMessage } from '../message/message.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
-import { RoomSendMessageReplyInput } from '../room/dto/room.dto.send.message.reply';
-import { RoomAddReactionToMessageInput } from '../room/dto/room.dto.add.reaction.to.message';
-import { RoomRemoveReactionToMessageInput } from '../room/dto/room.dto.remove.message.reaction';
+import { IRoom } from '../room/room.interface';
+import { RoomType } from '@common/enums/room.type';
+import { IProfile } from '@domain/common/profile/profile.interface';
 
 @Injectable()
 export class DiscussionService {
@@ -57,12 +57,13 @@ export class DiscussionService {
     });
 
     discussion.authorization = new AuthorizationPolicy();
-    discussion.displayName = `${communicationDisplayName}-discussion-${discussion.profile.displayName}`;
+
+    discussion.comments = await this.roomService.createRoom(
+      `${communicationDisplayName}-discussion-${discussion.profile.displayName}`,
+      RoomType.DISCUSSION
+    );
+
     discussion.createdBy = userID;
-    discussion.commentsCount = 0;
-    await this.save(discussion);
-    discussion.communicationRoomID =
-      await this.roomService.initializeCommunicationRoom(discussion);
 
     return await this.save(discussion);
   }
@@ -72,17 +73,21 @@ export class DiscussionService {
   ): Promise<IDiscussion> {
     const discussionID = deleteData.ID;
     const discussion = await this.getDiscussionOrFail(discussionID, {
-      relations: ['profile'],
+      relations: ['profile', 'comments'],
     });
 
     if (discussion.profile) {
       await this.profileService.deleteProfile(discussion.profile.id);
     }
 
+    if (discussion.comments) {
+      await this.roomService.deleteRoom(discussion.comments);
+    }
+
     const result = await this.discussionRepository.remove(
       discussion as Discussion
     );
-    await this.roomService.removeRoom(discussion);
+
     result.id = discussionID;
     return result;
   }
@@ -109,7 +114,7 @@ export class DiscussionService {
     if (!discussion)
       throw new EntityNotFoundException(
         `Not able to locate Discussion with the specified ID: ${discussionID}`,
-        LogContext.CHALLENGES
+        LogContext.COMMUNICATION
       );
     return discussion;
   }
@@ -148,96 +153,36 @@ export class DiscussionService {
     return await this.discussionRepository.save(discussion);
   }
 
-  async getDiscussionRoom(
-    discussion: IDiscussion
-  ): Promise<CommunicationRoomResult> {
-    const communicationRoom = await this.roomService.getCommunicationRoom(
-      discussion
+  public async getProfile(
+    discussionInput: IDiscussion,
+    relations: FindOptionsRelationByString = []
+  ): Promise<IProfile> {
+    const discussion = await this.getDiscussionOrFail(discussionInput.id, {
+      relations: ['profile', ...relations],
+    });
+    if (!discussion.profile)
+      throw new EntityNotFoundException(
+        `Discussion profile not initialised: ${discussionInput.id}`,
+        LogContext.COLLABORATION
+      );
+
+    return discussion.profile;
+  }
+
+  public async getComments(discussionID: string): Promise<IRoom> {
+    const discussionWithComments = await this.getDiscussionOrFail(
+      discussionID,
+      {
+        relations: ['comments'],
+      }
     );
-    const messagesCount = communicationRoom.messages.length;
-    if (messagesCount != discussion.commentsCount) {
-      this.logger.warn(
-        `Discussion (${discussion.displayName}) had a comment count of ${discussion.commentsCount} that is not syncd with the messages count of ${messagesCount}`,
+    const room = discussionWithComments.comments;
+    if (!room)
+      throw new EntityNotFoundException(
+        `Not able to locate comments room on Discussion with the specified ID: ${discussionID}`,
         LogContext.COMMUNICATION
       );
-      discussion.commentsCount = messagesCount;
-      await this.save(discussion);
-    }
-    return communicationRoom;
-  }
-
-  async sendMessageToDiscussion(
-    discussion: IDiscussion,
-    communicationUserID: string,
-    messageData: RoomSendMessageInput
-  ): Promise<IMessage> {
-    const message = await this.roomService.sendMessage(
-      discussion,
-      communicationUserID,
-      messageData
-    );
-    discussion.commentsCount = discussion.commentsCount + 1;
-    await this.save(discussion);
-    return message;
-  }
-
-  async sendMessageReplyToDiscussion(
-    discussion: IDiscussion,
-    communicationUserID: string,
-    messageData: RoomSendMessageReplyInput
-  ): Promise<IMessage> {
-    const message = await this.roomService.sendMessageReply(
-      discussion,
-      communicationUserID,
-      messageData
-    );
-    discussion.commentsCount = discussion.commentsCount + 1;
-    await this.save(discussion);
-    return message;
-  }
-
-  async addReactionToMessageInDiscussion(
-    discussion: IDiscussion,
-    communicationUserID: string,
-    messageData: RoomAddReactionToMessageInput
-  ): Promise<IMessage> {
-    const message = await this.roomService.addReactionToMessage(
-      discussion,
-      communicationUserID,
-      messageData
-    );
-
-    return message;
-  }
-
-  async removeReactionToMessageInDiscussion(
-    discussion: IDiscussion,
-    communicationUserID: string,
-    messageData: RoomRemoveReactionToMessageInput
-  ): Promise<boolean> {
-    await this.roomService.removeReactionToMessage(
-      discussion,
-      communicationUserID,
-      messageData
-    );
-
-    return true;
-  }
-
-  async removeMessageFromDiscussion(
-    discussion: IDiscussion,
-    communicationUserID: string,
-    messageData: RoomRemoveMessageInput
-  ): Promise<string> {
-    await this.roomService.removeMessage(
-      discussion,
-      communicationUserID,
-      messageData
-    );
-    discussion.commentsCount = discussion.commentsCount - 1;
-    await this.save(discussion);
-
-    return messageData.messageID;
+    return room;
   }
 
   async isDiscussionInCommunication(

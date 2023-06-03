@@ -43,9 +43,9 @@ import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteb
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { VisualType } from '@common/enums/visual.type';
-import { RoomService } from '@domain/communication/room2/room.service';
+import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
-import { IRoom } from '@domain/communication/room2/room.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @Injectable()
 export class CalloutService {
@@ -355,7 +355,7 @@ export class CalloutService {
     } else if (callout.type === CalloutType.LINK_COLLECTION) {
       return await this.getReferencesCountInLinkCallout(callout.id);
     } else {
-      const comments = await this.getCommentsFromCallout(callout.id);
+      const comments = await this.getComments(callout.id);
       if (comments) {
         return comments.messagesCount;
       }
@@ -617,9 +617,7 @@ export class CalloutService {
     return aspect;
   }
 
-  public async getCommentsFromCallout(
-    calloutID: string
-  ): Promise<IRoom | undefined> {
+  public async getComments(calloutID: string): Promise<IRoom | undefined> {
     const loadedCallout = await this.getCalloutOrFail(calloutID, {
       relations: ['comments'],
     });

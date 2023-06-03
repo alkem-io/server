@@ -6,7 +6,7 @@ import { CommunicationService } from './communication.service';
 import { AuthorizationPrivilege } from '@common/enums';
 import { ICommunication } from './communication.interface';
 import { IDiscussion } from '../discussion/discussion.interface';
-import { IUpdates } from '../updates/updates.interface';
+import { IRoom } from '../room/room.interface';
 
 @Resolver(() => ICommunication)
 export class CommunicationResolverFields {
@@ -14,12 +14,12 @@ export class CommunicationResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('updates', () => IUpdates, {
+  @ResolveField('updates', () => IRoom, {
     nullable: true,
     description: 'Updates for this Communication.',
   })
   @Profiling.api
-  async updates(@Parent() communication: ICommunication): Promise<IUpdates> {
+  async updates(@Parent() communication: ICommunication): Promise<IRoom> {
     return await this.communicationService.getUpdates(communication);
   }
 

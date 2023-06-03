@@ -15,7 +15,6 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_ASPECT_COMMENT } from '@common/constants/providers';
 import { RoomAuthorizationService } from './room.service.authorization';
-import { IRoom } from './room.interface';
 import { getRandomId } from '@src/common/utils';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputAspectComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.aspect.comment';
@@ -37,6 +36,7 @@ import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.me
 import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
+import { IRoom } from './room.interface';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -127,6 +127,56 @@ export class RoomResolverMutations {
           );
         }
         break;
+      case RoomType.DISCUSSION:
+      // Send the subscription event
+      // const eventID = `discussion-msg-${getRandomId()}`;
+      // const subscriptionPayload: DiscussionMessageReceivedPayload = {
+      //   eventID: eventID,
+      //   message: commentSent,
+      //   discussionID: room.id,
+      // };
+      // this.subscriptionDiscussionMessage.publish(
+      //   SubscriptionType.COMMUNICATION_DISCUSSION_MESSAGE_RECEIVED,
+      //   subscriptionPayload
+      // );
+
+      // const eventID2 = `discussion-update-${getRandomId()}`;
+      // const subscriptionPayloadUpdate: CommunicationDiscussionUpdated = {
+      //   eventID: eventID2,
+      //   discussionID: discussion.id,
+      // };
+      // this.subscriptionDiscussionMessage.publish(
+      //   SubscriptionType.COMMUNICATION_DISCUSSION_UPDATED,
+      //   subscriptionPayloadUpdate
+      // );
+
+      // const mentions = getMentionsFromText(discussionMessage.message);
+      // const entityMentionsNotificationInput: NotificationInputEntityMentions =
+      //   {
+      //     triggeredBy: agentInfo.userID,
+      //     comment: discussionMessage.message,
+      //     roomId: discussion.id,
+      //     mentions,
+      //     originEntity: {
+      //       id: room.id,
+      //       nameId: discussion.nameID,
+      //       displayName: discussion.profile.displayName,
+      //     },
+      //     commentType: RoomType.FORUM_DISCUSSION,
+      //   };
+      // this.notificationAdapter.entityMentions(
+      //   entityMentionsNotificationInput
+      // );
+
+      // const forumDiscussionCommentNotificationInput: NotificationInputForumDiscussionComment =
+      //   {
+      //     triggeredBy: agentInfo.userID,
+      //     discussion,
+      //     commentSent: discussionMessage,
+      //   };
+      // this.notificationAdapter.forumDiscussionComment(
+      //   forumDiscussionCommentNotificationInput
+      // );
       default:
       // ignore for now, later likely to be an exception
     }
@@ -144,6 +194,7 @@ export class RoomResolverMutations {
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<string> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID);
+
     // The choice was made **not** to wrap every message in an AuthorizationPolicy.
     // So we also allow users who sent the message in question to remove the message by
     // extending the authorization policy in memory but do not persist it.

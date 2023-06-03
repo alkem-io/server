@@ -1,9 +1,10 @@
 import { DiscussionCategory } from '@common/enums/communication.discussion.category';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IRoomableNameable } from '../room/roomable.nameable.interface';
+import { IRoom } from '../room/room.interface';
+import { INameable } from '@domain/common/entity/nameable-entity';
 
 @ObjectType('Discussion')
-export abstract class IDiscussion extends IRoomableNameable {
+export abstract class IDiscussion extends INameable {
   @Field(() => DiscussionCategory, {
     description: 'The category assigned to this Discussion.',
   })
@@ -11,8 +12,5 @@ export abstract class IDiscussion extends IRoomableNameable {
 
   createdBy!: string;
 
-  @Field(() => Number, {
-    description: 'The number of comments.',
-  })
-  commentsCount!: number;
+  comments?: IRoom;
 }

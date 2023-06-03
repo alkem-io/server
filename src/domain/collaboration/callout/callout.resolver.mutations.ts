@@ -53,8 +53,8 @@ import { NotificationInputEntityMentions } from '@services/adapters/notification
 import { ElasticsearchService } from '@services/external/elasticsearch';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { getMentionsFromText } from '@domain/communication/messaging/get.mentions.from.text';
-import { RoomService } from '@domain/communication/room2/room.service';
-import { RoomSendMessageInput } from '@domain/communication/room2/dto/room.dto.send.message';
+import { RoomService } from '@domain/communication/room/room.service';
+import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -120,9 +120,7 @@ export class CalloutResolverMutations {
       );
     }
 
-    const comments = await this.calloutService.getCommentsFromCallout(
-      data.calloutID
-    );
+    const comments = await this.calloutService.getComments(data.calloutID);
 
     if (!comments) {
       throw new EntityNotInitializedException(

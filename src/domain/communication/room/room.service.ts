@@ -1,57 +1,136 @@
-import { LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { EntityNotFoundException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { Room } from './room.entity';
+import { IRoom } from './room.interface';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { IdentityResolverService } from '@services/infrastructure/entity-resolver/identity.resolver.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IMessage } from '../message/message.interface';
-import { CommunicationRoomResult } from './dto/communication.dto.room.result';
-import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
-import { RoomSendMessageInput } from './dto/room.dto.send.message';
-import { IRoomable } from './roomable.interface';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IdentityResolverService } from '@services/infrastructure/entity-resolver/identity.resolver.service';
+import { RoomType } from '@common/enums/room.type';
+import { IMessageReaction } from '../message.reaction/message.reaction.interface';
 import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
-import { IMessageReaction } from '../message.reaction/message.reaction.interface';
+import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
+import { RoomSendMessageInput } from './dto/room.dto.send.message';
+import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 
 @Injectable()
 export class RoomService {
   constructor(
+    @InjectRepository(Room)
+    private roomRepository: Repository<Room>,
     private identityResolverService: IdentityResolverService,
     private communicationAdapter: CommunicationAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  // Convert from Matrix ID to Alkemio User ID
-  async populateRoomMessageSenders(
+  async createRoom(displayName: string, roomType: RoomType): Promise<IRoom> {
+    const room = new Room(displayName, roomType);
+    room.authorization = new AuthorizationPolicy();
+    room.externalRoomID = await this.initializeCommunicationRoom(room);
+    room.messagesCount = 0;
+    return await this.roomRepository.save(room);
+  }
+
+  async getRoomOrFail(roomID: string): Promise<IRoom> {
+    const room = await this.roomRepository.findOneBy({
+      id: roomID,
+    });
+    if (!room)
+      throw new EntityNotFoundException(
+        `Not able to locate Room with the specified ID: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+    return room;
+  }
+
+  async deleteRoom(room: IRoom): Promise<IRoom> {
+    const result = await this.roomRepository.remove(room as Room);
+    await this.communicationAdapter.removeRoom(room.externalRoomID);
+    result.id = room.id;
+    return result;
+  }
+
+  async save(room: IRoom): Promise<IRoom> {
+    return await this.roomRepository.save(room);
+  }
+
+  async getMessages(room: IRoom): Promise<IMessage[]> {
+    const externalRoom = await this.communicationAdapter.getCommunityRoom(
+      room.externalRoomID
+    );
+    const messagesCount = externalRoom.messages.length;
+    if (messagesCount != room.messagesCount) {
+      this.logger.warn(
+        `Room (${room.id}) had a comment count of ${room.messagesCount} that is not synced with the messages count of ${messagesCount}`,
+        LogContext.COMMUNICATION
+      );
+      room.messagesCount = messagesCount;
+      await this.save(room);
+    }
+    return await this.populateRoomMessageSenders(externalRoom.messages);
+  }
+
+  async removeRoomMessage(
+    room: IRoom,
+    communicationUserID: string,
+    messageData: RoomRemoveMessageInput
+  ): Promise<string> {
+    await this.communicationAdapter.deleteMessage({
+      senderCommunicationsID: communicationUserID,
+      messageId: messageData.messageID,
+      roomID: room.externalRoomID,
+    });
+    room.messagesCount = room.messagesCount - 1;
+    await this.save(room);
+    return messageData.messageID;
+  }
+
+  async populateRoomsMessageSenders(
     rooms: CommunicationRoomResult[]
   ): Promise<CommunicationRoomResult[]> {
-    const knownSendersMap = new Map();
     for (const room of rooms) {
-      for (const message of room.messages) {
-        const matrixUserID = message.sender;
-        let alkemioUserID = knownSendersMap.get(matrixUserID);
-        if (!alkemioUserID) {
-          alkemioUserID =
-            await this.identityResolverService.getUserIDByCommunicationsID(
-              matrixUserID
-            );
-          knownSendersMap.set(matrixUserID, alkemioUserID);
-        }
-        message.sender = alkemioUserID;
-        if (message.reactions)
-          message.reactions = await this.populateRoomReactionSenders(
-            message.reactions
-          );
-      }
+      room.messages = await this.populateRoomMessageSenders(room.messages);
     }
 
     return rooms;
   }
 
+  async populateRoomMessageSenders(messages: IMessage[]): Promise<IMessage[]> {
+    const knownSendersMap = new Map<string, string>();
+    for (const message of messages) {
+      const matrixUserID = message.sender;
+      let alkemioUserID = knownSendersMap.get(matrixUserID);
+      if (!alkemioUserID) {
+        alkemioUserID =
+          await this.identityResolverService.getUserIDByCommunicationsID(
+            matrixUserID
+          );
+        knownSendersMap.set(matrixUserID, alkemioUserID);
+      }
+      message.sender = alkemioUserID;
+      if (message.reactions) {
+        message.reactions = await this.populateRoomReactionSenders(
+          message.reactions,
+          knownSendersMap
+        );
+      } else {
+        message.reactions = [];
+      }
+    }
+
+    return messages;
+  }
+
   async populateRoomReactionSenders(
-    reactions: IMessageReaction[]
+    reactions: IMessageReaction[],
+    knownSendersMap: Map<string, string>
   ): Promise<IMessageReaction[]> {
-    const knownSendersMap = new Map();
     for (const reaction of reactions) {
       const matrixUserID = reaction.sender;
       let alkemioUserID = knownSendersMap.get(matrixUserID);
@@ -68,53 +147,39 @@ export class RoomService {
     return reactions;
   }
 
-  async initializeCommunicationRoom(roomable: IRoomable): Promise<string> {
-    if (
-      roomable.communicationRoomID &&
-      roomable.communicationRoomID.length > 0
-    ) {
+  async initializeCommunicationRoom(room: IRoom): Promise<string> {
+    if (room.externalRoomID && room.externalRoomID.length > 0) {
       this.logger.warn?.(
-        `Roomable (${roomable.displayName}) already has a communication room: ${roomable.communicationRoomID}`,
+        `Roomable (${room.id}) already has a communication room: ${room.externalRoomID}`,
         LogContext.COMMUNICATION
       );
-      return roomable.communicationRoomID;
+      return room.externalRoomID;
     }
     try {
-      roomable.communicationRoomID =
-        await this.communicationAdapter.createCommunityRoom(
-          roomable.displayName,
-          { roomableID: roomable.id }
-        );
-      return roomable.communicationRoomID;
+      room.externalRoomID = await this.communicationAdapter.createCommunityRoom(
+        room.displayName,
+        {
+          roomableID: room.id,
+        }
+      );
+      return room.externalRoomID;
     } catch (error: any) {
       this.logger.error?.(
-        `Unable to initialize roomable communication room (${roomable.displayName}): ${error}`,
+        `Unable to initialize roomable communication room (${room.displayName}): ${error}`,
         LogContext.COMMUNICATION
       );
     }
     return '';
   }
 
-  async getCommunicationRoom(
-    roomable: IRoomable
-  ): Promise<CommunicationRoomResult> {
-    const room = await this.communicationAdapter.getCommunityRoom(
-      roomable.communicationRoomID
-    );
-
-    await this.populateRoomMessageSenders([room]);
-
-    return room;
-  }
-
   async sendMessage(
-    roomable: IRoomable,
+    room: IRoom,
     communicationUserID: string,
     messageData: RoomSendMessageInput
   ): Promise<IMessage> {
     // Ensure the user is a member of room and group so can send
     await this.communicationAdapter.addUserToRoom(
-      roomable.communicationRoomID,
+      room.externalRoomID,
       communicationUserID
     );
     const alkemioUserID =
@@ -124,21 +189,23 @@ export class RoomService {
     const message = await this.communicationAdapter.sendMessage({
       senderCommunicationsID: communicationUserID,
       message: messageData.message,
-      roomID: roomable.communicationRoomID,
+      roomID: room.externalRoomID,
     });
 
     message.sender = alkemioUserID;
+    room.messagesCount = room.messagesCount + 1;
+    await this.save(room);
     return message;
   }
 
   async sendMessageReply(
-    roomable: IRoomable,
+    room: IRoom,
     communicationUserID: string,
     messageData: RoomSendMessageReplyInput
   ): Promise<IMessage> {
     // Ensure the user is a member of room and group so can send
     await this.communicationAdapter.addUserToRoom(
-      roomable.communicationRoomID,
+      room.externalRoomID,
       communicationUserID
     );
 
@@ -149,22 +216,25 @@ export class RoomService {
     const message = await this.communicationAdapter.sendMessageReply({
       senderCommunicationsID: communicationUserID,
       message: messageData.message,
-      roomID: roomable.communicationRoomID,
+      roomID: room.externalRoomID,
       threadID: messageData.threadID,
     });
 
     message.sender = alkemioUserID;
+    room.messagesCount = room.messagesCount + 1;
+    await this.save(room);
+
     return message;
   }
 
   async addReactionToMessage(
-    roomable: IRoomable,
+    room: IRoom,
     communicationUserID: string,
     messageData: RoomAddReactionToMessageInput
   ): Promise<IMessage> {
     // Ensure the user is a member of room and group so can send
     await this.communicationAdapter.addUserToRoom(
-      roomable.communicationRoomID,
+      room.externalRoomID,
       communicationUserID
     );
 
@@ -175,7 +245,7 @@ export class RoomService {
     const message = await this.communicationAdapter.addReaction({
       senderCommunicationsID: communicationUserID,
       text: messageData.text,
-      roomID: roomable.communicationRoomID,
+      roomID: room.externalRoomID,
       messageID: messageData.messageID,
     });
 
@@ -184,55 +254,34 @@ export class RoomService {
   }
 
   async removeReactionToMessage(
-    roomable: IRoomable,
+    room: IRoom,
     communicationUserID: string,
     messageData: RoomRemoveReactionToMessageInput
   ): Promise<boolean> {
     // Ensure the user is a member of room and group so can send
     await this.communicationAdapter.addUserToRoom(
-      roomable.communicationRoomID,
+      room.externalRoomID,
       communicationUserID
     );
 
     await this.communicationAdapter.removeReaction({
       senderCommunicationsID: communicationUserID,
-      roomID: roomable.communicationRoomID,
+      roomID: room.externalRoomID,
       reactionID: messageData.reactionID,
     });
 
     return true;
   }
 
-  async removeMessage(
-    roomable: IRoomable,
-    communicationUserID: string,
-    messageData: RoomRemoveMessageInput
-  ): Promise<string> {
-    return await this.communicationAdapter.deleteMessage({
-      senderCommunicationsID: communicationUserID,
-      messageId: messageData.messageID,
-      roomID: roomable.communicationRoomID,
-    });
-  }
-
-  async removeRoom(roomable: IRoomable): Promise<boolean> {
-    return await this.communicationAdapter.removeRoom(
-      roomable.communicationRoomID
-    );
-  }
-
-  async getUserIdForMessage(
-    roomable: IRoomable,
-    messageID: string
-  ): Promise<string> {
+  async getUserIdForMessage(room: IRoom, messageID: string): Promise<string> {
     const senderCommunicationID =
       await this.communicationAdapter.getMessageSender(
-        roomable.communicationRoomID,
+        room.externalRoomID,
         messageID
       );
     if (senderCommunicationID === '') {
       this.logger.error(
-        `Unable to identify sender for ${roomable.displayName} - ${messageID}`,
+        `Unable to identify sender for ${room.id} - ${messageID}`,
         LogContext.COMMUNICATION
       );
       return senderCommunicationID;

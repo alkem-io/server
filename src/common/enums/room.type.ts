@@ -3,4 +3,5 @@ export enum RoomType {
   POST = 'post',
   CALENDAR_EVENT = 'calendar_event',
   FORUM_DISCUSSION = 'forum_discussion',
+  UPDATES = 'updates',
 }

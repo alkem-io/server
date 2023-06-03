@@ -12,7 +12,7 @@ import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { ICalendarEvent } from './event.interface';
 import { CalendarEventService } from './event.service';
-import { IRoom } from '@domain/communication/room2/room.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @Resolver(() => ICalendarEvent)
 export class CalendarEventResolverFields {

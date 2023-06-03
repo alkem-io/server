@@ -21,7 +21,7 @@ import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { PostTemplateModule } from '@domain/template/post-template/post.template.module';
 import { WhiteboardTemplateModule } from '@domain/template/whiteboard-template/whiteboard.template.module';
-import { RoomModule } from '@domain/communication/room2/room.module';
+import { RoomModule } from '@domain/communication/room/room.module';
 
 @Module({
   imports: [

@@ -4,11 +4,11 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
 import { createTypedRelationDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
-import { IRoom } from '@domain/communication/room2/room.interface';
-import { Room } from '@domain/communication/room2';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { Room } from '@domain/communication/room/room.entity';
 
 @Injectable()
-export class CommentsLoaderCreator implements DataLoaderCreator<IRoom> {
+export class RoomLoaderCreator implements DataLoaderCreator<IRoom> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
   create(
