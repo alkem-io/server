@@ -19,8 +19,9 @@ export class room21685776282260 implements MigrationInterface {
       id: string;
       communicationRoomID: string;
       commentsCount: number;
+      displayName: string;
     }[] = await queryRunner.query(
-      `SELECT id, communicationRoomID, commentsCount FROM discussion`
+      `SELECT id, communicationRoomID, commentsCount, displayName FROM discussion`
     );
     for (const discussion of discussions) {
       const newRoomID = randomUUID();
@@ -31,8 +32,6 @@ export class room21685776282260 implements MigrationInterface {
         ('${roomAuthID}',
         1, '', '', 0, '')`
       );
-      // TODO: get the displayName from the profile?
-      const displayName = '';
 
       await queryRunner.query(
         `INSERT INTO room (id, version, authorizationId, messagesCount, externalRoomID, type, displayName)
@@ -42,7 +41,7 @@ export class room21685776282260 implements MigrationInterface {
                     '${discussion.commentsCount}',
                     '${escapeString(discussion.communicationRoomID)}',
                     'discussion',
-                    '${escapeString(displayName)}')`
+                    '${escapeString(discussion.displayName)}')`
       );
 
       await queryRunner.query(
@@ -152,6 +151,9 @@ export class room21685776282260 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`discussion\` ADD \`commentsCount\` int(11) NULL`
     );
+    await queryRunner.query(
+      `ALTER TABLE \`discussion\` ADD \`displayName\` varchar(255) NULL`
+    );
 
     const discussions: {
       id: string;
@@ -179,7 +181,7 @@ export class room21685776282260 implements MigrationInterface {
     }
 
     await queryRunner.query(
-      `ALTER TABLE \`discussion\` DROP COLUMN \`commentsCount\``
+      `ALTER TABLE \`discussion\` DROP COLUMN \`commentsId\``
     );
   }
 }
