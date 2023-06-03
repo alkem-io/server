@@ -54,7 +54,11 @@ export class CalendarEventAuthorizationService {
           calendarEvent.authorization
         );
       calendarEvent.comments.authorization =
-        this.roomAuthorizationService.allowContributorsToComment(
+        this.roomAuthorizationService.allowContributorsToCreateMessages(
+          calendarEvent.comments.authorization
+        );
+      calendarEvent.comments.authorization =
+        this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
           calendarEvent.comments.authorization
         );
     }

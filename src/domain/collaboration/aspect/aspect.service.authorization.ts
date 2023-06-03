@@ -55,7 +55,11 @@ export class AspectAuthorizationService {
         );
 
       aspect.comments.authorization =
-        this.roomAuthorizationService.allowContributorsToComment(
+        this.roomAuthorizationService.allowContributorsToCreateMessages(
+          aspect.comments.authorization
+        );
+      aspect.comments.authorization =
+        this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
           aspect.comments.authorization
         );
     }

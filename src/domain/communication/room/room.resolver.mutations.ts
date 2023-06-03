@@ -46,7 +46,7 @@ export class RoomResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       room.authorization,
-      AuthorizationPrivilege.CREATE_COMMENT,
+      AuthorizationPrivilege.CREATE_MESSAGE,
       `room send message: ${room.id}`
     );
 
@@ -207,7 +207,7 @@ export class RoomResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       room.authorization,
-      AuthorizationPrivilege.CREATE_COMMENT,
+      AuthorizationPrivilege.CREATE_MESSAGE_REPLY,
       `room reply to message: ${room.id}`
     );
 
@@ -234,7 +234,7 @@ export class RoomResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       room.authorization,
-      AuthorizationPrivilege.CREATE_COMMENT,
+      AuthorizationPrivilege.CREATE_MESSAGE_REACTION,
       `room add reaction to message: ${room.id}`
     );
 

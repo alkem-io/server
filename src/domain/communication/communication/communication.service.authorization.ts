@@ -5,7 +5,6 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { CommunicationService } from './communication.service';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import {
   POLICY_RULE_COMMUNICATION_CONTRIBUTE,
@@ -36,10 +35,6 @@ export class CommunicationAuthorizationService {
       communication.authorization
     );
 
-    communication.authorization = this.extendAuthorizationPolicy(
-      communication.authorization
-    );
-
     communication.discussions = await this.communicationService.getDiscussions(
       communication
     );
@@ -55,6 +50,10 @@ export class CommunicationAuthorizationService {
       await this.roomAuthorizationService.applyAuthorizationPolicy(
         communication.updates,
         communication.authorization
+      );
+    communication.updates.authorization =
+      this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
+        communication.updates.authorization
       );
 
     return await this.communicationService.save(communication);
@@ -83,20 +82,5 @@ export class CommunicationAuthorizationService {
       authorization,
       privilegeRules
     );
-  }
-
-  private extendAuthorizationPolicy(
-    authorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    //
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        authorization,
-        newRules
-      );
-
-    return updatedAuthorization;
   }
 }

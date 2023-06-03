@@ -98,7 +98,11 @@ export class CalloutAuthorizationService {
           callout.authorization
         );
       callout.comments.authorization =
-        this.roomAuthorizationService.allowContributorsToComment(
+        this.roomAuthorizationService.allowContributorsToCreateMessages(
+          callout.comments.authorization
+        );
+      callout.comments.authorization =
+        this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
           callout.comments.authorization
         );
     }

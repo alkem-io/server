@@ -52,7 +52,11 @@ export class DiscussionAuthorizationService {
         discussion.authorization
       );
     discussion.comments.authorization =
-      this.roomAuthorizationService.allowContributorsToComment(
+      this.roomAuthorizationService.allowContributorsToCreateMessages(
+        discussion.comments.authorization
+      );
+    discussion.comments.authorization =
+      this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
         discussion.comments.authorization
       );
 

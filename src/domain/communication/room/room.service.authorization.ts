@@ -7,9 +7,9 @@ import { IRoom } from './room.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  POLICY_RULE_COMMENTS_CREATE,
-  POLICY_RULE_COMMENTS_CONTRIBUTE,
-  CREDENTIAL_RULE_COMMENTS_MESSAGE_SENDER,
+  CREDENTIAL_RULE_ROOM_MESSAGE_SENDER,
+  POLICY_RULE_ROOM_ADMINS,
+  POLICY_RULE_ROOM_CONTRIBUTE,
 } from '@common/constants';
 
 @Injectable()
@@ -34,16 +34,38 @@ export class RoomAuthorizationService {
     return await this.roomService.save(room);
   }
 
-  public allowContributorsToComment(
+  public allowContributorsToCreateMessages(
     authorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
     // Allow any contributor to this community to create discussions, and to send messages to the discussion
     const contributePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.CREATE_COMMENT],
+      [AuthorizationPrivilege.CREATE_MESSAGE],
       AuthorizationPrivilege.CONTRIBUTE,
-      POLICY_RULE_COMMENTS_CONTRIBUTE
+      POLICY_RULE_ROOM_CONTRIBUTE
+    );
+    privilegeRules.push(contributePrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
+  }
+
+  public allowContributorsToReplyReactToMessages(
+    authorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    // Allow any contributor to this community to create discussions, and to send messages to the discussion
+    const contributePrivilege = new AuthorizationPolicyRulePrivilege(
+      [
+        AuthorizationPrivilege.CREATE_MESSAGE_REPLY,
+        AuthorizationPrivilege.CREATE_MESSAGE_REACTION,
+      ],
+      AuthorizationPrivilege.CONTRIBUTE,
+      POLICY_RULE_ROOM_CONTRIBUTE
     );
     privilegeRules.push(contributePrivilege);
 
@@ -59,9 +81,13 @@ export class RoomAuthorizationService {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.CREATE_COMMENT],
+      [
+        AuthorizationPrivilege.CREATE_MESSAGE,
+        AuthorizationPrivilege.CREATE_MESSAGE_REPLY,
+        AuthorizationPrivilege.CREATE_MESSAGE_REACTION,
+      ],
       AuthorizationPrivilege.CREATE,
-      POLICY_RULE_COMMENTS_CREATE
+      POLICY_RULE_ROOM_ADMINS
     );
     privilegeRules.push(createPrivilege);
 
@@ -92,7 +118,7 @@ export class RoomAuthorizationService {
               resourceID: senderUserID,
             },
           ],
-          CREDENTIAL_RULE_COMMENTS_MESSAGE_SENDER
+          CREDENTIAL_RULE_ROOM_MESSAGE_SENDER
         );
       newRules.push(messageSender);
     }

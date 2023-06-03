@@ -124,8 +124,8 @@ export class CalloutResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       comments.authorization,
-      AuthorizationPrivilege.CREATE_COMMENT,
-      `comments send message: ${comments.displayName}`
+      AuthorizationPrivilege.CREATE_MESSAGE,
+      `callout send message: ${comments.displayName}`
     );
 
     const messageData: RoomSendMessageInput = {

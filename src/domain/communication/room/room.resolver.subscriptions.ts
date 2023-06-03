@@ -31,7 +31,7 @@ export class RoomResolverSubscriptions {
   @TypedSubscription<RoomMessageReceivedPayload, RoomMessageReceivedArgs>(
     () => RoomMessageReceived,
     {
-      description: 'Receive new Discussion messages',
+      description: 'Receive new Room messages',
       async resolve(this: RoomResolverSubscriptions, payload, args, context) {
         const agentInfo = context.req?.user;
         const logMsgPrefix = `[User (${agentInfo.email}) Room Msg] - `;
