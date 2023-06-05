@@ -20,7 +20,6 @@ import {
 import { CommunityPolicy } from '../community-policy/community.policy.entity';
 import { Form } from '@domain/common/form/form.entity';
 import { Invitation } from '../invitation/invitation.entity';
-import { IApplication } from '../application/application.interface';
 
 @Entity()
 export class Community
@@ -59,7 +58,7 @@ export class Community
     eager: false,
     cascade: true,
   })
-  applications?: IApplication[];
+  applications?: Application[];
 
   @OneToMany(() => Invitation, invitation => invitation.community, {
     eager: false,
