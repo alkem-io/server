@@ -28,7 +28,7 @@ export class InnovationHubAuthorizationService {
       );
     hub.authorization.anonymousReadAccess = true;
 
-    await this.cascadeAuthorization(hub);
+    hub = await this.cascadeAuthorization(hub);
 
     return this.hubRepository.save(hub);
   }
@@ -37,10 +37,11 @@ export class InnovationHubAuthorizationService {
     innovationHub: IInnovationHub
   ): Promise<IInnovationHub> {
     if (innovationHub.profile) {
-      await this.profileAuthorizationService.applyAuthorizationPolicy(
-        innovationHub.profile,
-        innovationHub.authorization
-      );
+      innovationHub.profile =
+        await this.profileAuthorizationService.applyAuthorizationPolicy(
+          innovationHub.profile,
+          innovationHub.authorization
+        );
     }
 
     return innovationHub;
