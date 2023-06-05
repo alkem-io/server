@@ -13,7 +13,7 @@ export class CreateInvitationInput {
   @MaxLength(UUID_LENGTH)
   invitedUser!: string;
 
-  invitedBy!: string;
+  createdBy!: string;
 
   communityID!: string;
 }

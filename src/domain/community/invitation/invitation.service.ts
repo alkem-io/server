@@ -107,8 +107,8 @@ export class InvitationService {
     return user;
   }
 
-  async getInvitedBy(invitation: IInvitation): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(invitation.invitedBy);
+  async getCreatedBy(invitation: IInvitation): Promise<IUser> {
+    const user = await this.userService.getUserOrFail(invitation.createdBy);
     if (!user)
       throw new RelationshipNotFoundException(
         `Unable to load User that created invitation ${invitation.id} `,
@@ -136,14 +136,11 @@ export class InvitationService {
   }
 
   async findInvitationsForUser(userID: string): Promise<IInvitation[]> {
-    const existingInvitations = await this.invitationRepository
-      .createQueryBuilder('invitation')
-      .leftJoinAndSelect('invitation.community', 'community')
-      .where('invitation.invitedUser = :userID')
-      .setParameters({
-        userID: `${userID}`,
-      })
-      .getMany();
+    const existingInvitations = await this.invitationRepository.find({
+      where: { invitedUser: userID },
+      relations: ['community'],
+    });
+
     if (existingInvitations.length > 0) return existingInvitations;
     return [];
   }

@@ -24,5 +24,5 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   invitedUser!: string;
 
   @Column('char', { length: 36, nullable: true })
-  invitedBy!: string;
+  createdBy!: string;
 }
