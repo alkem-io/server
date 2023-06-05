@@ -5,7 +5,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { MockNotificationsService } from '@test/mocks/notifications.service.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { pubSubEngineMockFactory } from '@test/utils/pub.sub.engine.mock.factory';
-import { SUBSCRIPTION_ASPECT_COMMENT } from '@common/constants/providers';
+import { SUBSCRIPTION_ROOM_MESSAGE } from '@common/constants';
 
 describe('RoomResolverMutations', () => {
   let resolver: RoomResolverMutations;
@@ -17,7 +17,7 @@ describe('RoomResolverMutations', () => {
         MockCacheManager,
         MockWinstonProvider,
         MockNotificationsService,
-        pubSubEngineMockFactory(SUBSCRIPTION_ASPECT_COMMENT),
+        pubSubEngineMockFactory(SUBSCRIPTION_ROOM_MESSAGE),
       ],
     })
       .useMocker(defaultMockerFactory)
