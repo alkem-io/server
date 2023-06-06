@@ -340,7 +340,7 @@ export class NamingService {
 
   async getDiscussionForRoom(discussionID: string): Promise<IDiscussion> {
     // check if this is a comment related to an calendar
-    const result = await this.entityManager.findOne(IDiscussion, {
+    const result = await this.entityManager.findOne(Discussion, {
       where: {
         comments: { id: discussionID },
       },
