@@ -335,6 +335,7 @@ enum ProfileType {
   INNOVATION_PACK = 'innovation_pack',
   DISCUSSION = 'discussion',
   INNOVATION_FLOW_TEMPLATE = 'innovation_flow_template',
+  INNOVATION_HUB = 'innovation_hub',
 }
 
 export enum DirectStorageBucketEntityType {
