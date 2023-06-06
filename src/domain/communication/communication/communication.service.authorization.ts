@@ -51,10 +51,7 @@ export class CommunicationAuthorizationService {
         communication.updates,
         communication.authorization
       );
-    communication.updates.authorization =
-      this.roomAuthorizationService.allowContributorsToCreateMessages(
-        communication.updates.authorization
-      );
+    // Note: do NOT allow contributors to create new messages for updates...
     communication.updates.authorization =
       this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
         communication.updates.authorization
