@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class room1685643382237 implements MigrationInterface {
-  name = 'room1685643382237';
+export class room1685776282250 implements MigrationInterface {
+  name = 'room1685776282250';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Aspect ==> comments
