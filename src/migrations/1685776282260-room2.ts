@@ -29,7 +29,7 @@ export class room21685776282260 implements MigrationInterface {
       const newRoomID = randomUUID();
       const roomAuthID = randomUUID();
 
-      const roomType = this.getRoomTypeForDiscussion(
+      const roomType = await this.getRoomTypeForDiscussion(
         queryRunner,
         discussion.communicationId
       );
