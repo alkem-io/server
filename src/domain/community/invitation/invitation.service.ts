@@ -121,16 +121,11 @@ export class InvitationService {
     userID: string,
     communityID: string
   ): Promise<IInvitation[]> {
-    const existingInvitations = await this.invitationRepository
-      .createQueryBuilder('invitation')
-      .leftJoinAndSelect('invitation.community', 'community')
-      .where('invitation.invitedUser = :userID')
-      .andWhere('community.id = :communityID')
-      .setParameters({
-        userID: `${userID}`,
-        communityID: communityID,
-      })
-      .getMany();
+    const existingInvitations = await this.invitationRepository.find({
+      where: { invitedUser: userID, community: { id: communityID } },
+      relations: ['community'],
+    });
+
     if (existingInvitations.length > 0) return existingInvitations;
     return [];
   }
