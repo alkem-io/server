@@ -182,6 +182,9 @@ export class RolesService {
     const invitations = await this.invitationService.findInvitationsForUser(
       user.id
     );
+
+    if (!invitations) return [];
+
     for (const invitation of invitations) {
       // skip any finalized invitations; only want to return pending invitations
       const isFinalized = await this.invitationService.isFinalizedInvitation(
