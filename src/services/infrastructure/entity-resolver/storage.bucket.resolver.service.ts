@@ -137,6 +137,8 @@ export class StorageBucketResolverService {
           profile.entityID,
           'innovation_flow_template'
         );
+      case ProfileType.INNOVATION_HUB:
+        return await this.getPlatformStorageBucketId();
       case ProfileType.DISCUSSION:
         return await this.getStorageBucketIdForDiscussion(profile.entityID);
       default:
