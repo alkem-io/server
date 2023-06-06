@@ -3,6 +3,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { ApplicationForRoleResult } from './roles.dto.result.application';
 import { RolesResultOrganization } from './roles.dto.result.organization';
 import { RolesResultHub } from './roles.dto.result.hub';
+import { InvitationForRoleResult } from './roles.dto.result.invitation';
 
 @ObjectType()
 export class ContributorRoles {
@@ -28,4 +29,10 @@ export class ContributorRoles {
     description: 'Open applications for this contributor.',
   })
   applications: ApplicationForRoleResult[] = [];
+
+  @Field(() => [InvitationForRoleResult], {
+    nullable: true,
+    description: 'Open invitations for this contributor.',
+  })
+  invitations: InvitationForRoleResult[] = [];
 }

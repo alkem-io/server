@@ -72,6 +72,7 @@ export class CanvasService {
       },
       ...options,
     });
+
     if (!canvas)
       throw new EntityNotFoundException(
         `Not able to locate Canvas with the specified ID: ${canvasID}`,

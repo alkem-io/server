@@ -41,6 +41,7 @@ import {
   createCardURL,
   createCalendarEventURL,
   createForumDiscussionUrl,
+  CommunityInvitationCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
@@ -90,6 +91,21 @@ export class NotificationPayloadBuilder {
     const payload: CommunityApplicationCreatedEventPayload = {
       triggeredBy: applicationCreatorID,
       applicantID,
+      journey: journeyPayload,
+    };
+
+    return payload;
+  }
+
+  async buildInvitationCreatedNotificationPayload(
+    applicationCreatorID: string,
+    invitedUserID: string,
+    community: ICommunity
+  ): Promise<CommunityInvitationCreatedEventPayload> {
+    const journeyPayload = await this.buildJourneyPayload(community);
+    const payload: CommunityInvitationCreatedEventPayload = {
+      triggeredBy: applicationCreatorID,
+      inviteeID: invitedUserID,
       journey: journeyPayload,
     };
 

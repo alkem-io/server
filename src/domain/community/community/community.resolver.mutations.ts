@@ -6,7 +6,7 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { IApplication } from '@domain/community/application';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { ICommunity } from '@domain/community/community/community.interface';
-import { CommunityLifecycleOptionsProvider } from './community.lifecycle.options.provider';
+import { CommunityApplicationLifecycleOptionsProvider } from './community.lifecycle.application.options.provider';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -16,7 +16,6 @@ import { UserGroupAuthorizationService } from '../user-group/user-group.service.
 import { UserAuthorizationService } from '../user/user.service.authorization';
 import { AssignCommunityMemberUserInput } from './dto/community.dto.assign.member.user';
 import { RemoveCommunityMemberUserInput } from './dto/community.dto.remove.member.user';
-import { DeleteApplicationInput } from '../application/dto/application.dto.delete';
 import { ApplicationEventInput } from '../application/dto/application.dto.event';
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
@@ -42,6 +41,13 @@ import { CommunityAuthorizationService } from './community.service.authorization
 import { CommunityType } from '@common/enums/community.type';
 import { ElasticsearchService } from '@services/external/elasticsearch';
 import { UpdateCommunityApplicationFormInput } from './dto/community.dto.update.application.form';
+import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
+import { InvitationService } from '../invitation/invitation.service';
+import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation';
+import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
+import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecycle.invitation.options.provider';
+import { IInvitation } from '../invitation';
+import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -53,11 +59,14 @@ export class CommunityResolverMutations {
     private userAuthorizationService: UserAuthorizationService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communityService: CommunityService,
-    @Inject(CommunityLifecycleOptionsProvider)
-    private communityLifecycleOptionsProvider: CommunityLifecycleOptionsProvider,
+    @Inject(CommunityApplicationLifecycleOptionsProvider)
+    private communityLifecycleApplicationOptionsProvider: CommunityApplicationLifecycleOptionsProvider,
+    private communityLifecycleInvitationOptionsProvider: CommunityInvitationLifecycleOptionsProvider,
     private applicationService: ApplicationService,
     private agentService: AgentService,
     private applicationAuthorizationService: ApplicationAuthorizationService,
+    private invitationService: InvitationService,
+    private invitationAuthorizationService: InvitationAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService
   ) {}
 
@@ -101,7 +110,7 @@ export class CommunityResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
-      AuthorizationPrivilege.GRANT,
+      AuthorizationPrivilege.COMMUNITY_ADD_MEMBER,
       `assign user community: ${community.displayName}`
     );
     await this.communityService.assignUserToRole(
@@ -370,6 +379,52 @@ export class CommunityResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
+  @Mutation(() => IInvitation, {
+    description:
+      'Invite an existing User to join the specified Community as a member.',
+  })
+  @Profiling.api
+  async inviteExistingUserForCommunityMembership(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('invitationData')
+    invitationData: CreateInvitationExistingUserOnCommunityInput
+  ): Promise<IInvitation> {
+    const community = await this.communityService.getCommunityOrFail(
+      invitationData.communityID
+    );
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.COMMUNITY_INVITE,
+      `create invitation community: ${community.displayName}`
+    );
+
+    const input: CreateInvitationExistingUserOnCommunityInput = {
+      communityID: community.id,
+      invitedUser: invitationData.invitedUser,
+      createdBy: agentInfo.userID,
+    };
+    const invitation = await this.communityService.createInvitation(input);
+
+    const savedInvitation =
+      await this.invitationAuthorizationService.applyAuthorizationPolicy(
+        invitation,
+        community.authorization
+      );
+
+    // Send the notification
+    const notificationInput: NotificationInputCommunityInvitation = {
+      triggeredBy: agentInfo.userID,
+      community: community,
+      invitedUser: invitationData.invitedUser,
+    };
+    await this.notificationAdapter.invitationCreated(notificationInput);
+
+    return savedInvitation;
+  }
+
+  @UseGuards(GraphqlGuard)
   @Mutation(() => ICommunity, {
     description: 'Update the Application Form used by this Community.',
   })
@@ -479,26 +534,6 @@ export class CommunityResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IApplication, {
-    description: 'Removes the specified User Application.',
-  })
-  async deleteUserApplication(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteApplicationInput
-  ): Promise<IApplication> {
-    const application = await this.applicationService.getApplicationOrFail(
-      deleteData.ID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      application.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `delete application community: ${application.id}`
-    );
-    return await this.applicationService.deleteApplication(deleteData);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IApplication, {
     description: 'Trigger an event on the Application.',
   })
   async eventOnApplication(
@@ -515,8 +550,32 @@ export class CommunityResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `event on application: ${application.id}`
     );
-    return await this.communityLifecycleOptionsProvider.eventOnApplication(
+    return await this.communityLifecycleApplicationOptionsProvider.eventOnApplication(
       applicationEventData,
+      agentInfo
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IApplication, {
+    description: 'Trigger an event on the Invitation.',
+  })
+  async eventOnCommunityInvitation(
+    @Args('invitationEventData')
+    invitationEventData: InvitationEventInput,
+    @CurrentUser() agentInfo: AgentInfo
+  ): Promise<IApplication> {
+    const invitation = await this.invitationService.getInvitationOrFail(
+      invitationEventData.invitationID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      invitation.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `event on invitation: ${invitation.id}`
+    );
+    return await this.communityLifecycleInvitationOptionsProvider.eventOnInvitation(
+      invitationEventData,
       agentInfo
     );
   }
