@@ -1,5 +1,5 @@
 mutation deleteInvitation($deleteData: DeleteInvitationInput!) {
-  deleteUserInvitation(deleteData: $deleteData) {
+  deleteInvitation(deleteData: $deleteData) {
     id
   }
 }

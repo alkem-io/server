@@ -31,7 +31,7 @@ export class InvitationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       application.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.DELETE,
       `delete invitation to community: ${application.id}`
     );
     return await this.invitationService.deleteInvitation(deleteData);

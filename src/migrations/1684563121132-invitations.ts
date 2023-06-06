@@ -10,7 +10,7 @@ export class invitations1684563121132 implements MigrationInterface {
                                     \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                                     \`version\` int NOT NULL,
                                     \`invitedUser\` char(36) NULL,
-                                    \`invitedBy\` char(36) NULL,
+                                    \`createdBy\` char(36) NULL,
                                     \`authorizationId\` varchar(36) NULL,
                                     \`lifecycleId\` varchar(36) NULL,
                                     \`communityId\` varchar(36) NULL,

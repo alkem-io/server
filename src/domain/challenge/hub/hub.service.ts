@@ -70,6 +70,7 @@ import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-templa
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
+import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 
 @Injectable()
 export class HubService {
@@ -236,9 +237,9 @@ export class HubService {
       ],
     });
 
-    // Do not remove an hub that has child challenges , require these to be individually first removed
+    // Do not remove a hub that has child challenges, require these to be individually first removed
     if (hub.challenges && hub.challenges.length > 0)
-      throw new ValidationException(
+      throw new OperationNotAllowedException(
         `Unable to remove Hub (${hub.nameID}) as it contains ${hub.challenges.length} challenges`,
         LogContext.CHALLENGES
       );

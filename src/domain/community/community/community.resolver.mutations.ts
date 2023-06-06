@@ -403,7 +403,7 @@ export class CommunityResolverMutations {
     const input: CreateInvitationExistingUserOnCommunityInput = {
       communityID: community.id,
       invitedUser: invitationData.invitedUser,
-      invitedBy: agentInfo.userID,
+      createdBy: agentInfo.userID,
     };
     const invitation = await this.communityService.createInvitation(input);
 

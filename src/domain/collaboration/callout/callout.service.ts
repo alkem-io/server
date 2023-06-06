@@ -8,7 +8,6 @@ import {
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
-  NotSupportedException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -17,17 +16,15 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import {
-  CreateCalloutInput,
   CreateAspectOnCalloutInput,
+  CreateCalloutInput,
   CreateCanvasOnCalloutInput,
   UpdateCalloutInput,
 } from '@domain/collaboration/callout/dto/index';
-import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
 import { AspectService } from '@domain/collaboration/aspect/aspect.service';
 import { CanvasService } from '@domain/common/canvas/canvas.service';
 import { limitAndShuffle } from '@common/utils';
-import { Canvas } from '@domain/common/canvas/canvas.entity';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
@@ -350,6 +347,8 @@ export class CalloutService {
       return await this.aspectService.getCardsInCalloutCount(callout.id);
     } else if (callout.type === CalloutType.CANVAS) {
       return await this.canvasService.getCanvasesInCalloutCount(callout.id);
+    } else if (callout.type === CalloutType.LINK_COLLECTION) {
+      return await this.getReferencesCountInLinkCallout(callout.id);
     } else {
       const comments = await this.getCommentsFromCallout(callout.id);
       if (comments) {
@@ -357,6 +356,15 @@ export class CalloutService {
       }
     }
     return result;
+  }
+
+  private async getReferencesCountInLinkCallout(calloutId: string) {
+    const callout = await this.calloutRepository.findOne({
+      where: { id: calloutId },
+      relations: { profile: { references: true } },
+    });
+
+    return callout?.profile.references?.length ?? 0;
   }
 
   private async setNameIdOnAspectData(
@@ -506,31 +514,6 @@ export class CalloutService {
     return results;
   }
 
-  public async getCanvasFromCalloutOrFail(
-    calloutID: string,
-    canvasID: string
-  ): Promise<ICanvas> {
-    const canvas = await this.canvasService.getCanvasOrFail(canvasID, {
-      relations: ['callout'],
-    });
-    const callout = (canvas as Canvas).callout;
-    // check it is a canvas direction on a Callout
-    if (!callout) {
-      throw new NotSupportedException(
-        `Not able to delete a Canvas that is not contained by Callout: ${canvasID}`,
-        LogContext.COLLABORATION
-      );
-    }
-    if (callout.id !== calloutID) {
-      throw new NotSupportedException(
-        `Canvas (${canvasID}) is not a child of supplied callout: ${calloutID}`,
-        LogContext.COLLABORATION
-      );
-    }
-
-    return canvas;
-  }
-
   public async getAspectsFromCallout(
     callout: ICallout,
     relations: FindOptionsRelationByString = [],
@@ -577,31 +560,6 @@ export class CalloutService {
     }
 
     return results;
-  }
-
-  public async getApectFromCalloutOrFail(
-    calloutID: string,
-    aspectID: string
-  ): Promise<IAspect> {
-    const aspect = await this.aspectService.getAspectOrFail(aspectID, {
-      relations: ['callout'],
-    });
-    const callout = (aspect as Aspect).callout;
-    // check it is a canvas direction on a Callout
-    if (!callout) {
-      throw new NotSupportedException(
-        `Not able to delete a Canvas that is not contained by Callout: ${aspectID}`,
-        LogContext.COLLABORATION
-      );
-    }
-    if (callout.id !== calloutID) {
-      throw new NotSupportedException(
-        `Canvas (${aspectID}) is not a child of supplied callout: ${calloutID}`,
-        LogContext.COLLABORATION
-      );
-    }
-
-    return aspect;
   }
 
   public async getCommentsFromCallout(

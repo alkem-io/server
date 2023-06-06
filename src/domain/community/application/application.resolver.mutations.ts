@@ -30,7 +30,7 @@ export class ApplicationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       application.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.DELETE,
       `delete application community: ${application.id}`
     );
     return await this.applicationService.deleteApplication(deleteData);

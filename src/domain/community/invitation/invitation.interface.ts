@@ -6,7 +6,7 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 @ObjectType('Invitation')
 export abstract class IInvitation extends IAuthorizable {
   invitedUser!: string;
-  invitedBy!: string;
+  createdBy!: string;
 
   community?: ICommunity;
 
