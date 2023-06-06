@@ -16,7 +16,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CommunityRole } from '@common/enums/community.role';
 
 @Injectable()
-export class CommunityLifecycleOptionsProvider {
+export class CommunityApplicationLifecycleOptionsProvider {
   constructor(
     private lifecycleService: LifecycleService,
     private communityService: CommunityService,

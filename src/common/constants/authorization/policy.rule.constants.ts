@@ -14,3 +14,5 @@ export const POLICY_RULE_CALLOUT_CREATE = 'policyRule-calloutCreate';
 export const POLICY_RULE_CALLOUT_CONTRIBUTE = 'policyRule-calloutContribute';
 export const POLICY_RULE_COLLABORATION_CREATE =
   'policyRule-collaborationCreate';
+export const POLICY_RULE_COMMUNITY_INVITE = 'policyRule-communityInvite';
+export const POLICY_RULE_COMMUNITY_ADD_MEMBER = 'policyRule-communityAddMember';

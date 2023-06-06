@@ -250,6 +250,10 @@ export class UserService {
       UserPreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_ADMIN,
       'true'
     );
+    defaults.set(
+      UserPreferenceType.NOTIFICATION_COMMUNITY_INVITATION_USER,
+      'true'
+    );
     defaults.set(UserPreferenceType.NOTIFICATION_CALLOUT_PUBLISHED, 'true');
     // messaging & mentions
     defaults.set(UserPreferenceType.NOTIFICATION_COMMUNICATION_MENTION, 'true');

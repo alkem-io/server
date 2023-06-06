@@ -21,6 +21,9 @@ import { ContributorRoles } from './dto/roles.dto.result.contributor';
 import { ApplicationForRoleResult } from './dto/roles.dto.result.application';
 import { RolesOrganizationInput } from './dto/roles.dto.input.organization';
 import { mapCredentialsToRoles } from './util/map.credentials.to.roles';
+import { InvitationForRoleResult } from './dto/roles.dto.result.invitation';
+import { InvitationService } from '@domain/community/invitation/invitation.service';
+import { IInvitation } from '@domain/community/invitation';
 
 export class RolesService {
   constructor(
@@ -28,12 +31,14 @@ export class RolesService {
     private userService: UserService,
     private challengeService: ChallengeService,
     private applicationService: ApplicationService,
+    private invitationService: InvitationService,
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
     private hubFilterService: HubFilterService,
     private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
   async getUserRoles(
     membershipData: RolesUserInput
   ): Promise<ContributorRoles> {
@@ -50,6 +55,7 @@ export class RolesService {
     );
 
     contributorRoles.applications = await this.getUserApplications(user);
+    contributorRoles.invitations = await this.getUserInvitations(user);
 
     return contributorRoles;
   }
@@ -167,5 +173,86 @@ export class RolesService {
     applicationResult.opportunityID = opportunityForCommunity.id;
     applicationResult.challengeID = opportunityForCommunity.challenge.id;
     return applicationResult;
+  }
+
+  private async getUserInvitations(
+    user: IUser
+  ): Promise<InvitationForRoleResult[]> {
+    const invitationResults: InvitationForRoleResult[] = [];
+    const invitations = await this.invitationService.findInvitationsForUser(
+      user.id
+    );
+
+    if (!invitations) return [];
+
+    for (const invitation of invitations) {
+      // skip any finalized invitations; only want to return pending invitations
+      const isFinalized = await this.invitationService.isFinalizedInvitation(
+        invitation.id
+      );
+      if (isFinalized) continue;
+      const community = invitation.community;
+      const state = await this.invitationService.getInvitationState(
+        invitation.id
+      );
+      if (community) {
+        const invitationResult =
+          await this.buildInvitationResultForCommunityInvitation(
+            community,
+            state,
+            invitation
+          );
+
+        invitationResults.push(invitationResult);
+      }
+    }
+    return invitationResults;
+  }
+
+  private async buildInvitationResultForCommunityInvitation(
+    community: ICommunity,
+    state: string,
+    invitation: IInvitation
+  ): Promise<InvitationForRoleResult> {
+    const invitationResult = new InvitationForRoleResult(
+      community.id,
+      community.displayName,
+      state,
+      invitation.id,
+      community.hubID,
+      invitation.createdDate,
+      invitation.updatedDate
+    );
+
+    const isHubCommunity = await this.communityService.isHubCommunity(
+      community
+    );
+
+    if (isHubCommunity) return invitationResult;
+
+    // For Challenge or an Opportunity, need to dig deeper...
+    const challengeForCommunity =
+      await this.challengeService.getChallengeForCommunity(community.id);
+
+    if (challengeForCommunity) {
+      // the invitation is issued for a challenge
+      invitationResult.challengeID = challengeForCommunity.id;
+      return invitationResult;
+    }
+
+    const opportunityForCommunity =
+      await this.opportunityService.getOpportunityForCommunity(community.id);
+
+    if (!opportunityForCommunity || !opportunityForCommunity.challenge) {
+      throw new RelationshipNotFoundException(
+        `Unable to find Challenge or Opportunity with the community specified: ${community.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    // the invitation is issued for an an opportunity
+    invitationResult.opportunityID = opportunityForCommunity.id;
+    invitationResult.challengeID = opportunityForCommunity.challenge.id;
+    return invitationResult;
   }
 }

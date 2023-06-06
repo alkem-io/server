@@ -23,6 +23,7 @@ import { ICommunityPolicy } from '../community-policy/community.policy.interface
 import { IForm } from '@domain/common/form/form.interface';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { AgentInfo } from '@core/authentication';
+import { IInvitation } from '../invitation';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -191,6 +192,17 @@ export class CommunityResolverFields {
       pagination,
       filter
     );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('invitations', () => [IInvitation], {
+    nullable: true,
+    description: 'Invitations for this community.',
+  })
+  @Profiling.api
+  async inivitations(@Parent() community: Community): Promise<IInvitation[]> {
+    return await this.communityService.getInvitations(community);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
