@@ -16,8 +16,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import {
-  CreateCalloutInput,
   CreateAspectOnCalloutInput,
+  CreateCalloutInput,
   CreateCanvasOnCalloutInput,
   UpdateCalloutInput,
 } from '@domain/collaboration/callout/dto/index';
@@ -347,6 +347,8 @@ export class CalloutService {
       return await this.aspectService.getCardsInCalloutCount(callout.id);
     } else if (callout.type === CalloutType.CANVAS) {
       return await this.canvasService.getCanvasesInCalloutCount(callout.id);
+    } else if (callout.type === CalloutType.LINK_COLLECTION) {
+      return await this.getReferencesCountInLinkCallout(callout.id);
     } else {
       const comments = await this.getCommentsFromCallout(callout.id);
       if (comments) {
@@ -354,6 +356,15 @@ export class CalloutService {
       }
     }
     return result;
+  }
+
+  private async getReferencesCountInLinkCallout(calloutId: string) {
+    const callout = await this.calloutRepository.findOne({
+      where: { id: calloutId },
+      relations: { profile: { references: true } },
+    });
+
+    return callout?.profile.references?.length ?? 0;
   }
 
   private async setNameIdOnAspectData(
