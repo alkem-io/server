@@ -52,6 +52,10 @@ export class CommunicationAuthorizationService {
         communication.authorization
       );
     communication.updates.authorization =
+      this.roomAuthorizationService.allowContributorsToCreateMessages(
+        communication.updates.authorization
+      );
+    communication.updates.authorization =
       this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
         communication.updates.authorization
       );
