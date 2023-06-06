@@ -102,11 +102,14 @@ export class RoomService {
         knownSendersMap.set(matrixUserID, alkemioUserID);
       }
       message.sender = alkemioUserID;
-      if (message.reactions)
+      if (message.reactions) {
         message.reactions = await this.populateRoomReactionSenders(
           message.reactions,
           knownSendersMap
         );
+      } else {
+        message.reactions = [];
+      }
     }
 
     return messages;
