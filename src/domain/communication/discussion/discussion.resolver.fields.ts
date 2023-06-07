@@ -52,12 +52,10 @@ export class DiscussionResolverFields {
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('comments', () => IRoom, {
-    nullable: true,
+    nullable: false,
     description: 'The comments for this Discussion.',
   })
-  async comments(
-    @Parent() discussion: IDiscussion
-  ): Promise<IRoom | undefined> {
+  async comments(@Parent() discussion: IDiscussion): Promise<IRoom> {
     return await this.discussionService.getComments(discussion.id);
   }
 
