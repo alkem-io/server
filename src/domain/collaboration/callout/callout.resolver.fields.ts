@@ -24,6 +24,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -129,6 +130,16 @@ export class CalloutResolverFields {
       limit,
       shuffle
     );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('comments', () => IRoom, {
+    nullable: true,
+    description: 'The comments for this Callout.',
+  })
+  async comments(@Parent() callout: Callout): Promise<IRoom | undefined> {
+    return await this.calloutService.getComments(callout.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

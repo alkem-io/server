@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -37,9 +37,13 @@ export class RoomService {
     return await this.roomRepository.save(room);
   }
 
-  async getRoomOrFail(roomID: string): Promise<IRoom> {
-    const room = await this.roomRepository.findOneBy({
-      id: roomID,
+  async getRoomOrFail(
+    roomID: string,
+    options?: FindOneOptions<Room>
+  ): Promise<IRoom> {
+    const room = await this.roomRepository.findOne({
+      where: { id: roomID },
+      ...options,
     });
     if (!room)
       throw new EntityNotFoundException(

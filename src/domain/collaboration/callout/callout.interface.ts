@@ -56,10 +56,6 @@ export abstract class ICallout extends INameable {
   })
   whiteboardTemplate?: IWhiteboardTemplate;
 
-  @Field(() => IRoom, {
-    nullable: true,
-    description: 'The comments associated with this Callout.',
-  })
   comments?: IRoom;
 
   @Field(() => Number, {
