@@ -24,3 +24,4 @@ export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const WALLET_MANAGEMENT_SERVICE = 'alkemio-wallet-manager';
 export const REDIS_LOCK_SERVICE = 'redis-lock-service';
 export const MATRIX_ADAPTER_SERVICE = 'alkemio-matrix-adapter';
+export const HOCUSPOCUS_SERVER = 'hocuspocus-server';
