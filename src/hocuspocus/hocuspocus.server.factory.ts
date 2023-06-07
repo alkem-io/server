@@ -9,9 +9,13 @@ export const HocuspocusServerFactoryProvider: FactoryProvider = {
       port: 4001,
       quiet: true,
 
-      async onConnect() {
+      async onConnect(data: any) {
         console.log('🔮connected');
       },
+
+      async onAuthenticate() {
+
+      }
     }).listen();
   },
   inject: [],
