@@ -26,6 +26,8 @@ import { RoomDeleteMessagePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomDeleteMessageResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomMessageSenderResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomMessageSenderPayload } from '@alkemio/matrix-adapter-lib';
+import { RoomReactionSenderResponsePayload } from '@alkemio/matrix-adapter-lib';
+import { RoomReactionSenderPayload } from '@alkemio/matrix-adapter-lib';
 import { CreateRoomPayload } from '@alkemio/matrix-adapter-lib';
 import { CreateRoomResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomsUserPayload } from '@alkemio/matrix-adapter-lib';
@@ -353,6 +355,33 @@ export class CommunicationAdapter {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
         `Unable to locate message (id: ${messageID}) in room: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+  }
+
+  async getReactionSender(roomID: string, reactionID: string): Promise<string> {
+    const eventType = MatrixAdapterEventType.ROOM_REACTION_SENDER;
+    const inputPayload: RoomReactionSenderPayload = {
+      triggeredBy: '',
+      roomID: roomID,
+      reactionID: reactionID,
+    };
+    const eventID = this.logInputPayload(eventType, inputPayload);
+    const response = this.matrixAdapterClient.send(
+      { cmd: eventType },
+      inputPayload
+    );
+
+    try {
+      const responseData =
+        await firstValueFrom<RoomReactionSenderResponsePayload>(response);
+      this.logResponsePayload(eventType, responseData, eventID);
+      return responseData.senderID;
+    } catch (err: any) {
+      this.logInteractionError(eventType, err, eventID);
+      throw new MatrixEntityNotFoundException(
+        `Unable to locate message (id: ${reactionID}) in room: ${roomID}`,
         LogContext.COMMUNICATION
       );
     }

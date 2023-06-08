@@ -294,4 +294,22 @@ export class RoomService {
       senderCommunicationID
     );
   }
+
+  async getUserIdForReaction(room: IRoom, reactionID: string): Promise<string> {
+    const senderCommunicationID =
+      await this.communicationAdapter.getReactionSender(
+        room.externalRoomID,
+        reactionID
+      );
+    if (senderCommunicationID === '') {
+      this.logger.error(
+        `Unable to identify sender for ${room.id} - ${reactionID}`,
+        LogContext.COMMUNICATION
+      );
+      return senderCommunicationID;
+    }
+    return await this.identityResolverService.getUserIDByCommunicationsID(
+      senderCommunicationID
+    );
+  }
 }

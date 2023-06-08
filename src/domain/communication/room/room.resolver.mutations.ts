@@ -288,15 +288,15 @@ export class RoomResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IMessage, {
+  @Mutation(() => Boolean, {
     description: 'Remove a reaction on a message from the specified Room.',
   })
   @Profiling.api
   async removeReactionToMessageInRoom(
-    @Args('messageData') messageData: RoomRemoveReactionToMessageInput,
+    @Args('reactionData') reactionData: RoomRemoveReactionToMessageInput,
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<boolean> {
-    const room = await this.roomService.getRoomOrFail(messageData.roomID);
+    const room = await this.roomService.getRoomOrFail(reactionData.roomID);
 
     // The choice was made **not** to wrap every message in an AuthorizationPolicy.
     // So we also allow users who sent the react in question to remove the reaction by
@@ -304,9 +304,9 @@ export class RoomResolverMutations {
 
     // Todo: to be tested, may need additional work to get this going
     const extendedAuthorization =
-      await this.roomAuthorizationService.extendAuthorizationPolicyForMessageSender(
+      await this.roomAuthorizationService.extendAuthorizationPolicyForReactionSender(
         room,
-        messageData.reactionID
+        reactionData.reactionID
       );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -318,7 +318,7 @@ export class RoomResolverMutations {
     return await this.roomService.removeReactionToMessage(
       room,
       agentInfo.communicationID,
-      messageData
+      reactionData
     );
   }
 }

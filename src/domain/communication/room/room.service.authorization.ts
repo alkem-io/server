@@ -8,6 +8,7 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_ROOM_MESSAGE_SENDER,
+  CREDENTIAL_RULE_ROOM_REACTION_SENDER,
   POLICY_RULE_ROOM_ADMINS,
   POLICY_RULE_ROOM_CONTRIBUTE,
 } from '@common/constants';
@@ -119,6 +120,41 @@ export class RoomAuthorizationService {
             },
           ],
           CREDENTIAL_RULE_ROOM_MESSAGE_SENDER
+        );
+      newRules.push(messageSender);
+    }
+
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
+        room.authorization,
+        newRules
+      );
+
+    return updatedAuthorization;
+  }
+
+  async extendAuthorizationPolicyForReactionSender(
+    room: IRoom,
+    reactionID: string
+  ): Promise<IAuthorizationPolicy> {
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    const senderUserID = await this.roomService.getUserIdForReaction(
+      room,
+      reactionID
+    );
+
+    if (senderUserID !== '') {
+      const messageSender =
+        this.authorizationPolicyService.createCredentialRule(
+          [AuthorizationPrivilege.UPDATE, AuthorizationPrivilege.DELETE],
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: senderUserID,
+            },
+          ],
+          CREDENTIAL_RULE_ROOM_REACTION_SENDER
         );
       newRules.push(messageSender);
     }

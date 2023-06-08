@@ -1,13 +1,10 @@
-mutation removeReactionToMessageInRoom($messageData: RoomRemoveReactionToMessageInput!){
-  removeReactionToMessageInRoom(messageData: $messageData){
-    id
-    message
-  }
+mutation removeReactionToMessageInRoom($reactionData: RoomRemoveReactionToMessageInput!){
+  removeReactionToMessageInRoom(reactionData: $reactionData)
 }
 
 {
-  "messageData": {
-    "roomID": "string",
-    "reactionID": "$3a15g7wrN4CYx8GyNSJ9d1rg5NQaXREdajwRMOrYN-I",
+  "reactionData": {
+    "reactionID": "$DOh9zUj0yVDorRd3rbf0cdVBCqkLwNQRmWJOShfoUw4",
+    "roomID": "1c84f116-0790-4aa1-a61a-31ed24628ea9"
   }
 }
