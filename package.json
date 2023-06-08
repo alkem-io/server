@@ -50,6 +50,8 @@
     "@alkemio/notifications-lib": "^0.4.1",
     "@apollo/server": "^4.6.0",
     "@elastic/elasticsearch": "^8.4.0",
+    "@hocuspocus/extension-database": "^2.1.0",
+    "@hocuspocus/extension-logger": "^2.1.0",
     "@hocuspocus/server": "^2.1.0",
     "@nestjs/apollo": "^10.0.6",
     "@nestjs/axios": "^0.0.3",
@@ -61,7 +63,7 @@
     "@nestjs/microservices": "^8.1.2",
     "@nestjs/passport": "^8.0.0",
     "@nestjs/platform-express": "^8.0.5",
-    "@nestjs/platform-socket.io": "^8.4.7",
+    "@nestjs/platform-ws": "^8.4.7",
     "@nestjs/typeorm": "9.0.1",
     "@nestjs/websockets": "^8.4.7",
     "@ory/kratos-client": "^0.11.1",
@@ -87,6 +89,7 @@
     "helmet": "^4.6.0",
     "image-size": "^1.0.0",
     "ipfs-http-client": "^51.0.1",
+    "js-base64": "^3.7.5",
     "jwks-rsa": "^2.0.4",
     "jwt-decode": "^3.1.2",
     "logform": "^2.3.2",
@@ -104,7 +107,8 @@
     "winston": "^3.3.3",
     "ws": "^8.13.0",
     "xstate": "^4.26.1",
-    "yaml": "^2.0.0-7"
+    "yaml": "^2.0.0-7",
+    "yjs": "^13.6.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^8.1.0",
