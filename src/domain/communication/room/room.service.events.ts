@@ -23,6 +23,9 @@ import { ActivityInputUpdateSent } from '@services/adapters/activity-adapter/dto
 import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { ElasticsearchService } from '@services/external/elasticsearch/elasticsearch.service';
+import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
+import { ICallout } from '@domain/collaboration/callout';
+import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -184,5 +187,50 @@ export class RoomServiceEvents {
       updates: updates,
     };
     await this.notificationAdapter.updateSent(notificationInput);
+  }
+
+  public async processActivityCalloutCommentCreated(
+    callout: ICallout,
+    message: IMessage,
+    agentInfo: AgentInfo
+  ) {
+    const activityLogInput: ActivityInputCalloutDiscussionComment = {
+      triggeredBy: agentInfo.userID,
+      callout: callout,
+      message,
+    };
+    this.activityAdapter.calloutCommentCreated(activityLogInput);
+
+    const { hubID } =
+      await this.communityResolverService.getCommunityFromCalloutOrFail(
+        callout.id
+      );
+
+    this.elasticService.calloutCommentCreated(
+      {
+        id: callout.id,
+        name: callout.nameID,
+        hub: hubID,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
+  }
+
+  public async processNotificationDiscussionComment(
+    callout: ICallout,
+    room: IRoom,
+    message: IMessage,
+    agentInfo: AgentInfo
+  ) {
+    const notificationInput: NotificationInputDiscussionComment = {
+      callout: callout,
+      triggeredBy: agentInfo.userID,
+      comments: room,
+      commentSent: message,
+    };
+    await this.notificationAdapter.discussionComment(notificationInput);
   }
 }

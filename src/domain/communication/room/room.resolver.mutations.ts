@@ -20,6 +20,10 @@ import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
 import { NotSupportedException } from '@common/exceptions/not.supported.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { RoomServiceEvents } from './room.service.events';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { CalloutType } from '@common/enums/callout.type';
+import { CalloutState } from '@common/enums/callout.state';
+import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -51,10 +55,22 @@ export class RoomResolverMutations {
     );
 
     if (room.type === RoomType.CALLOUT) {
-      throw new NotSupportedException(
-        'Messages for Callouts to be sent via Callouts api',
-        LogContext.COLLABORATION
+      const callout = await this.namingService.getCalloutForRoom(
+        messageData.roomID
       );
+
+      if (callout.type !== CalloutType.COMMENTS) {
+        throw new NotSupportedException(
+          'Messages only supported on Comments Callout',
+          LogContext.COLLABORATION
+        );
+      }
+
+      if (callout.state === CalloutState.CLOSED) {
+        throw new CalloutClosedException(
+          `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
+        );
+      }
     }
 
     const message = await this.roomService.sendMessage(
@@ -141,6 +157,30 @@ export class RoomResolverMutations {
         );
 
         break;
+      case RoomType.CALLOUT:
+        const callout = await this.namingService.getCalloutForRoom(
+          messageData.roomID
+        );
+
+        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+          this.roomServiceEvents.processActivityCalloutCommentCreated(
+            callout,
+            message,
+            agentInfo
+          );
+          this.roomServiceEvents.processNotificationDiscussionComment(
+            callout,
+            room,
+            message,
+            agentInfo
+          );
+          this.roomServiceEvents.processNotificationMentions(
+            callout,
+            room,
+            message,
+            agentInfo
+          );
+        }
       default:
       // ignore for now, later likely to be an exception
     }

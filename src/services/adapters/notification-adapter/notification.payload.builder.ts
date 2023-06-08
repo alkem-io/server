@@ -697,7 +697,7 @@ export class NotificationPayloadBuilder {
       ConfigurationTypes.HOSTING
     )?.endpoint_cluster;
 
-    if (commentType === RoomType.DISCUSSION) {
+    if (commentType === RoomType.CALLOUT) {
       const community =
         await this.communityResolverService.getCommunityFromCalloutOrFail(
           originEntityId

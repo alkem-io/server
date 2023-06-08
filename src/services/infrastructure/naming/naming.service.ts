@@ -23,6 +23,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
+import { ICallout } from '@domain/collaboration/callout';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -306,16 +307,32 @@ export class NamingService {
     return community.policy;
   }
 
-  async getPostForRoom(postID: string): Promise<IAspect> {
+  async getPostForRoom(commentsID: string): Promise<IAspect> {
     const result = await this.entityManager.findOne(Aspect, {
       where: {
-        comments: { id: postID },
+        comments: { id: commentsID },
       },
       relations: ['profile'],
     });
     if (!result) {
       throw new EntityNotFoundException(
-        `Unable to identify Post for Room: : ${postID}`,
+        `Unable to identify Post for Room: : ${commentsID}`,
+        LogContext.COLLABORATION
+      );
+    }
+    return result;
+  }
+
+  async getCalloutForRoom(commentsID: string): Promise<ICallout> {
+    const result = await this.entityManager.findOne(Callout, {
+      where: {
+        comments: { id: commentsID },
+      },
+      relations: ['profile'],
+    });
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to identify Callout for Room: : ${commentsID}`,
         LogContext.COLLABORATION
       );
     }
@@ -338,17 +355,17 @@ export class NamingService {
     return result;
   }
 
-  async getDiscussionForRoom(discussionID: string): Promise<IDiscussion> {
+  async getDiscussionForRoom(commentsID: string): Promise<IDiscussion> {
     // check if this is a comment related to an calendar
     const result = await this.entityManager.findOne(Discussion, {
       where: {
-        comments: { id: discussionID },
+        comments: { id: commentsID },
       },
       relations: ['profile', 'comments'],
     });
     if (!result) {
       throw new EntityNotFoundException(
-        `Unable to identify Discussion for Room: : ${discussionID}`,
+        `Unable to identify Discussion for Room: : ${commentsID}`,
         LogContext.COLLABORATION
       );
     }
