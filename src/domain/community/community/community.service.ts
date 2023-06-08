@@ -754,7 +754,7 @@ export class CommunityService {
       relations: ['applications', 'parentCommunity'],
     });
 
-    await this.validateUserAbleToApplyInvite(user, agent, community);
+    await this.validateUserAbleToApply(user, agent, community);
 
     const hubID = community.hubID;
     if (!hubID)
@@ -785,7 +785,7 @@ export class CommunityService {
       }
     );
 
-    await this.validateUserAbleToApplyInvite(user, agent, community);
+    await this.validateUserAbleToInvite(user, agent, community);
 
     const invitation = await this.invitationService.createInvitation(
       invitationData
@@ -796,7 +796,7 @@ export class CommunityService {
     return invitation;
   }
 
-  private async validateUserAbleToApplyInvite(
+  private async validateUserAbleToApply(
     user: IUser,
     agent: IAgent,
     community: ICommunity
@@ -815,6 +815,39 @@ export class CommunityService {
       if (!isApplicationFinalized) {
         throw new InvalidStateTransitionException(
           `An application (ID: ${existingApplication.id}) already exists for user ${existingApplication.user?.email} on Community: ${community.displayName} that is not finalized.`,
+          LogContext.COMMUNITY
+        );
+      }
+    }
+
+    // Check if the user is already a member; if so do not allow an application
+    const isExistingMember = await this.isMember(agent, community);
+    if (isExistingMember)
+      throw new InvalidStateTransitionException(
+        `User ${user.nameID} is already a member of the Community: ${community.displayName}.`,
+        LogContext.COMMUNITY
+      );
+  }
+
+  private async validateUserAbleToInvite(
+    user: IUser,
+    agent: IAgent,
+    community: ICommunity
+  ) {
+    // Check presence / status of existing applications
+    const existingInvitations =
+      await this.invitationService.findExistingInvitations(
+        user.id,
+        community.id
+      );
+    for (const existingInvitation of existingInvitations) {
+      const isInvitationFinalized =
+        await this.invitationService.isFinalizedInvitation(
+          existingInvitation.id
+        );
+      if (!isInvitationFinalized) {
+        throw new InvalidStateTransitionException(
+          `An invitation (ID: ${existingInvitation.id}) already exists for user ${existingInvitation.invitedUser} on Community: ${community.displayName} that is not finalized.`,
           LogContext.COMMUNITY
         );
       }
