@@ -8,11 +8,10 @@ import { CalendarEventResolverMutations } from './event.resolver.mutations';
 import { CalendarEventService } from './event.service';
 import { CalendarEventResolverFields } from './event.resolver.fields';
 import { CalendarEventAuthorizationService } from './event.service.authorization';
-import { CalendarEventResolverSubscriptions } from './event.resolver.subscriptions';
 import { UserModule } from '@domain/community/user/user.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
-import { RoomModule } from '@domain/communication/room2/room.module';
+import { RoomModule } from '@domain/communication/room/room.module';
 
 @Module({
   imports: [
@@ -30,7 +29,6 @@ import { RoomModule } from '@domain/communication/room2/room.module';
     CalendarEventService,
     CalendarEventAuthorizationService,
     CalendarEventResolverFields,
-    CalendarEventResolverSubscriptions,
   ],
   exports: [CalendarEventService, CalendarEventAuthorizationService],
 })

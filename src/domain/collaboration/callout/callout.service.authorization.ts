@@ -27,7 +27,7 @@ import {
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { PostTemplateAuthorizationService } from '@domain/template/post-template/post.template.service.authorization';
 import { WhiteboardTemplateAuthorizationService } from '@domain/template/whiteboard-template/whiteboard.template.service.authorization';
-import { RoomAuthorizationService } from '@domain/communication/room2/room.service.authorization';
+import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 @Injectable()
 export class CalloutAuthorizationService {
   constructor(
@@ -90,14 +90,20 @@ export class CalloutAuthorizationService {
       );
     }
 
-    callout.comments = await this.calloutService.getCommentsFromCallout(
-      callout.id
-    );
+    callout.comments = await this.calloutService.getComments(callout.id);
     if (callout.comments) {
       callout.comments =
         await this.roomAuthorizationService.applyAuthorizationPolicy(
           callout.comments,
           callout.authorization
+        );
+      callout.comments.authorization =
+        this.roomAuthorizationService.allowContributorsToCreateMessages(
+          callout.comments.authorization
+        );
+      callout.comments.authorization =
+        this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
+          callout.comments.authorization
         );
     }
 

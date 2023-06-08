@@ -1,5 +1,5 @@
 import { IMessage } from '@domain/communication/message/message.interface';
-import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
+import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('DirectRoom')

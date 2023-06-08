@@ -1,11 +1,6 @@
-export const SUBSCRIPTION_DISCUSSION_MESSAGE =
-  'alkemio-subscriptions-discussion-message';
+export const SUBSCRIPTION_ROOM_MESSAGE = 'alkemio-subscriptions-room-message';
 export const SUBSCRIPTION_DISCUSSION_UPDATED =
   'alkemio-subscriptions-discussion-updated';
-export const SUBSCRIPTION_UPDATE_MESSAGE =
-  'alkemio-subscriptions-update-message';
-export const SUBSCRIPTION_ASPECT_COMMENT =
-  'alkemio-subscriptions-aspect-comment';
 export const SUBSCRIPTION_CANVAS_CONTENT =
   'alkemio-subscriptions-canvas-content';
 export const SUBSCRIPTION_CALLOUT_ASPECT_CREATED =

@@ -15,7 +15,7 @@ import { CalendarEventService } from './event.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CREDENTIAL_RULE_CALENDAR_EVENT_CREATED_BY } from '@common/constants/authorization/credential.rule.constants';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { RoomAuthorizationService } from '@domain/communication/room2/room.service.authorization';
+import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 
 @Injectable()
 export class CalendarEventAuthorizationService {
@@ -52,6 +52,14 @@ export class CalendarEventAuthorizationService {
         await this.roomAuthorizationService.applyAuthorizationPolicy(
           calendarEvent.comments,
           calendarEvent.authorization
+        );
+      calendarEvent.comments.authorization =
+        this.roomAuthorizationService.allowContributorsToCreateMessages(
+          calendarEvent.comments.authorization
+        );
+      calendarEvent.comments.authorization =
+        this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
+          calendarEvent.comments.authorization
         );
     }
 

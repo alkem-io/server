@@ -20,7 +20,7 @@ import {
   CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD,
 } from '@common/constants';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { RoomAuthorizationService } from '@domain/communication/room2/room.service.authorization';
+import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 
 @Injectable()
 export class AspectAuthorizationService {
@@ -52,6 +52,15 @@ export class AspectAuthorizationService {
         await this.roomAuthorizationService.applyAuthorizationPolicy(
           aspect.comments,
           aspect.authorization
+        );
+
+      aspect.comments.authorization =
+        this.roomAuthorizationService.allowContributorsToCreateMessages(
+          aspect.comments.authorization
+        );
+      aspect.comments.authorization =
+        this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
+          aspect.comments.authorization
         );
     }
 

@@ -14,7 +14,7 @@ import { ICalendarEvent } from './event.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
-import { RoomService } from '@domain/communication/room2/room.service';
+import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 
 @Injectable()

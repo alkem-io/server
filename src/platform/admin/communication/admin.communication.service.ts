@@ -6,7 +6,6 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { CommunicationAdminMembershipResult } from './dto/admin.communication.dto.membership.result';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
-import { IRoomable } from '@domain/communication/room/roomable.interface';
 import { CommunicationAdminRoomMembershipResult } from './dto/admin.communication.dto.room.result';
 import { IUser } from '@domain/community/user/user.interface';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
@@ -15,12 +14,15 @@ import { CommunicationAdminRoomResult } from './dto/admin.communication.dto.orph
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
 import { ValidationException } from '@common/exceptions';
 import { CommunityRole } from '@common/enums/community.role';
+import { DiscussionService } from '@domain/communication/discussion/discussion.service';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @Injectable()
 export class AdminCommunicationService {
   constructor(
     private communicationAdapter: CommunicationAdapter,
     private communicationService: CommunicationService,
+    private discussionService: DiscussionService,
     private communityService: CommunityService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -59,8 +61,9 @@ export class AdminCommunicationService {
       communication
     );
     for (const discussion of discussions) {
+      const comments = await this.discussionService.getComments(discussion.id);
       const discussionResult = await this.createCommunicationAdminRoomResult(
-        discussion,
+        comments,
         communityMembers
       );
       result.rooms.push(discussionResult);
@@ -69,16 +72,16 @@ export class AdminCommunicationService {
   }
 
   private async createCommunicationAdminRoomResult(
-    roomable: IRoomable,
+    room: IRoom,
     communityMembers: IUser[]
   ): Promise<CommunicationAdminRoomMembershipResult> {
     const result = new CommunicationAdminRoomMembershipResult(
-      roomable.id,
-      roomable.displayName
+      room.id,
+      room.displayName
     );
-    result.roomID = roomable.communicationRoomID;
+    result.roomID = room.externalRoomID;
     result.members = await this.communicationAdapter.getRoomMembers(
-      roomable.communicationRoomID
+      room.externalRoomID
     );
     // check which ones are missing
     for (const communityMember of communityMembers) {
@@ -102,7 +105,7 @@ export class AdminCommunicationService {
 
     // Obtain the access mode for the room
     result.joinRule = await this.communicationAdapter.getRoomJoinRule(
-      roomable.communicationRoomID
+      room.externalRoomID
     );
     return result;
   }

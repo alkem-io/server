@@ -47,9 +47,7 @@ import {
 import { ApplicationEventInput } from '@domain/community/application/dto/application.dto.event';
 import { CanvasCheckoutEventInput } from '@domain/common/canvas-checkout/dto/canvas.checkout.dto.event';
 import { OrganizationVerificationEventInput } from '@domain/community/organization-verification/dto/organization.verification.dto.event';
-import { RoomSendMessageInput } from '@domain/communication/room2/dto/room.dto.send.message';
-import { DiscussionSendMessageInput } from '@domain/communication/discussion/dto/discussion.dto.send.message';
-import { UpdatesSendMessageInput } from '@domain/communication/updates/dto/updates.dto.send.message';
+import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { UpdateAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.update';
 import { UpdateCanvasDirectInput } from '@domain/common/canvas/dto/canvas.dto.update.direct';
 import { UpdateDiscussionInput } from '@domain/communication/discussion/dto/discussion.dto.update';
@@ -81,8 +79,6 @@ export class BaseHandler extends AbstractHandler {
       CanvasCheckoutEventInput,
       ChallengeEventInput,
       RoomSendMessageInput,
-      DiscussionSendMessageInput,
-      UpdatesSendMessageInput,
       OpportunityEventInput,
       OrganizationVerificationEventInput,
       ProjectEventInput,

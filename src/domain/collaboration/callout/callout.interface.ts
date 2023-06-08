@@ -7,7 +7,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
-import { IRoom } from '@domain/communication/room2/room.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @ObjectType('Callout')
 export abstract class ICallout extends INameable {
@@ -56,10 +56,6 @@ export abstract class ICallout extends INameable {
   })
   whiteboardTemplate?: IWhiteboardTemplate;
 
-  @Field(() => IRoom, {
-    nullable: true,
-    description: 'The comments object for this Callout.',
-  })
   comments?: IRoom;
 
   @Field(() => Number, {

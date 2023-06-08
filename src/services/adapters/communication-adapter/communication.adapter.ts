@@ -2,7 +2,6 @@ import { firstValueFrom, TimeoutError, Observable } from 'rxjs';
 import { catchError, retry, timeout } from 'rxjs/operators';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
-import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communication.room.direct.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -63,6 +62,7 @@ import { CommunicationTimedOutException } from '@common/exceptions/communication
 import { CommunicationSendMessageReplyInput } from './dto/communications.dto.message.reply';
 import { CommunicationAddRectionToMessageInput } from './dto/communication.dto.add.reaction';
 import { CommunicationRemoveRectionToMessageInput } from './dto/communication.dto.remove.reaction';
+import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 
 @Injectable()
 export class CommunicationAdapter {

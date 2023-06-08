@@ -3,8 +3,7 @@ import {
   CommunicationMessagePayload,
 } from '@src/common/interfaces';
 
-export interface CalendarEventMessageReceivedPayload
-  extends BaseSubscriptionPayload {
-  calendarEventID: string;
+export interface RoomMessageReceivedPayload extends BaseSubscriptionPayload {
+  roomID: string;
   message: CommunicationMessagePayload;
 }
