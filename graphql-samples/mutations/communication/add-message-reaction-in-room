@@ -9,6 +9,6 @@ mutation addReactionToMessageInRoom($messageData: RoomAddReactionToMessageInput!
   "messageData": {
     "roomID": "uuid",
     "messageID": "$3a15g7wrN4CYx8GyNSJ9d1rg5NQaXREdajwRMOrYN-I",
-    "text": "👏"
+    "emoji": "👏"
   }
 }

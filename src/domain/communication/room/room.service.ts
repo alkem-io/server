@@ -234,8 +234,8 @@ export class RoomService {
   async addReactionToMessage(
     room: IRoom,
     communicationUserID: string,
-    messageData: RoomAddReactionToMessageInput
-  ): Promise<IMessage> {
+    reactionData: RoomAddReactionToMessageInput
+  ): Promise<IMessageReaction> {
     // Ensure the user is a member of room and group so can send
     await this.communicationAdapter.addUserToRoom(
       room.externalRoomID,
@@ -246,15 +246,15 @@ export class RoomService {
       await this.identityResolverService.getUserIDByCommunicationsID(
         communicationUserID
       );
-    const message = await this.communicationAdapter.addReaction({
+    const reaction = await this.communicationAdapter.addReaction({
       senderCommunicationsID: communicationUserID,
-      text: messageData.text,
+      emoji: reactionData.emoji,
       roomID: room.externalRoomID,
-      messageID: messageData.messageID,
+      messageID: reactionData.messageID,
     });
 
-    message.sender = alkemioUserID;
-    return message;
+    reaction.sender = alkemioUserID;
+    return reaction;
   }
 
   async removeReactionToMessage(

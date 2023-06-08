@@ -1,7 +1,7 @@
 export class CommunicationAddRectionToMessageInput {
   senderCommunicationsID!: string;
 
-  text!: string;
+  emoji!: string;
 
   roomID!: string;
 

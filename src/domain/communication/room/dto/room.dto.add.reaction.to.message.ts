@@ -21,5 +21,5 @@ export class RoomAddReactionToMessageInput {
     nullable: false,
     description: 'The reaction to the message.',
   })
-  text!: string;
+  emoji!: string;
 }

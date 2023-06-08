@@ -14,7 +14,7 @@ export class IMessageReaction {
     nullable: false,
     description: 'The reaction Emoji',
   })
-  text!: string;
+  emoji!: string;
 
   sender!: string;
 

@@ -18,6 +18,7 @@ import {
   RoomSendMessageReplyPayload,
   RoomAddMessageReactionPayload,
   RoomRemoveMessageReactionPayload,
+  RoomAddMessageReactionResponsePayload,
 } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsPayload } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsResponsePayload } from '@alkemio/matrix-adapter-lib';
@@ -65,6 +66,7 @@ import { CommunicationSendMessageReplyInput } from './dto/communications.dto.mes
 import { CommunicationAddRectionToMessageInput } from './dto/communication.dto.add.reaction';
 import { CommunicationRemoveRectionToMessageInput } from './dto/communication.dto.remove.reaction';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
+import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
 
 @Injectable()
 export class CommunicationAdapter {
@@ -165,12 +167,12 @@ export class CommunicationAdapter {
 
   async addReaction(
     sendMessageData: CommunicationAddRectionToMessageInput
-  ): Promise<IMessage> {
+  ): Promise<IMessageReaction> {
     const eventType = MatrixAdapterEventType.ROOM_ADD_REACTION_TO_MESSAGE;
     const inputPayload: RoomAddMessageReactionPayload = {
       triggeredBy: '',
       roomID: sendMessageData.roomID,
-      text: sendMessageData.text,
+      emoji: sendMessageData.emoji,
       senderID: sendMessageData.senderCommunicationsID,
       messageID: sendMessageData.messageID,
     };
@@ -182,17 +184,16 @@ export class CommunicationAdapter {
     );
 
     try {
-      const responseData = await firstValueFrom<RoomSendMessageResponsePayload>(
-        response
-      );
+      const responseData =
+        await firstValueFrom<RoomAddMessageReactionResponsePayload>(response);
       this.logResponsePayload(eventType, responseData, eventID);
 
-      const message = responseData.message;
+      const reaction = responseData.reaction;
       this.logger.verbose?.(
         `...reaction added to message in room: ${sendMessageData.roomID}`,
         LogContext.COMMUNICATION
       );
-      return message;
+      return reaction;
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(

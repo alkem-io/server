@@ -24,6 +24,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
+import { IMessageReaction } from '../message.reaction/message.reaction.interface';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -261,30 +262,30 @@ export class RoomResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IMessage, {
+  @Mutation(() => IMessageReaction, {
     description: 'Add a reaction to a message from the specified Room.',
   })
   @Profiling.api
   async addReactionToMessageInRoom(
-    @Args('messageData') messageData: RoomAddReactionToMessageInput,
+    @Args('reactionData') reactionData: RoomAddReactionToMessageInput,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IMessage> {
-    const room = await this.roomService.getRoomOrFail(messageData.roomID);
+  ): Promise<IMessageReaction> {
+    const room = await this.roomService.getRoomOrFail(reactionData.roomID);
 
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       room.authorization,
       AuthorizationPrivilege.CREATE_MESSAGE_REACTION,
-      `room add reaction to message: ${room.id}`
+      `room add reaction to message in room: ${room.id}`
     );
 
-    const message = await this.roomService.addReactionToMessage(
+    const reaction = await this.roomService.addReactionToMessage(
       room,
       agentInfo.communicationID,
-      messageData
+      reactionData
     );
 
-    return message;
+    return reaction;
   }
 
   @UseGuards(GraphqlGuard)
