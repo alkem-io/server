@@ -129,7 +129,7 @@ export class CalloutService {
     if (calloutData.type === CalloutType.COMMENTS) {
       savedCallout.comments = await this.roomService.createRoom(
         `callout-comments-${savedCallout.nameID}`,
-        RoomType.POST
+        RoomType.CALLOUT
       );
       return await this.calloutRepository.save(savedCallout);
     }
