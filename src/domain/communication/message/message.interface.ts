@@ -33,4 +33,10 @@ export class IMessage {
     description: 'Reactions on this message',
   })
   reactions?: IMessageReaction[];
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'The message being replied to',
+  })
+  threadID?: string;
 }
