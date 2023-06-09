@@ -1,6 +1,6 @@
 import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
-import { MessageReactionResolverFields } from './message.resolver.fields';
+import { MessageReactionResolverFields } from './message.reaction.resolver.fields';
 
 @Module({
   imports: [UserModule],
