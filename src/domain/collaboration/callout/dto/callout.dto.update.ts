@@ -20,13 +20,13 @@ export class UpdateCalloutInput extends UpdateNameableInput {
 
   @Field(() => UpdateCalloutPostTemplateInput, {
     nullable: true,
-    description: 'CardTemplate data for this Callout.',
+    description: 'PostTemplate data for this Callout.',
   })
   postTemplate?: UpdateCalloutPostTemplateInput;
 
   @Field(() => UpdateCalloutWhiteboardTemplateInput, {
     nullable: true,
-    description: 'CanvasTemplate data for this Callout.',
+    description: 'WhiteboardTemplate data for this Callout.',
   })
   whiteboardTemplate?: UpdateCalloutWhiteboardTemplateInput;
 

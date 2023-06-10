@@ -6,8 +6,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CalloutService } from './callout.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
-import { AspectAuthorizationService } from '@domain/collaboration/aspect/aspect.service.authorization';
+import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
+import { PostAuthorizationService } from '@domain/collaboration/post/post.service.authorization';
 import {
   LogContext,
   AuthorizationPrivilege,
@@ -33,8 +33,8 @@ export class CalloutAuthorizationService {
   constructor(
     private calloutService: CalloutService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private canvasAuthorizationService: CanvasAuthorizationService,
-    private aspectAuthorizationService: AspectAuthorizationService,
+    private whiteboardAuthorizationService: WhiteboardAuthorizationService,
+    private postAuthorizationService: PostAuthorizationService,
     private postTemplateAuthorizationService: PostTemplateAuthorizationService,
     private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
@@ -61,12 +61,12 @@ export class CalloutAuthorizationService {
 
     callout.authorization = this.appendCredentialRules(callout);
 
-    callout.aspects = await this.calloutService.getAspectsFromCallout(callout, [
-      'aspects.comments',
+    callout.posts = await this.calloutService.getPostsFromCallout(callout, [
+      'posts.comments',
     ]);
-    for (const aspect of callout.aspects) {
-      await this.aspectAuthorizationService.applyAuthorizationPolicy(
-        aspect,
+    for (const post of callout.posts) {
+      await this.postAuthorizationService.applyAuthorizationPolicy(
+        post,
         callout.authorization,
         communityPolicy
       );
@@ -79,13 +79,13 @@ export class CalloutAuthorizationService {
         callout.authorization
       );
 
-    callout.canvases = await this.calloutService.getCanvasesFromCallout(
+    callout.whiteboards = await this.calloutService.getWhiteboardesFromCallout(
       callout,
-      ['canvases.checkout']
+      ['whiteboards.checkout']
     );
-    for (const canvas of callout.canvases) {
-      await this.canvasAuthorizationService.applyAuthorizationPolicy(
-        canvas,
+    for (const whiteboard of callout.whiteboards) {
+      await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
+        whiteboard,
         callout.authorization
       );
     }

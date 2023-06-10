@@ -3,7 +3,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CommunityType } from '@common/enums/community.type';
 
-const emptyCanvasValue =
+const emptyWhiteboardValue =
   '{\n  "type": "excalidraw",\n  "version": 2,\n  "source": "",\n  "elements": [],\n  "appState": {\n    "gridSize": 20,\n    "viewBackgroundColor": "#ffffff"\n  },\n  "files": {}\n}';
 
 export const collaborationDefaults: any = {
@@ -65,7 +65,7 @@ export const collaborationDefaults: any = {
       profile: {
         displayName: 'Contribute',
         description:
-          'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own card, or comment on aspects added by others.',
+          'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
       },
       nameID: `${CalloutType.CARD}-default`,
       visibility: CalloutVisibility.PUBLISHED,
@@ -88,17 +88,17 @@ export const collaborationDefaults: any = {
       profile: {
         displayName: 'Collaborate visually',
         description:
-          'Collaborate visually using Canvases. Create a new Canvas from a template, or explore Canvases already created.',
+          'Collaborate visually using Whiteboardes. Create a new Whiteboard from a template, or explore Whiteboardes already created.',
       },
       nameID: `${CalloutType.CANVAS}-default`,
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 10,
       whiteboardTemplate: {
-        value: emptyCanvasValue,
+        value: emptyWhiteboardValue,
         profile: {
-          displayName: 'blank canvas',
-          description: 'A blank canvas to be worked further.',
+          displayName: 'blank whiteboard',
+          description: 'A blank whiteboard to be worked further.',
         },
       },
       group: 'KNOWLEDGE',

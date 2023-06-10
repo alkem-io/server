@@ -1,9 +1,9 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
-import { NotificationInputAspectCreated } from './dto/notification.dto.input.aspect.created';
+import { NotificationInputPostCreated } from './dto/notification.dto.input.post.created';
 import { NotificationInputCalloutPublished } from './dto/notification.dto.input.callout.published';
-import { NotificationInputAspectComment } from './dto/notification.dto.input.aspect.comment';
+import { NotificationInputPostComment } from './dto/notification.dto.input.post.comment';
 import { NotificationPayloadBuilder } from './notification.payload.builder';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { ClientProxy } from '@nestjs/microservices';
@@ -16,7 +16,7 @@ import { NotificationInputCommunityNewMember } from './dto/notification.dto.inpu
 import { NotificationInputCommunityContextReview } from './dto/notification.dto.input.community.context.review';
 import { NotificationInputUserRegistered } from './dto/notification.dto.input.user.registered';
 import { NotificationInputUserRemoved } from './dto/notification.dto.input.user.removed';
-import { NotificationInputCanvasCreated } from './dto/notification.dto.input.canvas.created';
+import { NotificationInputWhiteboardCreated } from './dto/notification.dto.input.whiteboard.created';
 import { NotificationInputDiscussionComment } from './dto/notification.dto.input.discussion.comment';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { stringifyWithoutAuthorization } from '@common/utils';
@@ -53,29 +53,29 @@ export class NotificationAdapter {
     this.notificationsClient.emit<number>(event, payload);
   }
 
-  public async aspectCreated(
-    eventData: NotificationInputAspectCreated
+  public async postCreated(
+    eventData: NotificationInputPostCreated
   ): Promise<void> {
     const event = NotificationEventType.COLLABORATION_CARD_CREATED;
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildCardCreatedPayload(
-        eventData.aspect.id
+      await this.notificationPayloadBuilder.buildPostCreatedPayload(
+        eventData.post.id
       );
 
     this.notificationsClient.emit<number>(event, payload);
   }
 
-  public async canvasCreated(
-    eventData: NotificationInputCanvasCreated
+  public async whiteboardCreated(
+    eventData: NotificationInputWhiteboardCreated
   ): Promise<void> {
     const event = NotificationEventType.COLLABORATION_CANVAS_CREATED;
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildCanvasCreatedPayload(
-        eventData.canvas.id
+      await this.notificationPayloadBuilder.buildWhiteboardCreatedPayload(
+        eventData.whiteboard.id
       );
 
     this.notificationsClient.emit<number>(event, payload);
@@ -96,15 +96,15 @@ export class NotificationAdapter {
     this.notificationsClient.emit(event, payload);
   }
 
-  public async aspectComment(
-    eventData: NotificationInputAspectComment
+  public async postComment(
+    eventData: NotificationInputPostComment
   ): Promise<void> {
     const event = NotificationEventType.COLLABORATION_CARD_COMMENT;
     this.logEventTriggered(eventData, event);
     // build notification payload
     const payload =
-      await this.notificationPayloadBuilder.buildCommentCreatedOnCardPayload(
-        eventData.aspect,
+      await this.notificationPayloadBuilder.buildCommentCreatedOnPostPayload(
+        eventData.post,
         eventData.room.id,
         eventData.commentSent
       );

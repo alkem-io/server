@@ -1,6 +1,6 @@
 subscription {
-  canvasContentUpdated {
-    canvasID,
+  whiteboardContentUpdated {
+    whiteboardID,
     value
   }
 }

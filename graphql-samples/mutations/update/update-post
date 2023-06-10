@@ -1,0 +1,19 @@
+mutation updatePost($postData: UpdatePostInput!) {
+  updatePost(postData: $postData) {
+    id
+    profile {
+      displayName
+    }
+  }
+}
+
+Variables:
+{
+  "postData": {
+    "ID": "uuid",
+    "profileData": {
+        "displayName": "some name"
+    },
+    "description": "text"
+  }
+}

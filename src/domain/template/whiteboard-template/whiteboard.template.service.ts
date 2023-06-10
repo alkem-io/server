@@ -9,7 +9,7 @@ import { IWhiteboardTemplate } from './whiteboard.template.interface';
 import { TemplateBaseService } from '../template-base/template.base.service';
 import { CreateWhiteboardTemplateInput } from './dto/whiteboard.template.dto.create';
 import { UpdateWhiteboardTemplateInput } from './dto/whiteboard.template.dto.update';
-import { CanvasService } from '@domain/common/canvas/canvas.service';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 
 @Injectable()
 export class WhiteboardTemplateService {
@@ -19,7 +19,7 @@ export class WhiteboardTemplateService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private templateBaseService: TemplateBaseService,
-    private whiteboardService: CanvasService
+    private whiteboardService: WhiteboardService
   ) {}
 
   async createWhiteboardTemplate(
@@ -36,7 +36,7 @@ export class WhiteboardTemplateService {
 
     // Allow specifying a Whiteboard to use as a base if no value is set
     if (!whiteboardTemplateData.value && whiteboardTemplateData.whiteboardID) {
-      const whiteboard = await this.whiteboardService.getCanvasOrFail(
+      const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
         whiteboardTemplateData.whiteboardID
       );
       result.value = whiteboard.value;

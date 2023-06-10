@@ -892,23 +892,27 @@ export class HubService {
     membersTopic.id = `members-${hub.id}`;
     metrics.push(membersTopic);
 
-    // Aspects
-    const aspectsCount = await this.baseChallengeService.getAspectsCount(
+    // Posts
+    const postsCount = await this.baseChallengeService.getPostsCount(
       hub,
       this.hubRepository
     );
-    const aspectsTopic = new NVP('aspects', aspectsCount.toString());
-    aspectsTopic.id = `aspects-${hub.id}`;
-    metrics.push(aspectsTopic);
+    const postsTopic = new NVP('posts', postsCount.toString());
+    postsTopic.id = `posts-${hub.id}`;
+    metrics.push(postsTopic);
 
-    // Canvases
-    const canvasesCount = await this.baseChallengeService.getCanvasesCount(
-      hub,
-      this.hubRepository
+    // Whiteboardes
+    const whiteboardsCount =
+      await this.baseChallengeService.getWhiteboardesCount(
+        hub,
+        this.hubRepository
+      );
+    const whiteboardsTopic = new NVP(
+      'whiteboards',
+      whiteboardsCount.toString()
     );
-    const canvasesTopic = new NVP('canvases', canvasesCount.toString());
-    canvasesTopic.id = `canvases-${hub.id}`;
-    metrics.push(canvasesTopic);
+    whiteboardsTopic.id = `whiteboards-${hub.id}`;
+    metrics.push(whiteboardsTopic);
 
     return metrics;
   }

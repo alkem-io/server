@@ -36,7 +36,7 @@ export class RoomResolverMutations {
     private roomServiceEvents: RoomServiceEvents
   ) {}
 
-  // todo should be removed to serve per entity e.g. send aspect comment
+  // todo should be removed to serve per entity e.g. send post comment
   @UseGuards(GraphqlGuard)
   @Mutation(() => IMessage, {
     description:

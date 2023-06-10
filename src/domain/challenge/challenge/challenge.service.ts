@@ -698,23 +698,27 @@ export class ChallengeService {
     challengesTopic.id = `challenges-${challenge.id}`;
     metrics.push(challengesTopic);
 
-    // Aspects
-    const aspectsCount = await this.baseChallengeService.getAspectsCount(
+    // Posts
+    const postsCount = await this.baseChallengeService.getPostsCount(
       challenge,
       this.challengeRepository
     );
-    const aspectsTopic = new NVP('aspects', aspectsCount.toString());
-    aspectsTopic.id = `aspects-${challenge.id}`;
-    metrics.push(aspectsTopic);
+    const postsTopic = new NVP('posts', postsCount.toString());
+    postsTopic.id = `posts-${challenge.id}`;
+    metrics.push(postsTopic);
 
-    // Canvases
-    const canvasesCount = await this.baseChallengeService.getCanvasesCount(
-      challenge,
-      this.challengeRepository
+    // Whiteboardes
+    const whiteboardsCount =
+      await this.baseChallengeService.getWhiteboardesCount(
+        challenge,
+        this.challengeRepository
+      );
+    const whiteboardsTopic = new NVP(
+      'whiteboards',
+      whiteboardsCount.toString()
     );
-    const canvasesTopic = new NVP('canvases', canvasesCount.toString());
-    canvasesTopic.id = `canvases-${challenge.id}`;
-    metrics.push(canvasesTopic);
+    whiteboardsTopic.id = `whiteboards-${challenge.id}`;
+    metrics.push(whiteboardsTopic);
 
     return metrics;
   }

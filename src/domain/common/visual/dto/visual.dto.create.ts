@@ -9,5 +9,5 @@ export class CreateVisualInput {
 
   maxHeight!: number;
 
-  aspectRatio!: number;
+  postRatio!: number;
 }

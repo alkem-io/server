@@ -19,14 +19,14 @@ export abstract class ISearchResults {
   @Field(() => [ISearchResult], {
     nullable: false,
     description:
-      'The search results for contributions (Cards, Whiteboards etc).',
+      'The search results for contributions (Posts, Whiteboards etc).',
   })
   contributionResults!: ISearchResult[];
 
   @Field(() => Number, {
     nullable: false,
     description:
-      'The total number of search results for contributions (Cards, Whiteboards etc).',
+      'The total number of search results for contributions (Posts, Whiteboards etc).',
   })
   contributionResultsCount!: number;
 

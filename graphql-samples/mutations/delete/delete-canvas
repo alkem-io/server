@@ -1,5 +1,5 @@
-mutation deleteCanvas($deleteData: DeleteCanvasInput!) {
-  deleteCanvas(deleteData: $deleteData) {
+mutation deleteWhiteboard($deleteData: DeleteWhiteboardInput!) {
+  deleteWhiteboard(deleteData: $deleteData) {
     id
   }
 }
@@ -7,6 +7,6 @@ mutation deleteCanvas($deleteData: DeleteCanvasInput!) {
 Variables:
 {
   "deleteData": {
-    "canvasID": "uuid"
+    "whiteboardID": "uuid"
   }
 }

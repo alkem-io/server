@@ -13,8 +13,8 @@ import { SUBSCRIPTION_CALLOUT_ASPECT_CREATED } from '@common/constants/providers
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { UUID } from '@domain/common/scalars';
 import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
-import { CalloutAspectCreatedArgs } from './dto/callout.args.aspect.created';
-import { CalloutAspectCreated, CalloutAspectCreatedPayload } from './dto';
+import { CalloutPostCreatedArgs } from './dto/callout.args.post.created';
+import { CalloutPostCreated, CalloutPostCreatedPayload } from './dto';
 import { UnableToSubscribeException } from '@src/common/exceptions';
 import { CalloutType } from '@common/enums/callout.type';
 
@@ -24,36 +24,36 @@ export class CalloutResolverSubscriptions {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
-    private subscriptionAspectCreated: PubSubEngine,
+    private subscriptionPostCreated: PubSubEngine,
     private calloutService: CalloutService,
     private authorizationService: AuthorizationService
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @TypedSubscription<CalloutAspectCreatedPayload, CalloutAspectCreatedArgs>(
-    () => CalloutAspectCreated,
+  @TypedSubscription<CalloutPostCreatedPayload, CalloutPostCreatedArgs>(
+    () => CalloutPostCreated,
     {
       description:
         'Receive new Update messages on Communities the currently authenticated User is a member of.',
       resolve(this: CalloutResolverSubscriptions, payload, args, context) {
         const agentInfo = context.req.user;
-        const logMsgPrefix = `[User (${agentInfo.email}) Callout Aspects] - `;
+        const logMsgPrefix = `[User (${agentInfo.email}) Callout Posts] - `;
         this.logger.verbose?.(
-          `${logMsgPrefix} sending out event for Aspects on Callout: ${payload.calloutID} `,
+          `${logMsgPrefix} sending out event for Posts on Callout: ${payload.calloutID} `,
           LogContext.SUBSCRIPTIONS
         );
 
         return {
           ...payload,
-          aspect: {
-            ...payload.aspect,
-            createdDate: new Date(payload.aspect.createdDate),
+          post: {
+            ...payload.post,
+            createdDate: new Date(payload.post.createdDate),
           },
         };
       },
       filter(this: CalloutResolverSubscriptions, payload, variables, context) {
         const agentInfo = context.req.user;
-        const logMsgPrefix = `[User (${agentInfo.email}) Callout Aspects] - `;
+        const logMsgPrefix = `[User (${agentInfo.email}) Callout Posts] - `;
         this.logger.verbose?.(
           `${logMsgPrefix} Filtering event '${payload.eventID}'`,
           LogContext.SUBSCRIPTIONS
@@ -68,7 +68,7 @@ export class CalloutResolverSubscriptions {
       },
     }
   )
-  async calloutAspectCreated(
+  async calloutPostCreated(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
       name: 'calloutID',
@@ -78,16 +78,16 @@ export class CalloutResolverSubscriptions {
     })
     calloutID: string
   ) {
-    const logMsgPrefix = `[User (${agentInfo.email}) Callout Aspects] - `;
+    const logMsgPrefix = `[User (${agentInfo.email}) Callout Posts] - `;
     this.logger.verbose?.(
-      `${logMsgPrefix} Subscribing to the following Callout Aspects: ${calloutID}`,
+      `${logMsgPrefix} Subscribing to the following Callout Posts: ${calloutID}`,
       LogContext.SUBSCRIPTIONS
     );
     // Validate
     const callout = await this.calloutService.getCalloutOrFail(calloutID);
     if (callout.type !== CalloutType.CARD) {
       throw new UnableToSubscribeException(
-        `Unable to subscribe: Callout not of type Card: ${calloutID}`,
+        `Unable to subscribe: Callout not of type Post: ${calloutID}`,
         LogContext.SUBSCRIPTIONS
       );
     }
@@ -95,10 +95,10 @@ export class CalloutResolverSubscriptions {
       agentInfo,
       callout.authorization,
       AuthorizationPrivilege.READ,
-      `subscription to new Aspects on Callout: ${callout.id}`
+      `subscription to new Posts on Callout: ${callout.id}`
     );
 
-    return this.subscriptionAspectCreated.asyncIterator(
+    return this.subscriptionPostCreated.asyncIterator(
       SubscriptionType.CALLOUT_ASPECT_CREATED
     );
   }

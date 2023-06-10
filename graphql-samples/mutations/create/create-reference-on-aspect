@@ -1,5 +1,5 @@
-mutation createReferenceOnAspect($referenceInput: CreateReferenceOnAspectInput!) {
-  createReferenceOnAspect(referenceData: $referenceInput) {
+mutation createReferenceOnPost($referenceInput: CreateReferenceOnPostInput!) {
+  createReferenceOnPost(referenceData: $referenceInput) {
     name,
     uri,
     description
@@ -9,7 +9,7 @@ mutation createReferenceOnAspect($referenceInput: CreateReferenceOnAspectInput!)
 Variables:
 {
   "referenceInput": {
-      "aspectID": "uuid",
+      "postID": "uuid",
       "name": "wow",
       "uri": "something",
       "description": "this works"

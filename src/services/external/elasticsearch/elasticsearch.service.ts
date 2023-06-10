@@ -212,7 +212,7 @@ export class ElasticsearchService {
       details
     );
   }
-  public calloutCardCreated(
+  public calloutPostCreated(
     contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
@@ -228,7 +228,7 @@ export class ElasticsearchService {
     );
   }
   // todo: callout is not available; do we need it
-  public calloutCanvasCreated(
+  public calloutWhiteboardCreated(
     contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
@@ -258,7 +258,7 @@ export class ElasticsearchService {
       details
     );
   }
-  public calloutCanvasEdited(
+  public calloutWhiteboardEdited(
     contribution: ContributionDetails,
     details: AuthorDetails
   ): void {

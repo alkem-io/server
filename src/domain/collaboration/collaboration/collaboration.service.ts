@@ -256,7 +256,7 @@ export class CollaborationService {
     const allCallouts = collaborationLoaded.callouts;
     if (!allCallouts)
       throw new EntityNotFoundException(
-        `Callout not initialised, no canvases: ${collaboration.id}`,
+        `Callout not initialised, no whiteboards: ${collaboration.id}`,
         LogContext.COLLABORATION
       );
 
@@ -404,47 +404,47 @@ export class CollaborationService {
     return loadedCollaboration.relations;
   }
 
-  public async getAspectsCount(collaboration: ICollaboration): Promise<number> {
+  public async getPostsCount(collaboration: ICollaboration): Promise<number> {
     const [result]: {
-      aspectsCount: number;
+      postsCount: number;
     }[] = await this.entityManager.connection.query(
       `
-      SELECT COUNT(*) as aspectsCount
+      SELECT COUNT(*) as postsCount
       FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
-      RIGHT JOIN \`aspect\` ON \`aspect\`.\`calloutId\` = \`callout\`.\`id\`
+      RIGHT JOIN \`post\` ON \`post\`.\`calloutId\` = \`callout\`.\`id\`
       WHERE \`collaboration\`.\`id\` = '${collaboration.id}' AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}';
       `
     );
 
-    return result.aspectsCount;
+    return result.postsCount;
   }
 
-  public async getCanvasesCount(
+  public async getWhiteboardesCount(
     collaboration: ICollaboration
   ): Promise<number> {
     const [result]: {
-      canvasesCount: number;
+      whiteboardsCount: number;
     }[] = await this.entityManager.connection.query(
       `
-      SELECT COUNT(*) as canvasesCount
+      SELECT COUNT(*) as whiteboardsCount
       FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
-      RIGHT JOIN \`canvas\` ON \`canvas\`.\`calloutId\` = \`callout\`.\`id\`
+      RIGHT JOIN \`whiteboard\` ON \`whiteboard\`.\`calloutId\` = \`callout\`.\`id\`
       WHERE \`collaboration\`.\`id\` = '${collaboration.id}'  AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}';
       `
     );
 
-    return result.canvasesCount;
+    return result.whiteboardsCount;
   }
 
   public async getRelationsCount(
     collaboration: ICollaboration
   ): Promise<number> {
-    const aspectsCount =
+    const postsCount =
       await this.relationService.getRelationsInCollaborationCount(
         collaboration.id
       );
 
-    return aspectsCount;
+    return postsCount;
   }
 
   public async getCommunityPolicy(

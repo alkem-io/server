@@ -26,8 +26,8 @@ import { UserService } from '@domain/community/user/user.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import SearchResultBuilderService from './search.result.builder.service';
-import { AspectService } from '@domain/collaboration/aspect/aspect.service';
-import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
+import { PostService } from '@domain/collaboration/post/post.service';
+import { Post } from '@domain/collaboration/post/post.entity';
 import { IHub } from '@domain/challenge/hub/hub.interface';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity';
@@ -42,7 +42,7 @@ enum SearchEntityTypes {
   HUB = 'hub',
   CHALLENGE = 'challenge',
   OPPORTUNITY = 'opportunity',
-  CARD = 'card',
+  CARD = 'post',
 }
 
 const SEARCH_ENTITIES: string[] = [
@@ -83,15 +83,15 @@ export class SearchService {
     private challengeRepository: Repository<Challenge>,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
-    @InjectRepository(Aspect)
-    private cardRepository: Repository<Aspect>,
+    @InjectRepository(Post)
+    private postRepository: Repository<Post>,
     private hubService: HubService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
     private userService: UserService,
     private organizationService: OrganizationService,
     private userGroupService: UserGroupService,
-    private cardService: AspectService,
+    private postService: PostService,
     private calloutService: CalloutService,
     private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -113,7 +113,7 @@ export class SearchService {
     const hubResults: Map<number, Match> = new Map();
     const challengeResults: Map<number, Match> = new Map();
     const opportunityResults: Map<number, Match> = new Map();
-    const cardResults: Map<number, Match> = new Map();
+    const postResults: Map<number, Match> = new Map();
 
     const filteredTerms = this.validateSearchTerms(searchData.terms);
 
@@ -123,7 +123,7 @@ export class SearchService {
       opportunityIDsFilter,
       userIDsFilter,
       organizationIDsFilter,
-      cardIDsFilter,
+      postIDsFilter,
     } = await this.getIDFilters(searchData.searchInHubFilter);
 
     // By default search all entity types
@@ -135,7 +135,7 @@ export class SearchService {
       searchHubs,
       searchChallenges,
       searchOpportunities,
-      searchCards,
+      searchPosts,
     ] = await this.searchBy(agentInfo, entityTypesFilter, hubIDsFilter);
 
     if (searchData.tagsetNames)
@@ -146,7 +146,7 @@ export class SearchService {
         userResults,
         groupResults,
         organizationResults,
-        cardResults,
+        postResults,
         userIDsFilter,
         entityTypesFilter
       );
@@ -178,21 +178,21 @@ export class SearchService {
         opportunityIDsFilter
       );
 
-    if (searchCards)
-      await this.searchCardsByTerms(
+    if (searchPosts)
+      await this.searchPostsByTerms(
         filteredTerms,
-        cardResults,
+        postResults,
         agentInfo,
-        cardIDsFilter
+        postIDsFilter
       );
     this.logger.verbose?.(
-      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organizationResults.size} organization results found; ${hubResults.size} hub results found; ${challengeResults.size} challenge results found; ${opportunityResults.size} opportunity results found; ${cardResults.size} card results found`,
+      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organizationResults.size} organization results found; ${hubResults.size} hub results found; ${challengeResults.size} challenge results found; ${opportunityResults.size} opportunity results found; ${postResults.size} post results found`,
       LogContext.API
     );
 
     const results: ISearchResults = {
       contributionResults: [],
-      contributionResultsCount: cardResults.size,
+      contributionResultsCount: postResults.size,
       contributorResults: [],
       contributorResultsCount: userResults.size + organizationResults.size,
       journeyResults: [],
@@ -219,7 +219,7 @@ export class SearchService {
     );
 
     results.contributionResults.push(
-      ...(await this.buildSearchResults(cardResults))
+      ...(await this.buildSearchResults(postResults))
     );
 
     this.processResults(results.contributionResults, RESULTS_LIMIT);
@@ -268,7 +268,7 @@ export class SearchService {
     let searchHubs = true;
     let searchChallenges = true;
     let searchOpportunities = true;
-    let searchCards = true;
+    let searchPosts = true;
 
     if (entityTypesFilter && entityTypesFilter.length > 0) {
       if (!entityTypesFilter.includes(SearchEntityTypes.USER))
@@ -284,7 +284,7 @@ export class SearchService {
       if (!entityTypesFilter.includes(SearchEntityTypes.OPPORTUNITY))
         searchOpportunities = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.CARD))
-        searchCards = false;
+        searchPosts = false;
     }
 
     if (!agentInfo.email) {
@@ -302,7 +302,7 @@ export class SearchService {
       searchHubs,
       searchChallenges,
       searchOpportunities,
-      searchCards,
+      searchPosts,
     ];
   }
 
@@ -605,57 +605,57 @@ export class SearchService {
     }
   }
 
-  async searchCardsByTerms(
+  async searchPostsByTerms(
     terms: string[],
-    cardResults: Map<number, Match>,
+    postResults: Map<number, Match>,
     agentInfo: AgentInfo,
-    cardIDsFilter: string[] | undefined
+    postIDsFilter: string[] | undefined
   ) {
-    if (cardIDsFilter && cardIDsFilter.length === 0) {
+    if (postIDsFilter && postIDsFilter.length === 0) {
       // no searching needed
       return;
     }
     for (const term of terms) {
-      const readableCardMatches: Aspect[] = [];
-      const cardQuery = this.cardRepository
-        .createQueryBuilder('aspect')
-        .leftJoinAndSelect('aspect.profile', 'profile')
-        .leftJoinAndSelect('aspect.authorization', 'authorization');
+      const readablePostMatches: Post[] = [];
+      const postQuery = this.postRepository
+        .createQueryBuilder('post')
+        .leftJoinAndSelect('post.profile', 'profile')
+        .leftJoinAndSelect('post.authorization', 'authorization');
 
       // Optionally restrict to search in just one Hub
-      if (cardIDsFilter) {
-        cardQuery.where('aspect.id IN (:cardsFilter)', {
-          cardsFilter: cardIDsFilter,
+      if (postIDsFilter) {
+        postQuery.where('post.id IN (:postsFilter)', {
+          postsFilter: postIDsFilter,
         });
       }
       // Note that brackets are needed to nest the and
-      cardQuery
+      postQuery
         .andWhere(
           new Brackets(qb => {
-            qb.where('aspect.nameID like :term')
+            qb.where('post.nameID like :term')
               .orWhere('profile.displayName like :term')
               .orWhere('profile.description like :term');
           })
         )
         .setParameters({ term: `%${term}%` });
 
-      const cardMatches = await cardQuery.getMany();
-      // Only show cards that the current user has read access to
-      for (const card of cardMatches) {
+      const postMatches = await postQuery.getMany();
+      // Only show posts that the current user has read access to
+      for (const post of postMatches) {
         if (
           this.authorizationService.isAccessGranted(
             agentInfo,
-            card.authorization,
+            post.authorization,
             AuthorizationPrivilege.READ
           )
         ) {
-          readableCardMatches.push(card);
+          readablePostMatches.push(post);
         }
       }
       // Create results for each match
       await this.buildMatchingResults(
-        readableCardMatches,
-        cardResults,
+        readablePostMatches,
+        postResults,
         term,
         SearchResultType.CARD
       );
@@ -669,11 +669,11 @@ export class SearchService {
     userResults: Map<number, Match>,
     groupResults: Map<number, Match>,
     organizationResults: Map<number, Match>,
-    cardResults: Map<number, Match>,
+    postResults: Map<number, Match>,
     usersFilter: string[] | undefined,
     entityTypesFilter?: string[]
   ) {
-    const [searchUsers, searchGroups, searchOrganizations, searchCards] =
+    const [searchUsers, searchGroups, searchOrganizations, searchPosts] =
       await this.searchBy(agentInfo, entityTypesFilter);
 
     if (searchUsers)
@@ -688,7 +688,7 @@ export class SearchService {
         tagsets,
         organizationResults
       );
-    if (searchCards) await this.searchCardsByTagsets(terms, cardResults);
+    if (searchPosts) await this.searchPostsByTagsets(terms, postResults);
   }
 
   async searchUsersByTagsets(
@@ -780,11 +780,11 @@ export class SearchService {
     }
   }
 
-  async searchCardsByTagsets(terms: string[], cardResults: Map<number, Match>) {
+  async searchPostsByTagsets(terms: string[], postResults: Map<number, Match>) {
     for (const term of terms) {
-      const cardMatches = await this.cardRepository
-        .createQueryBuilder('aspect')
-        .leftJoinAndSelect('aspect.profile', 'profile')
+      const postMatches = await this.postRepository
+        .createQueryBuilder('post')
+        .leftJoinAndSelect('post.profile', 'profile')
         .leftJoinAndSelect('profile.tagsets', 'tagset')
         .where('find_in_set(:term, tagset.tags)')
         .setParameters({ term: `${term}` })
@@ -792,8 +792,8 @@ export class SearchService {
 
       // Create results for each match
       await this.buildMatchingResults(
-        cardMatches,
-        cardResults,
+        postMatches,
+        postResults,
         term,
         SearchResultType.CARD
       );
@@ -838,7 +838,7 @@ export class SearchService {
           this.userService,
           this.organizationService,
           this.userGroupService,
-          this.cardService,
+          this.postService,
           this.calloutService,
           this.entityManager
         );
@@ -911,7 +911,7 @@ export class SearchService {
     opportunityIDsFilter: string[] | undefined;
     userIDsFilter: string[] | undefined;
     organizationIDsFilter: string[] | undefined;
-    cardIDsFilter: string[] | undefined;
+    postIDsFilter: string[] | undefined;
   }> {
     let searchInHub: IHub | undefined = undefined;
     let hubIDsFilter: string[] | undefined = undefined;
@@ -919,7 +919,7 @@ export class SearchService {
     let opportunityIDsFilter: string[] | undefined = undefined;
     let userIDsFilter: string[] | undefined = undefined;
     let organizationIDsFilter: string[] | undefined = undefined;
-    let cardIDsFilter: string[] | undefined = undefined;
+    let postIDsFilter: string[] | undefined = undefined;
     if (searchInHubID) {
       searchInHub = await this.hubService.getHubOrFail(searchInHubID, {
         relations: ['collaboration'],
@@ -934,7 +934,7 @@ export class SearchService {
       opportunityIDsFilter = opportunitiesFilter.map(opp => opp.id);
       userIDsFilter = await this.getUsersFilter(searchInHub);
       organizationIDsFilter = await this.getOrganizationsFilter(searchInHub);
-      cardIDsFilter = await this.getCardsFilter(
+      postIDsFilter = await this.getPostsFilter(
         searchInHub,
         challengesFilter,
         opportunitiesFilter
@@ -946,7 +946,7 @@ export class SearchService {
       opportunityIDsFilter,
       userIDsFilter,
       organizationIDsFilter,
-      cardIDsFilter,
+      postIDsFilter,
     };
   }
 
@@ -1024,7 +1024,7 @@ export class SearchService {
     return organizationsFilter;
   }
 
-  private async getCardsFilter(
+  private async getPostsFilter(
     hubFilter: IHub,
     challengesFilter: IChallenge[],
     opportunitiesFilter: IOpportunity[]
@@ -1038,19 +1038,19 @@ export class SearchService {
       collaborationFilter.push(c.collaboration?.id)
     );
 
-    // Get all the cards IDs in the Hub
-    const cardsFilter: string[] = [];
-    const cardQuery = this.cardRepository
-      .createQueryBuilder('card')
-      .leftJoinAndSelect('card.callout', 'callout')
+    // Get all the posts IDs in the Hub
+    const postsFilter: string[] = [];
+    const postQuery = this.postRepository
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.callout', 'callout')
       .leftJoinAndSelect('callout.collaboration', 'collaboration')
       .where('collaboration.id IN (:collaborationFilter)', {
         collaborationFilter: collaborationFilter,
       });
 
-    const cardMatches = await cardQuery.getMany();
-    cardMatches.forEach(match => cardsFilter.push(match.id));
+    const postMatches = await postQuery.getMany();
+    postMatches.forEach(match => postsFilter.push(match.id));
 
-    return cardsFilter;
+    return postsFilter;
   }
 }

@@ -8,9 +8,9 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { IPost } from '@domain/collaboration/post/post.interface';
 import { UUID_NAMEID } from '@domain/common/scalars';
-import { ICanvas } from '@domain/common/canvas/canvas.interface';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -50,17 +50,17 @@ export class CalloutResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('aspects', () => [IAspect], {
+  @ResolveField('posts', () => [IPost], {
     nullable: true,
-    description: 'The Aspects for this Callout.',
+    description: 'The Posts for this Callout.',
   })
   @Profiling.api
-  async aspects(
+  async posts(
     @Parent() callout: Callout,
     @Args({
       name: 'IDs',
       type: () => [UUID_NAMEID],
-      description: 'The IDs (either UUID or nameID) of the Aspects to return',
+      description: 'The IDs (either UUID or nameID) of the Posts to return',
       nullable: true,
     })
     ids: string[],
@@ -68,7 +68,7 @@ export class CalloutResolverFields {
       name: 'limit',
       type: () => Float,
       description:
-        'The number of Aspects to return; if omitted returns all Aspects.',
+        'The number of Posts to return; if omitted returns all Posts.',
       nullable: true,
     })
     limit: number,
@@ -76,14 +76,14 @@ export class CalloutResolverFields {
       name: 'shuffle',
       type: () => Boolean,
       description:
-        'If true and limit is specified then return the Aspects based on a random selection.',
+        'If true and limit is specified then return the Posts based on a random selection.',
       nullable: true,
     })
     shuffle: boolean
-  ): Promise<IAspect[]> {
-    return await this.calloutService.getAspectsFromCallout(
+  ): Promise<IPost[]> {
+    return await this.calloutService.getPostsFromCallout(
       callout,
-      ['aspects.comments'],
+      ['posts.comments'],
       ids,
       limit,
       shuffle
@@ -92,17 +92,17 @@ export class CalloutResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('canvases', () => [ICanvas], {
+  @ResolveField('whiteboards', () => [IWhiteboard], {
     nullable: true,
-    description: 'The Canvas entities for this Callout.',
+    description: 'The Whiteboard entities for this Callout.',
   })
   @Profiling.api
-  async canvases(
+  async whiteboards(
     @Parent() callout: Callout,
     @Args({
       name: 'IDs',
       type: () => [UUID_NAMEID],
-      description: 'The IDs of the canvases to return',
+      description: 'The IDs of the whiteboards to return',
       nullable: true,
     })
     ids: string[],
@@ -110,7 +110,7 @@ export class CalloutResolverFields {
       name: 'limit',
       type: () => Float,
       description:
-        'The number of Canvases to return; if omitted return all Canvases.',
+        'The number of Whiteboardes to return; if omitted return all Whiteboardes.',
       nullable: true,
     })
     limit: number,
@@ -118,14 +118,14 @@ export class CalloutResolverFields {
       name: 'shuffle',
       type: () => Boolean,
       description:
-        'If true and limit is specified then return the Canvases based on a random selection. Defaults to false.',
+        'If true and limit is specified then return the Whiteboardes based on a random selection. Defaults to false.',
       nullable: true,
     })
     shuffle: boolean
-  ): Promise<ICanvas[]> {
-    return await this.calloutService.getCanvasesFromCallout(
+  ): Promise<IWhiteboard[]> {
+    return await this.calloutService.getWhiteboardesFromCallout(
       callout,
-      ['canvases.checkout'],
+      ['whiteboards.checkout'],
       ids,
       limit,
       shuffle

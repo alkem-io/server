@@ -16,16 +16,16 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import {
-  CreateAspectOnCalloutInput,
+  CreatePostOnCalloutInput,
   CreateCalloutInput,
-  CreateCanvasOnCalloutInput,
+  CreateWhiteboardOnCalloutInput,
   UpdateCalloutInput,
 } from '@domain/collaboration/callout/dto/index';
-import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
-import { AspectService } from '@domain/collaboration/aspect/aspect.service';
-import { CanvasService } from '@domain/common/canvas/canvas.service';
+import { IPost } from '@domain/collaboration/post/post.interface';
+import { PostService } from '@domain/collaboration/post/post.service';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { limitAndShuffle } from '@common/utils';
-import { ICanvas } from '@domain/common/canvas/canvas.interface';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CalloutType } from '@common/enums/callout.type';
@@ -48,10 +48,10 @@ import { IRoom } from '@domain/communication/room/room.interface';
 export class CalloutService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private aspectService: AspectService,
+    private postService: PostService,
     private postTemplateService: PostTemplateService,
     private whiteboardTemplateService: WhiteboardTemplateService,
-    private canvasService: CanvasService,
+    private whiteboardService: WhiteboardService,
     private namingService: NamingService,
     private roomService: RoomService,
     private userService: UserService,
@@ -65,7 +65,7 @@ export class CalloutService {
     userID?: string
   ): Promise<ICallout> {
     if (calloutData.type == CalloutType.CARD && !calloutData.postTemplate) {
-      throw new Error('Please provide a card template');
+      throw new Error('Please provide a post template');
     }
 
     if (
@@ -86,8 +86,8 @@ export class CalloutService {
       calloutData.sortOrder = 10;
     }
 
-    // Save the card template data for creation via service
-    // Note: do NOT save the callout card template that is created through ORM creation flow,
+    // Save the post template data for creation via service
+    // Note: do NOT save the callout post template that is created through ORM creation flow,
     // as otherwise get a postTemplate created without any child entities (auth etc)
     const postTemplateData = calloutData.postTemplate;
     const whiteboardTemplateData = calloutData.whiteboardTemplate;
@@ -142,7 +142,7 @@ export class CalloutService {
         `${calloutData.whiteboard.profileData.displayName}`
       );
 
-      const canvas = await this.canvasService.createCanvas(
+      const whiteboard = await this.whiteboardService.createWhiteboard(
         {
           nameID: calloutNameID,
           value: calloutData.whiteboard.value,
@@ -151,10 +151,10 @@ export class CalloutService {
         userID
       );
       await this.profileService.addVisualOnProfile(
-        canvas.profile,
+        whiteboard.profile,
         VisualType.BANNER
       );
-      savedCallout.canvases = [canvas];
+      savedCallout.whiteboards = [whiteboard];
       await this.calloutRepository.save(savedCallout);
     }
 
@@ -279,8 +279,8 @@ export class CalloutService {
   public async deleteCallout(calloutID: string): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: [
-        'aspects',
-        'canvases',
+        'posts',
+        'whiteboards',
         'comments',
         'postTemplate',
         'whiteboardTemplate',
@@ -292,15 +292,15 @@ export class CalloutService {
       await this.profileService.deleteProfile(callout.profile.id);
     }
 
-    if (callout.canvases) {
-      for (const canvas of callout.canvases) {
-        await this.canvasService.deleteCanvas(canvas.id);
+    if (callout.whiteboards) {
+      for (const whiteboard of callout.whiteboards) {
+        await this.whiteboardService.deleteWhiteboard(whiteboard.id);
       }
     }
 
-    if (callout.aspects) {
-      for (const aspect of callout.aspects) {
-        await this.aspectService.deleteAspect({ ID: aspect.id });
+    if (callout.posts) {
+      for (const post of callout.posts) {
+        await this.postService.deletePost({ ID: post.id });
       }
     }
 
@@ -346,9 +346,11 @@ export class CalloutService {
   public async getActivityCount(callout: ICallout): Promise<number> {
     const result = 0;
     if (callout.type === CalloutType.CARD) {
-      return await this.aspectService.getCardsInCalloutCount(callout.id);
+      return await this.postService.getPostsInCalloutCount(callout.id);
     } else if (callout.type === CalloutType.CANVAS) {
-      return await this.canvasService.getCanvasesInCalloutCount(callout.id);
+      return await this.whiteboardService.getWhiteboardesInCalloutCount(
+        callout.id
+      );
     } else if (callout.type === CalloutType.LINK_COLLECTION) {
       return await this.getReferencesCountInLinkCallout(callout.id);
     } else {
@@ -369,59 +371,59 @@ export class CalloutService {
     return callout?.profile.references?.length ?? 0;
   }
 
-  private async setNameIdOnAspectData(
-    aspectData: CreateAspectOnCalloutInput,
+  private async setNameIdOnPostData(
+    postData: CreatePostOnCalloutInput,
     callout: ICallout
   ) {
-    if (aspectData.nameID && aspectData.nameID.length > 0) {
+    if (postData.nameID && postData.nameID.length > 0) {
       const nameAvailable =
-        await this.namingService.isAspectNameIdAvailableInCallout(
-          aspectData.nameID,
+        await this.namingService.isPostNameIdAvailableInCallout(
+          postData.nameID,
           callout.id
         );
       if (!nameAvailable)
         throw new ValidationException(
-          `Unable to create Aspect: the provided nameID is already taken: ${aspectData.nameID}`,
+          `Unable to create Post: the provided nameID is already taken: ${postData.nameID}`,
           LogContext.CHALLENGES
         );
     } else {
-      aspectData.nameID = this.namingService.createNameID(
-        aspectData.profileData.displayName
+      postData.nameID = this.namingService.createNameID(
+        postData.profileData.displayName
       );
     }
 
-    // Check that there isn't an aspect with the same title
-    const displayName = aspectData.profileData.displayName;
-    const existingAspect = callout.aspects?.find(
-      aspect => aspect.profile.displayName === displayName
+    // Check that there isn't an post with the same title
+    const displayName = postData.profileData.displayName;
+    const existingPost = callout.posts?.find(
+      post => post.profile.displayName === displayName
     );
-    if (existingAspect)
+    if (existingPost)
       throw new ValidationException(
-        `Already have an aspect with the provided display name: ${displayName}`,
+        `Already have an post with the provided display name: ${displayName}`,
         LogContext.COLLABORATION
       );
   }
 
-  public async createAspectOnCallout(
-    aspectData: CreateAspectOnCalloutInput,
+  public async createPostOnCallout(
+    postData: CreatePostOnCalloutInput,
     userID: string
-  ): Promise<IAspect> {
-    const calloutID = aspectData.calloutID;
+  ): Promise<IPost> {
+    const calloutID = postData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['profile', 'aspects', 'aspects.profile'],
+      relations: ['profile', 'posts', 'posts.profile'],
     });
-    if (!callout.aspects || !callout.profile)
+    if (!callout.posts || !callout.profile)
       throw new EntityNotInitializedException(
         `Callout (${calloutID}) not initialised`,
         LogContext.COLLABORATION
       );
 
-    await this.setNameIdOnAspectData(aspectData, callout);
+    await this.setNameIdOnPostData(postData, callout);
 
-    const aspect = await this.aspectService.createAspect(aspectData, userID);
-    callout.aspects.push(aspect);
+    const post = await this.postService.createPost(postData, userID);
+    callout.posts.push(post);
     await this.calloutRepository.save(callout);
-    return aspect;
+    return post;
   }
 
   public async getComments(calloutID: string): Promise<IRoom | undefined> {
@@ -431,141 +433,144 @@ export class CalloutService {
     return callout.comments;
   }
 
-  private async setNameIdOnCanvasData(
-    canvasData: CreateCanvasOnCalloutInput,
+  private async setNameIdOnWhiteboardData(
+    whiteboardData: CreateWhiteboardOnCalloutInput,
     callout: ICallout
   ) {
-    if (canvasData.nameID && canvasData.nameID.length > 0) {
+    if (whiteboardData.nameID && whiteboardData.nameID.length > 0) {
       const nameAvailable =
-        await this.namingService.isCanvasNameIdAvailableInCallout(
-          canvasData.nameID,
+        await this.namingService.isWhiteboardNameIdAvailableInCallout(
+          whiteboardData.nameID,
           callout.id
         );
       if (!nameAvailable)
         throw new ValidationException(
-          `Unable to create Canvas: the provided nameID is already taken: ${canvasData.nameID}`,
+          `Unable to create Whiteboard: the provided nameID is already taken: ${whiteboardData.nameID}`,
           LogContext.CHALLENGES
         );
     } else {
-      canvasData.nameID = this.namingService.createNameID(
-        `${canvasData.profileData.displayName}`
+      whiteboardData.nameID = this.namingService.createNameID(
+        `${whiteboardData.profileData.displayName}`
       );
     }
   }
 
-  public async createCanvasOnCallout(
-    canvasData: CreateCanvasOnCalloutInput,
+  public async createWhiteboardOnCallout(
+    whiteboardData: CreateWhiteboardOnCalloutInput,
     userID: string
-  ): Promise<ICanvas> {
-    const calloutID = canvasData.calloutID;
+  ): Promise<IWhiteboard> {
+    const calloutID = whiteboardData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['profile', 'canvases'],
+      relations: ['profile', 'whiteboards'],
     });
-    if (!callout.canvases)
+    if (!callout.whiteboards)
       throw new EntityNotInitializedException(
         `Callout (${calloutID}) not initialised`,
         LogContext.COLLABORATION
       );
 
-    if (callout.type == CalloutType.SINGLE_WHITEBOARD && callout.canvases[0]) {
+    if (
+      callout.type == CalloutType.SINGLE_WHITEBOARD &&
+      callout.whiteboards[0]
+    ) {
       throw new Error(
         'Whiteboard Callout cannot have more than one whiteboard'
       );
     }
 
-    this.setNameIdOnCanvasData(canvasData, callout);
+    this.setNameIdOnWhiteboardData(whiteboardData, callout);
 
-    const canvas = await this.canvasService.createCanvas(
+    const whiteboard = await this.whiteboardService.createWhiteboard(
       {
-        nameID: canvasData.nameID,
-        value: canvasData.value,
-        profileData: canvasData.profileData,
+        nameID: whiteboardData.nameID,
+        value: whiteboardData.value,
+        profileData: whiteboardData.profileData,
       },
       userID
     );
-    callout.canvases.push(canvas);
+    callout.whiteboards.push(whiteboard);
     await this.calloutRepository.save(callout);
-    return canvas;
+    return whiteboard;
   }
 
-  public async getCanvasesFromCallout(
+  public async getWhiteboardesFromCallout(
     callout: ICallout,
     relations: FindOptionsRelationByString = [],
-    canvasIDs?: string[],
+    whiteboardIDs?: string[],
     limit?: number,
     shuffle?: boolean
-  ): Promise<ICanvas[]> {
+  ): Promise<IWhiteboard[]> {
     const calloutLoaded = await this.getCalloutOrFail(callout.id, {
-      relations: ['canvases', ...relations],
+      relations: ['whiteboards', ...relations],
     });
-    if (!calloutLoaded.canvases)
+    if (!calloutLoaded.whiteboards)
       throw new EntityNotFoundException(
-        `Callout not initialised, no canvases: ${callout.id}`,
+        `Callout not initialised, no whiteboards: ${callout.id}`,
         LogContext.COLLABORATION
       );
 
-    if (!canvasIDs) {
+    if (!whiteboardIDs) {
       const limitAndShuffled = limitAndShuffle(
-        calloutLoaded.canvases,
+        calloutLoaded.whiteboards,
         limit,
         shuffle
       );
       return limitAndShuffled;
     }
-    const results: ICanvas[] = [];
-    for (const canvasID of canvasIDs) {
-      const canvas = calloutLoaded.canvases.find(
-        canvas => canvas.id === canvasID || canvas.nameID === canvasID
+    const results: IWhiteboard[] = [];
+    for (const whiteboardID of whiteboardIDs) {
+      const whiteboard = calloutLoaded.whiteboards.find(
+        whiteboard =>
+          whiteboard.id === whiteboardID || whiteboard.nameID === whiteboardID
       );
-      if (!canvas) continue;
-      results.push(canvas);
+      if (!whiteboard) continue;
+      results.push(whiteboard);
     }
     return results;
   }
 
-  public async getAspectsFromCallout(
+  public async getPostsFromCallout(
     callout: ICallout,
     relations: FindOptionsRelationByString = [],
-    aspectIDs?: string[],
+    postIDs?: string[],
     limit?: number,
     shuffle?: boolean
-  ): Promise<IAspect[]> {
+  ): Promise<IPost[]> {
     const loadedCallout = await this.getCalloutOrFail(callout.id, {
-      relations: ['aspects', ...relations],
+      relations: ['posts', ...relations],
     });
-    if (!loadedCallout.aspects) {
+    if (!loadedCallout.posts) {
       throw new EntityNotFoundException(
         `Context not initialised: ${callout.id}`,
         LogContext.COLLABORATION
       );
     }
-    if (!aspectIDs) {
+    if (!postIDs) {
       const limitAndShuffled = limitAndShuffle(
-        loadedCallout.aspects,
+        loadedCallout.posts,
         limit,
         shuffle
       );
-      const sortedAspects = limitAndShuffled.sort((a, b) =>
+      const sortedPosts = limitAndShuffled.sort((a, b) =>
         a.nameID.toLowerCase() > b.nameID.toLowerCase() ? 1 : -1
       );
-      return sortedAspects;
+      return sortedPosts;
     }
-    const results: IAspect[] = [];
-    for (const aspectID of aspectIDs) {
-      const aspect = loadedCallout.aspects.find(
-        aspect =>
-          aspect.id === aspectID || aspect.nameID === aspectID.toLowerCase()
+    const results: IPost[] = [];
+    for (const postID of postIDs) {
+      const post = loadedCallout.posts.find(
+        post => post.id === postID || post.nameID === postID.toLowerCase()
       );
-      if (!aspect) continue;
-      // toDo - in order to have this flow as 'exceptional' the client need to query only aspects in callouts the aspects
+      if (!post) continue;
+      // toDo - in order to have this flow as 'exceptional' the client need to query only posts in callouts the posts
       // are. Currently, with the latest set of changes, callouts can be a list and without specifying the correct one in the query,
       // errors will be thrown.
 
       // throw new EntityNotFoundException(
-      //   `Aspect with requested ID (${aspectID}) not located within current Callout: ${callout.id}`,
+      //   `Post with requested ID (${postID}) not located within current Callout: ${callout.id}`,
       //   LogContext.COLLABORATION
       // );
-      results.push(aspect);
+      results.push(post);
     }
 
     return results;

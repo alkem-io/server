@@ -30,9 +30,9 @@ export abstract class IVisual extends IAuthorizable {
   maxHeight!: number;
 
   @Field(() => Number, {
-    description: 'Aspect ratio width / height.',
+    description: 'Post ratio width / height.',
   })
-  aspectRatio!: number;
+  postRatio!: number;
 
   @Field(() => [String])
   allowedTypes!: string[];

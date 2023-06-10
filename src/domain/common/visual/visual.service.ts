@@ -122,7 +122,7 @@ export class VisualService {
         maxWidth: 1536,
         minHeight: 64,
         maxHeight: 256,
-        aspectRatio: 6,
+        postRatio: 6,
       },
       uri
     );
@@ -136,7 +136,7 @@ export class VisualService {
         maxWidth: 410,
         minHeight: 192,
         maxHeight: 256,
-        aspectRatio: 1.6,
+        postRatio: 1.6,
       },
       uri
     );
@@ -149,7 +149,7 @@ export class VisualService {
       maxWidth: this.avatarMaxImageSize,
       minHeight: this.avatarMinImageSize,
       maxHeight: this.avatarMaxImageSize,
-      aspectRatio: 1,
+      postRatio: 1,
     });
   }
 }

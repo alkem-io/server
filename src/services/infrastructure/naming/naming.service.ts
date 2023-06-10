@@ -4,8 +4,8 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project';
 import { NameID, UUID } from '@domain/common/scalars';
-import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
-import { Canvas } from '@domain/common/canvas/canvas.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { LogContext } from '@common/enums';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
@@ -14,7 +14,7 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { IPost } from '@domain/collaboration/post/post.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
 import { Collaboration } from '@domain/collaboration/collaboration';
@@ -33,10 +33,10 @@ export class NamingService {
     private challengeRepository: Repository<Challenge>,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
-    @InjectRepository(Aspect)
-    private aspectRepository: Repository<Aspect>,
-    @InjectRepository(Canvas)
-    private canvasRepository: Repository<Canvas>,
+    @InjectRepository(Post)
+    private postRepository: Repository<Post>,
+    @InjectRepository(Whiteboard)
+    private whiteboardRepository: Repository<Whiteboard>,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @InjectRepository(Project)
@@ -80,36 +80,36 @@ export class NamingService {
     return true;
   }
 
-  async isAspectNameIdAvailableInCallout(
+  async isPostNameIdAvailableInCallout(
     nameID: string,
     calloutID: string
   ): Promise<boolean> {
-    const query = this.aspectRepository
-      .createQueryBuilder('aspect')
-      .leftJoinAndSelect('aspect.callout', 'callout')
+    const query = this.postRepository
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.callout', 'callout')
       .where('callout.id = :id')
-      .andWhere('aspect.nameID= :nameID')
+      .andWhere('post.nameID= :nameID')
       .setParameters({ id: `${calloutID}`, nameID: `${nameID}` });
-    const aspectWithNameID = await query.getOne();
-    if (aspectWithNameID) {
+    const postWithNameID = await query.getOne();
+    if (postWithNameID) {
       return false;
     }
 
     return true;
   }
 
-  async isCanvasNameIdAvailableInCallout(
+  async isWhiteboardNameIdAvailableInCallout(
     nameID: string,
     calloutID: string
   ): Promise<boolean> {
-    const query = this.canvasRepository
-      .createQueryBuilder('canvas')
-      .leftJoinAndSelect('canvas.callout', 'callout')
+    const query = this.whiteboardRepository
+      .createQueryBuilder('whiteboard')
+      .leftJoinAndSelect('whiteboard.callout', 'callout')
       .where('callout.id = :id')
-      .andWhere('canvas.nameID= :nameID')
+      .andWhere('whiteboard.nameID= :nameID')
       .setParameters({ id: `${calloutID}`, nameID: `${nameID}` });
-    const canvasWithNameID = await query.getOne();
-    if (canvasWithNameID) {
+    const whiteboardWithNameID = await query.getOne();
+    if (whiteboardWithNameID) {
       return false;
     }
 
@@ -307,8 +307,8 @@ export class NamingService {
     return community.policy;
   }
 
-  async getPostForRoom(commentsID: string): Promise<IAspect> {
-    const result = await this.entityManager.findOne(Aspect, {
+  async getPostForRoom(commentsID: string): Promise<IPost> {
+    const result = await this.entityManager.findOne(Post, {
       where: {
         comments: { id: commentsID },
       },
