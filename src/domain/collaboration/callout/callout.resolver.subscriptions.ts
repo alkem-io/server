@@ -9,7 +9,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { SUBSCRIPTION_CALLOUT_ASPECT_CREATED } from '@common/constants/providers';
+import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants/providers';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { UUID } from '@domain/common/scalars';
 import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
@@ -23,7 +23,7 @@ export class CalloutResolverSubscriptions {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
+    @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private subscriptionPostCreated: PubSubEngine,
     private calloutService: CalloutService,
     private authorizationService: AuthorizationService
@@ -85,7 +85,7 @@ export class CalloutResolverSubscriptions {
     );
     // Validate
     const callout = await this.calloutService.getCalloutOrFail(calloutID);
-    if (callout.type !== CalloutType.CARD) {
+    if (callout.type !== CalloutType.POST) {
       throw new UnableToSubscribeException(
         `Unable to subscribe: Callout not of type Post: ${calloutID}`,
         LogContext.SUBSCRIPTIONS

@@ -61,13 +61,13 @@ export const collaborationDefaults: any = {
       group: 'HOME_2',
     },
     {
-      type: CalloutType.CARD,
+      type: CalloutType.POST,
       profile: {
         displayName: 'Contribute',
         description:
           'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
       },
-      nameID: `${CalloutType.CARD}-default`,
+      nameID: `${CalloutType.POST}-default`,
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 5,
@@ -84,13 +84,13 @@ export const collaborationDefaults: any = {
       group: 'KNOWLEDGE',
     },
     {
-      type: CalloutType.CANVAS,
+      type: CalloutType.WHITEBOARD,
       profile: {
         displayName: 'Collaborate visually',
         description:
           'Collaborate visually using Whiteboardes. Create a new Whiteboard from a template, or explore Whiteboardes already created.',
       },
-      nameID: `${CalloutType.CANVAS}-default`,
+      nameID: `${CalloutType.WHITEBOARD}-default`,
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 10,

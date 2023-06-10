@@ -16,11 +16,11 @@ interface ActivityLogBuilderFunction<TypedActivityLogEntry> {
 export interface IActivityLogBuilder {
   [ActivityEventType.MEMBER_JOINED]: ActivityLogBuilderFunction<IActivityLogEntryMemberJoined>;
   [ActivityEventType.CALLOUT_PUBLISHED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPublished>;
-  [ActivityEventType.CARD_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostCreated>;
-  [ActivityEventType.CANVAS_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutWhiteboardCreated>;
+  [ActivityEventType.POST_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostCreated>;
+  [ActivityEventType.WHITEBOARD_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutWhiteboardCreated>;
   [ActivityEventType.CHALLENGE_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryChallengeCreated>;
   [ActivityEventType.OPPORTUNITY_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryOpportunityCreated>;
-  [ActivityEventType.CARD_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostComment>;
+  [ActivityEventType.POST_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostComment>;
   [ActivityEventType.DISCUSSION_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutDiscussionComment>;
   [ActivityEventType.UPDATE_SENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutDiscussionComment>;
 }

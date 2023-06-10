@@ -30,7 +30,7 @@ export class PostMoveResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       post.authorization,
-      AuthorizationPrivilege.MOVE_CARD,
+      AuthorizationPrivilege.MOVE_POST,
       `move post: ${post.nameID}`
     );
     return await this.postMoveService.movePostToCallout(

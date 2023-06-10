@@ -657,7 +657,7 @@ export class SearchService {
         readablePostMatches,
         postResults,
         term,
-        SearchResultType.CARD
+        SearchResultType.POST
       );
     }
   }
@@ -795,7 +795,7 @@ export class SearchService {
         postMatches,
         postResults,
         term,
-        SearchResultType.CARD
+        SearchResultType.POST
       );
     }
   }

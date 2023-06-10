@@ -42,7 +42,7 @@ export class PostMoveService {
       );
     }
 
-    if (targetCallout.type !== CalloutType.CARD) {
+    if (targetCallout.type !== CalloutType.POST) {
       throw new NotSupportedException(
         'A Post can be moved to a callout of type CARD only.',
         LogContext.COLLABORATION

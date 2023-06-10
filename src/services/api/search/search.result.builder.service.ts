@@ -194,7 +194,7 @@ export default class SearchResultBuilderService
     return { challenge, opportunity, callout, hub };
   }
 
-  async [SearchResultType.CARD](rawSearchResult: ISearchResult) {
+  async [SearchResultType.POST](rawSearchResult: ISearchResult) {
     const post = await this.postService.getPostOrFail(
       rawSearchResult.result.id
     );

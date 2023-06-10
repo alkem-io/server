@@ -130,7 +130,7 @@ export class ActivityAdapter {
   public async postCreated(
     eventData: ActivityInputPostCreated
   ): Promise<boolean> {
-    const eventType = ActivityEventType.CARD_CREATED;
+    const eventType = ActivityEventType.POST_CREATED;
     this.logEventTriggered(eventData, eventType);
 
     const post = eventData.post;
@@ -153,7 +153,7 @@ export class ActivityAdapter {
   public async postComment(
     eventData: ActivityInputPostComment
   ): Promise<boolean> {
-    const eventType = ActivityEventType.CARD_COMMENT;
+    const eventType = ActivityEventType.POST_COMMENT;
     this.logEventTriggered(eventData, eventType);
 
     const postID = eventData.post.id;
@@ -177,7 +177,7 @@ export class ActivityAdapter {
   public async whiteboardCreated(
     eventData: ActivityInputWhiteboardCreated
   ): Promise<boolean> {
-    const eventType = ActivityEventType.CANVAS_CREATED;
+    const eventType = ActivityEventType.WHITEBOARD_CREATED;
     this.logEventTriggered(eventData, eventType);
 
     const whiteboard = eventData.whiteboard;

@@ -11,10 +11,10 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_CANVAS_CREATED_BY,
-  CREDENTIAL_RULE_CANVAS_LOCKED_BY,
-  POLICY_RULE_CANVAS_UPDATE,
-  POLICY_RULE_CANVAS_CONTRIBUTE,
+  CREDENTIAL_RULE_WHITEBOARD_CREATED_BY,
+  CREDENTIAL_RULE_WHITEBOARD_LOCKED_BY,
+  POLICY_RULE_WHITEBOARD_UPDATE,
+  POLICY_RULE_WHITEBOARD_CONTRIBUTE,
 } from '@common/constants';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 
@@ -85,7 +85,7 @@ export class WhiteboardAuthorizationService {
               resourceID: whiteboard.createdBy,
             },
           ],
-          CREDENTIAL_RULE_CANVAS_CREATED_BY
+          CREDENTIAL_RULE_WHITEBOARD_CREATED_BY
         );
       newRules.push(manageWhiteboardCreatedByPolicy);
     }
@@ -113,7 +113,7 @@ export class WhiteboardAuthorizationService {
             resourceID: checkout.lockedBy,
           },
         ],
-        CREDENTIAL_RULE_CANVAS_LOCKED_BY
+        CREDENTIAL_RULE_WHITEBOARD_LOCKED_BY
       );
 
       newRules.push(lockedBy);
@@ -134,16 +134,16 @@ export class WhiteboardAuthorizationService {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.UPDATE_CANVAS],
+      [AuthorizationPrivilege.UPDATE_WHITEBOARD],
       AuthorizationPrivilege.UPDATE,
-      POLICY_RULE_CANVAS_UPDATE
+      POLICY_RULE_WHITEBOARD_UPDATE
     );
     privilegeRules.push(createPrivilege);
 
     const contributePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.UPDATE_CANVAS],
+      [AuthorizationPrivilege.UPDATE_WHITEBOARD],
       AuthorizationPrivilege.CONTRIBUTE,
-      POLICY_RULE_CANVAS_CONTRIBUTE
+      POLICY_RULE_WHITEBOARD_CONTRIBUTE
     );
     privilegeRules.push(contributePrivilege);
 

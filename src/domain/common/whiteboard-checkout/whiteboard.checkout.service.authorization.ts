@@ -5,7 +5,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IWhiteboardCheckout } from './whiteboard.checkout.interface';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CREDENTIAL_RULE_CANVAS_CHECKOUT_LOCKED_BY } from '@common/constants/authorization/credential.rule.constants';
+import { CREDENTIAL_RULE_WHITEBOARD_CHECKOUT_LOCKED_BY } from '@common/constants/authorization/credential.rule.constants';
 
 @Injectable()
 export class WhiteboardCheckoutAuthorizationService {
@@ -40,7 +40,7 @@ export class WhiteboardCheckoutAuthorizationService {
             resourceID: checkout.lockedBy,
           },
         ],
-        CREDENTIAL_RULE_CANVAS_CHECKOUT_LOCKED_BY
+        CREDENTIAL_RULE_WHITEBOARD_CHECKOUT_LOCKED_BY
       );
 
       newRules.push(lockedBy);

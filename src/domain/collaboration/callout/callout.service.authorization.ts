@@ -211,10 +211,10 @@ export class CalloutAuthorizationService {
     calloutType: CalloutType
   ): AuthorizationPrivilege | undefined {
     switch (calloutType) {
-      case CalloutType.CANVAS:
-        return AuthorizationPrivilege.CREATE_CANVAS;
-      case CalloutType.CARD:
-        return AuthorizationPrivilege.CREATE_ASPECT;
+      case CalloutType.WHITEBOARD:
+        return AuthorizationPrivilege.CREATE_WHITEBOARD;
+      case CalloutType.POST:
+        return AuthorizationPrivilege.CREATE_POST;
       case CalloutType.COMMENTS:
         return undefined;
     }

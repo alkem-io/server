@@ -15,7 +15,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { WhiteboardContentUpdated } from '@domain/common/whiteboard/dto/whiteboard.dto.event.content.updated';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_CANVAS_CONTENT } from '@common/constants/providers';
+import { SUBSCRIPTION_WHITEBOARD_CONTENT } from '@common/constants/providers';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
 import { getRandomId } from '@src/common/utils';
@@ -35,7 +35,7 @@ export class WhiteboardResolverMutations {
     private whiteboardCheckoutAuthorizationService: WhiteboardCheckoutAuthorizationService,
     private whiteboardCheckoutLifecycleOptionsProvider: WhiteboardCheckoutLifecycleOptionsProvider,
     private communityResolverService: CommunityResolverService,
-    @Inject(SUBSCRIPTION_CANVAS_CONTENT)
+    @Inject(SUBSCRIPTION_WHITEBOARD_CONTENT)
     private readonly subscriptionWhiteboardContent: PubSubEngine,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -83,7 +83,7 @@ export class WhiteboardResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       whiteboard.authorization,
-      AuthorizationPrivilege.UPDATE_CANVAS,
+      AuthorizationPrivilege.UPDATE_WHITEBOARD,
       `update Whiteboard: ${whiteboard.nameID}`
     );
 
@@ -108,7 +108,7 @@ export class WhiteboardResolverMutations {
       LogContext.SUBSCRIPTIONS
     );
     this.subscriptionWhiteboardContent.publish(
-      SubscriptionType.CANVAS_CONTENT_UPDATED,
+      SubscriptionType.WHITEBOARD_CONTENT_UPDATED,
       subscriptionPayload
     );
 

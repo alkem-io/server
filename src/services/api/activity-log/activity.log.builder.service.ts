@@ -26,11 +26,11 @@ interface ActivityLogBuilderFunction<TypedActivityLogEntry> {
 export interface IActivityLogBuilder {
   [ActivityEventType.MEMBER_JOINED]: ActivityLogBuilderFunction<IActivityLogEntryMemberJoined>;
   [ActivityEventType.CALLOUT_PUBLISHED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPublished>;
-  [ActivityEventType.CARD_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostCreated>;
-  [ActivityEventType.CANVAS_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutWhiteboardCreated>;
+  [ActivityEventType.POST_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostCreated>;
+  [ActivityEventType.WHITEBOARD_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutWhiteboardCreated>;
   [ActivityEventType.CHALLENGE_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryChallengeCreated>;
   [ActivityEventType.OPPORTUNITY_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryOpportunityCreated>;
-  [ActivityEventType.CARD_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostComment>;
+  [ActivityEventType.POST_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostComment>;
   [ActivityEventType.DISCUSSION_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutDiscussionComment>;
   [ActivityEventType.UPDATE_SENT]: ActivityLogBuilderFunction<IActivityLogEntryUpdateSent>;
 }
@@ -75,7 +75,7 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     return activityCalloutPublished;
   }
 
-  async [ActivityEventType.CARD_CREATED](rawActivity: IActivity) {
+  async [ActivityEventType.POST_CREATED](rawActivity: IActivity) {
     const calloutPostCreated = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
     );
@@ -90,7 +90,7 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     return activityCalloutPostCreated;
   }
 
-  async [ActivityEventType.CANVAS_CREATED](rawActivity: IActivity) {
+  async [ActivityEventType.WHITEBOARD_CREATED](rawActivity: IActivity) {
     const calloutWhiteboardCreated = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
     );
@@ -128,7 +128,7 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     return activityOpportunityCreated;
   }
 
-  async [ActivityEventType.CARD_COMMENT](rawActivity: IActivity) {
+  async [ActivityEventType.POST_COMMENT](rawActivity: IActivity) {
     const calloutPostComment = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
     );

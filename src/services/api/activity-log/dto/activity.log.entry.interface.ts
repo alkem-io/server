@@ -20,15 +20,15 @@ import { IActivityLogEntryUpdateSent } from './activity.log.dto.entry.update.sen
     switch (type) {
       case ActivityEventType.CALLOUT_PUBLISHED:
         return IActivityLogEntryCalloutPublished;
-      case ActivityEventType.CARD_CREATED:
+      case ActivityEventType.POST_CREATED:
         return IActivityLogEntryCalloutPostCreated;
-      case ActivityEventType.CANVAS_CREATED:
+      case ActivityEventType.WHITEBOARD_CREATED:
         return IActivityLogEntryCalloutWhiteboardCreated;
       case ActivityEventType.CHALLENGE_CREATED:
         return IActivityLogEntryChallengeCreated;
       case ActivityEventType.OPPORTUNITY_CREATED:
         return IActivityLogEntryOpportunityCreated;
-      case ActivityEventType.CARD_COMMENT:
+      case ActivityEventType.POST_COMMENT:
         return IActivityLogEntryCalloutPostComment;
       case ActivityEventType.DISCUSSION_COMMENT:
         return IActivityLogEntryCalloutDiscussionComment;

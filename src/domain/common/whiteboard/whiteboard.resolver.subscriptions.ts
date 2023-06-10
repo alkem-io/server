@@ -8,7 +8,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { SUBSCRIPTION_CANVAS_CONTENT } from '@common/constants/providers';
+import { SUBSCRIPTION_WHITEBOARD_CONTENT } from '@common/constants/providers';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { LogContext } from '@common/enums/logging.context';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -20,7 +20,7 @@ export class WhiteboardResolverSubscriptions {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(SUBSCRIPTION_CANVAS_CONTENT)
+    @Inject(SUBSCRIPTION_WHITEBOARD_CONTENT)
     private subscriptionWhiteboardContent: PubSubEngine,
     private whiteboardService: WhiteboardService,
     private authorizationService: AuthorizationService
@@ -115,7 +115,7 @@ export class WhiteboardResolverSubscriptions {
     }
 
     return this.subscriptionWhiteboardContent.asyncIterator(
-      SubscriptionType.CANVAS_CONTENT_UPDATED
+      SubscriptionType.WHITEBOARD_CONTENT_UPDATED
     );
   }
 }

@@ -19,5 +19,5 @@ export interface ISearchResultBuilder {
   [SearchResultType.USER]: SearchResultBuilderFunction<ISearchResultUser>;
   [SearchResultType.ORGANIZATION]: SearchResultBuilderFunction<ISearchResultOrganization>;
   [SearchResultType.USERGROUP]: SearchResultBuilderFunction<ISearchResultUserGroup>;
-  [SearchResultType.CARD]: SearchResultBuilderFunction<ISearchResultPost>;
+  [SearchResultType.POST]: SearchResultBuilderFunction<ISearchResultPost>;
 }

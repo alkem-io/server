@@ -18,7 +18,7 @@ import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteb
 import { PostAuthorizationService } from '@domain/collaboration/post/post.service.authorization';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
-import { SUBSCRIPTION_CALLOUT_ASPECT_CREATED } from '@common/constants';
+import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { ICallout } from './callout.interface';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
@@ -49,7 +49,7 @@ export class CalloutResolverMutations {
     private namingService: NamingService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private postAuthorizationService: PostAuthorizationService,
-    @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
+    @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private postCreatedSubscription: PubSubEngine
   ) {}
 
@@ -184,7 +184,7 @@ export class CalloutResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
-      AuthorizationPrivilege.CREATE_ASPECT,
+      AuthorizationPrivilege.CREATE_POST,
       `create post on callout: ${callout.id}`
     );
 
@@ -266,7 +266,7 @@ export class CalloutResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
-      AuthorizationPrivilege.CREATE_CANVAS,
+      AuthorizationPrivilege.CREATE_WHITEBOARD,
       `create whiteboard on callout: ${callout.id}`
     );
 

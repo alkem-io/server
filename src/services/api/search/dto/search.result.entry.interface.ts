@@ -26,7 +26,7 @@ import { ISearchResultUserGroup } from './search.result.dto.entry.user.group';
         return ISearchResultUser;
       case SearchResultType.ORGANIZATION:
         return ISearchResultOrganization;
-      case SearchResultType.CARD:
+      case SearchResultType.POST:
         return ISearchResultPost;
       case SearchResultType.USERGROUP:
         return ISearchResultUserGroup;

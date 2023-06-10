@@ -1,7 +1,7 @@
 export enum SubscriptionType {
   COMMUNICATION_ROOM_MESSAGE_RECEIVED = 'communicationRoomMessageReceived',
   COMMUNICATION_DISCUSSION_UPDATED = 'communicationDiscussionUpdated',
-  CANVAS_CONTENT_UPDATED = 'canvasContentUpdated',
+  WHITEBOARD_CONTENT_UPDATED = 'whiteboardContentUpdated',
   PROFILE_VERIFIED_CREDENTIAL = 'profileVerifiedCredential',
   CALLOUT_ASPECT_CREATED = 'calloutAspectCreated',
   OPPORTUNITY_CREATED = 'opportunityCreated',

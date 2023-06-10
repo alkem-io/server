@@ -122,7 +122,7 @@ export class PostAuthorizationService {
     });
     const adminsMovePostRule =
       this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.MOVE_CARD],
+        [AuthorizationPrivilege.MOVE_POST],
         credentials,
         CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD
       );

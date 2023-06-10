@@ -25,7 +25,7 @@ export class Visual extends AuthorizableEntity implements IVisual {
   maxHeight!: number;
 
   @Column({ type: 'decimal', precision: 2, scale: 1 })
-  postRatio!: number;
+  aspectRatio!: number;
 
   @Column('simple-array')
   allowedTypes: string[];
@@ -47,7 +47,7 @@ export class Visual extends AuthorizableEntity implements IVisual {
     this.maxHeight = 0;
     this.minWidth = 0;
     this.maxWidth = 0;
-    this.postRatio = 1;
+    this.aspectRatio = 1;
   }
 
   private createDefaultAllowedTypes(): string[] {

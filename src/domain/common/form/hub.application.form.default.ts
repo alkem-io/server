@@ -40,9 +40,9 @@ export const collaborationDefaults: any = {
       sortOrder: 3,
     },
     {
-      type: CalloutType.CARD,
+      type: CalloutType.POST,
       displayName: 'Contribute',
-      nameID: `${CalloutType.CARD}-default`,
+      nameID: `${CalloutType.POST}-default`,
       description:
         'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
       visibility: CalloutVisibility.PUBLISHED,
@@ -60,9 +60,9 @@ export const collaborationDefaults: any = {
       },
     },
     {
-      type: CalloutType.CANVAS,
+      type: CalloutType.WHITEBOARD,
       displayName: 'Collaborate visually',
-      nameID: `${CalloutType.CANVAS}-default`,
+      nameID: `${CalloutType.WHITEBOARD}-default`,
       description:
         'Collaborate visually using Whiteboardes. Create a new Whiteboard from a template, or explore Whiteboardes already created.',
       visibility: CalloutVisibility.PUBLISHED,

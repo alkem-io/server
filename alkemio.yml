@@ -345,8 +345,8 @@ notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true
 
 collaboration:
-  canvases:
-    enabled: ${CANVASES_ENABLED}:true
+  whiteboards:
+    enabled: ${WHITEBOARDS_ENABLED}:true
 
 ## Configuration of the legal / usability aspects of the platform
 platform:

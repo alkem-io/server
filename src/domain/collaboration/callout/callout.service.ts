@@ -64,12 +64,12 @@ export class CalloutService {
     calloutData: CreateCalloutInput,
     userID?: string
   ): Promise<ICallout> {
-    if (calloutData.type == CalloutType.CARD && !calloutData.postTemplate) {
+    if (calloutData.type == CalloutType.POST && !calloutData.postTemplate) {
       throw new Error('Please provide a post template');
     }
 
     if (
-      calloutData.type == CalloutType.CANVAS &&
+      calloutData.type == CalloutType.WHITEBOARD &&
       !calloutData.whiteboardTemplate
     ) {
       throw new Error('Please provide a whiteboard template');
@@ -108,12 +108,12 @@ export class CalloutService {
       tags: calloutData.tags || [],
     });
 
-    if (calloutData.type == CalloutType.CARD && postTemplateData) {
+    if (calloutData.type == CalloutType.POST && postTemplateData) {
       callout.postTemplate = await this.postTemplateService.createPostTemplate(
         postTemplateData
       );
     }
-    if (calloutData.type == CalloutType.CANVAS && whiteboardTemplateData) {
+    if (calloutData.type == CalloutType.WHITEBOARD && whiteboardTemplateData) {
       callout.whiteboardTemplate =
         await this.whiteboardTemplateService.createWhiteboardTemplate(
           whiteboardTemplateData
@@ -242,7 +242,7 @@ export class CalloutService {
       callout.sortOrder = calloutUpdateData.sortOrder;
 
     if (
-      callout.type == CalloutType.CARD &&
+      callout.type == CalloutType.POST &&
       callout.postTemplate &&
       calloutUpdateData.postTemplate
     ) {
@@ -253,7 +253,7 @@ export class CalloutService {
     }
 
     if (
-      callout.type == CalloutType.CANVAS &&
+      callout.type == CalloutType.WHITEBOARD &&
       callout.whiteboardTemplate &&
       calloutUpdateData.whiteboardTemplate
     ) {
@@ -345,9 +345,9 @@ export class CalloutService {
 
   public async getActivityCount(callout: ICallout): Promise<number> {
     const result = 0;
-    if (callout.type === CalloutType.CARD) {
+    if (callout.type === CalloutType.POST) {
       return await this.postService.getPostsInCalloutCount(callout.id);
-    } else if (callout.type === CalloutType.CANVAS) {
+    } else if (callout.type === CalloutType.WHITEBOARD) {
       return await this.whiteboardService.getWhiteboardesInCalloutCount(
         callout.id
       );

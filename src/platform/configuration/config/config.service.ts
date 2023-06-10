@@ -78,9 +78,9 @@ export class KonfigService {
               ?.enabled,
           },
           {
-            name: 'canvases',
+            name: 'whiteboards',
             enabled: this.configService.get(ConfigurationTypes.COLLABORATION)
-              ?.canvases?.enabled,
+              ?.whiteboards?.enabled,
           },
           {
             name: 'landing-page',
