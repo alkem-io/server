@@ -151,12 +151,17 @@ export class postWhiteboardRename1686376509726 implements MigrationInterface {
       'ALTER TABLE whiteboard_checkout RENAME TO canvas_checkout'
     );
 
-    // TODO: update activity table entries
-    // Set the type properly
-    const activities: { id: string }[] = await queryRunner.query(
-      `SELECT id FROM activity`
+    // Update existing activity entries to set the type properly
+    const activities: { id: string; type: string }[] = await queryRunner.query(
+      `SELECT id, type FROM activity`
     );
     for (const activity of activities) {
+      const newType = activity.type
+        .replace('canvas', 'whiteboard')
+        .replace('card', 'post');
+      await queryRunner.query(
+        `UPDATE activity SET type='${newType}' WHERE id='${activity.id}'`
+      );
     }
 
     await queryRunner.query(
