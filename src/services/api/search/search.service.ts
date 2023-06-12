@@ -42,7 +42,7 @@ enum SearchEntityTypes {
   HUB = 'hub',
   CHALLENGE = 'challenge',
   OPPORTUNITY = 'opportunity',
-  CARD = 'post',
+  POST = 'post',
 }
 
 const SEARCH_ENTITIES: string[] = [
@@ -52,7 +52,7 @@ const SEARCH_ENTITIES: string[] = [
   SearchEntityTypes.HUB,
   SearchEntityTypes.CHALLENGE,
   SearchEntityTypes.OPPORTUNITY,
-  SearchEntityTypes.CARD,
+  SearchEntityTypes.POST,
 ];
 
 const SEARCH_TERM_LIMIT = 10;
@@ -283,7 +283,7 @@ export class SearchService {
         searchChallenges = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.OPPORTUNITY))
         searchOpportunities = false;
-      if (!entityTypesFilter.includes(SearchEntityTypes.CARD))
+      if (!entityTypesFilter.includes(SearchEntityTypes.POST))
         searchPosts = false;
     }
 

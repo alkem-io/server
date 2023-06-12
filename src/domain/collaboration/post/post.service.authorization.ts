@@ -16,8 +16,8 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_ASPECT_CREATED_BY,
-  CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD,
+  CREDENTIAL_RULE_POST_CREATED_BY,
+  CREDENTIAL_RULE_POST_ADMINS_MOVE,
 } from '@common/constants';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
@@ -105,7 +105,7 @@ export class PostAuthorizationService {
             resourceID: post.createdBy,
           },
         ],
-        CREDENTIAL_RULE_ASPECT_CREATED_BY
+        CREDENTIAL_RULE_POST_CREATED_BY
       );
     newRules.push(manageCreatedPostPolicy);
 
@@ -124,7 +124,7 @@ export class PostAuthorizationService {
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.MOVE_POST],
         credentials,
-        CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD
+        CREDENTIAL_RULE_POST_ADMINS_MOVE
       );
     adminsMovePostRule.cascade = false;
     newRules.push(adminsMovePostRule);

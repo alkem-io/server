@@ -212,7 +212,7 @@ export class CalloutResolverMutations {
       post,
     };
     await this.postCreatedSubscription.publish(
-      SubscriptionType.CALLOUT_ASPECT_CREATED,
+      SubscriptionType.CALLOUT_POST_CREATED,
       postCreatedEvent
     );
 

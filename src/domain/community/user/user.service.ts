@@ -234,13 +234,10 @@ export class UserService {
     defaults.set(UserPreferenceType.NOTIFICATION_APPLICATION_RECEIVED, 'true');
     defaults.set(UserPreferenceType.NOTIFICATION_APPLICATION_SUBMITTED, 'true');
 
-    defaults.set(UserPreferenceType.NOTIFICATION_CANVAS_CREATED, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_ASPECT_CREATED, 'true');
-    defaults.set(UserPreferenceType.NOTIFICATION_ASPECT_CREATED_ADMIN, 'true');
-    defaults.set(
-      UserPreferenceType.NOTIFICATION_ASPECT_COMMENT_CREATED,
-      'true'
-    );
+    defaults.set(UserPreferenceType.NOTIFICATION_WHITEBOARD_CREATED, 'true');
+    defaults.set(UserPreferenceType.NOTIFICATION_POST_CREATED, 'true');
+    defaults.set(UserPreferenceType.NOTIFICATION_POST_CREATED_ADMIN, 'true');
+    defaults.set(UserPreferenceType.NOTIFICATION_POST_COMMENT_CREATED, 'true');
 
     defaults.set(
       UserPreferenceType.NOTIFICATION_COMMUNITY_COLLABORATION_INTEREST_USER,

@@ -99,7 +99,7 @@ export class CalloutResolverSubscriptions {
     );
 
     return this.subscriptionPostCreated.asyncIterator(
-      SubscriptionType.CALLOUT_ASPECT_CREATED
+      SubscriptionType.CALLOUT_POST_CREATED
     );
   }
 }
