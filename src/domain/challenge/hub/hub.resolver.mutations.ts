@@ -156,7 +156,7 @@ export class HubResolverMutations {
     );
     this.preferenceService.validatePreferenceTypeOrFail(
       preference,
-      PreferenceDefinitionSet.HUB
+      PreferenceDefinitionSet.SPACE
     );
 
     await this.authorizationService.grantAccessOrFail(

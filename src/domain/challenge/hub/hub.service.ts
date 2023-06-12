@@ -129,7 +129,7 @@ export class HubService {
         );
     }
     hub.preferenceSet = await this.preferenceSetService.createPreferenceSet(
-      PreferenceDefinitionSet.HUB,
+      PreferenceDefinitionSet.SPACE,
       this.createPreferenceDefaults()
     );
 

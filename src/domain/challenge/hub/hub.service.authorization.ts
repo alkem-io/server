@@ -11,7 +11,7 @@ import { EntityNotInitializedException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IHub } from './hub.interface';
 import { Hub } from './hub.entity';
-import { HubPreferenceType } from '@common/enums/hub.preference.type';
+import { SpacePreferenceType } from '@common/enums/space.preference.type';
 import { IOrganization } from '@domain/community/organization';
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
@@ -139,7 +139,7 @@ export class HubAuthorizationService {
     // Anonymouse Read access
     const anonReadAccess = this.preferenceSetService.getPreferenceValue(
       preferenceSet,
-      HubPreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
+      SpacePreferenceType.AUTHORIZATION_ANONYMOUS_READ_ACCESS
     );
     this.communityPolicyService.setFlag(
       policy,
@@ -151,7 +151,7 @@ export class HubAuthorizationService {
     const allowAnyRegisteredUserToApply =
       this.preferenceSetService.getPreferenceValue(
         preferenceSet,
-        HubPreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE
+        SpacePreferenceType.MEMBERSHIP_APPLICATIONS_FROM_ANYONE
       );
 
     this.communityPolicyService.setFlag(
@@ -164,7 +164,7 @@ export class HubAuthorizationService {
     const allowAnyRegisteredUserToJoin =
       this.preferenceSetService.getPreferenceValue(
         preferenceSet,
-        HubPreferenceType.MEMBERSHIP_JOIN_HUB_FROM_ANYONE
+        SpacePreferenceType.MEMBERSHIP_JOIN_SPACE_FROM_ANYONE
       );
     this.communityPolicyService.setFlag(
       policy,
@@ -176,7 +176,7 @@ export class HubAuthorizationService {
     const allowHostOrganizationMemberToJoin =
       this.preferenceSetService.getPreferenceValue(
         preferenceSet,
-        HubPreferenceType.MEMBERSHIP_JOIN_HUB_FROM_HOST_ORGANIZATION_MEMBERS
+        SpacePreferenceType.MEMBERSHIP_JOIN_SPACE_FROM_HOST_ORGANIZATION_MEMBERS
       );
     this.communityPolicyService.setFlag(
       policy,
@@ -188,7 +188,7 @@ export class HubAuthorizationService {
     const allowMembersToCreateChallengesPref =
       this.preferenceSetService.getPreferenceValue(
         preferenceSet,
-        HubPreferenceType.ALLOW_MEMBERS_TO_CREATE_CHALLENGES
+        SpacePreferenceType.ALLOW_MEMBERS_TO_CREATE_CHALLENGES
       );
     this.communityPolicyService.setFlag(
       policy,
@@ -200,7 +200,7 @@ export class HubAuthorizationService {
     const allowMembersToCreateCalloutsPref =
       this.preferenceSetService.getPreferenceValue(
         preferenceSet,
-        HubPreferenceType.ALLOW_MEMBERS_TO_CREATE_CALLOUTS
+        SpacePreferenceType.ALLOW_MEMBERS_TO_CREATE_CALLOUTS
       );
     // Set the flag that is understood by Collaboration entity
     this.communityPolicyService.setFlag(

@@ -1,6 +1,6 @@
 export enum PreferenceDefinitionSet {
   USER = 'user',
-  HUB = 'hub',
+  SPACE = 'space',
   CHALLENGE = 'challenge',
   ORGANIZATION = 'organization',
 }

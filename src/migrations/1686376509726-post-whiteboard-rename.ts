@@ -94,6 +94,50 @@ export class postWhiteboardRename1686376509726 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`whiteboard_checkout\` ADD CONSTRAINT \`FK_bd3c7c6c2dbc2a8daf4b1500a69\` FOREIGN KEY (\`lifecycleId\`) REFERENCES \`lifecycle\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
+
+    // Update existing activity entries to set the type properly
+    const activities: { id: string; type: string }[] = await queryRunner.query(
+      `SELECT id, type FROM activity`
+    );
+    for (const activity of activities) {
+      const newType = activity.type
+        .replace('canvas', 'whiteboard')
+        .replace('card', 'post');
+      await queryRunner.query(
+        `UPDATE activity SET type='${newType}' WHERE id='${activity.id}'`
+      );
+    }
+
+    // Update the preferences
+    const preference_definitions: {
+      id: string;
+      type: string;
+      displayName: string;
+      description: string;
+      definitionSet: string;
+      groupName: string;
+    }[] = await queryRunner.query(
+      `SELECT id, type, displayName, description, definitionSet, groupName FROM preference_definition`
+    );
+    for (const definition of preference_definitions) {
+      const newType = definition.type
+        .replace('Aspect', 'Post')
+        .replace('Canvas', 'Whiteboard')
+        .replace('Hub', 'Space');
+      const newDisplayName = definition.displayName
+        .replace('aspect', 'Post')
+        .replace('Canvas', 'Whiteboard')
+        .replace('Hub', 'Space');
+      const newDescription = definition.description
+        .replace('aspect', 'Post')
+        .replace('Canvas', 'Whiteboard')
+        .replace('Hub', 'Space');
+      const newDefinitionSet = definition.definitionSet.replace('hub', 'space');
+      const newGroupName = definition.groupName.replace('Hub', 'Space');
+      await queryRunner.query(
+        `UPDATE preference_definition SET type='${newType}', displayName='${newDisplayName}', description='${newDescription}', definitionSet='${newDefinitionSet}', groupName='${newGroupName}' WHERE id='${definition.id}'`
+      );
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -151,20 +195,6 @@ export class postWhiteboardRename1686376509726 implements MigrationInterface {
       'ALTER TABLE whiteboard_checkout RENAME TO canvas_checkout'
     );
 
-    // Update existing activity entries to set the type properly
-    const activities: { id: string; type: string }[] = await queryRunner.query(
-      `SELECT id, type FROM activity`
-    );
-    for (const activity of activities) {
-      const newType = activity.type
-        .replace('canvas', 'whiteboard')
-        .replace('card', 'post');
-      await queryRunner.query(
-        `UPDATE activity SET type='${newType}' WHERE id='${activity.id}'`
-      );
-    }
-    // TODO: update the user preference for notifications
-
     await queryRunner.query(
       `ALTER TABLE \`canvas_checkout\` RENAME COLUMN \`whiteboardId\` TO \`canvasId\``
     );
@@ -201,5 +231,49 @@ export class postWhiteboardRename1686376509726 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`canvas_checkout\` ADD CONSTRAINT \`FK_bd3c7c6c2dbc2a8daf4b1500a69\` FOREIGN KEY (\`lifecycleId\`) REFERENCES \`lifecycle\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
+
+    // Update existing activity entries to set the type properly
+    const activities: { id: string; type: string }[] = await queryRunner.query(
+      `SELECT id, type FROM activity`
+    );
+    for (const activity of activities) {
+      const newType = activity.type
+        .replace('whiteboard', 'canvas')
+        .replace('post', 'card');
+      await queryRunner.query(
+        `UPDATE activity SET type='${newType}' WHERE id='${activity.id}'`
+      );
+    }
+
+    // Update the preferences
+    const preference_definitions: {
+      id: string;
+      type: string;
+      displayName: string;
+      description: string;
+      definitionSet: string;
+      groupName: string;
+    }[] = await queryRunner.query(
+      `SELECT id, type, displayName, description, definitionSet, groupName FROM preference_definition`
+    );
+    for (const definition of preference_definitions) {
+      const newType = definition.type
+        .replace('Post', 'Aspect')
+        .replace('Whiteboard', 'Canvas')
+        .replace('Space', 'Hub');
+      const newDisplayName = definition.displayName
+        .replace('Post', 'aspect')
+        .replace('Whiteboard', 'Canvas')
+        .replace('Space', 'Hub');
+      const newDescription = definition.description
+        .replace('Post', 'aspect')
+        .replace('Whiteboard', 'Canvas')
+        .replace('Space', 'Hub');
+      const newDefinitionSet = definition.definitionSet.replace('space', 'hub');
+      const newGroupName = definition.groupName.replace('Space', 'Hub');
+      await queryRunner.query(
+        `UPDATE preference_definition SET type='${newType}', displayName='${newDisplayName}', description='${newDescription}', definitionSet='${newDefinitionSet}', groupName='${newGroupName}' WHERE id='${definition.id}'`
+      );
+    }
   }
 }

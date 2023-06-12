@@ -19,7 +19,7 @@ import { IPreference } from './preference.interface';
 import { getDefaultPreferenceValue, validateValue } from './utils';
 import { CreatePreferenceDefinitionInput } from './dto/preference-definition.dto.create';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
-import { HubPreferenceType } from '@common/enums/hub.preference.type';
+import { SpacePreferenceType } from '@common/enums/space.preference.type';
 import { PreferenceType } from '@common/enums/preference.type';
 
 @Injectable()
@@ -60,7 +60,7 @@ export class PreferenceService {
   async definitionExists(
     group: string,
     valueType: PreferenceValueType,
-    type: UserPreferenceType | HubPreferenceType
+    type: UserPreferenceType | SpacePreferenceType
   ) {
     const res = await this.definitionRepository.findOneBy({
       group,

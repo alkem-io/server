@@ -196,7 +196,7 @@ export class ChallengeAuthorizationService {
     const allowHubMembersToContribute =
       this.preferenceSetService.getPreferenceValue(
         preferenceSet,
-        ChallengePreferenceType.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+        ChallengePreferenceType.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE
       );
     this.communityPolicyService.setFlag(
       policy,

@@ -819,7 +819,7 @@ export class ChallengeService {
       PreferenceType.ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES,
       'false'
     );
-    defaults.set(PreferenceType.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE, 'true');
+    defaults.set(PreferenceType.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE, 'true');
     defaults.set(PreferenceType.ALLOW_NON_MEMBERS_READ_ACCESS, 'true');
 
     return defaults;
