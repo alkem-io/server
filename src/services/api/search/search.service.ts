@@ -34,6 +34,7 @@ import { IOpportunity } from '@domain/collaboration/opportunity';
 import { ISearchResults } from './dto/search.result.dto';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { ISearchResultBuilder } from './search.result.builder.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -350,7 +351,8 @@ export class SearchService {
         userMatches,
         userResults,
         term,
-        SearchResultType.USER
+        SearchResultType.USER,
+        SCORE_INCREMENT
       );
     }
   }
@@ -369,7 +371,8 @@ export class SearchService {
         groupMatches,
         groupResults,
         term,
-        SearchResultType.USERGROUP
+        SearchResultType.USERGROUP,
+        SCORE_INCREMENT
       );
     }
   }
@@ -410,7 +413,8 @@ export class SearchService {
         organizationMatches,
         organizationResults,
         term,
-        SearchResultType.ORGANIZATION
+        SearchResultType.ORGANIZATION,
+        SCORE_INCREMENT
       );
     }
   }
@@ -421,7 +425,6 @@ export class SearchService {
     agentInfo: AgentInfo
   ) {
     for (const term of terms) {
-      const readableHubMatches: Hub[] = [];
       const hubMatches = await this.hubRepository
         .createQueryBuilder('hub')
         .leftJoinAndSelect('hub.challenges', 'challenges')
@@ -443,26 +446,39 @@ export class SearchService {
         .orWhere('location.city like :term')
         .setParameters({ term: `%${term}%` })
         .getMany();
-      // Only show challenges that the current user has read access to
+      // Only show hubs that the current user has read access to
       for (const hub of hubMatches) {
-        if (
-          this.authorizationService.isAccessGranted(
-            agentInfo,
-            hub.authorization,
-            AuthorizationPrivilege.READ
-          )
-        ) {
-          readableHubMatches.push(hub);
-        }
+        // Create results for each match directly, assigning in a different score depending on whether the user has read access or not
+        const score_increment = this.getScoreIncrement(
+          hub.authorization,
+          agentInfo
+        );
+        await this.buildMatchingResult(
+          hub,
+          hubResults,
+          term,
+          SearchResultType.HUB,
+          score_increment
+        );
       }
-      // Create results for each match
-      await this.buildMatchingResults(
-        readableHubMatches,
-        hubResults,
-        term,
-        SearchResultType.HUB
-      );
     }
+  }
+
+  // Determine the score increment based on whether the user has read access or not
+  private getScoreIncrement(
+    authorization: IAuthorizationPolicy | undefined,
+    agentInfo: AgentInfo
+  ): number {
+    if (
+      this.authorizationService.isAccessGranted(
+        agentInfo,
+        authorization,
+        AuthorizationPrivilege.READ
+      )
+    ) {
+      return SCORE_INCREMENT;
+    }
+    return SCORE_INCREMENT / 2;
   }
 
   async searchChallengesByTerms(
@@ -530,7 +546,8 @@ export class SearchService {
         readableChallengeMatches,
         challengeResults,
         term,
-        SearchResultType.CHALLENGE
+        SearchResultType.CHALLENGE,
+        SCORE_INCREMENT
       );
     }
   }
@@ -600,7 +617,8 @@ export class SearchService {
         readableOpportunityMatches,
         opportunityResults,
         term,
-        SearchResultType.OPPORTUNITY
+        SearchResultType.OPPORTUNITY,
+        SCORE_INCREMENT
       );
     }
   }
@@ -657,7 +675,8 @@ export class SearchService {
         readablePostMatches,
         postResults,
         term,
-        SearchResultType.POST
+        SearchResultType.POST,
+        SCORE_INCREMENT
       );
     }
   }
@@ -724,7 +743,8 @@ export class SearchService {
         userMatches,
         userResults,
         term,
-        SearchResultType.USER
+        SearchResultType.USER,
+        SCORE_INCREMENT
       );
     }
   }
@@ -749,7 +769,8 @@ export class SearchService {
         groupMatches,
         groupResults,
         term,
-        SearchResultType.USERGROUP
+        SearchResultType.USERGROUP,
+        SCORE_INCREMENT
       );
     }
   }
@@ -775,7 +796,8 @@ export class SearchService {
         organizationMatches,
         organizationResults,
         term,
-        SearchResultType.ORGANIZATION
+        SearchResultType.ORGANIZATION,
+        SCORE_INCREMENT
       );
     }
   }
@@ -795,7 +817,8 @@ export class SearchService {
         postMatches,
         postResults,
         term,
-        SearchResultType.POST
+        SearchResultType.POST,
+        SCORE_INCREMENT
       );
     }
   }
@@ -804,16 +827,28 @@ export class SearchService {
     rawMatches: any[],
     resultsMap: Map<number, Match>,
     term: string,
-    type: SearchResultType
+    type: SearchResultType,
+    score: number
   ) {
     for (const rawMatch of rawMatches) {
-      const match = new Match();
-      match.entity = rawMatch;
-      match.terms.push(term);
-      match.key = rawMatch.id;
-      match.type = type;
-      this.addMatchingResult(resultsMap, match);
+      this.buildMatchingResult(rawMatch, resultsMap, term, type, score);
     }
+  }
+
+  async buildMatchingResult(
+    rawMatch: any,
+    resultsMap: Map<number, Match>,
+    term: string,
+    type: SearchResultType,
+    score: number
+  ) {
+    const match = new Match();
+    match.entity = rawMatch;
+    match.terms.push(term);
+    match.key = rawMatch.id;
+    match.type = type;
+    match.score = score;
+    this.addMatchingResult(resultsMap, match);
   }
 
   async buildSearchResults(
@@ -865,7 +900,8 @@ export class SearchService {
   addMatchingResult(resultsMap: Map<number, Match>, match: Match) {
     const existingMatch = resultsMap.get(match.key);
     if (existingMatch) {
-      existingMatch.score = existingMatch.score + SCORE_INCREMENT;
+      // Increment the score with the match being added
+      existingMatch.score = existingMatch.score + match.score;
       // also add the term that was matched
       if (match.terms.length != 1)
         throw new ValidationException(
@@ -874,7 +910,6 @@ export class SearchService {
         );
       existingMatch.terms.push(match.terms[0]);
     } else {
-      match.score = SCORE_INCREMENT;
       resultsMap.set(match.key, match);
     }
   }
