@@ -804,11 +804,11 @@ export class ChallengeService {
   createPreferenceDefaults(): Map<PreferenceType, string> {
     const defaults: Map<PreferenceType, string> = new Map();
     defaults.set(
-      PreferenceType.MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS,
+      PreferenceType.MEMBERSHIP_JOIN_CHALLENGE_FROM_SPACE_MEMBERS,
       'true'
     );
     defaults.set(
-      PreferenceType.MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS,
+      PreferenceType.MEMBERSHIP_APPLY_CHALLENGE_FROM_SPACE_MEMBERS,
       'true'
     );
     defaults.set(
