@@ -15,8 +15,8 @@ import { Repository } from 'typeorm';
 import { CreateNVPInput } from '@src/domain/common/nvp/nvp.dto.create';
 import { Post } from '@domain/collaboration/post/post.entity';
 import {
-  CollaborationCardCreatedEventPayload,
-  CollaborationCardCommentEventPayload,
+  CollaborationPostCreatedEventPayload,
+  CollaborationPostCommentEventPayload,
   CollaborationInterestPayload,
   CollaborationCalloutPublishedEventPayload,
   JourneyPayload,
@@ -34,13 +34,13 @@ import {
   CommunityApplicationCreatedEventPayload,
   CollaborationDiscussionCommentEventPayload,
   PlatformForumDiscussionCommentEventPayload,
-  CollaborationCanvasCreatedEventPayload,
   createJourneyURL,
   createCalloutURL,
   createCardURL,
   createCalendarEventURL,
   createForumDiscussionUrl,
   CommunityInvitationCreatedEventPayload,
+  CollaborationWhiteboardCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
@@ -114,7 +114,7 @@ export class NotificationPayloadBuilder {
 
   async buildPostCreatedPayload(
     postId: string
-  ): Promise<CollaborationCardCreatedEventPayload> {
+  ): Promise<CollaborationPostCreatedEventPayload> {
     const post = await this.postRepository.findOne({
       where: { id: postId },
       relations: ['callout', 'callout.profile', 'profile'],
@@ -140,13 +140,13 @@ export class NotificationPayloadBuilder {
       );
 
     const journeyPayload = await this.buildJourneyPayload(community);
-    const payload: CollaborationCardCreatedEventPayload = {
+    const payload: CollaborationPostCreatedEventPayload = {
       triggeredBy: post.createdBy,
       callout: {
         displayName: callout.profile.displayName,
         nameID: callout.nameID,
       },
-      card: {
+      post: {
         id: postId,
         createdBy: post.createdBy,
         displayName: post.profile.displayName,
@@ -161,7 +161,7 @@ export class NotificationPayloadBuilder {
 
   async buildWhiteboardCreatedPayload(
     whiteboardId: string
-  ): Promise<CollaborationCanvasCreatedEventPayload> {
+  ): Promise<CollaborationWhiteboardCreatedEventPayload> {
     const whiteboard = await this.whiteboardRepository.findOne({
       where: { id: whiteboardId },
       relations: ['callout', 'callout.profile', 'profile'],
@@ -187,13 +187,13 @@ export class NotificationPayloadBuilder {
       );
 
     const journeyPayload = await this.buildJourneyPayload(community);
-    const payload: CollaborationCanvasCreatedEventPayload = {
+    const payload: CollaborationWhiteboardCreatedEventPayload = {
       triggeredBy: whiteboard.createdBy,
       callout: {
         displayName: callout.profile.displayName,
         nameID: callout.nameID,
       },
-      canvas: {
+      whiteboard: {
         id: whiteboardId,
         createdBy: whiteboard.createdBy,
         displayName: whiteboard.profile.displayName,
@@ -234,7 +234,7 @@ export class NotificationPayloadBuilder {
     postInput: IPost,
     commentsId: string,
     messageResult: IMessage
-  ): Promise<CollaborationCardCommentEventPayload> {
+  ): Promise<CollaborationPostCommentEventPayload> {
     const post = await this.postRepository.findOne({
       where: { id: postInput.id },
       relations: ['callout', 'callout.profile', 'profile'],
@@ -267,13 +267,13 @@ export class NotificationPayloadBuilder {
     }
 
     const journeyPayload = await this.buildJourneyPayload(community);
-    const payload: CollaborationCardCommentEventPayload = {
+    const payload: CollaborationPostCommentEventPayload = {
       triggeredBy: post.createdBy,
       callout: {
         displayName: callout.profile.displayName,
         nameID: callout.nameID,
       },
-      card: {
+      post: {
         displayName: post.profile.displayName,
         createdBy: post.createdBy,
         nameID: post.nameID,
@@ -786,8 +786,8 @@ export class NotificationPayloadBuilder {
     community: ICommunity
   ): Promise<JourneyPayload> {
     const result: JourneyPayload = {
-      hubID: community.hubID,
-      hubNameID: await this.getHubNameIdOrFail(community.hubID),
+      spaceID: community.hubID,
+      spaceNameID: await this.getHubNameIdOrFail(community.hubID),
       displayName: community.displayName,
       type: community.type,
     };

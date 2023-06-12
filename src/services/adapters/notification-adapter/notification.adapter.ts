@@ -56,7 +56,7 @@ export class NotificationAdapter {
   public async postCreated(
     eventData: NotificationInputPostCreated
   ): Promise<void> {
-    const event = NotificationEventType.COLLABORATION_CARD_CREATED;
+    const event = NotificationEventType.COLLABORATION_POST_CREATED;
     this.logEventTriggered(eventData, event);
 
     const payload =
@@ -70,7 +70,7 @@ export class NotificationAdapter {
   public async whiteboardCreated(
     eventData: NotificationInputWhiteboardCreated
   ): Promise<void> {
-    const event = NotificationEventType.COLLABORATION_CANVAS_CREATED;
+    const event = NotificationEventType.COLLABORATION_WHITEBOARD_CREATED;
     this.logEventTriggered(eventData, event);
 
     const payload =
@@ -99,7 +99,7 @@ export class NotificationAdapter {
   public async postComment(
     eventData: NotificationInputPostComment
   ): Promise<void> {
-    const event = NotificationEventType.COLLABORATION_CARD_COMMENT;
+    const event = NotificationEventType.COLLABORATION_POST_COMMENT;
     this.logEventTriggered(eventData, event);
     // build notification payload
     const payload =

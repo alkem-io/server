@@ -163,6 +163,7 @@ export class postWhiteboardRename1686376509726 implements MigrationInterface {
         `UPDATE activity SET type='${newType}' WHERE id='${activity.id}'`
       );
     }
+    // TODO: update the user preference for notifications
 
     await queryRunner.query(
       `ALTER TABLE \`canvas_checkout\` RENAME COLUMN \`whiteboardId\` TO \`canvasId\``
