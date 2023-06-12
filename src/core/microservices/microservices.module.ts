@@ -3,19 +3,16 @@ import { Global, Module } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { randomUUID } from 'crypto';
 import {
-  SUBSCRIPTION_ASPECT_COMMENT,
   NOTIFICATIONS_SERVICE,
   MATRIX_ADAPTER_SERVICE,
-  SUBSCRIPTION_DISCUSSION_MESSAGE,
-  SUBSCRIPTION_UPDATE_MESSAGE,
   SUBSCRIPTION_CANVAS_CONTENT,
   SUBSCRIPTION_CALLOUT_ASPECT_CREATED,
   WALLET_MANAGEMENT_SERVICE,
-  SUBSCRIPTION_DISCUSSION_UPDATED,
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
-  SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,
   SUBSCRIPTION_OPPORTUNITY_CREATED,
   SUBSCRIPTION_CHALLENGE_CREATED,
+  SUBSCRIPTION_ROOM_MESSAGE,
+  SUBSCRIPTION_DISCUSSION_UPDATED,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common/constants';
@@ -26,20 +23,12 @@ import { matrixAdapterServiceFactory } from './matrix.adapter.service.factory';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
-    provide: SUBSCRIPTION_DISCUSSION_MESSAGE,
-    queueName: MessagingQueue.SUBSCRIPTION_DISCUSSION_MESSAGE,
+    provide: SUBSCRIPTION_ROOM_MESSAGE,
+    queueName: MessagingQueue.SUBSCRIPTION_ROOM_MESSAGE,
   },
   {
     provide: SUBSCRIPTION_DISCUSSION_UPDATED,
     queueName: MessagingQueue.SUBSCRIPTION_DISCUSSION_UPDATED,
-  },
-  {
-    provide: SUBSCRIPTION_UPDATE_MESSAGE,
-    queueName: MessagingQueue.SUBSCRIPTION_UPDATE_MESSAGE,
-  },
-  {
-    provide: SUBSCRIPTION_ASPECT_COMMENT,
-    queueName: MessagingQueue.SUBSCRIPTION_ASPECT_COMMENT,
   },
   {
     provide: SUBSCRIPTION_CANVAS_CONTENT,
@@ -52,10 +41,6 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
     provide: SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
     queueName: MessagingQueue.SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
-  },
-  {
-    provide: SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,
-    queueName: MessagingQueue.SUBSCRIPTION_CALLOUT_MESSAGE_CREATED,
   },
   {
     provide: SUBSCRIPTION_OPPORTUNITY_CREATED,

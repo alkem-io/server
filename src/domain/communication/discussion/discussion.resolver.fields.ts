@@ -5,36 +5,22 @@ import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { DiscussionService } from './discussion.service';
 import { IDiscussion } from './discussion.interface';
-import { IMessage } from '../message/message.interface';
 import { Discussion } from './discussion.entity';
 import { Loader } from '@core/dataloader/decorators';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { IRoom } from '../room/room.interface';
+import { DiscussionService } from './discussion.service';
 
 @Resolver(() => IDiscussion)
 export class DiscussionResolverFields {
   constructor(
+    private discussionService: DiscussionService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
-    private discussionService: DiscussionService
+    private readonly logger: LoggerService
   ) {}
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('messages', () => [IMessage], {
-    nullable: true,
-    description: 'Messages for this Discussion.',
-  })
-  @Profiling.api
-  async messages(@Parent() discussion: IDiscussion): Promise<IMessage[]> {
-    const discussionRoom = await this.discussionService.getDiscussionRoom(
-      discussion
-    );
-    return discussionRoom.messages;
-  }
 
   @ResolveField('timestamp', () => Number, {
     nullable: true,
@@ -61,6 +47,16 @@ export class DiscussionResolverFields {
     }
 
     return createdBy;
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('comments', () => IRoom, {
+    nullable: false,
+    description: 'The comments for this Discussion.',
+  })
+  async comments(@Parent() discussion: IDiscussion): Promise<IRoom> {
+    return await this.discussionService.getComments(discussion.id);
   }
 
   @UseGuards(GraphqlGuard)

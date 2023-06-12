@@ -4,10 +4,10 @@ import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { IComments } from '@domain/communication/comments/comments.interface';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @ObjectType('Callout')
 export abstract class ICallout extends INameable {
@@ -56,11 +56,7 @@ export abstract class ICallout extends INameable {
   })
   whiteboardTemplate?: IWhiteboardTemplate;
 
-  @Field(() => IComments, {
-    nullable: true,
-    description: 'The Comments object for this Callout.',
-  })
-  comments?: IComments;
+  comments?: IRoom;
 
   @Field(() => Number, {
     nullable: false,

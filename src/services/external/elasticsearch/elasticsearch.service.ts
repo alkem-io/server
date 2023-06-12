@@ -243,7 +243,7 @@ export class ElasticsearchService {
       details
     );
   }
-  public calloutCardCommentCreated(
+  public calloutPostCommentCreated(
     contribution: ContributionDetails,
     details: AuthorDetails
   ): void {

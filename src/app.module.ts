@@ -56,6 +56,7 @@ import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-f
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
 import { AdminStorageModule } from '@platform/admin/storage/admin.storage.module';
+import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 
 @Module({
   imports: [
@@ -201,6 +202,7 @@ import { AdminStorageModule } from '@platform/admin/storage/admin.storage.module
     AdminStorageModule,
     AgentModule,
     MessageModule,
+    MessageReactionModule,
     RegistrationModule,
     RedisLockModule,
     ConversionModule,

@@ -6,7 +6,6 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
-import { IUpdates } from '@domain/communication/updates/updates.interface';
 import { ICommunity } from '@domain/community/community';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -55,7 +54,8 @@ import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { ConfigService } from '@nestjs/config/dist/config.service';
-import { CommentType } from '@common/enums/comment.type';
+import { RoomType } from '@common/enums/room.type';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -248,7 +248,7 @@ export class NotificationPayloadBuilder {
     }
 
     const community =
-      await this.communityResolverService.getCommunityFromCardCommentsOrFail(
+      await this.communityResolverService.getCommunityFromPostRoomOrFail(
         commentsId
       );
 
@@ -386,7 +386,7 @@ export class NotificationPayloadBuilder {
 
   async buildCommunicationUpdateSentNotificationPayload(
     updateCreatorId: string,
-    updates: IUpdates
+    updates: IRoom
   ): Promise<CommunicationUpdateEventPayload> {
     const community =
       await this.communityResolverService.getCommunityFromUpdatesOrFail(
@@ -621,7 +621,7 @@ export class NotificationPayloadBuilder {
     originEntityId: string,
     originEntityNameId: string,
     originEntityDisplayName: string,
-    commentType: CommentType
+    commentType: RoomType
   ): Promise<CommunicationUserMentionEventPayload | undefined> {
     const userData = await this.getUserData(mentionedUserNameID);
 
@@ -658,7 +658,7 @@ export class NotificationPayloadBuilder {
     originEntityId: string,
     originEntityNameId: string,
     originEntityDisplayName: string,
-    commentType: CommentType
+    commentType: RoomType
   ): Promise<CommunicationOrganizationMentionEventPayload | undefined> {
     const orgData = await this.getOrgData(mentionedUserNameID);
 
@@ -688,7 +688,7 @@ export class NotificationPayloadBuilder {
   }
 
   private async buildCommentOriginUrl(
-    commentType: CommentType,
+    commentType: RoomType,
     originEntityId: string,
     originEntityNameId: string,
     commentsId: string
@@ -697,7 +697,7 @@ export class NotificationPayloadBuilder {
       ConfigurationTypes.HOSTING
     )?.endpoint_cluster;
 
-    if (commentType === CommentType.DISCUSSION) {
+    if (commentType === RoomType.CALLOUT) {
       const community =
         await this.communityResolverService.getCommunityFromCalloutOrFail(
           originEntityId
@@ -715,7 +715,7 @@ export class NotificationPayloadBuilder {
       return createCalloutURL(journeyUrl, originEntityNameId);
     }
 
-    if (commentType === CommentType.CARD) {
+    if (commentType === RoomType.POST) {
       const card = await this.aspectRepository.findOne({
         where: {
           id: originEntityId,
@@ -731,7 +731,7 @@ export class NotificationPayloadBuilder {
       }
 
       const community =
-        await this.communityResolverService.getCommunityFromCardCommentsOrFail(
+        await this.communityResolverService.getCommunityFromPostRoomOrFail(
           commentsId
         );
 
@@ -754,7 +754,7 @@ export class NotificationPayloadBuilder {
       return createCardURL(journeyUrl, callout.nameID, card.nameID);
     }
 
-    if (commentType === CommentType.CALENDAR_EVENT) {
+    if (commentType === RoomType.CALENDAR_EVENT) {
       const community =
         await this.communityResolverService.getCommunityFromCalendarEventOrFail(
           originEntityId
@@ -772,7 +772,7 @@ export class NotificationPayloadBuilder {
       return createCalendarEventURL(journeyUrl, originEntityNameId);
     }
 
-    if (commentType === CommentType.FORUM_DISCUSSION) {
+    if (commentType === RoomType.DISCUSSION_FORUM) {
       return createForumDiscussionUrl(endpoint, originEntityNameId);
     }
 

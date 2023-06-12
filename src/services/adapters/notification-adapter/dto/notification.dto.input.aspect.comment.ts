@@ -1,10 +1,10 @@
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
-import { IComments } from '@domain/communication/comments/comments.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { NotificationInputBase } from './notification.dto.input.base';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 export interface NotificationInputAspectComment extends NotificationInputBase {
   aspect: IAspect;
-  comments: IComments;
+  room: IRoom;
   commentSent: IMessage;
 }

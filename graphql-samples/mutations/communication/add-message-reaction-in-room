@@ -1,0 +1,14 @@
+mutation addReactionToMessageInRoom($messageData: RoomAddReactionToMessageInput!){
+  addReactionToMessageInRoom(messageData: $messageData){
+    id
+    message
+  }
+}
+
+{
+  "messageData": {
+    "roomID": "uuid",
+    "messageID": "$3a15g7wrN4CYx8GyNSJ9d1rg5NQaXREdajwRMOrYN-I",
+    "emoji": "👏"
+  }
+}

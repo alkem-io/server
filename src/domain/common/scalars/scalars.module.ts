@@ -8,10 +8,12 @@ import { Markdown } from './scalar.markdown';
 import { MessageID } from './scalar.messageid';
 import { LifecycleDefinitionScalar } from './scalar.lifecycle.definition';
 import { CID } from './scalar.cid';
+import { Emoji } from './scalar.emoji';
 
 @Module({
   imports: [],
   providers: [
+    Emoji,
     NameID,
     UUID,
     UUID_NAMEID,

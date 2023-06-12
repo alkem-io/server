@@ -5,19 +5,20 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 import { DiscussionAuthorizationService } from '../discussion/discussion.service.authorization';
 import { AuthorizationPrivilege } from '@common/enums';
 import { CommunicationService } from './communication.service';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import {
   POLICY_RULE_COMMUNICATION_CONTRIBUTE,
   POLICY_RULE_COMMUNICATION_CREATE,
 } from '@common/constants';
+import { RoomAuthorizationService } from '../room/room.service.authorization';
 
 @Injectable()
 export class CommunicationAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private communicationService: CommunicationService,
-    private discussionAuthorizationService: DiscussionAuthorizationService
+    private discussionAuthorizationService: DiscussionAuthorizationService,
+    private roomAuthorizationService: RoomAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -34,10 +35,6 @@ export class CommunicationAuthorizationService {
       communication.authorization
     );
 
-    communication.authorization = this.extendAuthorizationPolicy(
-      communication.authorization
-    );
-
     communication.discussions = await this.communicationService.getDiscussions(
       communication
     );
@@ -49,10 +46,15 @@ export class CommunicationAuthorizationService {
     }
 
     communication.updates = this.communicationService.getUpdates(communication);
-    communication.updates.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
-        communication.updates.authorization,
+    communication.updates =
+      await this.roomAuthorizationService.applyAuthorizationPolicy(
+        communication.updates,
         communication.authorization
+      );
+    // Note: do NOT allow contributors to create new messages for updates...
+    communication.updates.authorization =
+      this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
+        communication.updates.authorization
       );
 
     return await this.communicationService.save(communication);
@@ -81,20 +83,5 @@ export class CommunicationAuthorizationService {
       authorization,
       privilegeRules
     );
-  }
-
-  private extendAuthorizationPolicy(
-    authorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    //
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        authorization,
-        newRules
-      );
-
-    return updatedAuthorization;
   }
 }

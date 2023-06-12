@@ -4,8 +4,8 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { MockNotificationsService } from '@test/mocks/notifications.service.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { SUBSCRIPTION_DISCUSSION_MESSAGE } from '@common/constants';
 import { pubSubEngineMockFactory } from '@test/utils/pub.sub.engine.mock.factory';
+import { SUBSCRIPTION_ROOM_MESSAGE } from '@common/constants';
 
 describe('DiscussionResolver', () => {
   let resolver: DiscussionResolverMutations;
@@ -17,7 +17,7 @@ describe('DiscussionResolver', () => {
         MockCacheManager,
         MockWinstonProvider,
         MockNotificationsService,
-        pubSubEngineMockFactory(SUBSCRIPTION_DISCUSSION_MESSAGE),
+        pubSubEngineMockFactory(SUBSCRIPTION_ROOM_MESSAGE),
       ],
     })
       .useMocker(defaultMockerFactory)
