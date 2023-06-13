@@ -237,7 +237,6 @@ services:
     command: sh -c "/wait && npm run start"
 
   matrix-adapter:
-    platform: linux/x86_64
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
