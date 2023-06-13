@@ -1,11 +1,9 @@
 import { Module } from '@nestjs/common';
-import { HocuspocusServerFactoryProvider } from './hocuspocus.server.factory';
-import { HocuspocusGateway } from './hocuspocus.gateway';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
-import { CalloutModule } from '@domain/collaboration/callout/callout.module';
+import { HocuspocusServerFactoryProvider } from './hocuspocus.server.factory';
 
 @Module({
-  imports: [AuthenticationModule, CalloutModule],
-  providers: [HocuspocusServerFactoryProvider, HocuspocusGateway],
+  imports: [AuthenticationModule],
+  providers: [HocuspocusServerFactoryProvider],
 })
 export class HocuspocusServerModule {}

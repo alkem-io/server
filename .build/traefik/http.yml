@@ -78,12 +78,6 @@ http:
           - /api/private
         forceSlash: false
 
-    strip-api-private-ws-prefix:
-      stripPrefix:
-        prefixes:
-          - /api/private/ws
-        forceSlash: false
-
     strip-api-public-prefix:
       stripPrefix:
         prefixes:

@@ -1,12 +1,6 @@
 import { FactoryProvider, LoggerService } from '@nestjs/common';
-import {
-  beforeHandleMessagePayload,
-  connectedPayload,
-  Server,
-  storePayload,
-} from '@hocuspocus/server';
+import { fetchPayload, Server, storePayload } from '@hocuspocus/server';
 import { HOCUSPOCUS_SERVER } from '@common/constants';
-import { BearerTokenNotFoundException } from '@common/exceptions/auth';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
 import { AuthenticationService } from '@core/authentication/authentication.service';
@@ -14,24 +8,19 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Configuration, FrontendApi } from '@ory/kratos-client';
 import { ConfigService } from '@nestjs/config';
 import {
+  beforeHandleMessagePayload,
   onConnectPayload,
-  onUpgradePayload,
 } from '@hocuspocus/server/src/types';
 import { AgentInfo } from '@core/authentication';
-import { Database } from '@hocuspocus/extension-database';
-import { fetchPayload } from '@hocuspocus/server';
-import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import * as Y from 'yjs';
-import { fromUint8Array, toUint8Array } from 'js-base64';
-import { TextDecoder } from 'util';
+import { Database } from '@hocuspocus/extension-database';
 
 export const HocuspocusServerFactoryProvider: FactoryProvider = {
   provide: HOCUSPOCUS_SERVER,
   useFactory: (
     logger: LoggerService,
     configService: ConfigService,
-    authService: AuthenticationService,
-    calloutService: CalloutService
+    authService: AuthenticationService
   ) => {
     const kratosPublicBaseUrl = configService.get(ConfigurationTypes.IDENTITY)
       .authentication.providers.ory.kratos_public_base_url_server;
@@ -45,41 +34,44 @@ export const HocuspocusServerFactoryProvider: FactoryProvider = {
     Server.configure({
       port: 4001,
       quiet: true,
-      beforeHandleMessage(payload: any) {
-        console.log(
-          Array.from(
-            (payload.document.store.clients as Map<any, any>).values()
-          )?.[0]?.[1]
-            .content.getContent()
-            .join()
-        );
+      beforeHandleMessage(
+        payload: beforeHandleMessagePayload
+      ) /*: Promise<any>*/ {
+        const updates = Y.encodeStateAsUpdate(payload.document);
+        // console.log(
+        //   'beforeHandleMessage',
+        //   Y.logUpdate(updates)
+        // );
+        //console.log(payload.document.get('default'))
         // console.log(payload.document.share.get() ?? payload.document.getText());
+
+        return Promise.resolve();
       },
       onConnect(payload: any) {
         return authenticate(payload);
       },
-      // extensions: [
-      //   new Database({
-      //     fetch: async (payload: fetchPayload) => {
-      //       const { documentName, document } = payload;
-      //
-      //       if (!documentName) return Promise.resolve()
-      //       Y.applyUpdate
-      //       const callout = await calloutService.getCalloutOrFail(documentName);
-      //
-      //       if ()
-      //
-      //       return document;
-      //     },
-      //     store: (payload: storePayload) => {
-      //
-      //     },
-      //   }),
-      // ],
+      extensions: [
+        new Database({
+          fetch: async (payload: fetchPayload) => {
+            // load the document
+            const { documentName, document } = payload;
+
+            // if (!documentName) return null;
+
+            // state
+            return Y.encodeStateAsUpdate(document);
+          },
+          store: (payload: storePayload) => {
+            // store the document
+            //Y.logUpdate(Y.encodeStateAsUpdate(payload.document));
+            //console.log(Y.encodeStateAsUpdate(payload.document));
+          },
+        }),
+      ],
     }).listen();
 
     /***
-     * Sets the user into the context field
+     * Sets the user into the context field or close the connection
      */
     const authenticate = (
       payload: onConnectPayload
@@ -120,10 +112,5 @@ export const HocuspocusServerFactoryProvider: FactoryProvider = {
       });
     };
   },
-  inject: [
-    WINSTON_MODULE_NEST_PROVIDER,
-    ConfigService,
-    AuthenticationService,
-    CalloutService,
-  ],
+  inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService, AuthenticationService],
 };
