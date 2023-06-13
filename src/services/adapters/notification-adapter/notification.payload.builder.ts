@@ -689,7 +689,7 @@ export class NotificationPayloadBuilder {
 
   async buildCommunicationOrganizationMentionNotificationPayload(
     senderID: string,
-    mentionedUserNameID: string,
+    mentionedOrgNameID: string,
     comment: string,
     commentsId: string,
     originEntityId: string,
@@ -697,11 +697,11 @@ export class NotificationPayloadBuilder {
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<CommunicationOrganizationMentionEventPayload | undefined> {
-    const orgData = await this.getOrgData(mentionedUserNameID);
+    const orgData = await this.getOrgData(mentionedOrgNameID);
 
     if (!orgData)
       throw new NotificationEventException(
-        `Could not find User with id: ${mentionedUserNameID}`,
+        `Could not find User with id: ${mentionedOrgNameID}`,
         LogContext.NOTIFICATIONS
       );
 
