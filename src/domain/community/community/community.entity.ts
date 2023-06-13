@@ -9,7 +9,6 @@ import {
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { ICommunity } from '@domain/community/community/community.interface';
-import { IApplication } from '@domain/community/application/application.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Application } from '@domain/community/application/application.entity';
 import { Communication } from '@domain/communication/communication/communication.entity';
@@ -20,6 +19,7 @@ import {
 } from '@src/common/constants/entity.field.length.constants';
 import { CommunityPolicy } from '../community-policy/community.policy.entity';
 import { Form } from '@domain/common/form/form.entity';
+import { Invitation } from '../invitation/invitation.entity';
 
 @Entity()
 export class Community
@@ -58,7 +58,13 @@ export class Community
     eager: false,
     cascade: true,
   })
-  applications?: IApplication[];
+  applications?: Application[];
+
+  @OneToMany(() => Invitation, invitation => invitation.community, {
+    eager: false,
+    cascade: true,
+  })
+  invitations?: Invitation[];
 
   @OneToOne(() => CommunityPolicy, {
     eager: true,

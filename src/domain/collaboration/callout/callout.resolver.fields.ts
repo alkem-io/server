@@ -9,7 +9,6 @@ import { GraphqlGuard } from '@core/authorization';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
-import { IComments } from '@domain/communication/comments/comments.interface';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { ICanvas } from '@domain/common/canvas/canvas.interface';
 import { IUser } from '@domain/community/user/user.interface';
@@ -18,7 +17,6 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import {
   CalloutPostTemplateLoaderCreator,
   CalloutWhiteboardTemplateLoaderCreator,
-  CommentsLoaderCreator,
   ProfileLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
@@ -26,6 +24,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -135,26 +134,12 @@ export class CalloutResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('comments', () => IComments, {
+  @ResolveField('comments', () => IRoom, {
     nullable: true,
     description: 'The comments for this Callout.',
   })
-  @Profiling.api
-  async comments(
-    @Parent() callout: ICallout,
-    @Loader(CommentsLoaderCreator, {
-      parentClassRef: Callout,
-      resolveToNull: true,
-    })
-    loader: ILoader<IComments>
-  ): Promise<IComments | null> {
-    return (
-      loader
-        .load(callout.id)
-        // empty object is result because DataLoader does not allow to return NULL values
-        // handle the value when the result is returned
-        .then(x => (!Object.keys(x).length ? null : x))
-    );
+  async comments(@Parent() callout: Callout): Promise<IRoom | undefined> {
+    return await this.calloutService.getComments(callout.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

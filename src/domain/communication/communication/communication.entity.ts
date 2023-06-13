@@ -2,7 +2,7 @@ import { Column, Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
-import { Updates } from '@domain/communication/updates/updates.entity';
+import { Room } from '../room/room.entity';
 
 @Entity()
 export class Communication
@@ -21,13 +21,13 @@ export class Communication
   @Column('simple-array')
   discussionCategories: string[];
 
-  @OneToOne(() => Updates, {
+  @OneToOne(() => Room, {
     eager: true,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  updates?: Updates;
+  updates!: Room;
 
   @Column()
   displayName!: string;

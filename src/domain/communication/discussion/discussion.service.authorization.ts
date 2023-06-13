@@ -2,17 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IDiscussion } from './discussion.interface';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { DiscussionService } from './discussion.service';
-import { AuthorizationCredential } from '@common/enums';
-import { RoomService } from '../room/room.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import {
-  POLICY_RULE_DISCUSSION_CONTRIBUTE,
-  POLICY_RULE_DISCUSSION_CREATE,
-  CREDENTIAL_RULE_DISCUSSION_MESSAGE_SENDER,
-} from '@common/constants';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { RoomAuthorizationService } from '../room/room.service.authorization';
 
 @Injectable()
 export class DiscussionAuthorizationService {
@@ -25,7 +18,8 @@ export class DiscussionAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private discussionService: DiscussionService,
-    private roomService: RoomService
+    private profileAuthorizationService: ProfileAuthorizationService,
+    private roomAuthorizationService: RoomAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -42,9 +36,29 @@ export class DiscussionAuthorizationService {
       discussion.authorization
     );
 
-    discussion.authorization = this.appendPrivilegeRules(
-      discussion.authorization
+    discussion.profile = await this.discussionService.getProfile(discussion);
+    discussion.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        discussion.profile,
+        discussion.authorization
+      );
+
+    discussion.comments = await this.discussionService.getComments(
+      discussion.id
     );
+    discussion.comments =
+      await this.roomAuthorizationService.applyAuthorizationPolicy(
+        discussion.comments,
+        discussion.authorization
+      );
+    discussion.comments.authorization =
+      this.roomAuthorizationService.allowContributorsToCreateMessages(
+        discussion.comments.authorization
+      );
+    discussion.comments.authorization =
+      this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
+        discussion.comments.authorization
+      );
 
     return await this.discussionService.save(discussion);
   }
@@ -57,69 +71,6 @@ export class DiscussionAuthorizationService {
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
         authorization,
-        newRules
-      );
-
-    return updatedAuthorization;
-  }
-
-  private appendPrivilegeRules(
-    authorization: IAuthorizationPolicy
-  ): IAuthorizationPolicy {
-    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
-
-    // Allow any contributor to this community to create discussions, and to send messages to the discussion
-    const contributePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.CREATE_COMMENT],
-      AuthorizationPrivilege.CONTRIBUTE,
-      POLICY_RULE_DISCUSSION_CONTRIBUTE
-    );
-    privilegeRules.push(contributePrivilege);
-
-    const createPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.CREATE_COMMENT],
-      AuthorizationPrivilege.CREATE,
-      POLICY_RULE_DISCUSSION_CREATE
-    );
-    privilegeRules.push(createPrivilege);
-
-    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-      authorization,
-      privilegeRules
-    );
-  }
-
-  async extendAuthorizationPolicyForMessageSender(
-    discussion: IDiscussion,
-    messageID: string,
-    authorizationPolicy: IAuthorizationPolicy
-  ): Promise<IAuthorizationPolicy> {
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    const senderUserID = await this.roomService.getUserIdForMessage(
-      discussion,
-      messageID
-    );
-
-    // Allow any member of this community to create messages on the discussion
-    if (senderUserID !== '') {
-      const messageSender =
-        this.authorizationPolicyService.createCredentialRule(
-          [AuthorizationPrivilege.UPDATE, AuthorizationPrivilege.DELETE],
-          [
-            {
-              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-              resourceID: senderUserID,
-            },
-          ],
-          CREDENTIAL_RULE_DISCUSSION_MESSAGE_SENDER
-        );
-      newRules.push(messageSender);
-    }
-
-    const updatedAuthorization =
-      this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        authorizationPolicy,
         newRules
       );
 

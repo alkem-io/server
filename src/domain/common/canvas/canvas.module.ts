@@ -14,6 +14,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ProfileModule } from '../profile/profile.module';
+import { CanvasResolverQueries } from './canvas.resolver.queries';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ProfileModule } from '../profile/profile.module';
     TypeOrmModule.forFeature([Canvas]),
   ],
   providers: [
+    CanvasResolverQueries,
     CanvasService,
     CanvasAuthorizationService,
     CanvasResolverMutations,

@@ -12,7 +12,6 @@ import {
   LogContext,
 } from '@common/enums';
 import { AspectService } from './aspect.service';
-import { CommentsAuthorizationService } from '@domain/communication/comments/comments.service.authorization';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
@@ -21,13 +20,14 @@ import {
   CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD,
 } from '@common/constants';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 
 @Injectable()
 export class AspectAuthorizationService {
   constructor(
     private aspectService: AspectService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private commentsAuthorizationService: CommentsAuthorizationService,
+    private roomAuthorizationService: RoomAuthorizationService,
     private communityPolicyService: CommunityPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     @InjectRepository(Aspect)
@@ -49,9 +49,18 @@ export class AspectAuthorizationService {
     // have rights to delete comments
     if (aspect.comments) {
       aspect.comments =
-        await this.commentsAuthorizationService.applyAuthorizationPolicy(
+        await this.roomAuthorizationService.applyAuthorizationPolicy(
           aspect.comments,
           aspect.authorization
+        );
+
+      aspect.comments.authorization =
+        this.roomAuthorizationService.allowContributorsToCreateMessages(
+          aspect.comments.authorization
+        );
+      aspect.comments.authorization =
+        this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
+          aspect.comments.authorization
         );
     }
 

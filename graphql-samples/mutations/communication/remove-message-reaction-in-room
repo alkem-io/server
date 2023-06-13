@@ -1,0 +1,10 @@
+mutation removeReactionToMessageInRoom($reactionData: RoomRemoveReactionToMessageInput!){
+  removeReactionToMessageInRoom(reactionData: $reactionData)
+}
+
+{
+  "reactionData": {
+    "reactionID": "$DOh9zUj0yVDorRd3rbf0cdVBCqkLwNQRmWJOShfoUw4",
+    "roomID": "1c84f116-0790-4aa1-a61a-31ed24628ea9"
+  }
+}

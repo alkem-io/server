@@ -16,6 +16,8 @@ import {
   CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL,
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
+  POLICY_RULE_COMMUNITY_INVITE,
+  POLICY_RULE_COMMUNITY_ADD_MEMBER,
 } from '@common/constants';
 
 @Injectable()
@@ -138,11 +140,20 @@ export class CommunityAuthorizationService {
   ): IAuthorizationPolicy {
     const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
 
-    // const communityJoinPrivilege = new AuthorizationPolicyRulePrivilege(
-    //   [AuthorizationPrivilege.COMMUNITY_JOIN],
-    //   AuthorizationPrivilege.GRANT
-    // );
-    // privilegeRules.push(communityJoinPrivilege);
+    const communityInvitePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.COMMUNITY_INVITE],
+      AuthorizationPrivilege.GRANT,
+      POLICY_RULE_COMMUNITY_INVITE
+    );
+    privilegeRules.push(communityInvitePrivilege);
+
+    // Note: this privilege should be later only assigned to global admins
+    const communityAddMemberPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER],
+      AuthorizationPrivilege.GRANT,
+      POLICY_RULE_COMMUNITY_ADD_MEMBER
+    );
+    privilegeRules.push(communityAddMemberPrivilege);
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,

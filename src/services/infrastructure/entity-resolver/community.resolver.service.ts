@@ -173,7 +173,7 @@ export class CommunityResolverService {
       .getOne();
   }
 
-  public async getCommunityFromCardCommentsOrFail(
+  public async getCommunityFromPostRoomOrFail(
     commentsId: string
   ): Promise<ICommunity> {
     const [queryResult]: {

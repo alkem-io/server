@@ -2,7 +2,6 @@ import { firstValueFrom, TimeoutError, Observable } from 'rxjs';
 import { catchError, retry, timeout } from 'rxjs/operators';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { MatrixEntityNotFoundException } from '@common/exceptions';
-import { CommunicationRoomResult } from '@domain/communication/room/dto/communication.dto.room.result';
 import { DirectRoomResult } from '@domain/community/user/dto/user.dto.communication.room.direct.result';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -16,6 +15,10 @@ import {
   MatrixAdapterEventType,
   RoomSendMessagePayload,
   RoomSendMessageResponsePayload,
+  RoomSendMessageReplyPayload,
+  RoomAddMessageReactionPayload,
+  RoomRemoveMessageReactionPayload,
+  RoomAddMessageReactionResponsePayload,
 } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsPayload } from '@alkemio/matrix-adapter-lib';
 import { RoomDetailsResponsePayload } from '@alkemio/matrix-adapter-lib';
@@ -24,6 +27,8 @@ import { RoomDeleteMessagePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomDeleteMessageResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomMessageSenderResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomMessageSenderPayload } from '@alkemio/matrix-adapter-lib';
+import { RoomReactionSenderResponsePayload } from '@alkemio/matrix-adapter-lib';
+import { RoomReactionSenderPayload } from '@alkemio/matrix-adapter-lib';
 import { CreateRoomPayload } from '@alkemio/matrix-adapter-lib';
 import { CreateRoomResponsePayload } from '@alkemio/matrix-adapter-lib';
 import { RoomsUserPayload } from '@alkemio/matrix-adapter-lib';
@@ -57,6 +62,11 @@ import { BaseMatrixAdapterEventResponsePayload } from '@alkemio/matrix-adapter-l
 import { getRandomId } from '@common/utils/random.id.generator.util';
 import { stringifyWithoutAuthorization } from '@common/utils/stringify.util';
 import { CommunicationTimedOutException } from '@common/exceptions/communication';
+import { CommunicationSendMessageReplyInput } from './dto/communications.dto.message.reply';
+import { CommunicationAddRectionToMessageInput } from './dto/communication.dto.add.reaction';
+import { CommunicationRemoveRectionToMessageInput } from './dto/communication.dto.remove.reaction';
+import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
+import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
 
 @Injectable()
 export class CommunicationAdapter {
@@ -110,7 +120,115 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to send message to room: ${err.message}`,
+        `Failed to send message to room: ${err}`,
+        LogContext.COMMUNICATION
+      );
+    }
+  }
+
+  async sendMessageReply(
+    sendMessageData: CommunicationSendMessageReplyInput
+  ): Promise<IMessage> {
+    const eventType = MatrixAdapterEventType.ROOM_SEND_MESSAGE_REPLY;
+    const inputPayload: RoomSendMessageReplyPayload = {
+      triggeredBy: '',
+      roomID: sendMessageData.roomID,
+      message: sendMessageData.message,
+      senderID: sendMessageData.senderCommunicationsID,
+      threadID: sendMessageData.threadID,
+    };
+    const eventID = this.logInputPayload(eventType, inputPayload);
+
+    const response = this.matrixAdapterClient.send(
+      { cmd: eventType },
+      inputPayload
+    );
+
+    try {
+      const responseData = await firstValueFrom<RoomSendMessageResponsePayload>(
+        response
+      );
+      this.logResponsePayload(eventType, responseData, eventID);
+
+      const message = responseData.message;
+      this.logger.verbose?.(
+        `...message sent to room: ${sendMessageData.roomID}`,
+        LogContext.COMMUNICATION
+      );
+      return message;
+    } catch (err: any) {
+      this.logInteractionError(eventType, err, eventID);
+      throw new MatrixEntityNotFoundException(
+        `Failed to send message to room: ${err}`,
+        LogContext.COMMUNICATION
+      );
+    }
+  }
+
+  async addReaction(
+    sendMessageData: CommunicationAddRectionToMessageInput
+  ): Promise<IMessageReaction> {
+    const eventType = MatrixAdapterEventType.ROOM_ADD_REACTION_TO_MESSAGE;
+    const inputPayload: RoomAddMessageReactionPayload = {
+      triggeredBy: '',
+      roomID: sendMessageData.roomID,
+      emoji: sendMessageData.emoji,
+      senderID: sendMessageData.senderCommunicationsID,
+      messageID: sendMessageData.messageID,
+    };
+    const eventID = this.logInputPayload(eventType, inputPayload);
+
+    const response = this.matrixAdapterClient.send(
+      { cmd: eventType },
+      inputPayload
+    );
+
+    try {
+      const responseData =
+        await firstValueFrom<RoomAddMessageReactionResponsePayload>(response);
+      this.logResponsePayload(eventType, responseData, eventID);
+
+      const reaction = responseData.reaction;
+      this.logger.verbose?.(
+        `...reaction added to message in room: ${sendMessageData.roomID}`,
+        LogContext.COMMUNICATION
+      );
+      return reaction;
+    } catch (err: any) {
+      this.logInteractionError(eventType, err, eventID);
+      throw new MatrixEntityNotFoundException(
+        `Failed to add reaction to message in room: ${err}`,
+        LogContext.COMMUNICATION
+      );
+    }
+  }
+
+  async removeReaction(
+    removeReactionData: CommunicationRemoveRectionToMessageInput
+  ): Promise<string> {
+    const eventType = MatrixAdapterEventType.ROOM_REMOVE_REACTION_TO_MESSAGE;
+    const inputPayload: RoomRemoveMessageReactionPayload = {
+      triggeredBy: '',
+      roomID: removeReactionData.roomID,
+      reactionID: removeReactionData.reactionID,
+      senderID: removeReactionData.senderCommunicationsID,
+    };
+    const eventID = this.logInputPayload(eventType, inputPayload);
+
+    const response = this.matrixAdapterClient.send(
+      { cmd: eventType },
+      inputPayload
+    );
+
+    try {
+      const responseData =
+        await firstValueFrom<RoomDeleteMessageResponsePayload>(response);
+      this.logResponsePayload(eventType, responseData, eventID);
+      return responseData.messageID;
+    } catch (err: any) {
+      this.logInteractionError(eventType, err, eventID);
+      throw new MatrixEntityNotFoundException(
+        `Failed to remove from room: ${err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -148,7 +266,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to obtain room: ${err.message}`,
+        `Failed to obtain room: ${err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -179,7 +297,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to delete message from room: ${err.message}`,
+        `Failed to delete message from room: ${err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -210,7 +328,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to send message to user: ${err.message}`,
+        `Failed to send message to user: ${err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -238,6 +356,33 @@ export class CommunicationAdapter {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
         `Unable to locate message (id: ${messageID}) in room: ${roomID}`,
+        LogContext.COMMUNICATION
+      );
+    }
+  }
+
+  async getReactionSender(roomID: string, reactionID: string): Promise<string> {
+    const eventType = MatrixAdapterEventType.ROOM_REACTION_SENDER;
+    const inputPayload: RoomReactionSenderPayload = {
+      triggeredBy: '',
+      roomID: roomID,
+      reactionID: reactionID,
+    };
+    const eventID = this.logInputPayload(eventType, inputPayload);
+    const response = this.matrixAdapterClient.send(
+      { cmd: eventType },
+      inputPayload
+    );
+
+    try {
+      const responseData =
+        await firstValueFrom<RoomReactionSenderResponsePayload>(response);
+      this.logResponsePayload(eventType, responseData, eventID);
+      return responseData.senderID;
+    } catch (err: any) {
+      this.logInteractionError(eventType, err, eventID);
+      throw new MatrixEntityNotFoundException(
+        `Unable to locate message (id: ${reactionID}) in room: ${roomID}`,
         LogContext.COMMUNICATION
       );
     }
@@ -303,7 +448,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to create room: ${err.message}`,
+        `Failed to create room: ${err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -373,7 +518,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to get rooms for User: ${err.message}`,
+        `Failed to get rooms for User: ${err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -405,7 +550,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to get direct rooms for User: ${err.message}`,
+        `Failed to get direct rooms for User: ${err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -443,7 +588,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to remove user from rooms: ${err.message}`,
+        `Failed to remove user from rooms: ${err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -467,7 +612,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to get all rooms: ${err.message}`,
+        `Failed to get all rooms: ${err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -503,17 +648,13 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to replicate room membership: ${err.message}`,
+        `Failed to replicate room membership: ${err}`,
         LogContext.COMMUNICATION
       );
     }
   }
 
-  public async addUserToRoom(
-    // groupID: string, according to matrix docs groups are getting deprecated
-    roomID: string,
-    matrixUserID: string
-  ) {
+  public async addUserToRoom(roomID: string, matrixUserID: string) {
     const eventType = MatrixAdapterEventType.ADD_USER_TO_ROOM;
     const inputPayload: AddUserToRoomPayload = {
       triggeredBy: '',

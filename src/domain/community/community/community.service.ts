@@ -51,6 +51,9 @@ import { FormService } from '@domain/common/form/form.service';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
+import { InvitationService } from '../invitation/invitation.service';
+import { IInvitation } from '../invitation/invitation.interface';
+import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
 
 @Injectable()
 export class CommunityService {
@@ -62,6 +65,7 @@ export class CommunityService {
     private organizationService: OrganizationService,
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
+    private invitationService: InvitationService,
     private communicationService: CommunicationService,
     private formService: FormService,
     private communityPolicyService: CommunityPolicyService,
@@ -87,6 +91,9 @@ export class CommunityService {
     community.applicationForm = await this.formService.createForm(
       applicationFormData
     );
+
+    community.applications = [];
+    community.invitations = [];
 
     community.groups = [];
     community.communication =
@@ -155,7 +162,13 @@ export class CommunityService {
   async removeCommunity(communityID: string): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const community = await this.getCommunityOrFail(communityID, {
-      relations: ['applications', 'groups', 'communication', 'applicationForm'],
+      relations: [
+        'applications',
+        'invitations',
+        'groups',
+        'communication',
+        'applicationForm',
+      ],
     });
 
     // Remove all groups
@@ -194,6 +207,15 @@ export class CommunityService {
       for (const application of community.applications) {
         await this.applicationService.deleteApplication({
           ID: application.id,
+        });
+      }
+    }
+
+    // Remove all invitations
+    if (community.invitations) {
+      for (const invitation of community.invitations) {
+        await this.invitationService.deleteInvitation({
+          ID: invitation.id,
         });
       }
     }
@@ -728,10 +750,57 @@ export class CommunityService {
     const { user, agent } = await this.userService.getUserAndAgent(
       applicationData.userID
     );
-    const community = (await this.getCommunityOrFail(applicationData.parentID, {
+    const community = await this.getCommunityOrFail(applicationData.parentID, {
       relations: ['applications', 'parentCommunity'],
-    })) as Community;
+    });
 
+    await this.validateUserAbleToApply(user, agent, community);
+
+    const hubID = community.hubID;
+    if (!hubID)
+      throw new EntityNotInitializedException(
+        `Unable to locate containing hub: ${community.displayName}`,
+        LogContext.COMMUNITY
+      );
+    const application = await this.applicationService.createApplication(
+      applicationData,
+      hubID
+    );
+    community.applications?.push(application);
+    await this.communityRepository.save(community);
+
+    return application;
+  }
+
+  async createInvitation(
+    invitationData: CreateInvitationExistingUserOnCommunityInput
+  ): Promise<IInvitation> {
+    const { user, agent } = await this.userService.getUserAndAgent(
+      invitationData.invitedUser
+    );
+    const community = await this.getCommunityOrFail(
+      invitationData.communityID,
+      {
+        relations: ['invitations'],
+      }
+    );
+
+    await this.validateUserAbleToInvite(user, agent, community);
+
+    const invitation = await this.invitationService.createInvitation(
+      invitationData
+    );
+    community.invitations?.push(invitation);
+    await this.communityRepository.save(community);
+
+    return invitation;
+  }
+
+  private async validateUserAbleToApply(
+    user: IUser,
+    agent: IAgent,
+    community: ICommunity
+  ) {
     // Check presence / status of existing applications
     const existingApplications =
       await this.applicationService.findExistingApplications(
@@ -755,24 +824,42 @@ export class CommunityService {
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new InvalidStateTransitionException(
-        `User ${applicationData.userID} is already a member of the Community: ${community.displayName}.`,
+        `User ${user.nameID} is already a member of the Community: ${community.displayName}.`,
         LogContext.COMMUNITY
       );
+  }
 
-    const hubID = community.hubID;
-    if (!hubID)
-      throw new EntityNotInitializedException(
-        `Unable to locate containing hub: ${community.displayName}`,
+  private async validateUserAbleToInvite(
+    user: IUser,
+    agent: IAgent,
+    community: ICommunity
+  ) {
+    // Check presence / status of existing applications
+    const existingInvitations =
+      await this.invitationService.findExistingInvitations(
+        user.id,
+        community.id
+      );
+    for (const existingInvitation of existingInvitations) {
+      const isInvitationFinalized =
+        await this.invitationService.isFinalizedInvitation(
+          existingInvitation.id
+        );
+      if (!isInvitationFinalized) {
+        throw new InvalidStateTransitionException(
+          `An invitation (ID: ${existingInvitation.id}) already exists for user ${existingInvitation.invitedUser} on Community: ${community.displayName} that is not finalized.`,
+          LogContext.COMMUNITY
+        );
+      }
+    }
+
+    // Check if the user is already a member; if so do not allow an application
+    const isExistingMember = await this.isMember(agent, community);
+    if (isExistingMember)
+      throw new InvalidStateTransitionException(
+        `User ${user.nameID} is already a member of the Community: ${community.displayName}.`,
         LogContext.COMMUNITY
       );
-    const application = await this.applicationService.createApplication(
-      applicationData,
-      hubID
-    );
-    community.applications?.push(application);
-    await this.communityRepository.save(community);
-
-    return application;
   }
 
   async getCommunityInNameableScopeOrFail(
@@ -799,6 +886,13 @@ export class CommunityService {
       relations: ['applications'],
     });
     return communityApps?.applications || [];
+  }
+
+  async getInvitations(community: ICommunity): Promise<IInvitation[]> {
+    const communityApps = await this.getCommunityOrFail(community.id, {
+      relations: ['invitations'],
+    });
+    return communityApps?.invitations || [];
   }
 
   async getApplicationForm(community: ICommunity): Promise<IForm> {

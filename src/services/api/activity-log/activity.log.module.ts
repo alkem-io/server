@@ -14,8 +14,8 @@ import { SubscriptionPublishServiceModule } from '@services/subscriptions/subscr
 import { ActivityLogService } from './activity.log.service';
 import { ActivityLogResolverQueries } from './activity.log.resolver.queries';
 import { ActivityLogResolverSubscriptions } from './activity.log.resolver.subscriptions';
-import { UpdatesModule } from '@domain/communication/updates/updates.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
+import { RoomModule } from '@domain/communication/room/room.module';
 
 @Module({
   imports: [
@@ -28,9 +28,9 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
     CalloutModule,
     AspectModule,
     CanvasModule,
+    RoomModule,
     ChallengeModule,
     OpportunityModule,
-    UpdatesModule,
     SubscriptionPublishServiceModule,
     PlatformAuthorizationPolicyModule,
   ],

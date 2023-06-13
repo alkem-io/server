@@ -37,12 +37,14 @@ export const CREDENTIAL_RULE_CANVAS_CHECKOUT_LOCKED_BY =
 export const CREDENTIAL_RULE_CANVAS_CREATED_BY =
   'credentialRule-canvasCreatedBy';
 export const CREDENTIAL_RULE_CANVAS_LOCKED_BY = 'credentialRule-canvasLockedBy';
-export const CREDENTIAL_RULE_COMMENTS_MESSAGE_SENDER =
-  'credentialRule-commentsMessageSender';
-export const CREDENTIAL_RULE_DISCUSSION_MESSAGE_SENDER =
-  'credentialRule-discussionMessageSender';
-export const CREDENTIAL_RULE_APPLICATION_USER_APPLICATION =
-  'credentialRule-applicationUserApplication';
+export const CREDENTIAL_RULE_ROOM_MESSAGE_SENDER =
+  'credentialRule-roomMessageSender';
+export const CREDENTIAL_RULE_ROOM_REACTION_SENDER =
+  'credentialRule-roomReactionSender';
+export const CREDENTIAL_RULE_COMMUNITY_USER_APPLICATION =
+  'credentialRule-communityUserApplication';
+export const CREDENTIAL_RULE_COMMUNITY_USER_INVITATION =
+  'credentialRule-communityUserInvitation';
 export const CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL =
   'credentialRule-communitySelfRemoval';
 export const CREDENTIAL_RULE_ORGANIZATION_VERIFICATION_ADMIN =

@@ -1,6 +1,7 @@
 import { MessageID } from '@domain/common/scalars';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IMessageReaction } from '../message.reaction/message.reaction.interface';
 
 @ObjectType('Message', {
   description:
@@ -26,4 +27,16 @@ export class IMessage {
     description: 'The server timestamp in UTC',
   })
   timestamp!: number;
+
+  @Field(() => [IMessageReaction], {
+    nullable: false,
+    description: 'Reactions on this message',
+  })
+  reactions?: IMessageReaction[];
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'The message being replied to',
+  })
+  threadID?: string;
 }

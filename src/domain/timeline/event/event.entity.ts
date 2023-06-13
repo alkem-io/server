@@ -1,8 +1,8 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { ICalendarEvent } from './event.interface';
-import { Comments } from '@domain/communication/comments';
 import { Calendar } from '../calendar/calendar.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
+import { Room } from '@domain/communication/room/room.entity';
 
 @Entity()
 export class CalendarEvent extends NameableEntity implements ICalendarEvent {
@@ -12,13 +12,13 @@ export class CalendarEvent extends NameableEntity implements ICalendarEvent {
   @Column('varchar', { length: 36, nullable: true })
   createdBy!: string;
 
-  @OneToOne(() => Comments, {
-    eager: false,
+  @OneToOne(() => Room, {
+    eager: true,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  comments?: Comments;
+  comments!: Room;
 
   @ManyToOne(() => Calendar, calendar => calendar.events, {
     eager: false,

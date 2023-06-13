@@ -14,18 +14,19 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { DeleteAspectInput } from './dto/aspect.dto.delete';
 import { UpdateAspectInput } from './dto/aspect.dto.update';
-import { CommentsService } from '@domain/communication/comments/comments.service';
 import { CreateAspectInput } from './dto/aspect.dto.create';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { VisualType } from '@common/enums/visual.type';
+import { RoomService } from '@domain/communication/room/room.service';
+import { RoomType } from '@common/enums/room.type';
 
 @Injectable()
 export class AspectService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private commentsService: CommentsService,
+    private roomService: RoomService,
     private profileService: ProfileService,
     @InjectRepository(Aspect)
     private aspectRepository: Repository<Aspect>,
@@ -55,8 +56,9 @@ export class AspectService {
     aspect.authorization = new AuthorizationPolicy();
     aspect.createdBy = userID;
 
-    aspect.comments = await this.commentsService.createComments(
-      `aspect-comments-${aspect.nameID}`
+    aspect.comments = await this.roomService.createRoom(
+      `aspect-comments-${aspect.nameID}`,
+      RoomType.POST
     );
 
     return await this.aspectRepository.save(aspect);
@@ -74,7 +76,7 @@ export class AspectService {
       await this.profileService.deleteProfile(aspect.profile.id);
     }
     if (aspect.comments) {
-      await this.commentsService.deleteComments(aspect.comments);
+      await this.roomService.deleteRoom(aspect.comments);
     }
 
     const result = await this.aspectRepository.remove(aspect as Aspect);
@@ -160,7 +162,7 @@ export class AspectService {
       );
     }
 
-    return this.commentsService.getCommentsOrFail(commentsId);
+    return this.roomService.getRoomOrFail(commentsId);
   }
 
   public async getAspectsInCalloutCount(calloutId: string) {
