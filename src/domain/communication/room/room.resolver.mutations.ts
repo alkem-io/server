@@ -238,13 +238,6 @@ export class RoomResolverMutations {
   ): Promise<IMessage> {
     const room = await this.roomService.getRoomOrFail(messageData.roomID);
 
-    if (room.type === RoomType.CALLOUT) {
-      throw new NotSupportedException(
-        'Messages for Callouts to be sent via Callouts api',
-        LogContext.COLLABORATION
-      );
-    }
-
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       room.authorization,
