@@ -327,10 +327,14 @@ export class NotificationPayloadBuilder {
 
   async buildCommentReplyPayload(
     data: NotificationInputCommentReply
-  ): Promise<CommentReplyEventPayload | undefined> {
+  ): Promise<CommentReplyEventPayload> {
     const userData = await this.getUserData(data.commentOwnerID);
 
-    if (!userData) return undefined;
+    if (!userData)
+      throw new NotificationEventException(
+        `Could not find User with id: ${data.commentOwnerID}`,
+        LogContext.NOTIFICATIONS
+      );
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       data.commentType,
@@ -654,7 +658,11 @@ export class NotificationPayloadBuilder {
   ): Promise<CommunicationUserMentionEventPayload | undefined> {
     const userData = await this.getUserData(mentionedUserNameID);
 
-    if (!userData) return undefined;
+    if (!userData)
+      throw new NotificationEventException(
+        `Could not find User with id: ${mentionedUserNameID}`,
+        LogContext.NOTIFICATIONS
+      );
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
@@ -691,7 +699,11 @@ export class NotificationPayloadBuilder {
   ): Promise<CommunicationOrganizationMentionEventPayload | undefined> {
     const orgData = await this.getOrgData(mentionedUserNameID);
 
-    if (!orgData) return undefined;
+    if (!orgData)
+      throw new NotificationEventException(
+        `Could not find User with id: ${mentionedUserNameID}`,
+        LogContext.NOTIFICATIONS
+      );
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
