@@ -237,11 +237,12 @@ services:
     command: sh -c "/wait && npm run start"
 
   matrix-adapter:
+    platform: linux/x86_64
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter:v0.2.1
+    image: alkemio/matrix-adapter:v0.3.0
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -298,5 +299,3 @@ services:
       - alkemio_dev_net
     ports:
       - 6379
-
-
