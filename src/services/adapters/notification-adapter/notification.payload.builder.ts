@@ -34,6 +34,7 @@ import {
   CommunityApplicationCreatedEventPayload,
   CollaborationDiscussionCommentEventPayload,
   PlatformForumDiscussionCommentEventPayload,
+  CommentReplyEventPayload,
   CollaborationCanvasCreatedEventPayload,
   createJourneyURL,
   createCalloutURL,
@@ -56,6 +57,7 @@ import { Community } from '@domain/community/community/community.entity';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { NotificationInputCommentReply } from './dto/notification.dto.input.comment.reply';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -318,6 +320,33 @@ export class NotificationPayloadBuilder {
         createdBy: messageResult.sender,
       },
       journey: journeyPayload,
+    };
+
+    return payload;
+  }
+
+  async buildCommentReplyPayload(
+    data: NotificationInputCommentReply
+  ): Promise<CommentReplyEventPayload | undefined> {
+    const userData = await this.getUserData(data.commentOwnerID);
+
+    if (!userData) return undefined;
+
+    const commentOriginUrl = await this.buildCommentOriginUrl(
+      data.commentType,
+      data.originEntity.id,
+      data.originEntity.nameId,
+      data.roomId
+    );
+
+    const payload: CommentReplyEventPayload = {
+      triggeredBy: data.triggeredBy,
+      reply: data.reply,
+      comment: {
+        commentUrl: commentOriginUrl,
+        commentOrigin: data.originEntity.displayName,
+        commentOwnerId: userData.id,
+      },
     };
 
     return payload;

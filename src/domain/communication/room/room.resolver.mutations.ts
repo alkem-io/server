@@ -252,13 +252,92 @@ export class RoomResolverMutations {
       `room reply to message: ${room.id}`
     );
 
-    const message = await this.roomService.sendMessageReply(
+    const messageOwnerId = await this.roomService.getUserIdForMessage(
+      room,
+      messageData.threadID
+    );
+
+    const reply = await this.roomService.sendMessageReply(
       room,
       agentInfo.communicationID,
       messageData
     );
 
-    return message;
+    switch (room.type) {
+      case RoomType.POST:
+        const post = await this.namingService.getPostForRoom(
+          messageData.roomID
+        );
+
+        this.roomServiceEvents.processNotificationCommentReply(
+          post,
+          room,
+          reply,
+          agentInfo,
+          messageOwnerId
+        );
+
+        break;
+      case RoomType.CALENDAR_EVENT:
+        const calendar = await this.namingService.getCalendarEventForRoom(
+          messageData.roomID
+        );
+
+        this.roomServiceEvents.processNotificationCommentReply(
+          calendar,
+          room,
+          reply,
+          agentInfo,
+          messageOwnerId
+        );
+
+        break;
+      case RoomType.DISCUSSION:
+        const discussion = await this.namingService.getDiscussionForRoom(
+          messageData.roomID
+        );
+
+        this.roomServiceEvents.processNotificationCommentReply(
+          discussion,
+          room,
+          reply,
+          agentInfo,
+          messageOwnerId
+        );
+
+        break;
+      case RoomType.DISCUSSION_FORUM:
+        const discussionForum = await this.namingService.getDiscussionForRoom(
+          messageData.roomID
+        );
+        this.roomServiceEvents.processNotificationCommentReply(
+          discussionForum,
+          room,
+          reply,
+          agentInfo,
+          messageOwnerId
+        );
+
+        break;
+      case RoomType.CALLOUT:
+        const callout = await this.namingService.getCalloutForRoom(
+          messageData.roomID
+        );
+
+        if (callout.visibility === CalloutVisibility.PUBLISHED) {
+          this.roomServiceEvents.processNotificationCommentReply(
+            callout,
+            room,
+            reply,
+            agentInfo,
+            messageOwnerId
+          );
+        }
+      default:
+      // ignore for now, later likely to be an exception
+    }
+
+    return reply;
   }
 
   @UseGuards(GraphqlGuard)
