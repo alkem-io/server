@@ -32,7 +32,7 @@ export class IMessage {
     nullable: false,
     description: 'Reactions on this message',
   })
-  reactions?: IMessageReaction[];
+  reactions!: IMessageReaction[];
 
   @Field(() => String, {
     nullable: true,

@@ -256,6 +256,8 @@ export class RoomResolverMutations {
       messageData
     );
 
+    this.roomServiceEvents.processMessageReceivedSubscription(room, reply);
+
     switch (room.type) {
       case RoomType.POST:
         const post = await this.namingService.getPostForRoom(
