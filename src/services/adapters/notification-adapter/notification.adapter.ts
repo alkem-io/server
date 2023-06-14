@@ -152,11 +152,22 @@ export class NotificationAdapter {
     const event = NotificationEventType.COMMENT_REPLY;
     this.logEventTriggered(eventData, event);
 
-    // build notification payload
-    const payload =
-      await this.notificationPayloadBuilder.buildCommentReplyPayload(eventData);
-    // send notification event
-    this.notificationsClient.emit<number>(event, payload);
+    try {
+      // build notification payload
+      const payload =
+        await this.notificationPayloadBuilder.buildCommentReplyPayload(
+          eventData
+        );
+      // send notification event
+      this.notificationsClient.emit<number>(event, payload);
+    } catch (error) {
+      this.logger.error(
+        `Error while building comment reply notification payload ${
+          (error as Error).message
+        }`,
+        LogContext.NOTIFICATIONS
+      );
+    }
   }
 
   public async updateSent(
