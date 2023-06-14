@@ -28,6 +28,7 @@ import { NotificationInputEntityMentions } from './dto/notification.dto.input.en
 import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
 import { NotificationInputForumDiscussionComment } from './dto/notification.dto.input.forum.discussion.comment';
 import { NotificationInputCommunityInvitation } from './dto/notification.dto.input.community.invitation';
+import { NotificationInputCommentReply } from './dto/notification.dto.input.comment.reply';
 
 @Injectable()
 export class NotificationAdapter {
@@ -143,6 +144,30 @@ export class NotificationAdapter {
       );
     // send notification event
     this.notificationsClient.emit<number>(event, payload);
+  }
+
+  public async commentReply(
+    eventData: NotificationInputCommentReply
+  ): Promise<void> {
+    const event = NotificationEventType.COMMENT_REPLY;
+    this.logEventTriggered(eventData, event);
+
+    try {
+      // build notification payload
+      const payload =
+        await this.notificationPayloadBuilder.buildCommentReplyPayload(
+          eventData
+        );
+      // send notification event
+      this.notificationsClient.emit<number>(event, payload);
+    } catch (error) {
+      this.logger.error(
+        `Error while building comment reply notification payload ${
+          (error as Error).message
+        }`,
+        LogContext.NOTIFICATIONS
+      );
+    }
   }
 
   public async updateSent(
