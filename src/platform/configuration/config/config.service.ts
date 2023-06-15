@@ -41,6 +41,8 @@ export class KonfigService {
         feedback: this.configService.get(ConfigurationTypes.PLATFORM)?.feedback,
         about: this.configService.get(ConfigurationTypes.PLATFORM)?.about,
         impact: this.configService.get(ConfigurationTypes.PLATFORM)?.impact,
+        inspiration: this.configService.get(ConfigurationTypes.PLATFORM)
+          ?.inspiration,
         foundation: this.configService.get(ConfigurationTypes.PLATFORM)
           ?.foundation,
         opensource: this.configService.get(ConfigurationTypes.PLATFORM)
