@@ -34,7 +34,6 @@ import {
   CommunityApplicationCreatedEventPayload,
   CollaborationDiscussionCommentEventPayload,
   PlatformForumDiscussionCommentEventPayload,
-  CommentReplyEventPayload,
   createJourneyURL,
   createCalloutURL,
   createCardURL,
@@ -42,6 +41,7 @@ import {
   createForumDiscussionUrl,
   CommunityInvitationCreatedEventPayload,
   CollaborationWhiteboardCreatedEventPayload,
+  CommentReplyEventPayload,
 } from '@alkemio/notifications-lib';
 
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
