@@ -267,6 +267,8 @@ export class UserService {
       'true'
     );
 
+    defaults.set(UserPreferenceType.NOTIFICATION_COMMENT_REPLY, 'true');
+
     return defaults;
   }
 

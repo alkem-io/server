@@ -29,7 +29,6 @@ hosting:
   #
   path_api_public_rest: ${PATH_API_PUBLIC_REST}:/api/public/rest
 
-
   # The path from the end point for all private api rest requests.
   # It is combined with the `endpoint` above to provide the full path for incoming requests targeting the public Rest api.
   #
@@ -370,6 +369,9 @@ platform:
 
   # Home page - Impact
   impact: ${PLATFORM_IMPACT}:https://alkemio.org/manifesto
+
+  # Collaboration tools
+  inspiration: ${PLATFORM_INSPIRATION}:https://alkemio.org/help/collaboration-tools/
 
   # Home page - Foundation
   foundation: ${PLATFORM_FOUNDATION}:https://alkemio.org/

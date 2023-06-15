@@ -26,6 +26,7 @@ import { ElasticsearchService } from '@services/external/elasticsearch/elasticse
 import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
 import { ICallout } from '@domain/collaboration/callout';
 import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
+import { NotificationInputCommentReply } from '@services/adapters/notification-adapter/dto/notification.dto.input.comment.reply';
 
 @Injectable()
 export class RoomServiceEvents {
@@ -73,6 +74,29 @@ export class RoomServiceEvents {
       commentType: room.type as RoomType,
     };
     this.notificationAdapter.entityMentions(entityMentionsNotificationInput);
+  }
+
+  public async processNotificationCommentReply(
+    parentEntity: INameable,
+    room: IRoom,
+    reply: IMessage,
+    agentInfo: AgentInfo,
+    messageOwnerId: string
+  ) {
+    // Send the notification
+    const notificationInput: NotificationInputCommentReply = {
+      triggeredBy: agentInfo.userID,
+      reply: reply.message,
+      roomId: room.id,
+      commentOwnerID: messageOwnerId,
+      originEntity: {
+        id: parentEntity.id,
+        nameId: parentEntity.nameID,
+        displayName: parentEntity.profile.displayName,
+      },
+      commentType: room.type as RoomType,
+    };
+    await this.notificationAdapter.commentReply(notificationInput);
   }
 
   public async processNotificationPostComment(

@@ -34,6 +34,7 @@ import {
   CommunityApplicationCreatedEventPayload,
   CollaborationDiscussionCommentEventPayload,
   PlatformForumDiscussionCommentEventPayload,
+  CommentReplyEventPayload,
   createJourneyURL,
   createCalloutURL,
   createCardURL,
@@ -56,6 +57,7 @@ import { Community } from '@domain/community/community/community.entity';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { NotificationInputCommentReply } from './dto/notification.dto.input.comment.reply';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -318,6 +320,37 @@ export class NotificationPayloadBuilder {
         createdBy: messageResult.sender,
       },
       journey: journeyPayload,
+    };
+
+    return payload;
+  }
+
+  async buildCommentReplyPayload(
+    data: NotificationInputCommentReply
+  ): Promise<CommentReplyEventPayload> {
+    const userData = await this.getUserData(data.commentOwnerID);
+
+    if (!userData)
+      throw new NotificationEventException(
+        `Could not find User with id: ${data.commentOwnerID}`,
+        LogContext.NOTIFICATIONS
+      );
+
+    const commentOriginUrl = await this.buildCommentOriginUrl(
+      data.commentType,
+      data.originEntity.id,
+      data.originEntity.nameId,
+      data.roomId
+    );
+
+    const payload: CommentReplyEventPayload = {
+      triggeredBy: data.triggeredBy,
+      reply: data.reply,
+      comment: {
+        commentUrl: commentOriginUrl,
+        commentOrigin: data.originEntity.displayName,
+        commentOwnerId: userData.id,
+      },
     };
 
     return payload;
@@ -625,7 +658,11 @@ export class NotificationPayloadBuilder {
   ): Promise<CommunicationUserMentionEventPayload | undefined> {
     const userData = await this.getUserData(mentionedUserNameID);
 
-    if (!userData) return undefined;
+    if (!userData)
+      throw new NotificationEventException(
+        `Could not find User with id: ${mentionedUserNameID}`,
+        LogContext.NOTIFICATIONS
+      );
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
@@ -652,7 +689,7 @@ export class NotificationPayloadBuilder {
 
   async buildCommunicationOrganizationMentionNotificationPayload(
     senderID: string,
-    mentionedUserNameID: string,
+    mentionedOrgNameID: string,
     comment: string,
     commentsId: string,
     originEntityId: string,
@@ -660,9 +697,13 @@ export class NotificationPayloadBuilder {
     originEntityDisplayName: string,
     commentType: RoomType
   ): Promise<CommunicationOrganizationMentionEventPayload | undefined> {
-    const orgData = await this.getOrgData(mentionedUserNameID);
+    const orgData = await this.getOrgData(mentionedOrgNameID);
 
-    if (!orgData) return undefined;
+    if (!orgData)
+      throw new NotificationEventException(
+        `Could not find User with id: ${mentionedOrgNameID}`,
+        LogContext.NOTIFICATIONS
+      );
 
     const commentOriginUrl = await this.buildCommentOriginUrl(
       commentType,
