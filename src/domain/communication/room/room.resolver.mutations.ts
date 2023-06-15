@@ -1,6 +1,5 @@
 import { UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Args, Mutation } from '@nestjs/graphql';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
@@ -25,6 +24,8 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { MutationType } from '@common/enums/subscriptions';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -33,7 +34,8 @@ export class RoomResolverMutations {
     private roomService: RoomService,
     private namingService: NamingService,
     private roomAuthorizationService: RoomAuthorizationService,
-    private roomServiceEvents: RoomServiceEvents
+    private roomServiceEvents: RoomServiceEvents,
+    private subscriptionPublishService: SubscriptionPublishService
   ) {}
 
   // todo should be removed to serve per entity e.g. send aspect comment
@@ -80,7 +82,11 @@ export class RoomResolverMutations {
       messageData
     );
 
-    this.roomServiceEvents.processMessageReceivedSubscription(room, message);
+    this.subscriptionPublishService.publishRoomEvent(
+      room.id,
+      MutationType.CREATE,
+      message
+    );
 
     switch (room.type) {
       case RoomType.POST:
@@ -182,6 +188,7 @@ export class RoomResolverMutations {
             agentInfo
           );
         }
+        break;
       default:
       // ignore for now, later likely to be an exception
     }
@@ -224,6 +231,12 @@ export class RoomResolverMutations {
       agentInfo
     );
 
+    this.subscriptionPublishService.publishRoomEvent(
+      room.id,
+      MutationType.DELETE,
+      { id: messageID } as IMessage
+    );
+
     return messageID;
   }
 
@@ -256,7 +269,18 @@ export class RoomResolverMutations {
       messageData
     );
 
-    this.roomServiceEvents.processMessageReceivedSubscription(room, reply);
+    this.subscriptionPublishService.publishRoomEvent(
+      room.id,
+      MutationType.CREATE,
+      reply
+    );
+
+
+    this.subscriptionPublishService.publishRoomEvent(
+      room.id,
+      MutationType.CREATE,
+      reply
+    );
 
     switch (room.type) {
       case RoomType.POST:
@@ -328,6 +352,7 @@ export class RoomResolverMutations {
             messageOwnerId
           );
         }
+        break;
       default:
       // ignore for now, later likely to be an exception
     }
@@ -357,6 +382,12 @@ export class RoomResolverMutations {
       room,
       agentInfo.communicationID,
       reactionData
+    );
+
+    this.subscriptionPublishService.publishRoomEvent(
+      room.id,
+      MutationType.CREATE,
+      reaction
     );
 
     return reaction;
@@ -390,10 +421,18 @@ export class RoomResolverMutations {
       `room remove reaction: ${room.id}`
     );
 
-    return await this.roomService.removeReactionToMessage(
+    const isDeleted = await this.roomService.removeReactionToMessage(
       room,
       agentInfo.communicationID,
       reactionData
     );
+
+    this.subscriptionPublishService.publishRoomEvent(
+      room.id,
+      MutationType.CREATE,
+      { id: reactionData.reactionID } as IMessageReaction
+    );
+
+    return isDeleted;
   }
 }

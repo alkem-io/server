@@ -1,4 +1,4 @@
-export const SUBSCRIPTION_ROOM_MESSAGE = 'alkemio-subscriptions-room-message';
+export const SUBSCRIPTION_ROOM_MESSAGE = 'alkemio-subscriptions-room-message'; // todo remove
 export const SUBSCRIPTION_DISCUSSION_UPDATED =
   'alkemio-subscriptions-discussion-updated';
 export const SUBSCRIPTION_CANVAS_CONTENT =
@@ -19,3 +19,4 @@ export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const WALLET_MANAGEMENT_SERVICE = 'alkemio-wallet-manager';
 export const REDIS_LOCK_SERVICE = 'redis-lock-service';
 export const MATRIX_ADAPTER_SERVICE = 'alkemio-matrix-adapter';
+export const SUBSCRIPTION_ROOM_EVENT_ = 'alkemio-subscriptions-room-event';

@@ -3,4 +3,5 @@ export interface CommunicationMessagePayload {
   message: string;
   sender: string;
   timestamp: number;
+  reactions: any[]; //todo
 }
