@@ -55,7 +55,7 @@ export class ElasticsearchService {
       requestTimeout: timeout,
       resurrectStrategy: 'ping',
       auth: { apiKey: api_key },
-      tls: { rejectUnauthorized: false },
+      tls: { rejectUnauthorized: true },
     });
   }
 
