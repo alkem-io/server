@@ -1,5 +1,5 @@
 import { PubSubEngine } from 'graphql-subscriptions';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { SUBSCRIPTION_ACTIVITY_CREATED } from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { IActivity } from '@platform/activity';
@@ -10,12 +10,15 @@ import {
   ActivityCreatedSubscriptionPayload,
   RoomEventSubscriptionPayload,
 } from './dto';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LogContext } from '@common/enums';
 
 @Injectable()
 export class SubscriptionPublishService {
   constructor(
     @Inject(SUBSCRIPTION_ACTIVITY_CREATED)
-    private activityCreatedSubscription: PubSubEngine
+    private activityCreatedSubscription: PubSubEngine,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   public publishActivity(
@@ -37,21 +40,30 @@ export class SubscriptionPublishService {
   public publishRoomEvent(
     roomId: string,
     type: MutationType,
-    data: IMessage | IMessageReaction
+    data: IMessage | IMessageReaction,
+    messageID?: string
   ): Promise<void> {
     const payload: RoomEventSubscriptionPayload = {
       eventID: `room-event-${randomInt()}`,
       roomID: roomId,
     };
 
-    if (data instanceof IMessage) {
+    if (isMessage(data)) {
       payload.message = {
         type,
         data,
       };
     } else {
+      if (!messageID) {
+        return this.logger.error(
+          'messageID needs to be provided for reaction message events',
+          LogContext.SUBSCRIPTIONS
+        );
+      }
+
       payload.reaction = {
         type,
+        messageID,
         data,
       };
     }
@@ -64,3 +76,9 @@ export class SubscriptionPublishService {
 }
 
 const randomInt = () => Math.round(Math.random() * 1000);
+
+const isMessage = (
+  messageOrReaction: unknown
+): messageOrReaction is IMessage => {
+  return (messageOrReaction as IMessage)?.message != undefined;
+};

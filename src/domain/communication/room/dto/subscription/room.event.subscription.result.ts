@@ -16,7 +16,7 @@ export class RoomEventSubscriptionResult {
     nullable: true,
     description: 'A message related event.',
   })
-  message?: RoomMessageEventSubscriptionResult
+  message?: RoomMessageEventSubscriptionResult;
 
   @Field(() => RoomMessageReactionEventSubscriptionResult, {
     nullable: true,

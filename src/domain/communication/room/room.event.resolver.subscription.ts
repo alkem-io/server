@@ -11,13 +11,12 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SUBSCRIPTION_ROOM_MESSAGE } from '@common/constants/providers';
 import { TypedSubscription } from '@src/common/decorators';
 import {
-  RoomMessageEventSubscriptionArgs,
+  RoomEventSubscriptionArgs,
+  RoomEventSubscriptionResult,
 } from '@domain/communication/room/dto/subscription';
-import { RoomMessageReceivedArgs } from '@domain/communication/room/dto/room.subscription.message.received.args';
-import { RoomService } from './room.service';
-import { RoomMessageEventSubscriptionResult } from '@domain/communication/room/dto/subscription/room.message.event.subscription.result';
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
 import { RoomEventSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
+import { RoomService } from './room.service';
 
 @Resolver()
 export class RoomEventResolverSubscription {
@@ -32,40 +31,45 @@ export class RoomEventResolverSubscription {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @TypedSubscription<
-    RoomEventSubscriptionPayload,
-    RoomMessageEventSubscriptionArgs
-  >(() => RoomMessageEventSubscriptionResult, {
-    description: 'Receive Room event',
-    async resolve(this: RoomEventResolverSubscription, payload, args, context) {
-      const agentInfo = context.req?.user;
-      const logMsgPrefix = `[User (${agentInfo.email}) Room Msg] - `;
-      this.logger.verbose?.(
-        `${logMsgPrefix} Sending out event: ${payload.roomID} `,
-        LogContext.SUBSCRIPTIONS
-      );
-      return payload;
-    },
-    async filter(
-      this: RoomEventResolverSubscription,
-      payload,
-      variables,
-      context
-    ) {
-      const agentInfo = context.req?.user;
-      const isMatch = variables.roomID === payload.roomID;
+  @TypedSubscription<RoomEventSubscriptionPayload, RoomEventSubscriptionArgs>(
+    () => RoomEventSubscriptionResult,
+    {
+      description: 'Receive Room event',
+      async resolve(
+        this: RoomEventResolverSubscription,
+        payload,
+        args,
+        context
+      ) {
+        const agentInfo = context.req?.user;
+        const logMsgPrefix = `[User (${agentInfo.email}) Room Msg] - `;
+        this.logger.verbose?.(
+          `${logMsgPrefix} Sending out event: ${payload.roomID} `,
+          LogContext.SUBSCRIPTIONS
+        );
+        return payload;
+      },
+      async filter(
+        this: RoomEventResolverSubscription,
+        payload,
+        variables,
+        context
+      ) {
+        const agentInfo = context.req?.user;
+        const isMatch = variables.roomID === payload.roomID;
 
-      this.logger.verbose?.(
-        `[User (${agentInfo.email}) Room Events] - Filtering event id '${payload.eventID}' - match=${isMatch}`,
-        LogContext.SUBSCRIPTIONS
-      );
+        this.logger.verbose?.(
+          `[User (${agentInfo.email}) Room Events] - Filtering event id '${payload.eventID}' - match=${isMatch}`,
+          LogContext.SUBSCRIPTIONS
+        );
 
-      return isMatch;
-    },
-  })
+        return isMatch;
+      },
+    }
+  )
   async roomEvents(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args({ nullable: false }) { roomID }: RoomMessageReceivedArgs
+    @Args({ nullable: false }) { roomID }: RoomEventSubscriptionArgs
   ) {
     const logMsgPrefix = `[User (${agentInfo.email}) Room Events] - `;
     this.logger.verbose?.(

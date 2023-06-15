@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
@@ -26,6 +26,7 @@ import { CalloutClosedException } from '@common/exceptions/callout/callout.close
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { MutationType } from '@common/enums/subscriptions';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Resolver()
 export class RoomResolverMutations {
@@ -35,7 +36,8 @@ export class RoomResolverMutations {
     private namingService: NamingService,
     private roomAuthorizationService: RoomAuthorizationService,
     private roomServiceEvents: RoomServiceEvents,
-    private subscriptionPublishService: SubscriptionPublishService
+    private subscriptionPublishService: SubscriptionPublishService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   // todo should be removed to serve per entity e.g. send aspect comment
@@ -234,7 +236,15 @@ export class RoomResolverMutations {
     this.subscriptionPublishService.publishRoomEvent(
       room.id,
       MutationType.DELETE,
-      { id: messageID } as IMessage
+      // send empty data, because the resource is deleted
+      {
+        id: messageID,
+        message: '',
+        reactions: [],
+        sender: '',
+        threadID: '',
+        timestamp: -1,
+      }
     );
 
     return messageID;
@@ -274,7 +284,6 @@ export class RoomResolverMutations {
       MutationType.CREATE,
       reply
     );
-
 
     this.subscriptionPublishService.publishRoomEvent(
       room.id,
@@ -387,7 +396,8 @@ export class RoomResolverMutations {
     this.subscriptionPublishService.publishRoomEvent(
       room.id,
       MutationType.CREATE,
-      reaction
+      reaction,
+      reactionData.messageID
     );
 
     return reaction;
@@ -429,8 +439,14 @@ export class RoomResolverMutations {
 
     this.subscriptionPublishService.publishRoomEvent(
       room.id,
-      MutationType.CREATE,
-      { id: reactionData.reactionID } as IMessageReaction
+      MutationType.DELETE,
+      // send empty data, because the resource is deleted
+      {
+        id: reactionData.reactionID,
+        emoji: '',
+        sender: '',
+        timestamp: -1,
+      } as IMessageReaction
     );
 
     return isDeleted;
