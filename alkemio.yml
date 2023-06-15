@@ -371,7 +371,7 @@ platform:
   impact: ${PLATFORM_IMPACT}:https://alkemio.org/manifesto
 
   # Collaboration tools
-  inspiration: ${PLATFORM_IMPACT}:https://alkemio.org/help/collaboration-tools/
+  inspiration: ${PLATFORM_INSPIRATION}:https://alkemio.org/help/collaboration-tools/
 
   # Home page - Foundation
   foundation: ${PLATFORM_FOUNDATION}:https://alkemio.org/
