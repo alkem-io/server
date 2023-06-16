@@ -285,12 +285,6 @@ export class RoomResolverMutations {
       reply
     );
 
-    this.subscriptionPublishService.publishRoomEvent(
-      room.id,
-      MutationType.CREATE,
-      reply
-    );
-
     switch (room.type) {
       case RoomType.POST:
         const post = await this.namingService.getPostForRoom(
@@ -437,17 +431,19 @@ export class RoomResolverMutations {
       reactionData
     );
 
-    this.subscriptionPublishService.publishRoomEvent(
-      room.id,
-      MutationType.DELETE,
-      // send empty data, because the resource is deleted
-      {
-        id: reactionData.reactionID,
-        emoji: '',
-        sender: '',
-        timestamp: -1,
-      } as IMessageReaction
-    );
+    if (isDeleted) {
+      this.subscriptionPublishService.publishRoomEvent(
+        room.id,
+        MutationType.DELETE,
+        // send empty data, because the resource is deleted
+        {
+          id: reactionData.reactionID,
+          emoji: '',
+          sender: '',
+          timestamp: -1,
+        } as IMessageReaction
+      );
+    }
 
     return isDeleted;
   }

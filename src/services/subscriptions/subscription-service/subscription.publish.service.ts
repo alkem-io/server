@@ -1,5 +1,5 @@
 import { PubSubEngine } from 'graphql-subscriptions';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { SUBSCRIPTION_ACTIVITY_CREATED } from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { IActivity } from '@platform/activity';
@@ -10,15 +10,12 @@ import {
   ActivityCreatedSubscriptionPayload,
   RoomEventSubscriptionPayload,
 } from './dto';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
 
 @Injectable()
 export class SubscriptionPublishService {
   constructor(
     @Inject(SUBSCRIPTION_ACTIVITY_CREATED)
-    private activityCreatedSubscription: PubSubEngine,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private activityCreatedSubscription: PubSubEngine
   ) {}
 
   public publishActivity(
@@ -54,13 +51,6 @@ export class SubscriptionPublishService {
         data,
       };
     } else {
-      if (!messageID) {
-        return this.logger.error(
-          'messageID needs to be provided for reaction message events',
-          LogContext.SUBSCRIPTIONS
-        );
-      }
-
       payload.reaction = {
         type,
         messageID,

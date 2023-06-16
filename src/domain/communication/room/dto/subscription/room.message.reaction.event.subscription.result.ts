@@ -13,10 +13,10 @@ export class RoomMessageReactionEventSubscriptionResult {
   type!: MutationType;
 
   @Field(() => String, {
-    nullable: false,
+    nullable: true,
     description: 'The message on which the reaction event happened.',
   })
-  messageID!: string;
+  messageID?: string;
 
   @Field(() => IMessageReaction, {
     nullable: false,

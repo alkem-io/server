@@ -11,7 +11,7 @@ export interface RoomEventSubscriptionPayload extends BaseSubscriptionPayload {
   };
   reaction?: {
     type: MutationType;
-    messageID: string;
+    messageID?: string;
     data: IMessageReaction | { id: string };
   };
 }
