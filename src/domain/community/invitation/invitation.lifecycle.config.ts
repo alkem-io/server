@@ -11,7 +11,7 @@ export const invitationLifecycleConfig: ILifecycleDefinition = {
       on: {
         ACCEPT: {
           target: 'accepted',
-          cond: 'communityUpdateAuthorized',
+          cond: 'communityInvitationAcceptAuthorized',
         },
         REJECT: 'rejected',
       },
@@ -25,8 +25,18 @@ export const invitationLifecycleConfig: ILifecycleDefinition = {
     },
     rejected: {
       on: {
-        REINVITE: 'invited',
-        ARCHIVE: 'archived',
+        REINVITE: {
+          target: 'invited',
+          cond: 'communityUpdateAuthorized',
+        },
+        REJECT: {
+          target: 'rejected',
+          cond: 'communityUpdateAuthorized',
+        },
+        ARCHIVE: {
+          target: 'archived',
+          cond: 'communityUpdateAuthorized',
+        },
       },
     },
     archived: {
