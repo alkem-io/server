@@ -15,4 +15,10 @@ export class SubscriptionReadService {
       SubscriptionType.ACTIVITY_CREATED
     );
   }
+
+  public subscribeToRoomEvents() {
+    return this.activityCreatedSubscription.asyncIterator(
+      SubscriptionType.ROOM_EVENTS
+    );
+  }
 }

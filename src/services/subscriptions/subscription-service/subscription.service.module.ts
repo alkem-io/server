@@ -40,4 +40,4 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
   ],
   exports: [SubscriptionPublishService, SubscriptionReadService],
 })
-export class SubscriptionPublishServiceModule {}
+export class SubscriptionServiceModule {}
