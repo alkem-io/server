@@ -32,27 +32,27 @@ export class LocationService {
         LogContext.COMMUNITY
       );
     }
-    if (locationData.city || locationData.city === '') {
+    if (locationData.city !== undefined) {
       location.city = locationData.city;
     }
 
-    if (locationData.country || locationData.country === '') {
+    if (locationData.country !== undefined) {
       location.country = locationData.country;
     }
 
-    if (locationData.addressLine1 || locationData.addressLine1 === '') {
+    if (locationData.addressLine1 !== undefined) {
       location.addressLine1 = locationData.addressLine1;
     }
 
-    if (locationData.addressLine2 || locationData.addressLine2 === '') {
+    if (locationData.addressLine2 !== undefined) {
       location.addressLine2 = locationData.addressLine2;
     }
 
-    if (locationData.postalCode || locationData.postalCode === '') {
+    if (locationData.postalCode !== undefined) {
       location.postalCode = locationData.postalCode;
     }
 
-    if (locationData.stateOrProvince || locationData.stateOrProvince === '') {
+    if (locationData.stateOrProvince !== undefined) {
       location.stateOrProvince = locationData.stateOrProvince;
     }
   }
