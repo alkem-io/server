@@ -34,25 +34,8 @@ export class RoomServiceEvents {
     private activityAdapter: ActivityAdapter,
     private elasticService: ElasticsearchService,
     private notificationAdapter: NotificationAdapter,
-    private communityResolverService: CommunityResolverService,
-    @Inject(SUBSCRIPTION_ROOM_MESSAGE)
-    private readonly subscriptionRoomMessage: PubSubEngine
+    private communityResolverService: CommunityResolverService
   ) {}
-
-  public processMessageReceivedSubscription(room: IRoom, message: IMessage) {
-    // build subscription payload
-    const eventID = `room-msg-${getRandomId()}`;
-    const subscriptionPayload: RoomMessageReceived = {
-      eventID: eventID,
-      message: message,
-      roomID: room.id,
-    };
-    // send the subscriptions event
-    this.subscriptionRoomMessage.publish(
-      SubscriptionType.COMMUNICATION_ROOM_MESSAGE_RECEIVED,
-      subscriptionPayload
-    );
-  }
 
   public processNotificationMentions(
     parentEntity: INameable,
