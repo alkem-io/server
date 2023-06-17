@@ -24,6 +24,7 @@ import { CommunityAuthorizationService } from './community.service.authorization
 import { FormModule } from '@domain/common/form/form.module';
 import { InvitationModule } from '../invitation/invitation.module';
 import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecycle.invitation.options.provider';
+import { InvitationExternalModule } from '../invitation.external/invitation.external.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecyc
     OrganizationModule,
     ApplicationModule,
     InvitationModule,
+    InvitationExternalModule,
     CommunicationModule,
     CommunityPolicyModule,
     LifecycleModule,
