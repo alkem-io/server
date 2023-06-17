@@ -905,11 +905,23 @@ export class CommunityService {
   private async validateInvitationToExternalUser(email: string) {
     // Check if a user with the provided email address already exists or not
     const isExistingUser = await this.userService.isRegisteredUser(email);
-    if (isExistingUser)
+    if (isExistingUser) {
       throw new InvalidStateTransitionException(
         `User with the provided email address already exists: ${email}`,
         LogContext.COMMUNITY
       );
+    }
+
+    const existingExternalInvitation =
+      await this.invitationExternalService.findInvitationExternalsForUser(
+        email
+      );
+    if (existingExternalInvitation.length > 0) {
+      throw new InvalidStateTransitionException(
+        `An invitation with the provided email address already exists: ${email}`,
+        LogContext.COMMUNITY
+      );
+    }
   }
 
   async getCommunityInNameableScopeOrFail(
