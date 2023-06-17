@@ -12,7 +12,7 @@ export class InvitationExternal
     cascade: false,
     onDelete: 'CASCADE',
   })
-  community?: Community;
+  community!: Community;
 
   @Column('varchar', { length: 255, nullable: false })
   email = '';

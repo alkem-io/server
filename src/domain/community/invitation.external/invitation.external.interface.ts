@@ -24,7 +24,7 @@ export abstract class IInvitationExternal extends IAuthorizable {
 
   createdBy!: string;
 
-  community?: ICommunity;
+  community!: ICommunity;
 
   @Field(() => Date)
   createdDate!: Date;

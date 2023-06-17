@@ -83,6 +83,13 @@ export class InvitationExternalService {
     return await this.invitationExternalRepository.save(invitationExternal);
   }
 
+  async recordProfileCreated(
+    invitationExternal: IInvitationExternal
+  ): Promise<IInvitationExternal> {
+    invitationExternal.profileCreated = true;
+    return await this.save(invitationExternal);
+  }
+
   async getCreatedBy(invitationExternal: IInvitationExternal): Promise<IUser> {
     const user = await this.userService.getUserOrFail(
       invitationExternal.createdBy
