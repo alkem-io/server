@@ -29,7 +29,6 @@ hosting:
   #
   path_api_public_rest: ${PATH_API_PUBLIC_REST}:/api/public/rest
 
-
   # The path from the end point for all private api rest requests.
   # It is combined with the `endpoint` above to provide the full path for incoming requests targeting the public Rest api.
   #
@@ -261,12 +260,6 @@ communications:
 ## storage ##
 # Alkemio uses multiple types of persistent storage, including SQL database and IPFS.
 storage:
-  file:
-    # Max file size of files that will be uploaded to IPFS (in bytes).
-    max_file_size: 5242880
-
-    # Supported mime types
-    mime_types: ${IPFS_MIME_TYPES}:image/bmp,image/jpeg,image/x-png,image/png,image/gif,application/pdf,image/webp,image/avif
   # MySQL database configuration for usage by the Alkemio Server.
   # The authentication method used by Alkemio Server is MySQL Native Password.
   # Note: both schema / database name are used for configuration and they need to have the same value.
@@ -357,49 +350,52 @@ collaboration:
 ## Configuration of the legal / usability aspects of the platform
 platform:
   # Terms of usage that all users comply with
-  terms: ${PLATFORM_TERMS}:https://alkemio.foundation/legal/hub/#tc
+  terms: ${PLATFORM_TERMS}:https://alkemio.org/legal/hub/#tc
 
   # Privacy policy for the platform
-  privacy: ${PLATFORM_PRIVACY}:https://alkemio.foundation/privacy/
+  privacy: ${PLATFORM_PRIVACY}:https://alkemio.org/privacy/
 
   # Security policy for the platform
-  security: ${PLATFORM_SECURITY}:https://alkemio.foundation/security/
+  security: ${PLATFORM_SECURITY}:https://alkemio.org/security/
 
   # Link for support requests
-  support: ${PLATFORM_SUPPORT}:https://alkemio.foundation/support/
+  support: ${PLATFORM_SUPPORT}:https://alkemio.org/support/
 
   # Feedback form for the platform
-  feedback: ${PLATFORM_FEEDBACK}:https://alkemio.foundation/feedback/
+  feedback: ${PLATFORM_FEEDBACK}:https://alkemio.org/feedback/
 
   # About the platform
-  about: ${PLATFORM_ABOUT}:https://alkemio.foundation/about/
+  about: ${PLATFORM_ABOUT}:https://alkemio.org/about/
 
   # Home page - Impact
-  impact: ${PLATFORM_IMPACT}:https://alkemio.foundation/manifesto
+  impact: ${PLATFORM_IMPACT}:https://alkemio.org/manifesto
+
+  # Collaboration tools
+  inspiration: ${PLATFORM_INSPIRATION}:https://alkemio.org/help/collaboration-tools/
 
   # Home page - Foundation
-  foundation: ${PLATFORM_FOUNDATION}:https://alkemio.foundation/
+  foundation: ${PLATFORM_FOUNDATION}:https://alkemio.org/
 
   # Home page - Opensource
   opensource: ${PLATFORM_OPENSOURCE}:https://github.com/alkem-io
 
   # Home page - Opensource
-  releases: ${PLATFORM_RELEASES}:https://alkemio.foundation/releases
+  releases: ${PLATFORM_RELEASES}:https://alkemio.org/releases
 
   # Help Dialog - Help
-  help: ${PLATFORM_HELP}:https://alkemio.foundation/help/
+  help: ${PLATFORM_HELP}:https://alkemio.org/help/
 
   # Help Dialog - Community Forum
-  community: ${PLATFORM_COMMUNITY}:https://alkemio.foundation/support/
+  community: ${PLATFORM_COMMUNITY}:https://alkemio.org/support/
 
   # Help Dialog - blog
-  newuser: ${PLATFORM_NEWUSER}:https://alkemio.foundation/help/
+  newuser: ${PLATFORM_NEWUSER}:https://alkemio.org/help/
 
   # Help Dialog - tips
-  tips: ${PLATFORM_TIPS}:https://alkemio.foundation/post/
+  tips: ${PLATFORM_TIPS}:https://alkemio.org/post/
 
   # Acceptable Usage Policy
-  aup: ${PLATFORM_AUP}:https://www.alkemio.foundation/legal/hub/#aup
+  aup: ${PLATFORM_AUP}:https://www.alkemio.org/legal/hub/#aup
 
   # Client can optionally work with a landing page, to give additional information
   landing_page:

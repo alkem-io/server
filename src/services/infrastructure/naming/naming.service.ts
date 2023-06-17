@@ -21,6 +21,9 @@ import { Collaboration } from '@domain/collaboration/collaboration';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
+import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
+import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
+import { ICallout } from '@domain/collaboration/callout';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -44,6 +47,8 @@ export class NamingService {
     private collaborationRepository: Repository<Collaboration>,
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
+    @InjectRepository(InnovationHub)
+    private innovationHubRepository: Repository<InnovationHub>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @InjectEntityManager('default')
@@ -191,6 +196,22 @@ export class NamingService {
     return true;
   }
 
+  async isInnovationHubSubdomainAvailable(subdomain: string): Promise<boolean> {
+    const innovationHubsCount = await this.innovationHubRepository.countBy({
+      subdomain: subdomain,
+    });
+    if (innovationHubsCount > 0) return false;
+    return true;
+  }
+
+  async isInnovationHubNameIdAvailable(nameID: string): Promise<boolean> {
+    const innovationHubsCount = await this.innovationHubRepository.countBy({
+      nameID: nameID,
+    });
+    if (innovationHubsCount > 0) return false;
+    return true;
+  }
+
   isValidNameID(nameID: string): boolean {
     if (nameID.length > NameID.MAX_LENGTH) return false;
     return NameID.REGEX.test(nameID);
@@ -286,26 +307,68 @@ export class NamingService {
     return community.policy;
   }
 
-  async getAspectForComments(commentsID: string): Promise<IAspect | null> {
-    // check if this is a comment related to an aspect
-
-    return await this.entityManager.findOne(Aspect, {
+  async getPostForRoom(commentsID: string): Promise<IAspect> {
+    const result = await this.entityManager.findOne(Aspect, {
       where: {
         comments: { id: commentsID },
       },
       relations: ['profile'],
     });
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to identify Post for Room: : ${commentsID}`,
+        LogContext.COLLABORATION
+      );
+    }
+    return result;
   }
 
-  async getCalendarEventForComments(
-    commentsID: string
-  ): Promise<ICalendarEvent | null> {
-    // check if this is a comment related to an calendar
-    return await this.entityManager.findOne(CalendarEvent, {
+  async getCalloutForRoom(commentsID: string): Promise<ICallout> {
+    const result = await this.entityManager.findOne(Callout, {
+      where: {
+        comments: { id: commentsID },
+      },
+      relations: ['profile'],
+    });
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to identify Callout for Room: : ${commentsID}`,
+        LogContext.COLLABORATION
+      );
+    }
+    return result;
+  }
+
+  async getCalendarEventForRoom(commentsID: string): Promise<ICalendarEvent> {
+    const result = await this.entityManager.findOne(CalendarEvent, {
       where: {
         comments: { id: commentsID },
       },
       relations: ['profile', 'comments'],
     });
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to identify CalendarEvent for Room: : ${commentsID}`,
+        LogContext.COLLABORATION
+      );
+    }
+    return result;
+  }
+
+  async getDiscussionForRoom(commentsID: string): Promise<IDiscussion> {
+    // check if this is a comment related to an calendar
+    const result = await this.entityManager.findOne(Discussion, {
+      where: {
+        comments: { id: commentsID },
+      },
+      relations: ['profile', 'comments'],
+    });
+    if (!result) {
+      throw new EntityNotFoundException(
+        `Unable to identify Discussion for Room: : ${commentsID}`,
+        LogContext.COLLABORATION
+      );
+    }
+    return result;
   }
 }

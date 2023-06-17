@@ -1,0 +1,16 @@
+mutation sendMessageToRoom($messageData: RoomSendMessageInput!) {
+  sendMessageToRoom(messageData: $messageData) {
+    id
+    message
+    timestamp
+    sender
+  }
+}
+
+Variables:
+{
+  "messageData": {
+    "message": "example222",
+    "roomID": "uuid"
+  }
+}

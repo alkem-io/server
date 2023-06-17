@@ -4,7 +4,7 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import {
@@ -12,38 +12,29 @@ import {
   ICommunication,
 } from '@domain/communication/communication';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { ConfigService } from '@nestjs/config';
 import { IDiscussion } from '../discussion/discussion.interface';
 import { DiscussionService } from '../discussion/discussion.service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { IUser } from '@domain/community/user/user.interface';
 import { CommunicationCreateDiscussionInput } from './dto/communication.dto.create.discussion';
-import { UpdatesService } from '../updates/updates.service';
-import { IUpdates } from '../updates/updates.interface';
-import { RoomService } from '../room/room.service';
 import { DiscussionCategory } from '@common/enums/communication.discussion.category';
 import { CommunicationDiscussionCategoryException } from '@common/exceptions/communication.discussion.category.exception';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
+import { RoomService } from '../room/room.service';
+import { IRoom } from '../room/room.interface';
+import { RoomType } from '@common/enums/room.type';
+import { COMMUNICATION_PLATFORM_HUBID } from '@common/constants';
 
 @Injectable()
 export class CommunicationService {
-  private communicationsEnabled = false;
-
   constructor(
-    private configService: ConfigService,
     private discussionService: DiscussionService,
-    private updatesService: UpdatesService,
-    private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
+    private communicationAdapter: CommunicationAdapter,
     @InjectRepository(Communication)
     private communicationRepository: Repository<Communication>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
-  ) {
-    // need both to be true
-    this.communicationsEnabled = this.configService.get(
-      ConfigurationTypes.COMMUNICATIONS
-    )?.enabled;
-  }
+  ) {}
 
   async createCommunication(
     displayName: string,
@@ -60,8 +51,9 @@ export class CommunicationService {
     // save to get the id assigned
     await this.save(communication);
 
-    communication.updates = await this.updatesService.createUpdates(
-      `${displayName}-Updates`
+    communication.updates = await this.roomService.createRoom(
+      `${displayName}-Updates`,
+      RoomType.UPDATES
     );
 
     return await this.communicationRepository.save(communication);
@@ -96,10 +88,15 @@ export class CommunicationService {
       );
     }
 
+    let roomType = RoomType.DISCUSSION;
+    if (this.isPlatformCommunication(communication)) {
+      roomType = RoomType.DISCUSSION_FORUM;
+    }
     const discussion = await this.discussionService.createDiscussion(
       discussionData,
       userID,
-      communication.displayName
+      communication.displayName,
+      roomType
     );
     this.logger.verbose?.(
       `[Discussion] Room created (${displayName}) and membership replicated from Updates (${communicationID})`,
@@ -110,8 +107,9 @@ export class CommunicationService {
     await this.communicationRepository.save(communication);
 
     // Trigger a room membership request for the current user that is not awaited
+    const room = await this.discussionService.getComments(discussion.id);
     await this.communicationAdapter.addUserToRoom(
-      discussion.communicationRoomID,
+      room.externalRoomID,
       userCommunicationID
     );
 
@@ -126,6 +124,13 @@ export class CommunicationService {
     // );
 
     return discussion;
+  }
+
+  private isPlatformCommunication(communication: ICommunication): boolean {
+    if (communication.hubID === COMMUNICATION_PLATFORM_HUBID) {
+      return true;
+    }
+    return false;
   }
 
   async getDiscussions(communication: ICommunication): Promise<IDiscussion[]> {
@@ -172,7 +177,7 @@ export class CommunicationService {
     return discussion;
   }
 
-  getUpdates(communication: ICommunication): IUpdates {
+  getUpdates(communication: ICommunication): IRoom {
     if (!communication.updates) {
       throw new EntityNotInitializedException(
         `Communication not initialized, no Updates: ${communication.id}`,
@@ -199,6 +204,7 @@ export class CommunicationService {
       );
     return communication;
   }
+
   async removeCommunication(communicationID: string): Promise<boolean> {
     // Note need to load it in with all contained entities so can remove fully
     const communication = await this.getCommunicationOrFail(communicationID, {
@@ -212,7 +218,7 @@ export class CommunicationService {
       });
     }
 
-    await this.updatesService.deleteUpdates(this.getUpdates(communication));
+    await this.roomService.deleteRoom(this.getUpdates(communication));
 
     await this.communicationRepository.remove(communication as Communication);
     return true;
@@ -233,11 +239,12 @@ export class CommunicationService {
 
   async getRoomsUsed(communication: ICommunication): Promise<string[]> {
     const communicationRoomIDs: string[] = [
-      this.getUpdates(communication).communicationRoomID,
+      this.getUpdates(communication).externalRoomID,
     ];
     const discussions = await this.getDiscussions(communication);
     for (const discussion of discussions) {
-      communicationRoomIDs.push(discussion.communicationRoomID);
+      const room = await this.discussionService.getComments(discussion.id);
+      communicationRoomIDs.push(room.displayName);
     }
     return communicationRoomIDs;
   }
@@ -259,10 +266,11 @@ export class CommunicationService {
   ): Promise<boolean> {
     // get the list of rooms to add the user to
     const communicationRoomIDs: string[] = [
-      this.getUpdates(communication).communicationRoomID,
+      this.getUpdates(communication).externalRoomID,
     ];
     for (const discussion of await this.getDiscussions(communication)) {
-      communicationRoomIDs.push(discussion.communicationRoomID);
+      const room = await this.discussionService.getComments(discussion.id);
+      communicationRoomIDs.push(room.externalRoomID);
     }
     await this.communicationAdapter.removeUserFromRooms(
       communicationRoomIDs,

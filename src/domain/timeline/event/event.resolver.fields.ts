@@ -1,14 +1,11 @@
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
 import { Profiling } from '@common/decorators/profiling.decorator';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { IComments } from '@domain/communication/comments/comments.interface';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { ICalendarEvent } from './event.interface';
@@ -58,17 +55,6 @@ export class CalendarEventResolverFields {
   @Profiling.api
   async profile(@Parent() calendarEvent: ICalendarEvent): Promise<IProfile> {
     return await this.calendarEventService.getProfile(calendarEvent);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('comments', () => IComments, {
-    nullable: true,
-    description: 'The comments for this CalendarEvent.',
-  })
-  @Profiling.api
-  async comments(@Parent() calendarEvent: ICalendarEvent): Promise<IComments> {
-    return this.calendarEventService.getComments(calendarEvent.id);
   }
 
   @ResolveField('startDate', () => Date, {

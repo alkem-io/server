@@ -9,6 +9,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { ApplicationResolverFields } from './application.resolver.fields';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ApplicationAuthorizationService } from './application.service.authorization';
+import { ApplicationResolverMutations } from './application.resolver.mutations';
 
 @Module({
   imports: [
@@ -23,7 +24,12 @@ import { ApplicationAuthorizationService } from './application.service.authoriza
     ApplicationService,
     ApplicationAuthorizationService,
     ApplicationResolverFields,
+    ApplicationResolverMutations,
   ],
-  exports: [ApplicationService, ApplicationAuthorizationService],
+  exports: [
+    ApplicationService,
+    ApplicationAuthorizationService,
+    ApplicationResolverMutations,
+  ],
 })
 export class ApplicationModule {}

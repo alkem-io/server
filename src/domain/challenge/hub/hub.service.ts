@@ -70,6 +70,7 @@ import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-templa
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
+import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 
 @Injectable()
 export class HubService {
@@ -236,9 +237,9 @@ export class HubService {
       ],
     });
 
-    // Do not remove an hub that has child challenges , require these to be individually first removed
+    // Do not remove a hub that has child challenges, require these to be individually first removed
     if (hub.challenges && hub.challenges.length > 0)
-      throw new ValidationException(
+      throw new OperationNotAllowedException(
         `Unable to remove Hub (${hub.nameID}) as it contains ${hub.challenges.length} challenges`,
         LogContext.CHALLENGES
       );
@@ -333,7 +334,7 @@ export class HubService {
     const notExist = [...ids];
 
     hubs.forEach(hub => {
-      const idIndex = ids.findIndex(x => x === hub.id);
+      const idIndex = notExist.findIndex(x => x === hub.id);
 
       if (idIndex >= -1) {
         notExist.splice(idIndex, 1);
@@ -396,7 +397,14 @@ export class HubService {
       .whereInIds(IDs)
       .getMany();
 
-    const visibleHubs = hubsDataForSorting.filter(hub => {
+    return this.filterAndSortHubs(hubsDataForSorting, allowedVisibilities);
+  }
+
+  private filterAndSortHubs(
+    hubsData: Hub[],
+    allowedVisibilities: HubVisibility[]
+  ): string[] {
+    const visibleHubs = hubsData.filter(hub => {
       return this.hubsFilterService.isVisible(
         hub.visibility,
         allowedVisibilities
@@ -404,6 +412,13 @@ export class HubService {
     });
 
     const sortedHubs = visibleHubs.sort((a, b) => {
+      if (
+        a.visibility !== b.visibility &&
+        (a.visibility === HubVisibility.DEMO ||
+          b.visibility === HubVisibility.DEMO)
+      )
+        return a.visibility === HubVisibility.DEMO ? 1 : -1;
+
       if (
         a.authorization?.anonymousReadAccess === true &&
         b.authorization?.anonymousReadAccess === false

@@ -1,0 +1,17 @@
+mutation eventOnCommunityInvitation($invitationEventData: InvitationEventInput!) {
+  eventOnCommunityInvitation(invitationEventData: $invitationEventData) {
+    id
+    lifecycle {
+      state
+    }
+  }
+}
+
+variables:
+{
+  "invitationEventData":
+  {
+    "invitationID": "uuid",
+  	"eventName": "ACCEPT"
+  }
+}

@@ -16,12 +16,14 @@ import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entit
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { HubFilterModule } from '@services/infrastructure/hub-filter/hub.filter.module';
+import { InvitationModule } from '@domain/community/invitation/invitation.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     ApplicationModule,
+    InvitationModule,
     UserModule,
     UserGroupModule,
     ChallengeModule,

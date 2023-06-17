@@ -10,12 +10,12 @@ import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
 import { CanvasModule } from '@domain/common/canvas/canvas.module';
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
-import { SubscriptionPublishServiceModule } from '@services/subscriptions/subscription-publish-service';
+import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { ActivityLogService } from './activity.log.service';
 import { ActivityLogResolverQueries } from './activity.log.resolver.queries';
 import { ActivityLogResolverSubscriptions } from './activity.log.resolver.subscriptions';
-import { UpdatesModule } from '@domain/communication/updates/updates.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
+import { RoomModule } from '@domain/communication/room/room.module';
 
 @Module({
   imports: [
@@ -28,10 +28,10 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
     CalloutModule,
     AspectModule,
     CanvasModule,
+    RoomModule,
     ChallengeModule,
     OpportunityModule,
-    UpdatesModule,
-    SubscriptionPublishServiceModule,
+    SubscriptionServiceModule,
     PlatformAuthorizationPolicyModule,
   ],
   providers: [

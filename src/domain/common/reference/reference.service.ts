@@ -40,19 +40,16 @@ export class ReferenceService {
     reference: IReference,
     referenceData: UpdateReferenceInput
   ) {
-    // Copy over the received data if a uri is supplied
-    if (referenceData.uri || referenceData.uri === '') {
+    if (referenceData.uri !== undefined) {
       reference.uri = referenceData.uri;
     }
 
-    if (referenceData.name) {
+    if (referenceData.name !== undefined) {
       reference.name = referenceData.name;
     }
 
-    if (referenceData.description) {
+    if (referenceData.description !== undefined) {
       reference.description = referenceData.description;
-    } else {
-      reference.description = '';
     }
   }
 

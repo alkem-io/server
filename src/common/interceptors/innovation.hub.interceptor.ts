@@ -11,6 +11,7 @@ import { INNOVATION_HUB_INJECT_TOKEN } from '@common/constants';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { InnovationHubService } from '@domain/innovation-hub';
+import { SUBDOMAIN_PATTERN } from '@core/validation';
 
 const SUBDOMAIN_GROUP = 'subdomain';
 /***
@@ -24,7 +25,7 @@ const SUBDOMAIN_GROUP = 'subdomain';
  https://alkem.io/
  */
 const SUBDOMAIN_REGEX = new RegExp(
-  `https?:\/\/(?<${SUBDOMAIN_GROUP}>\\w+)\\.\\w+\\.\\w+`
+  `https?:\/\/(?<${SUBDOMAIN_GROUP}>${SUBDOMAIN_PATTERN})\\.\\w+\\.\\w+`
 );
 
 /***

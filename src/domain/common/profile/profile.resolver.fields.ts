@@ -21,10 +21,15 @@ import {
   ProfileTagsetsLoaderCreator,
   VisualLoaderCreator,
 } from '@core/dataloader/creators';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { StorageBucketResolverService } from '@services/infrastructure/entity-resolver/storage.bucket.resolver.service';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
-  constructor(private profileService: ProfileService) {}
+  constructor(
+    private profileService: ProfileService,
+    private storageBucketResolverService: StorageBucketResolverService
+  ) {}
 
   @UseGuards(GraphqlGuard)
   @ResolveField('visual', () => IVisual, {
@@ -115,5 +120,17 @@ export class ProfileResolverFields {
     @Loader(ProfileLocationLoaderCreator) loader: ILoader<ILocation>
   ): Promise<ILocation> {
     return loader.load(profile.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('storageBucket', () => IStorageBucket, {
+    nullable: true,
+    description: 'The storage bucket for this Profile.',
+  })
+  @Profiling.api
+  async storageBucket(@Parent() profile: IProfile): Promise<IStorageBucket> {
+    return this.storageBucketResolverService.getStorageBucketForProfile(
+      profile.id
+    );
   }
 }

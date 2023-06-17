@@ -1,0 +1,11 @@
+mutation removeMessageOnRoom($messageData: RoomRemoveMessageInput!) {
+  removeMessageOnRoom(messageData: $messageData)
+}
+
+Variables:
+{
+  "messageData": {
+    "messageID": "example222",
+    "commentsID": "uuid"
+  }
+}

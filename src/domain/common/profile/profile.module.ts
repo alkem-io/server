@@ -11,6 +11,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { ProfileResolverFields } from './profile.resolver.fields';
 import { LocationModule } from '@domain/common/location';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { LocationModule } from '@domain/common/location';
     TypeOrmModule.forFeature([Profile]),
     VisualModule,
     LocationModule,
+    EntityResolverModule,
   ],
   providers: [
     ProfileResolverMutations,

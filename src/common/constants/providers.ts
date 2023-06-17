@@ -1,11 +1,6 @@
-export const SUBSCRIPTION_DISCUSSION_MESSAGE =
-  'alkemio-subscriptions-discussion-message';
+export const SUBSCRIPTION_ROOM_MESSAGE = 'alkemio-subscriptions-room-message'; // todo remove
 export const SUBSCRIPTION_DISCUSSION_UPDATED =
   'alkemio-subscriptions-discussion-updated';
-export const SUBSCRIPTION_UPDATE_MESSAGE =
-  'alkemio-subscriptions-update-message';
-export const SUBSCRIPTION_ASPECT_COMMENT =
-  'alkemio-subscriptions-aspect-comment';
 export const SUBSCRIPTION_CANVAS_CONTENT =
   'alkemio-subscriptions-canvas-content';
 export const SUBSCRIPTION_CALLOUT_ASPECT_CREATED =
@@ -24,4 +19,5 @@ export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const WALLET_MANAGEMENT_SERVICE = 'alkemio-wallet-manager';
 export const REDIS_LOCK_SERVICE = 'redis-lock-service';
 export const MATRIX_ADAPTER_SERVICE = 'alkemio-matrix-adapter';
+export const SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event';
 export const HOCUSPOCUS_SERVER = 'hocuspocus-server';

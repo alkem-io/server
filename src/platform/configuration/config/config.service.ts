@@ -41,6 +41,8 @@ export class KonfigService {
         feedback: this.configService.get(ConfigurationTypes.PLATFORM)?.feedback,
         about: this.configService.get(ConfigurationTypes.PLATFORM)?.about,
         impact: this.configService.get(ConfigurationTypes.PLATFORM)?.impact,
+        inspiration: this.configService.get(ConfigurationTypes.PLATFORM)
+          ?.inspiration,
         foundation: this.configService.get(ConfigurationTypes.PLATFORM)
           ?.foundation,
         opensource: this.configService.get(ConfigurationTypes.PLATFORM)
@@ -100,15 +102,6 @@ export class KonfigService {
       },
       geo: {
         endpoint: geoConfig?.rest_endpoint,
-      },
-      storage: {
-        file: {
-          maxFileSize: this.configService.get(ConfigurationTypes.STORAGE)?.file
-            ?.max_file_size,
-          mimeTypes: this.configService
-            .get(ConfigurationTypes.STORAGE)
-            ?.file.mime_types.split(','),
-        },
       },
     };
   }

@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.48.3",
+  "version": "0.50.2",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -46,8 +46,8 @@
     }
   },
   "dependencies": {
-    "@alkemio/matrix-adapter-lib": "^0.2.1",
-    "@alkemio/notifications-lib": "^0.4.1",
+    "@alkemio/matrix-adapter-lib": "^0.3.6",
+    "@alkemio/notifications-lib": "^0.4.3",
     "@apollo/server": "^4.6.0",
     "@elastic/elasticsearch": "^8.4.0",
     "@hocuspocus/extension-database": "^2.1.0",

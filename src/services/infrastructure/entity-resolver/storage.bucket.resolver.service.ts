@@ -4,6 +4,9 @@ import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { StorageBucketNotFoundException } from '@common/exceptions/storage.bucket.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { EntityNotFoundException } from '@common/exceptions';
+import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
 
 @Injectable()
 export class StorageBucketResolverService {
@@ -14,9 +17,32 @@ export class StorageBucketResolverService {
     private readonly logger: LoggerService
   ) {}
 
+  async getStorageBucketForProfile(profileID: string): Promise<IStorageBucket> {
+    const storageBucketID = await this.getStorageBucketIdForProfile(profileID);
+
+    if (!storageBucketID) {
+      throw new EntityNotFoundException(
+        `StorageBucket not found: ${storageBucketID}`,
+        LogContext.STORAGE_BUCKET
+      );
+    }
+    const storageBucket = await this.entityManager.findOneOrFail(
+      StorageBucket,
+      {
+        where: { id: storageBucketID },
+      }
+    );
+    if (!storageBucket)
+      throw new EntityNotFoundException(
+        `StorageBucket not found: ${storageBucketID}`,
+        LogContext.STORAGE_BUCKET
+      );
+    return storageBucket;
+  }
+
   public async getStorageBucketIdForProfile(
     profileID: string
-  ): Promise<string | never> {
+  ): Promise<string> {
     // First iterate over all the entity types that have storage spaces directly
     for (const entityName of Object.values(DirectStorageBucketEntityType)) {
       const match = await this.getDirectStorageBucketForProfile(
@@ -45,7 +71,7 @@ export class StorageBucketResolverService {
 
   public async getDocumentProfileType(
     profileID: string
-  ): Promise<ProfileResult | never> {
+  ): Promise<ProfileResult> {
     // Check the other places where a profile could be used
     const result = await this.getProfileType(profileID);
     if (!result) {
@@ -111,6 +137,8 @@ export class StorageBucketResolverService {
           profile.entityID,
           'innovation_flow_template'
         );
+      case ProfileType.INNOVATION_HUB:
+        return await this.getPlatformStorageBucketId();
       case ProfileType.DISCUSSION:
         return await this.getStorageBucketIdForDiscussion(profile.entityID);
       default:
@@ -132,7 +160,7 @@ export class StorageBucketResolverService {
   private async getStorageBucketIdForTemplate(
     templateId: string,
     templateType: TemplateType
-  ): Promise<string | never> {
+  ): Promise<string> {
     let query = `SELECT \`templatesSetId\` FROM \`${templateType}\`
   WHERE \`${templateType}\`.\`id\`='${templateId}'`;
     let [result]: {
@@ -309,6 +337,7 @@ enum ProfileType {
   INNOVATION_PACK = 'innovation_pack',
   DISCUSSION = 'discussion',
   INNOVATION_FLOW_TEMPLATE = 'innovation_flow_template',
+  INNOVATION_HUB = 'innovation_hub',
 }
 
 export enum DirectStorageBucketEntityType {

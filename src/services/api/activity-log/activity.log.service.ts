@@ -17,12 +17,12 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import ActivityLogBuilderService, {
   IActivityLogBuilder,
 } from '@services/api/activity-log/activity.log.builder.service';
-import { UpdatesService } from '@domain/communication/updates/updates.service';
 import { IActivity } from '@platform/activity/activity.interface';
 import { getJourneyByCollaboration } from '@common/utils';
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity';
+import { RoomService } from '@domain/communication/room/room.service';
 
 export class ActivityLogService {
   constructor(
@@ -33,7 +33,7 @@ export class ActivityLogService {
     private canvasService: CanvasService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
-    private updatesService: UpdatesService,
+    private roomService: RoomService,
     private communityService: CommunityService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
@@ -121,7 +121,7 @@ export class ActivityLogService {
           this.challengeService,
           this.opportunityService,
           this.communityService,
-          this.updatesService
+          this.roomService
         );
       const activityType = rawActivity.type as ActivityEventType;
       const result = await activityBuilder[activityType](rawActivity);

@@ -86,15 +86,15 @@ export class ProfileService {
       ],
     });
 
-    if (profileData.description) {
+    if (profileData.description !== undefined) {
       profile.description = profileData.description;
     }
 
-    if (profileData.displayName) {
+    if (profileData.displayName !== undefined) {
       profile.displayName = profileData.displayName;
     }
 
-    if (profileData.tagline) {
+    if (profileData.tagline !== undefined) {
       profile.tagline = profileData.tagline;
     }
 

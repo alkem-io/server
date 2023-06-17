@@ -1,8 +1,8 @@
-import { IComments } from '@domain/communication/comments/comments.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ICalendar } from '../calendar/calendar.interface';
 import { CalendarEventType } from '@common/enums/calendar.event.type';
 import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
 
 @ObjectType('CalendarEvent')
 export abstract class ICalendarEvent extends INameable {
@@ -19,7 +19,11 @@ export abstract class ICalendarEvent extends INameable {
 
   createdBy!: string;
 
-  comments?: IComments;
+  @Field(() => IRoom, {
+    nullable: false,
+    description: 'The comments for this CalendarEvent',
+  })
+  comments!: IRoom;
 
   // The scheduling related fields
   startDate!: Date;

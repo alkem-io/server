@@ -17,7 +17,7 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import { CommunityService } from '@domain/community/community/community.service';
 import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 import { IActivityLogEntryUpdateSent } from './dto/activity.log.dto.entry.update.sent';
-import { UpdatesService } from '@domain/communication/updates/updates.service';
+import { RoomService } from '@domain/communication/room/room.service';
 
 interface ActivityLogBuilderFunction<TypedActivityLogEntry> {
   (rawActivity: IActivity): Promise<TypedActivityLogEntry>;
@@ -45,7 +45,7 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     private readonly challengeService: ChallengeService,
     private readonly opportunityService: OpportunityService,
     private readonly communityService: CommunityService,
-    private readonly updatesService: UpdatesService
+    private readonly roomService: RoomService
   ) {}
 
   async [ActivityEventType.MEMBER_JOINED](rawActivity: IActivity) {
@@ -157,7 +157,7 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
   }
 
   async [ActivityEventType.UPDATE_SENT](rawActivity: IActivity) {
-    const updates = await this.updatesService.getUpdatesOrFail(
+    const updates = await this.roomService.getRoomOrFail(
       rawActivity.resourceID
     );
     const activityUpdateSent: IActivityLogEntryUpdateSent = {

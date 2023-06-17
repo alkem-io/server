@@ -18,6 +18,7 @@ import { asyncToThrow, testData } from '@test/utils';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import * as getUserRolesEntityData from './util/get.user.roles.entity.data';
+import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -33,6 +34,7 @@ describe('RolesService', () => {
         MockUserService,
         MockChallengeService,
         MockApplicationService,
+        MockInvitationService,
         MockCommunityService,
         MockOpportunityService,
         MockHubFilterService,
