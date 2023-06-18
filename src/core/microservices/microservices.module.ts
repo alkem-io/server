@@ -13,6 +13,7 @@ import {
   SUBSCRIPTION_CHALLENGE_CREATED,
   SUBSCRIPTION_ROOM_MESSAGE,
   SUBSCRIPTION_DISCUSSION_UPDATED,
+  SUBSCRIPTION_ROOM_EVENT,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common/constants';
@@ -49,6 +50,10 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
     provide: SUBSCRIPTION_CHALLENGE_CREATED,
     queueName: MessagingQueue.SUBSCRIPTION_CHALLENGE_CREATED,
+  },
+  {
+    provide: SUBSCRIPTION_ROOM_EVENT,
+    queueName: MessagingQueue.SUBSCRIPTION_ROOM_EVENT,
   },
 ];
 

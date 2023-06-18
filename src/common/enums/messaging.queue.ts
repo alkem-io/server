@@ -10,4 +10,5 @@ export enum MessagingQueue {
   SUBSCRIPTION_OPPORTUNITY_CREATED = 'alkemio-subscriptions-opportunity-created',
   SUBSCRIPTION_CHALLENGE_CREATED = 'alkemio-subscriptions-challenge-created',
   SUBSCRIPTION_ACTIVITY_CREATED = 'alkemio-subscriptions-activity-created',
+  SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event',
 }

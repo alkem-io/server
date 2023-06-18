@@ -11,7 +11,7 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { SubscriptionPublishService } from '../../subscriptions/subscription-publish-service';
+import { SubscriptionPublishService } from '../../subscriptions/subscription-service';
 import { ActivityInputCalloutPublished } from './dto/activity.dto.input.callout.published';
 import { ActivityInputPostCreated } from './dto/activity.dto.input.post.created';
 import { ActivityInputWhiteboardCreated } from './dto/activity.dto.input.whiteboard.created';

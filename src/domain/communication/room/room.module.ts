@@ -16,6 +16,8 @@ import { MessagingModule } from '../messaging/messaging.module';
 import { Room } from './room.entity';
 import { RoomResolverSubscriptions } from './room.resolver.subscriptions';
 import { RoomServiceEvents } from './room.service.events';
+import { RoomEventResolverSubscription } from './room.event.resolver.subscription';
+import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 
 @Module({
   imports: [
@@ -30,6 +32,7 @@ import { RoomServiceEvents } from './room.service.events';
     CommunicationAdapterModule,
     MessagingModule,
     TypeOrmModule.forFeature([Room]),
+    SubscriptionServiceModule,
   ],
   providers: [
     RoomService,
@@ -37,6 +40,7 @@ import { RoomServiceEvents } from './room.service.events';
     RoomResolverFields,
     RoomResolverMutations,
     RoomResolverSubscriptions,
+    RoomEventResolverSubscription,
     RoomServiceEvents,
   ],
   exports: [RoomService, RoomServiceEvents, RoomAuthorizationService],
