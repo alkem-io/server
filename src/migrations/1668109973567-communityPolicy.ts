@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { AuthorizationCredential } from '@common/enums';
+import { AuthorizationCredential } from './utils/duplicate/authorization.credential';
 
 export class communityPolicy1668109973567 implements MigrationInterface {
   name = 'communityPolicy1668109973567';

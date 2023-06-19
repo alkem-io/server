@@ -5,8 +5,8 @@ import {
   challengeCommunityPolicy,
 } from '@domain/challenge';
 import { opportunityCommunityPolicy } from '@domain/collaboration/opportunity';
-import { AuthorizationCredential } from '@common/enums';
 import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+import { AuthorizationCredential } from './utils/duplicate/authorization.credential';
 
 type CommunityPolicy = {
   member: CommunityPolicyRole;
