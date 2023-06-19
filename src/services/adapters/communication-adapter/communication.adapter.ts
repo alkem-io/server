@@ -197,7 +197,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to add reaction to message in room: ${err}`,
+        `Failed to add reaction to message in room: ${err.message}`,
         LogContext.COMMUNICATION
       );
     }
@@ -228,7 +228,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to remove from room: ${err}`,
+        `Failed to remove reaction from room: ${err.message}`,
         LogContext.COMMUNICATION
       );
     }
