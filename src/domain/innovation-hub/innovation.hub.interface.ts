@@ -1,19 +1,19 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { INameable } from '@domain/common/entity/nameable-entity';
 import { HubVisibility } from '@common/enums/hub.visibility';
-import { InnovationHubType } from './innovation.hub.type.enum';
+import { InnovationHxbType } from './innovation.hub.type.enum';
 
-@ObjectType('InnovationHub')
-export abstract class IInnovationHub extends INameable {
+@ObjectType('InnovationHxb')
+export abstract class IInnovationHxb extends INameable {
   @Field(() => String, {
-    description: 'The subdomain associated with this Innovation Hub.',
+    description: 'The subdomain associated with this Innovation Hxb.',
   })
   subdomain!: string;
 
-  @Field(() => InnovationHubType, {
-    description: 'Type of Innovation Hub',
+  @Field(() => InnovationHxbType, {
+    description: 'Type of Innovation Hxb',
   })
-  type!: InnovationHubType;
+  type!: InnovationHxbType;
 
   @Field(() => HubVisibility, {
     nullable: true,

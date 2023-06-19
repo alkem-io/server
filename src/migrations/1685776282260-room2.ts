@@ -106,12 +106,12 @@ export class room21685776282260 implements MigrationInterface {
   ): Promise<string> {
     const communications: {
       id: string;
-      hubID: string;
+      hxbID: string;
     }[] = await queryRunner.query(
-      `SELECT id, hubID FROM communication WHERE (id = '${communicationId}')`
+      `SELECT id, hxbID FROM communication WHERE (id = '${communicationId}')`
     );
     const communication = communications[0];
-    if (communication.hubID === 'platform') {
+    if (communication.hxbID === 'platform') {
       return 'discussion_forum';
     }
     return 'discussion';

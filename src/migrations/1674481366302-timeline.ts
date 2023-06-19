@@ -6,7 +6,7 @@ export class timeline1674481366302 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      'ALTER TABLE `hub` ADD `timelineID` char(36) NOT NULL'
+      'ALTER TABLE `hxb` ADD `timelineID` char(36) NOT NULL'
     );
     // Create timeline
     await queryRunner.query(
@@ -81,10 +81,10 @@ export class timeline1674481366302 implements MigrationInterface {
       `ALTER TABLE \`calendar_event\` ADD CONSTRAINT \`FK_77755450cf75dc486700ca034c6\` FOREIGN KEY (\`calendarId\`) REFERENCES \`calendar\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
-    const hubs: { id: string }[] = await queryRunner.query(
-      `SELECT id FROM hub`
+    const hxbs: { id: string }[] = await queryRunner.query(
+      `SELECT id FROM hxb`
     );
-    for (const hub of hubs) {
+    for (const hxb of hxbs) {
       // create calendar instance with authorization
       const calendarAuthID = randomUUID();
       const calendarID = randomUUID();
@@ -104,7 +104,7 @@ export class timeline1674481366302 implements MigrationInterface {
         `INSERT INTO timeline (id, createdDate, updatedDate, version, authorizationId, calendarId) VALUES ('${timelineID}', NOW(), NOW(), 1, '${timelineAuthID}', '${calendarID}')`
       );
       await queryRunner.query(
-        `UPDATE hub SET timelineId = '${timelineID}' WHERE id = '${hub.id}'`
+        `UPDATE hxb SET timelineId = '${timelineID}' WHERE id = '${hxb.id}'`
       );
     }
   }
@@ -154,6 +154,6 @@ export class timeline1674481366302 implements MigrationInterface {
     await queryRunner.query('DROP TABLE `calendar`');
     await queryRunner.query('DROP TABLE `timeline`');
 
-    await queryRunner.query('ALTER TABLE `hub` DROP COLUMN `timelineID`');
+    await queryRunner.query('ALTER TABLE `hxb` DROP COLUMN `timelineID`');
   }
 }

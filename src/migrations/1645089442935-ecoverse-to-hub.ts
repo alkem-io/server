@@ -1,77 +1,77 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class ecoverseToHub1645089442935 implements MigrationInterface {
+export class ecoverseToHxb1645089442935 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE \`ecoverse\` RENAME TO \`hub\``);
+    await queryRunner.query(`ALTER TABLE \`ecoverse\` RENAME TO \`hxb\``);
     await queryRunner.query(
-      `ALTER TABLE \`application\` RENAME COLUMN \`ecoverseID\` TO \`hubID\``
+      `ALTER TABLE \`application\` RENAME COLUMN \`ecoverseID\` TO \`hxbID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`challenge\` RENAME COLUMN \`ecoverseID\` TO \`hubID\``
+      `ALTER TABLE \`challenge\` RENAME COLUMN \`ecoverseID\` TO \`hxbID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`challenge\` RENAME COLUMN \`parentEcoverseID\` TO \`parentHubID\``
+      `ALTER TABLE \`challenge\` RENAME COLUMN \`parentEcoverseID\` TO \`parentHxbID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`opportunity\` RENAME COLUMN \`ecoverseID\` TO \`hubID\``
+      `ALTER TABLE \`opportunity\` RENAME COLUMN \`ecoverseID\` TO \`hxbID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`project\` RENAME COLUMN \`ecoverseID\` TO \`hubID\``
+      `ALTER TABLE \`project\` RENAME COLUMN \`ecoverseID\` TO \`hxbID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`communication\` RENAME COLUMN \`ecoverseID\` TO \`hubID\``
+      `ALTER TABLE \`communication\` RENAME COLUMN \`ecoverseID\` TO \`hxbID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`community\` RENAME COLUMN \`ecoverseID\` TO \`hubID\``
+      `ALTER TABLE \`community\` RENAME COLUMN \`ecoverseID\` TO \`hxbID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`user_group\` RENAME COLUMN \`ecoverseID\` TO \`hubID\``
+      `ALTER TABLE \`user_group\` RENAME COLUMN \`ecoverseID\` TO \`hxbID\``
     );
     await queryRunner.query(
-      `UPDATE \`credential\` SET \`type\` = 'hub-member' WHERE \`type\` = 'ecoverse-member'`
+      `UPDATE \`credential\` SET \`type\` = 'hxb-member' WHERE \`type\` = 'ecoverse-member'`
     );
     await queryRunner.query(
-      `UPDATE \`credential\` SET \`type\` = 'hub-admin' WHERE \`type\` = 'ecoverse-admin'`
+      `UPDATE \`credential\` SET \`type\` = 'hxb-admin' WHERE \`type\` = 'ecoverse-admin'`
     );
     await queryRunner.query(
-      `UPDATE \`credential\` SET \`type\` = 'hub-host' WHERE \`type\` = 'ecoverse-host'`
+      `UPDATE \`credential\` SET \`type\` = 'hxb-host' WHERE \`type\` = 'ecoverse-host'`
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `UPDATE \`credential\` SET \`type\` = 'ecoverse-host' WHERE \`type\` = 'hub-host'`
+      `UPDATE \`credential\` SET \`type\` = 'ecoverse-host' WHERE \`type\` = 'hxb-host'`
     );
     await queryRunner.query(
-      `UPDATE \`credential\` SET \`type\` = 'ecoverse-admin' WHERE \`type\` = 'hub-admin'`
+      `UPDATE \`credential\` SET \`type\` = 'ecoverse-admin' WHERE \`type\` = 'hxb-admin'`
     );
     await queryRunner.query(
-      `UPDATE \`credential\` SET \`type\` = 'ecoverse-member' WHERE \`type\` = 'hub-member'`
+      `UPDATE \`credential\` SET \`type\` = 'ecoverse-member' WHERE \`type\` = 'hxb-member'`
     );
     await queryRunner.query(
-      `ALTER TABLE \`user_group\` RENAME COLUMN \`hubID\` TO \`ecoverseID\``
+      `ALTER TABLE \`user_group\` RENAME COLUMN \`hxbID\` TO \`ecoverseID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`community\` RENAME COLUMN \`hubID\` TO \`ecoverseID\``
+      `ALTER TABLE \`community\` RENAME COLUMN \`hxbID\` TO \`ecoverseID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`communication\` RENAME COLUMN \`hubID\` TO \`ecoverseID\``
+      `ALTER TABLE \`communication\` RENAME COLUMN \`hxbID\` TO \`ecoverseID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`project\` RENAME COLUMN \`hubID\` TO \`ecoverseID\``
+      `ALTER TABLE \`project\` RENAME COLUMN \`hxbID\` TO \`ecoverseID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`opportunity\` RENAME COLUMN \`hubID\` TO \`ecoverseID\``
+      `ALTER TABLE \`opportunity\` RENAME COLUMN \`hxbID\` TO \`ecoverseID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`challenge\` RENAME COLUMN \`parentHubID\` TO \`parentEcoverseID\``
+      `ALTER TABLE \`challenge\` RENAME COLUMN \`parentHxbID\` TO \`parentEcoverseID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`challenge\` RENAME COLUMN \`hubID\` TO \`ecoverseID\``
+      `ALTER TABLE \`challenge\` RENAME COLUMN \`hxbID\` TO \`ecoverseID\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`application\` RENAME COLUMN \`hubID\` TO \`ecoverseID\``
+      `ALTER TABLE \`application\` RENAME COLUMN \`hxbID\` TO \`ecoverseID\``
     );
-    await queryRunner.query(`ALTER TABLE \`hub\` RENAME TO \`ecoverse\``);
+    await queryRunner.query(`ALTER TABLE \`hxb\` RENAME TO \`ecoverse\``);
   }
 }

@@ -2,19 +2,19 @@ import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ILibrary } from '@library/library/library.interface';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { InnovationHub as InnovationHubDecorator } from '@src/common/decorators';
-import { InnovationHubArgsQuery } from '@domain/innovation-hub/dto';
-import { InnovationHubService } from '@domain/innovation-hub';
-import { IInnovationHub } from '@domain/innovation-hub/types';
+import { InnovationHxb as InnovationHxbDecorator } from '@src/common/decorators';
+import { InnovationHxbArgsQuery } from '@domain/innovation-hub/dto';
+import { InnovationHxbService } from '@domain/innovation-hub';
+import { IInnovationHxb } from '@domain/innovation-hub/types';
 import { IPlatform } from './platform.interface';
 import { PlatformService } from './platform.service';
-import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
+import { InnovationHxb } from '@domain/innovation-hub/innovation.hub.entity';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
   constructor(
     private platformService: PlatformService,
-    private innovationHubService: InnovationHubService
+    private innovationHxbService: InnovationHxbService
   ) {}
 
   @ResolveField('library', () => ILibrary, {
@@ -42,31 +42,31 @@ export class PlatformResolverFields {
     return this.platformService.getStorageBucket(platform);
   }
 
-  @ResolveField(() => [IInnovationHub], {
-    description: 'List of Innovation Hubs on the platform',
+  @ResolveField(() => [IInnovationHxb], {
+    description: 'List of Innovation Hxbs on the platform',
   })
-  public innovationHubs(): Promise<IInnovationHub[]> {
-    return this.innovationHubService.getInnovationHubs();
+  public innovationHxbs(): Promise<IInnovationHxb[]> {
+    return this.innovationHxbService.getInnovationHxbs();
   }
 
-  @ResolveField(() => IInnovationHub, {
+  @ResolveField(() => IInnovationHxb, {
     description:
-      'Details about an Innovation Hubs on the platform. If the arguments are omitted, the current Innovation Hub you are in will be returned.',
+      'Details about an Innovation Hxbs on the platform. If the arguments are omitted, the current Innovation Hxb you are in will be returned.',
     nullable: true,
   })
-  public innovationHub(
+  public innovationHxb(
     @Args({
       nullable: true,
-      description: 'Returns a matching Innovation Hub.',
+      description: 'Returns a matching Innovation Hxb.',
     })
-    args: InnovationHubArgsQuery,
-    @InnovationHubDecorator() innovationHub?: InnovationHub
-  ): Promise<IInnovationHub | undefined> {
+    args: InnovationHxbArgsQuery,
+    @InnovationHxbDecorator() innovationHxb?: InnovationHxb
+  ): Promise<IInnovationHxb | undefined> {
     // if no arguments are provided, return the current IHub
     if (!Object.keys(args).length) {
-      return Promise.resolve(innovationHub as IInnovationHub);
+      return Promise.resolve(innovationHxb as IInnovationHxb);
     }
 
-    return this.innovationHubService.getInnovationHubOrFail(args);
+    return this.innovationHxbService.getInnovationHxbOrFail(args);
   }
 }

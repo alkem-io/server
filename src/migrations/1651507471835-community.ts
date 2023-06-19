@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import {
-  hubCommunityPolicy,
+  hxbCommunityPolicy,
   challengeCommunityPolicy,
 } from '@domain/challenge';
 import { opportunityCommunityPolicy } from '@domain/collaboration/opportunity';
@@ -42,8 +42,8 @@ export class community1651507471835 implements MigrationInterface {
         let policy: CommunityPolicy;
 
         switch (credential.type) {
-          case AuthorizationCredential.HUB_MEMBER:
-            policy = hubCommunityPolicy;
+          case AuthorizationCredential.HXB_MEMBER:
+            policy = hxbCommunityPolicy;
             break;
           case AuthorizationCredential.CHALLENGE_MEMBER:
             policy = challengeCommunityPolicy;

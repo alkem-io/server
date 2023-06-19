@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class innovationHub1683200121969 implements MigrationInterface {
+export class innovationHxb1683200121969 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // remove everything innovation SPACE
     await queryRunner.query(
@@ -40,18 +40,18 @@ export class innovationHub1683200121969 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE \`branding\``);
     await queryRunner.query(`DROP TABLE \`selection_criteria\``);
     await queryRunner.query(`DROP TABLE \`selection_filter\``);
-    // create the innovation HUB
+    // create the innovation HXB
     await queryRunner.query(
-      `CREATE TABLE \`innovation_hub\` (\`id\` varchar(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`nameID\` varchar(255) NOT NULL, \`subdomain\` varchar(255) NOT NULL, \`type\` varchar(255) NOT NULL, \`hubVisibilityFilter\` varchar(255) NULL, \`hubListFilter\` text NULL, \`authorizationId\` varchar(36) NULL, \`profileId\` varchar(36) NULL, UNIQUE INDEX \`IDX_8f35d04d098bb6c7c57a9a83ac\` (\`subdomain\`), UNIQUE INDEX \`REL_b411e4f27d77a96eccdabbf4b4\` (\`authorizationId\`), UNIQUE INDEX \`REL_36c8905c2c6c59467c60d94fd8\` (\`profileId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+      `CREATE TABLE \`innovation_hxb\` (\`id\` varchar(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`nameID\` varchar(255) NOT NULL, \`subdomain\` varchar(255) NOT NULL, \`type\` varchar(255) NOT NULL, \`hxbVisibilityFilter\` varchar(255) NULL, \`hxbListFilter\` text NULL, \`authorizationId\` varchar(36) NULL, \`profileId\` varchar(36) NULL, UNIQUE INDEX \`IDX_8f35d04d098bb6c7c57a9a83ac\` (\`subdomain\`), UNIQUE INDEX \`REL_b411e4f27d77a96eccdabbf4b4\` (\`authorizationId\`), UNIQUE INDEX \`REL_36c8905c2c6c59467c60d94fd8\` (\`profileId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
-      `ALTER TABLE \`innovation_hub\` ADD UNIQUE INDEX \`IDX_1d39dac2c6d2f17286d90c306b\` (\`nameID\`)`
+      `ALTER TABLE \`innovation_hxb\` ADD UNIQUE INDEX \`IDX_1d39dac2c6d2f17286d90c306b\` (\`nameID\`)`
     );
     await queryRunner.query(
-      `ALTER TABLE \`innovation_hub\` ADD CONSTRAINT \`FK_b411e4f27d77a96eccdabbf4b45\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`innovation_hxb\` ADD CONSTRAINT \`FK_b411e4f27d77a96eccdabbf4b45\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`innovation_hub\` ADD CONSTRAINT \`FK_36c8905c2c6c59467c60d94fd8a\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`innovation_hxb\` ADD CONSTRAINT \`FK_36c8905c2c6c59467c60d94fd8a\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
   }
 
@@ -87,25 +87,25 @@ export class innovationHub1683200121969 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`innovation_space\` ADD CONSTRAINT \`FK_c7f7ab0964b33595ba98513ea83\` FOREIGN KEY (\`brandingId\`) REFERENCES \`branding\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
-    // drop everything innovation HUB
+    // drop everything innovation HXB
     await queryRunner.query(
-      `ALTER TABLE \`innovation_hub\` DROP FOREIGN KEY \`FK_36c8905c2c6c59467c60d94fd8a\``
+      `ALTER TABLE \`innovation_hxb\` DROP FOREIGN KEY \`FK_36c8905c2c6c59467c60d94fd8a\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`innovation_hub\` DROP FOREIGN KEY \`FK_b411e4f27d77a96eccdabbf4b45\``
+      `ALTER TABLE \`innovation_hxb\` DROP FOREIGN KEY \`FK_b411e4f27d77a96eccdabbf4b45\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`innovation_hub\` DROP INDEX \`IDX_1d39dac2c6d2f17286d90c306b\``
+      `ALTER TABLE \`innovation_hxb\` DROP INDEX \`IDX_1d39dac2c6d2f17286d90c306b\``
     ); // unique index nameid
     await queryRunner.query(
-      `DROP INDEX \`REL_36c8905c2c6c59467c60d94fd8\` ON \`innovation_hub\``
+      `DROP INDEX \`REL_36c8905c2c6c59467c60d94fd8\` ON \`innovation_hxb\``
     );
     await queryRunner.query(
-      `DROP INDEX \`REL_b411e4f27d77a96eccdabbf4b4\` ON \`innovation_hub\``
+      `DROP INDEX \`REL_b411e4f27d77a96eccdabbf4b4\` ON \`innovation_hxb\``
     );
     await queryRunner.query(
-      `DROP INDEX \`IDX_8f35d04d098bb6c7c57a9a83ac\` ON \`innovation_hub\``
+      `DROP INDEX \`IDX_8f35d04d098bb6c7c57a9a83ac\` ON \`innovation_hxb\``
     ); // unique index subdomain
-    await queryRunner.query(`DROP TABLE \`innovation_hub\``);
+    await queryRunner.query(`DROP TABLE \`innovation_hxb\``);
   }
 }

@@ -7,12 +7,12 @@ export class journeyProfile1677593365001 implements MigrationInterface {
   name = 'journeyProfile1677593365001';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Extend Hub / Challenge / Opportunity with profiles
+    // Extend Hxb / Challenge / Opportunity with profiles
     await queryRunner.query(
-      `ALTER TABLE \`hub\` ADD \`profileId\` char(36) NULL`
+      `ALTER TABLE \`hxb\` ADD \`profileId\` char(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hub\` ADD CONSTRAINT \`FK_71231450cf75dc486700ca034c6\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+      `ALTER TABLE \`hxb\` ADD CONSTRAINT \`FK_71231450cf75dc486700ca034c6\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` ADD \`profileId\` char(36) NULL`
@@ -28,9 +28,9 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     );
 
     // remove existing FKs that will no longer apply
-    // Hub ==> Tagset
+    // Hxb ==> Tagset
     await queryRunner.query(
-      `ALTER TABLE \`hub\` DROP FOREIGN KEY \`FK_3a69b0a6c67ead7617634009903\``
+      `ALTER TABLE \`hxb\` DROP FOREIGN KEY \`FK_3a69b0a6c67ead7617634009903\``
     );
     // Challenge ==> tagset
     await queryRunner.query(
@@ -62,13 +62,13 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     );
 
     /////////////////////////////////
-    // Migrate the Hubs
-    const hubs: any[] = await queryRunner.query(
-      `SELECT id, tagsetId, contextId, displayName from hub`
+    // Migrate the Hxbs
+    const hxbs: any[] = await queryRunner.query(
+      `SELECT id, tagsetId, contextId, displayName from hxb`
     );
-    for (const hub of hubs) {
+    for (const hxb of hxbs) {
       const contexts: any[] = await queryRunner.query(
-        `SELECT id, version, tagline, locationId, background from context WHERE (id = '${hub.contextId}')`
+        `SELECT id, version, tagline, locationId, background from context WHERE (id = '${hxb.contextId}')`
       );
       const context = contexts[0];
       const newProfileID = randomUUID();
@@ -87,13 +87,13 @@ export class journeyProfile1677593365001 implements MigrationInterface {
                       '${profileAuthID}',
                       '${context.locationId}',
                       '${escapeString(context.background)}',
-                      '${escapeString(hub.displayName)}',
+                      '${escapeString(hxb.displayName)}',
                       '${escapeString(context.tagline)}')`
       );
 
       // Update the tagset to be one of many
       await queryRunner.query(
-        `UPDATE tagset SET profileId = '${newProfileID}' WHERE (id = '${hub.tagsetId}')`
+        `UPDATE tagset SET profileId = '${newProfileID}' WHERE (id = '${hxb.tagsetId}')`
       );
 
       // Update the references to be parented on the new profile
@@ -107,7 +107,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
       );
 
       await queryRunner.query(
-        `UPDATE hub SET profileId = '${newProfileID}' WHERE (id = '${hub.id}')`
+        `UPDATE hxb SET profileId = '${newProfileID}' WHERE (id = '${hxb.id}')`
       );
     }
 
@@ -211,11 +211,11 @@ export class journeyProfile1677593365001 implements MigrationInterface {
 
     /////////////////////////////////
     // Remove old data / structure
-    await queryRunner.query('ALTER TABLE `hub` DROP COLUMN `tagsetId`');
+    await queryRunner.query('ALTER TABLE `hxb` DROP COLUMN `tagsetId`');
     await queryRunner.query('ALTER TABLE `challenge` DROP COLUMN `tagsetId`');
     await queryRunner.query('ALTER TABLE `opportunity` DROP COLUMN `tagsetId`');
 
-    await queryRunner.query('ALTER TABLE `hub` DROP COLUMN `displayName`');
+    await queryRunner.query('ALTER TABLE `hxb` DROP COLUMN `displayName`');
     await queryRunner.query(
       'ALTER TABLE `challenge` DROP COLUMN `displayName`'
     );
@@ -242,9 +242,9 @@ export class journeyProfile1677593365001 implements MigrationInterface {
   ///////////////////////////////
   public async down(queryRunner: QueryRunner): Promise<void> {
     /////////////////////////////////
-    //Hub ==> Profile
+    //Hxb ==> Profile
     await queryRunner.query(
-      `ALTER TABLE \`hub\` DROP FOREIGN KEY \`FK_71231450cf75dc486700ca034c6\``
+      `ALTER TABLE \`hxb\` DROP FOREIGN KEY \`FK_71231450cf75dc486700ca034c6\``
     );
     // challenge ==> Profile
     await queryRunner.query(
@@ -256,9 +256,9 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     );
 
     // Add in new data / structure
-    await queryRunner.query('ALTER TABLE `hub` ADD `tagsetId` char(36) NULL');
+    await queryRunner.query('ALTER TABLE `hxb` ADD `tagsetId` char(36) NULL');
     await queryRunner.query(
-      `ALTER TABLE \`hub\` ADD CONSTRAINT \`FK_3a69b0a6c67ead7617634009903\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+      `ALTER TABLE \`hxb\` ADD CONSTRAINT \`FK_3a69b0a6c67ead7617634009903\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
     await queryRunner.query(
@@ -276,7 +276,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`hub\`ADD \`displayName\` varchar(255) NULL`
+      `ALTER TABLE \`hxb\`ADD \`displayName\` varchar(255) NULL`
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\`ADD \`displayName\` varchar(255) NULL`
@@ -310,17 +310,17 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     );
 
     /////////////////////////////////
-    // Migrate the Hubs
-    const hubs: any[] = await queryRunner.query(
-      `SELECT id, profileId, contextId from hub`
+    // Migrate the Hxbs
+    const hxbs: any[] = await queryRunner.query(
+      `SELECT id, profileId, contextId from hxb`
     );
-    for (const hub of hubs) {
+    for (const hxb of hxbs) {
       const contexts: any[] = await queryRunner.query(
-        `SELECT id from context WHERE (id = '${hub.contextId}')`
+        `SELECT id from context WHERE (id = '${hxb.contextId}')`
       );
       const context = contexts[0];
       const profiles: any[] = await queryRunner.query(
-        `SELECT id, tagline, description, displayName, locationId, authorizationId from profile WHERE (id = '${hub.profileId}')`
+        `SELECT id, tagline, description, displayName, locationId, authorizationId from profile WHERE (id = '${hxb.profileId}')`
       );
       const profile = profiles[0];
       const tagsets: any[] = await queryRunner.query(
@@ -333,15 +333,15 @@ export class journeyProfile1677593365001 implements MigrationInterface {
         `DELETE FROM authorization_policy WHERE (id = '${profile.authorizationId}')`
       );
 
-      // Update tagset, displayName on Hub
+      // Update tagset, displayName on Hxb
       await queryRunner.query(
-        `UPDATE hub SET
+        `UPDATE hxb SET
         tagsetId = '${tagset.id}',
         displayName = '${escapeString(profile.displayName)}'
-        WHERE (id = '${hub.id}')`
+        WHERE (id = '${hxb.id}')`
       );
 
-      // Update tagline, locationId on Hub
+      // Update tagline, locationId on Hxb
       await queryRunner.query(
         `UPDATE context SET
         locationId = '${profile.locationId}',
@@ -394,7 +394,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
         `DELETE FROM authorization_policy WHERE (id = '${profile.authorizationId}')`
       );
 
-      // Update tagset, displayName on Hub
+      // Update tagset, displayName on Hxb
       await queryRunner.query(
         `UPDATE challenge SET
         tagsetId = '${tagset.id}',
@@ -402,7 +402,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
         WHERE (id = '${challenge.id}')`
       );
 
-      // Update , tagline, locationId on Hub
+      // Update , tagline, locationId on Hxb
       await queryRunner.query(
         `UPDATE context SET
         locationId = '${profile.locationId}',
@@ -455,7 +455,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
         `DELETE FROM authorization_policy WHERE (id = '${profile.authorizationId}')`
       );
 
-      // Update tagset, displayName on Hub
+      // Update tagset, displayName on Hxb
       await queryRunner.query(
         `UPDATE opportunity SET
         tagsetId = '${tagset.id}',
@@ -463,7 +463,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
         WHERE (id = '${opportunity.id}')`
       );
 
-      // Update tagline, locationId on Hub
+      // Update tagline, locationId on Hxb
       await queryRunner.query(
         `UPDATE context SET
         locationId = '${profile.locationId}',
@@ -493,7 +493,7 @@ export class journeyProfile1677593365001 implements MigrationInterface {
     }
 
     // Remove old data / structure
-    await queryRunner.query('ALTER TABLE `hub` DROP COLUMN `profileId`');
+    await queryRunner.query('ALTER TABLE `hxb` DROP COLUMN `profileId`');
     await queryRunner.query('ALTER TABLE `challenge` DROP COLUMN `profileId`');
     await queryRunner.query(
       'ALTER TABLE `opportunity` DROP COLUMN `profileId`'

@@ -50,8 +50,8 @@ import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
-import { InnovationHubInterceptor } from '@common/interceptors';
-import { InnovationHubModule } from '@domain/innovation-hub';
+import { InnovationHxbInterceptor } from '@common/interceptors';
+import { InnovationHxbModule } from '@domain/innovation-hub';
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
@@ -211,7 +211,7 @@ import { MessageReactionModule } from '@domain/communication/message.reaction/me
     PostMoveModule,
     GeoLocationModule,
     ElasticsearchModule,
-    InnovationHubModule,
+    InnovationHxbModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
   ],
@@ -223,7 +223,7 @@ import { MessageReactionModule } from '@domain/communication/message.reaction/me
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: InnovationHubInterceptor,
+      useClass: InnovationHxbInterceptor,
     },
     {
       provide: APP_FILTER,

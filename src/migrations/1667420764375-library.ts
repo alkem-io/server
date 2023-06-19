@@ -45,7 +45,7 @@ export class library1667420764375 implements MigrationInterface {
     // create library instance with authorization
     const authID = randomUUID();
     const libraryID = randomUUID();
-    const libraryAuthPolicy = `[{"type":"global-admin","resourceID":"","grantedPrivileges":["create","read","update","delete"],"inheritable":true},{"type":"global-admin-hubs","resourceID":"","grantedPrivileges":["create","read","update","delete"],"inheritable":true}]`;
+    const libraryAuthPolicy = `[{"type":"global-admin","resourceID":"","grantedPrivileges":["create","read","update","delete"],"inheritable":true},{"type":"global-admin-hxbs","resourceID":"","grantedPrivileges":["create","read","update","delete"],"inheritable":true}]`;
 
     await queryRunner.query(
       `INSERT INTO authorization_policy VALUES ('${authID}', NOW(), NOW(), 1, '${libraryAuthPolicy}', '', 0, '')`

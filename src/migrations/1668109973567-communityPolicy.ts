@@ -204,10 +204,10 @@ type newCommunityRolePolicy = {
   maxOrg: number;
 };
 
-const hubCommunityPolicy: oldCommunityPolicy = {
+const hxbCommunityPolicy: oldCommunityPolicy = {
   member: {
     credential: {
-      type: AuthorizationCredential.HUB_MEMBER,
+      type: AuthorizationCredential.HXB_MEMBER,
       resourceID: '',
     },
     minOrg: 0,
@@ -217,7 +217,7 @@ const hubCommunityPolicy: oldCommunityPolicy = {
   },
   lead: {
     credential: {
-      type: AuthorizationCredential.HUB_HOST,
+      type: AuthorizationCredential.HXB_HOST,
       resourceID: '',
     },
     minOrg: 0,
@@ -274,7 +274,7 @@ const opportunityCommunityPolicy: oldCommunityPolicy = {
 };
 
 const communityPolicyToCommunityTypeMapping: Record<string, string> = {
-  hub: JSON.stringify(hubCommunityPolicy),
+  hxb: JSON.stringify(hxbCommunityPolicy),
   challenge: JSON.stringify(challengeCommunityPolicy),
   opportunity: JSON.stringify(opportunityCommunityPolicy),
 };

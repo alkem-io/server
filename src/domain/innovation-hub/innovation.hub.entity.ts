@@ -1,12 +1,12 @@
 import { Column, Entity } from 'typeorm';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
 import { HubVisibility } from '@common/enums/hub.visibility';
-import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { IInnovationHxb } from '@domain/innovation-hub/innovation.hub.interface';
 import { SUBDOMAIN_LENGTH } from '@common/constants';
-import { InnovationHubType } from './innovation.hub.type.enum';
+import { InnovationHxbType } from './innovation.hub.type.enum';
 
 @Entity()
-export class InnovationHub extends NameableEntity implements IInnovationHub {
+export class InnovationHxb extends NameableEntity implements IInnovationHxb {
   @Column({
     unique: true,
   })
@@ -19,7 +19,7 @@ export class InnovationHub extends NameableEntity implements IInnovationHub {
   subdomain!: string;
 
   @Column()
-  type!: InnovationHubType;
+  type!: InnovationHxbType;
 
   @Column('varchar', {
     length: 255,

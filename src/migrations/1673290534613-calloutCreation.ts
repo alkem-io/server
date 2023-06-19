@@ -9,7 +9,7 @@ import {
 } from './utils/preferences/add-preference-definitions-defaults';
 import {
   addPreferencesToChallenges,
-  addPreferencesToHubs,
+  addPreferencesToHxbs,
   PreferenceInsertType,
 } from './utils/preferences/add-preferences';
 
@@ -46,9 +46,9 @@ export class calloutCreation1673290534613 implements MigrationInterface {
     });
     await addPreferencesToChallenges(queryRunner, preferences);
 
-    const hubDefinitions: DefinitionInsertTypeWithDefault[] = [
+    const hxbDefinitions: DefinitionInsertTypeWithDefault[] = [
       {
-        definitionSet: 'hub',
+        definitionSet: 'hxb',
         group: 'Privileges',
         displayName: 'Allow members to create Callouts.',
         description: 'Allow members to create Callouts.',
@@ -57,18 +57,18 @@ export class calloutCreation1673290534613 implements MigrationInterface {
         defaultValue: 'false',
       },
     ];
-    const prefHubResults = await addPreferenceDefinitionsWithDefault(
+    const prefHxbResults = await addPreferenceDefinitionsWithDefault(
       queryRunner,
-      hubDefinitions
+      hxbDefinitions
     );
     // new preferences on existing users
-    const hubPreferences: PreferenceInsertType[] = prefHubResults.map(x => {
+    const hxbPreferences: PreferenceInsertType[] = prefHxbResults.map(x => {
       return {
         definitionId: x.uuid,
         value: x.defaultValue,
       };
     });
-    await addPreferencesToHubs(queryRunner, hubPreferences);
+    await addPreferencesToHxbs(queryRunner, hxbPreferences);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

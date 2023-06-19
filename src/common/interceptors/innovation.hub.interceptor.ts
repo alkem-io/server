@@ -10,7 +10,7 @@ import { GqlExecutionContext } from '@nestjs/graphql';
 import { INNOVATION_HUB_INJECT_TOKEN } from '@common/constants';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConfigurationTypes, LogContext } from '@common/enums';
-import { InnovationHubService } from '@domain/innovation-hub';
+import { InnovationHxbService } from '@domain/innovation-hub';
 import { SUBDOMAIN_PATTERN } from '@core/validation';
 
 const SUBDOMAIN_GROUP = 'subdomain';
@@ -29,18 +29,18 @@ const SUBDOMAIN_REGEX = new RegExp(
 );
 
 /***
- * Injects the Innovation Hub in the execution context, if matched with the subdomain
+ * Injects the Innovation Hxb in the execution context, if matched with the subdomain
  */
-export class InnovationHubInterceptor implements NestInterceptor {
-  private readonly innovationHubHeader: string;
+export class InnovationHxbInterceptor implements NestInterceptor {
+  private readonly innovationHxbHeader: string;
 
   constructor(
-    private readonly innovationHubService: InnovationHubService,
+    private readonly innovationHxbService: InnovationHxbService,
     private readonly configService: ConfigService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    this.innovationHubHeader = this.configService.get(
+    this.innovationHxbHeader = this.configService.get(
       ConfigurationTypes.INNOVATION_HUB
     )?.header;
   }
@@ -49,7 +49,7 @@ export class InnovationHubInterceptor implements NestInterceptor {
     const ctx =
       GqlExecutionContext.create(context).getContext<IGraphQLContext>();
 
-    const host = ctx.req.headers[this.innovationHubHeader] as
+    const host = ctx.req.headers[this.innovationHxbHeader] as
       | string
       | undefined;
 
@@ -65,12 +65,12 @@ export class InnovationHubInterceptor implements NestInterceptor {
 
     try {
       ctx[INNOVATION_HUB_INJECT_TOKEN] =
-        await this.innovationHubService.getInnovationHubOrFail({
+        await this.innovationHxbService.getInnovationHxbOrFail({
           subdomain: subDomain,
         });
     } catch (e) {
       this.logger.warn(
-        `${this.constructor.name} unable to find Innovation Hub with subdomain '${subDomain}'`,
+        `${this.constructor.name} unable to find Innovation Hxb with subdomain '${subDomain}'`,
         LogContext.INNOVATION_HUB
       );
     }

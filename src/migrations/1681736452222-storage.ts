@@ -1,5 +1,12 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { addStorageBucketRelation, allowedTypes, createStorageBucketAndLink, maxAllowedFileSize, removeStorageBucketAuths, removeStorageBucketRelation } from './utils/storage/storage-bucket-utils';
+import {
+  addStorageBucketRelation,
+  allowedTypes,
+  createStorageBucketAndLink,
+  maxAllowedFileSize,
+  removeStorageBucketAuths,
+  removeStorageBucketRelation,
+} from './utils/storage/storage-bucket-utils';
 export class storage1681736452222 implements MigrationInterface {
   name = 'storage1681736452222';
 
@@ -55,7 +62,7 @@ export class storage1681736452222 implements MigrationInterface {
     await addStorageBucketRelation(
       queryRunner,
       'FK_11991450cf75dc486700ca034c6',
-      'hub'
+      'hxb'
     );
     await addStorageBucketRelation(
       queryRunner,
@@ -78,46 +85,45 @@ export class storage1681736452222 implements MigrationInterface {
       'organization'
     );
 
-
     // Allow every profile to know the StorageBucket to use
     // TODO: enforce this to be a valid value or not? What happens if storagebucket is deleted?
     await queryRunner.query(
       `ALTER TABLE \`profile\` ADD \`storageBucketId\` char(36) NULL`
     );
 
-    const hubs: { id: string }[] = await queryRunner.query(
-      `SELECT id FROM hub`
+    const hxbs: { id: string }[] = await queryRunner.query(
+      `SELECT id FROM hxb`
     );
-    for (const hub of hubs) {
+    for (const hxb of hxbs) {
       await createStorageBucketAndLink(
         queryRunner,
-        'hub',
-        hub.id,
+        'hxb',
+        hxb.id,
         allowedTypes,
         maxAllowedFileSize,
         ''
       );
     }
 
-    const challenges: { id: string; hubID: string }[] = await queryRunner.query(
-      `SELECT id, hubID FROM challenge`
+    const challenges: { id: string; hxbID: string }[] = await queryRunner.query(
+      `SELECT id, hxbID FROM challenge`
     );
     for (const challenge of challenges) {
-      const hubs: { id: string; storageBucketId: string }[] =
+      const hxbs: { id: string; storageBucketId: string }[] =
         await queryRunner.query(
-          `SELECT id, storageBucketId FROM hub WHERE (id = '${challenge.hubID}')`
+          `SELECT id, storageBucketId FROM hxb WHERE (id = '${challenge.hxbID}')`
         );
-      if (hubs.length !== 1) {
-        throw new Error(`Found challenge without hubID set: ${challenge.id}`);
+      if (hxbs.length !== 1) {
+        throw new Error(`Found challenge without hxbID set: ${challenge.id}`);
       }
-      const hub = hubs[0];
+      const hxb = hxbs[0];
       await createStorageBucketAndLink(
         queryRunner,
         'challenge',
         challenge.id,
         allowedTypes,
         maxAllowedFileSize,
-        hub.storageBucketId
+        hxb.storageBucketId
       );
     }
 
@@ -171,14 +177,17 @@ export class storage1681736452222 implements MigrationInterface {
       'ALTER TABLE `document` DROP FOREIGN KEY `FK_11155450cf75dc486700ca034c6`'
     );
 
-    await removeStorageBucketAuths(
-      queryRunner,
-      ['hub', 'challenge', 'platform', 'library', 'organization']
-    )
+    await removeStorageBucketAuths(queryRunner, [
+      'hxb',
+      'challenge',
+      'platform',
+      'library',
+      'organization',
+    ]);
     await removeStorageBucketRelation(
       queryRunner,
       'FK_11991450cf75dc486700ca034c6',
-      'hub'
+      'hxb'
     );
     await removeStorageBucketRelation(
       queryRunner,
@@ -201,7 +210,6 @@ export class storage1681736452222 implements MigrationInterface {
       'organization'
     );
 
-
     await queryRunner.query('DROP TABLE `storage_bucket`');
     await queryRunner.query('DROP TABLE `document`');
 
@@ -209,5 +217,4 @@ export class storage1681736452222 implements MigrationInterface {
       `ALTER TABLE \`profile\` DROP COLUMN \`storageBucketId\``
     );
   }
-
 }

@@ -10,23 +10,23 @@ import {
 } from './utils/preferences/add-preferences';
 
 // Do NOT make links back to the main code base
-const ALLOW_HUB_MEMBERS_TO_CONTRIBUTE = 'AllowHubMembersToContribute';
+const ALLOW_HXB_MEMBERS_TO_CONTRIBUTE = 'AllowHxbMembersToContribute';
 const ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES =
   'AllowContributorsToCreateOpportunities';
 const ALLOW_NON_MEMBERS_READ_ACCESS = 'AllowNonMembersReadAccess';
 
-export class hubMembers1668835532642 implements MigrationInterface {
-  name = 'hubMembers1668835532642';
+export class hxbMembers1668835532642 implements MigrationInterface {
+  name = 'hxbMembers1668835532642';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     const definitions: DefinitionInsertTypeWithDefault[] = [
       {
         definitionSet: 'challenge',
         group: 'Privileges',
-        displayName: 'Allow Hub members to contribute.',
-        description: 'Allow Hub members to contribute.',
+        displayName: 'Allow Hxb members to contribute.',
+        description: 'Allow Hxb members to contribute.',
         valueType: 'boolean',
-        type: ALLOW_HUB_MEMBERS_TO_CONTRIBUTE,
+        type: ALLOW_HXB_MEMBERS_TO_CONTRIBUTE,
         defaultValue: 'false',
       },
       {
@@ -66,7 +66,7 @@ export class hubMembers1668835532642 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await removePreferences(queryRunner, [ALLOW_HUB_MEMBERS_TO_CONTRIBUTE]);
+    await removePreferences(queryRunner, [ALLOW_HXB_MEMBERS_TO_CONTRIBUTE]);
     await removePreferences(queryRunner, [
       ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES,
     ]);

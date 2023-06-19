@@ -21,7 +21,7 @@ import { Collaboration } from '@domain/collaboration/collaboration';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
-import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
+import { InnovationHxb } from '@domain/innovation-hub/innovation.hub.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { ICallout } from '@domain/collaboration/callout';
 
@@ -47,8 +47,8 @@ export class NamingService {
     private collaborationRepository: Repository<Collaboration>,
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
-    @InjectRepository(InnovationHub)
-    private innovationHubRepository: Repository<InnovationHub>,
+    @InjectRepository(InnovationHxb)
+    private innovationHxbRepository: Repository<InnovationHxb>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @InjectEntityManager('default')
@@ -196,19 +196,19 @@ export class NamingService {
     return true;
   }
 
-  async isInnovationHubSubdomainAvailable(subdomain: string): Promise<boolean> {
-    const innovationHubsCount = await this.innovationHubRepository.countBy({
+  async isInnovationHxbSubdomainAvailable(subdomain: string): Promise<boolean> {
+    const innovationHxbsCount = await this.innovationHxbRepository.countBy({
       subdomain: subdomain,
     });
-    if (innovationHubsCount > 0) return false;
+    if (innovationHxbsCount > 0) return false;
     return true;
   }
 
-  async isInnovationHubNameIdAvailable(nameID: string): Promise<boolean> {
-    const innovationHubsCount = await this.innovationHubRepository.countBy({
+  async isInnovationHxbNameIdAvailable(nameID: string): Promise<boolean> {
+    const innovationHxbsCount = await this.innovationHxbRepository.countBy({
       nameID: nameID,
     });
-    if (innovationHubsCount > 0) return false;
+    if (innovationHxbsCount > 0) return false;
     return true;
   }
 

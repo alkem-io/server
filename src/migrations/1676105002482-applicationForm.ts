@@ -29,7 +29,7 @@ export class applicationForm1676105002482 implements MigrationInterface {
     for (const community of communities) {
       const applicationFormID = randomUUID();
 
-      let applicationFormInput = hubCommunityApplicationForm;
+      let applicationFormInput = hxbCommunityApplicationForm;
       if (community.type === 'Challenge') {
         applicationFormInput = challengeCommunityApplicationForm;
       } else if (community.type === 'Opportunity') {
@@ -59,7 +59,7 @@ export class applicationForm1676105002482 implements MigrationInterface {
   }
 }
 
-const hubCommunityApplicationForm: any = {
+const hxbCommunityApplicationForm: any = {
   description: '',
   questions: [
     {

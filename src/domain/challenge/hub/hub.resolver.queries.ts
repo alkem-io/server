@@ -1,14 +1,14 @@
 import { Inject } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import {
-  InnovationHub as InnovationHubDecorator,
+  InnovationHxb as InnovationHxbDecorator,
   Profiling,
 } from '@src/common/decorators';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { HubService } from './hub.service';
 import { IHub } from './hub.interface';
 import { HubsQueryArgs } from './dto/hub.args.query.hubs';
-import { InnovationHub } from '@domain/innovation-hub/types';
+import { InnovationHxb } from '@domain/innovation-hub/types';
 
 @Resolver()
 export class HubResolverQueries {
@@ -20,14 +20,14 @@ export class HubResolverQueries {
   })
   @Profiling.api
   async hubs(
-    @InnovationHubDecorator() innovationHub: InnovationHub | undefined,
+    @InnovationHxbDecorator() innovationHxb: InnovationHxb | undefined,
     @Args({ nullable: true }) args: HubsQueryArgs
   ): Promise<IHub[]> {
-    if (!innovationHub) {
+    if (!innovationHxb) {
       return await this.hubService.getHubs(args);
     }
 
-    return this.hubService.getSpacesForInnovationHub(innovationHub);
+    return this.hubService.getSpacesForInnovationHxb(innovationHxb);
   }
 
   @Query(() => IHub, {

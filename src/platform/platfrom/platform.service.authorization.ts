@@ -17,8 +17,8 @@ import {
 } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
-import { InnovationHubService } from '@domain/innovation-hub';
-import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
+import { InnovationHxbService } from '@domain/innovation-hub';
+import { InnovationHxbAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -28,8 +28,8 @@ export class PlatformAuthorizationService {
     private libraryAuthorizationService: LibraryAuthorizationService,
     private communicationAuthorizationService: CommunicationAuthorizationService,
     private platformService: PlatformService,
-    private innovationHubService: InnovationHubService,
-    private innovationHubAuthorizationService: InnovationHubAuthorizationService,
+    private innovationHxbService: InnovationHxbService,
+    private innovationHxbAuthorizationService: InnovationHxbAuthorizationService,
     private storageBucketAuthorizationService: StorageBucketAuthorizationService,
     @InjectRepository(Platform)
     private platformRepository: Repository<Platform>
@@ -85,7 +85,7 @@ export class PlatformAuthorizationService {
         platform.authorization
       );
 
-    const innovationHubs = await this.innovationHubService.getInnovationHubs({
+    const innovationHxbs = await this.innovationHxbService.getInnovationHxbs({
       relations: [
         'profile',
         'profile.visuals',
@@ -95,9 +95,9 @@ export class PlatformAuthorizationService {
       ],
     });
 
-    for (const innovationHub of innovationHubs) {
-      this.innovationHubAuthorizationService.applyAuthorizationPolicyAndSave(
-        innovationHub
+    for (const innovationHxb of innovationHxbs) {
+      this.innovationHxbAuthorizationService.applyAuthorizationPolicyAndSave(
+        innovationHxb
       );
     }
     return platform;

@@ -3,12 +3,12 @@ import { Field, InputType } from '@nestjs/graphql';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { NameID, UUID } from '@domain/common/scalars';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity';
-import { InnovationHubType } from '@domain/innovation-hub/types';
+import { InnovationHxbType } from '@domain/innovation-hub/types';
 import { SUBDOMAIN_LENGTH } from '@common/constants';
 import { SUBDOMAIN_REGEX } from '@core/validation';
 
 @InputType()
-export class CreateInnovationHubInput extends CreateNameableInput {
+export class CreateInnovationHxbInput extends CreateNameableInput {
   @MinLength(1)
   @MaxLength(SUBDOMAIN_LENGTH)
   @Matches(SUBDOMAIN_REGEX, {
@@ -16,26 +16,26 @@ export class CreateInnovationHubInput extends CreateNameableInput {
       'The provided subdomain is not a valid ARPANET host name. Please refer to https://www.rfc-editor.org/rfc/rfc1034#section-3.5',
   })
   @Field(() => String, {
-    description: 'The subdomain to associate the Innovation Hub with.',
+    description: 'The subdomain to associate the Innovation Hxb with.',
   })
   subdomain!: string;
 
-  @Field(() => InnovationHubType, {
-    description: 'The type of Innovation Hub.',
+  @Field(() => InnovationHxbType, {
+    description: 'The type of Innovation Hxb.',
   })
-  type!: InnovationHubType;
+  type!: InnovationHxbType;
 
   @IsOptional()
   @Field(() => [UUID], {
     nullable: true,
-    description: `A list of Hubs to include in this Innovation Hub. Only valid when type '${InnovationHubType.LIST}' is used.`,
+    description: `A list of Hubs to include in this Innovation Hxb. Only valid when type '${InnovationHxbType.LIST}' is used.`,
   })
   hubListFilter?: string[];
 
   @IsOptional()
   @Field(() => HubVisibility, {
     nullable: true,
-    description: `Hubs with which visibility this Innovation Hub will display. Only valid when type '${InnovationHubType.VISIBILITY}' is used.`,
+    description: `Hubs with which visibility this Innovation Hxb will display. Only valid when type '${InnovationHxbType.VISIBILITY}' is used.`,
   })
   hubVisibilityFilter?: HubVisibility;
 

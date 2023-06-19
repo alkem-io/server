@@ -12,7 +12,7 @@ import { Community } from '@domain/community/community/community.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { CalendarEvent } from '@domain/timeline/event';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
-import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
+import { InnovationHxb } from '@domain/innovation-hub/innovation.hub.entity';
 
 @Module({
   imports: [
@@ -27,7 +27,7 @@ import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
     TypeOrmModule.forFeature([Community]),
     TypeOrmModule.forFeature([CalendarEvent]),
     TypeOrmModule.forFeature([Discussion]),
-    TypeOrmModule.forFeature([InnovationHub]),
+    TypeOrmModule.forFeature([InnovationHxb]),
   ],
   providers: [NamingService],
   exports: [NamingService],

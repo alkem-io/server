@@ -69,7 +69,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
+import { InnovationHxb, InnovationHxbType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 
 @Injectable()
@@ -311,25 +311,25 @@ export class HubService {
     return hub.visibility;
   }
 
-  public getSpacesForInnovationHub({
+  public getSpacesForInnovationHxb({
     type,
     hubListFilter,
     hubVisibilityFilter,
-  }: InnovationHub): Promise<Hub[]> | never {
-    if (type === InnovationHubType.VISIBILITY) {
+  }: InnovationHxb): Promise<Hub[]> | never {
+    if (type === InnovationHxbType.VISIBILITY) {
       return this.hubRepository.findBy({
         visibility: hubVisibilityFilter as HubVisibility,
       });
     }
 
-    if (type === InnovationHubType.LIST) {
+    if (type === InnovationHxbType.LIST) {
       return this.hubRepository.findBy([
         { id: In(hubListFilter as Array<string>) },
       ]);
     }
 
     throw new NotSupportedException(
-      `Unsupported Innovation Hub type: '${type}'`,
+      `Unsupported Innovation Hxb type: '${type}'`,
       LogContext.INNOVATION_HUB
     );
   }

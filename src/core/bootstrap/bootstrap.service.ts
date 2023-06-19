@@ -28,7 +28,7 @@ import { PlatformService } from '@platform/platfrom/platform.service';
 import { CreateHubInput } from '@domain/challenge/hub/dto/hub.dto.create';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
-import { InnovationHubService } from '@domain/innovation-hub';
+import { InnovationHxbService } from '@domain/innovation-hub';
 
 @Injectable()
 export class BootstrapService {
@@ -46,7 +46,7 @@ export class BootstrapService {
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private innovationHubService: InnovationHubService,
+    private innovationHxbService: InnovationHxbService,
     @InjectRepository(Hub)
     private hubRepository: Repository<Hub>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)

@@ -1,10 +1,10 @@
 import { registerEnumType } from '@nestjs/graphql';
 
-export enum InnovationHubType {
+export enum InnovationHxbType {
   VISIBILITY = 'visibility',
   LIST = 'list',
 }
 
-registerEnumType(InnovationHubType, {
-  name: 'InnovationHubType',
+registerEnumType(InnovationHxbType, {
+  name: 'InnovationHxbType',
 });
