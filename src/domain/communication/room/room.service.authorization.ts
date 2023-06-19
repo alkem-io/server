@@ -145,7 +145,7 @@ export class RoomAuthorizationService {
     );
 
     if (senderUserID !== '') {
-      const messageSender =
+      const reactionSenderRule =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.UPDATE, AuthorizationPrivilege.DELETE],
           [
@@ -156,7 +156,7 @@ export class RoomAuthorizationService {
           ],
           CREDENTIAL_RULE_ROOM_REACTION_SENDER
         );
-      newRules.push(messageSender);
+      newRules.push(reactionSenderRule);
     }
 
     const updatedAuthorization =
