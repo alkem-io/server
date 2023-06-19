@@ -10,7 +10,7 @@ export const collaborationDefaults: any = {
   callouts: [
     {
       nameID: 'hub-welcome',
-      type: CalloutType.COMMENTS,
+      type: CalloutType.POST,
       communityType: CommunityType.HUB,
       profile: {
         displayName: 'Welcome, please introduce yourself to the community!',
@@ -23,7 +23,7 @@ export const collaborationDefaults: any = {
       group: 'COMMUNITY_1',
     },
     {
-      type: CalloutType.COMMENTS,
+      type: CalloutType.POST,
       communityType: CommunityType.CHALLENGE,
       profile: {
         displayName: 'Why do you care about this Challenge?',
@@ -49,7 +49,7 @@ export const collaborationDefaults: any = {
       group: 'HOME_0',
     },
     {
-      type: CalloutType.COMMENTS,
+      type: CalloutType.POST,
       profile: {
         displayName: 'Suggestions, Questions, and Feedback',
         description: 'Please share it here :)',
@@ -61,13 +61,13 @@ export const collaborationDefaults: any = {
       group: 'HOME_2',
     },
     {
-      type: CalloutType.POST,
+      type: CalloutType.POST_COLLECTION,
       profile: {
         displayName: 'Contribute',
         description:
           'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
       },
-      nameID: `${CalloutType.POST}-default`,
+      nameID: `${CalloutType.POST_COLLECTION}-default`,
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 5,
@@ -84,13 +84,13 @@ export const collaborationDefaults: any = {
       group: 'KNOWLEDGE',
     },
     {
-      type: CalloutType.WHITEBOARD,
+      type: CalloutType.WHITEBOARD_COLLECTION,
       profile: {
         displayName: 'Collaborate visually',
         description:
           'Collaborate visually using Whiteboardes. Create a new Whiteboard from a template, or explore Whiteboardes already created.',
       },
-      nameID: `${CalloutType.WHITEBOARD}-default`,
+      nameID: `${CalloutType.WHITEBOARD_COLLECTION}-default`,
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 10,

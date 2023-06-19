@@ -64,12 +64,15 @@ export class CalloutService {
     calloutData: CreateCalloutInput,
     userID?: string
   ): Promise<ICallout> {
-    if (calloutData.type == CalloutType.POST && !calloutData.postTemplate) {
+    if (
+      calloutData.type == CalloutType.POST_COLLECTION &&
+      !calloutData.postTemplate
+    ) {
       throw new Error('Please provide a post template');
     }
 
     if (
-      calloutData.type == CalloutType.WHITEBOARD &&
+      calloutData.type == CalloutType.WHITEBOARD_COLLECTION &&
       !calloutData.whiteboardTemplate
     ) {
       throw new Error('Please provide a whiteboard template');
@@ -108,12 +111,15 @@ export class CalloutService {
       tags: calloutData.tags || [],
     });
 
-    if (calloutData.type == CalloutType.POST && postTemplateData) {
+    if (calloutData.type == CalloutType.POST_COLLECTION && postTemplateData) {
       callout.postTemplate = await this.postTemplateService.createPostTemplate(
         postTemplateData
       );
     }
-    if (calloutData.type == CalloutType.WHITEBOARD && whiteboardTemplateData) {
+    if (
+      calloutData.type == CalloutType.WHITEBOARD_COLLECTION &&
+      whiteboardTemplateData
+    ) {
       callout.whiteboardTemplate =
         await this.whiteboardTemplateService.createWhiteboardTemplate(
           whiteboardTemplateData
@@ -126,7 +132,7 @@ export class CalloutService {
     const savedCallout: ICallout = await this.calloutRepository.save(callout);
     savedCallout.visibility = CalloutVisibility.DRAFT;
 
-    if (calloutData.type === CalloutType.COMMENTS) {
+    if (calloutData.type === CalloutType.POST) {
       savedCallout.comments = await this.roomService.createRoom(
         `callout-comments-${savedCallout.nameID}`,
         RoomType.CALLOUT
@@ -242,7 +248,7 @@ export class CalloutService {
       callout.sortOrder = calloutUpdateData.sortOrder;
 
     if (
-      callout.type == CalloutType.POST &&
+      callout.type == CalloutType.POST_COLLECTION &&
       callout.postTemplate &&
       calloutUpdateData.postTemplate
     ) {
@@ -253,7 +259,7 @@ export class CalloutService {
     }
 
     if (
-      callout.type == CalloutType.WHITEBOARD &&
+      callout.type == CalloutType.WHITEBOARD_COLLECTION &&
       callout.whiteboardTemplate &&
       calloutUpdateData.whiteboardTemplate
     ) {
@@ -345,9 +351,9 @@ export class CalloutService {
 
   public async getActivityCount(callout: ICallout): Promise<number> {
     const result = 0;
-    if (callout.type === CalloutType.POST) {
+    if (callout.type === CalloutType.POST_COLLECTION) {
       return await this.postService.getPostsInCalloutCount(callout.id);
-    } else if (callout.type === CalloutType.WHITEBOARD) {
+    } else if (callout.type === CalloutType.WHITEBOARD_COLLECTION) {
       return await this.whiteboardService.getWhiteboardesInCalloutCount(
         callout.id
       );

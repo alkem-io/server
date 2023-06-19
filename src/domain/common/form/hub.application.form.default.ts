@@ -9,7 +9,7 @@ const emptyWhiteboardValue =
 export const collaborationDefaults: any = {
   callouts: [
     {
-      type: CalloutType.COMMENTS,
+      type: CalloutType.POST,
       communityType: CommunityType.HUB,
       displayName: 'Welcome, please introduce yourself to the community!',
       nameID: 'hub-welcome',
@@ -20,7 +20,7 @@ export const collaborationDefaults: any = {
       sortOrder: 1,
     },
     {
-      type: CalloutType.COMMENTS,
+      type: CalloutType.POST,
       communityType: CommunityType.CHALLENGE,
       displayName: 'Why do you care about this Challenge?',
       nameID: 'challenge-welcome',
@@ -31,7 +31,7 @@ export const collaborationDefaults: any = {
       sortOrder: 1,
     },
     {
-      type: CalloutType.COMMENTS,
+      type: CalloutType.POST,
       displayName: 'Suggestions, Questions, and Feedback',
       nameID: 'suggestions',
       description: 'Please share it here :)',
@@ -40,9 +40,9 @@ export const collaborationDefaults: any = {
       sortOrder: 3,
     },
     {
-      type: CalloutType.POST,
+      type: CalloutType.POST_COLLECTION,
       displayName: 'Contribute',
-      nameID: `${CalloutType.POST}-default`,
+      nameID: `${CalloutType.POST_COLLECTION}-default`,
       description:
         'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
       visibility: CalloutVisibility.PUBLISHED,
@@ -60,9 +60,9 @@ export const collaborationDefaults: any = {
       },
     },
     {
-      type: CalloutType.WHITEBOARD,
+      type: CalloutType.WHITEBOARD_COLLECTION,
       displayName: 'Collaborate visually',
-      nameID: `${CalloutType.WHITEBOARD}-default`,
+      nameID: `${CalloutType.WHITEBOARD_COLLECTION}-default`,
       description:
         'Collaborate visually using Whiteboardes. Create a new Whiteboard from a template, or explore Whiteboardes already created.',
       visibility: CalloutVisibility.PUBLISHED,

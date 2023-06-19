@@ -108,6 +108,21 @@ export class postWhiteboardRename1686376509726 implements MigrationInterface {
       );
     }
 
+    // Update existing callouts to set the type properly
+    const callouts: { id: string; type: string }[] = await queryRunner.query(
+      `SELECT id, type FROM callout`
+    );
+    for (const callout of callouts) {
+      const newType = callout.type
+        .replace('canvas', 'whiteboard-collection')
+        .replace('single-whiteboard', 'whiteboard')
+        .replace('post', 'post-collection')
+        .replace('comments', 'post');
+      await queryRunner.query(
+        `UPDATE callout SET type='${newType}' WHERE id='${callout.id}'`
+      );
+    }
+
     // Update the preferences
     const preference_definitions: {
       id: string;
@@ -242,6 +257,21 @@ export class postWhiteboardRename1686376509726 implements MigrationInterface {
         .replace('post', 'card');
       await queryRunner.query(
         `UPDATE activity SET type='${newType}' WHERE id='${activity.id}'`
+      );
+    }
+
+    // Update existing callouts to set the type properly
+    const callouts: { id: string; type: string }[] = await queryRunner.query(
+      `SELECT id, type FROM callout`
+    );
+    for (const callout of callouts) {
+      const newType = callout.type
+        .replace('whiteboard-collection', 'canvas')
+        .replace('whiteboard', 'single-whiteboard')
+        .replace('post-collection', 'post')
+        .replace('post', 'comments');
+      await queryRunner.query(
+        `UPDATE callout SET type='${newType}' WHERE id='${callout.id}'`
       );
     }
 

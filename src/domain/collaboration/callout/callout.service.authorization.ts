@@ -211,11 +211,11 @@ export class CalloutAuthorizationService {
     calloutType: CalloutType
   ): AuthorizationPrivilege | undefined {
     switch (calloutType) {
-      case CalloutType.WHITEBOARD:
+      case CalloutType.WHITEBOARD_COLLECTION:
         return AuthorizationPrivilege.CREATE_WHITEBOARD;
-      case CalloutType.POST:
+      case CalloutType.POST_COLLECTION:
         return AuthorizationPrivilege.CREATE_POST;
-      case CalloutType.COMMENTS:
+      case CalloutType.POST:
         return undefined;
     }
   }

@@ -85,7 +85,7 @@ export class CalloutResolverSubscriptions {
     );
     // Validate
     const callout = await this.calloutService.getCalloutOrFail(calloutID);
-    if (callout.type !== CalloutType.POST) {
+    if (callout.type !== CalloutType.POST_COLLECTION) {
       throw new UnableToSubscribeException(
         `Unable to subscribe: Callout not of type Post: ${calloutID}`,
         LogContext.SUBSCRIPTIONS
