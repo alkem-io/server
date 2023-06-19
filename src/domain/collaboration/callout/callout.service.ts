@@ -78,10 +78,7 @@ export class CalloutService {
       throw new Error('Please provide a whiteboard template');
     }
 
-    if (
-      calloutData.type == CalloutType.SINGLE_WHITEBOARD &&
-      !calloutData.whiteboard
-    ) {
+    if (calloutData.type == CalloutType.WHITEBOARD && !calloutData.whiteboard) {
       throw new Error('Please provide a whiteboard');
     }
 
@@ -140,10 +137,7 @@ export class CalloutService {
       return await this.calloutRepository.save(savedCallout);
     }
 
-    if (
-      calloutData.type == CalloutType.SINGLE_WHITEBOARD &&
-      calloutData.whiteboard
-    ) {
+    if (calloutData.type == CalloutType.WHITEBOARD && calloutData.whiteboard) {
       const calloutNameID = this.namingService.createNameID(
         `${calloutData.whiteboard.profileData.displayName}`
       );
@@ -475,10 +469,7 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
 
-    if (
-      callout.type == CalloutType.SINGLE_WHITEBOARD &&
-      callout.whiteboards[0]
-    ) {
+    if (callout.type == CalloutType.WHITEBOARD && callout.whiteboards[0]) {
       throw new Error(
         'Whiteboard Callout cannot have more than one whiteboard'
       );
