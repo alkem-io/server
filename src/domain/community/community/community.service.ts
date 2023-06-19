@@ -295,10 +295,28 @@ export class CommunityService {
     const isMember = await this.isMember(agent, community);
     if (isMember) return CommunityMembershipStatus.MEMBER;
 
-    // Check if an application is pending
-    const applications = await this.applicationService.findExistingApplications(
+    const openApplication = await this.findOpenApplication(
       agentInfo.userID,
       community.id
+    );
+    if (openApplication) CommunityMembershipStatus.APPLICATION_PENDING;
+
+    const openInvitation = await this.findOpenInvitation(
+      agentInfo.userID,
+      community.id
+    );
+    if (openInvitation) CommunityMembershipStatus.INVITATION_PENDING;
+
+    return CommunityMembershipStatus.NOT_MEMBER;
+  }
+
+  private async findOpenApplication(
+    userID: string,
+    communityID: string
+  ): Promise<IApplication | undefined> {
+    const applications = await this.applicationService.findExistingApplications(
+      userID,
+      communityID
     );
     for (const application of applications) {
       // skip any finalized applications; only want to return pending applications
@@ -306,10 +324,28 @@ export class CommunityService {
         application.id
       );
       if (isFinalized) continue;
-      return CommunityMembershipStatus.APPLICATION_PENDING;
+      return application;
     }
+    return undefined;
+  }
 
-    return CommunityMembershipStatus.NOT_MEMBER;
+  private async findOpenInvitation(
+    userID: string,
+    communityID: string
+  ): Promise<IInvitation | undefined> {
+    const invitations = await this.invitationService.findExistingInvitations(
+      userID,
+      communityID
+    );
+    for (const invitation of invitations) {
+      // skip any finalized applications; only want to return pending applications
+      const isFinalized = await this.invitationService.isFinalizedInvitation(
+        invitation.id
+      );
+      if (isFinalized) continue;
+      return invitation;
+    }
+    return undefined;
   }
 
   async getUsersWithRole(
@@ -801,23 +837,23 @@ export class CommunityService {
     agent: IAgent,
     community: ICommunity
   ) {
-    // Check presence / status of existing applications
-    const existingApplications =
-      await this.applicationService.findExistingApplications(
-        user.id,
-        community.id
+    const openApplication = await this.findOpenApplication(
+      user.id,
+      community.id
+    );
+    if (openApplication) {
+      throw new InvalidStateTransitionException(
+        `An open application (ID: ${openApplication.id}) already exists for user ${openApplication.user?.id} on Community: ${community.displayName}.`,
+        LogContext.COMMUNITY
       );
-    for (const existingApplication of existingApplications) {
-      const isApplicationFinalized =
-        await this.applicationService.isFinalizedApplication(
-          existingApplication.id
-        );
-      if (!isApplicationFinalized) {
-        throw new InvalidStateTransitionException(
-          `An application (ID: ${existingApplication.id}) already exists for user ${existingApplication.user?.email} on Community: ${community.displayName} that is not finalized.`,
-          LogContext.COMMUNITY
-        );
-      }
+    }
+
+    const openInvitation = await this.findOpenInvitation(user.id, community.id);
+    if (openInvitation) {
+      throw new InvalidStateTransitionException(
+        `An open invitation (ID: ${openInvitation.id}) already exists for user ${openInvitation.invitedUser} on Community: ${community.displayName}.`,
+        LogContext.COMMUNITY
+      );
     }
 
     // Check if the user is already a member; if so do not allow an application
@@ -834,23 +870,23 @@ export class CommunityService {
     agent: IAgent,
     community: ICommunity
   ) {
-    // Check presence / status of existing applications
-    const existingInvitations =
-      await this.invitationService.findExistingInvitations(
-        user.id,
-        community.id
+    const openInvitation = await this.findOpenInvitation(user.id, community.id);
+    if (openInvitation) {
+      throw new InvalidStateTransitionException(
+        `An open invitation (ID: ${openInvitation.id}) already exists for user ${openInvitation.invitedUser} on Community: ${community.displayName}.`,
+        LogContext.COMMUNITY
       );
-    for (const existingInvitation of existingInvitations) {
-      const isInvitationFinalized =
-        await this.invitationService.isFinalizedInvitation(
-          existingInvitation.id
-        );
-      if (!isInvitationFinalized) {
-        throw new InvalidStateTransitionException(
-          `An invitation (ID: ${existingInvitation.id}) already exists for user ${existingInvitation.invitedUser} on Community: ${community.displayName} that is not finalized.`,
-          LogContext.COMMUNITY
-        );
-      }
+    }
+
+    const openApplication = await this.findOpenApplication(
+      user.id,
+      community.id
+    );
+    if (openApplication) {
+      throw new InvalidStateTransitionException(
+        `An open application (ID: ${openApplication.id}) already exists for user ${openApplication.user?.id} on Community: ${community.displayName}.`,
+        LogContext.COMMUNITY
+      );
     }
 
     // Check if the user is already a member; if so do not allow an application
