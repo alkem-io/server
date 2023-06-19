@@ -14,6 +14,6 @@ Variables:
         "displayName": "wow",
         "description": "wow this is great"
       },
-      "canvasID": "uuid"
+      "whiteboardID": "uuid"
   }
 }

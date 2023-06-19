@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { UUID_NAMEID } from '@domain/common/scalars';
-import { HubPreferenceType } from '@common/enums/hub.preference.type';
+import { SpacePreferenceType } from '@common/enums/space.preference.type';
 
 @InputType()
 export class UpdateHubPreferenceInput {
@@ -9,10 +9,10 @@ export class UpdateHubPreferenceInput {
   })
   hubID!: string;
 
-  @Field(() => HubPreferenceType, {
+  @Field(() => SpacePreferenceType, {
     description: 'Type of the user preference',
   })
-  type!: HubPreferenceType;
+  type!: SpacePreferenceType;
 
   @Field(() => String)
   value!: string;

@@ -13,10 +13,10 @@ import {
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { SubscriptionPublishService } from '../../subscriptions/subscription-service';
 import { ActivityInputCalloutPublished } from './dto/activity.dto.input.callout.published';
-import { ActivityInputAspectCreated } from './dto/activity.dto.input.aspect.created';
-import { ActivityInputCanvasCreated } from './dto/activity.dto.input.canvas.created';
+import { ActivityInputPostCreated } from './dto/activity.dto.input.post.created';
+import { ActivityInputWhiteboardCreated } from './dto/activity.dto.input.whiteboard.created';
 import { ActivityInputMemberJoined } from './dto/activity.dto.input.member.joined';
-import { ActivityInputAspectComment } from './dto/activity.dto.input.aspect.comment';
+import { ActivityInputPostComment } from './dto/activity.dto.input.post.comment';
 import { ActivityInputCalloutDiscussionComment } from './dto/activity.dto.input.callout.discussion.comment';
 import { ActivityInputChallengeCreated } from './dto/activity.dto.input.challenge.created';
 import { ActivityInputOpportunityCreated } from './dto/activity.dto.input.opportunity.created';
@@ -127,19 +127,19 @@ export class ActivityAdapter {
     return true;
   }
 
-  public async aspectCreated(
-    eventData: ActivityInputAspectCreated
+  public async postCreated(
+    eventData: ActivityInputPostCreated
   ): Promise<boolean> {
-    const eventType = ActivityEventType.CARD_CREATED;
+    const eventType = ActivityEventType.POST_CREATED;
     this.logEventTriggered(eventData, eventType);
 
-    const aspect = eventData.aspect;
-    const description = `[${aspect.profile.displayName}] - ${aspect.profile.description}`;
-    const collaborationID = await this.getCollaborationIdForAspect(aspect.id);
+    const post = eventData.post;
+    const description = `[${post.profile.displayName}] - ${post.profile.description}`;
+    const collaborationID = await this.getCollaborationIdForPost(post.id);
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
-      resourceID: aspect.id,
+      resourceID: post.id,
       parentID: eventData.callout.id,
       description: description,
       type: eventType,
@@ -150,19 +150,19 @@ export class ActivityAdapter {
     return true;
   }
 
-  public async aspectComment(
-    eventData: ActivityInputAspectComment
+  public async postComment(
+    eventData: ActivityInputPostComment
   ): Promise<boolean> {
-    const eventType = ActivityEventType.CARD_COMMENT;
+    const eventType = ActivityEventType.POST_COMMENT;
     this.logEventTriggered(eventData, eventType);
 
-    const aspectID = eventData.aspect.id;
-    const calloutID = await this.getCalloutIdForAspect(aspectID);
+    const postID = eventData.post.id;
+    const calloutID = await this.getCalloutIdForPost(postID);
     const collaborationID = await this.getCollaborationIdForCallout(calloutID);
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
-      resourceID: aspectID,
+      resourceID: postID,
       parentID: calloutID,
       description: eventData.message.message,
       type: eventType,
@@ -174,20 +174,22 @@ export class ActivityAdapter {
     return true;
   }
 
-  public async canvasCreated(
-    eventData: ActivityInputCanvasCreated
+  public async whiteboardCreated(
+    eventData: ActivityInputWhiteboardCreated
   ): Promise<boolean> {
-    const eventType = ActivityEventType.CANVAS_CREATED;
+    const eventType = ActivityEventType.WHITEBOARD_CREATED;
     this.logEventTriggered(eventData, eventType);
 
-    const canvas = eventData.canvas;
-    const collaborationID = await this.getCollaborationIdForCanvas(canvas.id);
+    const whiteboard = eventData.whiteboard;
+    const collaborationID = await this.getCollaborationIdForWhiteboard(
+      whiteboard.id
+    );
 
-    const description = `[${canvas.profile.displayName}]`;
+    const description = `[${whiteboard.profile.displayName}]`;
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
-      resourceID: canvas.id,
+      resourceID: whiteboard.id,
       parentID: eventData.callout.id,
       description: description,
       type: eventType,
@@ -347,57 +349,59 @@ export class ActivityAdapter {
       .getOne();
     if (!collaboration) {
       throw new EntityNotFoundException(
-        `Unable to identify Collaboration for Canvas with ID: ${calloutID}`,
+        `Unable to identify Collaboration for Whiteboard with ID: ${calloutID}`,
         LogContext.ACTIVITY
       );
     }
     return collaboration.id;
   }
 
-  private async getCalloutIdForAspect(aspectID: string): Promise<string> {
+  private async getCalloutIdForPost(postID: string): Promise<string> {
     const callout = await this.calloutRepository
       .createQueryBuilder('callout')
-      .innerJoinAndSelect('callout.aspects', 'aspect')
-      .where('aspect.id = :id')
-      .setParameters({ id: `${aspectID}` })
+      .innerJoinAndSelect('callout.posts', 'post')
+      .where('post.id = :id')
+      .setParameters({ id: `${postID}` })
       .getOne();
     if (!callout) {
       throw new EntityNotFoundException(
-        `Unable to identify Callout for Aspect with ID: ${aspectID}`,
+        `Unable to identify Callout for Post with ID: ${postID}`,
         LogContext.ACTIVITY
       );
     }
     return callout.id;
   }
 
-  private async getCollaborationIdForAspect(aspectID: string): Promise<string> {
+  private async getCollaborationIdForPost(postID: string): Promise<string> {
     const collaboration = await this.collaborationRepository
       .createQueryBuilder('collaboration')
       .leftJoinAndSelect('collaboration.callouts', 'callouts')
-      .innerJoinAndSelect('callouts.aspects', 'aspect')
-      .where('aspect.id = :id')
-      .setParameters({ id: `${aspectID}` })
+      .innerJoinAndSelect('callouts.posts', 'post')
+      .where('post.id = :id')
+      .setParameters({ id: `${postID}` })
       .getOne();
     if (!collaboration) {
       throw new EntityNotFoundException(
-        `Unable to identify Collaboration for Canvas with ID: ${aspectID}`,
+        `Unable to identify Collaboration for Whiteboard with ID: ${postID}`,
         LogContext.ACTIVITY
       );
     }
     return collaboration.id;
   }
 
-  private async getCollaborationIdForCanvas(canvasID: string): Promise<string> {
+  private async getCollaborationIdForWhiteboard(
+    whiteboardID: string
+  ): Promise<string> {
     const collaboration = await this.collaborationRepository
       .createQueryBuilder('collaboration')
       .leftJoinAndSelect('collaboration.callouts', 'callouts')
-      .innerJoinAndSelect('callouts.canvases', 'canvas')
-      .where('canvas.id = :id')
-      .setParameters({ id: `${canvasID}` })
+      .innerJoinAndSelect('callouts.whiteboards', 'whiteboards')
+      .where('whiteboards.id = :id')
+      .setParameters({ id: `${whiteboardID}` })
       .getOne();
     if (!collaboration) {
       throw new EntityNotFoundException(
-        `Unable to identify Collaboration for Canvas with ID: ${canvasID}`,
+        `Unable to identify Collaboration for Whiteboard with ID: ${whiteboardID}`,
         LogContext.ACTIVITY
       );
     }

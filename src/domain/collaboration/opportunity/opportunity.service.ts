@@ -410,23 +410,27 @@ export class OpportunityService {
     relationsTopic.id = `relations-${opportunity.id}`;
     metrics.push(relationsTopic);
 
-    // Aspects
-    const aspectsCount = await this.baseChallengeService.getAspectsCount(
+    // Posts
+    const postsCount = await this.baseChallengeService.getPostsCount(
       opportunity,
       this.opportunityRepository
     );
-    const aspectsTopic = new NVP('aspects', aspectsCount.toString());
-    aspectsTopic.id = `aspects-${opportunity.id}`;
-    metrics.push(aspectsTopic);
+    const postsTopic = new NVP('posts', postsCount.toString());
+    postsTopic.id = `posts-${opportunity.id}`;
+    metrics.push(postsTopic);
 
-    // Canvases
-    const canvasesCount = await this.baseChallengeService.getCanvasesCount(
-      opportunity,
-      this.opportunityRepository
+    // Whiteboardes
+    const whiteboardsCount =
+      await this.baseChallengeService.getWhiteboardesCount(
+        opportunity,
+        this.opportunityRepository
+      );
+    const whiteboardsTopic = new NVP(
+      'whiteboards',
+      whiteboardsCount.toString()
     );
-    const canvasesTopic = new NVP('canvases', canvasesCount.toString());
-    canvasesTopic.id = `canvases-${opportunity.id}`;
-    metrics.push(canvasesTopic);
+    whiteboardsTopic.id = `whiteboards-${opportunity.id}`;
+    metrics.push(whiteboardsTopic);
 
     return metrics;
   }

@@ -1,6 +1,6 @@
-import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { IPost } from '@domain/collaboration/post/post.interface';
 import { ObjectType, Field } from '@nestjs/graphql';
-import { ICanvas } from '@domain/common/canvas/canvas.interface';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
@@ -12,7 +12,7 @@ import { IRoom } from '@domain/communication/room/room.interface';
 @ObjectType('Callout')
 export abstract class ICallout extends INameable {
   @Field(() => CalloutType, {
-    description: 'The Callout type, e.g. Card, Canvas, Discussion',
+    description: 'The Callout type, e.g. Post, Whiteboard, Discussion',
   })
   type!: CalloutType;
 
@@ -32,11 +32,11 @@ export abstract class ICallout extends INameable {
   })
   group?: string;
 
-  @Field(() => [IAspect], {
+  @Field(() => [IPost], {
     nullable: true,
-    description: 'The Aspects associated with this Callout.',
+    description: 'The Posts associated with this Callout.',
   })
-  aspects?: IAspect[];
+  posts?: IPost[];
 
   @Field(() => IPostTemplate, {
     nullable: true,
@@ -44,11 +44,11 @@ export abstract class ICallout extends INameable {
   })
   postTemplate?: IPostTemplate;
 
-  @Field(() => [ICanvas], {
+  @Field(() => [IWhiteboard], {
     nullable: true,
-    description: 'The Canvases associated with this Callout.',
+    description: 'The Whiteboardes associated with this Callout.',
   })
-  canvases?: ICanvas[];
+  whiteboards?: IWhiteboard[];
 
   @Field(() => IWhiteboardTemplate, {
     nullable: true,

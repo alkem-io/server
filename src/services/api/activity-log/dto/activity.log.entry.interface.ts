@@ -6,9 +6,9 @@ import { ActivityEventType } from '@common/enums/activity.event.type';
 import { IUser } from '@domain/community/user/user.interface';
 import { IActivityLogEntryMemberJoined } from './activity.log.dto.entry.member.joined.interface';
 import { IActivityLogEntryCalloutPublished } from './activity.log.dto.entry.callout.published';
-import { IActivityLogEntryCalloutCardCreated } from './activity.log.dto.entry.callout.card.created';
-import { IActivityLogEntryCalloutCanvasCreated } from './activity.log.dto.entry.callout.canvas.created';
-import { IActivityLogEntryCalloutCardComment } from './activity.log.dto.entry.callout.card.comment';
+import { IActivityLogEntryCalloutPostCreated } from './activity.log.dto.entry.callout.post.created';
+import { IActivityLogEntryCalloutWhiteboardCreated } from './activity.log.dto.entry.callout.whiteboard.created';
+import { IActivityLogEntryCalloutPostComment } from './activity.log.dto.entry.callout.post.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from './activity.log.dto.entry.callout.discussion.comment';
 import { IActivityLogEntryChallengeCreated } from './activity.log.dto.entry.challenge.created';
 import { IActivityLogEntryOpportunityCreated } from './activity.log.dto.entry.opportunity.created';
@@ -20,16 +20,16 @@ import { IActivityLogEntryUpdateSent } from './activity.log.dto.entry.update.sen
     switch (type) {
       case ActivityEventType.CALLOUT_PUBLISHED:
         return IActivityLogEntryCalloutPublished;
-      case ActivityEventType.CARD_CREATED:
-        return IActivityLogEntryCalloutCardCreated;
-      case ActivityEventType.CANVAS_CREATED:
-        return IActivityLogEntryCalloutCanvasCreated;
+      case ActivityEventType.POST_CREATED:
+        return IActivityLogEntryCalloutPostCreated;
+      case ActivityEventType.WHITEBOARD_CREATED:
+        return IActivityLogEntryCalloutWhiteboardCreated;
       case ActivityEventType.CHALLENGE_CREATED:
         return IActivityLogEntryChallengeCreated;
       case ActivityEventType.OPPORTUNITY_CREATED:
         return IActivityLogEntryOpportunityCreated;
-      case ActivityEventType.CARD_COMMENT:
-        return IActivityLogEntryCalloutCardComment;
+      case ActivityEventType.POST_COMMENT:
+        return IActivityLogEntryCalloutPostComment;
       case ActivityEventType.DISCUSSION_COMMENT:
         return IActivityLogEntryCalloutDiscussionComment;
       case ActivityEventType.MEMBER_JOINED:

@@ -50,12 +50,12 @@ query activityLogOnCollaboration($queryData: ActivityLogInput!) {
         }
       }
     }
-    ... on ActivityLogEntryCalloutCanvasCreated {
+    ... on ActivityLogEntryCalloutWhiteboardCreated {
       callout {
         id
         type
       }
-      canvas {
+      whiteboard {
         id
         profile {
           id
