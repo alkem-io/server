@@ -57,7 +57,7 @@ import { ITemplatesSet } from '@domain/template/templates-set/templates.set.inte
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
-import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
+import { UpdateHubPlatformSettingsInput } from './dto/hub.dto.update.platform.settings';
 import { HubsQueryArgs } from './dto/hub.args.query.hubs';
 import { HubVisibility } from '@common/enums/hub.visibility';
 import { HubFilterService } from '@services/infrastructure/hub-filter/hub.filter.service';
@@ -193,6 +193,7 @@ export class HubService {
       this.hubRepository
     );
 
+    // TODO: remove this once the usage of updateHubPlatformSettings is finished
     if (hubData.nameID) {
       if (hubData.nameID !== hub.nameID) {
         // updating the nameID, check new value is allowed
@@ -207,6 +208,7 @@ export class HubService {
       }
     }
 
+    // TODO: remove this once the usage of updateHubPlatformSettings is finished
     if (hubData.hostID) {
       await this.setHubHost(hub.id, hubData.hostID);
     }
@@ -214,14 +216,34 @@ export class HubService {
     return await this.hubRepository.save(hub);
   }
 
-  public async updateHubVisibility(
-    visibilityData: UpdateHubVisibilityInput
+  public async updateHubPlatformSettings(
+    updateData: UpdateHubPlatformSettingsInput
   ): Promise<IHub> {
-    const hub = await this.getHubOrFail(visibilityData.hubID);
+    const space = await this.getHubOrFail(updateData.hubID);
 
-    hub.visibility = visibilityData.visibility;
+    if (updateData.visibility) {
+      space.visibility = updateData.visibility;
+    }
 
-    return await this.save(hub);
+    if (updateData.nameID) {
+      if (updateData.nameID !== space.nameID) {
+        // updating the nameID, check new value is allowed
+        const updateAllowed = await this.isNameIdAvailable(updateData.nameID);
+        if (!updateAllowed) {
+          throw new ValidationException(
+            `Unable to update Hub nameID: the provided nameID is already taken: ${updateData.nameID}`,
+            LogContext.CHALLENGES
+          );
+        }
+        space.nameID = updateData.nameID;
+      }
+    }
+
+    if (updateData.hostID) {
+      await this.setHubHost(space.id, updateData.hostID);
+    }
+
+    return await this.save(space);
   }
 
   async deleteHub(deleteData: DeleteHubInput): Promise<IHub> {

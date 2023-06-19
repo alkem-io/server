@@ -302,7 +302,10 @@ export class HubAuthorizationService {
     // Allow global admins to reset authorization
     const authorizationReset =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.AUTHORIZATION_RESET],
+        [
+          AuthorizationPrivilege.AUTHORIZATION_RESET,
+          AuthorizationPrivilege.PLATFORM_ADMIN,
+        ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_ADMIN_HUBS,
