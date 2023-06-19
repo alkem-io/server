@@ -116,7 +116,7 @@ export class postWhiteboardRename1686376509726 implements MigrationInterface {
       const newType = callout.type
         .replace('canvas', 'whiteboard-collection')
         .replace('single-whiteboard', 'whiteboard')
-        .replace('post', 'post-collection')
+        .replace('card', 'post-collection')
         .replace('comments', 'post');
       await queryRunner.query(
         `UPDATE callout SET type='${newType}' WHERE id='${callout.id}'`
@@ -268,7 +268,7 @@ export class postWhiteboardRename1686376509726 implements MigrationInterface {
       const newType = callout.type
         .replace('whiteboard-collection', 'canvas')
         .replace('whiteboard', 'single-whiteboard')
-        .replace('post-collection', 'post')
+        .replace('post-collection', 'card')
         .replace('post', 'comments');
       await queryRunner.query(
         `UPDATE callout SET type='${newType}' WHERE id='${callout.id}'`
