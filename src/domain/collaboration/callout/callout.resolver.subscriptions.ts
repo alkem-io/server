@@ -37,7 +37,7 @@ export class CalloutResolverSubscriptions {
         'Receive new Update messages on Communities the currently authenticated User is a member of.',
       resolve(this: CalloutResolverSubscriptions, payload, args, context) {
         const agentInfo = context.req.user;
-        const logMsgPrefix = `[User (${agentInfo.email}) Callout Posts] - `;
+        const logMsgPrefix = `[User (${agentInfo.email}) Callout Post Collection] - `;
         this.logger.verbose?.(
           `${logMsgPrefix} sending out event for Posts on Callout: ${payload.calloutID} `,
           LogContext.SUBSCRIPTIONS
@@ -53,7 +53,7 @@ export class CalloutResolverSubscriptions {
       },
       filter(this: CalloutResolverSubscriptions, payload, variables, context) {
         const agentInfo = context.req.user;
-        const logMsgPrefix = `[User (${agentInfo.email}) Callout Posts] - `;
+        const logMsgPrefix = `[User (${agentInfo.email}) Callout Post Collection] - `;
         this.logger.verbose?.(
           `${logMsgPrefix} Filtering event '${payload.eventID}'`,
           LogContext.SUBSCRIPTIONS
@@ -78,16 +78,16 @@ export class CalloutResolverSubscriptions {
     })
     calloutID: string
   ) {
-    const logMsgPrefix = `[User (${agentInfo.email}) Callout Posts] - `;
+    const logMsgPrefix = `[User (${agentInfo.email}) Callout Post Collection] - `;
     this.logger.verbose?.(
-      `${logMsgPrefix} Subscribing to the following Callout Posts: ${calloutID}`,
+      `${logMsgPrefix} Subscribing to the Callout of type Post Collection: ${calloutID}`,
       LogContext.SUBSCRIPTIONS
     );
     // Validate
     const callout = await this.calloutService.getCalloutOrFail(calloutID);
     if (callout.type !== CalloutType.POST_COLLECTION) {
       throw new UnableToSubscribeException(
-        `Unable to subscribe: Callout not of type Post: ${calloutID}`,
+        `Unable to subscribe: Callout not of type Post Collection: ${calloutID}`,
         LogContext.SUBSCRIPTIONS
       );
     }
