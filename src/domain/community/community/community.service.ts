@@ -76,7 +76,7 @@ export class CommunityService {
 
   async createCommunity(
     name: string,
-    hubID: string,
+    spaceID: string,
     type: CommunityType,
     policy: ICommunityPolicyDefinition,
     applicationFormData: CreateFormInput
@@ -87,7 +87,7 @@ export class CommunityService {
       policy.member,
       policy.lead
     );
-    community.hubID = hubID;
+    community.spaceID = spaceID;
     community.applicationForm = await this.formService.createForm(
       applicationFormData
     );
@@ -99,7 +99,7 @@ export class CommunityService {
     community.communication =
       await this.communicationService.createCommunication(
         community.displayName,
-        hubID,
+        spaceID,
         Object.values(DiscussionCategoryCommunity)
       );
     return await this.communityRepository.save(community);
@@ -122,7 +122,7 @@ export class CommunityService {
     const group = await this.userGroupService.addGroupWithName(
       community,
       groupName,
-      community.hubID
+      community.spaceID
     );
     await this.communityRepository.save(community);
 
@@ -452,7 +452,7 @@ export class CommunityService {
         user: user,
       };
       this.activityAdapter.memberJoined(activityLogInput);
-      if (community.type === CommunityType.HUB) {
+      if (community.type === CommunityType.SPACE) {
         // todo: community joined
       }
     }
@@ -773,9 +773,9 @@ export class CommunityService {
     return validCredential;
   }
 
-  async getCommunities(hubId: string): Promise<Community[]> {
+  async getCommunities(spaceId: string): Promise<Community[]> {
     const communites = await this.communityRepository.find({
-      where: { hubID: hubId },
+      where: { spaceID: spaceId },
     });
     return communites || [];
   }
@@ -792,15 +792,15 @@ export class CommunityService {
 
     await this.validateUserAbleToApply(user, agent, community);
 
-    const hubID = community.hubID;
-    if (!hubID)
+    const spaceID = community.spaceID;
+    if (!spaceID)
       throw new EntityNotInitializedException(
-        `Unable to locate containing hub: ${community.displayName}`,
+        `Unable to locate containing space: ${community.displayName}`,
         LogContext.COMMUNITY
       );
     const application = await this.applicationService.createApplication(
       applicationData,
-      hubID
+      spaceID
     );
     community.applications?.push(application);
     await this.communityRepository.save(community);
@@ -904,7 +904,7 @@ export class CommunityService {
   ): Promise<ICommunity> {
     const community = await this.communityRepository.findOneBy({
       id: communityID,
-      hubID: nameableScopeID,
+      spaceID: nameableScopeID,
     });
 
     if (!community) {
@@ -975,7 +975,7 @@ export class CommunityService {
     return credentialMatches;
   }
 
-  async isHubCommunity(community: ICommunity): Promise<boolean> {
+  async isSpaceCommunity(community: ICommunity): Promise<boolean> {
     const parentCommunity = await this.getParentCommunity(community);
 
     return parentCommunity === undefined;

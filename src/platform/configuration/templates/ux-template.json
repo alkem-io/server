@@ -1,6 +1,6 @@
 {
   "name": "default-ux-template",
-  "description": "sample hub template based on Odyssey hub setup; used by Alkemio Web Client to configure the display / options to end users",
+  "description": "sample space template based on Odyssey space setup; used by Alkemio Web Client to configure the display / options to end users",
   "users": [
     {
       "name": "default",
@@ -12,8 +12,8 @@
           "uri": ""
         },
         {
-          "name": "github",
-          "description": "User profile on GitHub",
+          "name": "gitspace",
+          "description": "User profile on GitSpace",
           "uri": ""
         },
         {

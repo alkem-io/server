@@ -13,8 +13,8 @@ import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { Hub } from '@domain/challenge/hub/hub.entity';
-import { HubModule } from '@domain/challenge/hub/hub.module';
+import { Space } from '@domain/challenge/space/space.entity';
+import { SpaceModule } from '@domain/challenge/space/space.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { PostModule } from '@domain/collaboration/post/post.module';
 import { Post } from '@domain/collaboration/post/post.entity';
@@ -29,7 +29,7 @@ import { CalloutModule } from '@domain/collaboration/callout/callout.module';
     UserGroupModule,
     OrganizationModule,
     ChallengeModule,
-    HubModule,
+    SpaceModule,
     OpportunityModule,
     CollaborationModule,
     PostModule,
@@ -37,7 +37,7 @@ import { CalloutModule } from '@domain/collaboration/callout/callout.module';
     TypeOrmModule.forFeature([User]),
     TypeOrmModule.forFeature([UserGroup]),
     TypeOrmModule.forFeature([Organization]),
-    TypeOrmModule.forFeature([Hub]),
+    TypeOrmModule.forFeature([Space]),
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([Opportunity]),
     TypeOrmModule.forFeature([Post]),

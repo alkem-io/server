@@ -16,10 +16,10 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { Hub } from '@domain/challenge/hub/hub.entity';
+import { Space } from '@domain/challenge/space/space.entity';
 import { ISearchResult } from './dto/search.result.entry.interface';
 import { SearchResultType } from '@common/enums/search.result.type';
-import { HubService } from '@domain/challenge/hub/hub.service';
+import { SpaceService } from '@domain/challenge/space/space.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -28,7 +28,7 @@ import { UserGroupService } from '@domain/community/user-group/user-group.servic
 import SearchResultBuilderService from './search.result.builder.service';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { Post } from '@domain/collaboration/post/post.entity';
-import { IHub } from '@domain/challenge/hub/hub.interface';
+import { ISpace } from '@domain/challenge/space/space.interface';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { ISearchResults } from './dto/search.result.dto';
@@ -40,7 +40,7 @@ enum SearchEntityTypes {
   USER = 'user',
   GROUP = 'group',
   ORGANIZATION = 'organization',
-  HUB = 'hub',
+  SPACE = 'space',
   CHALLENGE = 'challenge',
   OPPORTUNITY = 'opportunity',
   POST = 'post',
@@ -50,7 +50,7 @@ const SEARCH_ENTITIES: string[] = [
   SearchEntityTypes.USER,
   SearchEntityTypes.GROUP,
   SearchEntityTypes.ORGANIZATION,
-  SearchEntityTypes.HUB,
+  SearchEntityTypes.SPACE,
   SearchEntityTypes.CHALLENGE,
   SearchEntityTypes.OPPORTUNITY,
   SearchEntityTypes.POST,
@@ -66,7 +66,7 @@ class Match {
   key = 0;
   score = 0;
   terms: string[] = [];
-  entity!: User | UserGroup | Organization | Hub | Challenge | Opportunity;
+  entity!: User | UserGroup | Organization | Space | Challenge | Opportunity;
   type!: SearchResultType;
 }
 
@@ -78,15 +78,15 @@ export class SearchService {
     private groupRepository: Repository<UserGroup>,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
-    @InjectRepository(Hub)
-    private hubRepository: Repository<Hub>,
+    @InjectRepository(Space)
+    private spaceRepository: Repository<Space>,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
-    private hubService: HubService,
+    private spaceService: SpaceService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
     private userService: UserService,
@@ -111,7 +111,7 @@ export class SearchService {
     const userResults: Map<number, Match> = new Map();
     const groupResults: Map<number, Match> = new Map();
     const organizationResults: Map<number, Match> = new Map();
-    const hubResults: Map<number, Match> = new Map();
+    const spaceResults: Map<number, Match> = new Map();
     const challengeResults: Map<number, Match> = new Map();
     const opportunityResults: Map<number, Match> = new Map();
     const postResults: Map<number, Match> = new Map();
@@ -119,13 +119,13 @@ export class SearchService {
     const filteredTerms = this.validateSearchTerms(searchData.terms);
 
     const {
-      hubIDsFilter,
+      spaceIDsFilter,
       challengeIDsFilter,
       opportunityIDsFilter,
       userIDsFilter,
       organizationIDsFilter,
       postIDsFilter,
-    } = await this.getIDFilters(searchData.searchInHubFilter);
+    } = await this.getIDFilters(searchData.searchInSpaceFilter);
 
     // By default search all entity types
     const entityTypesFilter = searchData.typesFilter;
@@ -133,11 +133,11 @@ export class SearchService {
       searchUsers,
       searchGroups,
       searchOrganizations,
-      searchHubs,
+      searchSpaces,
       searchChallenges,
       searchOpportunities,
       searchPosts,
-    ] = await this.searchBy(agentInfo, entityTypesFilter, hubIDsFilter);
+    ] = await this.searchBy(agentInfo, entityTypesFilter, spaceIDsFilter);
 
     if (searchData.tagsetNames)
       await this.searchTagsets(
@@ -162,8 +162,8 @@ export class SearchService {
         organizationResults,
         organizationIDsFilter
       );
-    if (searchHubs)
-      await this.searchHubsByTerms(filteredTerms, hubResults, agentInfo);
+    if (searchSpaces)
+      await this.searchSpacesByTerms(filteredTerms, spaceResults, agentInfo);
     if (searchChallenges)
       await this.searchChallengesByTerms(
         filteredTerms,
@@ -187,7 +187,7 @@ export class SearchService {
         postIDsFilter
       );
     this.logger.verbose?.(
-      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organizationResults.size} organization results found; ${hubResults.size} hub results found; ${challengeResults.size} challenge results found; ${opportunityResults.size} opportunity results found; ${postResults.size} post results found`,
+      `Executed search query: ${userResults.size} users results; ${groupResults.size} group results; ${organizationResults.size} organization results found; ${spaceResults.size} space results found; ${challengeResults.size} challenge results found; ${opportunityResults.size} opportunity results found; ${postResults.size} post results found`,
       LogContext.API
     );
 
@@ -198,7 +198,7 @@ export class SearchService {
       contributorResultsCount: userResults.size + organizationResults.size,
       journeyResults: [],
       journeyResultsCount:
-        hubResults.size + challengeResults.size + opportunityResults.size,
+        spaceResults.size + challengeResults.size + opportunityResults.size,
       groupResults: [],
     };
 
@@ -211,7 +211,9 @@ export class SearchService {
 
     results.groupResults.push(...(await this.buildSearchResults(groupResults)));
 
-    results.journeyResults.push(...(await this.buildSearchResults(hubResults)));
+    results.journeyResults.push(
+      ...(await this.buildSearchResults(spaceResults))
+    );
     results.journeyResults.push(
       ...(await this.buildSearchResults(challengeResults))
     );
@@ -261,12 +263,12 @@ export class SearchService {
   async searchBy(
     agentInfo: AgentInfo,
     entityTypesFilter?: string[],
-    hubIDsFilter?: string[] | undefined
+    spaceIDsFilter?: string[] | undefined
   ): Promise<[boolean, boolean, boolean, boolean, boolean, boolean, boolean]> {
     let searchUsers = true;
     let searchGroups = true;
     let searchOrganizations = true;
-    let searchHubs = true;
+    let searchSpaces = true;
     let searchChallenges = true;
     let searchOpportunities = true;
     let searchPosts = true;
@@ -278,8 +280,8 @@ export class SearchService {
         searchGroups = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.ORGANIZATION))
         searchOrganizations = false;
-      if (!entityTypesFilter.includes(SearchEntityTypes.HUB))
-        searchHubs = false;
+      if (!entityTypesFilter.includes(SearchEntityTypes.SPACE))
+        searchSpaces = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.CHALLENGE))
         searchChallenges = false;
       if (!entityTypesFilter.includes(SearchEntityTypes.OPPORTUNITY))
@@ -292,15 +294,15 @@ export class SearchService {
       searchUsers = false;
     }
 
-    if (hubIDsFilter) {
-      searchHubs = false;
+    if (spaceIDsFilter) {
+      searchSpaces = false;
     }
 
     return [
       searchUsers,
       searchGroups,
       searchOrganizations,
-      searchHubs,
+      searchSpaces,
       searchChallenges,
       searchOpportunities,
       searchPosts,
@@ -322,7 +324,7 @@ export class SearchService {
         .leftJoinAndSelect('user.profile', 'profile')
         .leftJoinAndSelect('profile.location', 'location');
 
-      // Optionally restrict to search in just one Hub
+      // Optionally restrict to search in just one Space
       if (usersFilter) {
         userQuery.where('user.id IN (:usersFilter)', {
           usersFilter: usersFilter,
@@ -389,7 +391,7 @@ export class SearchService {
         .leftJoinAndSelect('organization.groups', 'groups')
         .leftJoinAndSelect('profile.location', 'location');
 
-      // Optionally restrict to search in just one Hub
+      // Optionally restrict to search in just one Space
       if (organizationsFilter) {
         organizationQuery.where('organization.id IN (:organizationsFilter)', {
           organizationsFilter: organizationsFilter,
@@ -419,22 +421,22 @@ export class SearchService {
     }
   }
 
-  async searchHubsByTerms(
+  async searchSpacesByTerms(
     terms: string[],
-    hubResults: Map<number, Match>,
+    spaceResults: Map<number, Match>,
     agentInfo: AgentInfo
   ) {
     for (const term of terms) {
-      const hubMatches = await this.hubRepository
-        .createQueryBuilder('hub')
-        .leftJoinAndSelect('hub.challenges', 'challenges')
-        .leftJoinAndSelect('hub.authorization', 'authorization')
-        .leftJoinAndSelect('hub.context', 'context')
-        .leftJoinAndSelect('hub.collaboration', 'collaboration')
-        .leftJoinAndSelect('hub.profile', 'profile')
+      const spaceMatches = await this.spaceRepository
+        .createQueryBuilder('space')
+        .leftJoinAndSelect('space.challenges', 'challenges')
+        .leftJoinAndSelect('space.authorization', 'authorization')
+        .leftJoinAndSelect('space.context', 'context')
+        .leftJoinAndSelect('space.collaboration', 'collaboration')
+        .leftJoinAndSelect('space.profile', 'profile')
         .leftJoinAndSelect('profile.location', 'location')
         .leftJoinAndSelect('profile.tagsets', 'tagset')
-        .where('hub.nameID like :term')
+        .where('space.nameID like :term')
         .orWhere('profile.displayName like :term')
         .orWhere('profile.tagline like :term')
         .orWhere('profile.description like :term')
@@ -446,18 +448,18 @@ export class SearchService {
         .orWhere('location.city like :term')
         .setParameters({ term: `%${term}%` })
         .getMany();
-      // Only show hubs that the current user has read access to
-      for (const hub of hubMatches) {
+      // Only show spaces that the current user has read access to
+      for (const space of spaceMatches) {
         // Create results for each match directly, assigning in a different score depending on whether the user has read access or not
         const score_increment = this.getScoreIncrement(
-          hub.authorization,
+          space.authorization,
           agentInfo
         );
         await this.buildMatchingResult(
-          hub,
-          hubResults,
+          space,
+          spaceResults,
           term,
-          SearchResultType.HUB,
+          SearchResultType.SPACE,
           score_increment
         );
       }
@@ -503,7 +505,7 @@ export class SearchService {
         .leftJoinAndSelect('profile.location', 'location')
         .leftJoinAndSelect('profile.tagsets', 'tagset');
 
-      // Optionally restrict to search in just one Hub
+      // Optionally restrict to search in just one Space
       if (challengeIDsFilter) {
         challengeQuery.where('challenge.id IN (:challengesFilter)', {
           challengesFilter: challengeIDsFilter,
@@ -574,7 +576,7 @@ export class SearchService {
         .leftJoinAndSelect('opportunity.profile', 'profile')
         .leftJoinAndSelect('profile.location', 'location')
         .leftJoinAndSelect('profile.tagsets', 'tagset');
-      // Optionally restrict to search in just one Hub
+      // Optionally restrict to search in just one Space
       if (opportunityIDsFilter) {
         opportunitiesQuery.where('opportunity.id IN (:opportunitiesFilter)', {
           opportunitiesFilter: opportunityIDsFilter,
@@ -640,7 +642,7 @@ export class SearchService {
         .leftJoinAndSelect('post.profile', 'profile')
         .leftJoinAndSelect('post.authorization', 'authorization');
 
-      // Optionally restrict to search in just one Hub
+      // Optionally restrict to search in just one Space
       if (postIDsFilter) {
         postQuery.where('post.id IN (:postsFilter)', {
           postsFilter: postIDsFilter,
@@ -727,7 +729,7 @@ export class SearchService {
         .leftJoinAndSelect('profile.tagsets', 'tagset')
         .where('tagset.name IN (:tagsets)', { tagsets: tagsets });
 
-      // Optionally restrict to search in just one Hub
+      // Optionally restrict to search in just one Space
       if (userIDsFilter) {
         userQuery.andWhere('user.id IN (:usersFilter)');
       }
@@ -867,7 +869,7 @@ export class SearchService {
       const searchResultBuilder: ISearchResultBuilder =
         new SearchResultBuilderService(
           searchResultBase,
-          this.hubService,
+          this.spaceService,
           this.challengeService,
           this.opportunityService,
           this.userService,
@@ -940,43 +942,43 @@ export class SearchService {
     }
   }
 
-  private async getIDFilters(searchInHubID: string | undefined): Promise<{
-    hubIDsFilter: string[] | undefined;
+  private async getIDFilters(searchInSpaceID: string | undefined): Promise<{
+    spaceIDsFilter: string[] | undefined;
     challengeIDsFilter: string[] | undefined;
     opportunityIDsFilter: string[] | undefined;
     userIDsFilter: string[] | undefined;
     organizationIDsFilter: string[] | undefined;
     postIDsFilter: string[] | undefined;
   }> {
-    let searchInHub: IHub | undefined = undefined;
-    let hubIDsFilter: string[] | undefined = undefined;
+    let searchInSpace: ISpace | undefined = undefined;
+    let spaceIDsFilter: string[] | undefined = undefined;
     let challengeIDsFilter: string[] | undefined = undefined;
     let opportunityIDsFilter: string[] | undefined = undefined;
     let userIDsFilter: string[] | undefined = undefined;
     let organizationIDsFilter: string[] | undefined = undefined;
     let postIDsFilter: string[] | undefined = undefined;
-    if (searchInHubID) {
-      searchInHub = await this.hubService.getHubOrFail(searchInHubID, {
+    if (searchInSpaceID) {
+      searchInSpace = await this.spaceService.getSpaceOrFail(searchInSpaceID, {
         relations: ['collaboration'],
       });
-      hubIDsFilter = [searchInHub.id];
+      spaceIDsFilter = [searchInSpace.id];
 
-      const challengesFilter = await this.getChallengesFilter(hubIDsFilter);
+      const challengesFilter = await this.getChallengesFilter(spaceIDsFilter);
       challengeIDsFilter = challengesFilter.map(challenge => challenge.id);
       const opportunitiesFilter = await this.getOpportunitiesFilter(
-        hubIDsFilter
+        spaceIDsFilter
       );
       opportunityIDsFilter = opportunitiesFilter.map(opp => opp.id);
-      userIDsFilter = await this.getUsersFilter(searchInHub);
-      organizationIDsFilter = await this.getOrganizationsFilter(searchInHub);
+      userIDsFilter = await this.getUsersFilter(searchInSpace);
+      organizationIDsFilter = await this.getOrganizationsFilter(searchInSpace);
       postIDsFilter = await this.getPostsFilter(
-        searchInHub,
+        searchInSpace,
         challengesFilter,
         opportunitiesFilter
       );
     }
     return {
-      hubIDsFilter,
+      spaceIDsFilter,
       challengeIDsFilter,
       opportunityIDsFilter,
       userIDsFilter,
@@ -986,86 +988,88 @@ export class SearchService {
   }
 
   private async getChallengesFilter(
-    hubFilter: string[]
+    spaceFilter: string[]
   ): Promise<IChallenge[]> {
     const challengesQuery = this.challengeRepository
       .createQueryBuilder('challenge')
       .leftJoinAndSelect('challenge.collaboration', 'collaboration')
-      .where('challenge.hubID IN (:hubFilter)', {
-        hubFilter: hubFilter,
+      .where('challenge.spaceID IN (:spaceFilter)', {
+        spaceFilter: spaceFilter,
       });
 
     return await challengesQuery.getMany();
   }
 
   private async getOpportunitiesFilter(
-    hubFilter: string[]
+    spaceFilter: string[]
   ): Promise<IOpportunity[]> {
     const opportunitiesQuery = this.opportunityRepository
       .createQueryBuilder('opportunity')
       .leftJoinAndSelect('opportunity.collaboration', 'collaboration')
-      .where('opportunity.hubID IN (:hubFilter)', {
-        hubFilter: hubFilter,
+      .where('opportunity.spaceID IN (:spaceFilter)', {
+        spaceFilter: spaceFilter,
       });
 
     return await opportunitiesQuery.getMany();
   }
 
-  private async getUsersFilter(searchInHub: IHub): Promise<string[]> {
+  private async getUsersFilter(searchInSpace: ISpace): Promise<string[]> {
     const usersFilter = [];
-    const membersInHub = await this.userService.usersWithCredentials({
-      type: AuthorizationCredential.HUB_MEMBER,
-      resourceID: searchInHub.id,
+    const membersInSpace = await this.userService.usersWithCredentials({
+      type: AuthorizationCredential.SPACE_MEMBER,
+      resourceID: searchInSpace.id,
     });
-    for (const user of membersInHub) {
+    for (const user of membersInSpace) {
       usersFilter.push(user.id);
     }
-    const adminsInHub = await this.userService.usersWithCredentials({
-      type: AuthorizationCredential.HUB_ADMIN,
-      resourceID: searchInHub.id,
+    const adminsInSpace = await this.userService.usersWithCredentials({
+      type: AuthorizationCredential.SPACE_ADMIN,
+      resourceID: searchInSpace.id,
     });
-    for (const user of adminsInHub) {
+    for (const user of adminsInSpace) {
       usersFilter.push(user.id);
     }
     return usersFilter;
   }
 
-  private async getOrganizationsFilter(searchInHub: IHub): Promise<string[]> {
+  private async getOrganizationsFilter(
+    searchInSpace: ISpace
+  ): Promise<string[]> {
     const organizationsFilter = [];
-    const membersInHub =
+    const membersInSpace =
       await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.HUB_MEMBER,
-        resourceID: searchInHub.id,
+        type: AuthorizationCredential.SPACE_MEMBER,
+        resourceID: searchInSpace.id,
       });
-    for (const org of membersInHub) {
+    for (const org of membersInSpace) {
       organizationsFilter.push(org.id);
     }
-    const adminsInHub =
+    const adminsInSpace =
       await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.HUB_ADMIN,
-        resourceID: searchInHub.id,
+        type: AuthorizationCredential.SPACE_ADMIN,
+        resourceID: searchInSpace.id,
       });
-    for (const org of adminsInHub) {
+    for (const org of adminsInSpace) {
       organizationsFilter.push(org.id);
     }
-    const leadsInHub =
+    const leadsInSpace =
       await this.organizationService.organizationsWithCredentials({
-        type: AuthorizationCredential.HUB_HOST,
-        resourceID: searchInHub.id,
+        type: AuthorizationCredential.SPACE_HOST,
+        resourceID: searchInSpace.id,
       });
-    for (const org of leadsInHub) {
+    for (const org of leadsInSpace) {
       organizationsFilter.push(org.id);
     }
     return organizationsFilter;
   }
 
   private async getPostsFilter(
-    hubFilter: IHub,
+    spaceFilter: ISpace,
     challengesFilter: IChallenge[],
     opportunitiesFilter: IOpportunity[]
   ): Promise<string[]> {
     // Get all the relevant collaborations
-    const collaborationFilter = [hubFilter.collaboration?.id];
+    const collaborationFilter = [spaceFilter.collaboration?.id];
     challengesFilter.forEach(c =>
       collaborationFilter.push(c.collaboration?.id)
     );
@@ -1073,7 +1077,7 @@ export class SearchService {
       collaborationFilter.push(c.collaboration?.id)
     );
 
-    // Get all the posts IDs in the Hub
+    // Get all the posts IDs in the Space
     const postsFilter: string[] = [];
     const postQuery = this.postRepository
       .createQueryBuilder('post')

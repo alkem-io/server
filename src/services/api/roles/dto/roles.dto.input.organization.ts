@@ -1,6 +1,6 @@
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
-import { HubFilterInput } from '@services/infrastructure/hub-filter/dto/hub.filter.dto.input';
+import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 
 @InputType()
 export class RolesOrganizationInput {
@@ -10,9 +10,9 @@ export class RolesOrganizationInput {
   })
   organizationID!: string;
 
-  @Field(() => HubFilterInput, {
+  @Field(() => SpaceFilterInput, {
     nullable: true,
-    description: 'Return membership in Hubs matching the provided filter.',
+    description: 'Return membership in Spaces matching the provided filter.',
   })
-  filter?: HubFilterInput;
+  filter?: SpaceFilterInput;
 }

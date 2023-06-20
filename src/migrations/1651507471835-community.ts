@@ -1,12 +1,10 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
-import {
-  hxbCommunityPolicy,
-  challengeCommunityPolicy,
-} from '@domain/challenge';
-import { opportunityCommunityPolicy } from '@domain/collaboration/opportunity';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+
 import { AuthorizationCredential } from './utils/duplicate/authorization.credential';
+import { hubCommunityPolicy } from './utils/duplicate/hub.community.policy';
+import { challengeCommunityPolicy } from './utils/duplicate/challenge.community.policy';
+import { opportunityCommunityPolicy } from './utils/duplicate/opportunity.community.policy';
 
 type CommunityPolicy = {
   member: CommunityPolicyRole;
@@ -14,7 +12,7 @@ type CommunityPolicy = {
 };
 
 type CommunityPolicyRole = {
-  credential: CredentialDefinition;
+  credential: any;
   minUser: number;
   maxUser: number;
   minOrg: number;
@@ -42,8 +40,8 @@ export class community1651507471835 implements MigrationInterface {
         let policy: CommunityPolicy;
 
         switch (credential.type) {
-          case AuthorizationCredential.HXB_MEMBER:
-            policy = hxbCommunityPolicy;
+          case AuthorizationCredential.HUB_MEMBER:
+            policy = hubCommunityPolicy;
             break;
           case AuthorizationCredential.CHALLENGE_MEMBER:
             policy = challengeCommunityPolicy;

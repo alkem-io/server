@@ -56,7 +56,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_b025a2720e5ee0e5b38774f7a8c`'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` DROP FOREIGN KEY `FK_b0c3f360534db92017e36a00bb2`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_b0c3f360534db92017e36a00bb2`'
     );
     await queryRunner.query(
       'ALTER TABLE `user` DROP FOREIGN KEY `FK_b61c694cacfab25533bd23d9add`'
@@ -104,7 +104,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_178fa41e46fd331f3501a62f6bf`'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` DROP FOREIGN KEY `FK_17a161eef37c9f07186532ab758`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_17a161eef37c9f07186532ab758`'
     );
     await queryRunner.query(
       `ALTER TABLE \`innovation_pack\` DROP FOREIGN KEY \`FK_22222901817dd09d5906537e088\``
@@ -264,7 +264,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`challenge\` DROP FOREIGN KEY \`FK_d4551f18fed106ae2e20c70f7cb\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` DROP FOREIGN KEY \`FK_6325f4ef25c4e07e723a96ed37c\``
+      `ALTER TABLE \`hub\` DROP FOREIGN KEY \`FK_6325f4ef25c4e07e723a96ed37c\``
     );
     await queryRunner.query(
       `ALTER TABLE \`relation\` DROP FOREIGN KEY \`FK_701a6f8e3e1da76354571767c3f\``
@@ -279,7 +279,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `user_group` DROP FOREIGN KEY `FK_9fcc131f256e969d773327f07cb`'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` DROP FOREIGN KEY `FK_f5ad15bcb06a95c2a109fbcce2a`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_f5ad15bcb06a95c2a109fbcce2a`'
     );
     await queryRunner.query(
       `ALTER TABLE \`community\` DROP FOREIGN KEY \`FK_35533901817dd09d5906537e088\``
@@ -294,7 +294,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`visual\` DROP FOREIGN KEY \`FK_63de1450cf75dc486700ca034c6\``
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` DROP FOREIGN KEY `FK_6db8627abbf00b1b986e359054f`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_6db8627abbf00b1b986e359054f`'
     );
     await queryRunner.query(
       'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_9c169eb500e2d3823154c7b603d`'
@@ -303,10 +303,10 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `context` DROP FOREIGN KEY `FK_a03169c3f86480ba3863924f4d7`'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` DROP FOREIGN KEY `FK_ec1a68698d32f610a5fc1880c7f`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_ec1a68698d32f610a5fc1880c7f`'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` DROP FOREIGN KEY `FK_3a69b0a6c67ead7617634009903`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_3a69b0a6c67ead7617634009903`'
     );
     await queryRunner.query(
       `ALTER TABLE \`innovation_pack\` DROP FOREIGN KEY \`FK_77777450cf75dc486700ca034c6\``
@@ -388,7 +388,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`application\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`application\` CHANGE COLUMN \`hxbId\` \`hxbId\` CHAR(36) NULL;`
+      `ALTER TABLE \`application\` CHANGE COLUMN \`hubId\` \`hubId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`application\` CHANGE COLUMN \`userId\` \`userId\` CHAR(36) NULL;`
@@ -487,7 +487,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`challenge\` CHANGE COLUMN \`id\` \`id\` CHAR(36) NOT NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`challenge\` CHANGE COLUMN \`hxbID\` \`hxbID\` CHAR(36) NULL;`
+      `ALTER TABLE \`challenge\` CHANGE COLUMN \`hubID\` \`hubID\` CHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` CHAR(36) NULL;`
@@ -511,7 +511,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`challenge\` CHANGE COLUMN \`parentChallengeId\` \`parentChallengeId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`challenge\` CHANGE COLUMN \`parentHxbID\` \`parentHxbID\` CHAR(36) NULL;`
+      `ALTER TABLE \`challenge\` CHANGE COLUMN \`parentHubID\` \`parentHubID\` CHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` CHANGE COLUMN \`preferenceSetId\` \`preferenceSetId\` CHAR(36) NULL;`
@@ -532,7 +532,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`comments\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`communication\` CHANGE COLUMN \`hxbID\` \`hxbID\` CHAR(36) NOT NULL;`
+      `ALTER TABLE \`communication\` CHANGE COLUMN \`hubID\` \`hubID\` CHAR(36) NOT NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`community\` CHANGE COLUMN \`id\` \`id\` CHAR(36) NOT NULL;`
@@ -541,7 +541,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`community\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`community\` CHANGE COLUMN \`hxbID\` \`hxbID\` CHAR(36) NULL;`
+      `ALTER TABLE \`community\` CHANGE COLUMN \`hubID\` \`hubID\` CHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`community\` CHANGE COLUMN \`parentCommunityId\` \`parentCommunityId\` CHAR(36) NULL;`
@@ -580,31 +580,31 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`ecosystem_model\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`id\` \`id\` CHAR(36) NOT NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`id\` \`id\` CHAR(36) NOT NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` CHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`contextId\` \`contextId\` CHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`contextId\` \`contextId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`communityId\` \`communityId\` CHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`communityId\` \`communityId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`lifecycleId\` \`lifecycleId\` CHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`lifecycleId\` \`lifecycleId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`tagsetId\` \`tagsetId\` CHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`tagsetId\` \`tagsetId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`agentId\` \`agentId\` CHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`agentId\` \`agentId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`tagsetId\` \`tagsetId\` CHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`tagsetId\` \`tagsetId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`collaborationId\` \`collaborationId\` CHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`collaborationId\` \`collaborationId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`innovation_pack\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` CHAR(36) NULL;`
@@ -631,7 +631,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`opportunity\` CHANGE COLUMN \`id\` \`id\` CHAR(36) NOT NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`opportunity\` CHANGE COLUMN \`hxbID\` \`hxbID\` CHAR(36) NULL;`
+      `ALTER TABLE \`opportunity\` CHANGE COLUMN \`hubID\` \`hubID\` CHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`opportunity\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` CHAR(36) NULL;`
@@ -688,7 +688,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`project\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`project\` CHANGE COLUMN \`hxbID\` \`hxbID\` CHAR(36) NULL;`
+      `ALTER TABLE \`project\` CHANGE COLUMN \`hubID\` \`hubID\` CHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`project\` CHANGE COLUMN \`lifecycleId\` \`lifecycleId\` CHAR(36) NULL;`
@@ -757,7 +757,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`user_group\` CHANGE COLUMN \`profileId\` \`profileId\` CHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`user_group\` CHANGE COLUMN \`hxbID\` \`hxbID\` CHAR(36) NULL;`
+      `ALTER TABLE \`user_group\` CHANGE COLUMN \`hubID\` \`hubID\` CHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`user_group\` CHANGE COLUMN \`organizationId\` \`organizationId\` CHAR(36) NULL;`
@@ -837,7 +837,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `challenge` ADD CONSTRAINT `FK_b025a2720e5ee0e5b38774f7a8c` FOREIGN KEY (`agentId`) REFERENCES `agent`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` ADD CONSTRAINT `FK_b0c3f360534db92017e36a00bb2` FOREIGN KEY (`agentId`) REFERENCES `agent`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_b0c3f360534db92017e36a00bb2` FOREIGN KEY (`agentId`) REFERENCES `agent`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `user` ADD CONSTRAINT `FK_b61c694cacfab25533bd23d9add` FOREIGN KEY (`agentId`) REFERENCES `agent`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
@@ -888,7 +888,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `challenge` ADD CONSTRAINT `FK_178fa41e46fd331f3501a62f6bf` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_policy`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` ADD CONSTRAINT `FK_17a161eef37c9f07186532ab758` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_policy`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_17a161eef37c9f07186532ab758` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_policy`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       `ALTER TABLE \`innovation_pack\` ADD CONSTRAINT \`FK_22222901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -1008,13 +1008,13 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `challenge` ADD CONSTRAINT `FK_6b1bcaf365212806d8cc1f87b54` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_494b27cb13b59128fb24b365ca6` FOREIGN KEY (`parenthxbId`) REFERENCES `hxb`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_494b27cb13b59128fb24b365ca6` FOREIGN KEY (`parenthubId`) REFERENCES `hub`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` ADD CONSTRAINT \`FK_d4551f18fed106ae2e20c70f7cb\` FOREIGN KEY (\`collaborationId\`) REFERENCES \`collaboration\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` ADD CONSTRAINT \`FK_6325f4ef25c4e07e723a96ed37c\` FOREIGN KEY (\`collaborationId\`) REFERENCES \`collaboration\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`hub\` ADD CONSTRAINT \`FK_6325f4ef25c4e07e723a96ed37c\` FOREIGN KEY (\`collaborationId\`) REFERENCES \`collaboration\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       `ALTER TABLE \`relation\` ADD CONSTRAINT \`FK_701a6f8e3e1da76354571767c3f\` FOREIGN KEY (\`collaborationId\`) REFERENCES \`collaboration\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
@@ -1029,7 +1029,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `user_group` ADD CONSTRAINT `FK_9fcc131f256e969d773327f07cb` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` ADD CONSTRAINT `FK_f5ad15bcb06a95c2a109fbcce2a` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_f5ad15bcb06a95c2a109fbcce2a` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_35533901817dd09d5906537e088\` FOREIGN KEY (\`policyId\`) REFERENCES \`community_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -1044,7 +1044,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`visual\` ADD CONSTRAINT \`FK_63de1450cf75dc486700ca034c6\` FOREIGN KEY (\`contextId\`) REFERENCES \`context\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` ADD CONSTRAINT `FK_6db8627abbf00b1b986e359054f` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_6db8627abbf00b1b986e359054f` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `opportunity` ADD CONSTRAINT `FK_9c169eb500e2d3823154c7b603d` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
@@ -1053,10 +1053,10 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `context` ADD CONSTRAINT `FK_a03169c3f86480ba3863924f4d7` FOREIGN KEY (`ecosystemModelId`) REFERENCES `ecosystem_model`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` ADD CONSTRAINT `FK_ec1a68698d32f610a5fc1880c7f` FOREIGN KEY (`lifecycleId`) REFERENCES `lifecycle`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_ec1a68698d32f610a5fc1880c7f` FOREIGN KEY (`lifecycleId`) REFERENCES `lifecycle`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` ADD CONSTRAINT `FK_3a69b0a6c67ead7617634009903` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_3a69b0a6c67ead7617634009903` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       `ALTER TABLE \`innovation_pack\` ADD CONSTRAINT \`FK_77777450cf75dc486700ca034c6\` FOREIGN KEY (\`libraryId\`) REFERENCES \`library\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
@@ -1147,7 +1147,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       ` ALTER TABLE \`challenge\` ADD CONSTRAINT FK_c890de5a08d363719a41703a638 FOREIGN KEY (preferenceSetId) REFERENCES preference_set(id) ON DELETE SET NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` ADD CONSTRAINT FK_6bf7adf4308991457fdb04624e2 FOREIGN KEY (preferenceSetId) REFERENCES preference_set(id) ON DELETE SET NULL;`
+      `ALTER TABLE \`hub\` ADD CONSTRAINT FK_6bf7adf4308991457fdb04624e2 FOREIGN KEY (preferenceSetId) REFERENCES preference_set(id) ON DELETE SET NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`organization\` ADD CONSTRAINT FK_c07b5b4c96fa89cb80215827668 FOREIGN KEY (preferenceSetId) REFERENCES preference_set(id) ON DELETE SET NULL;`
@@ -1169,7 +1169,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       ` ALTER TABLE \`challenge\` DROP FOREIGN KEY FK_c890de5a08d363719a41703a638;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` DROP FOREIGN KEY FK_6bf7adf4308991457fdb04624e2;`
+      `ALTER TABLE \`hub\` DROP FOREIGN KEY FK_6bf7adf4308991457fdb04624e2;`
     );
     await queryRunner.query(
       `ALTER TABLE \`organization\` DROP FOREIGN KEY FK_c07b5b4c96fa89cb80215827668;`
@@ -1238,7 +1238,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_b025a2720e5ee0e5b38774f7a8c`'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` DROP FOREIGN KEY `FK_b0c3f360534db92017e36a00bb2`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_b0c3f360534db92017e36a00bb2`'
     );
     await queryRunner.query(
       'ALTER TABLE `user` DROP FOREIGN KEY `FK_b61c694cacfab25533bd23d9add`'
@@ -1286,7 +1286,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `challenge` DROP FOREIGN KEY `FK_178fa41e46fd331f3501a62f6bf`'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` DROP FOREIGN KEY `FK_17a161eef37c9f07186532ab758`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_17a161eef37c9f07186532ab758`'
     );
     await queryRunner.query(
       `ALTER TABLE \`innovation_pack\` DROP FOREIGN KEY \`FK_22222901817dd09d5906537e088\``
@@ -1446,7 +1446,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`challenge\` DROP FOREIGN KEY \`FK_d4551f18fed106ae2e20c70f7cb\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` DROP FOREIGN KEY \`FK_6325f4ef25c4e07e723a96ed37c\``
+      `ALTER TABLE \`hub\` DROP FOREIGN KEY \`FK_6325f4ef25c4e07e723a96ed37c\``
     );
     await queryRunner.query(
       `ALTER TABLE \`relation\` DROP FOREIGN KEY \`FK_701a6f8e3e1da76354571767c3f\``
@@ -1461,7 +1461,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `user_group` DROP FOREIGN KEY `FK_9fcc131f256e969d773327f07cb`'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` DROP FOREIGN KEY `FK_f5ad15bcb06a95c2a109fbcce2a`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_f5ad15bcb06a95c2a109fbcce2a`'
     );
     await queryRunner.query(
       `ALTER TABLE \`community\` DROP FOREIGN KEY \`FK_35533901817dd09d5906537e088\``
@@ -1476,7 +1476,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`visual\` DROP FOREIGN KEY \`FK_63de1450cf75dc486700ca034c6\``
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` DROP FOREIGN KEY `FK_6db8627abbf00b1b986e359054f`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_6db8627abbf00b1b986e359054f`'
     );
     await queryRunner.query(
       'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_9c169eb500e2d3823154c7b603d`'
@@ -1485,10 +1485,10 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `context` DROP FOREIGN KEY `FK_a03169c3f86480ba3863924f4d7`'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` DROP FOREIGN KEY `FK_ec1a68698d32f610a5fc1880c7f`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_ec1a68698d32f610a5fc1880c7f`'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` DROP FOREIGN KEY `FK_3a69b0a6c67ead7617634009903`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_3a69b0a6c67ead7617634009903`'
     );
     await queryRunner.query(
       `ALTER TABLE \`innovation_pack\` DROP FOREIGN KEY \`FK_77777450cf75dc486700ca034c6\``
@@ -1571,7 +1571,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`application\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`application\` CHANGE COLUMN \`hxbId\` \`hxbId\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`application\` CHANGE COLUMN \`hubId\` \`hubId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`application\` CHANGE COLUMN \`userId\` \`userId\` VARCHAR(36) NULL;`
@@ -1670,7 +1670,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`challenge\` CHANGE COLUMN \`id\` \`id\` VARCHAR(36) NOT NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`challenge\` CHANGE COLUMN \`hxbID\` \`hxbID\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`challenge\` CHANGE COLUMN \`hubID\` \`hubID\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` VARCHAR(36) NULL;`
@@ -1694,7 +1694,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`challenge\` CHANGE COLUMN \`parentChallengeId\` \`parentChallengeId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`challenge\` CHANGE COLUMN \`parentHxbID\` \`parentHxbID\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`challenge\` CHANGE COLUMN \`parentHubID\` \`parentHubID\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` CHANGE COLUMN \`preferenceSetId\` \`preferenceSetId\` VARCHAR(36) NULL;`
@@ -1715,7 +1715,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`comments\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`communication\` CHANGE COLUMN \`hxbID\` \`hxbID\` VARCHAR(36) NOT NULL;`
+      `ALTER TABLE \`communication\` CHANGE COLUMN \`hubID\` \`hubID\` VARCHAR(36) NOT NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`community\` CHANGE COLUMN \`id\` \`id\` VARCHAR(36) NOT NULL;`
@@ -1724,7 +1724,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`community\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`community\` CHANGE COLUMN \`hxbID\` \`hxbID\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`community\` CHANGE COLUMN \`hubID\` \`hubID\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`community\` CHANGE COLUMN \`parentCommunityId\` \`parentCommunityId\` VARCHAR(36) NULL;`
@@ -1763,31 +1763,31 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`ecosystem_model\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`id\` \`id\` VARCHAR(36) NOT NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`id\` \`id\` VARCHAR(36) NOT NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`contextId\` \`contextId\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`contextId\` \`contextId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`communityId\` \`communityId\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`communityId\` \`communityId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`lifecycleId\` \`lifecycleId\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`lifecycleId\` \`lifecycleId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`tagsetId\` \`tagsetId\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`tagsetId\` \`tagsetId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`agentId\` \`agentId\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`agentId\` \`agentId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`tagsetId\` \`tagsetId\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`tagsetId\` \`tagsetId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` CHANGE COLUMN \`collaborationId\` \`collaborationId\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`hub\` CHANGE COLUMN \`collaborationId\` \`collaborationId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`innovation_pack\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` VARCHAR(36) NULL;`
@@ -1814,7 +1814,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`opportunity\` CHANGE COLUMN \`id\` \`id\` VARCHAR(36) NOT NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`opportunity\` CHANGE COLUMN \`hxbID\` \`hxbID\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`opportunity\` CHANGE COLUMN \`hubID\` \`hubID\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`opportunity\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` VARCHAR(36) NULL;`
@@ -1871,7 +1871,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`project\` CHANGE COLUMN \`authorizationId\` \`authorizationId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`project\` CHANGE COLUMN \`hxbID\` \`hxbID\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`project\` CHANGE COLUMN \`hubID\` \`hubID\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`project\` CHANGE COLUMN \`lifecycleId\` \`lifecycleId\` VARCHAR(36) NULL;`
@@ -1941,7 +1941,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`user_group\` CHANGE COLUMN \`profileId\` \`profileId\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
-      `ALTER TABLE \`user_group\` CHANGE COLUMN \`hxbID\` \`hxbID\` VARCHAR(36) NULL;`
+      `ALTER TABLE \`user_group\` CHANGE COLUMN \`hubID\` \`hubID\` VARCHAR(36) NULL;`
     );
     await queryRunner.query(
       `ALTER TABLE \`user_group\` CHANGE COLUMN \`organizationId\` \`organizationId\` VARCHAR(36) NULL;`
@@ -2021,7 +2021,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `challenge` ADD CONSTRAINT `FK_b025a2720e5ee0e5b38774f7a8c` FOREIGN KEY (`agentId`) REFERENCES `agent`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` ADD CONSTRAINT `FK_b0c3f360534db92017e36a00bb2` FOREIGN KEY (`agentId`) REFERENCES `agent`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_b0c3f360534db92017e36a00bb2` FOREIGN KEY (`agentId`) REFERENCES `agent`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `user` ADD CONSTRAINT `FK_b61c694cacfab25533bd23d9add` FOREIGN KEY (`agentId`) REFERENCES `agent`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
@@ -2072,7 +2072,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `challenge` ADD CONSTRAINT `FK_178fa41e46fd331f3501a62f6bf` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_policy`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` ADD CONSTRAINT `FK_17a161eef37c9f07186532ab758` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_policy`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_17a161eef37c9f07186532ab758` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_policy`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       `ALTER TABLE \`innovation_pack\` ADD CONSTRAINT \`FK_22222901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -2192,13 +2192,13 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `challenge` ADD CONSTRAINT `FK_6b1bcaf365212806d8cc1f87b54` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_494b27cb13b59128fb24b365ca6` FOREIGN KEY (`parenthxbId`) REFERENCES `hxb`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
+      'ALTER TABLE `challenge` ADD CONSTRAINT `FK_494b27cb13b59128fb24b365ca6` FOREIGN KEY (`parenthubId`) REFERENCES `hub`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` ADD CONSTRAINT \`FK_d4551f18fed106ae2e20c70f7cb\` FOREIGN KEY (\`collaborationId\`) REFERENCES \`collaboration\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` ADD CONSTRAINT \`FK_6325f4ef25c4e07e723a96ed37c\` FOREIGN KEY (\`collaborationId\`) REFERENCES \`collaboration\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`hub\` ADD CONSTRAINT \`FK_6325f4ef25c4e07e723a96ed37c\` FOREIGN KEY (\`collaborationId\`) REFERENCES \`collaboration\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       `ALTER TABLE \`relation\` ADD CONSTRAINT \`FK_701a6f8e3e1da76354571767c3f\` FOREIGN KEY (\`collaborationId\`) REFERENCES \`collaboration\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
@@ -2213,7 +2213,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `user_group` ADD CONSTRAINT `FK_9fcc131f256e969d773327f07cb` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` ADD CONSTRAINT `FK_f5ad15bcb06a95c2a109fbcce2a` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_f5ad15bcb06a95c2a109fbcce2a` FOREIGN KEY (`communityId`) REFERENCES `community`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       `ALTER TABLE \`community\` ADD CONSTRAINT \`FK_35533901817dd09d5906537e088\` FOREIGN KEY (\`policyId\`) REFERENCES \`community_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -2228,7 +2228,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`visual\` ADD CONSTRAINT \`FK_63de1450cf75dc486700ca034c6\` FOREIGN KEY (\`contextId\`) REFERENCES \`context\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` ADD CONSTRAINT `FK_6db8627abbf00b1b986e359054f` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_6db8627abbf00b1b986e359054f` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       'ALTER TABLE `opportunity` ADD CONSTRAINT `FK_9c169eb500e2d3823154c7b603d` FOREIGN KEY (`contextId`) REFERENCES `context`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
@@ -2237,10 +2237,10 @@ export class schemaReview1674470019825 implements MigrationInterface {
       'ALTER TABLE `context` ADD CONSTRAINT `FK_a03169c3f86480ba3863924f4d7` FOREIGN KEY (`ecosystemModelId`) REFERENCES `ecosystem_model`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` ADD CONSTRAINT `FK_ec1a68698d32f610a5fc1880c7f` FOREIGN KEY (`lifecycleId`) REFERENCES `lifecycle`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_ec1a68698d32f610a5fc1880c7f` FOREIGN KEY (`lifecycleId`) REFERENCES `lifecycle`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
-      'ALTER TABLE `hxb` ADD CONSTRAINT `FK_3a69b0a6c67ead7617634009903` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+      'ALTER TABLE `hub` ADD CONSTRAINT `FK_3a69b0a6c67ead7617634009903` FOREIGN KEY (`tagsetId`) REFERENCES `tagset`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
     await queryRunner.query(
       `ALTER TABLE \`innovation_pack\` ADD CONSTRAINT \`FK_77777450cf75dc486700ca034c6\` FOREIGN KEY (\`libraryId\`) REFERENCES \`library\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`

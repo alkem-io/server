@@ -30,7 +30,7 @@ export class Community
   displayName: string;
 
   @Column()
-  hubID: string;
+  spaceID: string;
 
   @OneToOne(() => Communication, {
     eager: false,
@@ -96,7 +96,7 @@ export class Community
     super();
     this.displayName = name;
     this.type = type;
-    this.hubID = '';
+    this.spaceID = '';
     this.parentID = '';
   }
 }

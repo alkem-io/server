@@ -114,10 +114,10 @@ export class collaborationCalloutEntities1659522159191
       `CREATE TABLE \`callout\` (\`id\` varchar(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`version\` int NOT NULL, \`displayName\` varchar(255) NOT NULL, \`nameID\` varchar(255) NOT NULL, \`description\` text NOT NULL, \`type\` text NOT NULL, \`state\` text NOT NULL DEFAULT 'open', \`visibility\` text NOT NULL DEFAULT 'draft', \`authorizationId\` varchar(36) NULL, \`discussionId\` varchar(36) NULL, \`collaborationId\` varchar(36) NULL, UNIQUE INDEX \`REL_6289dee12effb51320051c6f1f\` (\`authorizationId\`), UNIQUE INDEX \`REL_62ed316cda7b75735b20307b47\` (\`discussionId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` ADD \`collaborationId\` varchar(36) NULL`
+      `ALTER TABLE \`hub\` ADD \`collaborationId\` varchar(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` ADD UNIQUE INDEX \`IDX_6325f4ef25c4e07e723a96ed37\` (\`collaborationId\`)`
+      `ALTER TABLE \`hub\` ADD UNIQUE INDEX \`IDX_6325f4ef25c4e07e723a96ed37\` (\`collaborationId\`)`
     );
     await queryRunner.query(
       `ALTER TABLE \`opportunity\` ADD \`collaborationId\` varchar(36) NULL`
@@ -168,7 +168,7 @@ export class collaborationCalloutEntities1659522159191
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` ADD CONSTRAINT \`FK_6325f4ef25c4e07e723a96ed37c\` FOREIGN KEY (\`collaborationId\`) REFERENCES \`collaboration\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`hub\` ADD CONSTRAINT \`FK_6325f4ef25c4e07e723a96ed37c\` FOREIGN KEY (\`collaborationId\`) REFERENCES \`collaboration\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
       `ALTER TABLE \`opportunity\` ADD CONSTRAINT \`FK_fa617e79d6b2926edc7b4a3878f\` FOREIGN KEY (\`collaborationId\`) REFERENCES \`collaboration\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -177,7 +177,7 @@ export class collaborationCalloutEntities1659522159191
       `ALTER TABLE \`challenge\` ADD CONSTRAINT \`FK_d4551f18fed106ae2e20c70f7cb\` FOREIGN KEY (\`collaborationId\`) REFERENCES \`collaboration\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
-    await migrateAspectsAndCanvases(queryRunner, 'hxb');
+    await migrateAspectsAndCanvases(queryRunner, 'hub');
     await migrateAspectsAndCanvases(queryRunner, 'challenge');
     await migrateAspectsAndCanvases(queryRunner, 'opportunity');
 
@@ -228,7 +228,7 @@ export class collaborationCalloutEntities1659522159191
       `ALTER TABLE \`opportunity\` DROP FOREIGN KEY \`FK_fa617e79d6b2926edc7b4a3878f\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` DROP FOREIGN KEY \`FK_6325f4ef25c4e07e723a96ed37c\``
+      `ALTER TABLE \`hub\` DROP FOREIGN KEY \`FK_6325f4ef25c4e07e723a96ed37c\``
     );
     await queryRunner.query(
       `ALTER TABLE \`aspect\` DROP FOREIGN KEY \`FK_deceb07e75a8600e38d5de14a89\``
@@ -264,10 +264,10 @@ export class collaborationCalloutEntities1659522159191
       `ALTER TABLE \`opportunity\` DROP COLUMN \`collaborationId\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` DROP INDEX \`IDX_6325f4ef25c4e07e723a96ed37\``
+      `ALTER TABLE \`hub\` DROP INDEX \`IDX_6325f4ef25c4e07e723a96ed37\``
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` DROP COLUMN \`collaborationId\``
+      `ALTER TABLE \`hub\` DROP COLUMN \`collaborationId\``
     );
     await queryRunner.query(`ALTER TABLE \`aspect\` DROP COLUMN \`calloutId\``);
     await queryRunner.query(

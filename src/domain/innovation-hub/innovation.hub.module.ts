@@ -1,21 +1,21 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { InnovationHxbService } from './innovation.hub.service';
-import { InnovationHxb } from './innovation.hub.entity';
-import { InnovationHxbFieldResolver } from './innovation.hub.field.resolver';
-import { HubModule } from '@domain/challenge/hub/hub.module';
+import { InnovationHubService } from './innovation.hub.service';
+import { InnovationHub } from './innovation.hub.entity';
+import { InnovationHubFieldResolver } from './innovation.hub.field.resolver';
+import { SpaceModule } from '@domain/challenge/space/space.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
-import { InnovationHxbAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
+import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { InnovationHxbResolverMutations } from './innovation.hub.resolver.mutations';
+import { InnovationHubResolverMutations } from './innovation.hub.resolver.mutations';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InnovationHxb]),
-    HubModule,
+    TypeOrmModule.forFeature([InnovationHub]),
+    SpaceModule,
     ProfileModule,
     PlatformAuthorizationPolicyModule,
     AuthorizationPolicyModule,
@@ -23,11 +23,11 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
     NamingModule,
   ],
   providers: [
-    InnovationHxbService,
-    InnovationHxbFieldResolver,
-    InnovationHxbResolverMutations,
-    InnovationHxbAuthorizationService,
+    InnovationHubService,
+    InnovationHubFieldResolver,
+    InnovationHubResolverMutations,
+    InnovationHubAuthorizationService,
   ],
-  exports: [InnovationHxbService, InnovationHxbAuthorizationService],
+  exports: [InnovationHubService, InnovationHubAuthorizationService],
 })
-export class InnovationHxbModule {}
+export class InnovationHubModule {}

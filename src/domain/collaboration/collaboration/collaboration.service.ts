@@ -28,7 +28,7 @@ import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
-import { Hub } from '@domain/challenge/hub/hub.entity';
+import { Space } from '@domain/challenge/space/space.entity';
 import { getJourneyByCollaboration } from '@common/utils';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 
@@ -99,14 +99,14 @@ export class CollaborationService {
     // check if exists
     await this.getCollaborationOrFail(collaborationID);
 
-    const { hubId, challengeId } = await getJourneyByCollaboration(
+    const { spaceId, challengeId } = await getJourneyByCollaboration(
       this.entityManager,
       collaborationID
     );
 
-    if (hubId) {
-      const hub = await this.entityManager.findOneOrFail(Hub, {
-        where: { id: hubId },
+    if (spaceId) {
+      const space = await this.entityManager.findOneOrFail(Space, {
+        where: { id: spaceId },
         relations: {
           challenges: {
             collaboration: true,
@@ -114,14 +114,14 @@ export class CollaborationService {
         },
       });
 
-      if (!hub.challenges) {
+      if (!space.challenges) {
         throw new EntityNotInitializedException(
-          `Challenges not found on Hub ${hubId}`,
+          `Challenges not found on Space ${spaceId}`,
           LogContext.COLLABORATION
         );
       }
 
-      return hub.challenges?.map(challenge => {
+      return space.challenges?.map(challenge => {
         if (!challenge.collaboration) {
           throw new EntityNotInitializedException(
             `Collaboration not found on challenge ${challenge.id}`,

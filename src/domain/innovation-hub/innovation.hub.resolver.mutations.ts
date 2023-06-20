@@ -2,83 +2,83 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
-import { IInnovationHxb } from './innovation.hub.interface';
+import { IInnovationHub } from './innovation.hub.interface';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { DeleteInnovationHxbInput } from './dto/innovation.hub.dto.delete';
-import { InnovationHxbService } from './innovation.hub.service';
+import { DeleteInnovationHubInput } from './dto/innovation.hub.dto.delete';
+import { InnovationHubService } from './innovation.hub.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { CreateInnovationHxbInput } from './dto/innovation.hub.dto.create';
+import { CreateInnovationHubInput } from './dto/innovation.hub.dto.create';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { UpdateInnovationHxbInput } from './dto/innovation.hub.dto.update';
+import { UpdateInnovationHubInput } from './dto/innovation.hub.dto.update';
 
 @Resolver()
-export class InnovationHxbResolverMutations {
+export class InnovationHubResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private innovationHxbService: InnovationHxbService,
+    private innovationHubService: InnovationHubService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IInnovationHxb, {
-    description: 'Create Innovation Hxb.',
+  @Mutation(() => IInnovationHub, {
+    description: 'Create Innovation Hub.',
   })
   @Profiling.api
-  async createInnovationHxb(
+  async createInnovationHub(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('createData') createData: CreateInnovationHxbInput
-  ): Promise<IInnovationHxb> {
+    @Args('createData') createData: CreateInnovationHubInput
+  ): Promise<IInnovationHub> {
     const authorizationPolicy =
       this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      'create innovation hub'
+      'create innovation space'
     );
 
-    return await this.innovationHxbService.createOrFail(createData);
+    return await this.innovationHubService.createOrFail(createData);
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IInnovationHxb, {
-    description: 'Update Innovation Hxb.',
+  @Mutation(() => IInnovationHub, {
+    description: 'Update Innovation Hub.',
   })
   @Profiling.api
-  async updateInnovationHxb(
+  async updateInnovationHub(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('updateData') updateData: UpdateInnovationHxbInput
-  ): Promise<IInnovationHxb> {
+    @Args('updateData') updateData: UpdateInnovationHubInput
+  ): Promise<IInnovationHub> {
     const authorizationPolicy =
       this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      'update innovation hub'
+      'update innovation space'
     );
 
-    return await this.innovationHxbService.updateOrFail(updateData);
+    return await this.innovationHubService.updateOrFail(updateData);
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IInnovationHxb, {
-    description: 'Delete Innovation Hxb.',
+  @Mutation(() => IInnovationHub, {
+    description: 'Delete Innovation Hub.',
   })
   @Profiling.api
-  async deleteInnovationHxb(
+  async deleteInnovationHub(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteInnovationHxbInput
-  ): Promise<IInnovationHxb> {
+    @Args('deleteData') deleteData: DeleteInnovationHubInput
+  ): Promise<IInnovationHub> {
     const authorizationPolicy =
       this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      'delete innovation hub'
+      'delete innovation space'
     );
-    return await this.innovationHxbService.deleteOrFail(deleteData.ID);
+    return await this.innovationHubService.deleteOrFail(deleteData.ID);
   }
 }

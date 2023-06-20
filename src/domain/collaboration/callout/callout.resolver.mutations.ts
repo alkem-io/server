@@ -230,7 +230,7 @@ export class CalloutResolverMutations {
       };
       this.activityAdapter.postCreated(activityLogInput);
 
-      const { hubID } =
+      const { spaceID } =
         await this.communityResolverService.getCommunityFromCalloutOrFail(
           postData.calloutID
         );
@@ -239,7 +239,7 @@ export class CalloutResolverMutations {
         {
           id: post.id,
           name: post.profile.displayName,
-          hub: hubID,
+          space: spaceID,
         },
         {
           id: agentInfo.userID,
@@ -300,7 +300,7 @@ export class CalloutResolverMutations {
         callout: callout,
       });
 
-      const { hubID } =
+      const { spaceID } =
         await this.communityResolverService.getCommunityFromCalloutOrFail(
           whiteboardData.calloutID
         );
@@ -309,7 +309,7 @@ export class CalloutResolverMutations {
         {
           id: whiteboard.id,
           name: whiteboard.nameID,
-          hub: hubID,
+          space: spaceID,
         },
         {
           id: agentInfo.userID,

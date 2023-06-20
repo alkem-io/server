@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import {
   addPreferenceDefinitions,
-  addPreferencesToHxbs,
+  addPreferencesToHubs,
   DefinitionInsertType,
   PreferenceInsertType,
   removePreferences,
@@ -10,16 +10,16 @@ import {
 // Do NOT make links back to the main code base
 const ALLOW_MEMBERS_TO_CREATE_CHALLENGES = 'AllowMembersToCreateChallenges';
 
-export class hxbPref1664603132147 implements MigrationInterface {
-  name = 'hxbPref1664603132147';
+export class hubPref1664603132147 implements MigrationInterface {
+  name = 'hubPref1664603132147';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     const definitions: DefinitionInsertType[] = [
       {
-        definitionSet: 'hxb',
+        definitionSet: 'hub',
         group: 'Privileges',
-        displayName: 'Allow Hxb members to create Challenges',
-        description: 'Allow members of the Hxb to create Challenges.',
+        displayName: 'Allow Hub members to create Challenges',
+        description: 'Allow members of the Hub to create Challenges.',
         valueType: 'boolean',
         type: ALLOW_MEMBERS_TO_CREATE_CHALLENGES,
       },
@@ -30,7 +30,7 @@ export class hxbPref1664603132147 implements MigrationInterface {
       definitionId: x,
       value: 'false',
     }));
-    await addPreferencesToHxbs(queryRunner, preferences);
+    await addPreferencesToHubs(queryRunner, preferences);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

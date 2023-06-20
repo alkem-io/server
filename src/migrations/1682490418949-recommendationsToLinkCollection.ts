@@ -37,30 +37,30 @@ export class recommendationsToLinkCollection1682490418949
     );
 
     for (const contextRecommendationId of contextRecommendationIds) {
-      const [{ hxbId, challengeId, opportunityId }]: {
-        hxbId?: string;
+      const [{ hubId, challengeId, opportunityId }]: {
+        hubId?: string;
         challengeId?: string;
         opportunityId?: string;
       }[] = await queryRunner.query(`
-          SELECT hxb.id AS hxbId, challenge.id AS challengeId, opportunity.id AS opportunityId FROM context
-          LEFT JOIN hxb ON hxb.contextId = context.id
+          SELECT hub.id AS hubId, challenge.id AS challengeId, opportunity.id AS opportunityId FROM context
+          LEFT JOIN hub ON hub.contextId = context.id
           LEFT JOIN challenge ON challenge.contextId = context.id
           LEFT JOIN opportunity ON opportunity.contextId = context.id
           WHERE context.id = '${contextRecommendationId}'
         `);
 
-      if (!hxbId && !challengeId && !opportunityId) {
+      if (!hubId && !challengeId && !opportunityId) {
         throw Error(
           `No Journey found for Context with id = '${contextRecommendationId}'`
         );
       }
 
-      const journeyTable = hxbId
-        ? 'hxb'
+      const journeyTable = hubId
+        ? 'hub'
         : challengeId
         ? 'challenge'
         : 'opportunity';
-      const journeyId = hxbId ?? challengeId ?? opportunityId;
+      const journeyId = hubId ?? challengeId ?? opportunityId;
 
       const [{ collaborationId }]: { collaborationId: string }[] =
         await queryRunner.query(`
@@ -120,33 +120,33 @@ export class recommendationsToLinkCollection1682490418949
     );
 
     for (const profileId of profileIds) {
-      const [{ hxbId, challengeId, opportunityId }]: {
-        hxbId?: string;
+      const [{ hubId, challengeId, opportunityId }]: {
+        hubId?: string;
         challengeId?: string;
         opportunityId?: string;
       }[] = await queryRunner.query(`
-          SELECT hxb.id AS hxbId, challenge.id AS challengeId, opportunity.id AS opportunityId FROM reference
+          SELECT hub.id AS hubId, challenge.id AS challengeId, opportunity.id AS opportunityId FROM reference
           LEFT JOIN profile ON profile.id = reference.profileId
           LEFT JOIN callout ON callout.profileId = profile.id
           LEFT JOIN collaboration ON collaboration.id = callout.collaborationId
-          LEFT JOIN hxb ON hxb.collaborationId = collaboration.id
+          LEFT JOIN hub ON hub.collaborationId = collaboration.id
           LEFT JOIN challenge ON challenge.collaborationId = collaboration.id
           LEFT JOIN opportunity ON opportunity.collaborationId = collaboration.id
           WHERE profile.id = '${profileId}'
           LIMIT 1;
       `);
 
-      if (!hxbId && !challengeId && !opportunityId) {
+      if (!hubId && !challengeId && !opportunityId) {
         // this profile most probably is not associated with a callout so silently continue; i.e was not a recommendation
         continue;
       }
 
-      const journeyTable = hxbId
-        ? 'hxb'
+      const journeyTable = hubId
+        ? 'hub'
         : challengeId
         ? 'challenge'
         : 'opportunity';
-      const journeyId = hxbId ?? challengeId ?? opportunityId;
+      const journeyId = hubId ?? challengeId ?? opportunityId;
 
       const [{ contextId }]: { contextId: string }[] = await queryRunner.query(`
           SELECT contextId FROM ${journeyTable} where id = '${journeyId}'

@@ -10,11 +10,11 @@ export const collaborationDefaults: any = {
   callouts: [
     {
       type: CalloutType.POST,
-      communityType: CommunityType.HUB,
+      communityType: CommunityType.SPACE,
       displayName: 'Welcome, please introduce yourself to the community!',
-      nameID: 'hub-welcome',
+      nameID: 'space-welcome',
       description:
-        'Please share a few words about yourself to help the community get to know each other. What brings you to this Hub and motivates you to work on these Challenges?',
+        'Please share a few words about yourself to help the community get to know each other. What brings you to this Space and motivates you to work on these Challenges?',
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 1,

@@ -62,7 +62,7 @@ export class OpportunityResolverMutations {
       {
         id: updatedOpportunity.id,
         name: updatedOpportunity.profile.displayName,
-        hub: updatedOpportunity.hubID ?? '',
+        space: updatedOpportunity.spaceID ?? '',
       },
       {
         id: agentInfo.userID,

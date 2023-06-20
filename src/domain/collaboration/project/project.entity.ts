@@ -15,7 +15,7 @@ import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.e
 @Entity()
 export class Project extends NameableEntity implements IProject {
   @Column()
-  hubID!: string;
+  spaceID!: string;
 
   @OneToOne(() => Lifecycle, {
     eager: false,

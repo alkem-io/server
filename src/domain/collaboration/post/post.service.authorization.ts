@@ -109,7 +109,7 @@ export class PostAuthorizationService {
       );
     newRules.push(manageCreatedPostPolicy);
 
-    // Allow hub admins to move post
+    // Allow space admins to move post
     const credentials =
       this.communityPolicyService.getAdminCredentials(communityPolicy);
     credentials.push({
@@ -117,7 +117,7 @@ export class PostAuthorizationService {
       resourceID: '',
     });
     credentials.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
       resourceID: '',
     });
     const adminsMovePostRule =

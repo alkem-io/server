@@ -1,21 +1,21 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class hxbVisibility1663786651174 implements MigrationInterface {
-  name = 'hxbVisibility1663786651174';
+export class hubVisibility1663786651174 implements MigrationInterface {
+  name = 'hubVisibility1663786651174';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` ADD \`visibility\` varchar(255) NULL`
+      `ALTER TABLE \`hub\` ADD \`visibility\` varchar(255) NULL`
     );
-    const hxbs: any[] = await queryRunner.query(`SELECT id from hxb`);
-    for (const hxb of hxbs) {
+    const hubs: any[] = await queryRunner.query(`SELECT id from hub`);
+    for (const hub of hubs) {
       await queryRunner.query(
-        `UPDATE \`hxb\` SET \`visibility\` = 'active' WHERE \`id\`= '${hxb.id}'`
+        `UPDATE \`hub\` SET \`visibility\` = 'active' WHERE \`id\`= '${hub.id}'`
       );
     }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE \`hxb\` DROP COLUMN \`visibility\``);
+    await queryRunner.query(`ALTER TABLE \`hub\` DROP COLUMN \`visibility\``);
   }
 }

@@ -60,9 +60,9 @@ export class challengeOrgPrefs1648469585965 implements MigrationInterface {
     await queryRunner.query(`
             INSERT INTO preference_definition (id, version, definitionSet, groupName, displayName, description, valueType, type)
             VALUES
-            ('${challengeJoinPrefDef}', 1, 'challenge', 'MembershipChallenge', 'Allow Hxb members to join', 'Allow members of the parent Hxb to join this Challenge', 'boolean', 'MembershipJoinChallengeFromHxbMembers'),
-            ('${challengeApplyPrefDef}', 1, 'challenge', 'MembershipChallenge', 'Allow Hxb members to apply', 'Allow members of the parent Hxb to apply to this Challenge', 'boolean', 'MembershipApplyChallengeFromHxbMembers'),
-            ('${challengeFeedbackPrefDef}', 1, 'challenge', 'MembershipChallenge', 'Allow Hxb members to provide feedback on Context', 'Allow members of the parent Hxb to give feedback on the Challenge Context', 'boolean', 'MembershipFeedbackOnChallengeContext')
+            ('${challengeJoinPrefDef}', 1, 'challenge', 'MembershipChallenge', 'Allow Hub members to join', 'Allow members of the parent Hub to join this Challenge', 'boolean', 'MembershipJoinChallengeFromHubMembers'),
+            ('${challengeApplyPrefDef}', 1, 'challenge', 'MembershipChallenge', 'Allow Hub members to apply', 'Allow members of the parent Hub to apply to this Challenge', 'boolean', 'MembershipApplyChallengeFromHubMembers'),
+            ('${challengeFeedbackPrefDef}', 1, 'challenge', 'MembershipChallenge', 'Allow Hub members to provide feedback on Context', 'Allow members of the parent Hub to give feedback on the Challenge Context', 'boolean', 'MembershipFeedbackOnChallengeContext')
         `);
     // preferences for challenges
     const challenges: { id: string }[] = await queryRunner.query(

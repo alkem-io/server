@@ -38,15 +38,15 @@ export const addPreferencesToUsers = async (
   }
 };
 
-export const addPreferencesToHxbs = async (
+export const addPreferencesToHubs = async (
   queryRunner: QueryRunner,
   preferences: PreferenceInsertType[]
 ) => {
-  const hxbs: { id: string; preferenceSetId: string }[] =
-    await queryRunner.query('SELECT id, preferenceSetId FROM hxb');
+  const hubs: { id: string; preferenceSetId: string }[] =
+    await queryRunner.query('SELECT id, preferenceSetId FROM hub');
 
   const prefValues: string[] = [];
-  for (const hxb of hxbs) {
+  for (const hub of hubs) {
     const defAuthUUIDs = preferences.map(() => randomUUID());
     const authValues = preferences.map(
       (x, i) => `('${defAuthUUIDs[i]}', NOW(), NOW(), 1, '', '', 0, '')`
@@ -59,7 +59,7 @@ export const addPreferencesToHxbs = async (
     prefValues.push(
       ...preferences.map(
         (x, i) =>
-          `(UUID(), NOW(), NOW(), 1, '${x.value}', '${defAuthUUIDs[i]}', '${x.definitionId}', '${hxb.preferenceSetId}')`
+          `(UUID(), NOW(), NOW(), 1, '${x.value}', '${defAuthUUIDs[i]}', '${x.definitionId}', '${hub.preferenceSetId}')`
       )
     );
   }
@@ -74,11 +74,11 @@ export const addPreferencesToChallenges = async (
   queryRunner: QueryRunner,
   preferences: PreferenceInsertType[]
 ) => {
-  const hxbs: { id: string; preferenceSetId: string }[] =
+  const hubs: { id: string; preferenceSetId: string }[] =
     await queryRunner.query('SELECT id, preferenceSetId FROM challenge');
 
   const prefValues: string[] = [];
-  for (const hxb of hxbs) {
+  for (const hub of hubs) {
     const defAuthUUIDs = preferences.map(() => randomUUID());
     const authValues = preferences.map(
       (x, i) => `('${defAuthUUIDs[i]}', NOW(), NOW(), 1, '', '', 0, '')`
@@ -91,7 +91,7 @@ export const addPreferencesToChallenges = async (
     prefValues.push(
       ...preferences.map(
         (x, i) =>
-          `(UUID(), NOW(), NOW(), 1, '${x.value}', '${defAuthUUIDs[i]}', '${x.definitionId}', '${hxb.preferenceSetId}')`
+          `(UUID(), NOW(), NOW(), 1, '${x.value}', '${defAuthUUIDs[i]}', '${x.definitionId}', '${hub.preferenceSetId}')`
       )
     );
   }

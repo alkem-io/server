@@ -17,14 +17,14 @@ import { AdminAuthorizationService } from './admin.authorization.service';
 import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
 import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.credential.revoke';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AssignGlobalHubsAdminInput } from './dto/authorization.dto.assign.global.hubs.admin';
-import { RemoveGlobalHubsAdminInput } from './dto/authorization.dto.remove.global.hubs.admin';
+import { AssignGlobalSpacesAdminInput } from './dto/authorization.dto.assign.global.spaces.admin';
+import { RemoveGlobalSpacesAdminInput } from './dto/authorization.dto.remove.global.spaces.admin';
 import { GLOBAL_POLICY_AUTHORIZATION_GRANT_GLOBAL_ADMIN } from '@common/constants/authorization/global.policy.constants';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { HubService } from '@domain/challenge/hub/hub.service';
+import { SpaceService } from '@domain/challenge/space/space.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserService } from '@domain/community/user/user.service';
-import { HubAuthorizationService } from '@domain/challenge/hub/hub.service.authorization';
+import { SpaceAuthorizationService } from '@domain/challenge/space/space.service.authorization';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -36,12 +36,12 @@ export class AdminAuthorizationResolverMutations {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
-    private hubAuthorizationService: HubAuthorizationService,
+    private spaceAuthorizationService: SpaceAuthorizationService,
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private userAuthorizationService: UserAuthorizationService,
     private authorizationService: AuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
-    private hubService: HubService,
+    private spaceService: SpaceService,
     private organizationService: OrganizationService,
     private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -179,40 +179,40 @@ export class AdminAuthorizationResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
-    description: 'Assigns a User as a Global Hubs Admin.',
+    description: 'Assigns a User as a Global Spaces Admin.',
   })
   @Profiling.api
-  async assignUserAsGlobalHubsAdmin(
+  async assignUserAsGlobalSpacesAdmin(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignGlobalHubsAdminInput
+    @Args('membershipData') membershipData: AssignGlobalSpacesAdminInput
   ): Promise<IUser> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `assign user global hubs admin: ${membershipData.userID}`
+      `assign user global spaces admin: ${membershipData.userID}`
     );
-    return await this.adminAuthorizationService.assignGlobalHubsAdmin(
+    return await this.adminAuthorizationService.assignGlobalSpacesAdmin(
       membershipData
     );
   }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IUser, {
-    description: 'Removes a User from being a Global Hubs Admin.',
+    description: 'Removes a User from being a Global Spaces Admin.',
   })
   @Profiling.api
-  async removeUserAsGlobalHubsAdmin(
+  async removeUserAsGlobalSpacesAdmin(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveGlobalHubsAdminInput
+    @Args('membershipData') membershipData: RemoveGlobalSpacesAdminInput
   ): Promise<IUser> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `remove user global hubs admin: ${membershipData.userID}`
+      `remove user global spaces admin: ${membershipData.userID}`
     );
-    return await this.adminAuthorizationService.removeGlobalHubsAdmin(
+    return await this.adminAuthorizationService.removeGlobalSpacesAdmin(
       membershipData
     );
   }
@@ -234,20 +234,20 @@ export class AdminAuthorizationResolverMutations {
       `reset authorization on platform: ${agentInfo.email}`
     );
 
-    const [hubs, organizations, users] = await Promise.all([
-      this.hubService.getAllHubs(),
+    const [spaces, organizations, users] = await Promise.all([
+      this.spaceService.getAllSpaces(),
       this.organizationService.getOrganizations({}),
       this.userService.getUsers({}),
     ]);
 
-    const resetHubAuthPromises = hubs.map(async hub => {
+    const resetSpaceAuthPromises = spaces.map(async space => {
       this.authorizationService.grantAccessOrFail(
         agentInfo,
-        hub.authorization,
+        space.authorization,
         AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
         `reset authorization definition: ${agentInfo.email}`
       );
-      await this.hubAuthorizationService.applyAuthorizationPolicy(hub);
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
     });
 
     const resetOrgAuthPromises = organizations.map(async organization => {
@@ -273,7 +273,7 @@ export class AdminAuthorizationResolverMutations {
     });
 
     const allPromises = [
-      ...resetHubAuthPromises,
+      ...resetSpaceAuthPromises,
       ...resetOrgAuthPromises,
       ...resetUserAuthPromises,
     ];

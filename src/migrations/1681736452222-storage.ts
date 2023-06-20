@@ -62,7 +62,7 @@ export class storage1681736452222 implements MigrationInterface {
     await addStorageBucketRelation(
       queryRunner,
       'FK_11991450cf75dc486700ca034c6',
-      'hxb'
+      'hub'
     );
     await addStorageBucketRelation(
       queryRunner,
@@ -91,39 +91,39 @@ export class storage1681736452222 implements MigrationInterface {
       `ALTER TABLE \`profile\` ADD \`storageBucketId\` char(36) NULL`
     );
 
-    const hxbs: { id: string }[] = await queryRunner.query(
-      `SELECT id FROM hxb`
+    const hubs: { id: string }[] = await queryRunner.query(
+      `SELECT id FROM hub`
     );
-    for (const hxb of hxbs) {
+    for (const hub of hubs) {
       await createStorageBucketAndLink(
         queryRunner,
-        'hxb',
-        hxb.id,
+        'hub',
+        hub.id,
         allowedTypes,
         maxAllowedFileSize,
         ''
       );
     }
 
-    const challenges: { id: string; hxbID: string }[] = await queryRunner.query(
-      `SELECT id, hxbID FROM challenge`
+    const challenges: { id: string; hubID: string }[] = await queryRunner.query(
+      `SELECT id, hubID FROM challenge`
     );
     for (const challenge of challenges) {
-      const hxbs: { id: string; storageBucketId: string }[] =
+      const hubs: { id: string; storageBucketId: string }[] =
         await queryRunner.query(
-          `SELECT id, storageBucketId FROM hxb WHERE (id = '${challenge.hxbID}')`
+          `SELECT id, storageBucketId FROM hub WHERE (id = '${challenge.hubID}')`
         );
-      if (hxbs.length !== 1) {
-        throw new Error(`Found challenge without hxbID set: ${challenge.id}`);
+      if (hubs.length !== 1) {
+        throw new Error(`Found challenge without hubID set: ${challenge.id}`);
       }
-      const hxb = hxbs[0];
+      const hub = hubs[0];
       await createStorageBucketAndLink(
         queryRunner,
         'challenge',
         challenge.id,
         allowedTypes,
         maxAllowedFileSize,
-        hxb.storageBucketId
+        hub.storageBucketId
       );
     }
 
@@ -178,7 +178,7 @@ export class storage1681736452222 implements MigrationInterface {
     );
 
     await removeStorageBucketAuths(queryRunner, [
-      'hxb',
+      'hub',
       'challenge',
       'platform',
       'library',
@@ -187,7 +187,7 @@ export class storage1681736452222 implements MigrationInterface {
     await removeStorageBucketRelation(
       queryRunner,
       'FK_11991450cf75dc486700ca034c6',
-      'hxb'
+      'hub'
     );
     await removeStorageBucketRelation(
       queryRunner,

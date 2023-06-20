@@ -3,47 +3,47 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { IInnovationHxb, InnovationHxb } from './types';
+import { IInnovationHub, InnovationHub } from './types';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 
 @Injectable()
-export class InnovationHxbAuthorizationService {
+export class InnovationHubAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    @InjectRepository(InnovationHxb)
-    private hubRepository: Repository<InnovationHxb>
+    @InjectRepository(InnovationHub)
+    private spaceRepository: Repository<InnovationHub>
   ) {}
 
   public async applyAuthorizationPolicyAndSave(
-    hub: IInnovationHxb
-  ): Promise<IInnovationHxb> {
-    hub.authorization = this.authorizationPolicyService.reset(
-      hub.authorization
+    space: IInnovationHub
+  ): Promise<IInnovationHub> {
+    space.authorization = this.authorizationPolicyService.reset(
+      space.authorization
     );
-    hub.authorization =
+    space.authorization =
       this.platformAuthorizationService.inheritRootAuthorizationPolicy(
-        hub.authorization
+        space.authorization
       );
-    hub.authorization.anonymousReadAccess = true;
+    space.authorization.anonymousReadAccess = true;
 
-    hub = await this.cascadeAuthorization(hub);
+    space = await this.cascadeAuthorization(space);
 
-    return this.hubRepository.save(hub);
+    return this.spaceRepository.save(space);
   }
 
   private async cascadeAuthorization(
-    innovationHxb: IInnovationHxb
-  ): Promise<IInnovationHxb> {
-    if (innovationHxb.profile) {
-      innovationHxb.profile =
+    innovationHub: IInnovationHub
+  ): Promise<IInnovationHub> {
+    if (innovationHub.profile) {
+      innovationHub.profile =
         await this.profileAuthorizationService.applyAuthorizationPolicy(
-          innovationHxb.profile,
-          innovationHxb.authorization
+          innovationHub.profile,
+          innovationHub.authorization
         );
     }
 
-    return innovationHxb;
+    return innovationHub;
   }
 }

@@ -172,8 +172,8 @@ export class StorageBucketResolverService {
       if (!result.templatesSetId) {
         return this.getPlatformStorageBucketId();
       } else {
-        query = `SELECT \`storageBucketId\` FROM \`hub\`
-      WHERE \`hub\`.\`templatesSetId\`='${result.templatesSetId}'`;
+        query = `SELECT \`storageBucketId\` FROM \`space\`
+      WHERE \`space\`.\`templatesSetId\`='${result.templatesSetId}'`;
         [result] = await this.entityManager.connection.query(query);
 
         if (result) return result.storageBucketId;
@@ -214,8 +214,8 @@ export class StorageBucketResolverService {
 
     if (result && result.storageBucketId) return result.storageBucketId;
 
-    query = `SELECT \`storageBucketId\` FROM \`hub\`
-      LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`hub\`.\`collaborationId\`
+    query = `SELECT \`storageBucketId\` FROM \`space\`
+      LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`space\`.\`collaborationId\`
       LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
       WHERE \`callout\`.\`id\`='${calloutId}'`;
     [result] = await this.entityManager.connection.query(query);
@@ -246,8 +246,8 @@ export class StorageBucketResolverService {
 
     if (result && result.storageBucketId) return result.storageBucketId;
 
-    query = `SELECT \`storageBucketId\` FROM \`hub\`
-      LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`hub\`.\`collaborationId\`
+    query = `SELECT \`storageBucketId\` FROM \`space\`
+      LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`space\`.\`collaborationId\`
       LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
       LEFT JOIN \`${calloutType}\` ON \`${calloutType}\`.\`calloutId\` = \`callout\`.\`id\`
       WHERE \`${calloutType}\`.\`id\`='${entityId}'`;
@@ -267,8 +267,8 @@ export class StorageBucketResolverService {
   private async getStorageBucketIdForDiscussion(
     discussionId: string
   ): Promise<string> {
-    const query = `SELECT \`storageBucketId\` FROM \`hub\`
-      LEFT JOIN \`communication\` ON \`communication\`.\`hubID\` = \`hub\`.\`id\`
+    const query = `SELECT \`storageBucketId\` FROM \`space\`
+      LEFT JOIN \`communication\` ON \`communication\`.\`spaceID\` = \`space\`.\`id\`
       LEFT JOIN \`discussion\` ON \`discussion\`.\`communicationId\` = \`communication\`.\`id\`
       WHERE \`discussion\`.\`id\`='${discussionId}'`;
     const [result]: {
@@ -337,11 +337,11 @@ enum ProfileType {
   INNOVATION_PACK = 'innovation_pack',
   DISCUSSION = 'discussion',
   INNOVATION_FLOW_TEMPLATE = 'innovation_flow_template',
-  INNOVATION_HUB = 'innovation_hxb',
+  INNOVATION_HUB = 'innovation_hub',
 }
 
 export enum DirectStorageBucketEntityType {
-  HUB = 'hub',
+  SPACE = 'space',
   CHALLENGE = 'challenge',
   ORGANIZATION = 'organization',
 }

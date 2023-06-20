@@ -18,12 +18,12 @@ export class templatesSet1654842042827 implements MigrationInterface {
       `ALTER TABLE \`templates_set\` ADD CONSTRAINT \`FK_66666901817dd09d5906537e088\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
-    // Link templates_set to hxb
+    // Link templates_set to hub
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` ADD \`templatesSetId\` char(36) NULL`
+      `ALTER TABLE \`hub\` ADD \`templatesSetId\` char(36) NULL`
     );
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` ADD CONSTRAINT \`FK_33336901817dd09d5906537e088\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`hub\` ADD CONSTRAINT \`FK_33336901817dd09d5906537e088\` FOREIGN KEY (\`templatesSetId\`) REFERENCES \`templates_set\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
     // Create template_info
@@ -77,9 +77,9 @@ export class templatesSet1654842042827 implements MigrationInterface {
     );
 
     // Migrate the existing Aspect Templates data or create default Aspect Templates
-    const hxbs: any[] = await queryRunner.query(`SELECT id, template from hxb`);
-    for (const hxb of hxbs) {
-      // Set authorization on templates_set + also link to hxb
+    const hubs: any[] = await queryRunner.query(`SELECT id, template from hub`);
+    for (const hub of hubs) {
+      // Set authorization on templates_set + also link to hub
       const authID = randomUUID();
       const templatesSetID = randomUUID();
       await queryRunner.query(
@@ -89,11 +89,11 @@ export class templatesSet1654842042827 implements MigrationInterface {
         `INSERT INTO templates_set (id, createdDate, updatedDate, version, authorizationId) VALUES ('${templatesSetID}', NOW(), NOW(), 1, '${authID}')`
       );
       await queryRunner.query(
-        `UPDATE hxb SET templatesSetId = '${templatesSetID}' WHERE (id = '${hxb.id}')`
+        `UPDATE hub SET templatesSetId = '${templatesSetID}' WHERE (id = '${hub.id}')`
       );
 
       // Create the aspect templates
-      const existingTemplate: any = hxb.template;
+      const existingTemplate: any = hub.template;
       if (existingTemplate) {
         console.log('Found existing template, so migrating...');
         const existingTemplateJson = JSON.parse(existingTemplate);
@@ -183,13 +183,13 @@ export class templatesSet1654842042827 implements MigrationInterface {
       }
     }
 
-    await queryRunner.query(`ALTER TABLE \`hxb\` DROP COLUMN \`template\``);
+    await queryRunner.query(`ALTER TABLE \`hub\` DROP COLUMN \`template\``);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Note: data is not migrated down, only the structure
     await queryRunner.query(
-      'ALTER TABLE `hxb` DROP FOREIGN KEY `FK_33336901817dd09d5906537e088`'
+      'ALTER TABLE `hub` DROP FOREIGN KEY `FK_33336901817dd09d5906537e088`'
     );
     // FK: template info
     await queryRunner.query(
@@ -209,11 +209,11 @@ export class templatesSet1654842042827 implements MigrationInterface {
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` DROP COLUMN \`templatesSetId\``
+      `ALTER TABLE \`hub\` DROP COLUMN \`templatesSetId\``
     );
 
     await queryRunner.query(
-      `ALTER TABLE \`hxb\` ADD \`template\` text NOT NULL`
+      `ALTER TABLE \`hub\` ADD \`template\` text NOT NULL`
     );
     await queryRunner.query('DROP TABLE `templates_set`');
     await queryRunner.query('DROP TABLE `aspect_template`');

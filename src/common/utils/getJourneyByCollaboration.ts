@@ -5,12 +5,12 @@ export const getJourneyByCollaboration = async (
   collaborationID: string
 ) => {
   const [result]: {
-    hubId: string | null;
+    spaceId: string | null;
     challengeId: string | null;
     opportunityId: string | null;
   }[] = await entityManager.query(`
-      SELECT hub.id AS hubId, challenge.id AS challengeId, opportunity.id AS opportunityId FROM collaboration
-      LEFT JOIN hub ON hub.collaborationId = collaboration.id
+      SELECT space.id AS spaceId, challenge.id AS challengeId, opportunity.id AS opportunityId FROM collaboration
+      LEFT JOIN space ON space.collaborationId = collaboration.id
       LEFT JOIN challenge ON challenge.collaborationId = collaboration.id
       LEFT JOIN opportunity ON opportunity.collaborationId = collaboration.id
       WHERE collaboration.id = '${collaborationID}'

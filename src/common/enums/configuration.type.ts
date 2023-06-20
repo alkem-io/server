@@ -12,5 +12,5 @@ export enum ConfigurationTypes {
   COLLABORATION = 'collaboration',
   SSI = 'ssi',
   INTEGRATIONS = 'integrations',
-  INNOVATION_HUB = 'innovation_hxb',
+  INNOVATION_HUB = 'innovation_hub',
 }

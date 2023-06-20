@@ -138,17 +138,17 @@ export class postWhiteboardRename1686376509726 implements MigrationInterface {
       const newType = definition.type
         .replace('Aspect', 'Post')
         .replace('Canvas', 'Whiteboard')
-        .replace('Hxb', 'Space');
+        .replace('Hub', 'Space');
       const newDisplayName = definition.displayName
         .replace('aspect', 'Post')
         .replace('Canvas', 'Whiteboard')
-        .replace('Hxb', 'Space');
+        .replace('Hub', 'Space');
       const newDescription = definition.description
         .replace('aspect', 'Post')
         .replace('Canvas', 'Whiteboard')
-        .replace('Hxb', 'Space');
-      const newDefinitionSet = definition.definitionSet.replace('hxb', 'space');
-      const newGroupName = definition.groupName.replace('Hxb', 'Space');
+        .replace('Hub', 'Space');
+      const newDefinitionSet = definition.definitionSet.replace('hub', 'space');
+      const newGroupName = definition.groupName.replace('Hub', 'Space');
       await queryRunner.query(
         `UPDATE preference_definition SET type='${newType}', displayName='${newDisplayName}', description='${newDescription}', definitionSet='${newDefinitionSet}', groupName='${newGroupName}' WHERE id='${definition.id}'`
       );
@@ -290,17 +290,17 @@ export class postWhiteboardRename1686376509726 implements MigrationInterface {
       const newType = definition.type
         .replace('Post', 'Aspect')
         .replace('Whiteboard', 'Canvas')
-        .replace('Space', 'Hxb');
+        .replace('Space', 'Hub');
       const newDisplayName = definition.displayName
         .replace('Post', 'aspect')
         .replace('Whiteboard', 'Canvas')
-        .replace('Space', 'Hxb');
+        .replace('Space', 'Hub');
       const newDescription = definition.description
         .replace('Post', 'aspect')
         .replace('Whiteboard', 'Canvas')
-        .replace('Space', 'Hxb');
-      const newDefinitionSet = definition.definitionSet.replace('space', 'hxb');
-      const newGroupName = definition.groupName.replace('Space', 'Hxb');
+        .replace('Space', 'Hub');
+      const newDefinitionSet = definition.definitionSet.replace('space', 'hub');
+      const newGroupName = definition.groupName.replace('Space', 'Hub');
       await queryRunner.query(
         `UPDATE preference_definition SET type='${newType}', displayName='${newDisplayName}', description='${newDescription}', definitionSet='${newDefinitionSet}', groupName='${newGroupName}' WHERE id='${definition.id}'`
       );

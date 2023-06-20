@@ -1,15 +1,15 @@
 export const CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW =
   'credentialRuleTypes-challengeInnovationFlow';
-export const CREDENTIAL_RULE_TYPES_HUB_AUTHORIZATION_RESET =
-  'credentialRuleTypes-hubAuthorizationReset';
-export const CREDENTIAL_RULE_TYPES_HUB_GLOBAL_ADMIN_COMMUNITY_READ =
-  'credentialRuleTypes-hubGlobalAdminCommunityRead';
-export const CREDENTIAL_RULE_TYPES_HUB_AUTHORIZATION_GLOBAL_ADMIN_GRANT =
-  'credentialRuleTypes-hubAuthorizationGlobalAdminGrant';
-export const CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_APPLY_GLOBAL_REGISTERED =
-  'credentialRuleTypes-hubCommunityApplyGlobalRegistered';
-export const CREDENTIAL_RULE_TYPES_HUB_COMMUNITY_JOIN_GLOBAL_REGISTERED =
-  'credentialRuleTypes-hubCommunityJoinGlobalRegistered';
+export const CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_RESET =
+  'credentialRuleTypes-spaceAuthorizationReset';
+export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ =
+  'credentialRuleTypes-spaceGlobalAdminCommunityRead';
+export const CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT =
+  'credentialRuleTypes-spaceAuthorizationGlobalAdminGrant';
+export const CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED =
+  'credentialRuleTypes-spaceCommunityApplyGlobalRegistered';
+export const CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED =
+  'credentialRuleTypes-spaceCommunityJoinGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS =
   'credentialRuleTypes-calloutUpdatePublisherGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED =

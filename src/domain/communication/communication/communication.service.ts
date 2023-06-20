@@ -23,7 +23,7 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { RoomService } from '../room/room.service';
 import { IRoom } from '../room/room.interface';
 import { RoomType } from '@common/enums/room.type';
-import { COMMUNICATION_PLATFORM_HUBID } from '@common/constants';
+import { COMMUNICATION_PLATFORM_SPACEID } from '@common/constants';
 
 @Injectable()
 export class CommunicationService {
@@ -38,12 +38,12 @@ export class CommunicationService {
 
   async createCommunication(
     displayName: string,
-    hubID: string,
+    spaceID: string,
     discussionCategories: DiscussionCategory[]
   ): Promise<ICommunication> {
     const communication: ICommunication = new Communication(displayName);
     communication.authorization = new AuthorizationPolicy();
-    communication.hubID = hubID;
+    communication.spaceID = spaceID;
 
     communication.discussions = [];
     communication.discussionCategories = discussionCategories;
@@ -127,7 +127,7 @@ export class CommunicationService {
   }
 
   private isPlatformCommunication(communication: ICommunication): boolean {
-    if (communication.hubID === COMMUNICATION_PLATFORM_HUBID) {
+    if (communication.spaceID === COMMUNICATION_PLATFORM_SPACEID) {
       return true;
     }
     return false;

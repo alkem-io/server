@@ -97,8 +97,8 @@ const getOtherTemplateVisualUri = async (
       `
         SELECT visual.uri FROM callout
         LEFT JOIN collaboration ON collaboration.id = callout.collaborationId
-        LEFT JOIN hxb ON hxb.collaborationId = collaboration.id
-        LEFT JOIN templates_set ON templates_set.id = hxb.templatesSetId
+        LEFT JOIN hub ON hub.collaborationId = collaboration.id
+        LEFT JOIN templates_set ON templates_set.id = hub.templatesSetId
         LEFT JOIN aspect_template ON aspect_template.templatesSetId = templates_set.id
         LEFT JOIN template_info ON template_info.id = aspect_template.templateInfoId
         LEFT JOIN visual ON visual.id = template_info.visualId

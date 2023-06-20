@@ -6,7 +6,7 @@ import { Project } from '@domain/collaboration/project';
 import { NameID, UUID } from '@domain/common/scalars';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { Hub } from '@domain/challenge/hub/hub.entity';
+import { Space } from '@domain/challenge/space/space.entity';
 import { LogContext } from '@common/enums';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Community } from '@domain/community/community';
@@ -21,7 +21,7 @@ import { Collaboration } from '@domain/collaboration/collaboration';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Discussion } from '@domain/communication/discussion/discussion.entity';
-import { InnovationHxb } from '@domain/innovation-hub/innovation.hub.entity';
+import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { ICallout } from '@domain/collaboration/callout';
 
@@ -31,8 +31,8 @@ export class NamingService {
   constructor(
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
-    @InjectRepository(Hub)
-    private hubRepository: Repository<Hub>,
+    @InjectRepository(Space)
+    private spaceRepository: Repository<Space>,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
     @InjectRepository(Whiteboard)
@@ -47,8 +47,8 @@ export class NamingService {
     private collaborationRepository: Repository<Collaboration>,
     @InjectRepository(Discussion)
     private discussionRepository: Repository<Discussion>,
-    @InjectRepository(InnovationHxb)
-    private innovationHxbRepository: Repository<InnovationHxb>,
+    @InjectRepository(InnovationHub)
+    private innovationHubRepository: Repository<InnovationHub>,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @InjectEntityManager('default')
@@ -56,25 +56,25 @@ export class NamingService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async isNameIdAvailableInHub(
+  async isNameIdAvailableInSpace(
     nameID: string,
-    hubID: string
+    spaceID: string
   ): Promise<boolean> {
     if (!nameID) return true;
 
     const challengeCount = await this.challengeRepository.countBy({
       nameID: nameID,
-      hubID: hubID,
+      spaceID: spaceID,
     });
     if (challengeCount > 0) return false;
     const opportunityCount = await this.opportunityRepository.countBy({
       nameID: nameID,
-      hubID: hubID,
+      spaceID: spaceID,
     });
     if (opportunityCount > 0) return false;
     const projectCount = await this.projectRepository.countBy({
       nameID: nameID,
-      hubID: hubID,
+      spaceID: spaceID,
     });
     if (projectCount > 0) return false;
     return true;
@@ -196,19 +196,19 @@ export class NamingService {
     return true;
   }
 
-  async isInnovationHxbSubdomainAvailable(subdomain: string): Promise<boolean> {
-    const innovationHxbsCount = await this.innovationHxbRepository.countBy({
+  async isInnovationHubSubdomainAvailable(subdomain: string): Promise<boolean> {
+    const innovationHubsCount = await this.innovationHubRepository.countBy({
       subdomain: subdomain,
     });
-    if (innovationHxbsCount > 0) return false;
+    if (innovationHubsCount > 0) return false;
     return true;
   }
 
-  async isInnovationHxbNameIdAvailable(nameID: string): Promise<boolean> {
-    const innovationHxbsCount = await this.innovationHxbRepository.countBy({
+  async isInnovationHubNameIdAvailable(nameID: string): Promise<boolean> {
+    const innovationHubsCount = await this.innovationHubRepository.countBy({
       nameID: nameID,
     });
-    if (innovationHxbsCount > 0) return false;
+    if (innovationHubsCount > 0) return false;
     return true;
   }
 
@@ -227,8 +227,8 @@ export class NamingService {
       communityId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT communityId from \`hub\`
-        WHERE \`hub\`.\`collaborationId\` = '${collaborationID}' UNION
+        SELECT communityId from \`space\`
+        WHERE \`space\`.\`collaborationId\` = '${collaborationID}' UNION
 
         SELECT communityId from \`challenge\`
         WHERE \`challenge\`.\`collaborationId\` = '${collaborationID}' UNION

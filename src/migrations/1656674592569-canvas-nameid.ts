@@ -16,7 +16,7 @@ export class canvasNameid1656674592569 implements MigrationInterface {
       `SELECT id, displayName from canvas`
     );
     for (const canvas of canvases) {
-      // Set authorization on templates_set + also link to hxb
+      // Set authorization on templates_set + also link to hub
       const nameID = generateNameID(canvas.displayName, true, 20);
       await queryRunner.query(
         `UPDATE canvas SET nameID = '${nameID}' WHERE (id = '${canvas.id}')`

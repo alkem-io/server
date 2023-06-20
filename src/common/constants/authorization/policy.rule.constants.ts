@@ -1,4 +1,5 @@
-export const POLICY_RULE_HUB_CREATE_CHALLENGE = 'policyRule-hubCreateChallenge';
+export const POLICY_RULE_SPACE_CREATE_CHALLENGE =
+  'policyRule-spaceCreateChallenge';
 export const POLICY_RULE_WHITEBOARD_UPDATE = 'policyRule-whiteboardUpdate';
 export const POLICY_RULE_VISUAL_UPDATE = 'policyRule-visualUpdate';
 export const POLICY_RULE_WHITEBOARD_CONTRIBUTE =

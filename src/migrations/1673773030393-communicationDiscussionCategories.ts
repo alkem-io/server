@@ -25,8 +25,8 @@ export class communicationDiscussionCategories1673773030393
       `ALTER TABLE \`communication\` ADD \`discussionCategories\` text NULL`
     );
 
-    const communications: { id: string; hxbID: string }[] =
-      await queryRunner.query(`SELECT id, hxbID FROM communication`);
+    const communications: { id: string; hubID: string }[] =
+      await queryRunner.query(`SELECT id, hubID FROM communication`);
     for (const communication of communications) {
       let categories: string[] = [
         CommunityCategory.GENERAL,
@@ -34,7 +34,7 @@ export class communicationDiscussionCategories1673773030393
         CommunityCategory.QUESTIONS,
         CommunityCategory.SHARING,
       ];
-      if (communication.hxbID === 'platform') {
+      if (communication.hubID === 'platform') {
         categories = [
           PlatformCategory.PLATFORM_FUNCTIONALITIES,
           PlatformCategory.COMMUNITY_BUILDING,
