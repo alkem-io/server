@@ -2,7 +2,7 @@ import { ValueProvider } from '@nestjs/common';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { PublicPart } from '../utils/public-part';
 
-export const MockHubFilterService: ValueProvider<
+export const MockSpaceFilterService: ValueProvider<
   PublicPart<SpaceFilterService>
 > = {
   provide: SpaceFilterService,

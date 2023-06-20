@@ -1,10 +1,10 @@
-import { HubService } from '@domain/challenge/hub/hub.service';
+import { SpaceService } from '@domain/challenge/space/space.service';
 import { ValueProvider } from '@nestjs/common';
 import { PublicPart } from '../utils/public-part';
 
-export const MockHubService: ValueProvider<PublicPart<HubService>> = {
-  provide: HubService,
+export const MockSpaceService: ValueProvider<PublicPart<SpaceService>> = {
+  provide: SpaceService,
   useValue: {
-    getHubOrFail: jest.fn(),
+    getSpaceOrFail: jest.fn(),
   },
 };

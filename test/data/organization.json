@@ -37,7 +37,7 @@
       },
       "credentials": [
         {
-          "type": "hub-host",
+          "type": "space-host",
           "resourceID": "00655835-4d15-4546-801e-1ab80ac3078a",
           "id": "bc898751-6ea0-4c1f-93e8-9c01e985ce72"
         }
