@@ -45,7 +45,11 @@ export class InvitationAuthorizationService {
     // also grant the user privileges to work with their own invitation
     const userInvitationRule =
       this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.READ, AuthorizationPrivilege.UPDATE],
+        [
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.COMMUNITY_INVITE_ACCEPT,
+        ],
         [
           {
             type: AuthorizationCredential.USER_SELF_MANAGEMENT,

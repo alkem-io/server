@@ -1,6 +1,9 @@
 import { PubSubEngine } from 'graphql-subscriptions';
 import { Inject, Injectable } from '@nestjs/common';
-import { SUBSCRIPTION_ACTIVITY_CREATED } from '@src/common/constants';
+import {
+  SUBSCRIPTION_ACTIVITY_CREATED,
+  SUBSCRIPTION_ROOM_EVENT,
+} from '@src/common/constants';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { IActivity } from '@platform/activity';
 import { IMessage } from '@domain/communication/message/message.interface';
@@ -15,7 +18,9 @@ import {
 export class SubscriptionPublishService {
   constructor(
     @Inject(SUBSCRIPTION_ACTIVITY_CREATED)
-    private activityCreatedSubscription: PubSubEngine
+    private activityCreatedSubscription: PubSubEngine,
+    @Inject(SUBSCRIPTION_ROOM_EVENT)
+    private roomEventsSubscription: PubSubEngine
   ) {}
 
   public publishActivity(
@@ -58,7 +63,7 @@ export class SubscriptionPublishService {
       };
     }
 
-    return this.activityCreatedSubscription.publish(
+    return this.roomEventsSubscription.publish(
       SubscriptionType.ROOM_EVENTS,
       payload
     );

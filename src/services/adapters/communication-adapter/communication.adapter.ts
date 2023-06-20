@@ -120,7 +120,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to send message to room: ${err}`,
+        `Failed to send message to room: ${err?.message ?? err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -159,7 +159,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to send message to room: ${err}`,
+        `Failed to send message to room: ${err?.message ?? err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -197,7 +197,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to add reaction to message in room: ${err.message}`,
+        `Failed to add reaction to message in room: ${err?.message ?? err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -228,7 +228,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to remove reaction from room: ${err.message}`,
+        `Failed to remove reaction from room: ${err?.message ?? err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -266,7 +266,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to obtain room: ${err}`,
+        `Failed to obtain room: ${err?.message ?? err}`,
         LogContext.COMMUNICATION
       );
     }
@@ -913,7 +913,7 @@ export class CommunicationAdapter {
           this.logInteractionError(eventType, err, eventID);
           rej(
             new MatrixEntityNotFoundException(
-              `${errorMessage}: ${err.message}`,
+              `${errorMessage}: ${err?.message ?? err}`,
               LogContext.COMMUNICATION
             )
           );
