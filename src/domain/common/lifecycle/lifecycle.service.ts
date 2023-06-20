@@ -105,7 +105,7 @@ export class LifecycleService {
     );
 
     const stateToHydrate = interpretedLifecycle.state;
-    // Note: https://gitspace.com/statelyai/xstate/discussions/1757
+    // Note: https://git.com/statelyai/xstate/discussions/1757
     // restoring state has the hydrated actions, which unless removed will be executed again
     stateToHydrate.actions = [];
     // Remove also the event itself as this would otherwise pull all agent / authorization policy into the hydrated state
