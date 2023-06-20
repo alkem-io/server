@@ -21,8 +21,8 @@ query search($searchData: SearchInput!) {
       score
       terms
       type
-      ... on SearchResultHub {
-        hub {
+      ... on SearchResultSpace {
+        space {
           nameID
         }
       }
@@ -56,6 +56,6 @@ query search($searchData: SearchInput!) {
   "searchData":
   {
     "terms": ["Alisha"],
-    "searchInHubFilter": "eco1"
+    "searchInSpaceFilter": "eco1"
   }
 }

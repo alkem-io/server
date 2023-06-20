@@ -21,8 +21,8 @@ query search($searchData: SearchInput!) {
       score
       terms
       type
-      ... on SearchResultHub {
-        hub {
+      ... on SearchResultSpace {
+        space {
           nameID
         }
       }
