@@ -8,9 +8,9 @@ export const MockNotificationAdapter: ValueProvider<
   provide: NotificationAdapter,
   useValue: {
     calloutPublished: jest.fn(),
-    aspectCreated: jest.fn(),
+    postCreated: jest.fn(),
     collaborationInterest: jest.fn(),
-    aspectComment: jest.fn(),
+    postComment: jest.fn(),
     updateSent: jest.fn(),
     forumDiscussionCreated: jest.fn(),
     applicationCreated: jest.fn(),

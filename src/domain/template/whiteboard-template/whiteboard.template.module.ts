@@ -1,6 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { CanvasModule } from '@domain/common/canvas/canvas.module';
+import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -16,7 +16,7 @@ import { WhiteboardTemplateAuthorizationService } from './whiteboard.template.se
     AuthorizationPolicyModule,
     TemplateBaseModule,
     ProfileModule,
-    CanvasModule,
+    WhiteboardModule,
     TypeOrmModule.forFeature([WhiteboardTemplate]),
   ],
   providers: [

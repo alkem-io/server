@@ -28,7 +28,7 @@ import { PreferenceSetService } from '@domain/common/preference-set/preference.s
 import { UpdateChallengePreferenceInput } from '@domain/challenge/challenge/dto/challenge.dto.update.preference';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
-import { UpdateHubVisibilityInput } from './dto/hub.dto.update.visibility';
+import { UpdateHubPlatformSettingsInput } from './dto/hub.dto.update.platform.settings';
 import { ChallengeCreatedPayload } from './dto/hub.challenge.created.payload';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_CHALLENGE_CREATED } from '@common/constants';
@@ -113,29 +113,26 @@ export class HubResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IHub, {
-    description: 'Update the visibility of the specified Hub.',
+    description:
+      'Update the platform settings, such as visibility, of the specified Hub.',
   })
   @Profiling.api
-  async updateHubVisibility(
+  async updateHubPlatformSettings(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('visibilityData') visibilityData: UpdateHubVisibilityInput
+    @Args('updateData') updateData: UpdateHubPlatformSettingsInput
   ): Promise<IHub> {
-    const hub = await this.hubService.getHubOrFail(visibilityData.hubID);
+    const space = await this.hubService.getHubOrFail(updateData.hubID);
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      hub.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `update visibility on hub: ${hub.id}`
+      space.authorization,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `update platform settings on space: ${space.id}`
     );
-    const oldVisibility = hub.visibility;
-    const result = await this.hubService.updateHubVisibility(visibilityData);
-    if (oldVisibility !== result.visibility) {
-      return await this.hubAuthorizationService.applyAuthorizationPolicy(
-        result
-      );
-    }
 
-    return result;
+    const result = await this.hubService.updateHubPlatformSettings(updateData);
+
+    // Update the authorization policy as most of the changes imply auth policy updates
+    return await this.hubAuthorizationService.applyAuthorizationPolicy(result);
   }
 
   @UseGuards(GraphqlGuard)
@@ -156,7 +153,7 @@ export class HubResolverMutations {
     );
     this.preferenceService.validatePreferenceTypeOrFail(
       preference,
-      PreferenceDefinitionSet.HUB
+      PreferenceDefinitionSet.SPACE
     );
 
     await this.authorizationService.grantAccessOrFail(

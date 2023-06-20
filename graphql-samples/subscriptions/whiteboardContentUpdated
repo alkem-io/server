@@ -1,0 +1,6 @@
+subscription {
+  whiteboardContentUpdated {
+    whiteboardID,
+    value
+  }
+}

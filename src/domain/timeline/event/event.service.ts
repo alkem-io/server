@@ -149,7 +149,7 @@ export class CalendarEventService {
     );
     if (!calendarEventLoaded.profile)
       throw new EntityNotFoundException(
-        `Card profile not initialised for calendarEvent: ${calendarEvent.id}`,
+        `Post profile not initialised for calendarEvent: ${calendarEvent.id}`,
         LogContext.CALENDAR
       );
 

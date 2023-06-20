@@ -173,7 +173,7 @@ export class ChallengeAuthorizationService {
     //
     const allowHubMembersToApply = this.preferenceSetService.getPreferenceValue(
       preferenceSet,
-      ChallengePreferenceType.MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS
+      ChallengePreferenceType.MEMBERSHIP_APPLY_CHALLENGE_FROM_SPACE_MEMBERS
     );
     this.communityPolicyService.setFlag(
       policy,
@@ -184,7 +184,7 @@ export class ChallengeAuthorizationService {
     //
     const allowHubMembersToJoin = this.preferenceSetService.getPreferenceValue(
       preferenceSet,
-      ChallengePreferenceType.MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS
+      ChallengePreferenceType.MEMBERSHIP_JOIN_CHALLENGE_FROM_SPACE_MEMBERS
     );
     this.communityPolicyService.setFlag(
       policy,
@@ -196,7 +196,7 @@ export class ChallengeAuthorizationService {
     const allowHubMembersToContribute =
       this.preferenceSetService.getPreferenceValue(
         preferenceSet,
-        ChallengePreferenceType.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+        ChallengePreferenceType.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE
       );
     this.communityPolicyService.setFlag(
       policy,

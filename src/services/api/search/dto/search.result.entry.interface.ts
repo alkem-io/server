@@ -9,7 +9,7 @@ import { ISearchResultChallenge } from './search.result.dto.entry.challenge';
 import { ISearchResultUser } from './search.result.dto.entry.user';
 import { ISearchResultOrganization } from './search.result.dto.entry.organization';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
-import { ISearchResultCard } from './search.result.dto.entry.card';
+import { ISearchResultPost } from './search.result.dto.entry.post';
 import { ISearchResultUserGroup } from './search.result.dto.entry.user.group';
 
 @InterfaceType('SearchResult', {
@@ -26,8 +26,8 @@ import { ISearchResultUserGroup } from './search.result.dto.entry.user.group';
         return ISearchResultUser;
       case SearchResultType.ORGANIZATION:
         return ISearchResultOrganization;
-      case SearchResultType.CARD:
-        return ISearchResultCard;
+      case SearchResultType.POST:
+        return ISearchResultPost;
       case SearchResultType.USERGROUP:
         return ISearchResultUserGroup;
     }

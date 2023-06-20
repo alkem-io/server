@@ -184,18 +184,18 @@ export class CommunityResolverService {
       `
       SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`communityType\` FROM \`callout\`
       RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
-      WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
+      JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
+      WHERE \`post\`.\`commentsId\` = '${commentsId}' UNION
 
       SELECT \`hub\`.\`id\` as \`entityId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`communityType\`  FROM \`callout\`
       RIGHT JOIN \`hub\` on \`hub\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
-      WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
+      JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
+      WHERE \`post\`.\`commentsId\` = '${commentsId}' UNION
 
       SELECT \`opportunity\`.\`id\` as \`entityId\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`communityType\`  FROM \`callout\`
       RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
-      WHERE \`aspect\`.\`commentsId\` = '${commentsId}';
+      JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
+      WHERE \`post\`.\`commentsId\` = '${commentsId}';
       `
     );
 

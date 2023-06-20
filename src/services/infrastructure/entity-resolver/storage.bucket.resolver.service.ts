@@ -113,12 +113,12 @@ export class StorageBucketResolverService {
       case ProfileType.POST:
         return await this.getStorageBucketIdForCalloutType(
           profile.entityID,
-          'aspect'
+          'post'
         );
       case ProfileType.WHITEBOARD:
         return await this.getStorageBucketIdForCalloutType(
           profile.entityID,
-          'canvas'
+          'whiteboard'
         );
       case ProfileType.INNOVATION_PACK:
         return await this.getPlatformStorageBucketId();
@@ -323,14 +323,14 @@ type TemplateType =
   | 'post_template'
   | 'innovation_flow_template';
 
-type CalloutType = 'aspect' | 'canvas';
+type CalloutType = 'post' | 'whiteboard';
 
 // Note: enum values must match the name of the underlying table
 enum ProfileType {
   USER = 'user',
   OPPORTUNITY = 'opportunity',
-  POST = 'aspect',
-  WHITEBOARD = 'canvas',
+  POST = 'post',
+  WHITEBOARD = 'whiteboard',
   POST_TEMPLATE = 'post_template',
   WHITEBOARD_TEMPLATE = 'whiteboard_template',
   CALLOUT = 'callout',

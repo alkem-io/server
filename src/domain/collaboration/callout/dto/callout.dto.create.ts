@@ -7,7 +7,7 @@ import { Type } from 'class-transformer';
 import { CreatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.create';
 import { CreateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { CreateCanvasInput } from '@domain/common/canvas/dto/canvas.dto.create';
+import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 
 @InputType()
 export class CreateCalloutInput {
@@ -47,21 +47,21 @@ export class CreateCalloutInput {
 
   @Field(() => CreatePostTemplateInput, {
     nullable: true,
-    description: 'PostTemplate data for Card Callouts.',
+    description: 'PostTemplate data for Post Callouts.',
   })
   postTemplate?: CreatePostTemplateInput;
 
   @Field(() => CreateWhiteboardTemplateInput, {
     nullable: true,
-    description: 'WhiteboardTemplate data for canvas Callouts.',
+    description: 'WhiteboardTemplate data for whiteboard Callouts.',
   })
   whiteboardTemplate?: CreateWhiteboardTemplateInput;
 
-  @Field(() => CreateCanvasInput, {
+  @Field(() => CreateWhiteboardInput, {
     nullable: true,
     description: 'Whiteboard data for whiteboard Callouts.',
   })
-  whiteboard?: CreateCanvasInput;
+  whiteboard?: CreateWhiteboardInput;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()

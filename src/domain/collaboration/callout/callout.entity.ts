@@ -6,8 +6,8 @@ import {
   JoinColumn,
   OneToOne,
 } from 'typeorm';
-import { Canvas } from '@domain/common/canvas/canvas.entity';
-import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
 import { ICallout } from './callout.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
@@ -38,17 +38,17 @@ export class Callout extends NameableEntity implements ICallout {
   })
   group?: string;
 
-  @OneToMany(() => Canvas, canvas => canvas.callout, {
+  @OneToMany(() => Whiteboard, whiteboard => whiteboard.callout, {
     eager: false,
     cascade: true,
   })
-  canvases?: Canvas[];
+  whiteboards?: Whiteboard[];
 
-  @OneToMany(() => Aspect, aspect => aspect.callout, {
+  @OneToMany(() => Post, post => post.callout, {
     eager: false,
     cascade: true,
   })
-  aspects?: Aspect[];
+  posts?: Post[];
 
   @OneToOne(() => PostTemplate, {
     eager: false,

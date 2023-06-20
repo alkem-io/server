@@ -13,9 +13,9 @@ export * from './journey/opportunity.content.edited';
 //
 export * from './callout/callout.created';
 export * from './callout/callout.comment.created';
-export * from './callout/callout.card.created';
-export * from './callout/callout.card.comment.created';
-export * from './callout/callout.canvas.created';
-export * from './callout/callout.canvas.edited';
+export * from './callout/callout.post.created';
+export * from './callout/callout.post.comment.created';
+export * from './callout/callout.whiteboard.created';
+export * from './callout/callout.whiteboard.edited';
 //
 export * from './update.created';

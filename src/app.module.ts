@@ -45,7 +45,7 @@ import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { LibraryModule } from '@library/library/library.module';
-import { AspectMoveModule } from '@domain/collaboration/aspect/aspect.move.module';
+import { PostMoveModule } from '@domain/collaboration/post/post.move.module';
 import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
@@ -209,7 +209,7 @@ import { HocuspocusServerModule } from './hocuspocus';
     ConversionModule,
     LibraryModule,
     PlatformModule,
-    AspectMoveModule,
+    PostMoveModule,
     GeoLocationModule,
     ElasticsearchModule,
     InnovationHubModule,

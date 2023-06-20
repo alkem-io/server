@@ -10,8 +10,8 @@ import { UserService } from '@domain/community/user/user.service';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
-import { AspectService } from '@domain/collaboration/aspect/aspect.service';
-import { CanvasService } from '@domain/common/canvas/canvas.service';
+import { PostService } from '@domain/collaboration/post/post.service';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import ActivityLogBuilderService, {
@@ -29,8 +29,8 @@ export class ActivityLogService {
     private activityService: ActivityService,
     private userService: UserService,
     private calloutService: CalloutService,
-    private aspectService: AspectService,
-    private canvasService: CanvasService,
+    private postService: PostService,
+    private whiteboardService: WhiteboardService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
     private roomService: RoomService,
@@ -116,8 +116,8 @@ export class ActivityLogService {
           activityLogEntryBase,
           this.userService,
           this.calloutService,
-          this.aspectService,
-          this.canvasService,
+          this.postService,
+          this.whiteboardService,
           this.challengeService,
           this.opportunityService,
           this.communityService,

@@ -20,14 +20,14 @@ import { LogContext } from '@common/enums';
 import { ActorGroupService } from '@domain/context/actor-group/actor-group.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CanvasService } from '@domain/common/canvas/canvas.service';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 
 @Injectable()
 export class EcosystemModelService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private actorGroupService: ActorGroupService,
-    private canvasService: CanvasService,
+    private whiteboardService: WhiteboardService,
     @InjectRepository(EcosystemModel)
     private ecosystemModelRepository: Repository<EcosystemModel>
   ) {}
@@ -122,7 +122,7 @@ export class EcosystemModelService {
       );
     const ecosystemModel = await this.getEcosystemModelOrFail(ecosystemId);
 
-    // Check that do not already have an aspect with the same title
+    // Check that do not already have an post with the same title
     const name = actorGroupData.name;
     const existingActorGroup = ecosystemModel.actorGroups?.find(
       actorGroup => actorGroup.name === name

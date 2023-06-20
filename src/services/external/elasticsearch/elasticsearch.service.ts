@@ -212,13 +212,13 @@ export class ElasticsearchService {
       details
     );
   }
-  public calloutCardCreated(
+  public calloutPostCreated(
     contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
     this.createDocument(
       {
-        type: 'CALLOUT_CARD_CREATED',
+        type: 'CALLOUT_POST_CREATED',
         id: contribution.id,
         name: contribution.name,
         author: details.id,
@@ -228,13 +228,13 @@ export class ElasticsearchService {
     );
   }
   // todo: callout is not available; do we need it
-  public calloutCanvasCreated(
+  public calloutWhiteboardCreated(
     contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
     this.createDocument(
       {
-        type: 'CALLOUT_CANVAS_CREATED',
+        type: 'CALLOUT_WHITEBOARD_CREATED',
         id: contribution.id,
         name: contribution.name,
         author: details.id,
@@ -249,7 +249,7 @@ export class ElasticsearchService {
   ): void {
     this.createDocument(
       {
-        type: 'CALLOUT_CARD_COMMENT_CREATED',
+        type: 'CALLOUT_POST_COMMENT_CREATED',
         id: contribution.id,
         name: contribution.name,
         author: details.id,
@@ -258,13 +258,13 @@ export class ElasticsearchService {
       details
     );
   }
-  public calloutCanvasEdited(
+  public calloutWhiteboardEdited(
     contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
     this.createDocument(
       {
-        type: 'CALLOUT_CANVAS_EDITED',
+        type: 'CALLOUT_WHITEBOARD_EDITED',
         id: contribution.id,
         name: contribution.name,
         author: details.id,

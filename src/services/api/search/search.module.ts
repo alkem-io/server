@@ -16,8 +16,8 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { Hub } from '@domain/challenge/hub/hub.entity';
 import { HubModule } from '@domain/challenge/hub/hub.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
-import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
-import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
+import { PostModule } from '@domain/collaboration/post/post.module';
+import { Post } from '@domain/collaboration/post/post.entity';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 
@@ -32,7 +32,7 @@ import { CalloutModule } from '@domain/collaboration/callout/callout.module';
     HubModule,
     OpportunityModule,
     CollaborationModule,
-    AspectModule,
+    PostModule,
     CalloutModule,
     TypeOrmModule.forFeature([User]),
     TypeOrmModule.forFeature([UserGroup]),
@@ -40,7 +40,7 @@ import { CalloutModule } from '@domain/collaboration/callout/callout.module';
     TypeOrmModule.forFeature([Hub]),
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([Opportunity]),
-    TypeOrmModule.forFeature([Aspect]),
+    TypeOrmModule.forFeature([Post]),
   ],
   providers: [SearchService, SearchResolverQueries],
   exports: [SearchService],
