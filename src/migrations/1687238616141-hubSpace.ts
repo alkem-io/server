@@ -1,4 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { escapeString } from './utils/escape-string';
 
 export class hubSpace1687238616141 implements MigrationInterface {
   name = 'hubSpace1687238616141';
@@ -141,6 +142,19 @@ export class hubSpace1687238616141 implements MigrationInterface {
         `UPDATE credential SET type='${newType}' WHERE id='${credential.id}'`
       );
     }
+
+    // Update existing community policies to have right credential names
+    const communityPolicies: { id: string; member: string; lead: string }[] =
+      await queryRunner.query(`SELECT id, member, lead FROM community_policy`);
+    for (const commununityPolicy of communityPolicies) {
+      const newMember = commununityPolicy.member.replace('hub', 'space');
+      const newLead = commununityPolicy.lead.replace('hub', 'space');
+      await queryRunner.query(
+        `UPDATE community_policy SET member='${escapeString(
+          newMember
+        )}', lead='${escapeString(newLead)}' WHERE id='${commununityPolicy.id}'`
+      );
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -279,6 +293,19 @@ export class hubSpace1687238616141 implements MigrationInterface {
       const newType = credential.type.replace('space', 'hub');
       await queryRunner.query(
         `UPDATE credential SET type='${newType}' WHERE id='${credential.id}'`
+      );
+    }
+
+    // Update existing community policies to have right credential names
+    const communityPolicies: { id: string; member: string; lead: string }[] =
+      await queryRunner.query(`SELECT id, member, lead FROM community_policy`);
+    for (const commununityPolicy of communityPolicies) {
+      const newMember = commununityPolicy.member.replace('space', 'hub');
+      const newLead = commununityPolicy.lead.replace('space', 'hub');
+      await queryRunner.query(
+        `UPDATE community_policy SET member='${escapeString(
+          newMember
+        )}', lead='${escapeString(newLead)}' WHERE id='${commununityPolicy.id}'`
       );
     }
   }
