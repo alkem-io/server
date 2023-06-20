@@ -21,10 +21,11 @@ This latter point is critical: demonstrating the vision of giving access to cont
 
 The initial scope for Template support covers:
 
-- Aspect Templates
-- Canvas Templates
+- Post Templates
+- Whiteboard Templates
+- InnovationFlow Templates
 
-Other templates types, such as Challenge Lifecycles, Community setups, Classification Tagsets etc should all be able to build upon this initial work.
+Other templates types, such as Community setups, Classification Tagsets etc should all be able to build upon this initial work.
 
 Out of scope:
 
