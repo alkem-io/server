@@ -120,7 +120,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to send message to room: ${err}`,
+        `Failed to send message to room: ${err.message}`,
         LogContext.COMMUNICATION
       );
     }
@@ -159,7 +159,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to send message to room: ${err}`,
+        `Failed to send message to room: ${err.message}`,
         LogContext.COMMUNICATION
       );
     }
@@ -266,7 +266,7 @@ export class CommunicationAdapter {
     } catch (err: any) {
       this.logInteractionError(eventType, err, eventID);
       throw new MatrixEntityNotFoundException(
-        `Failed to obtain room: ${err}`,
+        `Failed to obtain room: ${err?.message ?? err}`,
         LogContext.COMMUNICATION
       );
     }
