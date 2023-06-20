@@ -133,6 +133,14 @@ http:
       entryPoints:
         - 'web'
 
+    api-private-ws:
+      rule: 'PathPrefix(`/api/private/ws`)'
+      service: 'oathkeeper-proxy'
+      middlewares:
+        - strip-api-private-prefix
+      entryPoints:
+        - 'web'
+
     api-public-rest:
       rule: 'PathPrefix(`/api/public/rest`)'
       service: 'alkemio-server'

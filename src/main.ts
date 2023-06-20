@@ -12,6 +12,7 @@ import { graphqlUploadExpress } from 'graphql-upload';
 import { ConfigurationTypes } from '@common/enums';
 import { json } from 'body-parser';
 import cookieParser from 'cookie-parser';
+import { WsAdapter } from '@nestjs/platform-ws';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
@@ -34,6 +35,8 @@ const bootstrap = async () => {
       methods: configService.get(ConfigurationTypes.SECURITY)?.cors?.methods,
     });
   }
+
+  app.useWebSocketAdapter(new WsAdapter());
 
   app.use(faviconMiddleware);
   app.use(cookieParser());
