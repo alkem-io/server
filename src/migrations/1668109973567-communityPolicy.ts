@@ -1,6 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { AuthorizationCredential } from './utils/duplicate/authorization.credential';
+import { hubCommunityPolicy } from './utils/duplicate/hub.community.policy';
 
 export class communityPolicy1668109973567 implements MigrationInterface {
   name = 'communityPolicy1668109973567';
@@ -202,29 +203,6 @@ type newCommunityRolePolicy = {
   maxUser: number;
   minOrg: number;
   maxOrg: number;
-};
-
-const hubCommunityPolicy: oldCommunityPolicy = {
-  member: {
-    credential: {
-      type: AuthorizationCredential.HUB_MEMBER,
-      resourceID: '',
-    },
-    minOrg: 0,
-    maxOrg: -1,
-    minUser: 0,
-    maxUser: -1,
-  },
-  lead: {
-    credential: {
-      type: AuthorizationCredential.HUB_HOST,
-      resourceID: '',
-    },
-    minOrg: 0,
-    maxOrg: 1,
-    minUser: 0,
-    maxUser: 2,
-  },
 };
 
 const challengeCommunityPolicy: oldCommunityPolicy = {
