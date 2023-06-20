@@ -1,4 +1,4 @@
-import { SUBSCRIPTION_CALLOUT_ASPECT_CREATED } from '@common/constants';
+import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockNotificationsService } from '@test/mocks/notifications.service.mock';
@@ -17,7 +17,7 @@ describe('ContextResolver', () => {
         MockCacheManager,
         MockWinstonProvider,
         MockNotificationsService,
-        pubSubEngineMockFactory(SUBSCRIPTION_CALLOUT_ASPECT_CREATED),
+        pubSubEngineMockFactory(SUBSCRIPTION_CALLOUT_POST_CREATED),
       ],
     })
       .useMocker(defaultMockerFactory)

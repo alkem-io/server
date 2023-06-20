@@ -90,6 +90,6 @@ query search($searchData: SearchInput!) {
 {
   "searchData":
   {
-    "terms": ["aspect-name"]
+    "terms": ["post-name"]
   }
 }

@@ -17,7 +17,7 @@ export class MessageResolverFields {
 
   @ResolveField('sender', () => IUser, {
     nullable: true,
-    description: 'The user that created this Aspect',
+    description: 'The user that created this Post',
   })
   async sender(@Parent() message: IMessage): Promise<IUser | null> {
     const sender = message.sender;

@@ -10,9 +10,9 @@ export enum AuthorizationPrivilege {
   AUTHORIZATION_RESET = 'authorization-reset',
   ADMIN = 'admin',
   PLATFORM_ADMIN = 'platform-admin', // To determine if the user should have access to the platform administration
-  CREATE_CANVAS = 'create-canvas',
+  CREATE_WHITEBOARD = 'create-whiteboard',
   CREATE_CHALLENGE = 'create-challenge',
-  CREATE_ASPECT = 'create-aspect',
+  CREATE_POST = 'create-post',
   CREATE_MESSAGE = 'create-message',
   CREATE_MESSAGE_REPLY = 'create-message-reply',
   CREATE_MESSAGE_REACTION = 'create-message-reaction',
@@ -23,7 +23,7 @@ export enum AuthorizationPrivilege {
   FILE_UPLOAD = 'file-upload',
   FILE_DELETE = 'file-delete',
   READ_USERS = 'read-users',
-  UPDATE_CANVAS = 'update-canvas',
+  UPDATE_WHITEBOARD = 'update-whiteboard',
   UPDATE_INNOVATION_FLOW = 'update-lifecycle',
   COMMUNITY_JOIN = 'community-join',
   COMMUNITY_APPLY = 'community-apply',
@@ -35,7 +35,7 @@ export enum AuthorizationPrivilege {
   UPDATE_CALLOUT_PUBLISHER = 'update-callout-publisher',
   CREATE_RELATION = 'create-relation',
   CREATE_OPPORTUNITY = 'create-opportunity',
-  MOVE_CARD = 'move-card',
+  MOVE_POST = 'move-post',
 }
 
 registerEnumType(AuthorizationPrivilege, {

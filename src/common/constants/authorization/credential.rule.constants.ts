@@ -18,10 +18,8 @@ export const CREDENTIAL_RULE_HUB_MEMBERS_CREATE_CHALLENGES =
 export const CREDENTIAL_RULE_HUB_MEMBERS_READ = 'credentialRule-hubMembersRead';
 export const CREDENTIAL_RULE_HUB_HOST_ASSOCIATES_JOIN =
   'credentialRule-hubHostAssociatesJoin';
-export const CREDENTIAL_RULE_ASPECT_CREATED_BY =
-  'credentialRule-aspectCreatedBy';
-export const CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD =
-  'credentialRule-aspectAdminsMoveCard';
+export const CREDENTIAL_RULE_POST_CREATED_BY = 'credentialRule-postCreatedBy';
+export const CREDENTIAL_RULE_POST_ADMINS_MOVE = 'credentialRule-postAdminsMove';
 export const CREDENTIAL_RULE_CALLOUT_CREATED_BY =
   'credentialRule-calloutCreatedBy';
 export const CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS =
@@ -32,11 +30,12 @@ export const CREDENTIAL_RULE_OPPORTUNITY_MEMBER =
   'credentialRule-opportunityMember';
 export const CREDENTIAL_RULE_RELATION_CREATED_BY =
   'credentialRule-relationCreatedBy';
-export const CREDENTIAL_RULE_CANVAS_CHECKOUT_LOCKED_BY =
-  'credentialRule-canvasCheckoutLockedBy';
-export const CREDENTIAL_RULE_CANVAS_CREATED_BY =
-  'credentialRule-canvasCreatedBy';
-export const CREDENTIAL_RULE_CANVAS_LOCKED_BY = 'credentialRule-canvasLockedBy';
+export const CREDENTIAL_RULE_WHITEBOARD_CHECKOUT_LOCKED_BY =
+  'credentialRule-whiteboardCheckoutLockedBy';
+export const CREDENTIAL_RULE_WHITEBOARD_CREATED_BY =
+  'credentialRule-whiteboardCreatedBy';
+export const CREDENTIAL_RULE_WHITEBOARD_LOCKED_BY =
+  'credentialRule-whiteboardLockedBy';
 export const CREDENTIAL_RULE_ROOM_MESSAGE_SENDER =
   'credentialRule-roomMessageSender';
 export const CREDENTIAL_RULE_ROOM_REACTION_SENDER =
