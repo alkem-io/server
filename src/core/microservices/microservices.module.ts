@@ -11,7 +11,6 @@ import {
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL,
   SUBSCRIPTION_OPPORTUNITY_CREATED,
   SUBSCRIPTION_CHALLENGE_CREATED,
-  SUBSCRIPTION_ROOM_MESSAGE,
   SUBSCRIPTION_DISCUSSION_UPDATED,
   SUBSCRIPTION_ROOM_EVENT,
 } from '@common/constants/providers';
@@ -23,10 +22,6 @@ import { walletManagerServiceFactory } from './wallet-manager.service.factory';
 import { matrixAdapterServiceFactory } from './matrix.adapter.service.factory';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
-  {
-    provide: SUBSCRIPTION_ROOM_MESSAGE,
-    queueName: MessagingQueue.SUBSCRIPTION_ROOM_MESSAGE,
-  },
   {
     provide: SUBSCRIPTION_DISCUSSION_UPDATED,
     queueName: MessagingQueue.SUBSCRIPTION_DISCUSSION_UPDATED,
