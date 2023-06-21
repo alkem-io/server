@@ -5,7 +5,7 @@ query search($searchData: SearchInput!) {
       score
       terms
       type
-      ... on SearchResultCard {
+      ... on SearchResultPost {
         space {
           nameID
         }
@@ -25,7 +25,7 @@ query search($searchData: SearchInput!) {
       score
       terms
       type
-      ... on SearchResultCard {
+      ... on SearchResultPost {
         space {
           nameID
         }
@@ -45,7 +45,7 @@ query search($searchData: SearchInput!) {
       score
       terms
       type
-      ... on SearchResultCard {
+      ... on SearchResultPost {
         space {
           nameID
         }
@@ -65,7 +65,7 @@ query search($searchData: SearchInput!) {
       score
       terms
       type
-      ... on SearchResultCard {
+      ... on SearchResultPost {
         space {
           nameID
         }

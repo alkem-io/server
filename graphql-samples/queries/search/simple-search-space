@@ -42,8 +42,8 @@ query search($searchData: SearchInput!) {
       score
       terms
       type
-      ... on SearchResultCard {
-        card {
+      ... on SearchResultPost {
+        post {
           nameID
         }
       }

@@ -36,7 +36,7 @@ import {
   PlatformForumDiscussionCommentEventPayload,
   createJourneyURL,
   createCalloutURL,
-  createCardURL,
+  createPostURL,
   createCalendarEventURL,
   createForumDiscussionUrl,
   CommunityInvitationCreatedEventPayload,
@@ -792,7 +792,7 @@ export class NotificationPayloadBuilder {
 
       const journeyPayload = await this.buildJourneyPayload(community);
       const journeyUrl = createJourneyURL(endpoint, journeyPayload);
-      return createCardURL(journeyUrl, callout.nameID, post.nameID);
+      return createPostURL(journeyUrl, callout.nameID, post.nameID);
     }
 
     if (commentType === RoomType.CALENDAR_EVENT) {
