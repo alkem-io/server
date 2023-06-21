@@ -6,6 +6,7 @@ import { Community, ICommunity } from '@domain/community/community';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Communication } from '@domain/communication/communication/communication.entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 
 @Injectable()
 export class CommunityResolverService {
@@ -16,6 +17,8 @@ export class CommunityResolverService {
     private discussionRepository: Repository<Discussion>,
     @InjectRepository(Communication)
     private communicationRepository: Repository<Communication>,
+    @InjectRepository(Profile)
+    private profileRepository: Repository<Profile>,
     @InjectEntityManager('default')
     private entityManager: EntityManager
   ) {}
@@ -163,6 +166,35 @@ export class CommunityResolverService {
       );
     }
     return community;
+  }
+
+  public async getDisplayNameForCommunityOrFail(
+    communityId: string
+  ): Promise<string> {
+    const [result]: {
+      profileId: string;
+    }[] = await this.entityManager.connection.query(
+      `
+        SELECT profileId from \`hub\`
+        WHERE \`hub\`.\`communityId\` = '${communityId}' UNION
+        SELECT profileId from \`challenge\`
+        WHERE \`challenge\`.\`communityId\` = '${communityId}' UNION
+        SELECT profileId from \`opportunity\`
+        WHERE \`opportunity\`.\`communityId\` = '${communityId}';
+      `
+    );
+
+    const profileId = result.profileId;
+    const profile = await this.profileRepository.findOne({
+      where: { id: profileId },
+    });
+    if (!profile) {
+      throw new EntityNotFoundException(
+        `Unable to find Profile for Community: ${communityId}`,
+        LogContext.NOTIFICATIONS
+      );
+    }
+    return profile.displayName;
   }
 
   public async getCommunity(communityID: string) {

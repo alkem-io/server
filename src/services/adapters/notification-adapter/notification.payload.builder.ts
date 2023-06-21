@@ -826,10 +826,14 @@ export class NotificationPayloadBuilder {
   private async buildJourneyPayload(
     community: ICommunity
   ): Promise<JourneyPayload> {
+    const displayName =
+      await this.communityResolverService.getDisplayNameForCommunityOrFail(
+        community.id
+      );
     const result: JourneyPayload = {
       spaceID: community.hubID,
       spaceNameID: await this.getHubNameIdOrFail(community.hubID),
-      displayName: community.displayName,
+      displayName: displayName,
       type: community.type,
     };
     if (community.type === CommunityType.CHALLENGE) {

@@ -135,7 +135,7 @@ export class RolesService {
   ): Promise<ApplicationForRoleResult> {
     const applicationResult = new ApplicationForRoleResult(
       community.id,
-      community.displayName,
+      '', //community.displayName,
       state,
       application.id,
       community.hubID,
@@ -216,7 +216,7 @@ export class RolesService {
   ): Promise<InvitationForRoleResult> {
     const invitationResult = new InvitationForRoleResult(
       community.id,
-      community.displayName,
+      '', // community.displayName,
       state,
       invitation.id,
       community.hubID,

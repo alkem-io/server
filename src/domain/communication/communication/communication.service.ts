@@ -143,7 +143,7 @@ export class CommunicationService {
     const discussions = communicationWithDiscussions.discussions;
     if (!discussions)
       throw new EntityNotInitializedException(
-        `Unable to load Discussions for Communication: ${communication.displayName} `,
+        `Unable to load Discussions for Communication: ${communication.id} `,
         LogContext.COMMUNICATION
       );
 

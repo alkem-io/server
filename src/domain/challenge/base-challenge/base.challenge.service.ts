@@ -136,17 +136,6 @@ export class BaseChallengeService {
       );
     }
 
-    const newDisplayName = baseChallengeData.profileData?.displayName;
-    if (
-      newDisplayName &&
-      newDisplayName !== baseChallenge.profile.displayName
-    ) {
-      if (baseChallenge.community) {
-        // will be retrieved; see relations above
-        baseChallenge.community.displayName = newDisplayName;
-      }
-    }
-
     return await repository.save(baseChallenge);
   }
 
