@@ -54,6 +54,7 @@ import { CommunityMembershipStatus } from '@common/enums/community.membership.st
 import { InvitationService } from '../invitation/invitation.service';
 import { IInvitation } from '../invitation/invitation.interface';
 import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 @Injectable()
 export class CommunityService {
@@ -67,6 +68,7 @@ export class CommunityService {
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
     private communicationService: CommunicationService,
+    private communityResolverService: CommunityResolverService,
     private formService: FormService,
     private communityPolicyService: CommunityPolicyService,
     @InjectRepository(Community)
@@ -405,6 +407,12 @@ export class CommunityService {
     }
 
     return 0;
+  }
+
+  public async getDisplayName(community: ICommunity): Promise<string> {
+    return await this.communityResolverService.getDisplayNameForCommunityOrFail(
+      community.id
+    );
   }
 
   getCredentialDefinitionForRole(

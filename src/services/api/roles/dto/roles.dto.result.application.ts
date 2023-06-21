@@ -13,9 +13,9 @@ export class ApplicationForRoleResult {
   })
   communityID: string;
 
-  // @Field(() => String, {
-  //   description: 'Display name of the community',
-  // })
+  @Field(() => String, {
+    description: 'Display name of the community',
+  })
   displayName: string;
 
   @Field(() => String, {

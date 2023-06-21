@@ -24,6 +24,7 @@ import { mapCredentialsToRoles } from './util/map.credentials.to.roles';
 import { InvitationForRoleResult } from './dto/roles.dto.result.invitation';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { IInvitation } from '@domain/community/invitation';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 export class RolesService {
   constructor(
@@ -35,6 +36,7 @@ export class RolesService {
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
     private hubFilterService: HubFilterService,
+    private communityResolverService: CommunityResolverService,
     private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -133,9 +135,13 @@ export class RolesService {
     state: string,
     application: IApplication
   ): Promise<ApplicationForRoleResult> {
+    const communityDisplayName =
+      await this.communityResolverService.getDisplayNameForCommunityOrFail(
+        community.id
+      );
     const applicationResult = new ApplicationForRoleResult(
       community.id,
-      '', //community.displayName,
+      communityDisplayName,
       state,
       application.id,
       community.hubID,
@@ -214,9 +220,13 @@ export class RolesService {
     state: string,
     invitation: IInvitation
   ): Promise<InvitationForRoleResult> {
+    const communityDisplayName =
+      await this.communityResolverService.getDisplayNameForCommunityOrFail(
+        community.id
+      );
     const invitationResult = new InvitationForRoleResult(
       community.id,
-      '', // community.displayName,
+      communityDisplayName,
       state,
       invitation.id,
       community.hubID,

@@ -17,6 +17,7 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
 import { HubFilterModule } from '@services/infrastructure/hub-filter/hub.filter.module';
 import { InvitationModule } from '@domain/community/invitation/invitation.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { InvitationModule } from '@domain/community/invitation/invitation.module
     HubModule,
     PlatformAuthorizationPolicyModule,
     HubFilterModule,
+    EntityResolverModule,
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([Opportunity]),
   ],
