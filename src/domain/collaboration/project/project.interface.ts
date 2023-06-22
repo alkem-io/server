@@ -9,5 +9,5 @@ export abstract class IProject extends INameable {
 
   agreements?: IAgreement[];
 
-  hubID!: string;
+  spaceID!: string;
 }

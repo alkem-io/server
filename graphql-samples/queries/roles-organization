@@ -1,6 +1,6 @@
 query {
   rolesOrganization(rolesData: {organizationID: "eco1"}) {
-   	hubs {
+   	spaces {
       nameID
       id
       roles

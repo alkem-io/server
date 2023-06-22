@@ -53,17 +53,17 @@ export class BaseChallengeService {
   public async initialise(
     baseChallenge: IBaseChallenge,
     baseChallengeData: CreateBaseChallengeInput,
-    hubID: string,
+    spaceID: string,
     communityType: CommunityType,
     communityPolicy: ICommunityPolicyDefinition,
     applicationFormData: CreateFormInput
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
-    await this.isNameAvailableOrFail(baseChallengeData.nameID, hubID);
+    await this.isNameAvailableOrFail(baseChallengeData.nameID, spaceID);
 
     baseChallenge.community = await this.communityService.createCommunity(
       baseChallengeData.profileData.displayName,
-      hubID,
+      spaceID,
       communityType,
       communityPolicy,
       applicationFormData
@@ -219,7 +219,7 @@ export class BaseChallengeService {
 
   public async isNameAvailableOrFail(nameID: string, nameableScopeID: string) {
     if (
-      !(await this.namingService.isNameIdAvailableInHub(
+      !(await this.namingService.isNameIdAvailableInSpace(
         nameID,
         nameableScopeID
       ))
@@ -379,7 +379,7 @@ export class BaseChallengeService {
     return await this.communityService.getMembersCount(community);
   }
 
-  public async getAspectsCount(
+  public async getPostsCount(
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
@@ -388,10 +388,10 @@ export class BaseChallengeService {
       repository
     );
 
-    return await this.collaborationService.getAspectsCount(collaboration);
+    return await this.collaborationService.getPostsCount(collaboration);
   }
 
-  public async getCanvasesCount(
+  public async getWhiteboardesCount(
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
@@ -399,7 +399,7 @@ export class BaseChallengeService {
       baseChallenge.id,
       repository
     );
-    return await this.collaborationService.getCanvasesCount(collaboration);
+    return await this.collaborationService.getWhiteboardesCount(collaboration);
   }
 
   public async getRelationsCount(

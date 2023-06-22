@@ -19,7 +19,7 @@ export class userPreferencesAspect1651759916148 implements MigrationInterface {
         description:
           'Receive notification when an aspect is created in a community I am administrator of',
         valueType: 'boolean',
-        type: UserPreferenceType.NOTIFICATION_ASPECT_CREATED_ADMIN,
+        type: UserPreferenceType.NOTIFICATION_POST_CREATED_ADMIN,
       },
       {
         definitionSet: 'user',
@@ -28,7 +28,7 @@ export class userPreferencesAspect1651759916148 implements MigrationInterface {
         description:
           'Receive notification when an aspect is created in community i am a member of',
         valueType: 'boolean',
-        type: UserPreferenceType.NOTIFICATION_ASPECT_CREATED,
+        type: UserPreferenceType.NOTIFICATION_POST_CREATED,
       },
       {
         definitionSet: 'user',
@@ -37,7 +37,7 @@ export class userPreferencesAspect1651759916148 implements MigrationInterface {
         description:
           'Receive notification when a comment is created on my aspect',
         valueType: 'boolean',
-        type: UserPreferenceType.NOTIFICATION_ASPECT_COMMENT_CREATED,
+        type: UserPreferenceType.NOTIFICATION_POST_COMMENT_CREATED,
       },
     ];
     const defIds = await addPreferenceDefinitions(queryRunner, definitions);
@@ -51,9 +51,9 @@ export class userPreferencesAspect1651759916148 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await removePreferences(queryRunner, [
-      PreferenceType.NOTIFICATION_ASPECT_CREATED_ADMIN,
-      PreferenceType.NOTIFICATION_ASPECT_CREATED,
-      PreferenceType.NOTIFICATION_ASPECT_COMMENT_CREATED,
+      PreferenceType.NOTIFICATION_POST_CREATED_ADMIN,
+      PreferenceType.NOTIFICATION_POST_CREATED,
+      PreferenceType.NOTIFICATION_POST_COMMENT_CREATED,
     ]);
   }
 }

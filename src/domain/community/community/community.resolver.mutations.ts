@@ -532,12 +532,12 @@ export class CommunityResolverMutations {
     );
 
     switch (community.type) {
-      case CommunityType.HUB:
-        this.elasticService.hubJoined(
+      case CommunityType.SPACE:
+        this.elasticService.spaceJoined(
           {
             id: community.parentID,
             name: community.displayName,
-            hub: community.hubID,
+            space: community.spaceID,
           },
           {
             id: agentInfo.userID,
@@ -550,7 +550,7 @@ export class CommunityResolverMutations {
           {
             id: community.parentID,
             name: community.displayName,
-            hub: community.hubID,
+            space: community.spaceID,
           },
           {
             id: agentInfo.userID,
@@ -563,7 +563,7 @@ export class CommunityResolverMutations {
           {
             id: community.parentID,
             name: community.displayName,
-            hub: community.hubID,
+            space: community.spaceID,
           },
           {
             id: agentInfo.userID,

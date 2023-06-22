@@ -35,7 +35,7 @@ export class InnovationHubResolverMutations {
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      'create innovation hub'
+      'create innovation space'
     );
 
     return await this.innovationHubService.createOrFail(createData);
@@ -56,7 +56,7 @@ export class InnovationHubResolverMutations {
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      'update innovation hub'
+      'update innovation space'
     );
 
     return await this.innovationHubService.updateOrFail(updateData);
@@ -77,7 +77,7 @@ export class InnovationHubResolverMutations {
       agentInfo,
       authorizationPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      'delete innovation hub'
+      'delete innovation space'
     );
     return await this.innovationHubService.deleteOrFail(deleteData.ID);
   }

@@ -51,7 +51,7 @@ export class AgentCacheService {
   }
 
   //toDo add redis distributed to lock to make the code thread-safe
-  //https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2021
+  //https://app.zenspace.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2021
 
   // public async setAgentInfoCache(
   //   agentInfo: AgentInfo

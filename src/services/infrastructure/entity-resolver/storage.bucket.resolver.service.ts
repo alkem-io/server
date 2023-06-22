@@ -113,12 +113,12 @@ export class StorageBucketResolverService {
       case ProfileType.POST:
         return await this.getStorageBucketIdForCalloutType(
           profile.entityID,
-          'aspect'
+          'post'
         );
       case ProfileType.WHITEBOARD:
         return await this.getStorageBucketIdForCalloutType(
           profile.entityID,
-          'canvas'
+          'whiteboard'
         );
       case ProfileType.INNOVATION_PACK:
         return await this.getPlatformStorageBucketId();
@@ -172,8 +172,8 @@ export class StorageBucketResolverService {
       if (!result.templatesSetId) {
         return this.getPlatformStorageBucketId();
       } else {
-        query = `SELECT \`storageBucketId\` FROM \`hub\`
-      WHERE \`hub\`.\`templatesSetId\`='${result.templatesSetId}'`;
+        query = `SELECT \`storageBucketId\` FROM \`space\`
+      WHERE \`space\`.\`templatesSetId\`='${result.templatesSetId}'`;
         [result] = await this.entityManager.connection.query(query);
 
         if (result) return result.storageBucketId;
@@ -214,8 +214,8 @@ export class StorageBucketResolverService {
 
     if (result && result.storageBucketId) return result.storageBucketId;
 
-    query = `SELECT \`storageBucketId\` FROM \`hub\`
-      LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`hub\`.\`collaborationId\`
+    query = `SELECT \`storageBucketId\` FROM \`space\`
+      LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`space\`.\`collaborationId\`
       LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
       WHERE \`callout\`.\`id\`='${calloutId}'`;
     [result] = await this.entityManager.connection.query(query);
@@ -246,8 +246,8 @@ export class StorageBucketResolverService {
 
     if (result && result.storageBucketId) return result.storageBucketId;
 
-    query = `SELECT \`storageBucketId\` FROM \`hub\`
-      LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`hub\`.\`collaborationId\`
+    query = `SELECT \`storageBucketId\` FROM \`space\`
+      LEFT JOIN \`collaboration\` ON \`collaboration\`.\`id\` = \`space\`.\`collaborationId\`
       LEFT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
       LEFT JOIN \`${calloutType}\` ON \`${calloutType}\`.\`calloutId\` = \`callout\`.\`id\`
       WHERE \`${calloutType}\`.\`id\`='${entityId}'`;
@@ -267,8 +267,8 @@ export class StorageBucketResolverService {
   private async getStorageBucketIdForDiscussion(
     discussionId: string
   ): Promise<string> {
-    const query = `SELECT \`storageBucketId\` FROM \`hub\`
-      LEFT JOIN \`communication\` ON \`communication\`.\`hubID\` = \`hub\`.\`id\`
+    const query = `SELECT \`storageBucketId\` FROM \`space\`
+      LEFT JOIN \`communication\` ON \`communication\`.\`spaceID\` = \`space\`.\`id\`
       LEFT JOIN \`discussion\` ON \`discussion\`.\`communicationId\` = \`communication\`.\`id\`
       WHERE \`discussion\`.\`id\`='${discussionId}'`;
     const [result]: {
@@ -323,14 +323,14 @@ type TemplateType =
   | 'post_template'
   | 'innovation_flow_template';
 
-type CalloutType = 'aspect' | 'canvas';
+type CalloutType = 'post' | 'whiteboard';
 
 // Note: enum values must match the name of the underlying table
 enum ProfileType {
   USER = 'user',
   OPPORTUNITY = 'opportunity',
-  POST = 'aspect',
-  WHITEBOARD = 'canvas',
+  POST = 'post',
+  WHITEBOARD = 'whiteboard',
   POST_TEMPLATE = 'post_template',
   WHITEBOARD_TEMPLATE = 'whiteboard_template',
   CALLOUT = 'callout',
@@ -341,7 +341,7 @@ enum ProfileType {
 }
 
 export enum DirectStorageBucketEntityType {
-  HUB = 'hub',
+  SPACE = 'space',
   CHALLENGE = 'challenge',
   ORGANIZATION = 'organization',
 }

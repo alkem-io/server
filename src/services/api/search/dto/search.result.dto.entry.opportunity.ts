@@ -1,5 +1,5 @@
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { IHub } from '@domain/challenge/hub/hub.interface';
+import { ISpace } from '@domain/challenge/space/space.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISearchResultBase } from './search.result.dto.entry.base.interface';
@@ -18,11 +18,11 @@ export abstract class ISearchResultOpportunity
   })
   opportunity!: IOpportunity;
 
-  @Field(() => IHub, {
+  @Field(() => ISpace, {
     nullable: false,
-    description: 'The Hub that the Opportunity is in.',
+    description: 'The Space that the Opportunity is in.',
   })
-  hub!: IHub;
+  space!: ISpace;
 
   @Field(() => IChallenge, {
     nullable: false,

@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
-import { HubModule } from '@domain/challenge/hub/hub.module';
+import { SpaceModule } from '@domain/challenge/space/space.module';
 import { RolesService } from './roles.service';
 import { RolesResolverQueries } from './roles.resolver.queries';
 import { CommunityModule } from '@domain/community/community/community.module';
@@ -15,7 +15,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
-import { HubFilterModule } from '@services/infrastructure/hub-filter/hub.filter.module';
+import { SpaceFilterModule } from '@services/infrastructure/space-filter/space.filter.module';
 import { InvitationModule } from '@domain/community/invitation/invitation.module';
 
 @Module({
@@ -30,9 +30,9 @@ import { InvitationModule } from '@domain/community/invitation/invitation.module
     OpportunityModule,
     CommunityModule,
     OrganizationModule,
-    HubModule,
+    SpaceModule,
     PlatformAuthorizationPolicyModule,
-    HubFilterModule,
+    SpaceFilterModule,
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([Opportunity]),
   ],

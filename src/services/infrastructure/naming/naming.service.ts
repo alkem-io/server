@@ -4,9 +4,9 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project';
 import { NameID, UUID } from '@domain/common/scalars';
-import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
-import { Canvas } from '@domain/common/canvas/canvas.entity';
-import { Hub } from '@domain/challenge/hub/hub.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { Space } from '@domain/challenge/space/space.entity';
 import { LogContext } from '@common/enums';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Community } from '@domain/community/community';
@@ -14,7 +14,7 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { IPost } from '@domain/collaboration/post/post.interface';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CalendarEvent, ICalendarEvent } from '@domain/timeline/event';
 import { Collaboration } from '@domain/collaboration/collaboration';
@@ -24,6 +24,7 @@ import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { ICallout } from '@domain/collaboration/callout';
+import { NAMEID_LENGTH } from '@common/constants';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -31,12 +32,12 @@ export class NamingService {
   constructor(
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
-    @InjectRepository(Hub)
-    private hubRepository: Repository<Hub>,
-    @InjectRepository(Aspect)
-    private aspectRepository: Repository<Aspect>,
-    @InjectRepository(Canvas)
-    private canvasRepository: Repository<Canvas>,
+    @InjectRepository(Space)
+    private spaceRepository: Repository<Space>,
+    @InjectRepository(Post)
+    private postRepository: Repository<Post>,
+    @InjectRepository(Whiteboard)
+    private whiteboardRepository: Repository<Whiteboard>,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     @InjectRepository(Project)
@@ -56,60 +57,60 @@ export class NamingService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async isNameIdAvailableInHub(
+  async isNameIdAvailableInSpace(
     nameID: string,
-    hubID: string
+    spaceID: string
   ): Promise<boolean> {
     if (!nameID) return true;
 
     const challengeCount = await this.challengeRepository.countBy({
       nameID: nameID,
-      hubID: hubID,
+      spaceID: spaceID,
     });
     if (challengeCount > 0) return false;
     const opportunityCount = await this.opportunityRepository.countBy({
       nameID: nameID,
-      hubID: hubID,
+      spaceID: spaceID,
     });
     if (opportunityCount > 0) return false;
     const projectCount = await this.projectRepository.countBy({
       nameID: nameID,
-      hubID: hubID,
+      spaceID: spaceID,
     });
     if (projectCount > 0) return false;
     return true;
   }
 
-  async isAspectNameIdAvailableInCallout(
+  async isPostNameIdAvailableInCallout(
     nameID: string,
     calloutID: string
   ): Promise<boolean> {
-    const query = this.aspectRepository
-      .createQueryBuilder('aspect')
-      .leftJoinAndSelect('aspect.callout', 'callout')
+    const query = this.postRepository
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.callout', 'callout')
       .where('callout.id = :id')
-      .andWhere('aspect.nameID= :nameID')
+      .andWhere('post.nameID= :nameID')
       .setParameters({ id: `${calloutID}`, nameID: `${nameID}` });
-    const aspectWithNameID = await query.getOne();
-    if (aspectWithNameID) {
+    const postWithNameID = await query.getOne();
+    if (postWithNameID) {
       return false;
     }
 
     return true;
   }
 
-  async isCanvasNameIdAvailableInCallout(
+  async isWhiteboardNameIdAvailableInCallout(
     nameID: string,
     calloutID: string
   ): Promise<boolean> {
-    const query = this.canvasRepository
-      .createQueryBuilder('canvas')
-      .leftJoinAndSelect('canvas.callout', 'callout')
+    const query = this.whiteboardRepository
+      .createQueryBuilder('whiteboard')
+      .leftJoinAndSelect('whiteboard.callout', 'callout')
       .where('callout.id = :id')
-      .andWhere('canvas.nameID= :nameID')
+      .andWhere('whiteboard.nameID= :nameID')
       .setParameters({ id: `${calloutID}`, nameID: `${nameID}` });
-    const canvasWithNameID = await query.getOne();
-    if (canvasWithNameID) {
+    const whiteboardWithNameID = await query.getOne();
+    if (whiteboardWithNameID) {
       return false;
     }
 
@@ -227,8 +228,8 @@ export class NamingService {
       communityId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT communityId from \`hub\`
-        WHERE \`hub\`.\`collaborationId\` = '${collaborationID}' UNION
+        SELECT communityId from \`space\`
+        WHERE \`space\`.\`collaborationId\` = '${collaborationID}' UNION
 
         SELECT communityId from \`challenge\`
         WHERE \`challenge\`.\`collaborationId\` = '${collaborationID}' UNION
@@ -241,14 +242,17 @@ export class NamingService {
   }
 
   createNameID(base: string, useRandomSuffix = true): string {
+    const NAMEID_SUFFIX_LENGTH = 5;
     const nameIDExcludedCharacters = /[^a-zA-Z0-9-]/g;
     let randomSuffix = '';
     if (useRandomSuffix) {
-      const randomNumber = Math.floor(Math.random() * 10000).toString();
+      const randomNumber = Math.floor(
+        Math.random() * Math.pow(10, NAMEID_SUFFIX_LENGTH - 1)
+      ).toString();
       randomSuffix = `-${randomNumber}`;
     }
-    const baseMaxLength = base.slice(0, 20);
-    // replace spaces + trim to 25 characters
+    const baseMaxLength = base.slice(0, NAMEID_LENGTH - NAMEID_SUFFIX_LENGTH);
+    // replace spaces + trim to NAMEID_LENGTH characters
     const nameID = `${baseMaxLength}${randomSuffix}`.replace(/\s/g, '');
     // replace characters with umlouts etc to normal characters
     const nameIDNoSpecialCharacters: string =
@@ -257,7 +261,7 @@ export class NamingService {
     return nameIDNoSpecialCharacters
       .replace(nameIDExcludedCharacters, '')
       .toLowerCase()
-      .slice(0, 25);
+      .slice(0, NAMEID_LENGTH);
   }
 
   async getCommunityPolicyForCollaboration(
@@ -307,8 +311,8 @@ export class NamingService {
     return community.policy;
   }
 
-  async getPostForRoom(commentsID: string): Promise<IAspect> {
-    const result = await this.entityManager.findOne(Aspect, {
+  async getPostForRoom(commentsID: string): Promise<IPost> {
+    const result = await this.entityManager.findOne(Post, {
       where: {
         comments: { id: commentsID },
       },

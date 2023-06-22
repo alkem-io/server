@@ -1,0 +1,14 @@
+mutation updateWhiteboard($whiteboardData: UpdateWhiteboardDirectInput!) {
+  updateWhiteboard(whiteboardData: $whiteboardData) {
+    name
+  }
+}
+
+Variables:
+{
+  "whiteboardData": {
+    "ID": "uuid",
+    "name": "some description",
+    "isTemplate": true
+  }
+}

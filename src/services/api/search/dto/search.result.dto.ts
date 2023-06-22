@@ -19,27 +19,27 @@ export abstract class ISearchResults {
   @Field(() => [ISearchResult], {
     nullable: false,
     description:
-      'The search results for contributions (Cards, Whiteboards etc).',
+      'The search results for contributions (Posts, Whiteboards etc).',
   })
   contributionResults!: ISearchResult[];
 
   @Field(() => Number, {
     nullable: false,
     description:
-      'The total number of search results for contributions (Cards, Whiteboards etc).',
+      'The total number of search results for contributions (Posts, Whiteboards etc).',
   })
   contributionResultsCount!: number;
 
   @Field(() => [ISearchResult], {
     nullable: false,
-    description: 'The search results for Hubs / Challenges / Opportunities.',
+    description: 'The search results for Spaces / Challenges / Opportunities.',
   })
   journeyResults!: ISearchResult[];
 
   @Field(() => Number, {
     nullable: false,
     description:
-      'The total number of results for Hubs / Challenges / Opportunities.',
+      'The total number of results for Spaces / Challenges / Opportunities.',
   })
   journeyResultsCount!: number;
 

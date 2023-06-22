@@ -9,6 +9,6 @@ export const MockOpportunityService: ValueProvider<
   useValue: {
     getOpportunityForCommunity: jest.fn(),
     getOpportunityOrFail: jest.fn(),
-    getHubID: jest.fn(),
+    getSpaceID: jest.fn(),
   },
 };

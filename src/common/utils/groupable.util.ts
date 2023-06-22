@@ -3,7 +3,7 @@ import { IOrganization } from '@domain/community/organization/organization.inter
 import { ICommunity } from '@domain/community/community/community.interface';
 
 export const isCommunity = (groupable: IGroupable): groupable is ICommunity =>
-  'hubID' in groupable;
+  'spaceID' in groupable;
 
 export const isOrganization = (
   groupable: IGroupable

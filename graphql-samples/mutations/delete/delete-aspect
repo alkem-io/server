@@ -1,5 +1,5 @@
-mutation deleteAspect($deleteData: DeleteAspectInput!) {
-  deleteAspect(deleteData: $deleteData) {
+mutation deletePost($deleteData: DeletePostInput!) {
+  deletePost(deleteData: $deleteData) {
     id
   }
 }

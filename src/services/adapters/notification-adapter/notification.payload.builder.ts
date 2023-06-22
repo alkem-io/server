@@ -3,7 +3,7 @@ import { CommunityType } from '@common/enums/community.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Hub } from '@domain/challenge/hub/hub.entity';
+import { Space } from '@domain/challenge/space/space.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { ICommunity } from '@domain/community/community';
@@ -13,10 +13,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { CreateNVPInput } from '@src/domain/common/nvp/nvp.dto.create';
-import { Aspect } from '@src/domain/collaboration/aspect/aspect.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
 import {
-  CollaborationCardCreatedEventPayload,
-  CollaborationCardCommentEventPayload,
+  CollaborationPostCreatedEventPayload,
+  CollaborationPostCommentEventPayload,
   CollaborationInterestPayload,
   CollaborationCalloutPublishedEventPayload,
   JourneyPayload,
@@ -34,23 +34,23 @@ import {
   CommunityApplicationCreatedEventPayload,
   CollaborationDiscussionCommentEventPayload,
   PlatformForumDiscussionCommentEventPayload,
-  CommentReplyEventPayload,
-  CollaborationCanvasCreatedEventPayload,
   createJourneyURL,
   createCalloutURL,
-  createCardURL,
+  createPostURL,
   createCalendarEventURL,
   createForumDiscussionUrl,
   CommunityInvitationCreatedEventPayload,
+  CollaborationWhiteboardCreatedEventPayload,
+  CommentReplyEventPayload,
 } from '@alkemio/notifications-lib';
 
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IMessage } from '@domain/communication/message/message.interface';
-import { IAspect } from '@domain/collaboration/aspect';
+import { IPost } from '@domain/collaboration/post';
 import { IUser } from '@domain/community/user/user.interface';
-import { Canvas } from '@domain/common/canvas/canvas.entity';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { Community } from '@domain/community/community/community.entity';
@@ -62,17 +62,17 @@ import { NotificationInputCommentReply } from './dto/notification.dto.input.comm
 @Injectable()
 export class NotificationPayloadBuilder {
   constructor(
-    @InjectRepository(Hub)
-    private hubRepository: Repository<Hub>,
+    @InjectRepository(Space)
+    private spaceRepository: Repository<Space>,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
     private communityResolverService: CommunityResolverService,
-    @InjectRepository(Aspect)
-    private aspectRepository: Repository<Aspect>,
-    @InjectRepository(Canvas)
-    private canvasRepository: Repository<Canvas>,
+    @InjectRepository(Post)
+    private postRepository: Repository<Post>,
+    @InjectRepository(Whiteboard)
+    private whiteboardRepository: Repository<Whiteboard>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @InjectRepository(Organization)
@@ -114,24 +114,24 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  async buildCardCreatedPayload(
-    cardId: string
-  ): Promise<CollaborationCardCreatedEventPayload> {
-    const card = await this.aspectRepository.findOne({
-      where: { id: cardId },
+  async buildPostCreatedPayload(
+    postId: string
+  ): Promise<CollaborationPostCreatedEventPayload> {
+    const post = await this.postRepository.findOne({
+      where: { id: postId },
       relations: ['callout', 'callout.profile', 'profile'],
     });
-    if (!card) {
+    if (!post) {
       throw new NotificationEventException(
-        `Could not acquire aspect from id: ${cardId}`,
+        `Could not acquire post from id: ${postId}`,
         LogContext.NOTIFICATIONS
       );
     }
 
-    const callout = card.callout;
+    const callout = post.callout;
     if (!callout) {
       throw new NotificationEventException(
-        `Could not acquire callout from aspect with id: ${cardId}`,
+        `Could not acquire callout from post with id: ${postId}`,
         LogContext.NOTIFICATIONS
       );
     }
@@ -142,18 +142,18 @@ export class NotificationPayloadBuilder {
       );
 
     const journeyPayload = await this.buildJourneyPayload(community);
-    const payload: CollaborationCardCreatedEventPayload = {
-      triggeredBy: card.createdBy,
+    const payload: CollaborationPostCreatedEventPayload = {
+      triggeredBy: post.createdBy,
       callout: {
         displayName: callout.profile.displayName,
         nameID: callout.nameID,
       },
-      card: {
-        id: cardId,
-        createdBy: card.createdBy,
-        displayName: card.profile.displayName,
-        nameID: card.nameID,
-        type: card.type,
+      post: {
+        id: postId,
+        createdBy: post.createdBy,
+        displayName: post.profile.displayName,
+        nameID: post.nameID,
+        type: post.type,
       },
       journey: journeyPayload,
     };
@@ -161,24 +161,24 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  async buildCanvasCreatedPayload(
-    canvasId: string
-  ): Promise<CollaborationCanvasCreatedEventPayload> {
-    const canvas = await this.canvasRepository.findOne({
-      where: { id: canvasId },
+  async buildWhiteboardCreatedPayload(
+    whiteboardId: string
+  ): Promise<CollaborationWhiteboardCreatedEventPayload> {
+    const whiteboard = await this.whiteboardRepository.findOne({
+      where: { id: whiteboardId },
       relations: ['callout', 'callout.profile', 'profile'],
     });
-    if (!canvas) {
+    if (!whiteboard) {
       throw new NotificationEventException(
-        `Could not acquire canvas from id: ${canvasId}`,
+        `Could not acquire whiteboard from id: ${whiteboardId}`,
         LogContext.NOTIFICATIONS
       );
     }
 
-    const callout = canvas.callout;
+    const callout = whiteboard.callout;
     if (!callout) {
       throw new NotificationEventException(
-        `Could not acquire callout from canvas with id: ${canvasId}`,
+        `Could not acquire callout from whiteboard with id: ${whiteboardId}`,
         LogContext.NOTIFICATIONS
       );
     }
@@ -189,17 +189,17 @@ export class NotificationPayloadBuilder {
       );
 
     const journeyPayload = await this.buildJourneyPayload(community);
-    const payload: CollaborationCanvasCreatedEventPayload = {
-      triggeredBy: canvas.createdBy,
+    const payload: CollaborationWhiteboardCreatedEventPayload = {
+      triggeredBy: whiteboard.createdBy,
       callout: {
         displayName: callout.profile.displayName,
         nameID: callout.nameID,
       },
-      canvas: {
-        id: canvasId,
-        createdBy: canvas.createdBy,
-        displayName: canvas.profile.displayName,
-        nameID: canvas.nameID,
+      whiteboard: {
+        id: whiteboardId,
+        createdBy: whiteboard.createdBy,
+        displayName: whiteboard.profile.displayName,
+        nameID: whiteboard.nameID,
       },
       journey: journeyPayload,
     };
@@ -232,19 +232,19 @@ export class NotificationPayloadBuilder {
     return payload;
   }
 
-  async buildCommentCreatedOnCardPayload(
-    aspect: IAspect,
+  async buildCommentCreatedOnPostPayload(
+    postInput: IPost,
     commentsId: string,
     messageResult: IMessage
-  ): Promise<CollaborationCardCommentEventPayload> {
-    const card = await this.aspectRepository.findOne({
-      where: { id: aspect.id },
+  ): Promise<CollaborationPostCommentEventPayload> {
+    const post = await this.postRepository.findOne({
+      where: { id: postInput.id },
       relations: ['callout', 'callout.profile', 'profile'],
     });
 
-    if (!card) {
+    if (!post) {
       throw new NotificationEventException(
-        `Could not acquire card with id: ${aspect.id}`,
+        `Could not acquire post with id: ${postInput.id}`,
         LogContext.NOTIFICATIONS
       );
     }
@@ -260,25 +260,25 @@ export class NotificationPayloadBuilder {
         LogContext.NOTIFICATIONS
       );
     }
-    const callout = card.callout;
+    const callout = post.callout;
     if (!callout) {
       throw new NotificationEventException(
-        `Could not acquire callout from card with id: ${card.id}`,
+        `Could not acquire callout from post with id: ${post.id}`,
         LogContext.NOTIFICATIONS
       );
     }
 
     const journeyPayload = await this.buildJourneyPayload(community);
-    const payload: CollaborationCardCommentEventPayload = {
-      triggeredBy: card.createdBy,
+    const payload: CollaborationPostCommentEventPayload = {
+      triggeredBy: post.createdBy,
       callout: {
         displayName: callout.profile.displayName,
         nameID: callout.nameID,
       },
-      card: {
-        displayName: card.profile.displayName,
-        createdBy: card.createdBy,
-        nameID: card.nameID,
+      post: {
+        displayName: post.profile.displayName,
+        createdBy: post.createdBy,
+        nameID: post.nameID,
       },
       comment: {
         message: messageResult.message,
@@ -757,16 +757,16 @@ export class NotificationPayloadBuilder {
     }
 
     if (commentType === RoomType.POST) {
-      const card = await this.aspectRepository.findOne({
+      const post = await this.postRepository.findOne({
         where: {
           id: originEntityId,
         },
         relations: ['callout'],
       });
 
-      if (!card) {
+      if (!post) {
         throw new NotificationEventException(
-          `Could not acquire card with id: ${originEntityId}`,
+          `Could not acquire post with id: ${originEntityId}`,
           LogContext.NOTIFICATIONS
         );
       }
@@ -782,17 +782,17 @@ export class NotificationPayloadBuilder {
           LogContext.NOTIFICATIONS
         );
       }
-      const callout = card.callout;
+      const callout = post.callout;
       if (!callout) {
         throw new NotificationEventException(
-          `Could not acquire callout from card with id: ${card.id}`,
+          `Could not acquire callout from post with id: ${post.id}`,
           LogContext.NOTIFICATIONS
         );
       }
 
       const journeyPayload = await this.buildJourneyPayload(community);
       const journeyUrl = createJourneyURL(endpoint, journeyPayload);
-      return createCardURL(journeyUrl, callout.nameID, card.nameID);
+      return createPostURL(journeyUrl, callout.nameID, post.nameID);
     }
 
     if (commentType === RoomType.CALENDAR_EVENT) {
@@ -827,8 +827,8 @@ export class NotificationPayloadBuilder {
     community: ICommunity
   ): Promise<JourneyPayload> {
     const result: JourneyPayload = {
-      hubID: community.hubID,
-      hubNameID: await this.getHubNameIdOrFail(community.hubID),
+      spaceID: community.spaceID,
+      spaceNameID: await this.getSpaceNameIdOrFail(community.spaceID),
       displayName: community.displayName,
       type: community.type,
     };
@@ -880,20 +880,20 @@ export class NotificationPayloadBuilder {
     return community;
   }
 
-  private async getHubNameIdOrFail(hubID: string): Promise<string> {
-    const hub = await this.hubRepository
-      .createQueryBuilder('hub')
-      .where('hub.id = :id')
-      .setParameters({ id: `${hubID}` })
+  private async getSpaceNameIdOrFail(spaceID: string): Promise<string> {
+    const space = await this.spaceRepository
+      .createQueryBuilder('space')
+      .where('space.id = :id')
+      .setParameters({ id: `${spaceID}` })
       .getOne();
 
-    if (!hub) {
+    if (!space) {
       throw new EntityNotFoundException(
-        `Unable to find Hub with id: ${hubID}`,
+        `Unable to find Space with id: ${spaceID}`,
         LogContext.CHALLENGES
       );
     }
-    return hub.nameID;
+    return space.nameID;
   }
 
   private async getChallengeNameIdOrFail(challengeID: string): Promise<string> {

@@ -1,0 +1,22 @@
+query spaces {
+  spaces {
+    storageBucket
+    {
+      size
+      documents
+      {
+        displayName
+        size
+      }
+    }
+    storageBucket
+    {
+      size
+      documents
+      {
+        displayName
+        size
+      }
+    }
+  }
+}

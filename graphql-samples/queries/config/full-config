@@ -14,7 +14,7 @@ query
         {
           name
           actorGroups
-          aspects
+          posts
           relations
         }
       }

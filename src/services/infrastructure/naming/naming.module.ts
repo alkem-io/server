@@ -4,9 +4,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project';
-import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
-import { Hub } from '@domain/challenge/hub/hub.entity';
-import { Canvas } from '@domain/common/canvas/canvas.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
+import { Space } from '@domain/challenge/space/space.entity';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
@@ -19,9 +19,9 @@ import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([Opportunity]),
     TypeOrmModule.forFeature([Project]),
-    TypeOrmModule.forFeature([Aspect]),
-    TypeOrmModule.forFeature([Canvas]),
-    TypeOrmModule.forFeature([Hub]),
+    TypeOrmModule.forFeature([Post]),
+    TypeOrmModule.forFeature([Whiteboard]),
+    TypeOrmModule.forFeature([Space]),
     TypeOrmModule.forFeature([Callout]),
     TypeOrmModule.forFeature([Collaboration]),
     TypeOrmModule.forFeature([Community]),

@@ -1,6 +1,0 @@
-subscription {
-  canvasContentUpdated {
-    canvasID,
-    value
-  }
-}

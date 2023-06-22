@@ -3,24 +3,24 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CommunityType } from '@common/enums/community.type';
 
-const emptyCanvasValue =
+const emptyWhiteboardValue =
   '{\n  "type": "excalidraw",\n  "version": 2,\n  "source": "",\n  "elements": [],\n  "appState": {\n    "gridSize": 20,\n    "viewBackgroundColor": "#ffffff"\n  },\n  "files": {}\n}';
 
 export const collaborationDefaults: any = {
   callouts: [
     {
-      type: CalloutType.COMMENTS,
-      communityType: CommunityType.HUB,
+      type: CalloutType.POST,
+      communityType: CommunityType.SPACE,
       displayName: 'Welcome, please introduce yourself to the community!',
-      nameID: 'hub-welcome',
+      nameID: 'space-welcome',
       description:
-        'Please share a few words about yourself to help the community get to know each other. What brings you to this Hub and motivates you to work on these Challenges?',
+        'Please share a few words about yourself to help the community get to know each other. What brings you to this Space and motivates you to work on these Challenges?',
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 1,
     },
     {
-      type: CalloutType.COMMENTS,
+      type: CalloutType.POST,
       communityType: CommunityType.CHALLENGE,
       displayName: 'Why do you care about this Challenge?',
       nameID: 'challenge-welcome',
@@ -31,7 +31,7 @@ export const collaborationDefaults: any = {
       sortOrder: 1,
     },
     {
-      type: CalloutType.COMMENTS,
+      type: CalloutType.POST,
       displayName: 'Suggestions, Questions, and Feedback',
       nameID: 'suggestions',
       description: 'Please share it here :)',
@@ -40,11 +40,11 @@ export const collaborationDefaults: any = {
       sortOrder: 3,
     },
     {
-      type: CalloutType.CARD,
+      type: CalloutType.POST_COLLECTION,
       displayName: 'Contribute',
-      nameID: `${CalloutType.CARD}-default`,
+      nameID: `${CalloutType.POST_COLLECTION}-default`,
       description:
-        'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own card, or comment on aspects added by others.',
+        'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 5,
@@ -60,19 +60,19 @@ export const collaborationDefaults: any = {
       },
     },
     {
-      type: CalloutType.CANVAS,
+      type: CalloutType.WHITEBOARD_COLLECTION,
       displayName: 'Collaborate visually',
-      nameID: `${CalloutType.CANVAS}-default`,
+      nameID: `${CalloutType.WHITEBOARD_COLLECTION}-default`,
       description:
-        'Collaborate visually using Canvases. Create a new Canvas from a template, or explore Canvases already created.',
+        'Collaborate visually using Whiteboardes. Create a new Whiteboard from a template, or explore Whiteboardes already created.',
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 10,
       whiteboardTemplate: {
-        value: emptyCanvasValue,
+        value: emptyWhiteboardValue,
         info: {
-          title: 'blank canvas',
-          description: 'A blank canvas to be worked further.',
+          title: 'blank whiteboard',
+          description: 'A blank whiteboard to be worked further.',
         },
       },
     },

@@ -13,24 +13,24 @@ export class InnovationHubAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     @InjectRepository(InnovationHub)
-    private hubRepository: Repository<InnovationHub>
+    private spaceRepository: Repository<InnovationHub>
   ) {}
 
   public async applyAuthorizationPolicyAndSave(
-    hub: IInnovationHub
+    space: IInnovationHub
   ): Promise<IInnovationHub> {
-    hub.authorization = this.authorizationPolicyService.reset(
-      hub.authorization
+    space.authorization = this.authorizationPolicyService.reset(
+      space.authorization
     );
-    hub.authorization =
+    space.authorization =
       this.platformAuthorizationService.inheritRootAuthorizationPolicy(
-        hub.authorization
+        space.authorization
       );
-    hub.authorization.anonymousReadAccess = true;
+    space.authorization.anonymousReadAccess = true;
 
-    hub = await this.cascadeAuthorization(hub);
+    space = await this.cascadeAuthorization(space);
 
-    return this.hubRepository.save(hub);
+    return this.spaceRepository.save(space);
   }
 
   private async cascadeAuthorization(

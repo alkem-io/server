@@ -1,6 +1,6 @@
 import { Column, Entity } from 'typeorm';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
-import { HubVisibility } from '@common/enums/hub.visibility';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { SUBDOMAIN_LENGTH } from '@common/constants';
 import { InnovationHubType } from './innovation.hub.type.enum';
@@ -25,10 +25,10 @@ export class InnovationHub extends NameableEntity implements IInnovationHub {
     length: 255,
     nullable: true,
   })
-  hubVisibilityFilter?: HubVisibility;
+  spaceVisibilityFilter?: SpaceVisibility;
 
   @Column('simple-array', {
     nullable: true,
   })
-  hubListFilter?: string[];
+  spaceListFilter?: string[];
 }

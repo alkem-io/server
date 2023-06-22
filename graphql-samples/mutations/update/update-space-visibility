@@ -1,0 +1,13 @@
+mutation updateSpaceVisibility($visibilityData: UpdateSpaceVisibilityInput!) {
+  updateSpaceVisibility(visibilityData: $visibilityData) {
+    id
+  }
+}
+
+Variables:
+{
+  "visibilityData": {
+    "spaceID": "uuid_nameid",
+    "visibility": "ARCHIVED"
+  }
+}

@@ -54,7 +54,7 @@ import { UpdateChallengeInnovationFlowInput } from './dto/challenge.dto.update.i
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
-import { HubVisibility } from '@common/enums/hub.visibility';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
@@ -89,19 +89,19 @@ export class ChallengeService {
 
   async createChallenge(
     challengeData: CreateChallengeInput,
-    hubID: string,
+    spaceID: string,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
     if (challengeData.innovationFlowTemplateID) {
       await this.innovationFlowTemplateService.validateInnovationFlowDefinitionOrFail(
         challengeData.innovationFlowTemplateID,
-        hubID,
+        spaceID,
         InnovationFlowType.CHALLENGE
       );
     } else {
       challengeData.innovationFlowTemplateID =
         await this.innovationFlowTemplateService.getDefaultInnovationFlowTemplateId(
-          hubID,
+          spaceID,
           InnovationFlowType.CHALLENGE
         );
     }
@@ -113,11 +113,11 @@ export class ChallengeService {
     }
     await this.baseChallengeService.isNameAvailableOrFail(
       challengeData.nameID,
-      hubID
+      spaceID
     );
 
     const challenge: IChallenge = Challenge.create(challengeData);
-    challenge.hubID = hubID;
+    challenge.spaceID = spaceID;
     challenge.childChallenges = [];
 
     challenge.opportunities = [];
@@ -128,7 +128,7 @@ export class ChallengeService {
     await this.baseChallengeService.initialise(
       challenge,
       challengeData,
-      hubID,
+      spaceID,
       CommunityType.CHALLENGE,
       challengeCommunityPolicy,
       challengeCommunityApplicationForm
@@ -155,7 +155,7 @@ export class ChallengeService {
     const machineConfig: ILifecycleDefinition =
       await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
         challengeData.innovationFlowTemplateID,
-        hubID,
+        spaceID,
         InnovationFlowType.CHALLENGE
       );
 
@@ -214,7 +214,7 @@ export class ChallengeService {
         // updating the nameID, check new value is allowed
         await this.baseChallengeService.isNameAvailableOrFail(
           challengeData.nameID,
-          this.getHubID(challenge)
+          this.getSpaceID(challenge)
         );
         challenge.nameID = challengeData.nameID;
         await this.challengeRepository.save(challenge);
@@ -240,7 +240,7 @@ export class ChallengeService {
     const machineConfig: ILifecycleDefinition =
       await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
         challengeData.innovationFlowTemplateID,
-        this.getHubID(challenge),
+        this.getSpaceID(challenge),
         InnovationFlowType.CHALLENGE
       );
 
@@ -315,14 +315,14 @@ export class ChallengeService {
     let challenge: IChallenge | null = null;
     if (challengeID.length == UUID_LENGTH) {
       challenge = await this.challengeRepository.findOne({
-        where: { id: challengeID, hubID: nameableScopeID },
+        where: { id: challengeID, spaceID: nameableScopeID },
         ...options,
       });
     }
     if (!challenge) {
       // look up based on nameID
       challenge = await this.challengeRepository.findOne({
-        where: { nameID: challengeID, hubID: nameableScopeID },
+        where: { nameID: challengeID, spaceID: nameableScopeID },
         ...options,
       });
     }
@@ -546,15 +546,15 @@ export class ChallengeService {
       relations: ['childChallenges', 'community'],
     });
 
-    const hubID = this.getHubID(challenge);
+    const spaceID = this.getSpaceID(challenge);
     await this.baseChallengeService.isNameAvailableOrFail(
       challengeData.nameID,
-      hubID
+      spaceID
     );
 
     const childChallenge = await this.createChallenge(
       challengeData,
-      hubID,
+      spaceID,
       agentInfo
     );
 
@@ -571,15 +571,15 @@ export class ChallengeService {
     return childChallenge;
   }
 
-  getHubID(challenge: IChallenge): string {
-    const hubID = challenge.hubID;
-    if (!hubID) {
+  getSpaceID(challenge: IChallenge): string {
+    const spaceID = challenge.spaceID;
+    if (!spaceID) {
       throw new RelationshipNotFoundException(
-        `Unable to find hubID for challenge: ${challenge.id} `,
+        `Unable to find spaceID for challenge: ${challenge.id} `,
         LogContext.CHALLENGES
       );
     }
-    return hubID;
+    return spaceID;
   }
 
   async createOpportunity(
@@ -605,15 +605,15 @@ export class ChallengeService {
       );
     }
 
-    const hubID = this.getHubID(challenge);
+    const spaceID = this.getSpaceID(challenge);
     await this.baseChallengeService.isNameAvailableOrFail(
       opportunityData.nameID,
-      hubID
+      spaceID
     );
 
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
-      hubID,
+      spaceID,
       challenge.storageBucket.id,
       agentInfo
     );
@@ -636,13 +636,15 @@ export class ChallengeService {
     return challenges || [];
   }
 
-  async getChallengesInHubCount(hubID: string): Promise<number> {
-    const count = await this.challengeRepository.countBy({ hubID: hubID });
+  async getChallengesInSpaceCount(spaceID: string): Promise<number> {
+    const count = await this.challengeRepository.countBy({ spaceID: spaceID });
     return count;
   }
 
-  async getChallengesCount(visibility = HubVisibility.ACTIVE): Promise<number> {
-    const sqlQuery = `SELECT COUNT(*) as challengesCount FROM challenge RIGHT JOIN hub ON challenge.hubID = hub.id WHERE hub.visibility = '${visibility}'`;
+  async getChallengesCount(
+    visibility = SpaceVisibility.ACTIVE
+  ): Promise<number> {
+    const sqlQuery = `SELECT COUNT(*) as challengesCount FROM challenge RIGHT JOIN space ON challenge.spaceID = space.id WHERE space.visibility = '${visibility}'`;
     const [queryResult]: {
       challengesCount: number;
     }[] = await this.entityManager.connection.query(sqlQuery);
@@ -698,23 +700,27 @@ export class ChallengeService {
     challengesTopic.id = `challenges-${challenge.id}`;
     metrics.push(challengesTopic);
 
-    // Aspects
-    const aspectsCount = await this.baseChallengeService.getAspectsCount(
+    // Posts
+    const postsCount = await this.baseChallengeService.getPostsCount(
       challenge,
       this.challengeRepository
     );
-    const aspectsTopic = new NVP('aspects', aspectsCount.toString());
-    aspectsTopic.id = `aspects-${challenge.id}`;
-    metrics.push(aspectsTopic);
+    const postsTopic = new NVP('posts', postsCount.toString());
+    postsTopic.id = `posts-${challenge.id}`;
+    metrics.push(postsTopic);
 
-    // Canvases
-    const canvasesCount = await this.baseChallengeService.getCanvasesCount(
-      challenge,
-      this.challengeRepository
+    // Whiteboardes
+    const whiteboardsCount =
+      await this.baseChallengeService.getWhiteboardesCount(
+        challenge,
+        this.challengeRepository
+      );
+    const whiteboardsTopic = new NVP(
+      'whiteboards',
+      whiteboardsCount.toString()
     );
-    const canvasesTopic = new NVP('canvases', canvasesCount.toString());
-    canvasesTopic.id = `canvases-${challenge.id}`;
-    metrics.push(canvasesTopic);
+    whiteboardsTopic.id = `whiteboards-${challenge.id}`;
+    metrics.push(whiteboardsTopic);
 
     return metrics;
   }
@@ -800,11 +806,11 @@ export class ChallengeService {
   createPreferenceDefaults(): Map<PreferenceType, string> {
     const defaults: Map<PreferenceType, string> = new Map();
     defaults.set(
-      PreferenceType.MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS,
+      PreferenceType.MEMBERSHIP_JOIN_CHALLENGE_FROM_SPACE_MEMBERS,
       'true'
     );
     defaults.set(
-      PreferenceType.MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS,
+      PreferenceType.MEMBERSHIP_APPLY_CHALLENGE_FROM_SPACE_MEMBERS,
       'true'
     );
     defaults.set(
@@ -815,7 +821,7 @@ export class ChallengeService {
       PreferenceType.ALLOW_CONTRIBUTORS_TO_CREATE_OPPORTUNITIES,
       'false'
     );
-    defaults.set(PreferenceType.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE, 'true');
+    defaults.set(PreferenceType.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE, 'true');
     defaults.set(PreferenceType.ALLOW_NON_MEMBERS_READ_ACCESS, 'true');
 
     return defaults;

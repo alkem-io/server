@@ -38,7 +38,7 @@ import { UpdateOpportunityInnovationFlowInput } from './dto/opportunity.dto.upda
 import { ICollaboration } from '../collaboration/collaboration.interface';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
-import { HubVisibility } from '@common/enums/hub.visibility';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -68,7 +68,7 @@ export class OpportunityService {
 
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
-    hubID: string,
+    spaceID: string,
     storageBucketID: string,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
@@ -76,13 +76,13 @@ export class OpportunityService {
     if (opportunityData.innovationFlowTemplateID) {
       await this.innovationFlowTemplateService.validateInnovationFlowDefinitionOrFail(
         opportunityData.innovationFlowTemplateID,
-        hubID,
+        spaceID,
         InnovationFlowType.OPPORTUNITY
       );
     } else {
       opportunityData.innovationFlowTemplateID =
         await this.innovationFlowTemplateService.getDefaultInnovationFlowTemplateId(
-          hubID,
+          spaceID,
           InnovationFlowType.OPPORTUNITY
         );
     }
@@ -94,17 +94,17 @@ export class OpportunityService {
     }
     await this.baseChallengeService.isNameAvailableOrFail(
       opportunityData.nameID,
-      hubID
+      spaceID
     );
 
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
-    opportunity.hubID = hubID;
+    opportunity.spaceID = spaceID;
     opportunity.projects = [];
 
     await this.baseChallengeService.initialise(
       opportunity,
       opportunityData,
-      hubID,
+      spaceID,
       CommunityType.OPPORTUNITY,
       opportunityCommunityPolicy,
       opportunityCommunityApplicationForm
@@ -144,7 +144,7 @@ export class OpportunityService {
       const machineConfig: ILifecycleDefinition =
         await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
           opportunityData.innovationFlowTemplateID,
-          hubID,
+          spaceID,
           InnovationFlowType.OPPORTUNITY
         );
 
@@ -175,7 +175,7 @@ export class OpportunityService {
     const machineConfig: ILifecycleDefinition =
       await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
         opportunityData.innovationFlowTemplateID,
-        this.getHubID(opportunity),
+        this.getSpaceID(opportunity),
         InnovationFlowType.OPPORTUNITY
       );
 
@@ -197,14 +197,14 @@ export class OpportunityService {
     let opportunity: IOpportunity | null = null;
     if (opportunityID.length == UUID_LENGTH) {
       opportunity = await this.opportunityRepository.findOne({
-        where: { id: opportunityID, hubID: nameableScopeID },
+        where: { id: opportunityID, spaceID: nameableScopeID },
         ...options,
       });
     }
     if (!opportunity) {
       // look up based on nameID
       opportunity = await this.opportunityRepository.findOne({
-        where: { nameID: opportunityID, hubID: nameableScopeID },
+        where: { nameID: opportunityID, spaceID: nameableScopeID },
         ...options,
       });
     }
@@ -249,12 +249,12 @@ export class OpportunityService {
   ): Promise<IOpportunity[]> {
     if (IDs && IDs.length > 0) {
       return await this.opportunityRepository.find({
-        where: { id: In(IDs), hubID: nameableScopeID },
+        where: { id: In(IDs), spaceID: nameableScopeID },
       });
     }
 
     return await this.opportunityRepository.findBy({
-      hubID: nameableScopeID,
+      spaceID: nameableScopeID,
     });
   }
 
@@ -298,7 +298,7 @@ export class OpportunityService {
         // updating the nameID, check new value is allowed
         await this.baseChallengeService.isNameAvailableOrFail(
           opportunityData.nameID,
-          this.getHubID(opportunity)
+          this.getSpaceID(opportunity)
         );
         baseOpportunity.nameID = opportunityData.nameID;
         await this.opportunityRepository.save(baseOpportunity);
@@ -360,7 +360,7 @@ export class OpportunityService {
 
     const project = await this.projectService.createProject(
       projectData,
-      this.getHubID(opportunity)
+      this.getSpaceID(opportunity)
     );
     if (!opportunity.projects)
       throw new EntityNotInitializedException(
@@ -372,15 +372,15 @@ export class OpportunityService {
     return project;
   }
 
-  getHubID(opportunity: IOpportunity): string {
-    const hubID = opportunity.hubID;
-    if (!hubID) {
+  getSpaceID(opportunity: IOpportunity): string {
+    const spaceID = opportunity.spaceID;
+    if (!spaceID) {
       throw new RelationshipNotFoundException(
-        `Unable to load hubID for opportunity: ${opportunity.id} `,
+        `Unable to load spaceID for opportunity: ${opportunity.id} `,
         LogContext.CHALLENGES
       );
     }
-    return hubID;
+    return spaceID;
   }
 
   async getMetrics(opportunity: IOpportunity): Promise<INVP[]> {
@@ -410,35 +410,39 @@ export class OpportunityService {
     relationsTopic.id = `relations-${opportunity.id}`;
     metrics.push(relationsTopic);
 
-    // Aspects
-    const aspectsCount = await this.baseChallengeService.getAspectsCount(
+    // Posts
+    const postsCount = await this.baseChallengeService.getPostsCount(
       opportunity,
       this.opportunityRepository
     );
-    const aspectsTopic = new NVP('aspects', aspectsCount.toString());
-    aspectsTopic.id = `aspects-${opportunity.id}`;
-    metrics.push(aspectsTopic);
+    const postsTopic = new NVP('posts', postsCount.toString());
+    postsTopic.id = `posts-${opportunity.id}`;
+    metrics.push(postsTopic);
 
-    // Canvases
-    const canvasesCount = await this.baseChallengeService.getCanvasesCount(
-      opportunity,
-      this.opportunityRepository
+    // Whiteboardes
+    const whiteboardsCount =
+      await this.baseChallengeService.getWhiteboardesCount(
+        opportunity,
+        this.opportunityRepository
+      );
+    const whiteboardsTopic = new NVP(
+      'whiteboards',
+      whiteboardsCount.toString()
     );
-    const canvasesTopic = new NVP('canvases', canvasesCount.toString());
-    canvasesTopic.id = `canvases-${opportunity.id}`;
-    metrics.push(canvasesTopic);
+    whiteboardsTopic.id = `whiteboards-${opportunity.id}`;
+    metrics.push(whiteboardsTopic);
 
     return metrics;
   }
 
-  async getOpportunitiesInHubCount(hubID: string): Promise<number> {
-    return await this.opportunityRepository.countBy({ hubID: hubID });
+  async getOpportunitiesInSpaceCount(spaceID: string): Promise<number> {
+    return await this.opportunityRepository.countBy({ spaceID: spaceID });
   }
 
   async getOpportunitiesCount(
-    visibility = HubVisibility.ACTIVE
+    visibility = SpaceVisibility.ACTIVE
   ): Promise<number> {
-    const sqlQuery = `SELECT COUNT(*) as opportunitiesCount FROM opportunity RIGHT JOIN hub ON opportunity.hubID = hub.id WHERE hub.visibility = '${visibility}'`;
+    const sqlQuery = `SELECT COUNT(*) as opportunitiesCount FROM opportunity RIGHT JOIN space ON opportunity.spaceID = space.id WHERE space.visibility = '${visibility}'`;
     const [queryResult]: {
       opportunitiesCount: number;
     }[] = await this.entityManager.connection.query(sqlQuery);

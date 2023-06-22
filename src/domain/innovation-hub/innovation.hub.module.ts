@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { InnovationHubService } from './innovation.hub.service';
 import { InnovationHub } from './innovation.hub.entity';
 import { InnovationHubFieldResolver } from './innovation.hub.field.resolver';
-import { HubModule } from '@domain/challenge/hub/hub.module';
+import { SpaceModule } from '@domain/challenge/space/space.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
@@ -15,7 +15,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([InnovationHub]),
-    HubModule,
+    SpaceModule,
     ProfileModule,
     PlatformAuthorizationPolicyModule,
     AuthorizationPolicyModule,
