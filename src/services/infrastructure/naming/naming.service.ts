@@ -24,6 +24,7 @@ import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { ICallout } from '@domain/collaboration/callout';
+import { NAMEID_LENGTH } from '@common/constants';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -241,14 +242,17 @@ export class NamingService {
   }
 
   createNameID(base: string, useRandomSuffix = true): string {
+    const NAMEID_SUFFIX_LENGTH = 5;
     const nameIDExcludedCharacters = /[^a-zA-Z0-9-]/g;
     let randomSuffix = '';
     if (useRandomSuffix) {
-      const randomNumber = Math.floor(Math.random() * 10000).toString();
+      const randomNumber = Math.floor(
+        Math.random() * Math.pow(10, NAMEID_SUFFIX_LENGTH - 1)
+      ).toString();
       randomSuffix = `-${randomNumber}`;
     }
-    const baseMaxLength = base.slice(0, 20);
-    // replace spaces + trim to 25 characters
+    const baseMaxLength = base.slice(0, NAMEID_LENGTH - NAMEID_SUFFIX_LENGTH);
+    // replace spaces + trim to NAMEID_LENGTH characters
     const nameID = `${baseMaxLength}${randomSuffix}`.replace(/\s/g, '');
     // replace characters with umlouts etc to normal characters
     const nameIDNoSpecialCharacters: string =
@@ -257,7 +261,7 @@ export class NamingService {
     return nameIDNoSpecialCharacters
       .replace(nameIDExcludedCharacters, '')
       .toLowerCase()
-      .slice(0, 25);
+      .slice(0, NAMEID_LENGTH);
   }
 
   async getCommunityPolicyForCollaboration(

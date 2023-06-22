@@ -90,7 +90,7 @@ export const collaborationDefaults: any = {
         description:
           'Collaborate visually using Whiteboardes. Create a new Whiteboard from a template, or explore Whiteboardes already created.',
       },
-      nameID: `${CalloutType.WHITEBOARD_COLLECTION}-default`,
+      nameID: `${CalloutType.WHITEBOARD_COLLECTION}`,
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 10,
