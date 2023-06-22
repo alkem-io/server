@@ -114,8 +114,8 @@ export class InnovationHubService {
         space.nameID = input.nameID;
       }
     }
-    if (space.type === InnovationHubType.LIST && input.spaceListFilter) {
-      if (!input.spaceListFilter.length) {
+    if (space.type === InnovationHubType.LIST && input.hubListFilter) {
+      if (!input.hubListFilter.length) {
         throw new Error(
           `At least one Space needs to be provided for Innovation Hub of type '${InnovationHubType.LIST}'`
         );
@@ -123,7 +123,7 @@ export class InnovationHubService {
 
       // validate spaces
       const trueOrList = await this.spaceService.spacesExist(
-        input.spaceListFilter
+        input.hubListFilter
       );
 
       if (Array.isArray(trueOrList)) {
@@ -133,7 +133,7 @@ export class InnovationHubService {
           )}'`
         );
       }
-      space.spaceListFilter = input.spaceListFilter;
+      space.hubListFilter = input.hubListFilter;
     }
     if (
       space.type === InnovationHubType.VISIBILITY &&
@@ -206,7 +206,7 @@ export class InnovationHubService {
     return space;
   }
 
-  public async getSpaceListFilterOrFail(
+  public async getHubListFilterOrFail(
     spaceId: string
   ): Promise<string[] | undefined | never> {
     const space = await this.innovationHubRepository.findOneBy({
@@ -220,23 +220,23 @@ export class InnovationHubService {
       );
     }
 
-    if (space.type === InnovationHubType.LIST && !space.spaceListFilter) {
+    if (space.type === InnovationHubType.LIST && !space.hubListFilter) {
       throw new EntityNotInitializedException(
         `Space list filter for Innovation Hub with id: '${spaceId}' not found!`,
         LogContext.INNOVATION_HUB
       );
     }
 
-    return space.spaceListFilter;
+    return space.hubListFilter;
   }
 
   private async validateCreateInput({
     type,
-    spaceListFilter,
+    hubListFilter,
     hubVisibilityFilter,
   }: CreateInnovationHubInput): Promise<true | never> {
     if (type === InnovationHubType.LIST) {
-      if (!spaceListFilter || !spaceListFilter.length) {
+      if (!hubListFilter || !hubListFilter.length) {
         throw new Error(
           `At least one Space needs to be provided for Innovation Hub of type '${InnovationHubType.LIST}'`
         );
@@ -248,7 +248,7 @@ export class InnovationHubService {
         );
       }
       // validate spaces
-      const trueOrList = await this.spaceService.spacesExist(spaceListFilter);
+      const trueOrList = await this.spaceService.spacesExist(hubListFilter);
 
       if (Array.isArray(trueOrList)) {
         throw new Error(
@@ -266,7 +266,7 @@ export class InnovationHubService {
         );
       }
 
-      if (spaceListFilter && spaceListFilter.length) {
+      if (hubListFilter && hubListFilter.length) {
         throw new Error(
           `List of Spaces not applicable for Innovation Hub of type '${InnovationHubType.VISIBILITY}'`
         );

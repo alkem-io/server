@@ -6,7 +6,7 @@ mutation updateInnovationHub($input: UpdateInnovationHubInput!){
       displayName
     }
     type
-    spaceListFilter {
+    hubListFilter {
       id
       nameID
       profile {
@@ -25,6 +25,6 @@ query variables:
         "profileData": {
         "displayName": "test space"
         },
-        "spaceListFilter": ["889ed0cf-4cd9-41d6-8ce0-d27b65cb149e"]
+        "hubListFilter": ["889ed0cf-4cd9-41d6-8ce0-d27b65cb149e"]
     }
 }

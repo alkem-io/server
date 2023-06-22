@@ -320,7 +320,7 @@ export class SpaceService {
 
   public getSpacesForInnovationHub({
     type,
-    spaceListFilter,
+    hubListFilter,
     hubVisibilityFilter,
   }: InnovationHub): Promise<Space[]> | never {
     if (type === InnovationHubType.VISIBILITY) {
@@ -331,7 +331,7 @@ export class SpaceService {
 
     if (type === InnovationHubType.LIST) {
       return this.spaceRepository.findBy([
-        { id: In(spaceListFilter as Array<string>) },
+        { id: In(hubListFilter as Array<string>) },
       ]);
     }
 

@@ -20,10 +20,10 @@ export class InnovationHubFieldResolver {
   @ResolveField(() => [ISpace], {
     nullable: true,
   })
-  public async spaceListFilter(
+  public async hubListFilter(
     @Parent() space: IInnovationHub
   ): Promise<ISpace[] | undefined> {
-    const filter = await this.innovationHubService.getSpaceListFilterOrFail(
+    const filter = await this.innovationHubService.getHubListFilterOrFail(
       space.id
     );
 

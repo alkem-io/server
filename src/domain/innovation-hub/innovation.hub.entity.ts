@@ -30,5 +30,5 @@ export class InnovationHub extends NameableEntity implements IInnovationHub {
   @Column('simple-array', {
     nullable: true,
   })
-  spaceListFilter?: string[];
+  hubListFilter?: string[];
 }

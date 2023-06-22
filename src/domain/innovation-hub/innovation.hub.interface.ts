@@ -23,5 +23,5 @@ export abstract class IInnovationHub extends INameable {
   hubVisibilityFilter?: SpaceVisibility;
 
   // exposed through the field resolver
-  spaceListFilter?: string[];
+  hubListFilter?: string[];
 }

@@ -12,7 +12,7 @@ export class UpdateInnovationHubInput extends UpdateNameableInput {
     nullable: true,
     description: `A list of Spaces to include in this Innovation Hub. Only valid when type '${InnovationHubType.LIST}' is used.`,
   })
-  spaceListFilter?: string[];
+  hubListFilter?: string[];
 
   @IsOptional()
   @Field(() => SpaceVisibility, {
