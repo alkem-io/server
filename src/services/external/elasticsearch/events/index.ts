@@ -1,7 +1,7 @@
 export * from './base.contribution';
 
-export * from './journey/hub.joined';
-export * from './journey/hub.content.edited';
+export * from './journey/space.joined';
+export * from './journey/space.content.edited';
 //
 export * from './journey/challenge.created';
 export * from './journey/challenge.joined';

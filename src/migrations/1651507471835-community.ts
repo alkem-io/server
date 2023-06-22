@@ -1,12 +1,10 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
-import {
-  hubCommunityPolicy,
-  challengeCommunityPolicy,
-} from '@domain/challenge';
-import { opportunityCommunityPolicy } from '@domain/collaboration/opportunity';
-import { AuthorizationCredential } from '@common/enums';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
+
+import { AuthorizationCredential } from './utils/duplicate/authorization.credential';
+import { hubCommunityPolicy } from './utils/duplicate/hub.community.policy';
+import { challengeCommunityPolicy } from './utils/duplicate/challenge.community.policy';
+import { opportunityCommunityPolicy } from './utils/duplicate/opportunity.community.policy';
 
 type CommunityPolicy = {
   member: CommunityPolicyRole;
@@ -14,7 +12,7 @@ type CommunityPolicy = {
 };
 
 type CommunityPolicyRole = {
-  credential: CredentialDefinition;
+  credential: any;
   minUser: number;
   maxUser: number;
   minOrg: number;

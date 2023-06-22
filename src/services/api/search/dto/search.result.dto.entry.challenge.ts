@@ -1,5 +1,5 @@
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { IHub } from '@domain/challenge/hub/hub.interface';
+import { ISpace } from '@domain/challenge/space/space.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISearchResultBase } from './search.result.dto.entry.base.interface';
 import { ISearchResult } from './search.result.entry.interface';
@@ -17,9 +17,9 @@ export abstract class ISearchResultChallenge
   })
   challenge!: IChallenge;
 
-  @Field(() => IHub, {
+  @Field(() => ISpace, {
     nullable: false,
-    description: 'The Hub that the Challenge is in.',
+    description: 'The Space that the Challenge is in.',
   })
-  hub!: IHub;
+  space!: ISpace;
 }

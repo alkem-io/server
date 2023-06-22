@@ -24,12 +24,12 @@ query activityLogOnCollaboration($queryData: ActivityLogInput!) {
         type
       }
     }
-    ... on ActivityLogEntryCalloutCardCreated {
+    ... on ActivityLogEntryCalloutPostCreated {
       callout {
         id
         type
       }
-      card {
+      post {
         id
         profile {
           id
@@ -37,12 +37,12 @@ query activityLogOnCollaboration($queryData: ActivityLogInput!) {
         }
       }
     }
-    ... on ActivityLogEntryCalloutCardComment {
+    ... on ActivityLogEntryCalloutPostComment {
       callout {
         id
         type
       }
-      card {
+      post {
         id
         profile {
           id

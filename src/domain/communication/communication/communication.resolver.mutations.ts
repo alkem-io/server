@@ -18,7 +18,7 @@ import { SubscriptionType } from '@common/enums/subscription.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputForumDiscussionCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.created';
-import { COMMUNICATION_PLATFORM_HUBID } from '@common/constants';
+import { COMMUNICATION_PLATFORM_SPACEID } from '@common/constants';
 import { NotificationInputUserMessage } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.message';
 import { CommunicationSendMessageToUserInput } from './dto/communication.dto.send.message.user';
 import { NotificationInputOrganizationMessage } from '@services/adapters/notification-adapter/dto/notification.input.organization.message';
@@ -86,7 +86,7 @@ export class CommunicationResolverMutations {
       communication.authorization
     );
 
-    if (communication.hubID === COMMUNICATION_PLATFORM_HUBID) {
+    if (communication.spaceID === COMMUNICATION_PLATFORM_SPACEID) {
       // Send the notification
       const notificationInput: NotificationInputForumDiscussionCreated = {
         triggeredBy: agentInfo.userID,

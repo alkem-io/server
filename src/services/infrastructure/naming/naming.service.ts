@@ -6,7 +6,7 @@ import { Project } from '@domain/collaboration/project';
 import { NameID, UUID } from '@domain/common/scalars';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { Hub } from '@domain/challenge/hub/hub.entity';
+import { Space } from '@domain/challenge/space/space.entity';
 import { LogContext } from '@common/enums';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Community } from '@domain/community/community';
@@ -24,6 +24,7 @@ import { Discussion } from '@domain/communication/discussion/discussion.entity';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { ICallout } from '@domain/collaboration/callout';
+import { NAMEID_LENGTH } from '@common/constants';
 
 export class NamingService {
   replaceSpecialCharacters = require('replace-special-characters');
@@ -31,8 +32,8 @@ export class NamingService {
   constructor(
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
-    @InjectRepository(Hub)
-    private hubRepository: Repository<Hub>,
+    @InjectRepository(Space)
+    private spaceRepository: Repository<Space>,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
     @InjectRepository(Whiteboard)
@@ -56,25 +57,25 @@ export class NamingService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async isNameIdAvailableInHub(
+  async isNameIdAvailableInSpace(
     nameID: string,
-    hubID: string
+    spaceID: string
   ): Promise<boolean> {
     if (!nameID) return true;
 
     const challengeCount = await this.challengeRepository.countBy({
       nameID: nameID,
-      hubID: hubID,
+      spaceID: spaceID,
     });
     if (challengeCount > 0) return false;
     const opportunityCount = await this.opportunityRepository.countBy({
       nameID: nameID,
-      hubID: hubID,
+      spaceID: spaceID,
     });
     if (opportunityCount > 0) return false;
     const projectCount = await this.projectRepository.countBy({
       nameID: nameID,
-      hubID: hubID,
+      spaceID: spaceID,
     });
     if (projectCount > 0) return false;
     return true;
@@ -227,8 +228,8 @@ export class NamingService {
       communityId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT communityId from \`hub\`
-        WHERE \`hub\`.\`collaborationId\` = '${collaborationID}' UNION
+        SELECT communityId from \`space\`
+        WHERE \`space\`.\`collaborationId\` = '${collaborationID}' UNION
 
         SELECT communityId from \`challenge\`
         WHERE \`challenge\`.\`collaborationId\` = '${collaborationID}' UNION
@@ -241,14 +242,17 @@ export class NamingService {
   }
 
   createNameID(base: string, useRandomSuffix = true): string {
+    const NAMEID_SUFFIX_LENGTH = 5;
     const nameIDExcludedCharacters = /[^a-zA-Z0-9-]/g;
     let randomSuffix = '';
     if (useRandomSuffix) {
-      const randomNumber = Math.floor(Math.random() * 10000).toString();
+      const randomNumber = Math.floor(
+        Math.random() * Math.pow(10, NAMEID_SUFFIX_LENGTH - 1)
+      ).toString();
       randomSuffix = `-${randomNumber}`;
     }
-    const baseMaxLength = base.slice(0, 20);
-    // replace spaces + trim to 25 characters
+    const baseMaxLength = base.slice(0, NAMEID_LENGTH - NAMEID_SUFFIX_LENGTH);
+    // replace spaces + trim to NAMEID_LENGTH characters
     const nameID = `${baseMaxLength}${randomSuffix}`.replace(/\s/g, '');
     // replace characters with umlouts etc to normal characters
     const nameIDNoSpecialCharacters: string =
@@ -257,7 +261,7 @@ export class NamingService {
     return nameIDNoSpecialCharacters
       .replace(nameIDExcludedCharacters, '')
       .toLowerCase()
-      .slice(0, 25);
+      .slice(0, NAMEID_LENGTH);
   }
 
   async getCommunityPolicyForCollaboration(

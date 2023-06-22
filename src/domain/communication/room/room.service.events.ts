@@ -130,7 +130,7 @@ export class RoomServiceEvents {
       {
         id: post.id,
         name: post.profile.displayName,
-        hub: community.hubID,
+        space: community.spaceID,
       },
       {
         id: agentInfo.userID,
@@ -162,7 +162,7 @@ export class RoomServiceEvents {
     };
     this.activityAdapter.updateSent(activityLogInput);
 
-    const { hubID } =
+    const { spaceID } =
       await this.communityResolverService.getCommunityFromUpdatesOrFail(
         room.id
       );
@@ -171,7 +171,7 @@ export class RoomServiceEvents {
       {
         id: room.id,
         name: '',
-        hub: hubID,
+        space: spaceID,
       },
       {
         id: agentInfo.userID,
@@ -203,7 +203,7 @@ export class RoomServiceEvents {
     };
     this.activityAdapter.calloutCommentCreated(activityLogInput);
 
-    const { hubID } =
+    const { spaceID } =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
         callout.id
       );
@@ -212,7 +212,7 @@ export class RoomServiceEvents {
       {
         id: callout.id,
         name: callout.nameID,
-        hub: hubID,
+        space: spaceID,
       },
       {
         id: agentInfo.userID,

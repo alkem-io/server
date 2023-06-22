@@ -1,5 +1,5 @@
-mutation updateHubPlatformSettings($updateData: UpdateHubPlatformSettingsInput!) {
-  updateHubPlatformSettings(updateData: $updateData) {
+mutation updateSpacePlatformSettings($updateData: UpdateSpacePlatformSettingsInput!) {
+  updateSpacePlatformSettings(updateData: $updateData) {
     id
   }
 }
@@ -7,7 +7,7 @@ mutation updateHubPlatformSettings($updateData: UpdateHubPlatformSettingsInput!)
 Variables:
 {
   "updateData": {
-    "hubID": "uuid_nameid",
+    "spaceID": "uuid_nameid",
     "visibility": "ARCHIVED",
     "hostID": "uuid_nameid",
     "nameID": "nameid"

@@ -35,7 +35,7 @@ const SORTING_COLUMN: keyof Paginationable = 'rowId';
       {
         "node": {
           "id": "03edfab2-fd65-4bb2-94f9-bbd35bb369cf",
-          "displayName": "hub admin"
+          "displayName": "space admin"
         }
       },
       {
@@ -47,7 +47,7 @@ const SORTING_COLUMN: keyof Paginationable = 'rowId';
       {
         "node": {
           "id": "9d1969de-2551-4eb8-bbd2-bf8963f1b71f",
-          "displayName": "hub member"
+          "displayName": "space member"
         }
       }
     ]

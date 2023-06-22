@@ -2,7 +2,7 @@
   "challenge": {
     "nameID": "ch12",
     "id": "31ad6631-2004-4b08-a6d7-07b9df2c49db",
-    "hubID": "00655835-4d15-4546-801e-1ab80ac3078a",
+    "spaceID": "00655835-4d15-4546-801e-1ab80ac3078a",
     "profile": {
       "id": "08c6ec54-524a-4d7f-9f58-a4c50f0c0496",
       "tagline": "",
@@ -19,7 +19,7 @@
     "community": {
       "displayName": "12 Responsible Consumption + Production",
       "type": "challenge",
-      "hubID": "00655835-4d15-4546-801e-1ab80ac3078a",
+      "spaceID": "00655835-4d15-4546-801e-1ab80ac3078a",
       "parentID": "31ad6631-2004-4b08-a6d7-07b9df2c49db",
       "policy": "{\"member\":{\"credential\":{\"type\":\"challenge-member\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\"},\"minOrg\":0,\"maxOrg\":-1,\"minUser\":0,\"maxUser\":-1},\"lead\":{\"credential\":{\"type\":\"challenge-lead\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\"},\"minOrg\":0,\"maxOrg\":9,\"minUser\":0,\"maxUser\":2}}",
       "id": "72fde617-29f2-4832-af48-2a59f7c847ad",
@@ -28,7 +28,7 @@
       "version": 3,
       "authorization": {
         "anonymousReadAccess": false,
-        "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"hub-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"hub-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"challenge-admin\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"grant\",\"delete\"],\"cascade\":true},{\"type\":\"challenge-member\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"hub-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"community-apply\"],\"cascade\":false}]",
+        "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"challenge-admin\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"grant\",\"delete\"],\"cascade\":true},{\"type\":\"challenge-member\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"community-apply\"],\"cascade\":false}]",
         "verifiedCredentialRules": "[]",
         "privilegeRules": "[]",
         "id": "002720bf-d2de-4f6e-a482-2f1d00800596"
@@ -36,7 +36,7 @@
     },
     "authorization": {
       "anonymousReadAccess": false,
-      "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"hub-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"hub-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"challenge-admin\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"grant\",\"delete\"],\"cascade\":true},{\"type\":\"challenge-member\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
+      "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"challenge-admin\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"grant\",\"delete\"],\"cascade\":true},{\"type\":\"challenge-member\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
       "verifiedCredentialRules": "[]",
       "privilegeRules": "",
       "id": "805ea628-e78a-4745-a8f6-745ce4269d57"
@@ -47,7 +47,7 @@
       "id": "d7b970ba-13c7-4657-a205-6d2334d789dc",
       "authorization": {
         "anonymousReadAccess": false,
-        "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"hub-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"hub-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"challenge-admin\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"grant\",\"delete\"],\"cascade\":true},{\"type\":\"challenge-member\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
+        "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"challenge-admin\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"grant\",\"delete\"],\"cascade\":true},{\"type\":\"challenge-member\",\"resourceID\":\"31ad6631-2004-4b08-a6d7-07b9df2c49db\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
         "verifiedCredentialRules": "[]",
         "privilegeRules": "",
         "id": "5dbaf774-9457-417d-9f5b-b04251b82d68"

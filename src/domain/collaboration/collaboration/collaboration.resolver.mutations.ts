@@ -168,7 +168,7 @@ export class CollaborationResolverMutations {
       this.activityAdapter.calloutPublished(activityLogInput);
     }
 
-    const { hubID } =
+    const { spaceID } =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
         callout.id
       );
@@ -177,7 +177,7 @@ export class CollaborationResolverMutations {
       {
         id: callout.id,
         name: callout.nameID,
-        hub: hubID,
+        space: spaceID,
       },
       {
         id: agentInfo.userID,

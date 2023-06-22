@@ -487,13 +487,15 @@ export class CommunityResolverMutations {
       agentInfo
     );
 
+    const displayName = await this.communityService.getDisplayName(community);
+
     switch (community.type) {
-      case CommunityType.HUB:
-        this.elasticService.hubJoined(
+      case CommunityType.SPACE:
+        this.elasticService.spaceJoined(
           {
             id: community.parentID,
-            name: community.id,
-            hub: community.hubID,
+            name: displayName,
+            space: community.spaceID,
           },
           {
             id: agentInfo.userID,
@@ -505,8 +507,8 @@ export class CommunityResolverMutations {
         this.elasticService.challengeJoined(
           {
             id: community.parentID,
-            name: community.id,
-            hub: community.hubID,
+            name: displayName,
+            space: community.spaceID,
           },
           {
             id: agentInfo.userID,
@@ -518,8 +520,8 @@ export class CommunityResolverMutations {
         this.elasticService.opportunityJoined(
           {
             id: community.parentID,
-            name: community.id,
-            hub: community.hubID,
+            name: displayName,
+            space: community.spaceID,
           },
           {
             id: agentInfo.userID,

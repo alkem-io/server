@@ -1,4 +1,4 @@
 export * from './config';
-export * from './hubs';
+export * from './spaces';
 export * from './me';
 export * from './metadata';

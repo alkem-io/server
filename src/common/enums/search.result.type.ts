@@ -1,7 +1,7 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum SearchResultType {
-  HUB = 'hub',
+  SPACE = 'space',
   CHALLENGE = 'challenge',
   OPPORTUNITY = 'opportunity',
   USER = 'user',

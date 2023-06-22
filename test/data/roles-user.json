@@ -1,6 +1,6 @@
 {
   "rolesUser": {
-    "hubs": [
+    "spaces": [
       {
         "displayName": "UN Sustainable Development Goals",
         "nameID": "un-sdgs",
@@ -45,22 +45,22 @@
           }
         ],
         "opportunities": [],
-        "hubID": "00655835-4d15-4546-801e-1ab80ac3078a",
-        "hub": {
+        "spaceID": "00655835-4d15-4546-801e-1ab80ac3078a",
+        "space": {
           "displayName": "UN Sustainable Development Goals",
           "nameID": "un-sdgs",
           "template": "",
           "id": "00655835-4d15-4546-801e-1ab80ac3078a",
           "community": {
             "displayName": "UN Sustainable Development Goals",
-            "type": "hub",
-            "hubID": "00655835-4d15-4546-801e-1ab80ac3078a",
+            "type": "space",
+            "spaceID": "00655835-4d15-4546-801e-1ab80ac3078a",
             "parentID": "00655835-4d15-4546-801e-1ab80ac3078a",
-            "policy": "{\"member\":{\"credential\":{\"type\":\"hub-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\"},\"minOrg\":0,\"maxOrg\":-1,\"minUser\":0,\"maxUser\":-1},\"lead\":{\"credential\":{\"type\":\"hub-host\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\"},\"minOrg\":0,\"maxOrg\":1,\"minUser\":0,\"maxUser\":2}}",
+            "policy": "{\"member\":{\"credential\":{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\"},\"minOrg\":0,\"maxOrg\":-1,\"minUser\":0,\"maxUser\":-1},\"lead\":{\"credential\":{\"type\":\"space-host\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\"},\"minOrg\":0,\"maxOrg\":1,\"minUser\":0,\"maxUser\":2}}",
             "id": "d9269921-1660-4f76-95d1-16c5b3d06fb1",
             "authorization": {
               "anonymousReadAccess": false,
-              "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"hub-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"hub-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-registered\",\"resourceID\":\"\",\"grantedPrivileges\":[\"community-apply\"],\"cascade\":false}]",
+              "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-registered\",\"resourceID\":\"\",\"grantedPrivileges\":[\"community-apply\"],\"cascade\":false}]",
               "verifiedCredentialRules": "[]",
               "privilegeRules": "[]",
               "id": "4b4b27c3-6a46-4bb1-b437-fc569aa0ff3e"
@@ -68,7 +68,7 @@
           },
           "authorization": {
             "anonymousReadAccess": false,
-            "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"hub-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"hub-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
+            "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
             "verifiedCredentialRules": "[]",
             "privilegeRules": "",
             "id": "26b45df9-85fe-4dff-942a-726b17455911"
@@ -86,7 +86,7 @@
             "id": "093da171-5454-452f-b024-937ccb057920",
             "authorization": {
               "anonymousReadAccess": false,
-              "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"hub-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"hub-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
+              "credentialRules": "[{\"type\":\"global-admin\",\"resourceID\":\"\",\"grantedPrivileges\":[\"create\",\"grant\",\"read\",\"update\",\"delete\"],\"cascade\":true},{\"type\":\"global-admin-community\",\"resourceID\":\"\",\"grantedPrivileges\":[\"read\"],\"cascade\":true},{\"type\":\"space-admin\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"create\",\"read\",\"update\",\"delete\",\"grant\"],\"cascade\":true},{\"type\":\"space-member\",\"resourceID\":\"00655835-4d15-4546-801e-1ab80ac3078a\",\"grantedPrivileges\":[\"read\"],\"cascade\":true}]",
               "verifiedCredentialRules": "[]",
               "privilegeRules": "",
               "id": "515a3ada-1b37-4c23-8da4-c431cce5880b"
@@ -155,11 +155,11 @@
     ],
     "applications": [
       {
-        "displayName": "Default Hub",
+        "displayName": "Default Space",
         "communityID": "22160282-7dab-45ab-9a83-039e05fcf5a4",
         "state": "new",
         "id": "18084faf-c950-4faf-baa8-15d74a5f715e",
-        "hubID": "bde93e37-4581-4b27-a6d9-07f12b33847c"
+        "spaceID": "bde93e37-4581-4b27-a6d9-07f12b33847c"
       }
     ],
     "communities": [],

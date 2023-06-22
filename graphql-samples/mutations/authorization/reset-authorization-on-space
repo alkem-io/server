@@ -1,0 +1,11 @@
+mutation authorizationPolicyResetOnSpace($authorizationResetData: SpaceAuthorizationResetInput!) {
+  authorizationPolicyResetOnSpace(authorizationResetData: $authorizationResetData) {
+    nameID
+  }
+}
+
+{
+  "authorizationResetData": {
+    "spaceID": "eco1"
+  }
+}

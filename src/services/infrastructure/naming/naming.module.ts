@@ -5,7 +5,7 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Project } from '@domain/collaboration/project';
 import { Post } from '@domain/collaboration/post/post.entity';
-import { Hub } from '@domain/challenge/hub/hub.entity';
+import { Space } from '@domain/challenge/space/space.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Community } from '@domain/community/community/community.entity';
@@ -21,7 +21,7 @@ import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
     TypeOrmModule.forFeature([Project]),
     TypeOrmModule.forFeature([Post]),
     TypeOrmModule.forFeature([Whiteboard]),
-    TypeOrmModule.forFeature([Hub]),
+    TypeOrmModule.forFeature([Space]),
     TypeOrmModule.forFeature([Callout]),
     TypeOrmModule.forFeature([Collaboration]),
     TypeOrmModule.forFeature([Community]),

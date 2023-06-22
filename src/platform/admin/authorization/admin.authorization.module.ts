@@ -8,7 +8,7 @@ import { AdminAuthorizationResolverMutations } from './admin.authorization.resol
 import { AdminAuthorizationResolverQueries } from './admin.authorization.resolver.queries';
 import { AdminAuthorizationService } from './admin.authorization.service';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
-import { HubModule } from '@domain/challenge/hub/hub.module';
+import { SpaceModule } from '@domain/challenge/space/space.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { PlatformModule } from '@platform/platfrom/platform.module';
 
@@ -18,7 +18,7 @@ import { PlatformModule } from '@platform/platfrom/platform.module';
     AuthorizationPolicyModule,
     AgentModule,
     UserModule,
-    HubModule,
+    SpaceModule,
     OrganizationModule,
     PlatformModule,
     CredentialModule,

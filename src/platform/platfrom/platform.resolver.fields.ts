@@ -62,7 +62,7 @@ export class PlatformResolverFields {
     args: InnovationHubArgsQuery,
     @InnovationHubDecorator() innovationHub?: InnovationHub
   ): Promise<IInnovationHub | undefined> {
-    // if no arguments are provided, return the current IHub
+    // if no arguments are provided, return the current ISpace
     if (!Object.keys(args).length) {
       return Promise.resolve(innovationHub as IInnovationHub);
     }

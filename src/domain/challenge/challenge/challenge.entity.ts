@@ -7,7 +7,7 @@ import {
   OneToMany,
   OneToOne,
 } from 'typeorm';
-import { Hub } from '@domain/challenge/hub/hub.entity';
+import { Space } from '@domain/challenge/space/space.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { PreferenceSet } from '@domain/common/preference-set';
 import { IChallenge } from './challenge.interface';
@@ -35,15 +35,15 @@ export class Challenge extends BaseChallenge implements IChallenge {
   })
   parentChallenge?: Challenge;
 
-  @ManyToOne(() => Hub, hub => hub.challenges, {
+  @ManyToOne(() => Space, space => space.challenges, {
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
   })
-  parentHub?: Hub;
+  parentSpace?: Space;
 
   @Column()
-  hubID?: string; //toDo make mandatory https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2196
+  spaceID?: string; //toDo make mandatory https://app.zenspace.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2196
 
   @OneToOne(() => PreferenceSet, {
     eager: false,

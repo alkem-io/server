@@ -1,5 +1,5 @@
-mutation updateHubVisibility($visibilityData: UpdateHubVisibilityInput!) {
-  updateHubVisibility(visibilityData: $visibilityData) {
+mutation updateSpaceVisibility($visibilityData: UpdateSpaceVisibilityInput!) {
+  updateSpaceVisibility(visibilityData: $visibilityData) {
     id
   }
 }
@@ -7,7 +7,7 @@ mutation updateHubVisibility($visibilityData: UpdateHubVisibilityInput!) {
 Variables:
 {
   "visibilityData": {
-    "hubID": "uuid_nameid",
+    "spaceID": "uuid_nameid",
     "visibility": "ARCHIVED"
   }
 }

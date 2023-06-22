@@ -1,5 +1,12 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { addStorageBucketRelation, allowedTypes, createStorageBucketAndLink, maxAllowedFileSize, removeStorageBucketAuths, removeStorageBucketRelation } from './utils/storage/storage-bucket-utils';
+import {
+  addStorageBucketRelation,
+  allowedTypes,
+  createStorageBucketAndLink,
+  maxAllowedFileSize,
+  removeStorageBucketAuths,
+  removeStorageBucketRelation,
+} from './utils/storage/storage-bucket-utils';
 export class storage1681736452222 implements MigrationInterface {
   name = 'storage1681736452222';
 
@@ -77,7 +84,6 @@ export class storage1681736452222 implements MigrationInterface {
       'FK_51991450cf75dc486700ca034c6',
       'organization'
     );
-
 
     // Allow every profile to know the StorageBucket to use
     // TODO: enforce this to be a valid value or not? What happens if storagebucket is deleted?
@@ -171,10 +177,13 @@ export class storage1681736452222 implements MigrationInterface {
       'ALTER TABLE `document` DROP FOREIGN KEY `FK_11155450cf75dc486700ca034c6`'
     );
 
-    await removeStorageBucketAuths(
-      queryRunner,
-      ['hub', 'challenge', 'platform', 'library', 'organization']
-    )
+    await removeStorageBucketAuths(queryRunner, [
+      'hub',
+      'challenge',
+      'platform',
+      'library',
+      'organization',
+    ]);
     await removeStorageBucketRelation(
       queryRunner,
       'FK_11991450cf75dc486700ca034c6',
@@ -201,7 +210,6 @@ export class storage1681736452222 implements MigrationInterface {
       'organization'
     );
 
-
     await queryRunner.query('DROP TABLE `storage_bucket`');
     await queryRunner.query('DROP TABLE `document`');
 
@@ -209,5 +217,4 @@ export class storage1681736452222 implements MigrationInterface {
       `ALTER TABLE \`profile\` DROP COLUMN \`storageBucketId\``
     );
   }
-
 }

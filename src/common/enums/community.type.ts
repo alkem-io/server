@@ -1,5 +1,5 @@
 export enum CommunityType {
-  HUB = 'hub',
+  SPACE = 'space',
   CHALLENGE = 'challenge',
   OPPORTUNITY = 'opportunity',
 }

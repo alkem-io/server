@@ -24,7 +24,7 @@ export abstract class ICommunity extends IAuthorizable {
 
   policy!: ICommunityPolicy;
 
-  hubID!: string;
+  spaceID!: string;
 
   communication?: ICommunication;
   type!: CommunityType;

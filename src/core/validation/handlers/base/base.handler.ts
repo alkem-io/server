@@ -6,7 +6,7 @@ import {
   ChallengeEventInput,
   UpdateChallengeInput,
 } from '@domain/challenge/challenge';
-import { UpdateHubInput } from '@domain/challenge/hub/dto/hub.dto.update';
+import { UpdateSpaceInput } from '@domain/challenge/space/dto/space.dto.update';
 import {
   CreateProjectInput,
   ProjectEventInput,
@@ -31,7 +31,7 @@ import {
   CreateUserGroupInput,
   UpdateUserGroupInput,
 } from '@domain/community/user-group/dto';
-import { CreateChallengeOnHubInput } from '@domain/challenge/challenge/dto/challenge.dto.create.in.hub';
+import { CreateChallengeOnSpaceInput } from '@domain/challenge/challenge/dto/challenge.dto.create.in.space';
 import { CreateChallengeOnChallengeInput } from '@domain/challenge/challenge/dto/challenge.dto.create.in.challenge';
 import { CreateActorInput, UpdateActorInput } from '@domain/context/actor';
 import { CommunityApplyInput } from '@domain/community/community/dto/community.dto.apply';
@@ -89,7 +89,7 @@ export class BaseHandler extends AbstractHandler {
       CreatePostTemplateOnTemplatesSetInput,
       CreateWhiteboardOnCalloutInput,
       CreateWhiteboardTemplateOnTemplatesSetInput,
-      CreateChallengeOnHubInput,
+      CreateChallengeOnSpaceInput,
       CreateChallengeOnChallengeInput,
       CreateOpportunityInput,
       CreateOrganizationInput,
@@ -107,7 +107,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateDocumentInput,
       UpdatePostTemplateInput,
       UpdateCommunityApplicationFormInput,
-      UpdateHubInput,
+      UpdateSpaceInput,
       UpdateOrganizationInput,
       UpdateOpportunityInput,
       UpdateChallengeInput,

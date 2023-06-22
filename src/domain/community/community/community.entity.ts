@@ -27,7 +27,7 @@ export class Community
   implements ICommunity, IGroupable
 {
   @Column()
-  hubID: string;
+  spaceID: string;
 
   @OneToOne(() => Communication, {
     eager: false,
@@ -92,7 +92,7 @@ export class Community
   constructor(type: CommunityType) {
     super();
     this.type = type;
-    this.hubID = '';
+    this.spaceID = '';
     this.parentID = '';
   }
 }

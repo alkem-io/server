@@ -1,8 +1,8 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
-import { IHub } from '@domain/challenge/hub/hub.interface';
-import { HubService } from '@domain/challenge/hub/hub.service';
+import { ISpace } from '@domain/challenge/space/space.interface';
+import { SpaceService } from '@domain/challenge/space/space.service';
 import { IProfile } from '@domain/common/profile';
 import { Profiling } from '@common/decorators';
 import { Loader } from '@core/dataloader/decorators';
@@ -13,23 +13,25 @@ import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 @Resolver(() => IInnovationHub)
 export class InnovationHubFieldResolver {
   constructor(
-    private hubService: InnovationHubService,
-    private spaceService: HubService
+    private innovationHubService: InnovationHubService,
+    private spaceService: SpaceService
   ) {}
 
-  @ResolveField(() => [IHub], {
+  @ResolveField(() => [ISpace], {
     nullable: true,
   })
-  public async hubListFilter(
-    @Parent() hub: IInnovationHub
-  ): Promise<IHub[] | undefined> {
-    const filter = await this.hubService.getSpaceListFilterOrFail(hub.id);
+  public async spaceListFilter(
+    @Parent() space: IInnovationHub
+  ): Promise<ISpace[] | undefined> {
+    const filter = await this.innovationHubService.getSpaceListFilterOrFail(
+      space.id
+    );
 
     if (!filter) {
       return undefined;
     }
 
-    return this.spaceService.getHubsById(filter);
+    return this.spaceService.getSpacesById(filter);
   }
 
   @ResolveField('profile', () => IProfile, {
@@ -38,10 +40,10 @@ export class InnovationHubFieldResolver {
   })
   @Profiling.api
   async profile(
-    @Parent() hub: InnovationHub,
+    @Parent() space: InnovationHub,
     @Loader(ProfileLoaderCreator, { parentClassRef: InnovationHub })
     loader: ILoader<IProfile>
   ) {
-    return loader.load(hub.id);
+    return loader.load(space.id);
   }
 }

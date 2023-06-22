@@ -1,6 +1,6 @@
 query {
   rolesUser(rolesData: {userID: "admin-alkemio", filter: {visibilities: [ARCHIVED, ACTIVE, DEMO]}}) {
-   	hubs {
+   	spaces {
       nameID
       id
       roles

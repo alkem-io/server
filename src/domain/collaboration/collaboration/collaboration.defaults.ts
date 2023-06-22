@@ -9,13 +9,13 @@ const emptyWhiteboardValue =
 export const collaborationDefaults: any = {
   callouts: [
     {
-      nameID: 'hub-welcome',
+      nameID: 'space-welcome',
       type: CalloutType.POST,
-      communityType: CommunityType.HUB,
+      communityType: CommunityType.SPACE,
       profile: {
         displayName: 'Welcome, please introduce yourself to the community!',
         description:
-          'Please share a few words about yourself to help the community get to know each other. What brings you to this Hub and motivates you to work on these Challenges?',
+          'Please share a few words about yourself to help the community get to know each other. What brings you to this Space and motivates you to work on these Challenges?',
       },
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
@@ -90,7 +90,7 @@ export const collaborationDefaults: any = {
         description:
           'Collaborate visually using Whiteboardes. Create a new Whiteboard from a template, or explore Whiteboardes already created.',
       },
-      nameID: `${CalloutType.WHITEBOARD_COLLECTION}-default`,
+      nameID: `${CalloutType.WHITEBOARD_COLLECTION}`,
       visibility: CalloutVisibility.PUBLISHED,
       state: CalloutState.OPEN,
       sortOrder: 10,

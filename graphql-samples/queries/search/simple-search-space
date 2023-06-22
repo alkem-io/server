@@ -1,0 +1,61 @@
+query search($searchData: SearchInput!) {
+  search(searchData: $searchData) {
+    contributorResults {
+      id
+      score
+      terms
+      type
+      ... on SearchResultUser {
+        user {
+          nameID
+        }
+      }
+      ... on SearchResultOrganization {
+        organization {
+          nameID
+        }
+      }
+    }
+    journeyResults {
+      id
+      score
+      terms
+      type
+      ... on SearchResultSpace {
+        space {
+          nameID
+        }
+      }
+      ... on SearchResultChallenge {
+        challenge {
+          nameID
+        }
+      }
+      ... on SearchResultOpportunity {
+        opportunity {
+          nameID
+        }
+      }
+    }
+    contributionResults {
+      id
+      score
+      terms
+      type
+      ... on SearchResultPost {
+        post {
+          nameID
+        }
+      }
+
+    }
+  }
+}
+
+{
+  "searchData":
+  {
+    "terms": ["Alisha"],
+    "searchInSpaceFilter": "eco1"
+  }
+}

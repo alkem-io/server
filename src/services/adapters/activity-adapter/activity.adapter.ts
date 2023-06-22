@@ -51,15 +51,15 @@ export class ActivityAdapter {
 
     const challenge = eventData.challenge;
 
-    if (!challenge.hubID) {
+    if (!challenge.spaceID) {
       throw new EntityNotInitializedException(
-        `Unable to get hubID of Challenge: ${challenge.id}`,
+        `Unable to get spaceID of Challenge: ${challenge.id}`,
         LogContext.ACTIVITY
       );
     }
 
-    const collaborationID = await this.getCollaborationIdForHub(
-      challenge.hubID
+    const collaborationID = await this.getCollaborationIdForSpace(
+      challenge.spaceID
     );
     const description = challenge.profile.displayName;
 
@@ -67,7 +67,7 @@ export class ActivityAdapter {
       collaborationID,
       triggeredBy: eventData.triggeredBy,
       resourceID: challenge.id,
-      parentID: challenge.hubID,
+      parentID: challenge.spaceID,
       description,
       type: eventType,
     });
@@ -296,19 +296,19 @@ export class ActivityAdapter {
     return true;
   }
 
-  private async getCollaborationIdForHub(hubID: string): Promise<string> {
+  private async getCollaborationIdForSpace(spaceID: string): Promise<string> {
     const [result]: { collaborationId: string }[] =
       await this.entityManager.connection.query(
         `
           SELECT collaboration.id as collaborationId FROM collaboration
-          LEFT JOIN hub ON hub.collaborationId = collaboration.id
-          WHERE hub.id = '${hubID}'
+          LEFT JOIN space ON space.collaborationId = collaboration.id
+          WHERE space.id = '${spaceID}'
         `
       );
 
     if (!result) {
       throw new EntityNotFoundException(
-        `Unable to identify Collaboration for Hub with ID: ${hubID}`,
+        `Unable to identify Collaboration for Space with ID: ${spaceID}`,
         LogContext.ACTIVITY
       );
     }
@@ -413,8 +413,8 @@ export class ActivityAdapter {
       collaborationId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT collaborationId from \`hub\`
-        WHERE \`hub\`.\`communityId\` = '${communityId}' UNION
+        SELECT collaborationId from \`space\`
+        WHERE \`space\`.\`communityId\` = '${communityId}' UNION
 
         SELECT collaborationId from \`challenge\`
         WHERE \`challenge\`.\`communityId\` = '${communityId}' UNION
