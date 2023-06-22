@@ -1,5 +1,5 @@
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Hub } from '@domain/challenge/hub/hub.entity';
+import { Space } from '@domain/challenge/space/space.entity';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
 import { Whiteboard } from '@domain/common/whiteboard';
@@ -18,7 +18,7 @@ import { NotificationPayloadBuilder } from './notification.payload.builder';
     ActivityModule,
     EntityResolverModule,
     TypeOrmModule.forFeature([
-      Hub,
+      Space,
       Challenge,
       Opportunity,
       Post,

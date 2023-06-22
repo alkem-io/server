@@ -5,7 +5,7 @@ import { Field, InputType } from '@nestjs/graphql';
 export class SearchInput {
   @Field(() => [String], {
     nullable: false,
-    description: 'The terms to be searched for within this Hub. Max 5.',
+    description: 'The terms to be searched for within this Space. Max 5.',
   })
   terms!: string[];
 
@@ -26,7 +26,7 @@ export class SearchInput {
   @Field(() => UUID_NAMEID, {
     nullable: true,
     description:
-      'Restrict the search to only the specified Hub. Default is all Hubs.',
+      'Restrict the search to only the specified Space. Default is all Spaces.',
   })
-  searchInHubFilter?: string;
+  searchInSpaceFilter?: string;
 }

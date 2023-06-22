@@ -105,12 +105,12 @@ export class InnovationFlowTemplateService {
 
   public async getInnovationFlowDefinitionFromTemplate(
     templateID: string,
-    hubID: string,
+    spaceID: string,
     templateType: InnovationFlowType
   ): Promise<ILifecycleDefinition> {
     await this.validateInnovationFlowDefinitionOrFail(
       templateID,
-      hubID,
+      spaceID,
       templateType
     );
     const innovationFlowTemplate = await this.getInnovationFlowTemplateOrFail(
@@ -126,24 +126,24 @@ export class InnovationFlowTemplateService {
   }
 
   public async getDefaultInnovationFlowTemplateId(
-    hubID: string,
+    spaceID: string,
     templateType: InnovationFlowType
   ): Promise<string> {
     const [{ innovationFlowTemplateId }]: {
       innovationFlowTemplateId: string;
     }[] = await this.entityManager.connection.query(
       `
-      SELECT innovation_flow_template.id AS innovationFlowTemplateId FROM hub
-      LEFT JOIN innovation_flow_template ON hub.templatesSetId = innovation_flow_template.templatesSetId
+      SELECT innovation_flow_template.id AS innovationFlowTemplateId FROM space
+      LEFT JOIN innovation_flow_template ON space.templatesSetId = innovation_flow_template.templatesSetId
       WHERE innovation_flow_template.type = '${templateType}'
-      AND hub.id = '${hubID}'
+      AND space.id = '${spaceID}'
       LIMIT 1
       `
     );
 
     if (!innovationFlowTemplateId) {
       throw new EntityNotFoundException(
-        `Not able to locate InnovationFlowTemplate with type: ${templateType} for Hub: ${hubID}`,
+        `Not able to locate InnovationFlowTemplate with type: ${templateType} for Space: ${spaceID}`,
         LogContext.COMMUNICATION
       );
     }
@@ -153,36 +153,40 @@ export class InnovationFlowTemplateService {
 
   async validateInnovationFlowDefinitionOrFail(
     templateID: string,
-    hubID: string,
+    spaceID: string,
     templateType: InnovationFlowType
   ): Promise<void> {
     const isInnovationFlowTemplateAvailable =
-      await this.isInnovationFlowTemplateInHub(templateID, hubID, templateType);
+      await this.isInnovationFlowTemplateInSpace(
+        templateID,
+        spaceID,
+        templateType
+      );
     if (!isInnovationFlowTemplateAvailable) {
       throw new EntityNotFoundException(
-        `Unable to find ${templateType} InnovationFlow Template with ID: ${templateID}, in parent Hub template set.`,
+        `Unable to find ${templateType} InnovationFlow Template with ID: ${templateID}, in parent Space template set.`,
         LogContext.LIFECYCLE
       );
     }
   }
 
-  private async isInnovationFlowTemplateInHub(
+  private async isInnovationFlowTemplateInSpace(
     innovationFlowTemplateID: string,
-    hubID: string,
+    spaceID: string,
     templateType: string
   ) {
     const [queryResult]: {
-      hubCount: string;
+      spaceCount: string;
     }[] = await this.entityManager.connection.query(
       `
-      SELECT COUNT(*) as hubCount FROM \`hub\`
-      RIGHT JOIN \`innovation_flow_template\` ON \`hub\`.\`templatesSetId\` = \`innovation_flow_template\`.\`templatesSetId\`
+      SELECT COUNT(*) as spaceCount FROM \`space\`
+      RIGHT JOIN \`innovation_flow_template\` ON \`space\`.\`templatesSetId\` = \`innovation_flow_template\`.\`templatesSetId\`
       WHERE \`innovation_flow_template\`.\`id\` = '${innovationFlowTemplateID}'
       AND \`innovation_flow_template\`.\`type\` = '${templateType}'
-      AND \`hub\`.\`id\` = '${hubID}'
+      AND \`space\`.\`id\` = '${spaceID}'
       `
     );
 
-    return queryResult.hubCount === '1';
+    return queryResult.spaceCount === '1';
   }
 }

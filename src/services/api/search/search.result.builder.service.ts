@@ -2,11 +2,11 @@ import { UserService } from '@domain/community/user/user.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { ISearchResultBuilder } from './search.result.builder.interface';
-import { HubService } from '@domain/challenge/hub/hub.service';
+import { SpaceService } from '@domain/challenge/space/space.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { ISearchResultBase } from './dto/search.result.dto.entry.base.interface';
 import { SearchResultType } from '@common/enums/search.result.type';
-import { ISearchResultHub } from './dto/search.result.dto.entry.hub';
+import { ISearchResultSpace } from './dto/search.result.dto.entry.space';
 import { ISearchResultChallenge } from './dto/search.result.dto.entry.challenge';
 import { ISearchResultOpportunity } from './dto/search.result.dto.entry.opportunity';
 import { ISearchResultUser } from './dto/search.result.dto.entry.user';
@@ -22,7 +22,7 @@ import { LogContext } from '@common/enums';
 import { PostService } from '@domain/collaboration/post/post.service';
 import { ISearchResultPost } from './dto/search.result.dto.entry.post';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { IHub } from '@domain/challenge/hub/hub.interface';
+import { ISpace } from '@domain/challenge/space/space.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { ICallout } from '@domain/collaboration/callout';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
@@ -30,14 +30,14 @@ import { EntityManager } from 'typeorm';
 
 export type PostParents = {
   callout: ICallout;
-  hub: IHub;
+  space: ISpace;
   challenge: IChallenge | undefined;
   opportunity: IOpportunity | undefined;
 };
 
 export type PostParentIDs = {
   calloutID: string;
-  hubID: string;
+  spaceID: string;
   challengeID: string | undefined;
   opportunityID: string | undefined;
 };
@@ -47,7 +47,7 @@ export default class SearchResultBuilderService
 {
   constructor(
     private readonly searchResultBase: ISearchResultBase,
-    private readonly hubService: HubService,
+    private readonly spaceService: SpaceService,
     private readonly challengeService: ChallengeService,
     private readonly opportunityService: OpportunityService,
     private readonly userService: UserService,
@@ -58,26 +58,28 @@ export default class SearchResultBuilderService
     private readonly entityManager: EntityManager
   ) {}
 
-  async [SearchResultType.HUB](rawSearchResult: ISearchResult) {
-    const hub = await this.hubService.getHubOrFail(rawSearchResult.result.id);
-    const searchResultHub: ISearchResultHub = {
+  async [SearchResultType.SPACE](rawSearchResult: ISearchResult) {
+    const space = await this.spaceService.getSpaceOrFail(
+      rawSearchResult.result.id
+    );
+    const searchResultSpace: ISearchResultSpace = {
       ...this.searchResultBase,
-      hub: hub,
+      space: space,
     };
-    return searchResultHub;
+    return searchResultSpace;
   }
 
   async [SearchResultType.CHALLENGE](rawSearchResult: ISearchResult) {
     const challenge = await this.challengeService.getChallengeOrFail(
       rawSearchResult.result.id
     );
-    const hub = await this.hubService.getHubOrFail(
-      this.challengeService.getHubID(challenge)
+    const space = await this.spaceService.getSpaceOrFail(
+      this.challengeService.getSpaceID(challenge)
     );
     const searchResultChallenge: ISearchResultChallenge = {
       ...this.searchResultBase,
       challenge,
-      hub,
+      space,
     };
     return searchResultChallenge;
   }
@@ -89,8 +91,8 @@ export default class SearchResultBuilderService
         relations: ['challenge'],
       }
     );
-    const hub = await this.hubService.getHubOrFail(
-      this.opportunityService.getHubID(opportunity)
+    const space = await this.spaceService.getSpaceOrFail(
+      this.opportunityService.getSpaceID(opportunity)
     );
     if (!opportunity.challenge) {
       throw new RelationshipNotFoundException(
@@ -104,7 +106,7 @@ export default class SearchResultBuilderService
     const searchResultOpportunity: ISearchResultOpportunity = {
       ...this.searchResultBase,
       opportunity,
-      hub,
+      space,
       challenge,
     };
     return searchResultOpportunity;
@@ -147,21 +149,21 @@ export default class SearchResultBuilderService
     const [queryResult]: PostParentIDs[] =
       await this.entityManager.connection.query(
         `
-      SELECT \`hub\`.\`id\` as \`hubID\`, \`challenge\`.\`id\` as \`challengeID\`, null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
+      SELECT \`space\`.\`id\` as \`spaceID\`, \`challenge\`.\`id\` as \`challengeID\`, null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
       RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`hub\` on \`challenge\`.\`hubID\` = \`hub\`.\`id\`
+      JOIN \`space\` on \`challenge\`.\`spaceID\` = \`space\`.\`id\`
       JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
       WHERE \`post\`.\`id\` = '${postId}' UNION
 
-      SELECT \`hub\`.\`id\` as \`hubID\`, null as \'challengeID\', null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\`  FROM \`callout\`
-      RIGHT JOIN \`hub\` on \`hub\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      SELECT \`space\`.\`id\` as \`spaceID\`, null as \'challengeID\', null as \'opportunityID\', \`callout\`.\`id\` as \`calloutID\`  FROM \`callout\`
+      RIGHT JOIN \`space\` on \`space\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
       WHERE \`post\`.\`id\` = '${postId}' UNION
 
-      SELECT  \`hub\`.\`id\` as \`hubID\`, \`challenge\`.\`id\` as \`challengeID\`, \`opportunity\`.\`id\` as \`opportunityID\`, \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
+      SELECT  \`space\`.\`id\` as \`spaceID\`, \`challenge\`.\`id\` as \`challengeID\`, \`opportunity\`.\`id\` as \`opportunityID\`, \`callout\`.\`id\` as \`calloutID\` FROM \`callout\`
       RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       JOIN \`challenge\` on \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
-      JOIN \`hub\` on \`opportunity\`.\`hubID\` = \`hub\`.\`id\`
+      JOIN \`space\` on \`opportunity\`.\`spaceID\` = \`space\`.\`id\`
       JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
       WHERE \`post\`.\`id\` = '${postId}';
       `
@@ -180,7 +182,7 @@ export default class SearchResultBuilderService
     const callout = await this.calloutService.getCalloutOrFail(
       queryResult.calloutID
     );
-    const hub = await this.hubService.getHubOrFail(queryResult.hubID);
+    const space = await this.spaceService.getSpaceOrFail(queryResult.spaceID);
 
     if (queryResult.challengeID)
       challenge = await this.challengeService.getChallengeOrFail(
@@ -191,7 +193,7 @@ export default class SearchResultBuilderService
         queryResult.opportunityID
       );
 
-    return { challenge, opportunity, callout, hub };
+    return { challenge, opportunity, callout, space };
   }
 
   async [SearchResultType.POST](rawSearchResult: ISearchResult) {

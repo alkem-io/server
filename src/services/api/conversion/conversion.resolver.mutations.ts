@@ -5,18 +5,18 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConversionService } from './conversion.service';
-import { IHub } from '@domain/challenge/hub/hub.interface';
+import { ISpace } from '@domain/challenge/space/space.interface';
 import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.global';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ConvertChallengeToHubInput } from './dto/convert.dto.challenge.to.hub.input';
-import { HubAuthorizationService } from '@domain/challenge/hub/hub.service.authorization';
+import { ConvertChallengeToSpaceInput } from './dto/convert.dto.challenge.to.space.input';
+import { SpaceAuthorizationService } from '@domain/challenge/space/space.service.authorization';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { ConvertOpportunityToChallengeInput } from './dto/convert.dto.opportunity.to.challenge.input';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
-import { HubService } from '@domain/challenge/hub/hub.service';
+import { SpaceService } from '@domain/challenge/space/space.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS } from '@common/constants/authorization/global.policy.constants';
 
@@ -28,8 +28,8 @@ export class ConversionResolverMutations {
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private conversionService: ConversionService,
-    private hubAuthorizationService: HubAuthorizationService,
-    private hubService: HubService,
+    private spaceAuthorizationService: SpaceAuthorizationService,
+    private spaceService: SpaceService,
     private opportunityService: OpportunityService,
     private challengeService: ChallengeService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -39,34 +39,37 @@ export class ConversionResolverMutations {
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [
           AuthorizationRoleGlobal.GLOBAL_ADMIN,
-          AuthorizationRoleGlobal.GLOBAL_ADMIN_HUBS,
+          AuthorizationRoleGlobal.GLOBAL_ADMIN_SPACES,
         ],
-        [AuthorizationPrivilege.CREATE_HUB, AuthorizationPrivilege.CREATE],
+        [AuthorizationPrivilege.CREATE_SPACE, AuthorizationPrivilege.CREATE],
         GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS
       );
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IHub, {
-    description: 'Creates a new Hub by converting an existing Challenge.',
+  @Mutation(() => ISpace, {
+    description: 'Creates a new Space by converting an existing Challenge.',
   })
   @Profiling.api
-  async convertChallengeToHub(
+  async convertChallengeToSpace(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('convertData') convertChallengeToHubData: ConvertChallengeToHubInput
-  ): Promise<IHub> {
+    @Args('convertData')
+    convertChallengeToSpaceData: ConvertChallengeToSpaceInput
+  ): Promise<ISpace> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.CREATE_HUB,
-      `convert challenge to hub: ${agentInfo.email}`
+      AuthorizationPrivilege.CREATE_SPACE,
+      `convert challenge to space: ${agentInfo.email}`
     );
-    const newHub = await this.conversionService.convertChallengeToHub(
-      convertChallengeToHubData,
+    const newSpace = await this.conversionService.convertChallengeToSpace(
+      convertChallengeToSpaceData,
       agentInfo
     );
 
-    return await this.hubAuthorizationService.applyAuthorizationPolicy(newHub);
+    return await this.spaceAuthorizationService.applyAuthorizationPolicy(
+      newSpace
+    );
   }
 
   @UseGuards(GraphqlGuard)
@@ -92,13 +95,13 @@ export class ConversionResolverMutations {
     const newChallenge =
       await this.conversionService.convertOpportunityToChallenge(
         convertOpportunityToChallengeData.opportunityID,
-        this.opportunityService.getHubID(opportunity),
+        this.opportunityService.getSpaceID(opportunity),
         agentInfo
       );
-    const parentHub = await this.hubService.getHubOrFail(
-      this.challengeService.getHubID(newChallenge)
+    const parentSpace = await this.spaceService.getSpaceOrFail(
+      this.challengeService.getSpaceID(newChallenge)
     );
-    await this.hubAuthorizationService.applyAuthorizationPolicy(parentHub);
+    await this.spaceAuthorizationService.applyAuthorizationPolicy(parentSpace);
     return this.challengeService.getChallengeOrFail(newChallenge.id);
   }
 }

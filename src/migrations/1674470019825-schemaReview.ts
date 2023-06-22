@@ -1,9 +1,7 @@
-import {MigrationInterface, QueryRunner} from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class schemaReview1674470019825 implements MigrationInterface {
-
   public async up(queryRunner: QueryRunner): Promise<void> {
-
     // Make guids CHAR(36)
     //FIRST DROP CONSTRAINTS
     await queryRunner.query(
@@ -239,7 +237,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`template_info\` DROP FOREIGN KEY \`FK_77777901817dd09d5906537e088\``
     );
     await queryRunner.query(
-       `ALTER TABLE \`card_profile\` DROP FOREIGN KEY \`FK_44443901817dd09d5906537e088\``
+      `ALTER TABLE \`card_profile\` DROP FOREIGN KEY \`FK_44443901817dd09d5906537e088\``
     );
     await queryRunner.query(
       'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_0e2c355dbb2950851dbc17a4490`'
@@ -789,7 +787,6 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`lifecycle_template\` CHANGE COLUMN \`type\` \`type\` VARCHAR(128) NOT NULL;`
     );
 
-
     //RE-ADD CONSTRAINTS
     await queryRunner.query(
       'ALTER TABLE `actor` ADD CONSTRAINT `FK_a2afa3851ea733de932251b3a1f` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_policy`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
@@ -910,7 +907,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
     );
     await queryRunner.query(
       'ALTER TABLE `organization_verification` ADD CONSTRAINT `FK_3795f9dd15ef3ef2dd1d27e309c` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_policy`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
-    );;
+    );
     await queryRunner.query(
       `ALTER TABLE \`visual\` ADD CONSTRAINT \`FK_439d0b187986492b58178a82c3f\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
@@ -1422,7 +1419,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`template_info\` DROP FOREIGN KEY \`FK_77777901817dd09d5906537e088\``
     );
     await queryRunner.query(
-       `ALTER TABLE \`card_profile\` DROP FOREIGN KEY \`FK_44443901817dd09d5906537e088\``
+      `ALTER TABLE \`card_profile\` DROP FOREIGN KEY \`FK_44443901817dd09d5906537e088\``
     );
     await queryRunner.query(
       'ALTER TABLE `opportunity` DROP FOREIGN KEY `FK_0e2c355dbb2950851dbc17a4490`'
@@ -1533,7 +1530,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`activity\` CHANGE COLUMN \`collaborationID\` \`collaborationID\` VARCHAR(36) NULL;`
-      );
+    );
     await queryRunner.query(
       `ALTER TABLE \`actor\` CHANGE COLUMN \`id\` \`id\` VARCHAR(36) NOT NULL;`
     );
@@ -1737,7 +1734,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`community\` CHANGE COLUMN \`communicationId\` \`communicationId\` VARCHAR(36) NULL;`
-      );
+    );
     await queryRunner.query(
       `ALTER TABLE \`community_policy\` CHANGE COLUMN \`id\` \`id\` VARCHAR(36) NOT NULL;`
     );
@@ -2094,7 +2091,7 @@ export class schemaReview1674470019825 implements MigrationInterface {
     );
     await queryRunner.query(
       'ALTER TABLE `organization_verification` ADD CONSTRAINT `FK_3795f9dd15ef3ef2dd1d27e309c` FOREIGN KEY (`authorizationId`) REFERENCES `authorization_policy`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
-    );;
+    );
     await queryRunner.query(
       `ALTER TABLE \`visual\` ADD CONSTRAINT \`FK_439d0b187986492b58178a82c3f\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
@@ -2297,5 +2294,4 @@ export class schemaReview1674470019825 implements MigrationInterface {
       `ALTER TABLE \`template_info\` ADD CONSTRAINT \`FK_77777901817dd09d5906537e088\` FOREIGN KEY (\`tagsetId\`) REFERENCES \`tagset\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
   }
-
 }

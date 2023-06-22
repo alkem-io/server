@@ -1,5 +1,5 @@
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
-import { IHub } from '@domain/challenge/hub/hub.interface';
+import { ISpace } from '@domain/challenge/space/space.interface';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { ICallout } from '@domain/collaboration/callout';
 import { IOpportunity } from '@domain/collaboration/opportunity';
@@ -20,11 +20,11 @@ export abstract class ISearchResultPost
   })
   post!: IPost;
 
-  @Field(() => IHub, {
+  @Field(() => ISpace, {
     nullable: false,
-    description: 'The Hub of the Post.',
+    description: 'The Space of the Post.',
   })
-  hub!: IHub;
+  space!: ISpace;
 
   @Field(() => ICallout, {
     nullable: false,

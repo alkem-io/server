@@ -1,15 +1,15 @@
-mutation UpdateHub($hubData: UpdateHubInput!) {
-  updateHub(hubData: $hubData) {
+mutation UpdateSpace($spaceData: UpdateSpaceInput!) {
+  updateSpace(spaceData: $spaceData) {
     id
   }
 }
 {
-  "hubData":
+  "spaceData":
 		{
       "ID": "uuid",
       "hostID": "uuid",
       "profileData": {
-        "displayName": "New Hub 3"
+        "displayName": "New Space 3"
       }
 
 		}

@@ -6,6 +6,6 @@ export const MockCommunityService: ValueProvider<PublicPart<CommunityService>> =
   {
     provide: CommunityService,
     useValue: {
-      isHubCommunity: jest.fn(),
+      isSpaceCommunity: jest.fn(),
     },
   };

@@ -59,32 +59,32 @@ export class ElasticsearchService {
     });
   }
 
-  public hubJoined(
+  public spaceJoined(
     contribution: ContributionDetails,
     details: AuthorDetails
   ): void {
     this.createDocument(
       {
-        type: 'HUB_JOINED',
+        type: 'SPACE_JOINED',
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        hub: contribution.id,
+        space: contribution.id,
       },
       details
     );
   }
-  public hubContentEdited(
+  public spaceContentEdited(
     contribution: ContributionDetails,
     authorDetails: AuthorDetails
   ): void {
     this.createDocument(
       {
-        type: 'HUB_CONTENT_EDITED',
+        type: 'SPACE_CONTENT_EDITED',
         id: contribution.id,
         name: contribution.name,
         author: authorDetails.id,
-        hub: contribution.hub,
+        space: contribution.space,
       },
       authorDetails
     );
@@ -100,7 +100,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        hub: contribution.hub,
+        space: contribution.space,
       },
       details
     );
@@ -115,7 +115,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        hub: contribution.hub,
+        space: contribution.space,
       },
       details
     );
@@ -130,7 +130,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        hub: contribution.hub,
+        space: contribution.space,
       },
       details
     );
@@ -146,7 +146,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        hub: contribution.hub,
+        space: contribution.space,
       },
       details
     );
@@ -161,7 +161,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        hub: contribution.hub,
+        space: contribution.space,
       },
       details
     );
@@ -176,7 +176,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        hub: contribution.hub,
+        space: contribution.space,
       },
       details
     );
@@ -192,7 +192,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        hub: contribution.hub,
+        space: contribution.space,
       },
       details
     );
@@ -207,7 +207,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        hub: contribution.hub,
+        space: contribution.space,
       },
       details
     );
@@ -222,7 +222,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        hub: contribution.hub,
+        space: contribution.space,
       },
       details
     );
@@ -238,7 +238,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        hub: contribution.hub,
+        space: contribution.space,
       },
       details
     );
@@ -253,7 +253,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        hub: contribution.hub,
+        space: contribution.space,
       },
       details
     );
@@ -268,7 +268,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        hub: contribution.hub,
+        space: contribution.space,
       },
       details
     );
@@ -284,7 +284,7 @@ export class ElasticsearchService {
         id: contribution.id,
         name: contribution.name,
         author: details.id,
-        hub: contribution.hub,
+        space: contribution.space,
       },
       details
     );

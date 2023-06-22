@@ -2,17 +2,17 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { LogContext } from '@common/enums/logging.context';
-import { ConvertChallengeToHubInput } from './dto/convert.dto.challenge.to.hub.input';
-import { HubService } from '@domain/challenge/hub/hub.service';
+import { ConvertChallengeToSpaceInput } from './dto/convert.dto.challenge.to.space.input';
+import { SpaceService } from '@domain/challenge/space/space.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
-import { IHub } from '@domain/challenge/hub/hub.interface';
+import { ISpace } from '@domain/challenge/space/space.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
 import { CommunityRole } from '@common/enums/community.role';
-import { CreateHubInput } from '@domain/challenge/hub/dto/hub.dto.create';
+import { CreateSpaceInput } from '@domain/challenge/space/dto/space.dto.create';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
@@ -24,7 +24,7 @@ import { DiscussionCategoryCommunity } from '@common/enums/communication.discuss
 
 export class ConversionService {
   constructor(
-    private hubService: HubService,
+    private spaceService: SpaceService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
     private communityService: CommunityService,
@@ -32,10 +32,10 @@ export class ConversionService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async convertChallengeToHub(
-    conversionData: ConvertChallengeToHubInput,
+  async convertChallengeToSpace(
+    conversionData: ConvertChallengeToSpaceInput,
     agentInfo: AgentInfo
-  ): Promise<IHub> {
+  ): Promise<ISpace> {
     const challenge = await this.challengeService.getChallengeOrFail(
       conversionData.challengeID,
       {
@@ -57,19 +57,22 @@ export class ConversionService {
       );
     if (challengeCommunityLeadOrgs.length !== 1) {
       throw new ValidationException(
-        `A Challenge must have exactly on Lead organization to be converted to a Hub: ${challenge.nameID} has ${challengeCommunityLeadOrgs.length}`,
+        `A Challenge must have exactly on Lead organization to be converted to a Space: ${challenge.nameID} has ${challengeCommunityLeadOrgs.length}`,
         LogContext.CHALLENGES
       );
     }
     const hostOrg = challengeCommunityLeadOrgs[0];
-    const createHubInput: CreateHubInput = {
+    const createSpaceInput: CreateSpaceInput = {
       hostID: hostOrg.nameID,
       nameID: challenge.nameID,
       profileData: {
         displayName: challenge.profile.displayName,
       },
     };
-    const hub = await this.hubService.createHub(createHubInput, agentInfo);
+    const space = await this.spaceService.createSpace(
+      createSpaceInput,
+      agentInfo
+    );
 
     const userMembers = await this.communityService.getUsersWithRole(
       challengeCommunity,
@@ -92,37 +95,37 @@ export class ConversionService {
       orgMembers,
       challengeCommunityLeadOrgs
     );
-    // also remove the current user from the members of the hub
-    const hubCommunity = hub.community;
-    if (!hubCommunity) {
+    // also remove the current user from the members of the space
+    const spaceCommunity = space.community;
+    if (!spaceCommunity) {
       throw new EntityNotInitializedException(
-        `Unable to locate Community on Hub: ${hub.nameID}`,
+        `Unable to locate Community on Space: ${space.nameID}`,
         LogContext.CHALLENGES
       );
     }
     await this.communityService.removeUserFromRole(
-      hubCommunity,
+      spaceCommunity,
       agentInfo.userID,
       CommunityRole.MEMBER
     );
 
     // Swap the communications
-    await this.swapCommunication(hubCommunity, challengeCommunity);
-    const hubCommunityUpdated = await this.hubService.getCommunity(hub);
+    await this.swapCommunication(spaceCommunity, challengeCommunity);
+    const spaceCommunityUpdated = await this.spaceService.getCommunity(space);
 
     // Swap the contexts
     const challengeContext = challenge.context;
-    const hubContext = hub.context;
-    hub.context = challengeContext;
-    challenge.context = hubContext;
+    const spaceContext = space.context;
+    space.context = challengeContext;
+    challenge.context = spaceContext;
 
     // Save both + then delete the challenge (save is needed to ensure right context is deleted etc)
-    await this.hubService.save(hub);
+    await this.spaceService.save(space);
     const updatedChallenge = await this.challengeService.save(challenge);
 
-    // Assign users to roles in new hub
+    // Assign users to roles in new space
     await this.assignContributors(
-      hubCommunityUpdated,
+      spaceCommunityUpdated,
       userMembers,
       userLeads,
       orgMembers
@@ -135,7 +138,7 @@ export class ConversionService {
     for (const opportunity of opportunities) {
       await this.convertOpportunityToChallenge(
         opportunity.id,
-        hub.id,
+        space.id,
         agentInfo
       );
     }
@@ -143,12 +146,12 @@ export class ConversionService {
     await this.challengeService.deleteChallenge({
       ID: updatedChallenge.id,
     });
-    return hub;
+    return space;
   }
 
   async convertOpportunityToChallenge(
     opportunityID: string,
-    hubID: string,
+    spaceID: string,
     agentInfo: AgentInfo,
     innovationFlowTemplateID?: string
   ): Promise<IChallenge> {
@@ -160,7 +163,10 @@ export class ConversionService {
     );
 
     const challengeNameID = `${opportunity.nameID}c`;
-    await this.hubService.validateChallengeNameIdOrFail(challengeNameID, hubID);
+    await this.spaceService.validateChallengeNameIdOrFail(
+      challengeNameID,
+      spaceID
+    );
     let challenge: IChallenge;
 
     if (innovationFlowTemplateID)
@@ -172,13 +178,13 @@ export class ConversionService {
             displayName: opportunity.profile.displayName,
           },
         },
-        hubID,
+        spaceID,
         agentInfo
       );
     else {
       const defaultChallengeLifecycleTemplate =
-        await this.hubService.getDefaultInnovationFlowTemplate(
-          hubID,
+        await this.spaceService.getDefaultInnovationFlowTemplate(
+          spaceID,
           InnovationFlowType.CHALLENGE
         );
       challenge = await this.challengeService.createChallenge(
@@ -189,7 +195,7 @@ export class ConversionService {
             displayName: opportunity.profile.displayName,
           },
         },
-        hubID,
+        spaceID,
         agentInfo
       );
     }
@@ -268,8 +274,8 @@ export class ConversionService {
       orgLeads
     );
 
-    // Add the new challenge to the hub
-    return await this.hubService.addChallengeToHub(hubID, challenge);
+    // Add the new challenge to the space
+    return await this.spaceService.addChallengeToSpace(spaceID, challenge);
   }
 
   private async swapCommunication(
@@ -285,7 +291,7 @@ export class ConversionService {
     const tmpCommunication =
       await this.communicationService.createCommunication(
         'temp',
-        parentCommunity.hubID,
+        parentCommunity.spaceID,
         Object.values(DiscussionCategoryCommunity)
       );
     childCommunity.communication = tmpCommunication;

@@ -81,8 +81,8 @@ export class CommunityResolverService {
       communityType: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`callout\`
-        RIGHT JOIN \`hub\` on \`callout\`.\`collaborationId\` = \`hub\`.\`collaborationId\`
+        SELECT \`space\`.\`id\` as \`spaceId\`, \`space\`.\`communityId\` as communityId, 'space' as \`entityType\` FROM \`callout\`
+        RIGHT JOIN \`space\` on \`callout\`.\`collaborationId\` = \`space\`.\`collaborationId\`
         WHERE \`callout\`.\`id\` = '${calloutId}' UNION
 
         SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`callout\`
@@ -116,8 +116,8 @@ export class CommunityResolverService {
       communityType: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`timeline\`
-        RIGHT JOIN \`hub\` on \`timeline\`.\`id\` = \`hub\`.\`timelineID\`
+        SELECT \`space\`.\`id\` as \`spaceId\`, \`space\`.\`communityId\` as communityId, 'space' as \`entityType\` FROM \`timeline\`
+        RIGHT JOIN \`space\` on \`timeline\`.\`id\` = \`space\`.\`timelineID\`
         JOIN \`calendar\` on \`timeline\`.\`calendarId\` = \`calendar\`.\`id\`
         JOIN \`calendar_event\` on \`calendar\`.\`id\` = \`calendar_event\`.\`calendarId\`
         WHERE \`calendar_event\`.\`id\` = '${callendarEventId}';
@@ -143,8 +143,8 @@ export class CommunityResolverService {
       communityId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT communityId from \`hub\`
-        WHERE \`hub\`.\`collaborationId\` = '${collaborationID}' UNION
+        SELECT communityId from \`space\`
+        WHERE \`space\`.\`collaborationId\` = '${collaborationID}' UNION
         SELECT communityId from \`challenge\`
         WHERE \`challenge\`.\`collaborationId\` = '${collaborationID}' UNION
         SELECT communityId from \`opportunity\`
@@ -187,8 +187,8 @@ export class CommunityResolverService {
       JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
       WHERE \`post\`.\`commentsId\` = '${commentsId}' UNION
 
-      SELECT \`hub\`.\`id\` as \`entityId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`communityType\`  FROM \`callout\`
-      RIGHT JOIN \`hub\` on \`hub\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      SELECT \`space\`.\`id\` as \`entityId\`, \`space\`.\`communityId\` as communityId, 'space' as \`communityType\`  FROM \`callout\`
+      RIGHT JOIN \`space\` on \`space\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
       JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
       WHERE \`post\`.\`commentsId\` = '${commentsId}' UNION
 

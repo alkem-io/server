@@ -5,7 +5,7 @@ import { MockOpportunityService } from '@test/mocks/opportunity.service.mock';
 import { MockOrganizationService } from '@test/mocks/organization.service.mock';
 import { MockUserService } from '@test/mocks/user.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
-import { MockHubFilterService } from '@test/mocks/hub.filter.service.mock';
+import { MockSpaceFilterService } from '@test/mocks/space.filter.service.mock';
 import { EntityManagerProvider } from '@test/mocks';
 import { Test } from '@nestjs/testing';
 import { RolesService } from './roles.service';
@@ -13,17 +13,17 @@ import { UserService } from '@domain/community/user/user.service';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { CommunityService } from '@domain/community/community/community.service';
-import { HubFilterService } from '@services/infrastructure/hub-filter/hub.filter.service';
+import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { asyncToThrow, testData } from '@test/utils';
 import { RelationshipNotFoundException } from '@common/exceptions';
-import { HubVisibility } from '@common/enums/hub.visibility';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 import * as getUserRolesEntityData from './util/get.user.roles.entity.data';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
   let userService: UserService;
-  let hubFilterService: HubFilterService;
+  let spaceFilterService: SpaceFilterService;
   let applicationService: ApplicationService;
   let organizationService: OrganizationService;
   let communityService: CommunityService;
@@ -37,7 +37,7 @@ describe('RolesService', () => {
         MockInvitationService,
         MockCommunityService,
         MockOpportunityService,
-        MockHubFilterService,
+        MockSpaceFilterService,
         MockOrganizationService,
         MockWinstonProvider,
         EntityManagerProvider,
@@ -50,7 +50,7 @@ describe('RolesService', () => {
     applicationService = moduleRef.get(ApplicationService);
     organizationService = moduleRef.get(OrganizationService);
     communityService = moduleRef.get(CommunityService);
-    hubFilterService = moduleRef.get(HubFilterService);
+    spaceFilterService = moduleRef.get(SpaceFilterService);
   });
 
   describe('User Roles', () => {
@@ -60,13 +60,13 @@ describe('RolesService', () => {
         .mockResolvedValue(testData.user);
 
       jest
-        .spyOn(hubFilterService, 'getAllowedVisibilities')
-        .mockReturnValue([HubVisibility.ACTIVE]);
+        .spyOn(spaceFilterService, 'getAllowedVisibilities')
+        .mockReturnValue([SpaceVisibility.ACTIVE]);
 
       jest
         .spyOn(getUserRolesEntityData, 'getUserRolesEntityData')
         .mockResolvedValue({
-          hubs: [testData.hub as any],
+          spaces: [testData.space as any],
           challenges: [testData.challenge as any],
           opportunities: [testData.opportunity as any],
           organizations: [testData.organization as any],
@@ -84,7 +84,7 @@ describe('RolesService', () => {
         .spyOn(applicationService, 'getApplicationState')
         .mockResolvedValue('new');
 
-      jest.spyOn(communityService, 'isHubCommunity').mockResolvedValue(true);
+      jest.spyOn(communityService, 'isSpaceCommunity').mockResolvedValue(true);
     });
 
     it('Should get user roles', async () => {
@@ -96,7 +96,7 @@ describe('RolesService', () => {
         expect.arrayContaining([
           expect.objectContaining({
             communityID: testData.rolesUser.applications[0].communityID,
-            hubID: testData.rolesUser.applications[0].hubID,
+            spaceID: testData.rolesUser.applications[0].spaceID,
           }),
         ])
       );
@@ -109,10 +109,10 @@ describe('RolesService', () => {
         ])
       );
 
-      expect(res.hubs).toEqual(
+      expect(res.spaces).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            hubID: testData.hub.id,
+            spaceID: testData.space.id,
           }),
         ])
       );
@@ -120,7 +120,7 @@ describe('RolesService', () => {
 
     it('Should throw exception when community parent is not found', async () => {
       jest
-        .spyOn(communityService, 'isHubCommunity')
+        .spyOn(communityService, 'isSpaceCommunity')
         .mockResolvedValueOnce(false);
 
       await asyncToThrow(
@@ -157,10 +157,10 @@ describe('RolesService', () => {
         organizationID: testData.organization.id,
       });
 
-      expect(res.hubs).toEqual(
+      expect(res.spaces).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            hubID: testData.hub.id,
+            spaceID: testData.space.id,
           }),
         ])
       );

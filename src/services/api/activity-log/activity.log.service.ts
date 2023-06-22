@@ -19,7 +19,7 @@ import ActivityLogBuilderService, {
 } from '@services/api/activity-log/activity.log.builder.service';
 import { IActivity } from '@platform/activity/activity.interface';
 import { getJourneyByCollaboration } from '@common/utils';
-import { Hub } from '@domain/challenge/hub/hub.entity';
+import { Space } from '@domain/challenge/space/space.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity';
 import { RoomService } from '@domain/communication/room/room.service';
@@ -138,11 +138,11 @@ export class ActivityLogService {
   private async getParentDetailsByCollaboration(
     collaborationID: string
   ): Promise<{ nameID: string; displayName: string } | undefined> {
-    const { hubId, challengeId, opportunityId } =
+    const { spaceId, challengeId, opportunityId } =
       await getJourneyByCollaboration(this.entityManager, collaborationID);
 
     const getDetails = async (
-      entity: EntityTarget<Hub | Challenge | Opportunity>,
+      entity: EntityTarget<Space | Challenge | Opportunity>,
       id: string
     ) => {
       const result = await this.entityManager.findOneOrFail(entity, {
@@ -155,8 +155,8 @@ export class ActivityLogService {
       };
     };
 
-    if (hubId) {
-      return getDetails(Hub, hubId);
+    if (spaceId) {
+      return getDetails(Space, spaceId);
     }
 
     if (challengeId) {

@@ -4,14 +4,14 @@ import { registerEnumType } from '@nestjs/graphql';
 export enum AuthorizationCredential {
   GLOBAL_ADMIN = 'global-admin', // able to do everything, god mode
   GLOBAL_ADMIN_COMMUNITY = 'global-admin-community', // able to manage the top level community, including assigning credentials
-  GLOBAL_ADMIN_HUBS = 'global-admin-hubs', // able to manage the top level hubs, including assigning credentials except global admin ones
+  GLOBAL_ADMIN_SPACES = 'global-admin-spaces', // able to manage the top level spaces, including assigning credentials except global admin ones
   GLOBAL_REGISTERED = 'global-registered', // credential issued to all registered users
 
   USER_SELF_MANAGEMENT = 'user-self', // able to update a user
 
-  HUB_ADMIN = 'hub-admin',
-  HUB_HOST = 'hub-host', // host for an hub; can only be one...
-  HUB_MEMBER = 'hub-member',
+  SPACE_ADMIN = 'space-admin',
+  SPACE_HOST = 'space-host', // host for an space; can only be one...
+  SPACE_MEMBER = 'space-member',
 
   CHALLENGE_ADMIN = 'challenge-admin',
   CHALLENGE_MEMBER = 'challenge-member',

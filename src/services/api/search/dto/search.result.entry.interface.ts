@@ -4,7 +4,7 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
 import { SearchResultType } from '@common/enums/search.result.type';
 import { ISearchResultOpportunity } from './search.result.dto.entry.opportunity';
-import { ISearchResultHub } from './search.result.dto.entry.hub';
+import { ISearchResultSpace } from './search.result.dto.entry.space';
 import { ISearchResultChallenge } from './search.result.dto.entry.challenge';
 import { ISearchResultUser } from './search.result.dto.entry.user';
 import { ISearchResultOrganization } from './search.result.dto.entry.organization';
@@ -16,8 +16,8 @@ import { ISearchResultUserGroup } from './search.result.dto.entry.user.group';
   resolveType(searchResult) {
     const type = searchResult.type;
     switch (type) {
-      case SearchResultType.HUB:
-        return ISearchResultHub;
+      case SearchResultType.SPACE:
+        return ISearchResultSpace;
       case SearchResultType.CHALLENGE:
         return ISearchResultChallenge;
       case SearchResultType.OPPORTUNITY:

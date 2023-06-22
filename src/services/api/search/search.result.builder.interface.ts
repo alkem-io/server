@@ -1,6 +1,6 @@
 import { ISearchResult } from './dto/search.result.entry.interface';
 import { SearchResultType } from '@common/enums/search.result.type';
-import { ISearchResultHub } from './dto/search.result.dto.entry.hub';
+import { ISearchResultSpace } from './dto/search.result.dto.entry.space';
 import { ISearchResultChallenge } from './dto/search.result.dto.entry.challenge';
 import { ISearchResultOpportunity } from './dto/search.result.dto.entry.opportunity';
 import { ISearchResultUser } from './dto/search.result.dto.entry.user';
@@ -13,7 +13,7 @@ interface SearchResultBuilderFunction<TypedSearchResult> {
 }
 
 export interface ISearchResultBuilder {
-  [SearchResultType.HUB]: SearchResultBuilderFunction<ISearchResultHub>;
+  [SearchResultType.SPACE]: SearchResultBuilderFunction<ISearchResultSpace>;
   [SearchResultType.CHALLENGE]: SearchResultBuilderFunction<ISearchResultChallenge>;
   [SearchResultType.OPPORTUNITY]: SearchResultBuilderFunction<ISearchResultOpportunity>;
   [SearchResultType.USER]: SearchResultBuilderFunction<ISearchResultUser>;

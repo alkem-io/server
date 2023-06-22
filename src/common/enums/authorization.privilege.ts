@@ -18,7 +18,7 @@ export enum AuthorizationPrivilege {
   CREATE_MESSAGE_REACTION = 'create-message-reaction',
   CREATE_DISCUSSION = 'create-discussion',
   CONTRIBUTE = 'contribute',
-  CREATE_HUB = 'create-hub',
+  CREATE_SPACE = 'create-space',
   CREATE_ORGANIZATION = 'create-organization',
   FILE_UPLOAD = 'file-upload',
   FILE_DELETE = 'file-delete',

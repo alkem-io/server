@@ -5,7 +5,7 @@ import { ICommunity } from '@domain/community/community/community.interface';
 
 @InterfaceType('Groupable', {
   resolveType(groupable) {
-    if (groupable.hubID) {
+    if (groupable.spaceID) {
       return ICommunity;
     }
     return IOrganization;

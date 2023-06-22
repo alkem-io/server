@@ -3,7 +3,7 @@ import { CommunityType } from '@common/enums/community.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Hub } from '@domain/challenge/hub/hub.entity';
+import { Space } from '@domain/challenge/space/space.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { IDiscussion } from '@domain/communication/discussion/discussion.interface';
 import { ICommunity } from '@domain/community/community';
@@ -36,7 +36,7 @@ import {
   PlatformForumDiscussionCommentEventPayload,
   createJourneyURL,
   createCalloutURL,
-  createCardURL,
+  createPostURL,
   createCalendarEventURL,
   createForumDiscussionUrl,
   CommunityInvitationCreatedEventPayload,
@@ -62,8 +62,8 @@ import { NotificationInputCommentReply } from './dto/notification.dto.input.comm
 @Injectable()
 export class NotificationPayloadBuilder {
   constructor(
-    @InjectRepository(Hub)
-    private hubRepository: Repository<Hub>,
+    @InjectRepository(Space)
+    private spaceRepository: Repository<Space>,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
     @InjectRepository(Opportunity)
@@ -792,7 +792,7 @@ export class NotificationPayloadBuilder {
 
       const journeyPayload = await this.buildJourneyPayload(community);
       const journeyUrl = createJourneyURL(endpoint, journeyPayload);
-      return createCardURL(journeyUrl, callout.nameID, post.nameID);
+      return createPostURL(journeyUrl, callout.nameID, post.nameID);
     }
 
     if (commentType === RoomType.CALENDAR_EVENT) {
@@ -827,8 +827,8 @@ export class NotificationPayloadBuilder {
     community: ICommunity
   ): Promise<JourneyPayload> {
     const result: JourneyPayload = {
-      spaceID: community.hubID,
-      spaceNameID: await this.getHubNameIdOrFail(community.hubID),
+      spaceID: community.spaceID,
+      spaceNameID: await this.getSpaceNameIdOrFail(community.spaceID),
       displayName: community.displayName,
       type: community.type,
     };
@@ -880,20 +880,20 @@ export class NotificationPayloadBuilder {
     return community;
   }
 
-  private async getHubNameIdOrFail(hubID: string): Promise<string> {
-    const hub = await this.hubRepository
-      .createQueryBuilder('hub')
-      .where('hub.id = :id')
-      .setParameters({ id: `${hubID}` })
+  private async getSpaceNameIdOrFail(spaceID: string): Promise<string> {
+    const space = await this.spaceRepository
+      .createQueryBuilder('space')
+      .where('space.id = :id')
+      .setParameters({ id: `${spaceID}` })
       .getOne();
 
-    if (!hub) {
+    if (!space) {
       throw new EntityNotFoundException(
-        `Unable to find Hub with id: ${hubID}`,
+        `Unable to find Space with id: ${spaceID}`,
         LogContext.CHALLENGES
       );
     }
-    return hub.nameID;
+    return space.nameID;
   }
 
   private async getChallengeNameIdOrFail(challengeID: string): Promise<string> {

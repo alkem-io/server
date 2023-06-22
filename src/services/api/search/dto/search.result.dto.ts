@@ -32,14 +32,14 @@ export abstract class ISearchResults {
 
   @Field(() => [ISearchResult], {
     nullable: false,
-    description: 'The search results for Hubs / Challenges / Opportunities.',
+    description: 'The search results for Spaces / Challenges / Opportunities.',
   })
   journeyResults!: ISearchResult[];
 
   @Field(() => Number, {
     nullable: false,
     description:
-      'The total number of results for Hubs / Challenges / Opportunities.',
+      'The total number of results for Spaces / Challenges / Opportunities.',
   })
   journeyResultsCount!: number;
 

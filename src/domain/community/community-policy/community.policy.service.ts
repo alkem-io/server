@@ -126,9 +126,9 @@ export class CommunityPolicyService {
   ): ICredentialDefinition {
     const resourceID = leadCredential.resourceID;
     switch (leadCredential.type) {
-      case AuthorizationCredential.HUB_HOST:
+      case AuthorizationCredential.SPACE_HOST:
         return {
-          type: AuthorizationCredential.HUB_ADMIN,
+          type: AuthorizationCredential.SPACE_ADMIN,
           resourceID,
         };
       case AuthorizationCredential.CHALLENGE_LEAD:

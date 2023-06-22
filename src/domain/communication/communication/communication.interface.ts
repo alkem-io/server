@@ -14,7 +14,7 @@ export abstract class ICommunication extends IAuthorizable {
   })
   updates!: IRoom;
 
-  hubID!: string;
+  spaceID!: string;
 
   displayName!: string;
 

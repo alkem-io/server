@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Hub } from '@domain/challenge/hub/hub.entity';
-import { HubModule } from '@domain/challenge/hub/hub.module';
+import { Space } from '@domain/challenge/space/space.entity';
+import { SpaceModule } from '@domain/challenge/space/space.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
@@ -17,14 +17,14 @@ import { InnovationHubModule } from '@domain/innovation-hub';
   imports: [
     AgentModule,
     AuthorizationPolicyModule,
-    HubModule,
+    SpaceModule,
     UserModule,
     AdminAuthorizationModule,
     PlatformModule,
     PlatformAuthorizationPolicyModule,
     CommunicationModule,
     OrganizationModule,
-    TypeOrmModule.forFeature([Hub]),
+    TypeOrmModule.forFeature([Space]),
     InnovationHubModule,
   ],
   providers: [BootstrapService],

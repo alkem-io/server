@@ -16,7 +16,7 @@ export class IOrganization extends IContributor {
 
   @Field(() => String, {
     nullable: true,
-    description: 'Legal name - required if hosting an Hub',
+    description: 'Legal name - required if hosting an Space',
   })
   legalEntityName?: string;
 

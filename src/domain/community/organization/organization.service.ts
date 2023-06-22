@@ -248,10 +248,10 @@ export class OrganizationService {
         'preferenceSet',
       ],
     });
-    const isHubHost = await this.isHubHost(organization);
-    if (isHubHost) {
+    const isSpaceHost = await this.isSpaceHost(organization);
+    if (isSpaceHost) {
       throw new ForbiddenException(
-        'Unable to delete Organization: host of one or more hubs',
+        'Unable to delete Organization: host of one or more spaces',
         LogContext.CHALLENGES
       );
     }
@@ -324,7 +324,7 @@ export class OrganizationService {
     return result;
   }
 
-  async isHubHost(organization: IOrganization): Promise<boolean> {
+  async isSpaceHost(organization: IOrganization): Promise<boolean> {
     if (!organization.agent)
       throw new RelationshipNotFoundException(
         `Unable to load agent for organization: ${organization.id}`,
@@ -332,7 +332,7 @@ export class OrganizationService {
       );
 
     return await this.agentService.hasValidCredential(organization.agent.id, {
-      type: AuthorizationCredential.HUB_HOST,
+      type: AuthorizationCredential.SPACE_HOST,
     });
   }
 

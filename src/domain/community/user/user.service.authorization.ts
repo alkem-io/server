@@ -104,7 +104,7 @@ export class UserAuthorizationService {
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
         ],
         CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET
       );
@@ -166,16 +166,16 @@ export class UserAuthorizationService {
     );
     newRules.push(userSelfAdmin);
 
-    // Get the agent + credentials + grant access for hub / challenge admins read only
+    // Get the agent + credentials + grant access for space / challenge admins read only
     const { credentials } = await this.userService.getUserAndCredentials(
       user.id
     );
     const readCredentials: ICredentialDefinition[] = [];
     for (const credential of credentials) {
-      // Grant read access to Hub Admins for hubs the user is a member of
-      if (credential.type === AuthorizationCredential.HUB_MEMBER) {
+      // Grant read access to Space Admins for spaces the user is a member of
+      if (credential.type === AuthorizationCredential.SPACE_MEMBER) {
         readCredentials.push({
-          type: AuthorizationCredential.HUB_ADMIN,
+          type: AuthorizationCredential.SPACE_ADMIN,
           resourceID: credential.resourceID,
         });
       } else if (credential.type === AuthorizationCredential.CHALLENGE_MEMBER) {

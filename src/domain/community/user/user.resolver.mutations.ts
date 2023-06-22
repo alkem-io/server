@@ -95,7 +95,7 @@ export class UserResolverMutations {
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IPreference, {
-    description: 'Updates one of the Preferences on a Hub',
+    description: 'Updates one of the Preferences on a Space',
   })
   @Profiling.api
   async updatePreferenceOnUser(

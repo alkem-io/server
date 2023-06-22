@@ -37,10 +37,10 @@ export class ApplicationService {
 
   async createApplication(
     applicationData: CreateApplicationInput,
-    hubID = ''
+    spaceID = ''
   ): Promise<IApplication> {
     const application: IApplication = Application.create(applicationData);
-    application.hubID = hubID;
+    application.spaceID = spaceID;
     application.user = await this.userService.getUserOrFail(
       applicationData.userID
     );

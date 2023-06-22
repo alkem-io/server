@@ -117,7 +117,7 @@ export class WhiteboardResolverMutations {
         `Whiteboard ${whiteboard.id} not initialized`,
         LogContext.COLLABORATION
       );
-    const { hubID } =
+    const { spaceID } =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
         whiteboard?.callout.id
       );
@@ -126,7 +126,7 @@ export class WhiteboardResolverMutations {
       {
         id: whiteboard.id,
         name: whiteboard.nameID,
-        hub: hubID,
+        space: spaceID,
       },
       {
         id: agentInfo.userID,
