@@ -38,6 +38,8 @@ export const HocuspocusServerFactoryProvider: FactoryProvider = {
         payload: beforeHandleMessagePayload
       ) /*: Promise<any>*/ {
         const updates = Y.encodeStateAsUpdate(payload.document);
+
+        //console.log(payload.document);
         // console.log(
         //   'beforeHandleMessage',
         //   Y.logUpdate(updates)
@@ -57,6 +59,18 @@ export const HocuspocusServerFactoryProvider: FactoryProvider = {
             const { documentName, document } = payload;
 
             // if (!documentName) return null;
+
+            const yjson = document.getMap('json');
+            yjson.set('type', 'excalidraw');
+            yjson.set('version', 2);
+            yjson.set('source', 'http://localhost:3000');
+            yjson.set('source', 'http://localhost:3000');
+            yjson.set('elements', []);
+            yjson.set('appState', {
+              gridSize: 20,
+              viewBackgroundColor: '#ffffff',
+            });
+            yjson.set('files', {});
 
             // state
             return Y.encodeStateAsUpdate(document);
