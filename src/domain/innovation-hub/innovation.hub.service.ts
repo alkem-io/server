@@ -258,7 +258,7 @@ export class InnovationHubService {
           `Visibility filter not applicable for Innovation Hub of type '${InnovationHubType.LIST}'`
         );
       }
-      if (spaceListFilter && !spaceListFilter.length) {
+      if (spaceListFilter && spaceListFilter.length) {
         // If specified on create, validate spaces
         const trueOrList = await this.spaceService.spacesExist(spaceListFilter);
 
