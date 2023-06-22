@@ -137,9 +137,9 @@ export class InnovationHubService {
     }
     if (
       space.type === InnovationHubType.VISIBILITY &&
-      input.spaceVisibilityFilter
+      input.hubVisibilityFilter
     )
-      space.spaceVisibilityFilter = input.spaceVisibilityFilter;
+      space.hubVisibilityFilter = input.hubVisibilityFilter;
     if (input.profileData) {
       space.profile = await this.profileService.updateProfile(
         space.profile,
@@ -233,7 +233,7 @@ export class InnovationHubService {
   private async validateCreateInput({
     type,
     spaceListFilter,
-    spaceVisibilityFilter,
+    hubVisibilityFilter,
   }: CreateInnovationHubInput): Promise<true | never> {
     if (type === InnovationHubType.LIST) {
       if (!spaceListFilter || !spaceListFilter.length) {
@@ -242,7 +242,7 @@ export class InnovationHubService {
         );
       }
 
-      if (spaceVisibilityFilter) {
+      if (hubVisibilityFilter) {
         throw new Error(
           `Visibility filter not applicable for Innovation Hub of type '${InnovationHubType.LIST}'`
         );
@@ -260,7 +260,7 @@ export class InnovationHubService {
     }
 
     if (type === InnovationHubType.VISIBILITY) {
-      if (!spaceVisibilityFilter) {
+      if (!hubVisibilityFilter) {
         throw new Error(
           `A visibility needs to be provided for Innovation Hub of type '${InnovationHubType.VISIBILITY}'`
         );

@@ -25,7 +25,7 @@ export class InnovationHub extends NameableEntity implements IInnovationHub {
     length: 255,
     nullable: true,
   })
-  spaceVisibilityFilter?: SpaceVisibility;
+  hubVisibilityFilter?: SpaceVisibility;
 
   @Column('simple-array', {
     nullable: true,

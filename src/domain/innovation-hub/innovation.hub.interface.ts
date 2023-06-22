@@ -20,7 +20,7 @@ export abstract class IInnovationHub extends INameable {
     description:
       'If defined, what type of visibility to filter the Spaces on. You can have only one type of filter active at any given time.',
   })
-  spaceVisibilityFilter?: SpaceVisibility;
+  hubVisibilityFilter?: SpaceVisibility;
 
   // exposed through the field resolver
   spaceListFilter?: string[];

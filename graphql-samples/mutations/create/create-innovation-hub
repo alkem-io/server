@@ -13,7 +13,7 @@ mutation createInnovationHub($input: CreateInnovationHubInput!){
         displayName
       }
     }
-    spaceVisibilityFilter
+    hubVisibilityFilter
   }
 }
 

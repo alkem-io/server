@@ -37,7 +37,7 @@ export class CreateInnovationHubInput extends CreateNameableInput {
     nullable: true,
     description: `Spaces with which visibility this Innovation Hub will display. Only valid when type '${InnovationHubType.VISIBILITY}' is used.`,
   })
-  spaceVisibilityFilter?: SpaceVisibility;
+  hubVisibilityFilter?: SpaceVisibility;
 
   @Field(() => NameID, {
     nullable: true,
