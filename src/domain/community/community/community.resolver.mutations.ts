@@ -449,7 +449,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.COMMUNITY_INVITE,
-      `create invitation external community: ${community.displayName}`
+      `create invitation external community: ${community.id}`
     );
 
     const externalInvitation =
