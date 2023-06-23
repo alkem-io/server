@@ -3,7 +3,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotFoundException,
-  EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -17,7 +16,6 @@ import { InnovationHubAuthorizationService } from './innovation.hub.service.auth
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { UUID_LENGTH } from '@common/constants';
 
 @Injectable()
 export class InnovationHubService {
@@ -70,26 +68,26 @@ export class InnovationHubService {
       );
     }
 
-    const space: IInnovationHub = InnovationHub.create(createData);
-    space.authorization = new AuthorizationPolicy();
+    const hub: IInnovationHub = InnovationHub.create(createData);
+    hub.authorization = new AuthorizationPolicy();
 
-    space.profile = await this.profileService.createProfile(
+    hub.profile = await this.profileService.createProfile(
       createData.profileData
     );
 
-    await this.profileService.addTagsetOnProfile(space.profile, {
+    await this.profileService.addTagsetOnProfile(hub.profile, {
       name: RestrictedTagsetNames.DEFAULT,
       tags: [],
     });
 
     await this.profileService.addVisualOnProfile(
-      space.profile,
+      hub.profile,
       VisualType.BANNER
     );
 
-    await this.innovationHubRepository.save(space);
+    await this.innovationHubRepository.save(hub);
 
-    return this.authService.applyAuthorizationPolicyAndSave(space);
+    return this.authService.applyAuthorizationPolicyAndSave(hub);
   }
 
   public async updateOrFail(
@@ -97,7 +95,7 @@ export class InnovationHubService {
   ): Promise<IInnovationHub> {
     const innovationHub: IInnovationHub = await this.getInnovationHubOrFail(
       {
-        id: input.ID,
+        idOrNameId: input.ID,
       },
       { relations: ['profile'] }
     );
@@ -155,22 +153,22 @@ export class InnovationHubService {
   }
 
   public async deleteOrFail(innovationHubID: string): Promise<IInnovationHub> {
-    const space = await this.getInnovationHubOrFail(
-      { id: innovationHubID },
+    const hub = await this.getInnovationHubOrFail(
+      { idOrNameId: innovationHubID },
       {
         relations: ['profile'],
       }
     );
 
-    if (space.profile) {
-      await this.profileService.deleteProfile(space.profile.id);
+    if (hub.profile) {
+      await this.profileService.deleteProfile(hub.profile.id);
     }
 
-    if (space.authorization)
-      await this.authorizationPolicyService.delete(space.authorization);
+    if (hub.authorization)
+      await this.authorizationPolicyService.delete(hub.authorization);
 
     const result = await this.innovationHubRepository.remove(
-      space as InnovationHub
+      hub as InnovationHub
     );
     result.id = innovationHubID;
 
@@ -182,40 +180,33 @@ export class InnovationHubService {
   }
 
   public async getInnovationHubOrFail(
-    args: { subdomain?: string; id?: string },
+    args: { subdomain?: string; idOrNameId?: string },
     options?: FindOneOptions<InnovationHub>
   ): Promise<InnovationHub | never> {
     if (!Object.keys(args).length) {
       throw new Error('No criteria provided for fetching the Innovation Hub');
     }
 
-    const { id, subdomain } = args;
-    let innovationHub: InnovationHub | null = null;
-    if (id?.length === UUID_LENGTH) {
-      innovationHub = await this.innovationHubRepository.findOne({
-        where: options?.where
-          ? Array.isArray(options.where)
-            ? [{ id }, { subdomain }, ...options.where]
-            : [{ id }, { subdomain }, options.where]
-          : [{ id }, { subdomain }],
-        ...options,
-      });
-    }
-    if (!innovationHub) {
-      // look up based on nameID
-      innovationHub = await this.innovationHubRepository.findOne({
-        where: options?.where
-          ? Array.isArray(options.where)
-            ? [{ nameID: id }, { subdomain }, ...options.where]
-            : [{ nameID: id }, { subdomain }, options.where]
-          : [{ nameID: id }, { subdomain }],
-        ...options,
-      });
-    }
+    const { idOrNameId, subdomain } = args;
+
+    const whereArgs = [
+      { id: idOrNameId },
+      { nameID: idOrNameId },
+      { subdomain },
+    ];
+
+    const innovationHub = await this.innovationHubRepository.findOne({
+      where: options?.where
+        ? Array.isArray(options.where)
+          ? [...whereArgs, ...options.where]
+          : [...whereArgs, options.where]
+        : [{ id: idOrNameId }, { subdomain }, { nameID: idOrNameId }],
+      ...options,
+    });
 
     if (!innovationHub) {
       throw new EntityNotFoundException(
-        `Innovation hub with id: '${id}' not found`,
+        `Innovation hub '${idOrNameId}' not found`,
         LogContext.INNOVATION_HUB
       );
     }
@@ -224,27 +215,20 @@ export class InnovationHubService {
   }
 
   public async getSpaceListFilterOrFail(
-    spaceId: string
+    hubId: string
   ): Promise<string[] | undefined | never> {
-    const space = await this.innovationHubRepository.findOneBy({
-      id: spaceId,
+    const hub = await this.innovationHubRepository.findOneBy({
+      id: hubId,
     });
 
-    if (!space) {
+    if (!hub) {
       throw new EntityNotFoundException(
-        `Innovation Hub with id: '${spaceId}' not found!`,
+        `Innovation Hub with id: '${hubId}' not found!`,
         LogContext.INNOVATION_HUB
       );
     }
 
-    if (space.type === InnovationHubType.LIST && !space.spaceListFilter) {
-      throw new EntityNotInitializedException(
-        `Space list filter for Innovation Hub with id: '${spaceId}' not found!`,
-        LogContext.INNOVATION_HUB
-      );
-    }
-
-    return space.spaceListFilter;
+    return hub.spaceListFilter;
   }
 
   private async validateCreateInput({

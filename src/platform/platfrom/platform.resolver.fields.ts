@@ -67,6 +67,9 @@ export class PlatformResolverFields {
       return Promise.resolve(innovationHub as IInnovationHub);
     }
 
-    return this.innovationHubService.getInnovationHubOrFail(args);
+    return this.innovationHubService.getInnovationHubOrFail({
+      subdomain: args.subdomain,
+      idOrNameId: args.id,
+    });
   }
 }
