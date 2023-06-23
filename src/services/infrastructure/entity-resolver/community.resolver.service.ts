@@ -169,19 +169,14 @@ export class CommunityResolverService {
   }
 
   public async getDisplayNameForCommunityOrFail(
-    communityId: string
+    communityId: string,
+    communityType: string
   ): Promise<string> {
     const [result]: {
       profileId: string;
     }[] = await this.entityManager.connection.query(
-      `
-        SELECT profileId from \`hub\`
-        WHERE \`hub\`.\`communityId\` = '${communityId}' UNION
-        SELECT profileId from \`challenge\`
-        WHERE \`challenge\`.\`communityId\` = '${communityId}' UNION
-        SELECT profileId from \`opportunity\`
-        WHERE \`opportunity\`.\`communityId\` = '${communityId}';
-      `
+      `SELECT profileId from \`${communityType}\`
+        WHERE \`${communityType}\`.\`communityId\` = '${communityId}';`
     );
 
     const profileId = result.profileId;
