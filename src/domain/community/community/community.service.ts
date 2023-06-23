@@ -54,6 +54,7 @@ import { CommunityMembershipStatus } from '@common/enums/community.membership.st
 import { InvitationService } from '../invitation/invitation.service';
 import { IInvitation } from '../invitation/invitation.interface';
 import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 @Injectable()
 export class CommunityService {
@@ -67,6 +68,7 @@ export class CommunityService {
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
     private communicationService: CommunicationService,
+    private communityResolverService: CommunityResolverService,
     private formService: FormService,
     private communityPolicyService: CommunityPolicyService,
     @InjectRepository(Community)
@@ -81,7 +83,7 @@ export class CommunityService {
     policy: ICommunityPolicyDefinition,
     applicationFormData: CreateFormInput
   ): Promise<ICommunity> {
-    const community: ICommunity = new Community(name, type);
+    const community: ICommunity = new Community(type);
     community.authorization = new AuthorizationPolicy();
     community.policy = await this.communityPolicyService.createCommunityPolicy(
       policy.member,
@@ -98,7 +100,7 @@ export class CommunityService {
     community.groups = [];
     community.communication =
       await this.communicationService.createCommunication(
-        community.displayName,
+        name,
         spaceID,
         Object.values(DiscussionCategoryCommunity)
       );
@@ -136,7 +138,7 @@ export class CommunityService {
     });
     if (!communityWithGroups.groups) {
       throw new EntityNotInitializedException(
-        `Community not initialized: ${community.displayName}`,
+        `Community not initialized: ${community.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -407,6 +409,13 @@ export class CommunityService {
     return 0;
   }
 
+  public async getDisplayName(community: ICommunity): Promise<string> {
+    return await this.communityResolverService.getDisplayNameForCommunityOrFail(
+      community.id,
+      community.type
+    );
+  }
+
   getCredentialDefinitionForRole(
     community: ICommunity,
     role: CommunityRole
@@ -428,7 +437,7 @@ export class CommunityService {
     );
     if (!hasMemberRoleInParent) {
       throw new ValidationException(
-        `Unable to assign Agent (${agent.id}) to community (${community.displayName}): agent is not a member of parent community`,
+        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community`,
         LogContext.CHALLENGES
       );
     }
@@ -470,7 +479,7 @@ export class CommunityService {
       .addUserToCommunications(communication, user.communicationID)
       .catch(error =>
         this.logger.error?.(
-          `Unable to add user to community messaging (${community.displayName}): ${error}`,
+          `Unable to add user to community messaging (${community.id}): ${error}`,
           LogContext.COMMUNICATION
         )
       );
@@ -499,7 +508,7 @@ export class CommunityService {
     const policy = community.policy;
     if (!policy) {
       throw new EntityNotInitializedException(
-        `Unable to locate policy for community: ${community.displayName}`,
+        `Unable to locate policy for community: ${community.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -517,7 +526,7 @@ export class CommunityService {
     const communication = community.communication;
     if (!communication) {
       throw new EntityNotInitializedException(
-        `Unable to locate communication for community: ${community.displayName}`,
+        `Unable to locate communication for community: ${community.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -562,7 +571,7 @@ export class CommunityService {
         .removeUserFromCommunications(communication, user)
         .catch(error =>
           this.logger.error?.(
-            `Unable remove user from community messaging (${community.displayName}): ${error}`,
+            `Unable remove user from community messaging (${community.id}): ${error}`,
             LogContext.COMMUNICATION
           )
         );
@@ -795,7 +804,7 @@ export class CommunityService {
     const spaceID = community.spaceID;
     if (!spaceID)
       throw new EntityNotInitializedException(
-        `Unable to locate containing space: ${community.displayName}`,
+        `Unable to locate containing space: ${community.id}`,
         LogContext.COMMUNITY
       );
     const application = await this.applicationService.createApplication(
@@ -843,7 +852,7 @@ export class CommunityService {
     );
     if (openApplication) {
       throw new InvalidStateTransitionException(
-        `An open application (ID: ${openApplication.id}) already exists for user ${openApplication.user?.id} on Community: ${community.displayName}.`,
+        `An open application (ID: ${openApplication.id}) already exists for user ${openApplication.user?.id} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -851,7 +860,7 @@ export class CommunityService {
     const openInvitation = await this.findOpenInvitation(user.id, community.id);
     if (openInvitation) {
       throw new InvalidStateTransitionException(
-        `An open invitation (ID: ${openInvitation.id}) already exists for user ${openInvitation.invitedUser} on Community: ${community.displayName}.`,
+        `An open invitation (ID: ${openInvitation.id}) already exists for user ${openInvitation.invitedUser} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -860,7 +869,7 @@ export class CommunityService {
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new InvalidStateTransitionException(
-        `User ${user.nameID} is already a member of the Community: ${community.displayName}.`,
+        `User ${user.nameID} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }
@@ -873,7 +882,7 @@ export class CommunityService {
     const openInvitation = await this.findOpenInvitation(user.id, community.id);
     if (openInvitation) {
       throw new InvalidStateTransitionException(
-        `An open invitation (ID: ${openInvitation.id}) already exists for user ${openInvitation.invitedUser} on Community: ${community.displayName}.`,
+        `An open invitation (ID: ${openInvitation.id}) already exists for user ${openInvitation.invitedUser} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -884,7 +893,7 @@ export class CommunityService {
     );
     if (openApplication) {
       throw new InvalidStateTransitionException(
-        `An open application (ID: ${openApplication.id}) already exists for user ${openApplication.user?.id} on Community: ${community.displayName}.`,
+        `An open application (ID: ${openApplication.id}) already exists for user ${openApplication.user?.id} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
     }
@@ -893,7 +902,7 @@ export class CommunityService {
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new InvalidStateTransitionException(
-        `User ${user.nameID} is already a member of the Community: ${community.displayName}.`,
+        `User ${user.nameID} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }
