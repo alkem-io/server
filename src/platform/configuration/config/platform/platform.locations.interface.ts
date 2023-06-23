@@ -59,6 +59,12 @@ export abstract class IPlatformLocations {
 
   @Field(() => String, {
     nullable: false,
+    description: 'URL to a page about the innovation library',
+  })
+  innovationLibrary!: string;
+
+  @Field(() => String, {
+    nullable: false,
     description:
       'URL for the link Foundation in the HomePage of the application',
   })

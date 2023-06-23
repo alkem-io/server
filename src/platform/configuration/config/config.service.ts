@@ -43,6 +43,8 @@ export class KonfigService {
         impact: this.configService.get(ConfigurationTypes.PLATFORM)?.impact,
         inspiration: this.configService.get(ConfigurationTypes.PLATFORM)
           ?.inspiration,
+        innovationLibrary: this.configService.get(ConfigurationTypes.PLATFORM)
+          ?.innovationLibrary,
         foundation: this.configService.get(ConfigurationTypes.PLATFORM)
           ?.foundation,
         opensource: this.configService.get(ConfigurationTypes.PLATFORM)
