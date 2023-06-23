@@ -19,6 +19,7 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import * as getUserRolesEntityData from './util/get.user.roles.entity.data';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
+import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
@@ -39,6 +40,7 @@ describe('RolesService', () => {
         MockOpportunityService,
         MockSpaceFilterService,
         MockOrganizationService,
+        MockCommunityResolverService,
         MockWinstonProvider,
         EntityManagerProvider,
         RolesService,

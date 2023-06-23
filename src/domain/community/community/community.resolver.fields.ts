@@ -277,4 +277,12 @@ export class CommunityResolverFields {
   ): Promise<CommunityMembershipStatus> {
     return this.communityService.getMembershipStatus(agentInfo, community);
   }
+
+  @ResolveField('displayName', () => String, {
+    nullable: true,
+    description: 'The displayName for this Community.',
+  })
+  async displayName(@Parent() community: ICommunity): Promise<string> {
+    return await this.communityService.getDisplayName(community);
+  }
 }

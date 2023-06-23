@@ -95,7 +95,7 @@ export class CommunicationResolverSubscriptions {
       agentInfo,
       communication.authorization,
       AuthorizationPrivilege.READ,
-      `subscription to discussion updates on: ${communication.displayName}`
+      `subscription to discussion updates on: ${communication.id}`
     );
 
     return this.subscriptionDiscussionUpdated.asyncIterator(

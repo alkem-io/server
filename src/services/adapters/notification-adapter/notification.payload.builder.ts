@@ -467,7 +467,6 @@ export class NotificationPayloadBuilder {
   async buildCommunityContextReviewSubmittedNotificationPayload(
     userId: string,
     communityId: string,
-    challengeId: string,
     questions: CreateNVPInput[]
   ): Promise<CollaborationContextReviewSubmittedPayload> {
     const community = await this.communityResolverService.getCommunity(
@@ -826,10 +825,15 @@ export class NotificationPayloadBuilder {
   private async buildJourneyPayload(
     community: ICommunity
   ): Promise<JourneyPayload> {
+    const displayName =
+      await this.communityResolverService.getDisplayNameForCommunityOrFail(
+        community.id,
+        community.type
+      );
     const result: JourneyPayload = {
       spaceID: community.spaceID,
       spaceNameID: await this.getSpaceNameIdOrFail(community.spaceID),
-      displayName: community.displayName,
+      displayName: displayName,
       type: community.type,
     };
     if (community.type === CommunityType.CHALLENGE) {
