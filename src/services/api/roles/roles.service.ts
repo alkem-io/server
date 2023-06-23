@@ -137,7 +137,8 @@ export class RolesService {
   ): Promise<ApplicationForRoleResult> {
     const communityDisplayName =
       await this.communityResolverService.getDisplayNameForCommunityOrFail(
-        community.id
+        community.id,
+        community.type
       );
     const applicationResult = new ApplicationForRoleResult(
       community.id,
@@ -222,7 +223,8 @@ export class RolesService {
   ): Promise<InvitationForRoleResult> {
     const communityDisplayName =
       await this.communityResolverService.getDisplayNameForCommunityOrFail(
-        community.id
+        community.id,
+        community.type
       );
     const invitationResult = new InvitationForRoleResult(
       community.id,

@@ -828,7 +828,8 @@ export class NotificationPayloadBuilder {
   ): Promise<JourneyPayload> {
     const displayName =
       await this.communityResolverService.getDisplayNameForCommunityOrFail(
-        community.id
+        community.id,
+        community.type
       );
     const result: JourneyPayload = {
       spaceID: community.spaceID,

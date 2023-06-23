@@ -411,7 +411,8 @@ export class CommunityService {
 
   public async getDisplayName(community: ICommunity): Promise<string> {
     return await this.communityResolverService.getDisplayNameForCommunityOrFail(
-      community.id
+      community.id,
+      community.type
     );
   }
 
