@@ -368,7 +368,6 @@ export class NotificationAdapter {
       await this.notificationPayloadBuilder.buildCommunityContextReviewSubmittedNotificationPayload(
         eventData.triggeredBy,
         eventData.community.id,
-        eventData.community.parentID,
         eventData.questions
       );
     this.notificationsClient.emit(event, payload);

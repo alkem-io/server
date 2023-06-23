@@ -467,7 +467,6 @@ export class NotificationPayloadBuilder {
   async buildCommunityContextReviewSubmittedNotificationPayload(
     userId: string,
     communityId: string,
-    challengeId: string,
     questions: CreateNVPInput[]
   ): Promise<CollaborationContextReviewSubmittedPayload> {
     const community = await this.communityResolverService.getCommunity(
