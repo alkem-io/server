@@ -83,6 +83,12 @@ export class hubSpace1687238616141 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`user_group\` RENAME COLUMN \`hubID\` TO \`spaceID\``
     );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_hub\` RENAME COLUMN \`hubListFilter\` TO \`spaceListFilter\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_hub\` RENAME COLUMN \`hubVisibilityFilter\` TO \`spaceVisibilityFilter\``
+    );
 
     await queryRunner.query(
       'ALTER TABLE `challenge` ADD CONSTRAINT `FK_494b27cb13b59128fb24b365ca6` FOREIGN KEY (`parentSpaceId`) REFERENCES `space`(`id`) ON DELETE CASCADE ON UPDATE NO ACTION'
@@ -235,6 +241,12 @@ export class hubSpace1687238616141 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`user_group\` RENAME COLUMN \`spaceID\` TO \`hubID\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_hub\` RENAME COLUMN \`spaceListFilter\` TO \`hubListFilter\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`innovation_hub\` RENAME COLUMN \`spaceVisibilityFilter\` TO \`hubVisibilityFilter\``
     );
 
     await queryRunner.query(
