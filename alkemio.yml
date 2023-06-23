@@ -373,6 +373,9 @@ platform:
   # Collaboration tools
   inspiration: ${PLATFORM_INSPIRATION}:https://alkemio.org/help/collaboration-tools/
 
+  # Innovation library
+  innovationLibrary: ${PLATFORM_INNOVATIONLIBRARY}:https://www.alkemio.org/help/innovation-library
+
   # Home page - Foundation
   foundation: ${PLATFORM_FOUNDATION}:https://alkemio.org/
 
