@@ -14,12 +14,20 @@ export class CommunityPolicy
   @Column('text')
   lead!: string;
 
+  @Column('text')
+  admin!: string;
+
+  @Column('text')
+  host!: string;
+
   flags!: Map<CommunityPolicyFlag, boolean>;
 
-  constructor(member: string, lead: string) {
+  constructor(member: string, lead: string, host: string, admin: string) {
     super();
     this.member = member;
     this.lead = lead;
+    this.admin = admin;
+    this.host = host;
     this.flags = new Map();
     // todo: example, remove later
     this.flags.set(CommunityPolicyFlag.ALLOW_ANONYMOUS_READ_ACCESS, true);

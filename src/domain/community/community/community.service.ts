@@ -87,7 +87,9 @@ export class CommunityService {
     community.authorization = new AuthorizationPolicy();
     community.policy = await this.communityPolicyService.createCommunityPolicy(
       policy.member,
-      policy.lead
+      policy.lead,
+      policy.admin,
+      policy.host
     );
     community.spaceID = spaceID;
     community.applicationForm = await this.formService.createForm(
@@ -709,8 +711,9 @@ export class CommunityService {
   private async removeCommunityUserAdmins(
     community: ICommunity
   ): Promise<void> {
-    const adminCredential = this.communityPolicyService.getAdminCredential(
-      community.policy
+    const adminCredential = this.communityPolicyService.getCredentialForRole(
+      community.policy,
+      CommunityRole.ADMIN
     );
     const agents = await this.agentService.findAgentsWithMatchingCredentials(
       adminCredential

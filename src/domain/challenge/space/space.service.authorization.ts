@@ -41,6 +41,7 @@ import {
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
 } from '@common/constants';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -385,7 +386,12 @@ export class SpaceAuthorizationService {
         AuthorizationPrivilege.DELETE,
         AuthorizationPrivilege.GRANT,
       ],
-      [this.communityPolicyService.getAdminCredential(policy)],
+      [
+        this.communityPolicyService.getCredentialForRole(
+          policy,
+          CommunityRole.ADMIN
+        ),
+      ],
       CREDENTIAL_RULE_SPACE_ADMINS
     );
     newRules.push(spaceAdmin);
@@ -400,7 +406,12 @@ export class SpaceAuthorizationService {
       const memberChallenge =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.CREATE_CHALLENGE],
-          [this.communityPolicyService.getMembershipCredential(policy)],
+          [
+            this.communityPolicyService.getCredentialForRole(
+              policy,
+              CommunityRole.MEMBER
+            ),
+          ],
           CREDENTIAL_RULE_SPACE_MEMBERS_CREATE_CHALLENGES
         );
       memberChallenge.cascade = false;
@@ -409,7 +420,12 @@ export class SpaceAuthorizationService {
 
     const spaceMember = this.authorizationPolicyService.createCredentialRule(
       [AuthorizationPrivilege.READ],
-      [this.communityPolicyService.getMembershipCredential(policy)],
+      [
+        this.communityPolicyService.getCredentialForRole(
+          policy,
+          CommunityRole.MEMBER
+        ),
+      ],
       CREDENTIAL_RULE_SPACE_MEMBERS_READ
     );
     newRules.push(spaceMember);
