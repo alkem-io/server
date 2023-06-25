@@ -45,6 +45,8 @@ import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecyc
 import { IInvitation } from '../invitation';
 import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
 import { ValidationException } from '@common/exceptions/validation.exception';
+import { IOrganization } from '../organization';
+import { IUser } from '../user/user.interface';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -93,14 +95,14 @@ export class CommunityResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ICommunity, {
+  @Mutation(() => IUser, {
     description: 'Assigns a User to a role in the specified Community.',
   })
   @Profiling.api
   async assignCommunityRoleToUser(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: AssignCommunityRoleToUserInput
-  ): Promise<ICommunity> {
+  ): Promise<IUser> {
     this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
@@ -126,13 +128,11 @@ export class CommunityResolverMutations {
 
     // reset the user authorization policy so that their profile is visible to other community members
     const user = await this.userService.getUserOrFail(roleData.userID);
-    await this.userAuthorizationService.applyAuthorizationPolicy(user);
-
-    return community;
+    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ICommunity, {
+  @Mutation(() => IOrganization, {
     description: 'Assigns an Organization a Role in the specified Community.',
   })
   @Profiling.api
@@ -140,7 +140,7 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData')
     roleData: AssignCommunityRoleToOrganizationInput
-  ): Promise<ICommunity> {
+  ): Promise<IOrganization> {
     this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
@@ -160,14 +160,14 @@ export class CommunityResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ICommunity, {
+  @Mutation(() => IUser, {
     description: 'Removes a User from a Role in the specified Community.',
   })
   @Profiling.api
   async removeCommunityRoleFromUser(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromUserInput
-  ): Promise<ICommunity> {
+  ): Promise<IUser> {
     this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
@@ -197,12 +197,11 @@ export class CommunityResolverMutations {
     // reset the user authorization policy so that their profile is not visible
     // to other community members
     const user = await this.userService.getUserOrFail(roleData.userID);
-    await this.userAuthorizationService.applyAuthorizationPolicy(user);
-    return community;
+    return await this.userAuthorizationService.applyAuthorizationPolicy(user);
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ICommunity, {
+  @Mutation(() => IOrganization, {
     description:
       'Removes an Organization from a Role in the specified Community.',
   })
@@ -210,7 +209,7 @@ export class CommunityResolverMutations {
   async removeCommunityRoleFromOrganization(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData') roleData: RemoveCommunityRoleFromOrganizationInput
-  ): Promise<ICommunity> {
+  ): Promise<IOrganization> {
     this.validateNotHostRole(roleData.role);
     const community = await this.communityService.getCommunityOrFail(
       roleData.communityID
@@ -373,7 +372,7 @@ export class CommunityResolverMutations {
     };
     await this.notificationAdapter.communityNewMember(notificationInput);
 
-    const result = await this.communityService.assignUserToRole(
+    await this.communityService.assignUserToRole(
       community,
       agentInfo.userID,
       CommunityRole.MEMBER,
@@ -424,7 +423,7 @@ export class CommunityResolverMutations {
         break;
     }
 
-    return result;
+    return community;
   }
 
   @UseGuards(GraphqlGuard)

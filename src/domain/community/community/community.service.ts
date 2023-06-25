@@ -431,7 +431,7 @@ export class CommunityService {
     userID: string,
     role: CommunityRole,
     agentInfo?: AgentInfo
-  ): Promise<ICommunity> {
+  ): Promise<IUser> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
     const hasMemberRoleInParent = await this.isMemberInParentCommunity(
       agent,
@@ -468,7 +468,7 @@ export class CommunityService {
       }
     }
 
-    return community;
+    return user;
   }
 
   private async addMemberToCommunication(
@@ -539,7 +539,7 @@ export class CommunityService {
     community: ICommunity,
     organizationID: string,
     role: CommunityRole
-  ): Promise<ICommunity> {
+  ): Promise<IOrganization> {
     const { organization, agent } =
       await this.organizationService.getOrganizationAndAgent(organizationID);
 
@@ -550,14 +550,14 @@ export class CommunityService {
       CommunityContributorType.ORGANIZATION
     );
 
-    return community;
+    return organization;
   }
 
   async removeUserFromRole(
     community: ICommunity,
     userID: string,
     role: CommunityRole
-  ): Promise<ICommunity> {
+  ): Promise<IUser> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
 
     user.agent = await this.removeContributorFromRole(
@@ -579,14 +579,14 @@ export class CommunityService {
         );
     }
 
-    return community;
+    return user;
   }
 
   async removeOrganizationFromRole(
     community: ICommunity,
     organizationID: string,
     role: CommunityRole
-  ): Promise<ICommunity> {
+  ): Promise<IOrganization> {
     const { organization, agent } =
       await this.organizationService.getOrganizationAndAgent(organizationID);
 
@@ -597,7 +597,7 @@ export class CommunityService {
       CommunityContributorType.ORGANIZATION
     );
 
-    return community;
+    return organization;
   }
 
   private async validateUserCommunityPolicy(
