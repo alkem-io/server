@@ -1,0 +1,14 @@
+mutation assignCommunityRoleToUserLead($roleData: AssignCommunityRoleUserInput!) {
+  assignCommunityRoleToUserLead(roleData: $roleData) {
+    id,
+  }
+}
+
+Variables:
+{
+  "roleData": {
+    "userID": "uuid",
+    "communityID": "uuid",
+    "role": "MEMBER"
+  }
+}
