@@ -14,7 +14,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { UserService } from '@domain/community/user/user.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { UserAuthorizationService } from '../user/user.service.authorization';
-import { RemoveCommunityUserRoleInput } from './dto/community.dto.remove.user.role';
+import { RemoveCommunityUserRoleInput } from './dto/community.dto.role.remove.user';
 import { ApplicationEventInput } from '../application/dto/application.dto.event';
 import { ApplicationAuthorizationService } from '../application/application.service.authorization';
 import { AgentService } from '@domain/agent/agent/agent.service';
@@ -25,10 +25,10 @@ import { AgentBeginVerifiedCredentialOfferOutput } from '@domain/agent/agent/dto
 import { AlkemioUserClaim } from '@services/external/trust-registry/trust.registry.claim/claim.alkemio.user';
 import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 import { CreateUserGroupInput } from '../user-group/dto';
-import { RemoveCommunityOrganizationRoleInput } from './dto/community.dto.remove.organization.role';
-import { AssignCommunityOrganizationRoleInput } from './dto/community.dto.assign.organization.role';
+import { RemoveCommunityOrganizationRoleInput } from './dto/community.dto.role.remove.organization';
+import { AssignCommunityOrganizationRoleInput } from './dto/community.dto.role.assign.organization';
 import { CommunityRole } from '@common/enums/community.role';
-import { AssignCommunityUserRoleInput } from './dto/community.dto.assign.user.role';
+import { AssignCommunityUserRoleInput } from './dto/community.dto.role.assign.user';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
 import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';
@@ -136,7 +136,7 @@ export class CommunityResolverMutations {
     description: 'Assigns an Organization a Role in the specified Community.',
   })
   @Profiling.api
-  async assignCommunitRoleToOrganization(
+  async assignCommunityRoleToOrganization(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('roleData')
     roleData: AssignCommunityOrganizationRoleInput
