@@ -3,7 +3,7 @@ import { UUID, UUID_NAMEID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class RemoveCommunityOrganizationRoleInput {
+export class RemoveCommunityRoleFromOrganizationInput {
   @Field(() => UUID, { nullable: false })
   communityID!: string;
 

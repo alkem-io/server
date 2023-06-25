@@ -21,10 +21,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
 import { IChallenge } from './challenge.interface';
-import { IUser } from '@domain/community/user/user.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
-import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
 import { UpdateChallengeInnovationFlowInput } from './dto/challenge.dto.update.innovation.flow';
 import { OpportunityCreatedPayload } from './dto/challenge.opportunity.created.payload';
@@ -245,47 +242,5 @@ export class ChallengeResolverMutations {
       },
       agentInfo
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Assigns a User as an Challenge Admin.',
-  })
-  @Profiling.api
-  async assignUserAsChallengeAdmin(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignChallengeAdminInput
-  ): Promise<IUser> {
-    const challenge = await this.challengeService.getChallengeOrFail(
-      membershipData.challengeID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      challenge.authorization,
-      AuthorizationPrivilege.GRANT,
-      `assign user challenge admin: ${challenge.nameID}`
-    );
-    return await this.challengeService.assignChallengeAdmin(membershipData);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Removes a User from being an Challenge Admin.',
-  })
-  @Profiling.api
-  async removeUserAsChallengeAdmin(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveChallengeAdminInput
-  ): Promise<IUser> {
-    const challenge = await this.challengeService.getChallengeOrFail(
-      membershipData.challengeID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      challenge.authorization,
-      AuthorizationPrivilege.GRANT,
-      `remove user challenge admin: ${challenge.nameID}`
-    );
-    return await this.challengeService.removeChallengeAdmin(membershipData);
   }
 }

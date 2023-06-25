@@ -11,9 +11,6 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AgentInfo } from '@core/authentication';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IUser } from '@domain/community/user/user.interface';
-import { RemoveOpportunityAdminInput } from './dto/opportunity.dto.remove.admin';
-import { AssignOpportunityAdminInput } from './dto/opportunity.dto.assign.admin';
 import { IOpportunity } from './opportunity.interface';
 import {
   DeleteOpportunityInput,
@@ -169,47 +166,5 @@ export class OpportunityResolverMutations {
       },
       agentInfo
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Assigns a User as an Opportunity Admin.',
-  })
-  @Profiling.api
-  async assignUserAsOpportunityAdmin(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignOpportunityAdminInput
-  ): Promise<IUser> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
-      membershipData.opportunityID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      opportunity.authorization,
-      AuthorizationPrivilege.GRANT,
-      `assign user opportunity admin: ${opportunity.nameID}`
-    );
-    return await this.opportunityService.assignOpportunityAdmin(membershipData);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Removes a User from being an Opportunity Admin.',
-  })
-  @Profiling.api
-  async removeUserAsOpportunityAdmin(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveOpportunityAdminInput
-  ): Promise<IUser> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
-      membershipData.opportunityID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      opportunity.authorization,
-      AuthorizationPrivilege.GRANT,
-      `remove user opportunity admin: ${opportunity.nameID}`
-    );
-    return await this.opportunityService.removeOpportunityAdmin(membershipData);
   }
 }
