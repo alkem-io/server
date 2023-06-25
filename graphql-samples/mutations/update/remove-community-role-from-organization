@@ -1,4 +1,4 @@
-mutation removeCommunityRoleFromOrganization($roleData: RemoveCommunityRoleOrganizationInput!) {
+mutation removeCommunityRoleFromOrganization($roleData: RemoveCommunityRoleFromOrganizationInput!) {
   removeCommunityRoleFromOrganization(roleData: $roleData) {
     id,
   }
