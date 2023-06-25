@@ -159,6 +159,38 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
+  @ResolveField('usersInRole', () => [IUser], {
+    nullable: true,
+    description: 'All users that have the specified Role in this Community.',
+  })
+  @Profiling.api
+  async usersInRole(
+    @Parent() community: Community,
+    @Args('role', { nullable: false }) role: CommunityRole
+  ) {
+    return await this.communityService.getUsersWithRole(community, role);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('organizationsInRole', () => [IOrganization], {
+    nullable: true,
+    description:
+      'All Organizations that have the specified Role in this Community.',
+  })
+  @Profiling.api
+  async organizationsInRole(
+    @Parent() community: Community,
+    @Args('role', { nullable: false }) role: CommunityRole
+  ): Promise<IOrganization[]> {
+    return await this.communityService.getOrganizationsWithRole(
+      community,
+      role
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('availableLeadUsers', () => PaginatedUsers, {
     nullable: true,
     description:
