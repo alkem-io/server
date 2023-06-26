@@ -6,14 +6,14 @@ mutation createInnovationHub($input: CreateInnovationHubInput!){
       displayName
     }
     type
-    hubListFilter {
+    spaceListFilter {
       id
       nameID
       profile {
         displayName
       }
     }
-    hubVisibilityFilter
+    spaceVisibilityFilter
   }
 }
 
@@ -26,6 +26,6 @@ query variables:
       "profileData": {
         "displayName": "test space"
       },
-      "hubListFilter": ["889ed0cf-4cd9-41d6-8ce0-d27b65cb149e"]
+      "spaceListFilter": ["889ed0cf-4cd9-41d6-8ce0-d27b65cb149e"]
     }
   }

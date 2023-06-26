@@ -1,4 +1,4 @@
-mutation CreateChallenge($challengeData: CreateChallengeOnHubInput!) {
+mutation CreateChallenge($challengeData: CreateChallengeOnSpaceInput!) {
   createChallenge(challengeData: $challengeData) {
     nameID,
     id
@@ -9,7 +9,7 @@ query variables:
 {
   "challengeData":
   {
-    "hubID": "1",
+    "spaceID": "1",
     "innovationFlowTemplateID": "uuid",
     "nameID": "balance-grid",
     "profiledata": {

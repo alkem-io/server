@@ -1,8 +1,8 @@
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
-import { Hub } from '@domain/challenge/hub/hub.entity';
-import { Aspect } from '@domain/collaboration/aspect/aspect.entity';
+import { Space } from '@domain/challenge/space/space.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
 import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entity';
-import { Canvas } from '@domain/common/canvas';
+import { Whiteboard } from '@domain/common/whiteboard';
 import { Community } from '@domain/community/community/community.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { User } from '@domain/community/user/user.entity';
@@ -18,11 +18,11 @@ import { NotificationPayloadBuilder } from './notification.payload.builder';
     ActivityModule,
     EntityResolverModule,
     TypeOrmModule.forFeature([
-      Hub,
+      Space,
       Challenge,
       Opportunity,
-      Aspect,
-      Canvas,
+      Post,
+      Whiteboard,
       User,
       Organization,
       Community,

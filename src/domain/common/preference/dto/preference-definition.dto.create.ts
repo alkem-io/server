@@ -1,5 +1,5 @@
 import { UserPreferenceType } from '@common/enums';
-import { HubPreferenceType } from '@common/enums/hub.preference.type';
+import { SpacePreferenceType } from '@common/enums/space.preference.type';
 import { PreferenceValueType } from '@common/enums/preference.value.type';
 
 export class CreatePreferenceDefinitionInput {
@@ -7,5 +7,5 @@ export class CreatePreferenceDefinitionInput {
   displayName!: string;
   description!: string;
   valueType!: PreferenceValueType;
-  type!: UserPreferenceType | HubPreferenceType;
+  type!: UserPreferenceType | SpacePreferenceType;
 }

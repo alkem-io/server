@@ -2,7 +2,7 @@ import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ApplicationForRoleResult } from './roles.dto.result.application';
 import { RolesResultOrganization } from './roles.dto.result.organization';
-import { RolesResultHub } from './roles.dto.result.hub';
+import { RolesResultSpace } from './roles.dto.result.space';
 import { InvitationForRoleResult } from './roles.dto.result.invitation';
 
 @ObjectType()
@@ -12,11 +12,11 @@ export class ContributorRoles {
   })
   id!: string;
 
-  @Field(() => [RolesResultHub], {
+  @Field(() => [RolesResultSpace], {
     description:
-      'Details of Hubs the User or Organization is a member of, with child memberships',
+      'Details of Spaces the User or Organization is a member of, with child memberships',
   })
-  hubs: RolesResultHub[] = [];
+  spaces: RolesResultSpace[] = [];
 
   @Field(() => [RolesResultOrganization], {
     description:

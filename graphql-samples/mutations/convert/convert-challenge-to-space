@@ -1,0 +1,14 @@
+mutation ConvertChallengeToSpace($convertData: ConvertChallengeToSpaceInput!) {
+  convertChallengeToSpace(convertData: $convertData) {
+    displayName,
+    id
+  }
+}
+
+query variables:
+{
+  "convertData":
+  {
+    "challengeID": "uuid"
+  }
+}

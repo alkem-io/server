@@ -1,2 +1,2 @@
 export * from './challenge';
-export * from './hub';
+export * from './space';

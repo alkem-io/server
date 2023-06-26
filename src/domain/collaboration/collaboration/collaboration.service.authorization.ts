@@ -94,11 +94,11 @@ export class CollaborationAuthorizationService {
     const contributors = [
       this.communityPolicyService.getMembershipCredential(policy),
     ];
-    // optionally add hub members
+    // optionally add space members
     if (
       this.communityPolicyService.getFlag(
         policy,
-        CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+        CommunityPolicyFlag.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE
       )
     ) {
       const parentCredentials =
@@ -111,7 +111,7 @@ export class CollaborationAuthorizationService {
       resourceID: '',
     });
     contributors.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
       resourceID: '',
     });
     return contributors;

@@ -1,0 +1,16 @@
+mutation updatePreferenceOnSpace($preferenceData: UpdateSpacePreferenceInput!) {
+  updatePreferenceOnSpace(preferenceData: $preferenceData) {
+    id
+    value
+  }
+}
+
+
+query variables:
+{
+  "preferenceData": {
+    "spaceID": "UUID_NAMEID",
+    "type": "",
+    "value": "true"
+  }
+}

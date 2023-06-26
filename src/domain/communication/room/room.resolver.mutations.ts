@@ -40,7 +40,7 @@ export class RoomResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  // todo should be removed to serve per entity e.g. send aspect comment
+  // todo should be removed to serve per entity e.g. send post comment
   @UseGuards(GraphqlGuard)
   @Mutation(() => IMessage, {
     description:
@@ -64,7 +64,7 @@ export class RoomResolverMutations {
         messageData.roomID
       );
 
-      if (callout.type !== CalloutType.COMMENTS) {
+      if (callout.type !== CalloutType.POST) {
         throw new NotSupportedException(
           'Messages only supported on Comments Callout',
           LogContext.COLLABORATION

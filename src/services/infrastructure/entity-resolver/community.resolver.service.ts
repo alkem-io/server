@@ -6,6 +6,7 @@ import { Community, ICommunity } from '@domain/community/community';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Communication } from '@domain/communication/communication/communication.entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 
 @Injectable()
 export class CommunityResolverService {
@@ -16,6 +17,8 @@ export class CommunityResolverService {
     private discussionRepository: Repository<Discussion>,
     @InjectRepository(Communication)
     private communicationRepository: Repository<Communication>,
+    @InjectRepository(Profile)
+    private profileRepository: Repository<Profile>,
     @InjectEntityManager('default')
     private entityManager: EntityManager
   ) {}
@@ -81,8 +84,8 @@ export class CommunityResolverService {
       communityType: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`callout\`
-        RIGHT JOIN \`hub\` on \`callout\`.\`collaborationId\` = \`hub\`.\`collaborationId\`
+        SELECT \`space\`.\`id\` as \`spaceId\`, \`space\`.\`communityId\` as communityId, 'space' as \`entityType\` FROM \`callout\`
+        RIGHT JOIN \`space\` on \`callout\`.\`collaborationId\` = \`space\`.\`collaborationId\`
         WHERE \`callout\`.\`id\` = '${calloutId}' UNION
 
         SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`callout\`
@@ -116,8 +119,8 @@ export class CommunityResolverService {
       communityType: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT \`hub\`.\`id\` as \`hubId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`entityType\` FROM \`timeline\`
-        RIGHT JOIN \`hub\` on \`timeline\`.\`id\` = \`hub\`.\`timelineID\`
+        SELECT \`space\`.\`id\` as \`spaceId\`, \`space\`.\`communityId\` as communityId, 'space' as \`entityType\` FROM \`timeline\`
+        RIGHT JOIN \`space\` on \`timeline\`.\`id\` = \`space\`.\`timelineID\`
         JOIN \`calendar\` on \`timeline\`.\`calendarId\` = \`calendar\`.\`id\`
         JOIN \`calendar_event\` on \`calendar\`.\`id\` = \`calendar_event\`.\`calendarId\`
         WHERE \`calendar_event\`.\`id\` = '${callendarEventId}';
@@ -143,8 +146,8 @@ export class CommunityResolverService {
       communityId: string;
     }[] = await this.entityManager.connection.query(
       `
-        SELECT communityId from \`hub\`
-        WHERE \`hub\`.\`collaborationId\` = '${collaborationID}' UNION
+        SELECT communityId from \`space\`
+        WHERE \`space\`.\`collaborationId\` = '${collaborationID}' UNION
         SELECT communityId from \`challenge\`
         WHERE \`challenge\`.\`collaborationId\` = '${collaborationID}' UNION
         SELECT communityId from \`opportunity\`
@@ -163,6 +166,30 @@ export class CommunityResolverService {
       );
     }
     return community;
+  }
+
+  public async getDisplayNameForCommunityOrFail(
+    communityId: string,
+    communityType: string
+  ): Promise<string> {
+    const [result]: {
+      profileId: string;
+    }[] = await this.entityManager.connection.query(
+      `SELECT profileId from \`${communityType}\`
+        WHERE \`${communityType}\`.\`communityId\` = '${communityId}';`
+    );
+
+    const profileId = result.profileId;
+    const profile = await this.profileRepository.findOne({
+      where: { id: profileId },
+    });
+    if (!profile) {
+      throw new EntityNotFoundException(
+        `Unable to find Profile for Community: ${communityId}`,
+        LogContext.NOTIFICATIONS
+      );
+    }
+    return profile.displayName;
   }
 
   public async getCommunity(communityID: string) {
@@ -184,18 +211,18 @@ export class CommunityResolverService {
       `
       SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`communityType\` FROM \`callout\`
       RIGHT JOIN \`challenge\` on \`challenge\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
-      WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
+      JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
+      WHERE \`post\`.\`commentsId\` = '${commentsId}' UNION
 
-      SELECT \`hub\`.\`id\` as \`entityId\`, \`hub\`.\`communityId\` as communityId, 'hub' as \`communityType\`  FROM \`callout\`
-      RIGHT JOIN \`hub\` on \`hub\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
-      WHERE \`aspect\`.\`commentsId\` = '${commentsId}' UNION
+      SELECT \`space\`.\`id\` as \`entityId\`, \`space\`.\`communityId\` as communityId, 'space' as \`communityType\`  FROM \`callout\`
+      RIGHT JOIN \`space\` on \`space\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
+      JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
+      WHERE \`post\`.\`commentsId\` = '${commentsId}' UNION
 
       SELECT \`opportunity\`.\`id\` as \`entityId\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`communityType\`  FROM \`callout\`
       RIGHT JOIN \`opportunity\` on \`opportunity\`.\`collaborationId\` = \`callout\`.\`collaborationId\`
-      JOIN \`aspect\` on \`callout\`.\`id\` = \`aspect\`.\`calloutId\`
-      WHERE \`aspect\`.\`commentsId\` = '${commentsId}';
+      JOIN \`post\` on \`callout\`.\`id\` = \`post\`.\`calloutId\`
+      WHERE \`post\`.\`commentsId\` = '${commentsId}';
       `
     );
 

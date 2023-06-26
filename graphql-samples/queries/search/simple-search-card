@@ -5,8 +5,8 @@ query search($searchData: SearchInput!) {
       score
       terms
       type
-      ... on SearchResultCard {
-        hub {
+      ... on SearchResultPost {
+        space {
           nameID
         }
         challenge {
@@ -25,8 +25,8 @@ query search($searchData: SearchInput!) {
       score
       terms
       type
-      ... on SearchResultCard {
-        hub {
+      ... on SearchResultPost {
+        space {
           nameID
         }
         challenge {
@@ -45,8 +45,8 @@ query search($searchData: SearchInput!) {
       score
       terms
       type
-      ... on SearchResultCard {
-        hub {
+      ... on SearchResultPost {
+        space {
           nameID
         }
         challenge {
@@ -65,8 +65,8 @@ query search($searchData: SearchInput!) {
       score
       terms
       type
-      ... on SearchResultCard {
-        hub {
+      ... on SearchResultPost {
+        space {
           nameID
         }
         challenge {
@@ -90,6 +90,6 @@ query search($searchData: SearchInput!) {
 {
   "searchData":
   {
-    "terms": ["aspect-name"]
+    "terms": ["post-name"]
   }
 }

@@ -86,7 +86,7 @@ export class PlatformAuthorizationPolicyService {
         ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS
       );
@@ -108,13 +108,13 @@ export class PlatformAuthorizationPolicyService {
     globalAdminNotInherited.cascade = false;
     credentialRules.push(globalAdminNotInherited);
 
-    // Allow global admin Hubs to access Platform mgmt
+    // Allow global admin Spaces to access Platform mgmt
     const platformAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_ADMIN],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
           AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
@@ -139,7 +139,7 @@ export class PlatformAuthorizationPolicyService {
           AuthorizationPrivilege.FILE_UPLOAD,
         ],
         [
-          AuthorizationCredential.HUB_ADMIN,
+          AuthorizationCredential.SPACE_ADMIN,
           AuthorizationCredential.CHALLENGE_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD
@@ -152,9 +152,9 @@ export class PlatformAuthorizationPolicyService {
         [AuthorizationPrivilege.ADMIN],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
           AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-          AuthorizationCredential.HUB_ADMIN,
+          AuthorizationCredential.SPACE_ADMIN,
           AuthorizationCredential.CHALLENGE_ADMIN,
           AuthorizationCredential.OPPORTUNITY_ADMIN,
           AuthorizationCredential.ORGANIZATION_ADMIN,
@@ -172,7 +172,7 @@ export class PlatformAuthorizationPolicyService {
 
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [
-        AuthorizationPrivilege.CREATE_HUB,
+        AuthorizationPrivilege.CREATE_SPACE,
         AuthorizationPrivilege.CREATE_ORGANIZATION,
         AuthorizationPrivilege.FILE_UPLOAD,
       ],

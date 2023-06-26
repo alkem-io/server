@@ -1,0 +1,13 @@
+mutation assignUserAsSpaceAdmin($membershipData: AssignSpaceAdminInput!) {
+  assignUserAsSpaceAdmin(membershipData: $membershipData) {
+    id,
+  }
+}
+
+Variables:
+{
+  "membershipData": {
+    "userID": "uuid",
+    "spaceID": "uuid"
+  }
+}

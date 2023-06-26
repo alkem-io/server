@@ -112,7 +112,7 @@ export class ChallengeResolverMutations {
       {
         id: opportunity.id,
         name: opportunity.profile.displayName,
-        hub: opportunity.hubID ?? '',
+        space: opportunity.spaceID ?? '',
       },
       {
         id: agentInfo.userID,
@@ -189,7 +189,7 @@ export class ChallengeResolverMutations {
       {
         id: challenge.id,
         name: challenge.profile.displayName,
-        hub: challenge.hubID ?? '',
+        space: challenge.spaceID ?? '',
       },
       {
         id: agentInfo.userID,

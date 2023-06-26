@@ -27,13 +27,13 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import {
-  CREDENTIAL_RULE_CHALLENGE_HUB_ADMINS,
+  CREDENTIAL_RULE_CHALLENGE_SPACE_ADMINS,
   CREDENTIAL_RULE_CHALLENGE_ADMINS,
   CREDENTIAL_RULE_CHALLENGE_MEMBER_READ,
   CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW,
   CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY,
-  CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_APPLY,
-  CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_JOIN,
+  CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY,
+  CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN,
 } from '@common/constants';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 
@@ -60,7 +60,7 @@ export class ChallengeAuthorizationService {
     const communityPolicy = await this.setCommunityPolicyFlags(challenge);
 
     // private challenge or not?
-    // If it is a private challenge then cannot inherit from Hub
+    // If it is a private challenge then cannot inherit from Space
     const privateChallenge = !this.communityPolicyService.getFlag(
       communityPolicy,
       CommunityPolicyFlag.ALLOW_NON_MEMBERS_READ_ACCESS
@@ -171,37 +171,39 @@ export class ChallengeAuthorizationService {
     );
 
     //
-    const allowHubMembersToApply = this.preferenceSetService.getPreferenceValue(
-      preferenceSet,
-      ChallengePreferenceType.MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS
-    );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS,
-      allowHubMembersToApply
-    );
-
-    //
-    const allowHubMembersToJoin = this.preferenceSetService.getPreferenceValue(
-      preferenceSet,
-      ChallengePreferenceType.MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS
-    );
-    this.communityPolicyService.setFlag(
-      policy,
-      CommunityPolicyFlag.MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS,
-      allowHubMembersToJoin
-    );
-
-    //
-    const allowHubMembersToContribute =
+    const allowSpaceMembersToApply =
       this.preferenceSetService.getPreferenceValue(
         preferenceSet,
-        ChallengePreferenceType.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+        ChallengePreferenceType.MEMBERSHIP_APPLY_CHALLENGE_FROM_SPACE_MEMBERS
       );
     this.communityPolicyService.setFlag(
       policy,
-      CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE,
-      allowHubMembersToContribute
+      CommunityPolicyFlag.MEMBERSHIP_APPLY_CHALLENGE_FROM_SPACE_MEMBERS,
+      allowSpaceMembersToApply
+    );
+
+    //
+    const allowSpaceMembersToJoin =
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
+        ChallengePreferenceType.MEMBERSHIP_JOIN_CHALLENGE_FROM_SPACE_MEMBERS
+      );
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.MEMBERSHIP_JOIN_CHALLENGE_FROM_SPACE_MEMBERS,
+      allowSpaceMembersToJoin
+    );
+
+    //
+    const allowSpaceMembersToContribute =
+      this.preferenceSetService.getPreferenceValue(
+        preferenceSet,
+        ChallengePreferenceType.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE
+      );
+    this.communityPolicyService.setFlag(
+      policy,
+      CommunityPolicyFlag.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE,
+      allowSpaceMembersToContribute
     );
 
     //
@@ -273,7 +275,7 @@ export class ChallengeAuthorizationService {
   ): IAuthorizationPolicyRuleCredential[] {
     const rules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const challengeHubAdmins =
+    const challengeSpaceAdmins =
       this.authorizationPolicyService.createCredentialRule(
         [
           AuthorizationPrivilege.CREATE,
@@ -283,9 +285,9 @@ export class ChallengeAuthorizationService {
           AuthorizationPrivilege.DELETE,
         ],
         [...this.communityPolicyService.getAdminCredentials(policy)],
-        CREDENTIAL_RULE_CHALLENGE_HUB_ADMINS
+        CREDENTIAL_RULE_CHALLENGE_SPACE_ADMINS
       );
-    rules.push(challengeHubAdmins);
+    rules.push(challengeSpaceAdmins);
 
     return rules;
   }
@@ -339,7 +341,7 @@ export class ChallengeAuthorizationService {
         [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
         ],
         CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW
       );
@@ -373,7 +375,7 @@ export class ChallengeAuthorizationService {
     if (
       this.communityPolicyService.getFlag(
         policy,
-        CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+        CommunityPolicyFlag.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE
       )
     ) {
       criteria.push(
@@ -437,35 +439,35 @@ export class ChallengeAuthorizationService {
       this.communityPolicyService.getParentMembershipCredential(policy);
 
     // Allow member of the parent community to Apply
-    const allowHubMembersToApply = this.communityPolicyService.getFlag(
+    const allowSpaceMembersToApply = this.communityPolicyService.getFlag(
       policy,
-      CommunityPolicyFlag.MEMBERSHIP_APPLY_CHALLENGE_FROM_HUB_MEMBERS
+      CommunityPolicyFlag.MEMBERSHIP_APPLY_CHALLENGE_FROM_SPACE_MEMBERS
     );
-    if (allowHubMembersToApply) {
-      const hubMemberCanApply =
+    if (allowSpaceMembersToApply) {
+      const spaceMemberCanApply =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.COMMUNITY_APPLY],
           [parentCommunityCredential],
-          CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_APPLY
+          CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY
         );
-      hubMemberCanApply.cascade = false;
-      newRules.push(hubMemberCanApply);
+      spaceMemberCanApply.cascade = false;
+      newRules.push(spaceMemberCanApply);
     }
 
     // Allow member of the parent community to Join
-    const allowHubMembersToJoin = this.communityPolicyService.getFlag(
+    const allowSpaceMembersToJoin = this.communityPolicyService.getFlag(
       policy,
-      CommunityPolicyFlag.MEMBERSHIP_JOIN_CHALLENGE_FROM_HUB_MEMBERS
+      CommunityPolicyFlag.MEMBERSHIP_JOIN_CHALLENGE_FROM_SPACE_MEMBERS
     );
-    if (allowHubMembersToJoin) {
-      const hubMemberCanJoin =
+    if (allowSpaceMembersToJoin) {
+      const spaceMemberCanJoin =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.COMMUNITY_JOIN],
           [parentCommunityCredential],
-          CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_JOIN
+          CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN
         );
-      hubMemberCanJoin.cascade = false;
-      newRules.push(hubMemberCanJoin);
+      spaceMemberCanJoin.cascade = false;
+      newRules.push(spaceMemberCanJoin);
     }
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(

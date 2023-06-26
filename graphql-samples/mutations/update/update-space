@@ -1,0 +1,16 @@
+mutation UpdateSpace($spaceData: UpdateSpaceInput!) {
+  updateSpace(spaceData: $spaceData) {
+    id
+  }
+}
+{
+  "spaceData":
+		{
+      "ID": "uuid",
+      "hostID": "uuid",
+      "profileData": {
+        "displayName": "New Space 3"
+      }
+
+		}
+}

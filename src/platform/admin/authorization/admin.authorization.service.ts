@@ -21,8 +21,8 @@ import { RevokeAuthorizationCredentialInput } from './dto/authorization.dto.cred
 import { UsersWithAuthorizationCredentialInput } from './dto/authorization.dto.users.with.credential';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AgentInfo } from '@core/authentication';
-import { AssignGlobalHubsAdminInput } from './dto/authorization.dto.assign.global.hubs.admin';
-import { RemoveGlobalHubsAdminInput } from './dto/authorization.dto.remove.global.hubs.admin';
+import { AssignGlobalSpacesAdminInput } from './dto/authorization.dto.assign.global.spaces.admin';
+import { RemoveGlobalSpacesAdminInput } from './dto/authorization.dto.remove.global.spaces.admin';
 
 @Injectable()
 export class AdminAuthorizationService {
@@ -91,29 +91,29 @@ export class AdminAuthorizationService {
     return await this.userService.getUserWithAgent(removeData.userID);
   }
 
-  async assignGlobalHubsAdmin(
-    assignData: AssignGlobalHubsAdminInput
+  async assignGlobalSpacesAdmin(
+    assignData: AssignGlobalSpacesAdminInput
   ): Promise<IUser> {
     const agent = await this.userService.getAgent(assignData.userID);
 
     // assign the credential
     await this.agentService.grantCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
       resourceID: '',
     });
 
     return await this.userService.getUserWithAgent(assignData.userID);
   }
 
-  async removeGlobalHubsAdmin(
-    removeData: RemoveGlobalHubsAdminInput
+  async removeGlobalSpacesAdmin(
+    removeData: RemoveGlobalSpacesAdminInput
   ): Promise<IUser> {
     const agent = await this.userService.getAgent(removeData.userID);
 
     await this.agentService.revokeCredential({
       agentID: agent.id,
-      type: AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+      type: AuthorizationCredential.GLOBAL_ADMIN_SPACES,
       resourceID: '',
     });
 

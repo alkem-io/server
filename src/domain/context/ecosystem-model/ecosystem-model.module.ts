@@ -7,7 +7,7 @@ import { EcosystemModelResolverMutations } from './ecosystem-model.resolver.muta
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { EcosystemModelAuthorizationService } from './ecosystem-model.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { CanvasModule } from '@domain/common/canvas/canvas.module';
+import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { EcosystemModelResolverFields } from './ecosystem-model.resolver.fields';
 
 @Module({
@@ -15,7 +15,7 @@ import { EcosystemModelResolverFields } from './ecosystem-model.resolver.fields'
     AuthorizationModule,
     AuthorizationPolicyModule,
     ActorGroupModule,
-    CanvasModule,
+    WhiteboardModule,
     TypeOrmModule.forFeature([EcosystemModel]),
   ],
   providers: [

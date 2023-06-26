@@ -17,7 +17,7 @@ import { IQuestion } from '@domain/common/question/question.interface';
 @Entity()
 export class Application extends AuthorizableEntity implements IApplication {
   @Column()
-  hubID?: string;
+  spaceID?: string;
 
   @OneToOne(() => Lifecycle, {
     eager: true,

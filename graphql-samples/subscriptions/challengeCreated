@@ -1,6 +1,6 @@
 subscription {
-  challengeCreated(hubID: "uuid") {
-		hubID
+  challengeCreated(spaceID: "uuid") {
+		spaceID
     challenge{
       nameID
     }

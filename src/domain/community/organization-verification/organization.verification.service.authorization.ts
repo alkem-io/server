@@ -66,7 +66,7 @@ export class OrganizationVerificationAuthorizationService {
         ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
           AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
         ],
         CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL

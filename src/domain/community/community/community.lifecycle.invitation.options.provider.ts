@@ -91,6 +91,15 @@ export class CommunityInvitationLifecycleOptionsProvider {
             AuthorizationPrivilege.UPDATE
           );
         },
+        communityInvitationAcceptAuthorized: (_, event) => {
+          const agentInfo: AgentInfo = event.agentInfo;
+          const authorizationPolicy: AuthorizationPolicy = event.authorization;
+          return this.authorizationService.isAccessGranted(
+            agentInfo,
+            authorizationPolicy,
+            AuthorizationPrivilege.COMMUNITY_INVITE_ACCEPT
+          );
+        },
       },
     };
 }

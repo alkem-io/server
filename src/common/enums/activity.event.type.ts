@@ -2,9 +2,9 @@ import { registerEnumType } from '@nestjs/graphql';
 
 export enum ActivityEventType {
   CALLOUT_PUBLISHED = 'callout-published',
-  CARD_CREATED = 'card-created',
-  CANVAS_CREATED = 'canvas-created',
-  CARD_COMMENT = 'card-comment',
+  POST_CREATED = 'post-created',
+  WHITEBOARD_CREATED = 'whiteboard-created',
+  POST_COMMENT = 'post-comment',
   DISCUSSION_COMMENT = 'discussion-comment',
   UPDATE_SENT = 'update-sent',
   MEMBER_JOINED = 'member-joined',

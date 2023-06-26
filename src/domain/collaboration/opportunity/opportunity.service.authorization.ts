@@ -81,11 +81,11 @@ export class OpportunityAuthorizationService {
     // propagate the value of the parent community policy into the opportunity community policy
     const challengeContributors = this.communityPolicyService.getFlag(
       challengeCommunityPolicy,
-      CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE
+      CommunityPolicyFlag.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE
     );
     this.communityPolicyService.setFlag(
       policy,
-      CommunityPolicyFlag.ALLOW_HUB_MEMBERS_TO_CONTRIBUTE,
+      CommunityPolicyFlag.ALLOW_SPACE_MEMBERS_TO_CONTRIBUTE,
       challengeContributors
     );
 
@@ -149,7 +149,7 @@ export class OpportunityAuthorizationService {
         [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
         ],
         CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW
       );

@@ -1,0 +1,15 @@
+mutation updateSpacePlatformSettings($updateData: UpdateSpacePlatformSettingsInput!) {
+  updateSpacePlatformSettings(updateData: $updateData) {
+    id
+  }
+}
+
+Variables:
+{
+  "updateData": {
+    "spaceID": "uuid_nameid",
+    "visibility": "ARCHIVED",
+    "hostID": "uuid_nameid",
+    "nameID": "nameid"
+  }
+}

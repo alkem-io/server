@@ -132,7 +132,7 @@ export class OrganizationAuthorizationService {
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
         ],
         CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET
       );
@@ -153,13 +153,13 @@ export class OrganizationAuthorizationService {
       );
     newRules.push(communityAdmin);
 
-    // Allow Global admins + Global Hub Admins to manage access to Hubs + contents
+    // Allow Global admins + Global Space Admins to manage access to Spaces + contents
     const globalAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.GRANT],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_HUBS,
+          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
         ],
         CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS
       );

@@ -1,6 +1,6 @@
 import { EntityManager } from 'typeorm';
 import { ICredential } from '@src/domain';
-import { HubVisibility } from '@common/enums/hub.visibility';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from './group.credentials.by.entity';
 import { getUserRolesEntityData } from './get.user.roles.entity.data';
 import { getUserRolesQueryResult } from './get.user.roles.query.result';
@@ -8,21 +8,21 @@ import { getUserRolesQueryResult } from './get.user.roles.query.result';
 export const mapCredentialsToRoles = async (
   entityManager: EntityManager,
   credentials: ICredential[],
-  allowedVisibilities: HubVisibility[]
+  allowedVisibilities: SpaceVisibility[]
 ) => {
   const credentialMap = groupCredentialsByEntity(credentials);
 
-  const hubIds = Array.from(credentialMap.get('hubs')?.keys() ?? []);
+  const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
   const challengeIds = Array.from(
     credentialMap.get('challenges')?.keys() ?? []
   );
   const oppIds = Array.from(credentialMap.get('opportunities')?.keys() ?? []);
   const orgIds = Array.from(credentialMap.get('organizations')?.keys() ?? []);
 
-  const { hubs, challenges, opportunities, organizations } =
+  const { spaces, challenges, opportunities, organizations } =
     await getUserRolesEntityData(
       entityManager,
-      hubIds,
+      spaceIds,
       allowedVisibilities,
       challengeIds,
       oppIds,
@@ -31,7 +31,7 @@ export const mapCredentialsToRoles = async (
 
   return getUserRolesQueryResult(
     credentialMap,
-    hubs,
+    spaces,
     challenges,
     opportunities,
     organizations

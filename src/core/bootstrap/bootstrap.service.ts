@@ -1,8 +1,8 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Hub } from '@domain/challenge/hub/hub.entity';
-import { HubService } from '@domain/challenge/hub/hub.service';
+import { Space } from '@domain/challenge/space/space.entity';
+import { SpaceService } from '@domain/challenge/space/space.service';
 import { UserService } from '@domain/community/user/user.service';
 import { Repository } from 'typeorm';
 import fs from 'fs';
@@ -12,12 +12,12 @@ import { Profiling } from '@common/decorators';
 import { ConfigurationTypes, LogContext } from '@common/enums';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
-import { HubAuthorizationService } from '@domain/challenge/hub/hub.service.authorization';
+import { SpaceAuthorizationService } from '@domain/challenge/space/space.service.authorization';
 import {
   DEFAULT_HOST_ORG_DISPLAY_NAME,
   DEFAULT_HOST_ORG_NAMEID,
-  DEFAULT_HUB_DISPLAYNAME,
-  DEFAULT_HUB_NAMEID,
+  DEFAULT_SPACE_DISPLAYNAME,
+  DEFAULT_SPACE_NAMEID,
 } from '@common/constants';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
@@ -25,7 +25,7 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { AdminAuthorizationService } from '@platform/admin/authorization/admin.authorization.service';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { PlatformService } from '@platform/platfrom/platform.service';
-import { CreateHubInput } from '@domain/challenge/hub/dto/hub.dto.create';
+import { CreateSpaceInput } from '@domain/challenge/space/dto/space.dto.create';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
 import { InnovationHubService } from '@domain/innovation-hub';
@@ -34,10 +34,10 @@ import { InnovationHubService } from '@domain/innovation-hub';
 export class BootstrapService {
   constructor(
     private agentService: AgentService,
-    private hubService: HubService,
+    private spaceService: SpaceService,
     private userService: UserService,
     private userAuthorizationService: UserAuthorizationService,
-    private hubAuthorizationService: HubAuthorizationService,
+    private spaceAuthorizationService: SpaceAuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
     private configService: ConfigService,
     private organizationService: OrganizationService,
@@ -47,8 +47,8 @@ export class BootstrapService {
     private platformAuthorizationService: PlatformAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private innovationHubService: InnovationHubService,
-    @InjectRepository(Hub)
-    private hubRepository: Repository<Hub>,
+    @InjectRepository(Space)
+    private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -64,7 +64,7 @@ export class BootstrapService {
       )?.logging?.profiling_enabled;
       if (profilingEnabled) Profiling.profilingEnabled = profilingEnabled;
 
-      await this.ensureHubSingleton();
+      await this.ensureSpaceSingleton();
       await this.bootstrapProfiles();
       await this.ensureSsiPopulated();
       await this.platformService.ensureCommunicationCreated();
@@ -226,14 +226,14 @@ export class BootstrapService {
     }
   }
 
-  async ensureHubSingleton() {
+  async ensureSpaceSingleton() {
     this.logger.verbose?.(
-      '=== Ensuring at least one hub is present ===',
+      '=== Ensuring at least one space is present ===',
       LogContext.BOOTSTRAP
     );
-    const hubCount = await this.hubRepository.count();
-    if (hubCount == 0) {
-      this.logger.verbose?.('...No hub present...', LogContext.BOOTSTRAP);
+    const spaceCount = await this.spaceRepository.count();
+    if (spaceCount == 0) {
+      this.logger.verbose?.('...No space present...', LogContext.BOOTSTRAP);
       this.logger.verbose?.('........creating...', LogContext.BOOTSTRAP);
       // create a default host org
       const hostOrganization = await this.organizationService.getOrganization(
@@ -251,16 +251,18 @@ export class BootstrapService {
         );
       }
 
-      const hubInput: CreateHubInput = {
-        nameID: DEFAULT_HUB_NAMEID,
+      const spaceInput: CreateSpaceInput = {
+        nameID: DEFAULT_SPACE_NAMEID,
         hostID: DEFAULT_HOST_ORG_NAMEID,
         profileData: {
-          displayName: DEFAULT_HUB_DISPLAYNAME,
-          tagline: 'An empty hub to be populated',
+          displayName: DEFAULT_SPACE_DISPLAYNAME,
+          tagline: 'An empty space to be populated',
         },
       };
-      const hub = await this.hubService.createHub(hubInput);
-      return await this.hubAuthorizationService.applyAuthorizationPolicy(hub);
+      const space = await this.spaceService.createSpace(spaceInput);
+      return await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        space
+      );
     }
   }
 }

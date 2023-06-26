@@ -344,8 +344,8 @@ notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true
 
 collaboration:
-  canvases:
-    enabled: ${CANVASES_ENABLED}:true
+  whiteboards:
+    enabled: ${WHITEBOARDS_ENABLED}:true
 
 ## Configuration of the legal / usability aspects of the platform
 platform:
@@ -372,6 +372,9 @@ platform:
 
   # Collaboration tools
   inspiration: ${PLATFORM_INSPIRATION}:https://alkemio.org/help/collaboration-tools/
+
+  # Innovation library
+  innovationLibrary: ${PLATFORM_INNOVATIONLIBRARY}:https://www.alkemio.org/help/innovation-library
 
   # Home page - Foundation
   foundation: ${PLATFORM_FOUNDATION}:https://alkemio.org/
@@ -466,7 +469,7 @@ ssi:
     proof_of_community_membership:
       name: Alkemio Community Member [Test]
       issuer: jolocom
-      description: The holder is a member of an Alkemio hub, challenge or opportunity community. (Issued by Alkemio, so for testing purposes)
+      description: The holder is a member of an Alkemio Space, challenge or opportunity community. (Issued by Alkemio, so for testing purposes)
       schema: https://schema.org/EducationalOccupationalCredential
       types:
         - Credential

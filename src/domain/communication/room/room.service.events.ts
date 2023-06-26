@@ -1,20 +1,15 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AgentInfo } from '@core/authentication';
 import { IMessage } from '../message/message.interface';
-import { PubSubEngine } from 'graphql-subscriptions';
-import { SubscriptionType } from '@common/enums/subscription.type';
-import { getRandomId } from '@src/common/utils';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { ActivityInputAspectComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.aspect.comment';
-import { NotificationInputAspectComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.aspect.comment';
+import { ActivityInputPostComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.post.comment';
+import { NotificationInputPostComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.post.comment';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { IPost } from '@domain/collaboration/post/post.interface';
 import { RoomType } from '@common/enums/room.type';
 import { NotificationInputEntityMentions } from '@services/adapters/notification-adapter/dto/notification.dto.input.entity.mentions';
 import { getMentionsFromText } from '../messaging/get.mentions.from.text';
 import { IRoom } from './room.interface';
-import { SUBSCRIPTION_ROOM_MESSAGE } from '@common/constants';
-import { RoomMessageReceived } from './dto/room.subscription.dto.event.message.received';
 import { NotificationInputForumDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.forum.discussion.comment';
 import { INameable } from '@domain/common/entity/nameable-entity';
 import { IDiscussion } from '../discussion/discussion.interface';
@@ -83,19 +78,19 @@ export class RoomServiceEvents {
   }
 
   public async processNotificationPostComment(
-    aspect: IAspect,
+    post: IPost,
     room: IRoom,
     message: IMessage,
     agentInfo: AgentInfo
   ) {
     // Send the notification
-    const notificationInput: NotificationInputAspectComment = {
+    const notificationInput: NotificationInputPostComment = {
       triggeredBy: agentInfo.userID,
-      aspect: aspect,
+      post: post,
       room: room,
       commentSent: message,
     };
-    await this.notificationAdapter.aspectComment(notificationInput);
+    await this.notificationAdapter.postComment(notificationInput);
   }
 
   public async processNotificationForumDiscussionComment(
@@ -115,17 +110,17 @@ export class RoomServiceEvents {
   }
 
   public async processActivityPostComment(
-    post: IAspect,
+    post: IPost,
     room: IRoom,
     message: IMessage,
     agentInfo: AgentInfo
   ) {
-    const activityLogInput: ActivityInputAspectComment = {
+    const activityLogInput: ActivityInputPostComment = {
       triggeredBy: agentInfo.userID,
-      aspect: post,
+      post: post,
       message: message,
     };
-    this.activityAdapter.aspectComment(activityLogInput);
+    this.activityAdapter.postComment(activityLogInput);
 
     const community =
       await this.communityResolverService.getCommunityFromPostRoomOrFail(
@@ -135,7 +130,7 @@ export class RoomServiceEvents {
       {
         id: post.id,
         name: post.profile.displayName,
-        hub: community.hubID,
+        space: community.spaceID,
       },
       {
         id: agentInfo.userID,
@@ -167,7 +162,7 @@ export class RoomServiceEvents {
     };
     this.activityAdapter.updateSent(activityLogInput);
 
-    const { hubID } =
+    const { spaceID } =
       await this.communityResolverService.getCommunityFromUpdatesOrFail(
         room.id
       );
@@ -176,7 +171,7 @@ export class RoomServiceEvents {
       {
         id: room.id,
         name: '',
-        hub: hubID,
+        space: spaceID,
       },
       {
         id: agentInfo.userID,
@@ -208,7 +203,7 @@ export class RoomServiceEvents {
     };
     this.activityAdapter.calloutCommentCreated(activityLogInput);
 
-    const { hubID } =
+    const { spaceID } =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
         callout.id
       );
@@ -217,7 +212,7 @@ export class RoomServiceEvents {
       {
         id: callout.id,
         name: callout.nameID,
-        hub: hubID,
+        space: spaceID,
       },
       {
         id: agentInfo.userID,

@@ -97,6 +97,7 @@ export class StorageBucketResolverMutations {
     const updateData: UpdateVisualInput = {
       visualID: visual.id,
       uri: this.documentService.getPubliclyAccessibleURL(visualDocument),
+      alternativeText: uploadData.alternativeText,
     };
     return await this.visualService.updateVisual(updateData);
   }
