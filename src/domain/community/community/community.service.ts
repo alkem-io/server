@@ -54,6 +54,10 @@ import { CommunityMembershipStatus } from '@common/enums/community.membership.st
 import { InvitationService } from '../invitation/invitation.service';
 import { IInvitation } from '../invitation/invitation.interface';
 import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
+import { CreateInvitationExternalUserOnCommunityInput } from './dto/community.dto.invite.external.user';
+import { IInvitationExternal } from '../invitation.external';
+import { InvitationExternalService } from '../invitation.external/invitation.external.service';
+import { CreateInvitationExternalInput } from '../invitation.external/dto/invitation.external.dto.create';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 @Injectable()
@@ -67,6 +71,7 @@ export class CommunityService {
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
+    private invitationExternalService: InvitationExternalService,
     private communicationService: CommunicationService,
     private communityResolverService: CommunityResolverService,
     private formService: FormService,
@@ -96,6 +101,7 @@ export class CommunityService {
 
     community.applications = [];
     community.invitations = [];
+    community.externalInvitations = [];
 
     community.groups = [];
     community.communication =
@@ -167,6 +173,7 @@ export class CommunityService {
       relations: [
         'applications',
         'invitations',
+        'externalInvitations',
         'groups',
         'communication',
         'applicationForm',
@@ -218,6 +225,13 @@ export class CommunityService {
       for (const invitation of community.invitations) {
         await this.invitationService.deleteInvitation({
           ID: invitation.id,
+        });
+      }
+    }
+    if (community.externalInvitations) {
+      for (const externalInvitation of community.externalInvitations) {
+        await this.invitationExternalService.deleteInvitationExternal({
+          ID: externalInvitation.id,
         });
       }
     }
@@ -799,7 +813,7 @@ export class CommunityService {
       relations: ['applications', 'parentCommunity'],
     });
 
-    await this.validateUserAbleToApply(user, agent, community);
+    await this.validateApplicationFromUser(user, agent, community);
 
     const spaceID = community.spaceID;
     if (!spaceID)
@@ -817,7 +831,7 @@ export class CommunityService {
     return application;
   }
 
-  async createInvitation(
+  async createInvitationExistingUser(
     invitationData: CreateInvitationExistingUserOnCommunityInput
   ): Promise<IInvitation> {
     const { user, agent } = await this.userService.getUserAndAgent(
@@ -830,7 +844,7 @@ export class CommunityService {
       }
     );
 
-    await this.validateUserAbleToInvite(user, agent, community);
+    await this.validateInvitationToExistingUser(user, agent, community);
 
     const invitation = await this.invitationService.createInvitation(
       invitationData
@@ -841,7 +855,33 @@ export class CommunityService {
     return invitation;
   }
 
-  private async validateUserAbleToApply(
+  async createInvitationExternalUser(
+    invitationData: CreateInvitationExternalUserOnCommunityInput,
+    agentInfo: AgentInfo
+  ): Promise<IInvitationExternal> {
+    await this.validateInvitationToExternalUser(invitationData.email);
+    const community = await this.getCommunityOrFail(
+      invitationData.communityID,
+      {
+        relations: ['externalInvitations'],
+      }
+    );
+
+    const externalInvitationInput: CreateInvitationExternalInput = {
+      ...invitationData,
+      createdBy: agentInfo.userID,
+    };
+    const externalInvitation =
+      await this.invitationExternalService.createInvitationExternal(
+        externalInvitationInput
+      );
+    community.externalInvitations?.push(externalInvitation);
+    await this.communityRepository.save(community);
+
+    return externalInvitation;
+  }
+
+  private async validateApplicationFromUser(
     user: IUser,
     agent: IAgent,
     community: ICommunity
@@ -874,7 +914,7 @@ export class CommunityService {
       );
   }
 
-  private async validateUserAbleToInvite(
+  private async validateInvitationToExistingUser(
     user: IUser,
     agent: IAgent,
     community: ICommunity
@@ -905,6 +945,28 @@ export class CommunityService {
         `User ${user.nameID} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
+  }
+
+  private async validateInvitationToExternalUser(email: string) {
+    // Check if a user with the provided email address already exists or not
+    const isExistingUser = await this.userService.isRegisteredUser(email);
+    if (isExistingUser) {
+      throw new InvalidStateTransitionException(
+        `User with the provided email address already exists: ${email}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    const existingExternalInvitation =
+      await this.invitationExternalService.findInvitationExternalsForUser(
+        email
+      );
+    if (existingExternalInvitation.length > 0) {
+      throw new InvalidStateTransitionException(
+        `An invitation with the provided email address already exists: ${email}`,
+        LogContext.COMMUNITY
+      );
+    }
   }
 
   async getCommunityInNameableScopeOrFail(
@@ -938,6 +1000,15 @@ export class CommunityService {
       relations: ['invitations'],
     });
     return communityApps?.invitations || [];
+  }
+
+  async getExternalInvitations(
+    community: ICommunity
+  ): Promise<IInvitationExternal[]> {
+    const communityApps = await this.getCommunityOrFail(community.id, {
+      relations: ['externalInvitations'],
+    });
+    return communityApps?.externalInvitations || [];
   }
 
   async getApplicationForm(community: ICommunity): Promise<IForm> {

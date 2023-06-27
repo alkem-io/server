@@ -1,7 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '@src/common/decorators';
-import { IApplication } from '@domain/community/application';
 import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -24,15 +23,15 @@ export class InvitationResolverMutations {
   async deleteInvitation(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('deleteData') deleteData: DeleteInvitationInput
-  ): Promise<IApplication> {
-    const application = await this.invitationService.getInvitationOrFail(
+  ): Promise<IInvitation> {
+    const invitation = await this.invitationService.getInvitationOrFail(
       deleteData.ID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      application.authorization,
+      invitation.authorization,
       AuthorizationPrivilege.DELETE,
-      `delete invitation to community: ${application.id}`
+      `delete invitation to community: ${invitation.id}`
     );
     return await this.invitationService.deleteInvitation(deleteData);
   }
