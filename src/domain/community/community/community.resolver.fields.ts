@@ -24,6 +24,7 @@ import { IForm } from '@domain/common/form/form.interface';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { AgentInfo } from '@core/authentication';
 import { IInvitation } from '../invitation';
+import { IInvitationExternal } from '../invitation.external';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -199,9 +200,23 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
+  @ResolveField('invitationsExternal', () => [IInvitationExternal], {
+    nullable: true,
+    description:
+      'Invitations to join this Community for users not yet on the Alkemio platform.',
+  })
+  @Profiling.api
+  async invitationsExternal(
+    @Parent() community: Community
+  ): Promise<IInvitationExternal[]> {
+    return await this.communityService.getExternalInvitations(community);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {
     nullable: true,
-    description: 'Application available for this community.',
+    description: 'Applications available for this community.',
   })
   @Profiling.api
   async applications(@Parent() community: Community) {

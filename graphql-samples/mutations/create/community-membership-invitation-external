@@ -1,0 +1,16 @@
+mutation inviteExternalUserForCommunityMembership($invitationData: CreateInvitationExternalUserOnCommunityInput!) {
+  inviteExternalUserForCommunityMembership(invitationData: $invitationData){
+    id
+    email
+  }
+}
+
+query variables:
+{
+  "invitationData": {
+    "communityID": "uuid",
+    "email": "email",
+    "welcomeMessage": "hello",
+    "firstName": "name"
+  }
+}
