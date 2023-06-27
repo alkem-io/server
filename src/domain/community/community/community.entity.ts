@@ -20,6 +20,7 @@ import {
 import { CommunityPolicy } from '../community-policy/community.policy.entity';
 import { Form } from '@domain/common/form/form.entity';
 import { Invitation } from '../invitation/invitation.entity';
+import { InvitationExternal } from '../invitation.external/invitation.external.entity';
 
 @Entity()
 export class Community
@@ -62,6 +63,16 @@ export class Community
     cascade: true,
   })
   invitations?: Invitation[];
+
+  @OneToMany(
+    () => InvitationExternal,
+    invitationExternal => invitationExternal.community,
+    {
+      eager: false,
+      cascade: true,
+    }
+  )
+  externalInvitations?: InvitationExternal[];
 
   @OneToOne(() => CommunityPolicy, {
     eager: true,
