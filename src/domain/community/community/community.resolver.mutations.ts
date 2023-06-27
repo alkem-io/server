@@ -86,7 +86,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.CREATE,
-      `create group community: ${community.displayName}`
+      `create group community: ${community.id}`
     );
     const group = await this.communityService.createGroup(groupData);
     return await this.userGroupAuthorizationService.applyAuthorizationPolicy(
@@ -111,7 +111,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.COMMUNITY_ADD_MEMBER,
-      `assign user community: ${community.displayName}`
+      `assign user community: ${community.id}`
     );
     await this.communityService.assignUserToRole(
       community,
@@ -143,7 +143,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign user community: ${community.displayName}`
+      `assign user community: ${community.id}`
     );
     await this.communityService.assignUserToRole(
       community,
@@ -177,7 +177,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign organization community member: ${community.displayName}`
+      `assign organization community member: ${community.id}`
     );
     return await this.communityService.assignOrganizationToRole(
       community,
@@ -204,7 +204,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.GRANT,
-      `assign organization community lead: ${community.displayName}`
+      `assign organization community lead: ${community.id}`
     );
     return await this.communityService.assignOrganizationToRole(
       community,
@@ -239,7 +239,7 @@ export class CommunityResolverMutations {
       agentInfo,
       extendedAuthorization,
       AuthorizationPrivilege.GRANT,
-      `remove user from community: ${community.displayName}`
+      `remove user from community: ${community.id}`
     );
 
     await this.communityService.removeUserFromRole(
@@ -270,7 +270,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.GRANT,
-      `remove user from community lead: ${community.displayName}`
+      `remove user from community lead: ${community.id}`
     );
 
     return await this.communityService.removeUserFromRole(
@@ -298,7 +298,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.GRANT,
-      `remove community member organization: ${community.displayName}`
+      `remove community member organization: ${community.id}`
     );
 
     return await this.communityService.removeOrganizationFromRole(
@@ -326,7 +326,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.GRANT,
-      `remove community member organization: ${community.displayName}`
+      `remove community member organization: ${community.id}`
     );
 
     return await this.communityService.removeOrganizationFromRole(
@@ -353,7 +353,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.COMMUNITY_APPLY,
-      `create application community: ${community.displayName}`
+      `create application community: ${community.id}`
     );
 
     const application = await this.communityService.createApplication({
@@ -397,7 +397,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.COMMUNITY_INVITE,
-      `create invitation community: ${community.displayName}`
+      `create invitation community: ${community.id}`
     );
 
     const input: CreateInvitationExistingUserOnCommunityInput = {
@@ -442,7 +442,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.UPDATE,
-      `update community application form: ${community.displayName}`
+      `update community application form: ${community.id}`
     );
 
     return await this.communityService.updateApplicationForm(
@@ -469,7 +469,7 @@ export class CommunityResolverMutations {
       agentInfo,
       community.authorization,
       AuthorizationPrivilege.COMMUNITY_JOIN,
-      `join community: ${community.displayName}`
+      `join community: ${community.id}`
     );
 
     // Send the notification
@@ -487,13 +487,15 @@ export class CommunityResolverMutations {
       agentInfo
     );
 
+    const displayName = await this.communityService.getDisplayName(community);
+
     switch (community.type) {
-      case CommunityType.HUB:
-        this.elasticService.hubJoined(
+      case CommunityType.SPACE:
+        this.elasticService.spaceJoined(
           {
             id: community.parentID,
-            name: community.displayName,
-            hub: community.hubID,
+            name: displayName,
+            space: community.spaceID,
           },
           {
             id: agentInfo.userID,
@@ -505,8 +507,8 @@ export class CommunityResolverMutations {
         this.elasticService.challengeJoined(
           {
             id: community.parentID,
-            name: community.displayName,
-            hub: community.hubID,
+            name: displayName,
+            space: community.spaceID,
           },
           {
             id: agentInfo.userID,
@@ -518,8 +520,8 @@ export class CommunityResolverMutations {
         this.elasticService.opportunityJoined(
           {
             id: community.parentID,
-            name: community.displayName,
-            hub: community.hubID,
+            name: displayName,
+            space: community.spaceID,
           },
           {
             id: agentInfo.userID,
@@ -610,7 +612,7 @@ export class CommunityResolverMutations {
             }),
             new CommunityMemberClaim({
               communityID: community.id,
-              communityDisplayName: community.displayName,
+              communityDisplayName: community.id,
             }),
           ],
         },

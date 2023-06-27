@@ -1,1 +1,1 @@
-export const COMMUNICATION_PLATFORM_HUBID = 'platform';
+export const COMMUNICATION_PLATFORM_SPACEID = 'platform';

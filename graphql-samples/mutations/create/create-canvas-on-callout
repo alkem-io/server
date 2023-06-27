@@ -1,5 +1,5 @@
-mutation createCanvasOnCallout($data: CreateCanvasOnCalloutInput!){
-  createCanvasOnCallout(canvasData:$data){
+mutation createWhiteboardOnCallout($data: CreateWhiteboardOnCalloutInput!){
+  createWhiteboardOnCallout(whiteboardData:$data){
     id
   }
 }
@@ -8,6 +8,6 @@ Variables:
 {
   "data": {
     "calloutID": "9798c6ac-80e7-452a-a3b0-0592657e88c9",
-    "displayName": "sample canvas"
+    "displayName": "sample whiteboard"
   }
 }

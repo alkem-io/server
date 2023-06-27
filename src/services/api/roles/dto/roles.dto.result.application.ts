@@ -34,9 +34,9 @@ export class ApplicationForRoleResult {
   updatedDate: Date;
 
   @Field(() => UUID, {
-    description: 'ID for the ultimate containing Hub',
+    description: 'ID for the ultimate containing Space',
   })
-  hubID!: string;
+  spaceID!: string;
 
   @Field(() => UUID, {
     description:
@@ -56,7 +56,7 @@ export class ApplicationForRoleResult {
     displayName: string,
     state: string,
     id: string,
-    hubID: string,
+    spaceID: string,
     createdDate: Date,
     updatedDate: Date
   ) {
@@ -64,7 +64,7 @@ export class ApplicationForRoleResult {
     this.communityID = communityID;
     this.state = state;
     this.id = id;
-    this.hubID = hubID;
+    this.spaceID = spaceID;
     this.createdDate = createdDate;
     this.updatedDate = updatedDate;
   }

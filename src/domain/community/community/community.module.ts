@@ -24,6 +24,7 @@ import { CommunityAuthorizationService } from './community.service.authorization
 import { FormModule } from '@domain/common/form/form.module';
 import { InvitationModule } from '../invitation/invitation.module';
 import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecycle.invitation.options.provider';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecyc
     CommunityPolicyModule,
     LifecycleModule,
     AgentModule,
+    EntityResolverModule,
     FormModule,
     TypeOrmModule.forFeature([Community]),
     TrustRegistryAdapterModule,

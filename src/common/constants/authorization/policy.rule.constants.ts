@@ -1,7 +1,9 @@
-export const POLICY_RULE_HUB_CREATE_CHALLENGE = 'policyRule-hubCreateChallenge';
-export const POLICY_RULE_CANVAS_UPDATE = 'policyRule-canvasUpdate';
+export const POLICY_RULE_SPACE_CREATE_CHALLENGE =
+  'policyRule-spaceCreateChallenge';
+export const POLICY_RULE_WHITEBOARD_UPDATE = 'policyRule-whiteboardUpdate';
 export const POLICY_RULE_VISUAL_UPDATE = 'policyRule-visualUpdate';
-export const POLICY_RULE_CANVAS_CONTRIBUTE = 'policyRule-canvasContribute';
+export const POLICY_RULE_WHITEBOARD_CONTRIBUTE =
+  'policyRule-whiteboardContribute';
 export const POLICY_RULE_ROOM_CONTRIBUTE = 'policyRule-roomContribute';
 export const POLICY_RULE_ROOM_ADMINS = 'policyRule-roomAdminsCreate';
 export const POLICY_RULE_COMMUNICATION_CONTRIBUTE =

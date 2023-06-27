@@ -1,5 +1,5 @@
 query {
-  users(filter: {credentials: [HUB_HOST]}) {
+  users(filter: {credentials: [SPACE_HOST]}) {
     nameID
   }
 }

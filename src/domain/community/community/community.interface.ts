@@ -1,6 +1,6 @@
 import { IApplication } from '@domain/community/application/application.interface';
 import { IUserGroup } from '@domain/community/user-group/user-group.interface';
-import { Field, ObjectType } from '@nestjs/graphql';
+import { ObjectType } from '@nestjs/graphql';
 import { IGroupable } from '@domain/common/interfaces/groupable.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ICommunication } from '@domain/communication/communication';
@@ -13,12 +13,6 @@ import { IInvitation } from '../invitation';
   implements: () => [IGroupable],
 })
 export abstract class ICommunity extends IAuthorizable {
-  @Field(() => String, {
-    nullable: false,
-    description: 'The name of the Community',
-  })
-  displayName!: string;
-
   groups?: IUserGroup[];
 
   applications?: IApplication[];
@@ -30,15 +24,10 @@ export abstract class ICommunity extends IAuthorizable {
 
   policy!: ICommunityPolicy;
 
-  hubID!: string;
+  spaceID!: string;
 
   communication?: ICommunication;
   type!: CommunityType;
 
   parentID!: string;
-
-  constructor() {
-    super();
-    this.displayName = '';
-  }
 }

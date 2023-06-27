@@ -50,7 +50,7 @@ export class CalendarEventResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
-    description: 'The Profile for this Card.',
+    description: 'The Profile for this Post.',
   })
   @Profiling.api
   async profile(@Parent() calendarEvent: ICalendarEvent): Promise<IProfile> {

@@ -43,6 +43,8 @@ export class KonfigService {
         impact: this.configService.get(ConfigurationTypes.PLATFORM)?.impact,
         inspiration: this.configService.get(ConfigurationTypes.PLATFORM)
           ?.inspiration,
+        innovationLibrary: this.configService.get(ConfigurationTypes.PLATFORM)
+          ?.innovationLibrary,
         foundation: this.configService.get(ConfigurationTypes.PLATFORM)
           ?.foundation,
         opensource: this.configService.get(ConfigurationTypes.PLATFORM)
@@ -80,9 +82,9 @@ export class KonfigService {
               ?.enabled,
           },
           {
-            name: 'canvases',
+            name: 'whiteboards',
             enabled: this.configService.get(ConfigurationTypes.COLLABORATION)
-              ?.canvases?.enabled,
+              ?.whiteboards?.enabled,
           },
           {
             name: 'landing-page',

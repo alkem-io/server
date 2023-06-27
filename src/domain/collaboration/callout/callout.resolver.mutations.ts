@@ -1,53 +1,41 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Profiling } from '@src/common/decorators';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { CalloutService } from './callout.service';
-import { IAspect } from '@domain/collaboration/aspect/aspect.interface';
+import { IPost } from '@domain/collaboration/post/post.interface';
 import {
-  CalloutAspectCreatedPayload,
-  CreateAspectOnCalloutInput,
-  CreateCanvasOnCalloutInput,
+  CalloutPostCreatedPayload,
+  CreatePostOnCalloutInput,
+  CreateWhiteboardOnCalloutInput,
   DeleteCalloutInput,
   UpdateCalloutInput,
 } from '@domain/collaboration/callout/dto';
-import { CanvasAuthorizationService } from '@domain/common/canvas/canvas.service.authorization';
-import { AspectAuthorizationService } from '@domain/collaboration/aspect/aspect.service.authorization';
+import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
+import { PostAuthorizationService } from '@domain/collaboration/post/post.service.authorization';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { ICanvas } from '@domain/common/canvas/canvas.interface';
-import { SUBSCRIPTION_CALLOUT_ASPECT_CREATED } from '@common/constants';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { ICallout } from './callout.interface';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import {
-  EntityNotInitializedException,
-  NotSupportedException,
-} from '@src/common/exceptions';
-import { CalloutType } from '@common/enums/callout.type';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { ActivityInputAspectCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.aspect.created';
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
-import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
-import { NotificationInputAspectCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.aspect.created';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
-import { IMessage } from '@domain/communication/message/message.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { NotificationInputCanvasCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.canvas.created';
-import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
 import { ElasticsearchService } from '@services/external/elasticsearch';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { RoomService } from '@domain/communication/room/room.service';
-import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
-import { SendMessageOnCalloutInput } from './dto/callout.dto.message.created';
-import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
+import { ActivityInputPostCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.post.created';
+import { NotificationInputPostCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.post.created';
+import { NotificationInputWhiteboardCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.whiteboard.created';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -59,12 +47,10 @@ export class CalloutResolverMutations {
     private authorizationService: AuthorizationService,
     private calloutService: CalloutService,
     private namingService: NamingService,
-    private roomService: RoomService,
-    private roomServiceEvents: RoomServiceEvents,
-    private canvasAuthorizationService: CanvasAuthorizationService,
-    private aspectAuthorizationService: AspectAuthorizationService,
-    @Inject(SUBSCRIPTION_CALLOUT_ASPECT_CREATED)
-    private aspectCreatedSubscription: PubSubEngine
+    private whiteboardAuthorizationService: WhiteboardAuthorizationService,
+    private postAuthorizationService: PostAuthorizationService,
+    @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
+    private postCreatedSubscription: PubSubEngine
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -184,22 +170,22 @@ export class CalloutResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IAspect, {
-    description: 'Create a new Aspect on the Callout.',
+  @Mutation(() => IPost, {
+    description: 'Create a new Post on the Callout.',
   })
   @Profiling.api
-  async createAspectOnCallout(
+  async createPostOnCallout(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('aspectData') aspectData: CreateAspectOnCalloutInput
-  ): Promise<IAspect> {
+    @Args('postData') postData: CreatePostOnCalloutInput
+  ): Promise<IPost> {
     const callout = await this.calloutService.getCalloutOrFail(
-      aspectData.calloutID
+      postData.calloutID
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
-      AuthorizationPrivilege.CREATE_ASPECT,
-      `create aspect on callout: ${callout.id}`
+      AuthorizationPrivilege.CREATE_POST,
+      `create post on callout: ${callout.id}`
     );
 
     if (callout.state === CalloutState.CLOSED) {
@@ -208,52 +194,52 @@ export class CalloutResolverMutations {
       );
     }
 
-    let aspect = await this.calloutService.createAspectOnCallout(
-      aspectData,
+    let post = await this.calloutService.createPostOnCallout(
+      postData,
       agentInfo.userID
     );
 
     const communityPolicy =
       await this.namingService.getCommunityPolicyForCallout(callout.id);
-    aspect = await this.aspectAuthorizationService.applyAuthorizationPolicy(
-      aspect,
+    post = await this.postAuthorizationService.applyAuthorizationPolicy(
+      post,
       callout.authorization,
       communityPolicy
     );
-    const aspectCreatedEvent: CalloutAspectCreatedPayload = {
-      eventID: `callout-aspect-created-${Math.round(Math.random() * 100)}`,
+    const postCreatedEvent: CalloutPostCreatedPayload = {
+      eventID: `callout-post-created-${Math.round(Math.random() * 100)}`,
       calloutID: callout.id,
-      aspect,
+      post,
     };
-    await this.aspectCreatedSubscription.publish(
-      SubscriptionType.CALLOUT_ASPECT_CREATED,
-      aspectCreatedEvent
+    await this.postCreatedSubscription.publish(
+      SubscriptionType.CALLOUT_POST_CREATED,
+      postCreatedEvent
     );
 
     if (callout.visibility === CalloutVisibility.PUBLISHED) {
-      const notificationInput: NotificationInputAspectCreated = {
-        aspect: aspect,
+      const notificationInput: NotificationInputPostCreated = {
+        post: post,
         triggeredBy: agentInfo.userID,
       };
-      await this.notificationAdapter.aspectCreated(notificationInput);
+      await this.notificationAdapter.postCreated(notificationInput);
 
-      const activityLogInput: ActivityInputAspectCreated = {
+      const activityLogInput: ActivityInputPostCreated = {
         triggeredBy: agentInfo.userID,
-        aspect: aspect,
+        post: post,
         callout: callout,
       };
-      this.activityAdapter.aspectCreated(activityLogInput);
+      this.activityAdapter.postCreated(activityLogInput);
 
-      const { hubID } =
+      const { spaceID } =
         await this.communityResolverService.getCommunityFromCalloutOrFail(
-          aspectData.calloutID
+          postData.calloutID
         );
 
-      this.elasticService.calloutCardCreated(
+      this.elasticService.calloutPostCreated(
         {
-          id: aspect.id,
-          name: aspect.profile.displayName,
-          hub: hubID,
+          id: post.id,
+          name: post.profile.displayName,
+          space: spaceID,
         },
         {
           id: agentInfo.userID,
@@ -262,26 +248,26 @@ export class CalloutResolverMutations {
       );
     }
 
-    return aspect;
+    return post;
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => ICanvas, {
-    description: 'Create a new Canvas on the Callout.',
+  @Mutation(() => IWhiteboard, {
+    description: 'Create a new Whiteboard on the Callout.',
   })
   @Profiling.api
-  async createCanvasOnCallout(
+  async createWhiteboardOnCallout(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('canvasData') canvasData: CreateCanvasOnCalloutInput
-  ): Promise<ICanvas> {
+    @Args('whiteboardData') whiteboardData: CreateWhiteboardOnCalloutInput
+  ): Promise<IWhiteboard> {
     const callout = await this.calloutService.getCalloutOrFail(
-      canvasData.calloutID
+      whiteboardData.calloutID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
-      AuthorizationPrivilege.CREATE_CANVAS,
-      `create canvas on callout: ${callout.id}`
+      AuthorizationPrivilege.CREATE_WHITEBOARD,
+      `create whiteboard on callout: ${callout.id}`
     );
 
     if (callout.state === CalloutState.CLOSED) {
@@ -290,40 +276,40 @@ export class CalloutResolverMutations {
       );
     }
 
-    const canvas = await this.calloutService.createCanvasOnCallout(
-      canvasData,
+    const whiteboard = await this.calloutService.createWhiteboardOnCallout(
+      whiteboardData,
       agentInfo.userID
     );
 
-    const authorizedCanvas =
-      await this.canvasAuthorizationService.applyAuthorizationPolicy(
-        canvas,
+    const authorizedWhiteboard =
+      await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
+        whiteboard,
         callout.authorization
       );
 
     if (callout.visibility === CalloutVisibility.PUBLISHED) {
-      const notificationInput: NotificationInputCanvasCreated = {
-        canvas: canvas,
+      const notificationInput: NotificationInputWhiteboardCreated = {
+        whiteboard: whiteboard,
         triggeredBy: agentInfo.userID,
       };
-      await this.notificationAdapter.canvasCreated(notificationInput);
+      await this.notificationAdapter.whiteboardCreated(notificationInput);
 
-      this.activityAdapter.canvasCreated({
+      this.activityAdapter.whiteboardCreated({
         triggeredBy: agentInfo.userID,
-        canvas: authorizedCanvas,
+        whiteboard: authorizedWhiteboard,
         callout: callout,
       });
 
-      const { hubID } =
+      const { spaceID } =
         await this.communityResolverService.getCommunityFromCalloutOrFail(
-          canvasData.calloutID
+          whiteboardData.calloutID
         );
 
-      this.elasticService.calloutCanvasCreated(
+      this.elasticService.calloutWhiteboardCreated(
         {
-          id: canvas.id,
-          name: canvas.nameID,
-          hub: hubID,
+          id: whiteboard.id,
+          name: whiteboard.nameID,
+          space: spaceID,
         },
         {
           id: agentInfo.userID,
@@ -332,6 +318,6 @@ export class CalloutResolverMutations {
       );
     }
 
-    return authorizedCanvas;
+    return authorizedWhiteboard;
   }
 }

@@ -1,5 +1,5 @@
 query {
-  hubs(filter: {visibilities: [ARCHIVED, ACTIVE, DEMO]}) {
+  spaces(filter: {visibilities: [ARCHIVED, ACTIVE, DEMO]}) {
     nameID
     visibility
 

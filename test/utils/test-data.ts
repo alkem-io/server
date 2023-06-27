@@ -1,4 +1,4 @@
-import * as hub from '@test/data/hub.json';
+import * as space from '@test/data/space.json';
 import * as user from '@test/data/user.json';
 import * as agent from '@test/data/agent.json';
 import * as organization from '@test/data/organization.json';
@@ -8,7 +8,7 @@ import * as userRoles from '@test/data/roles-user.json';
 import * as challenge from '@test/data/challenge.json';
 
 export const testData = {
-  ...hub,
+  ...space,
   ...agent,
   ...opportunity,
   ...organization,

@@ -3,7 +3,7 @@ import { ValidationPipe } from '@common/pipes/validation.pipe';
 import configuration from '@config/configuration';
 import {
   configQuery,
-  hubsQuery,
+  spacesQuery,
   meQuery,
   serverMetadataQuery,
 } from '@config/graphql';
@@ -13,7 +13,7 @@ import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { HubModule } from '@domain/challenge/hub/hub.module';
+import { SpaceModule } from '@domain/challenge/space/space.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { CacheModule, MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -45,7 +45,7 @@ import { SessionExtendMiddleware } from '@src/core/middleware';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { LibraryModule } from '@library/library/library.module';
-import { AspectMoveModule } from '@domain/collaboration/aspect/aspect.move.module';
+import { PostMoveModule } from '@domain/collaboration/post/post.move.module';
 import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
@@ -124,11 +124,11 @@ import { MessageReactionModule } from '@domain/communication/message.reaction/me
               query: print(meQuery),
             },
             {
-              name: 'Hubs',
+              name: 'Spaces',
               endpoint: `${
                 configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/private/graphql`,
-              query: print(hubsQuery),
+              query: print(spacesQuery),
             },
             {
               name: 'Configuration',
@@ -190,7 +190,7 @@ import { MessageReactionModule } from '@domain/communication/message.reaction/me
     ScalarsModule,
     AuthenticationModule,
     AuthorizationModule,
-    HubModule,
+    SpaceModule,
     MetadataModule,
     BootstrapModule,
     SearchModule,
@@ -208,7 +208,7 @@ import { MessageReactionModule } from '@domain/communication/message.reaction/me
     ConversionModule,
     LibraryModule,
     PlatformModule,
-    AspectMoveModule,
+    PostMoveModule,
     GeoLocationModule,
     ElasticsearchModule,
     InnovationHubModule,

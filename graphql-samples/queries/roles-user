@@ -1,6 +1,6 @@
 query {
   rolesUser(rolesData: {userID: "admin-alkemio"}) {
-   	hubs {
+   	spaces {
       nameID
       id
       roles

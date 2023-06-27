@@ -2,7 +2,7 @@ import { ICredential } from '@src/domain';
 import { AuthorizationCredential, CredentialRole } from '@common/enums';
 
 export type EntityCredentialType =
-  | 'hubs'
+  | 'spaces'
   | 'challenges'
   | 'opportunities'
   | 'organizations'
@@ -16,21 +16,21 @@ export type CredentialMap = Map<
 /***
  * Groups credentials by the entity category they are related to and attaches the credential type
  * returns Map of Maps in the following fashion
- * Map<'hubs', Map<'hubUUID1', ['type1', 'type2']>>
- * - where 'hubs' is the category,
- * - 'hubUUID1' is the identifier for a hub
- * - ['type1', 'type2'] are the types of credentials associated with 'hubUUID1'.
+ * Map<'spaces', Map<'spaceUUID1', ['type1', 'type2']>>
+ * - where 'spaces' is the category,
+ * - 'spaceUUID1' is the identifier for a space
+ * - ['type1', 'type2'] are the types of credentials associated with 'spaceUUID1'.
  * The types are represented by an array because they are guaranteed unique,
- * meaning an User (whose credentials are parsed here) can't have two credentials of type 'hub-admin' for the same Hub
+ * meaning an User (whose credentials are parsed here) can't have two credentials of type 'space-admin' for the same Space
  */
 export const groupCredentialsByEntity = (credentials: ICredential[]) => {
   return credentials.reduce<CredentialMap>((map, credential) => {
     if (
-      credential.type === AuthorizationCredential.HUB_ADMIN ||
-      credential.type === AuthorizationCredential.HUB_HOST ||
-      credential.type === AuthorizationCredential.HUB_MEMBER
+      credential.type === AuthorizationCredential.SPACE_ADMIN ||
+      credential.type === AuthorizationCredential.SPACE_HOST ||
+      credential.type === AuthorizationCredential.SPACE_MEMBER
     ) {
-      return setMap(map, 'hubs', credential);
+      return setMap(map, 'spaces', credential);
     } else if (
       credential.type === AuthorizationCredential.CHALLENGE_ADMIN ||
       credential.type === AuthorizationCredential.CHALLENGE_LEAD ||
@@ -85,17 +85,17 @@ const credentialTypeToRole = (
   type: AuthorizationCredential
 ): CredentialRole => {
   const roleMap: Partial<Record<AuthorizationCredential, CredentialRole>> = {
-    [AuthorizationCredential.HUB_ADMIN]: CredentialRole.ADMIN,
+    [AuthorizationCredential.SPACE_ADMIN]: CredentialRole.ADMIN,
     [AuthorizationCredential.CHALLENGE_ADMIN]: CredentialRole.ADMIN,
     [AuthorizationCredential.OPPORTUNITY_ADMIN]: CredentialRole.ADMIN,
     [AuthorizationCredential.ORGANIZATION_ADMIN]: CredentialRole.ADMIN,
 
-    [AuthorizationCredential.HUB_HOST]: CredentialRole.HOST,
+    [AuthorizationCredential.SPACE_HOST]: CredentialRole.HOST,
 
     [AuthorizationCredential.CHALLENGE_LEAD]: CredentialRole.LEAD,
     [AuthorizationCredential.OPPORTUNITY_LEAD]: CredentialRole.LEAD,
 
-    [AuthorizationCredential.HUB_MEMBER]: CredentialRole.MEMBER,
+    [AuthorizationCredential.SPACE_MEMBER]: CredentialRole.MEMBER,
     [AuthorizationCredential.CHALLENGE_MEMBER]: CredentialRole.MEMBER,
     [AuthorizationCredential.OPPORTUNITY_MEMBER]: CredentialRole.MEMBER,
 

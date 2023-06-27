@@ -6,11 +6,11 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
 import { UserModule } from '@domain/community/user/user.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
-import { AspectModule } from '@domain/collaboration/aspect/aspect.module';
-import { CanvasModule } from '@domain/common/canvas/canvas.module';
+import { PostModule } from '@domain/collaboration/post/post.module';
+import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
-import { SubscriptionPublishServiceModule } from '@services/subscriptions/subscription-publish-service';
+import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { ActivityLogService } from './activity.log.service';
 import { ActivityLogResolverQueries } from './activity.log.resolver.queries';
 import { ActivityLogResolverSubscriptions } from './activity.log.resolver.subscriptions';
@@ -26,12 +26,12 @@ import { RoomModule } from '@domain/communication/room/room.module';
     UserModule,
     CommunityModule,
     CalloutModule,
-    AspectModule,
-    CanvasModule,
+    PostModule,
+    WhiteboardModule,
     RoomModule,
     ChallengeModule,
     OpportunityModule,
-    SubscriptionPublishServiceModule,
+    SubscriptionServiceModule,
     PlatformAuthorizationPolicyModule,
   ],
   providers: [

@@ -88,8 +88,8 @@ export class AuthorizationPolicyService {
         case AuthorizationRoleGlobal.GLOBAL_COMMUNITY_ADMIN:
           credType = AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY;
           break;
-        case AuthorizationRoleGlobal.GLOBAL_ADMIN_HUBS:
-          credType = AuthorizationCredential.GLOBAL_ADMIN_HUBS;
+        case AuthorizationRoleGlobal.GLOBAL_ADMIN_SPACES:
+          credType = AuthorizationCredential.GLOBAL_ADMIN_SPACES;
           break;
         default:
           throw new ForbiddenException(

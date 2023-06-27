@@ -4,15 +4,15 @@ The ability to create new content on Alkemio, based on a set of existing definit
 
 Some examples of where Templates are applicable in Alkemio include:
 
-- Aspect Types
-- Canvases
-- Challenge Lifecycles
+- Posts
+- Whiteboards
+- Lifecycles
 
 The way it works is that within a given scope, typically a Challenge Hub, there are a set of Templates available. Then when a user wants to create a new instance of a particular entity, they chooose the Template and use it as a **template** for a new entity. In the example of a new Canvas, the user chooses the CanvaseTemplate they wish to use and then the user creates a new Canvas based on that Canvas. The original Canvas Template is not mofified, and the User can then work further on the new Canvas.
 
 Templates provide the following key benefits:
 
-- Allowing each Hub to customize the environment
+- Allowing each Space to customize the environment
 - Enabling the sharing of best practices in a systematic way.
 
 This latter point is critical: demonstrating the vision of giving access to content to accelerate working effectively on Challenges.
@@ -21,10 +21,11 @@ This latter point is critical: demonstrating the vision of giving access to cont
 
 The initial scope for Template support covers:
 
-- Aspect Templates
-- Canvas Templates
+- Post Templates
+- Whiteboard Templates
+- InnovationFlow Templates
 
-Other templates types, such as Challenge Lifecycles, Community setups, Classification Tagsets etc should all be able to build upon this initial work.
+Other templates types, such as Community setups, Classification Tagsets etc should all be able to build upon this initial work.
 
 Out of scope:
 
@@ -32,7 +33,7 @@ Out of scope:
 
 ## Domain Templates
 
-As Templates are a core mechanism for the platform, the Templates themselves should be part of the domain model. Each Hub as such should be aware of the set of Templates that are available within the scope of that Hub. This has to be data driven.
+As Templates are a core mechanism for the platform, the Templates themselves should be part of the domain model. Each Space as such should be aware of the set of Templates that are available within the scope of that Space. This has to be data driven.
 
 Each Template will have fields that are specific to that type of Template, but there will be shared meta-data information that is common to all Templates. The common information includes:
 
@@ -59,4 +60,4 @@ The management of Platform Templates is not part of the domain model, and could 
 
 ![](./images/templates-platform.png)
 
-The Hub admin then uses the Platform TemplatesSet to choose what Templates are available within the particular Hub.
+The Space admin then uses the Platform TemplatesSet to choose what Templates are available within the particular Space.

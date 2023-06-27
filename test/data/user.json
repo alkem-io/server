@@ -317,7 +317,7 @@
           "id": "e415d048-dcf9-4f14-b13b-3c574fd653e7"
         },
         {
-          "type": "hub-member",
+          "type": "space-member",
           "resourceID": "00655835-4d15-4546-801e-1ab80ac3078a",
           "id": "ed9fcc5c-842c-49a4-b076-d498345361fc",
           "createdDate": {},
@@ -335,7 +335,7 @@
           "id": "f066f091-7f1d-4eb3-87b7-a3d7bbef9232"
         },
         {
-          "type": "hub-admin",
+          "type": "space-admin",
           "resourceID": "00655835-4d15-4546-801e-1ab80ac3078a",
           "id": "f163c694-66c5-4452-a2a2-d73c31a44ebc"
         },

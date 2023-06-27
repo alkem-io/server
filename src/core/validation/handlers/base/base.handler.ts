@@ -6,7 +6,7 @@ import {
   ChallengeEventInput,
   UpdateChallengeInput,
 } from '@domain/challenge/challenge';
-import { UpdateHubInput } from '@domain/challenge/hub/dto/hub.dto.update';
+import { UpdateSpaceInput } from '@domain/challenge/space/dto/space.dto.update';
 import {
   CreateProjectInput,
   ProjectEventInput,
@@ -31,12 +31,12 @@ import {
   CreateUserGroupInput,
   UpdateUserGroupInput,
 } from '@domain/community/user-group/dto';
-import { CreateChallengeOnHubInput } from '@domain/challenge/challenge/dto/challenge.dto.create.in.hub';
+import { CreateChallengeOnSpaceInput } from '@domain/challenge/challenge/dto/challenge.dto.create.in.space';
 import { CreateChallengeOnChallengeInput } from '@domain/challenge/challenge/dto/challenge.dto.create.in.challenge';
 import { CreateActorInput, UpdateActorInput } from '@domain/context/actor';
 import { CommunityApplyInput } from '@domain/community/community/dto/community.dto.apply';
-import { CreateAspectOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.aspect';
-import { CreateCanvasOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.canvas';
+import { CreatePostOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.post';
+import { CreateWhiteboardOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.whiteboard';
 import { CommunicationCreateDiscussionInput } from '@domain/communication/communication/dto/communication.dto.create.discussion';
 import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
@@ -45,11 +45,11 @@ import {
   UpdateProfileInput,
 } from '@domain/common/profile/dto';
 import { ApplicationEventInput } from '@domain/community/application/dto/application.dto.event';
-import { CanvasCheckoutEventInput } from '@domain/common/canvas-checkout/dto/canvas.checkout.dto.event';
+import { WhiteboardCheckoutEventInput } from '@domain/common/whiteboard-checkout/dto/whiteboard.checkout.dto.event';
 import { OrganizationVerificationEventInput } from '@domain/community/organization-verification/dto/organization.verification.dto.event';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
-import { UpdateAspectInput } from '@domain/collaboration/aspect/dto/aspect.dto.update';
-import { UpdateCanvasDirectInput } from '@domain/common/canvas/dto/canvas.dto.update.direct';
+import { UpdatePostInput } from '@domain/collaboration/post/dto/post.dto.update';
+import { UpdateWhiteboardDirectInput } from '@domain/common/whiteboard/dto/whiteboard.dto.update.direct';
 import { UpdateDiscussionInput } from '@domain/communication/discussion/dto/discussion.dto.update';
 import { UpdateEcosystemModelInput } from '@domain/context/ecosystem-model/dto/ecosystem-model.dto.update';
 import { SendMessageOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.message.created';
@@ -76,7 +76,7 @@ export class BaseHandler extends AbstractHandler {
   ): Promise<ValidationError[]> {
     const types: Function[] = [
       ApplicationEventInput,
-      CanvasCheckoutEventInput,
+      WhiteboardCheckoutEventInput,
       ChallengeEventInput,
       RoomSendMessageInput,
       OpportunityEventInput,
@@ -84,12 +84,12 @@ export class BaseHandler extends AbstractHandler {
       ProjectEventInput,
       CreateActorGroupInput,
       CreateActorInput,
-      CreateAspectOnCalloutInput,
+      CreatePostOnCalloutInput,
       CreateDocumentInput,
       CreatePostTemplateOnTemplatesSetInput,
-      CreateCanvasOnCalloutInput,
+      CreateWhiteboardOnCalloutInput,
       CreateWhiteboardTemplateOnTemplatesSetInput,
-      CreateChallengeOnHubInput,
+      CreateChallengeOnSpaceInput,
       CreateChallengeOnChallengeInput,
       CreateOpportunityInput,
       CreateOrganizationInput,
@@ -103,11 +103,11 @@ export class BaseHandler extends AbstractHandler {
       CreateCalendarEventOnCalendarInput,
       DeleteDocumentInput,
       UpdateActorInput,
-      UpdateAspectInput,
+      UpdatePostInput,
       UpdateDocumentInput,
       UpdatePostTemplateInput,
       UpdateCommunityApplicationFormInput,
-      UpdateHubInput,
+      UpdateSpaceInput,
       UpdateOrganizationInput,
       UpdateOpportunityInput,
       UpdateChallengeInput,
@@ -116,7 +116,7 @@ export class BaseHandler extends AbstractHandler {
       UpdateUserInput,
       UpdateProfileInput,
       UpdateProjectInput,
-      UpdateCanvasDirectInput,
+      UpdateWhiteboardDirectInput,
       UpdateWhiteboardTemplateInput,
       UpdateDiscussionInput,
       UpdateEcosystemModelInput,

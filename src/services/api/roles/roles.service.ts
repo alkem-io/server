@@ -14,8 +14,8 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { ICredential } from '@domain/agent/credential/credential.interface';
 import { IApplication } from '@domain/community/application';
-import { HubVisibility } from '@common/enums/hub.visibility';
-import { HubFilterService } from '@services/infrastructure/hub-filter/hub.filter.service';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { RolesUserInput } from './dto/roles.dto.input.user';
 import { ContributorRoles } from './dto/roles.dto.result.contributor';
 import { ApplicationForRoleResult } from './dto/roles.dto.result.application';
@@ -24,6 +24,7 @@ import { mapCredentialsToRoles } from './util/map.credentials.to.roles';
 import { InvitationForRoleResult } from './dto/roles.dto.result.invitation';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { IInvitation } from '@domain/community/invitation';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 export class RolesService {
   constructor(
@@ -34,7 +35,8 @@ export class RolesService {
     private invitationService: InvitationService,
     private communityService: CommunityService,
     private opportunityService: OpportunityService,
-    private hubFilterService: HubFilterService,
+    private spaceFilterService: SpaceFilterService,
+    private communityResolverService: CommunityResolverService,
     private organizationService: OrganizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -44,7 +46,7 @@ export class RolesService {
   ): Promise<ContributorRoles> {
     const user = await this.userService.getUserWithAgent(membershipData.userID);
 
-    const allowedVisibilities = this.hubFilterService.getAllowedVisibilities(
+    const allowedVisibilities = this.spaceFilterService.getAllowedVisibilities(
       membershipData.filter
     );
 
@@ -67,7 +69,7 @@ export class RolesService {
       await this.organizationService.getOrganizationAndAgent(
         membershipData.organizationID
       );
-    const allowedVisibilities = this.hubFilterService.getAllowedVisibilities(
+    const allowedVisibilities = this.spaceFilterService.getAllowedVisibilities(
       membershipData.filter
     );
     return this.getContributorRoles(
@@ -80,7 +82,7 @@ export class RolesService {
   private async getContributorRoles(
     credentials: ICredential[],
     contributorID: string,
-    hubVisibilities: HubVisibility[]
+    spaceVisibilities: SpaceVisibility[]
   ): Promise<ContributorRoles> {
     const membership = new ContributorRoles();
 
@@ -89,9 +91,9 @@ export class RolesService {
     const maps = await mapCredentialsToRoles(
       this.entityManager,
       credentials,
-      hubVisibilities
+      spaceVisibilities
     );
-    membership.hubs = maps.hubs;
+    membership.spaces = maps.spaces;
     membership.organizations = maps.organizations;
 
     return membership;
@@ -133,21 +135,26 @@ export class RolesService {
     state: string,
     application: IApplication
   ): Promise<ApplicationForRoleResult> {
+    const communityDisplayName =
+      await this.communityResolverService.getDisplayNameForCommunityOrFail(
+        community.id,
+        community.type
+      );
     const applicationResult = new ApplicationForRoleResult(
       community.id,
-      community.displayName,
+      communityDisplayName,
       state,
       application.id,
-      community.hubID,
+      community.spaceID,
       application.createdDate,
       application.updatedDate
     );
 
-    const isHubCommunity = await this.communityService.isHubCommunity(
+    const isSpaceCommunity = await this.communityService.isSpaceCommunity(
       community
     );
 
-    if (isHubCommunity) return applicationResult;
+    if (isSpaceCommunity) return applicationResult;
 
     // For Challenge or an Opportunity, need to dig deeper...
     const challengeForCommunity =
@@ -214,21 +221,26 @@ export class RolesService {
     state: string,
     invitation: IInvitation
   ): Promise<InvitationForRoleResult> {
+    const communityDisplayName =
+      await this.communityResolverService.getDisplayNameForCommunityOrFail(
+        community.id,
+        community.type
+      );
     const invitationResult = new InvitationForRoleResult(
       community.id,
-      community.displayName,
+      communityDisplayName,
       state,
       invitation.id,
-      community.hubID,
+      community.spaceID,
       invitation.createdDate,
       invitation.updatedDate
     );
 
-    const isHubCommunity = await this.communityService.isHubCommunity(
+    const isSpaceCommunity = await this.communityService.isSpaceCommunity(
       community
     );
 
-    if (isHubCommunity) return invitationResult;
+    if (isSpaceCommunity) return invitationResult;
 
     // For Challenge or an Opportunity, need to dig deeper...
     const challengeForCommunity =

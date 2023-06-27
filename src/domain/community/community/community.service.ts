@@ -54,6 +54,7 @@ import { CommunityMembershipStatus } from '@common/enums/community.membership.st
 import { InvitationService } from '../invitation/invitation.service';
 import { IInvitation } from '../invitation/invitation.interface';
 import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 
 @Injectable()
 export class CommunityService {
@@ -67,6 +68,7 @@ export class CommunityService {
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
     private communicationService: CommunicationService,
+    private communityResolverService: CommunityResolverService,
     private formService: FormService,
     private communityPolicyService: CommunityPolicyService,
     @InjectRepository(Community)
@@ -76,18 +78,18 @@ export class CommunityService {
 
   async createCommunity(
     name: string,
-    hubID: string,
+    spaceID: string,
     type: CommunityType,
     policy: ICommunityPolicyDefinition,
     applicationFormData: CreateFormInput
   ): Promise<ICommunity> {
-    const community: ICommunity = new Community(name, type);
+    const community: ICommunity = new Community(type);
     community.authorization = new AuthorizationPolicy();
     community.policy = await this.communityPolicyService.createCommunityPolicy(
       policy.member,
       policy.lead
     );
-    community.hubID = hubID;
+    community.spaceID = spaceID;
     community.applicationForm = await this.formService.createForm(
       applicationFormData
     );
@@ -98,8 +100,8 @@ export class CommunityService {
     community.groups = [];
     community.communication =
       await this.communicationService.createCommunication(
-        community.displayName,
-        hubID,
+        name,
+        spaceID,
         Object.values(DiscussionCategoryCommunity)
       );
     return await this.communityRepository.save(community);
@@ -122,7 +124,7 @@ export class CommunityService {
     const group = await this.userGroupService.addGroupWithName(
       community,
       groupName,
-      community.hubID
+      community.spaceID
     );
     await this.communityRepository.save(community);
 
@@ -136,7 +138,7 @@ export class CommunityService {
     });
     if (!communityWithGroups.groups) {
       throw new EntityNotInitializedException(
-        `Community not initialized: ${community.displayName}`,
+        `Community not initialized: ${community.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -295,10 +297,28 @@ export class CommunityService {
     const isMember = await this.isMember(agent, community);
     if (isMember) return CommunityMembershipStatus.MEMBER;
 
-    // Check if an application is pending
-    const applications = await this.applicationService.findExistingApplications(
+    const openApplication = await this.findOpenApplication(
       agentInfo.userID,
       community.id
+    );
+    if (openApplication) CommunityMembershipStatus.APPLICATION_PENDING;
+
+    const openInvitation = await this.findOpenInvitation(
+      agentInfo.userID,
+      community.id
+    );
+    if (openInvitation) CommunityMembershipStatus.INVITATION_PENDING;
+
+    return CommunityMembershipStatus.NOT_MEMBER;
+  }
+
+  private async findOpenApplication(
+    userID: string,
+    communityID: string
+  ): Promise<IApplication | undefined> {
+    const applications = await this.applicationService.findExistingApplications(
+      userID,
+      communityID
     );
     for (const application of applications) {
       // skip any finalized applications; only want to return pending applications
@@ -306,10 +326,28 @@ export class CommunityService {
         application.id
       );
       if (isFinalized) continue;
-      return CommunityMembershipStatus.APPLICATION_PENDING;
+      return application;
     }
+    return undefined;
+  }
 
-    return CommunityMembershipStatus.NOT_MEMBER;
+  private async findOpenInvitation(
+    userID: string,
+    communityID: string
+  ): Promise<IInvitation | undefined> {
+    const invitations = await this.invitationService.findExistingInvitations(
+      userID,
+      communityID
+    );
+    for (const invitation of invitations) {
+      // skip any finalized applications; only want to return pending applications
+      const isFinalized = await this.invitationService.isFinalizedInvitation(
+        invitation.id
+      );
+      if (isFinalized) continue;
+      return invitation;
+    }
+    return undefined;
   }
 
   async getUsersWithRole(
@@ -371,6 +409,13 @@ export class CommunityService {
     return 0;
   }
 
+  public async getDisplayName(community: ICommunity): Promise<string> {
+    return await this.communityResolverService.getDisplayNameForCommunityOrFail(
+      community.id,
+      community.type
+    );
+  }
+
   getCredentialDefinitionForRole(
     community: ICommunity,
     role: CommunityRole
@@ -392,7 +437,7 @@ export class CommunityService {
     );
     if (!hasMemberRoleInParent) {
       throw new ValidationException(
-        `Unable to assign Agent (${agent.id}) to community (${community.displayName}): agent is not a member of parent community`,
+        `Unable to assign Agent (${agent.id}) to community (${community.id}): agent is not a member of parent community`,
         LogContext.CHALLENGES
       );
     }
@@ -416,7 +461,7 @@ export class CommunityService {
         user: user,
       };
       this.activityAdapter.memberJoined(activityLogInput);
-      if (community.type === CommunityType.HUB) {
+      if (community.type === CommunityType.SPACE) {
         // todo: community joined
       }
     }
@@ -434,7 +479,7 @@ export class CommunityService {
       .addUserToCommunications(communication, user.communicationID)
       .catch(error =>
         this.logger.error?.(
-          `Unable to add user to community messaging (${community.displayName}): ${error}`,
+          `Unable to add user to community messaging (${community.id}): ${error}`,
           LogContext.COMMUNICATION
         )
       );
@@ -463,7 +508,7 @@ export class CommunityService {
     const policy = community.policy;
     if (!policy) {
       throw new EntityNotInitializedException(
-        `Unable to locate policy for community: ${community.displayName}`,
+        `Unable to locate policy for community: ${community.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -481,7 +526,7 @@ export class CommunityService {
     const communication = community.communication;
     if (!communication) {
       throw new EntityNotInitializedException(
-        `Unable to locate communication for community: ${community.displayName}`,
+        `Unable to locate communication for community: ${community.id}`,
         LogContext.COMMUNITY
       );
     }
@@ -526,7 +571,7 @@ export class CommunityService {
         .removeUserFromCommunications(communication, user)
         .catch(error =>
           this.logger.error?.(
-            `Unable remove user from community messaging (${community.displayName}): ${error}`,
+            `Unable remove user from community messaging (${community.id}): ${error}`,
             LogContext.COMMUNICATION
           )
         );
@@ -737,9 +782,9 @@ export class CommunityService {
     return validCredential;
   }
 
-  async getCommunities(hubId: string): Promise<Community[]> {
+  async getCommunities(spaceId: string): Promise<Community[]> {
     const communites = await this.communityRepository.find({
-      where: { hubID: hubId },
+      where: { spaceID: spaceId },
     });
     return communites || [];
   }
@@ -756,15 +801,15 @@ export class CommunityService {
 
     await this.validateUserAbleToApply(user, agent, community);
 
-    const hubID = community.hubID;
-    if (!hubID)
+    const spaceID = community.spaceID;
+    if (!spaceID)
       throw new EntityNotInitializedException(
-        `Unable to locate containing hub: ${community.displayName}`,
+        `Unable to locate containing space: ${community.id}`,
         LogContext.COMMUNITY
       );
     const application = await this.applicationService.createApplication(
       applicationData,
-      hubID
+      spaceID
     );
     community.applications?.push(application);
     await this.communityRepository.save(community);
@@ -801,30 +846,30 @@ export class CommunityService {
     agent: IAgent,
     community: ICommunity
   ) {
-    // Check presence / status of existing applications
-    const existingApplications =
-      await this.applicationService.findExistingApplications(
-        user.id,
-        community.id
+    const openApplication = await this.findOpenApplication(
+      user.id,
+      community.id
+    );
+    if (openApplication) {
+      throw new InvalidStateTransitionException(
+        `An open application (ID: ${openApplication.id}) already exists for user ${openApplication.user?.id} on Community: ${community.id}.`,
+        LogContext.COMMUNITY
       );
-    for (const existingApplication of existingApplications) {
-      const isApplicationFinalized =
-        await this.applicationService.isFinalizedApplication(
-          existingApplication.id
-        );
-      if (!isApplicationFinalized) {
-        throw new InvalidStateTransitionException(
-          `An application (ID: ${existingApplication.id}) already exists for user ${existingApplication.user?.email} on Community: ${community.displayName} that is not finalized.`,
-          LogContext.COMMUNITY
-        );
-      }
+    }
+
+    const openInvitation = await this.findOpenInvitation(user.id, community.id);
+    if (openInvitation) {
+      throw new InvalidStateTransitionException(
+        `An open invitation (ID: ${openInvitation.id}) already exists for user ${openInvitation.invitedUser} on Community: ${community.id}.`,
+        LogContext.COMMUNITY
+      );
     }
 
     // Check if the user is already a member; if so do not allow an application
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new InvalidStateTransitionException(
-        `User ${user.nameID} is already a member of the Community: ${community.displayName}.`,
+        `User ${user.nameID} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }
@@ -834,30 +879,30 @@ export class CommunityService {
     agent: IAgent,
     community: ICommunity
   ) {
-    // Check presence / status of existing applications
-    const existingInvitations =
-      await this.invitationService.findExistingInvitations(
-        user.id,
-        community.id
+    const openInvitation = await this.findOpenInvitation(user.id, community.id);
+    if (openInvitation) {
+      throw new InvalidStateTransitionException(
+        `An open invitation (ID: ${openInvitation.id}) already exists for user ${openInvitation.invitedUser} on Community: ${community.id}.`,
+        LogContext.COMMUNITY
       );
-    for (const existingInvitation of existingInvitations) {
-      const isInvitationFinalized =
-        await this.invitationService.isFinalizedInvitation(
-          existingInvitation.id
-        );
-      if (!isInvitationFinalized) {
-        throw new InvalidStateTransitionException(
-          `An invitation (ID: ${existingInvitation.id}) already exists for user ${existingInvitation.invitedUser} on Community: ${community.displayName} that is not finalized.`,
-          LogContext.COMMUNITY
-        );
-      }
+    }
+
+    const openApplication = await this.findOpenApplication(
+      user.id,
+      community.id
+    );
+    if (openApplication) {
+      throw new InvalidStateTransitionException(
+        `An open application (ID: ${openApplication.id}) already exists for user ${openApplication.user?.id} on Community: ${community.id}.`,
+        LogContext.COMMUNITY
+      );
     }
 
     // Check if the user is already a member; if so do not allow an application
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
       throw new InvalidStateTransitionException(
-        `User ${user.nameID} is already a member of the Community: ${community.displayName}.`,
+        `User ${user.nameID} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }
@@ -868,7 +913,7 @@ export class CommunityService {
   ): Promise<ICommunity> {
     const community = await this.communityRepository.findOneBy({
       id: communityID,
-      hubID: nameableScopeID,
+      spaceID: nameableScopeID,
     });
 
     if (!community) {
@@ -939,7 +984,7 @@ export class CommunityService {
     return credentialMatches;
   }
 
-  async isHubCommunity(community: ICommunity): Promise<boolean> {
+  async isSpaceCommunity(community: ICommunity): Promise<boolean> {
     const parentCommunity = await this.getParentCommunity(community);
 
     return parentCommunity === undefined;

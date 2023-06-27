@@ -3,7 +3,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   EntityNotFoundException,
-  EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
@@ -14,7 +13,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IInnovationHub, InnovationHub, InnovationHubType } from './types';
 import { CreateInnovationHubInput, UpdateInnovationHubInput } from './dto';
 import { InnovationHubAuthorizationService } from './innovation.hub.service.authorization';
-import { HubService } from '@domain/challenge/hub/hub.service';
+import { SpaceService } from '@domain/challenge/space/space.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 
@@ -26,7 +25,7 @@ export class InnovationHubService {
     private readonly profileService: ProfileService,
     private readonly authService: InnovationHubAuthorizationService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
-    private readonly hubService: HubService,
+    private readonly spaceService: SpaceService,
     private namingService: NamingService
   ) {}
 
@@ -94,15 +93,15 @@ export class InnovationHubService {
   public async updateOrFail(
     input: UpdateInnovationHubInput
   ): Promise<IInnovationHub> {
-    const hub: IInnovationHub = await this.getInnovationHubOrFail(
+    const innovationHub: IInnovationHub = await this.getInnovationHubOrFail(
       {
-        id: input.ID,
+        idOrNameId: input.ID,
       },
       { relations: ['profile'] }
     );
 
     if (input.nameID) {
-      if (input.nameID !== hub.nameID) {
+      if (input.nameID !== innovationHub.nameID) {
         const updateAllowed =
           await this.namingService.isInnovationHubNameIdAvailable(input.nameID);
         if (!updateAllowed) {
@@ -111,43 +110,51 @@ export class InnovationHubService {
             LogContext.INNOVATION_HUB
           );
         }
-        hub.nameID = input.nameID;
+        innovationHub.nameID = input.nameID;
       }
     }
-    if (hub.type === InnovationHubType.LIST && input.hubListFilter) {
-      if (!input.hubListFilter.length) {
+    if (
+      innovationHub.type === InnovationHubType.LIST &&
+      input.spaceListFilter
+    ) {
+      if (!input.spaceListFilter.length) {
         throw new Error(
-          `At least one Hub needs to be provided for Innovation Hub of type '${InnovationHubType.LIST}'`
+          `At least one Space needs to be provided for Innovation Hub of type '${InnovationHubType.LIST}'`
         );
       }
 
-      // validate hubs
-      const trueOrList = await this.hubService.hubsExist(input.hubListFilter);
+      // validate spaces
+      const trueOrList = await this.spaceService.spacesExist(
+        input.spaceListFilter
+      );
 
       if (Array.isArray(trueOrList)) {
         throw new Error(
-          `Hubs with the following identifiers not found: '${trueOrList.join(
+          `Spaces with the following identifiers not found: '${trueOrList.join(
             ','
           )}'`
         );
       }
-      hub.hubListFilter = input.hubListFilter;
+      innovationHub.spaceListFilter = input.spaceListFilter;
     }
-    if (hub.type === InnovationHubType.VISIBILITY && input.hubVisibilityFilter)
-      hub.hubVisibilityFilter = input.hubVisibilityFilter;
+    if (
+      innovationHub.type === InnovationHubType.VISIBILITY &&
+      input.spaceVisibilityFilter
+    )
+      innovationHub.spaceVisibilityFilter = input.spaceVisibilityFilter;
     if (input.profileData) {
-      hub.profile = await this.profileService.updateProfile(
-        hub.profile,
+      innovationHub.profile = await this.profileService.updateProfile(
+        innovationHub.profile,
         input.profileData
       );
     }
 
-    return await this.innovationHubRepository.save(hub);
+    return await this.innovationHubRepository.save(innovationHub);
   }
 
   public async deleteOrFail(innovationHubID: string): Promise<IInnovationHub> {
     const hub = await this.getInnovationHubOrFail(
-      { id: innovationHubID },
+      { idOrNameId: innovationHubID },
       {
         relations: ['profile'],
       }
@@ -173,32 +180,38 @@ export class InnovationHubService {
   }
 
   public async getInnovationHubOrFail(
-    args: { subdomain?: string; id?: string },
+    args: { subdomain?: string; idOrNameId?: string },
     options?: FindOneOptions<InnovationHub>
   ): Promise<InnovationHub | never> {
     if (!Object.keys(args).length) {
       throw new Error('No criteria provided for fetching the Innovation Hub');
     }
 
-    const { id, subdomain } = args;
+    const { idOrNameId, subdomain } = args;
 
-    const hub = await this.innovationHubRepository.findOne({
+    const whereArgs = [
+      { id: idOrNameId },
+      { nameID: idOrNameId },
+      { subdomain },
+    ];
+
+    const innovationHub = await this.innovationHubRepository.findOne({
       where: options?.where
         ? Array.isArray(options.where)
-          ? [{ id }, { subdomain }, ...options.where]
-          : [{ id }, { subdomain }, options.where]
-        : [{ id }, { subdomain }],
+          ? [...whereArgs, ...options.where]
+          : [...whereArgs, options.where]
+        : [{ id: idOrNameId }, { subdomain }, { nameID: idOrNameId }],
       ...options,
     });
 
-    if (!hub) {
+    if (!innovationHub) {
       throw new EntityNotFoundException(
-        `Innovation hub with id: '${id}' not found`,
+        `Innovation hub '${idOrNameId}' not found`,
         LogContext.INNOVATION_HUB
       );
     }
 
-    return hub;
+    return innovationHub;
   }
 
   public async getSpaceListFilterOrFail(
@@ -215,55 +228,44 @@ export class InnovationHubService {
       );
     }
 
-    if (hub.type === InnovationHubType.LIST && !hub.hubListFilter) {
-      throw new EntityNotInitializedException(
-        `Space list filter for Innovation Hub with id: '${hubId}' not found!`,
-        LogContext.INNOVATION_HUB
-      );
-    }
-
-    return hub.hubListFilter;
+    return hub.spaceListFilter;
   }
 
   private async validateCreateInput({
     type,
-    hubListFilter,
-    hubVisibilityFilter,
+    spaceListFilter,
+    spaceVisibilityFilter,
   }: CreateInnovationHubInput): Promise<true | never> {
     if (type === InnovationHubType.LIST) {
-      if (!hubListFilter || !hubListFilter.length) {
-        throw new Error(
-          `At least one Hub needs to be provided for Innovation Hub of type '${InnovationHubType.LIST}'`
-        );
-      }
-
-      if (hubVisibilityFilter) {
+      if (spaceVisibilityFilter) {
         throw new Error(
           `Visibility filter not applicable for Innovation Hub of type '${InnovationHubType.LIST}'`
         );
       }
-      // validate hubs
-      const trueOrList = await this.hubService.hubsExist(hubListFilter);
+      if (spaceListFilter && spaceListFilter.length) {
+        // If specified on create, validate spaces
+        const trueOrList = await this.spaceService.spacesExist(spaceListFilter);
 
-      if (Array.isArray(trueOrList)) {
-        throw new Error(
-          `Hubs with the following identifiers not found: '${trueOrList.join(
-            ','
-          )}'`
-        );
+        if (Array.isArray(trueOrList)) {
+          throw new Error(
+            `Spaces with the following identifiers not found: '${trueOrList.join(
+              ','
+            )}'`
+          );
+        }
       }
     }
 
     if (type === InnovationHubType.VISIBILITY) {
-      if (!hubVisibilityFilter) {
+      if (!spaceVisibilityFilter) {
         throw new Error(
           `A visibility needs to be provided for Innovation Hub of type '${InnovationHubType.VISIBILITY}'`
         );
       }
 
-      if (hubListFilter && hubListFilter.length) {
+      if (spaceListFilter && spaceListFilter.length) {
         throw new Error(
-          `List of Hubs not applicable for Innovation Hub of type '${InnovationHubType.VISIBILITY}'`
+          `List of Spaces not applicable for Innovation Hub of type '${InnovationHubType.VISIBILITY}'`
         );
       }
     }

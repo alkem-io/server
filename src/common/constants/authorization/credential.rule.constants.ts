@@ -1,27 +1,26 @@
-export const CREDENTIAL_RULE_CHALLENGE_HUB_ADMINS =
-  'credentialRule-challengeHubAdmins';
+export const CREDENTIAL_RULE_CHALLENGE_SPACE_ADMINS =
+  'credentialRule-challengeSpaceAdmins';
 export const CREDENTIAL_RULE_CHALLENGE_ADMINS =
   'credentialRule-challengeAdmins';
 export const CREDENTIAL_RULE_CHALLENGE_MEMBER_READ =
   'credentialRule-challengeMemberRead';
 export const CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY =
   'credentialRule-challengeCreateOpportunity';
-export const CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_JOIN =
-  'credentialRule-challengeHubMemberJoin';
-export const CREDENTIAL_RULE_CHALLENGE_HUB_MEMBER_APPLY =
-  'credentialRule-challengeHubMemberApply';
-export const CREDENTIAL_RULE_CHALLENGE_HUB_ADMIN_DELETE =
-  'credentialRule-challengeHubAdminDelete';
-export const CREDENTIAL_RULE_HUB_ADMINS = 'credentialRule-hubAdmins';
-export const CREDENTIAL_RULE_HUB_MEMBERS_CREATE_CHALLENGES =
-  'credentialRule-hubMembersCreateChallenges';
-export const CREDENTIAL_RULE_HUB_MEMBERS_READ = 'credentialRule-hubMembersRead';
-export const CREDENTIAL_RULE_HUB_HOST_ASSOCIATES_JOIN =
-  'credentialRule-hubHostAssociatesJoin';
-export const CREDENTIAL_RULE_ASPECT_CREATED_BY =
-  'credentialRule-aspectCreatedBy';
-export const CREDENTIAL_RULE_ASPECT_ADMINS_MOVE_CARD =
-  'credentialRule-aspectAdminsMoveCard';
+export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN =
+  'credentialRule-challengeSpaceMemberJoin';
+export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY =
+  'credentialRule-challengeSpaceMemberApply';
+export const CREDENTIAL_RULE_CHALLENGE_SPACE_ADMIN_DELETE =
+  'credentialRule-challengeSpaceAdminDelete';
+export const CREDENTIAL_RULE_SPACE_ADMINS = 'credentialRule-spaceAdmins';
+export const CREDENTIAL_RULE_SPACE_MEMBERS_CREATE_CHALLENGES =
+  'credentialRule-spaceMembersCreateChallenges';
+export const CREDENTIAL_RULE_SPACE_MEMBERS_READ =
+  'credentialRule-spaceMembersRead';
+export const CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN =
+  'credentialRule-spaceHostAssociatesJoin';
+export const CREDENTIAL_RULE_POST_CREATED_BY = 'credentialRule-postCreatedBy';
+export const CREDENTIAL_RULE_POST_ADMINS_MOVE = 'credentialRule-postAdminsMove';
 export const CREDENTIAL_RULE_CALLOUT_CREATED_BY =
   'credentialRule-calloutCreatedBy';
 export const CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS =
@@ -32,11 +31,12 @@ export const CREDENTIAL_RULE_OPPORTUNITY_MEMBER =
   'credentialRule-opportunityMember';
 export const CREDENTIAL_RULE_RELATION_CREATED_BY =
   'credentialRule-relationCreatedBy';
-export const CREDENTIAL_RULE_CANVAS_CHECKOUT_LOCKED_BY =
-  'credentialRule-canvasCheckoutLockedBy';
-export const CREDENTIAL_RULE_CANVAS_CREATED_BY =
-  'credentialRule-canvasCreatedBy';
-export const CREDENTIAL_RULE_CANVAS_LOCKED_BY = 'credentialRule-canvasLockedBy';
+export const CREDENTIAL_RULE_WHITEBOARD_CHECKOUT_LOCKED_BY =
+  'credentialRule-whiteboardCheckoutLockedBy';
+export const CREDENTIAL_RULE_WHITEBOARD_CREATED_BY =
+  'credentialRule-whiteboardCreatedBy';
+export const CREDENTIAL_RULE_WHITEBOARD_LOCKED_BY =
+  'credentialRule-whiteboardLockedBy';
 export const CREDENTIAL_RULE_ROOM_MESSAGE_SENDER =
   'credentialRule-roomMessageSender';
 export const CREDENTIAL_RULE_ROOM_REACTION_SENDER =

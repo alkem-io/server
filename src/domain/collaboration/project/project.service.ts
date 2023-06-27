@@ -40,12 +40,12 @@ export class ProjectService {
 
   async createProject(
     projectData: CreateProjectInput,
-    hubID: string
+    spaceID: string
   ): Promise<IProject> {
-    await this.isNameAvailableOrFail(projectData.nameID, hubID);
+    await this.isNameAvailableOrFail(projectData.nameID, spaceID);
     const project: IProject = Project.create(projectData);
     project.authorization = new AuthorizationPolicy();
-    project.hubID = hubID;
+    project.spaceID = spaceID;
 
     await this.projectRepository.save(project);
 
@@ -84,7 +84,7 @@ export class ProjectService {
     let project: IProject | null = null;
     if (projectID.length == UUID_LENGTH) {
       project = await this.projectRepository.findOne({
-        where: { id: projectID, hubID: nameableScopeID },
+        where: { id: projectID, spaceID: nameableScopeID },
         ...options,
       });
     }
@@ -92,7 +92,7 @@ export class ProjectService {
     if (!project) {
       // look up based on nameID instead
       project = await this.projectRepository.findOne({
-        where: { nameID: projectID, hubID: nameableScopeID },
+        where: { nameID: projectID, spaceID: nameableScopeID },
         ...options,
       });
     }
@@ -109,7 +109,7 @@ export class ProjectService {
 
   async isNameAvailableOrFail(nameID: string, nameableScopeID: string) {
     if (
-      !(await this.namingService.isNameIdAvailableInHub(
+      !(await this.namingService.isNameIdAvailableInSpace(
         nameID,
         nameableScopeID
       ))
@@ -140,9 +140,9 @@ export class ProjectService {
     return await this.projectRepository.save(project);
   }
 
-  async getProjects(hubID: string): Promise<Project[]> {
+  async getProjects(spaceID: string): Promise<Project[]> {
     const projects = await this.projectRepository.findBy({
-      hubID: hubID,
+      spaceID: spaceID,
     });
     return projects || [];
   }
@@ -193,8 +193,8 @@ export class ProjectService {
     return project.lifecycle;
   }
 
-  async getProjectsInHubCount(hubID: string): Promise<number> {
-    const count = await this.projectRepository.countBy({ hubID: hubID });
+  async getProjectsInSpaceCount(spaceID: string): Promise<number> {
+    const count = await this.projectRepository.countBy({ spaceID: spaceID });
     return count;
   }
 

@@ -2,16 +2,16 @@ import { IActivity } from '@platform/activity';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { IActivityLogEntryMemberJoined } from '@services/api/activity-log/dto/activity.log.dto.entry.member.joined.interface';
 import { IActivityLogEntryCalloutPublished } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.published';
-import { IActivityLogEntryCalloutCardCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.card.created';
-import { IActivityLogEntryCalloutCanvasCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.canvas.created';
+import { IActivityLogEntryCalloutPostCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.created';
+import { IActivityLogEntryCalloutWhiteboardCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.whiteboard.created';
 import { IActivityLogEntryChallengeCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.challenge.created';
 import { IActivityLogEntryOpportunityCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.opportunity.created';
-import { IActivityLogEntryCalloutCardComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.card.comment';
+import { IActivityLogEntryCalloutPostComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.discussion.comment';
 import { UserService } from '@domain/community/user/user.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
-import { AspectService } from '@domain/collaboration/aspect/aspect.service';
-import { CanvasService } from '@domain/common/canvas/canvas.service';
+import { PostService } from '@domain/collaboration/post/post.service';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { CommunityService } from '@domain/community/community/community.service';
@@ -26,11 +26,11 @@ interface ActivityLogBuilderFunction<TypedActivityLogEntry> {
 export interface IActivityLogBuilder {
   [ActivityEventType.MEMBER_JOINED]: ActivityLogBuilderFunction<IActivityLogEntryMemberJoined>;
   [ActivityEventType.CALLOUT_PUBLISHED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPublished>;
-  [ActivityEventType.CARD_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutCardCreated>;
-  [ActivityEventType.CANVAS_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutCanvasCreated>;
+  [ActivityEventType.POST_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostCreated>;
+  [ActivityEventType.WHITEBOARD_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutWhiteboardCreated>;
   [ActivityEventType.CHALLENGE_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryChallengeCreated>;
   [ActivityEventType.OPPORTUNITY_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryOpportunityCreated>;
-  [ActivityEventType.CARD_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutCardComment>;
+  [ActivityEventType.POST_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostComment>;
   [ActivityEventType.DISCUSSION_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutDiscussionComment>;
   [ActivityEventType.UPDATE_SENT]: ActivityLogBuilderFunction<IActivityLogEntryUpdateSent>;
 }
@@ -40,8 +40,8 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     private readonly activityLogEntryBase: IActivityLogEntry,
     private readonly userService: UserService,
     private readonly calloutService: CalloutService,
-    private readonly aspectService: AspectService,
-    private readonly canvasService: CanvasService,
+    private readonly postService: PostService,
+    private readonly whiteboardService: WhiteboardService,
     private readonly challengeService: ChallengeService,
     private readonly opportunityService: OpportunityService,
     private readonly communityService: CommunityService,
@@ -75,35 +75,35 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     return activityCalloutPublished;
   }
 
-  async [ActivityEventType.CARD_CREATED](rawActivity: IActivity) {
-    const calloutCardCreated = await this.calloutService.getCalloutOrFail(
+  async [ActivityEventType.POST_CREATED](rawActivity: IActivity) {
+    const calloutPostCreated = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
     );
-    const cardCreated = await this.aspectService.getAspectOrFail(
+    const postCreated = await this.postService.getPostOrFail(
       rawActivity.resourceID
     );
-    const activityCalloutCardCreated: IActivityLogEntryCalloutCardCreated = {
+    const activityCalloutPostCreated: IActivityLogEntryCalloutPostCreated = {
       ...this.activityLogEntryBase,
-      callout: calloutCardCreated,
-      card: cardCreated,
+      callout: calloutPostCreated,
+      post: postCreated,
     };
-    return activityCalloutCardCreated;
+    return activityCalloutPostCreated;
   }
 
-  async [ActivityEventType.CANVAS_CREATED](rawActivity: IActivity) {
-    const calloutCanvasCreated = await this.calloutService.getCalloutOrFail(
+  async [ActivityEventType.WHITEBOARD_CREATED](rawActivity: IActivity) {
+    const calloutWhiteboardCreated = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
     );
-    const canvasCreated = await this.canvasService.getCanvasOrFail(
+    const whiteboardCreated = await this.whiteboardService.getWhiteboardOrFail(
       rawActivity.resourceID
     );
-    const activityCalloutCanvasCreated: IActivityLogEntryCalloutCanvasCreated =
+    const activityCalloutWhiteboardCreated: IActivityLogEntryCalloutWhiteboardCreated =
       {
         ...this.activityLogEntryBase,
-        callout: calloutCanvasCreated,
-        canvas: canvasCreated,
+        callout: calloutWhiteboardCreated,
+        whiteboard: whiteboardCreated,
       };
-    return activityCalloutCanvasCreated;
+    return activityCalloutWhiteboardCreated;
   }
 
   async [ActivityEventType.CHALLENGE_CREATED](rawActivity: IActivity) {
@@ -128,20 +128,20 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     return activityOpportunityCreated;
   }
 
-  async [ActivityEventType.CARD_COMMENT](rawActivity: IActivity) {
-    const calloutCardComment = await this.calloutService.getCalloutOrFail(
+  async [ActivityEventType.POST_COMMENT](rawActivity: IActivity) {
+    const calloutPostComment = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
     );
-    const cardCommentedOn = await this.aspectService.getAspectOrFail(
+    const postCommentedOn = await this.postService.getPostOrFail(
       rawActivity.resourceID
     );
-    const activityCalloutCardCommentedOn: IActivityLogEntryCalloutCardComment =
+    const activityCalloutPostCommentedOn: IActivityLogEntryCalloutPostComment =
       {
         ...this.activityLogEntryBase,
-        callout: calloutCardComment,
-        card: cardCommentedOn,
+        callout: calloutPostComment,
+        post: postCommentedOn,
       };
-    return activityCalloutCardCommentedOn;
+    return activityCalloutPostCommentedOn;
   }
 
   async [ActivityEventType.DISCUSSION_COMMENT](rawActivity: IActivity) {

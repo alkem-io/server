@@ -10,7 +10,7 @@ export class Communication
   implements ICommunication
 {
   @Column()
-  hubID: string;
+  spaceID: string;
 
   @OneToMany(() => Discussion, discussion => discussion.communication, {
     eager: false,
@@ -34,7 +34,7 @@ export class Communication
 
   constructor(displayName: string) {
     super();
-    this.hubID = '';
+    this.spaceID = '';
     this.displayName = displayName || '';
     this.discussionCategories = [];
   }
