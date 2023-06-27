@@ -33,9 +33,8 @@ export class StorageAccessController {
     @Param('id') id: string,
     @Res({ passthrough: true }) res: Response
   ): Promise<StreamableFile> {
-    console.log('BABA TI');
     const document = await this.documentService.getDocumentOrFail(id);
-    this.logger.log('TEST');
+
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       document.authorization,
