@@ -175,7 +175,7 @@ export class StorageBucketResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => String, {
     description:
-      'Create a new Document on the Storage and return the value as part of the returned Reference.',
+      'Create a new Document on the Storage and return the public Url.',
   })
   @Profiling.api
   async uploadFileOnStorageBucket(
@@ -212,8 +212,6 @@ export class StorageBucketResolverMutations {
         storageBucket.authorization
       );
 
-    const uri =
-      this.documentService.getPubliclyAccessibleURL(documentAuthorized);
-    return uri;
+    return this.documentService.getPubliclyAccessibleURL(documentAuthorized);
   }
 }
