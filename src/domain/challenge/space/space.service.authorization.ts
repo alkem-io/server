@@ -39,6 +39,7 @@ import {
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
+  CREDENTIAL_RULE_TYPES_SPACE_STORAGE_FILE_UPLOAD,
 } from '@common/constants';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 
@@ -121,6 +122,14 @@ export class SpaceAuthorizationService {
             spaceSaved.community.authorization,
             spacePolicy,
             hostOrg
+          );
+
+        spaceSaved.storageBucket =
+          await this.spaceService.getStorageBucketOrFail(spaceSaved.id);
+        spaceSaved.community.authorization =
+          this.extendStorageAuthorizationPolicy(
+            spaceSaved.storageBucket.authorization,
+            spacePolicy
           );
 
         spaceSaved.collaboration = await this.spaceService.getCollaboration(
@@ -501,6 +510,36 @@ export class SpaceAuthorizationService {
     );
 
     return communityAuthorization;
+  }
+
+  private extendStorageAuthorizationPolicy(
+    storageAuthorization: IAuthorizationPolicy | undefined,
+    policy: ICommunityPolicy
+  ): IAuthorizationPolicy {
+    if (!storageAuthorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${JSON.stringify(policy)}`,
+        LogContext.CHALLENGES
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Any member can upload
+    const membersCanUpload =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.FILE_UPLOAD],
+        [this.communityPolicyService.getMembershipCredential(policy)],
+        CREDENTIAL_RULE_TYPES_SPACE_STORAGE_FILE_UPLOAD
+      );
+    membersCanUpload.cascade = false;
+    newRules.push(membersCanUpload);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      storageAuthorization,
+      newRules
+    );
+
+    return storageAuthorization;
   }
 
   appendVerifiedCredentialRules(

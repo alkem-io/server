@@ -6,6 +6,8 @@ export const CREDENTIAL_RULE_CHALLENGE_MEMBER_READ =
   'credentialRule-challengeMemberRead';
 export const CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY =
   'credentialRule-challengeCreateOpportunity';
+export const CREDENTIAL_RULE_CHALLENGE_FILE_UPLOAD =
+  'credentialRule-challengeMemberFileUpload';
 export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN =
   'credentialRule-challengeSpaceMemberJoin';
 export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY =

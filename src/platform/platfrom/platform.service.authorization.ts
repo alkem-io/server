@@ -84,6 +84,10 @@ export class PlatformAuthorizationService {
         platform.storageBucket,
         platform.authorization
       );
+    platform.storageBucket.authorization =
+      this.extendStorageAuthorizationPolicy(
+        platform.storageBucket.authorization
+      );
 
     const innovationHubs = await this.innovationHubService.getInnovationHubs({
       relations: [
@@ -128,5 +132,34 @@ export class PlatformAuthorizationService {
     );
 
     return authorization;
+  }
+
+  private extendStorageAuthorizationPolicy(
+    storageAuthorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    if (!storageAuthorization)
+      throw new EntityNotInitializedException(
+        'Authorization definition not found for Platform Communication',
+        LogContext.PLATFORM
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Any member can upload
+    const registeredUserUpload =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.FILE_UPLOAD],
+        [AuthorizationCredential.GLOBAL_REGISTERED],
+        'platformFileUploadRegistered'
+      );
+    registeredUserUpload.cascade = false;
+    newRules.push(registeredUserUpload);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      storageAuthorization,
+      newRules
+    );
+
+    return storageAuthorization;
   }
 }

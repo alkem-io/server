@@ -34,6 +34,7 @@ import {
   CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY,
   CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY,
   CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN,
+  CREDENTIAL_RULE_CHALLENGE_FILE_UPLOAD,
 } from '@common/constants';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 
@@ -104,6 +105,14 @@ export class ChallengeAuthorizationService {
       challenge.community.authorization,
       communityPolicy
     );
+
+    challenge.storageBucket =
+      await this.challengeService.getStorageBucketOrFail(challenge.id);
+    challenge.storageBucket.authorization =
+      this.extendStorageAuthorizationPolicy(
+        challenge.storageBucket.authorization,
+        communityPolicy
+      );
 
     // Cascade
     challenge.childChallenges = await this.challengeService.getChildChallenges(
@@ -476,6 +485,36 @@ export class ChallengeAuthorizationService {
     );
 
     return authorization;
+  }
+
+  private extendStorageAuthorizationPolicy(
+    storageAuthorization: IAuthorizationPolicy | undefined,
+    policy: ICommunityPolicy
+  ): IAuthorizationPolicy {
+    if (!storageAuthorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${JSON.stringify(policy)}`,
+        LogContext.CHALLENGES
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Any member can upload
+    const membersCanUpload =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.FILE_UPLOAD],
+        [this.communityPolicyService.getMembershipCredential(policy)],
+        CREDENTIAL_RULE_CHALLENGE_FILE_UPLOAD
+      );
+    membersCanUpload.cascade = false;
+    newRules.push(membersCanUpload);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      storageAuthorization,
+      newRules
+    );
+
+    return storageAuthorization;
   }
 
   private appendPrivilegeRules(

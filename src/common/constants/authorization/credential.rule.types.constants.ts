@@ -8,6 +8,8 @@ export const CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_GLOBAL_ADMIN_GRANT =
   'credentialRuleTypes-spaceAuthorizationGlobalAdminGrant';
 export const CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED =
   'credentialRuleTypes-spaceCommunityApplyGlobalRegistered';
+export const CREDENTIAL_RULE_TYPES_SPACE_STORAGE_FILE_UPLOAD =
+  'credentialRuleTypes-spaceStoargeFileUpload';
 export const CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED =
   'credentialRuleTypes-spaceCommunityJoinGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS =
