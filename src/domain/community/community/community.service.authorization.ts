@@ -19,6 +19,8 @@ import {
   POLICY_RULE_COMMUNITY_INVITE,
   POLICY_RULE_COMMUNITY_ADD_MEMBER,
 } from '@common/constants';
+import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
+import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -28,6 +30,8 @@ export class CommunityAuthorizationService {
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private communicationAuthorizationService: CommunicationAuthorizationService,
     private applicationAuthorizationService: ApplicationAuthorizationService,
+    private invitationAuthorizationService: InvitationAuthorizationService,
+    private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>
   ) {}
@@ -90,6 +94,29 @@ export class CommunityAuthorizationService {
           community.authorization
         );
       application.authorization = applicationSaved.authorization;
+    }
+
+    community.invitations = await this.communityService.getInvitations(
+      community
+    );
+    for (const invitation of community.invitations) {
+      const invitationSaved =
+        await this.invitationAuthorizationService.applyAuthorizationPolicy(
+          invitation,
+          community.authorization
+        );
+      invitation.authorization = invitationSaved.authorization;
+    }
+
+    community.externalInvitations =
+      await this.communityService.getExternalInvitations(community);
+    for (const externalInvitation of community.externalInvitations) {
+      const invitationSaved =
+        await this.invitationExternalAuthorizationService.applyAuthorizationPolicy(
+          externalInvitation,
+          community.authorization
+        );
+      externalInvitation.authorization = invitationSaved.authorization;
     }
 
     return await this.communityRepository.save(community);

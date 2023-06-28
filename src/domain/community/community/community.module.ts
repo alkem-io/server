@@ -24,6 +24,7 @@ import { CommunityAuthorizationService } from './community.service.authorization
 import { FormModule } from '@domain/common/form/form.module';
 import { InvitationModule } from '../invitation/invitation.module';
 import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecycle.invitation.options.provider';
+import { InvitationExternalModule } from '../invitation.external/invitation.external.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
@@ -38,6 +39,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     OrganizationModule,
     ApplicationModule,
     InvitationModule,
+    InvitationExternalModule,
     CommunicationModule,
     CommunityPolicyModule,
     LifecycleModule,

@@ -34,6 +34,8 @@ export class RegistrationResolverMutations {
     const savedUser =
       await this.userAuthorizationService.applyAuthorizationPolicy(user);
 
+    await this.registrationService.processPendingInvitations(user);
+
     // Send the notification
     const notificationInput: NotificationInputUserRegistered = {
       triggeredBy: agentInfo.userID,

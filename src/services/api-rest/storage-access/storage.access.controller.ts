@@ -44,6 +44,14 @@ export class StorageAccessController {
 
     res.setHeader('Content-Type', `${document.mimeType}`);
 
+    // Set caching headers
+    res.setHeader('Cache-Control', 'public, max-age=15552000');
+    res.setHeader('Pragma', 'public');
+    res.setHeader(
+      'Expires',
+      new Date(Date.now() + 15552000 * 1000).toUTCString()
+    );
+
     const readable = this.documentService.getDocumentContents(document);
     return new StreamableFile(readable);
   }

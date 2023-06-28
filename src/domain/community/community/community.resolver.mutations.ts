@@ -48,6 +48,9 @@ import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
 import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecycle.invitation.options.provider';
 import { IInvitation } from '../invitation';
 import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
+import { CreateInvitationExternalUserOnCommunityInput } from './dto/community.dto.invite.external.user';
+import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
+import { IInvitationExternal } from '../invitation.external';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -67,6 +70,7 @@ export class CommunityResolverMutations {
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationService: InvitationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
+    private invitationExternalAuthorizationService: InvitationExternalAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService
   ) {}
 
@@ -405,7 +409,9 @@ export class CommunityResolverMutations {
       invitedUser: invitationData.invitedUser,
       createdBy: agentInfo.userID,
     };
-    const invitation = await this.communityService.createInvitation(input);
+    const invitation = await this.communityService.createInvitationExistingUser(
+      input
+    );
 
     const savedInvitation =
       await this.invitationAuthorizationService.applyAuthorizationPolicy(
@@ -421,6 +427,44 @@ export class CommunityResolverMutations {
     };
     await this.notificationAdapter.invitationCreated(notificationInput);
 
+    return savedInvitation;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IInvitationExternal, {
+    description:
+      'Invite an external User to join the specified Community as a member.',
+  })
+  @Profiling.api
+  async inviteExternalUserForCommunityMembership(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('invitationData')
+    invitationData: CreateInvitationExternalUserOnCommunityInput
+  ): Promise<IInvitationExternal> {
+    const community = await this.communityService.getCommunityOrFail(
+      invitationData.communityID
+    );
+
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      community.authorization,
+      AuthorizationPrivilege.COMMUNITY_INVITE,
+      `create invitation external community: ${community.id}`
+    );
+
+    const externalInvitation =
+      await this.communityService.createInvitationExternalUser(
+        invitationData,
+        agentInfo
+      );
+
+    const savedInvitation =
+      await this.invitationExternalAuthorizationService.applyAuthorizationPolicy(
+        externalInvitation,
+        community.authorization
+      );
+
+    // TODO - send a relevant notification
     return savedInvitation;
   }
 
