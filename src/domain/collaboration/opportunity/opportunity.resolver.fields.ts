@@ -2,7 +2,6 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { IOpportunity } from './opportunity.interface';
 import { OpportunityService } from './opportunity.service';
-import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { IContext } from '@domain/context/context/context.interface';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
@@ -17,10 +16,10 @@ import {
   JourneyCollaborationLoaderCreator,
   JourneyCommunityLoaderCreator,
   JourneyContextLoaderCreator,
-  JourneyLifecycleLoaderCreator,
   OpportunityParentNameLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.interface';
 
 @Resolver(() => IOpportunity)
 export class OpportunityResolverFields {
@@ -28,17 +27,13 @@ export class OpportunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('lifecycle', () => ILifecycle, {
+  @ResolveField('innovationFlow', () => IInnovationFlow, {
     nullable: true,
-    description: 'The lifecycle for the Opportunity.',
+    description: 'The InnovationFlow for the Opportunity.',
   })
   @Profiling.api
-  async lifecycle(
-    @Parent() opportunity: IOpportunity,
-    @Loader(JourneyLifecycleLoaderCreator, { parentClassRef: Opportunity })
-    loader: ILoader<ILifecycle>
-  ) {
-    return loader.load(opportunity.id);
+  async innovationFlow(@Parent() opportunity: IOpportunity) {
+    return await this.opportunityService.getInnovationFlow(opportunity.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -51,7 +46,7 @@ export class OpportunityResolverFields {
   async community(
     @Parent() opportunity: IOpportunity,
     @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Opportunity })
-    loader: ILoader<ILifecycle>
+    loader: ILoader<ICommunity>
   ) {
     return loader.load(opportunity.id);
   }
@@ -66,7 +61,7 @@ export class OpportunityResolverFields {
   async context(
     @Parent() opportunity: IOpportunity,
     @Loader(JourneyContextLoaderCreator, { parentClassRef: Opportunity })
-    loader: ILoader<ILifecycle>
+    loader: ILoader<IContext>
   ) {
     return loader.load(opportunity.id);
   }
@@ -81,7 +76,7 @@ export class OpportunityResolverFields {
   async collaboration(
     @Parent() opportunity: IOpportunity,
     @Loader(JourneyCollaborationLoaderCreator, { parentClassRef: Opportunity })
-    loader: ILoader<ILifecycle>
+    loader: ILoader<ICollaboration>
   ) {
     return loader.load(opportunity.id);
   }

@@ -17,7 +17,6 @@ import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.chall
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { SpaceAuthorizationService } from '@domain/challenge/space/space.service.authorization';
-import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { UserModule } from '@domain/community/user/user.module';
@@ -47,7 +46,6 @@ import { SpaceStorageBucketLoaderCreator } from '@core/dataloader/creators/loade
     CommunityPolicyModule,
     ChallengeModule,
     BaseChallengeModule,
-    LifecycleModule,
     OpportunityModule,
     PlatformAuthorizationPolicyModule,
     ProjectModule,

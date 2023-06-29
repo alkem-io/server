@@ -3,17 +3,17 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { DataLoaderInitError } from '@common/exceptions/data-loader';
-import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
-import { createTypedRelationDataLoader } from '../../../utils';
-import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
+import { createTypedRelationDataLoader } from '../../utils';
+import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
+import { InnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.entity';
 
 @Injectable()
-export class JourneyLifecycleLoaderCreator
+export class InnovationFlowLifecycleLoaderCreator
   implements DataLoaderCreator<ILifecycle>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<ILifecycle, BaseChallenge>) {
+  create(options?: DataLoaderCreatorOptions<ILifecycle, InnovationFlow>) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
         `${this.constructor.name} requires the 'parentClassRef' to be provided.`

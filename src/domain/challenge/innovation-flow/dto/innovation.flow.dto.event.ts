@@ -1,12 +1,12 @@
-import { SMALL_TEXT_LENGTH } from '@common/constants';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { MaxLength } from 'class-validator';
 
 @InputType()
-export class BaseChallengeEventInput {
+export class InnovationFlowEvent {
   @Field(() => UUID, { nullable: false })
-  ID!: string;
+  innovationFlowID!: string;
 
   @Field({ nullable: false })
   @MaxLength(SMALL_TEXT_LENGTH)

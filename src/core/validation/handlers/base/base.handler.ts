@@ -2,10 +2,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 import { CreateActorGroupInput } from '@domain/context/actor-group';
-import {
-  ChallengeEventInput,
-  UpdateChallengeInput,
-} from '@domain/challenge/challenge';
+import { UpdateChallengeInput } from '@domain/challenge/challenge';
 import { UpdateSpaceInput } from '@domain/challenge/space/dto/space.dto.update';
 import {
   CreateProjectInput,
@@ -24,7 +21,6 @@ import {
 } from '@domain/community/organization/dto';
 import {
   CreateOpportunityInput,
-  OpportunityEventInput,
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity/dto';
 import {
@@ -69,6 +65,11 @@ import {
 import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upload.image';
 import { CreateInvitationExistingUserOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.existing.user';
 import { CreateInvitationExternalUserOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.external.user';
+import { InnovationFlowEvent } from '@domain/challenge/innovation-flow/dto/innovation.flow.dto.event';
+import {
+  UpdateInnovationFlowInput,
+  UpdateInnovationFlowTemplateInput,
+} from '@domain/challenge/innovation-flow';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -78,9 +79,10 @@ export class BaseHandler extends AbstractHandler {
     const types: Function[] = [
       ApplicationEventInput,
       WhiteboardCheckoutEventInput,
-      ChallengeEventInput,
+      InnovationFlowEvent,
+      UpdateInnovationFlowInput,
+      UpdateInnovationFlowTemplateInput,
       RoomSendMessageInput,
-      OpportunityEventInput,
       OrganizationVerificationEventInput,
       ProjectEventInput,
       CreateActorGroupInput,

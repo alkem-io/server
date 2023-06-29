@@ -87,10 +87,12 @@ const getChallengesMock = (
     result.push({
       id: `${spaceId}.${i}`,
       nameID: `challenge-${spaceId}.${i}`,
-      lifecycle: {
-        id: `lifecycle-${i}`,
-        machineDef: '',
-        ...getEntityMock<Lifecycle>(),
+      innovationFlow: {
+        lifecycle: {
+          id: `lifecycle-${i}`,
+          machineDef: '',
+          ...getEntityMock<Lifecycle>(),
+        },
       },
       profile: {
         id: `profile-challenge-${spaceId}.${i}`,
@@ -118,10 +120,12 @@ const getOpportunitiesMock = (
     result.push({
       id: `${challengeId}.${i}`,
       nameID: `opportunity-${challengeId}.${i}`,
-      lifecycle: {
-        id: `lifecycle-${i}`,
-        machineDef: '',
-        ...getEntityMock<Lifecycle>(),
+      innovationFlow: {
+        lifecycle: {
+          id: `lifecycle-${i}`,
+          machineDef: '',
+          ...getEntityMock<Lifecycle>(),
+        },
       },
       profile: {
         id: `profile-challenge-${challengeId}.${i}`,
@@ -164,11 +168,6 @@ const getSpaceMock = ({
       `auth-${id}`,
       anonymousReadAccess
     ),
-    lifecycle: {
-      id: `lifecycle-${id}`,
-      machineDef: '',
-      ...getEntityMock<Lifecycle>(),
-    },
     challenges: getChallengesMock(id, challengesCount, opportunitiesCounts),
     ...getEntityMock<Space>(),
   };

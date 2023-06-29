@@ -1,12 +1,12 @@
-import { Field, InputType } from '@nestjs/graphql';
 import { UUID } from '@domain/common/scalars';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class UpdateChallengeInnovationFlowInput {
+export class UpdateInnovationFlowTemplateInput {
   @Field(() => UUID, {
-    description: 'ID of the Challenge',
+    description: 'ID of the Innovation Flow',
   })
-  challengeID!: string;
+  innovationFlowID!: string;
 
   @Field(() => UUID, {
     nullable: false,

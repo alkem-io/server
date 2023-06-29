@@ -2,6 +2,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseChallenge } from '../../challenge/base-challenge/base.challenge.interface';
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
+import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.interface';
 @ObjectType('Opportunity')
 export abstract class IOpportunity extends IBaseChallenge {
   @Field(() => [IProject], {
@@ -13,4 +14,6 @@ export abstract class IOpportunity extends IBaseChallenge {
   spaceID?: string; //toDo make mandatory https://app.zenspace.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2196
 
   challenge?: IChallenge;
+
+  innovationFlow?: IInnovationFlow;
 }
