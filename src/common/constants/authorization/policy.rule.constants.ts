@@ -19,4 +19,4 @@ export const POLICY_RULE_COLLABORATION_CREATE =
 export const POLICY_RULE_COMMUNITY_INVITE = 'policyRule-communityInvite';
 export const POLICY_RULE_COMMUNITY_ADD_MEMBER = 'policyRule-communityAddMember';
 export const POLICY_RULE_STORAGE_BUCKET_FILE_UPLOAD =
-  'credentialRule-storageBucketUpdaterFileUpload';
+  'policyRule-storageBucketUpdaterFileUpload';
