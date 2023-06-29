@@ -192,7 +192,7 @@ export class StorageBucketResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       storageBucket.authorization,
-      AuthorizationPrivilege.READ, //FILE_UPLOAD,
+      AuthorizationPrivilege.FILE_UPLOAD,
       `create document on storage: ${storageBucket.id}`
     );
 
