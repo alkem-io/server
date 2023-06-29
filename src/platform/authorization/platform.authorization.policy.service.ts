@@ -10,10 +10,9 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
-  CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD,
+  CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD as CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG,
   CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN,
   POLICY_RULE_PLATFORM_CREATE,
-  POLICY_RULE_PLATFORM_DELETE,
 } from '@common/constants';
 
 @Injectable()
@@ -134,15 +133,12 @@ export class PlatformAuthorizationPolicyService {
 
     const createOrg =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.CREATE_ORGANIZATION,
-          AuthorizationPrivilege.FILE_UPLOAD,
-        ],
+        [AuthorizationPrivilege.CREATE_ORGANIZATION],
         [
           AuthorizationCredential.SPACE_ADMIN,
           AuthorizationCredential.CHALLENGE_ADMIN,
         ],
-        CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD
+        CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG
       );
     createOrg.cascade = false;
     credentialRules.push(createOrg);
@@ -174,19 +170,11 @@ export class PlatformAuthorizationPolicyService {
       [
         AuthorizationPrivilege.CREATE_SPACE,
         AuthorizationPrivilege.CREATE_ORGANIZATION,
-        AuthorizationPrivilege.FILE_UPLOAD,
       ],
       AuthorizationPrivilege.CREATE,
       POLICY_RULE_PLATFORM_CREATE
     );
     privilegeRules.push(createPrivilege);
-
-    const deletePrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.FILE_DELETE],
-      AuthorizationPrivilege.DELETE,
-      POLICY_RULE_PLATFORM_DELETE
-    );
-    privilegeRules.push(deletePrivilege);
 
     return privilegeRules;
   }
