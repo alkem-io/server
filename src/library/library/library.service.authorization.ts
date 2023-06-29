@@ -15,6 +15,7 @@ import {
   LogContext,
 } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { CREDENTIAL_RULE_TYPES_LIBRARY_FILE_UPLOAD_ANY_USER } from '@common/constants';
 
 @Injectable()
 export class LibraryAuthorizationService {
@@ -93,7 +94,7 @@ export class LibraryAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.FILE_UPLOAD],
         [AuthorizationCredential.GLOBAL_REGISTERED],
-        'credentialRuleLibraryStorageUpload'
+        CREDENTIAL_RULE_TYPES_LIBRARY_FILE_UPLOAD_ANY_USER
       );
     registeredUsersCanUpload.cascade = false;
     newRules.push(registeredUsersCanUpload);

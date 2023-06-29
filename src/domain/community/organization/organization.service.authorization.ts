@@ -21,6 +21,7 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_ADMIN,
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
+  CREDENTIAL_RULE_ORGANIZATION_FILE_UPLOAD,
 } from '@common/constants';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 
@@ -248,7 +249,7 @@ export class OrganizationAuthorizationService {
             resourceID: organization.id,
           },
         ],
-        'credentialRuleOrganizationStorage'
+        CREDENTIAL_RULE_ORGANIZATION_FILE_UPLOAD
       );
     associatesCanUpload.cascade = false;
     newRules.push(associatesCanUpload);

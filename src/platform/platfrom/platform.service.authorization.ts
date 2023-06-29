@@ -19,6 +19,7 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { InnovationHubService } from '@domain/innovation-hub';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
+import { CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER } from '@common/constants';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -150,7 +151,7 @@ export class PlatformAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.FILE_UPLOAD],
         [AuthorizationCredential.GLOBAL_REGISTERED],
-        'platformFileUploadRegistered'
+        CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER
       );
     registeredUserUpload.cascade = false;
     newRules.push(registeredUserUpload);
