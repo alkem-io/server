@@ -70,6 +70,11 @@ export class OrganizationAuthorizationService {
         organization.storageBucket,
         organization.authorization
       );
+    organization.storageBucket.authorization =
+      this.extendStorageAuthorizationPolicy(
+        organization.storageBucket.authorization,
+        organization
+      );
 
     organization.agent = await this.organizationService.getAgent(organization);
     organization.agent.authorization =
@@ -219,6 +224,41 @@ export class OrganizationAuthorizationService {
       );
 
     return updatedAuthorization;
+  }
+
+  private extendStorageAuthorizationPolicy(
+    storageAuthorization: IAuthorizationPolicy | undefined,
+    organization: IOrganization
+  ): IAuthorizationPolicy {
+    if (!storageAuthorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${organization.nameID}`,
+        LogContext.COMMUNITY
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Any associate can upload
+    const associatesCanUpload =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.FILE_UPLOAD],
+        [
+          {
+            type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+            resourceID: organization.id,
+          },
+        ],
+        'credentialRuleOrganizationStorage'
+      );
+    associatesCanUpload.cascade = false;
+    newRules.push(associatesCanUpload);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      storageAuthorization,
+      newRules
+    );
+
+    return storageAuthorization;
   }
 
   public extendAuthorizationPolicyForSelfRemoval(
