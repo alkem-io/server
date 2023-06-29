@@ -544,7 +544,12 @@ export class SpaceAuthorizationService {
     const membersCanUpload =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.FILE_UPLOAD],
-        [this.communityPolicyService.getMembershipCredential(policy)],
+        [
+          this.communityPolicyService.getCredentialForRole(
+            policy,
+            CommunityRole.MEMBER
+          ),
+        ],
         CREDENTIAL_RULE_SPACE_FILE_UPLOAD
       );
     membersCanUpload.cascade = false;
