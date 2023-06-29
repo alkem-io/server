@@ -21,6 +21,7 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_ADMIN,
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
+  CREDENTIAL_RULE_ORGANIZATION_FILE_UPLOAD,
 } from '@common/constants';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 
@@ -69,6 +70,11 @@ export class OrganizationAuthorizationService {
       await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         organization.storageBucket,
         organization.authorization
+      );
+    organization.storageBucket.authorization =
+      this.extendStorageAuthorizationPolicy(
+        organization.storageBucket.authorization,
+        organization
       );
 
     organization.agent = await this.organizationService.getAgent(organization);
@@ -219,6 +225,41 @@ export class OrganizationAuthorizationService {
       );
 
     return updatedAuthorization;
+  }
+
+  private extendStorageAuthorizationPolicy(
+    storageAuthorization: IAuthorizationPolicy | undefined,
+    organization: IOrganization
+  ): IAuthorizationPolicy {
+    if (!storageAuthorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${organization.nameID}`,
+        LogContext.COMMUNITY
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Any associate can upload
+    const associatesCanUpload =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.FILE_UPLOAD],
+        [
+          {
+            type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+            resourceID: organization.id,
+          },
+        ],
+        CREDENTIAL_RULE_ORGANIZATION_FILE_UPLOAD
+      );
+    associatesCanUpload.cascade = false;
+    newRules.push(associatesCanUpload);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      storageAuthorization,
+      newRules
+    );
+
+    return storageAuthorization;
   }
 
   public extendAuthorizationPolicyForSelfRemoval(
