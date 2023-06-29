@@ -70,5 +70,3 @@ export const CREDENTIAL_RULE_LIBRARY_INNOVATION_PACK_PROVIDER_ADMIN =
   'credentialRule-libraryInnovationPackProvider';
 export const CREDENTIAL_RULE_ORGANIZATION_FILE_UPLOAD =
   'credentialRule-organizationAssociateFileUpload';
-export const CREDENTIAL_RULE_STORAGE_BUCKET_FILE_UPLOAD =
-  'credentialRule-storageBucketUpdaterFileUpload';
