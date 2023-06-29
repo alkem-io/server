@@ -13,6 +13,8 @@ import { Challenge } from '../challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
+import { InnovationFlow } from '../innovation-flow/innovation.flow.entity';
+import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -88,11 +90,22 @@ const getChallengesMock = (
       id: `${spaceId}.${i}`,
       nameID: `challenge-${spaceId}.${i}`,
       innovationFlow: {
+        id: '',
+        spaceID: '',
+        type: InnovationFlowType.CHALLENGE,
         lifecycle: {
           id: `lifecycle-${i}`,
           machineDef: '',
           ...getEntityMock<Lifecycle>(),
         },
+        profile: {
+          id: '',
+          displayName: `Challenge ${spaceId}.${i}`,
+          tagline: '',
+          description: '',
+          ...getEntityMock<Profile>(),
+        },
+        ...getEntityMock<InnovationFlow>(),
       },
       profile: {
         id: `profile-challenge-${spaceId}.${i}`,
@@ -121,11 +134,22 @@ const getOpportunitiesMock = (
       id: `${challengeId}.${i}`,
       nameID: `opportunity-${challengeId}.${i}`,
       innovationFlow: {
+        id: '',
+        spaceID: '',
+        type: InnovationFlowType.OPPORTUNITY,
         lifecycle: {
           id: `lifecycle-${i}`,
           machineDef: '',
           ...getEntityMock<Lifecycle>(),
         },
+        profile: {
+          id: '',
+          displayName: `opportunity-${challengeId}.${i}`,
+          tagline: '',
+          description: '',
+          ...getEntityMock<Profile>(),
+        },
+        ...getEntityMock<InnovationFlow>(),
       },
       profile: {
         id: `profile-challenge-${challengeId}.${i}`,
