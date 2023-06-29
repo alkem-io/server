@@ -503,7 +503,7 @@ export class ChallengeAuthorizationService {
     const membersCanUpload =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.FILE_UPLOAD],
-        [this.communityPolicyService.getMembershipCredential(policy)],
+        this.getContributorCriteria(policy),
         CREDENTIAL_RULE_CHALLENGE_FILE_UPLOAD
       );
     membersCanUpload.cascade = false;
