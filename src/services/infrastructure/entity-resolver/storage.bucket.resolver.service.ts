@@ -120,6 +120,8 @@ export class StorageBucketResolverService {
           profile.entityID,
           'whiteboard'
         );
+      case ProfileType.INNOVATION_FLOW:
+        return await this.getStorageBucketIdForInnovationFlow(profile.entityID);
       case ProfileType.INNOVATION_PACK:
         return await this.getPlatformStorageBucketId();
       case ProfileType.WHITEBOARD_TEMPLATE:
@@ -231,6 +233,27 @@ export class StorageBucketResolverService {
     return result.storageBucketId;
   }
 
+  private async getStorageBucketIdForInnovationFlow(
+    innovationFlowID: string
+  ): Promise<string> {
+    let query = `SELECT \`storageBucketId\` FROM \`challenge\`
+      LEFT JOIN \`innovation_flow\` ON \`innovation_flow\`.\`id\` = \`challenge\`.\`innovationFlowId\`
+      WHERE \`innovation_flow\`.\`id\`='${innovationFlowID}'`;
+    let [result]: {
+      storageBucketId: string;
+    }[] = await this.entityManager.connection.query(query);
+
+    if (result && result.storageBucketId) return result.storageBucketId;
+
+    query = `SELECT \`storageBucketId\` FROM \`challenge\`
+      LEFT JOIN \`opportunity\` ON \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
+      LEFT JOIN \`innovation_flow\` ON \`innovation_flow\`.\`id\` = \`opportunity\`.\`innovationFlowId\`
+      WHERE \`innovation_flow\`.\`id\`='${innovationFlowID}'`;
+    [result] = await this.entityManager.connection.query(query);
+
+    return result.storageBucketId;
+  }
+
   private async getStorageBucketIdForCalloutType(
     entityId: string,
     calloutType: CalloutType
@@ -334,6 +357,7 @@ enum ProfileType {
   POST_TEMPLATE = 'post_template',
   WHITEBOARD_TEMPLATE = 'whiteboard_template',
   CALLOUT = 'callout',
+  INNOVATION_FLOW = 'innovation_flow',
   INNOVATION_PACK = 'innovation_pack',
   DISCUSSION = 'discussion',
   INNOVATION_FLOW_TEMPLATE = 'innovation_flow_template',
