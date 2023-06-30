@@ -14,7 +14,7 @@ import { UserService } from '../user/user.service';
 import { IInvitationExternal } from './invitation.external.interface';
 import { InvitationExternal } from './invitation.external.entity';
 import { CreateInvitationExternalInput } from './dto/invitation.external.dto.create';
-import { DeleteInvitationExternalInput } from './dto/invitation.external..dto.delete';
+import { DeleteInvitationExternalInput } from './dto/invitation.external.dto.delete';
 
 @Injectable()
 export class InvitationExternalService {
