@@ -53,12 +53,12 @@ import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { InvitationService } from '../invitation/invitation.service';
 import { IInvitation } from '../invitation/invitation.interface';
-import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
 import { CreateInvitationExternalUserOnCommunityInput } from './dto/community.dto.invite.external.user';
 import { IInvitationExternal } from '../invitation.external';
 import { InvitationExternalService } from '../invitation.external/invitation.external.service';
 import { CreateInvitationExternalInput } from '../invitation.external/dto/invitation.external.dto.create';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 
 @Injectable()
 export class CommunityService {
@@ -835,7 +835,7 @@ export class CommunityService {
   }
 
   async createInvitationExistingUser(
-    invitationData: CreateInvitationExistingUserOnCommunityInput
+    invitationData: CreateInvitationInput
   ): Promise<IInvitation> {
     const { user, agent } = await this.userService.getUserAndAgent(
       invitationData.invitedUser

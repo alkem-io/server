@@ -18,4 +18,7 @@ export abstract class IInvitation extends IAuthorizable {
 
   @Field(() => Date)
   updatedDate!: Date;
+
+  @Field(() => String, { nullable: true })
+  welcomeMessage?: string;
 }

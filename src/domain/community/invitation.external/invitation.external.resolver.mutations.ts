@@ -5,7 +5,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { DeleteInvitationExternalInput } from './dto/invitation.external..dto.delete';
+import { DeleteInvitationExternalInput } from './dto/invitation.external.dto.delete';
 import { InvitationExternalService } from './invitation.external.service';
 import { IInvitationExternal } from './invitation.external.interface';
 
