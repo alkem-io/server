@@ -2,8 +2,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 import { escapeString } from './utils/escape-string';
 import { randomUUID } from 'crypto';
 
-export class communityPolicyRoles1687620528918 implements MigrationInterface {
-  name = 'communityPolicyRoles1687620528918';
+export class communityPolicyRoles1688042931820 implements MigrationInterface {
+  name = 'communityPolicyRoles1688042931820';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
