@@ -31,6 +31,7 @@ export class communityPolicyRoles1688042931820 implements MigrationInterface {
         enabled: true,
         ...oldMemberRolePolicy,
       };
+      const newMemberPolicyStr = JSON.stringify(newMemberRolePolicy);
 
       // Update for leads
       const oldLeadRolePolicy: oldCommunityRolePolicy = JSON.parse(
@@ -40,12 +41,11 @@ export class communityPolicyRoles1688042931820 implements MigrationInterface {
         enabled: true,
         ...oldLeadRolePolicy,
       };
+      const newLeadPolicyStr = JSON.stringify(newLeadRolePolicy);
 
       // Update for Admins
-      const adminRolePolicyStr = communityPolicy.member.replace(
-        'member',
-        'admin'
-      );
+      const memberPolicyStr = communityPolicy.member.toString();
+      const adminRolePolicyStr = memberPolicyStr.replace('member', 'admin');
       const oldAdminRolePolicy: oldCommunityRolePolicy =
         JSON.parse(adminRolePolicyStr);
       oldAdminRolePolicy.minOrg = 0;
@@ -56,6 +56,7 @@ export class communityPolicyRoles1688042931820 implements MigrationInterface {
         enabled: true,
         ...oldAdminRolePolicy,
       };
+      const newAdminPolicyStr = JSON.stringify(newAdminRolePolicy);
 
       // Update for Hosts
       const hostRolePolicyStr = communityPolicy.lead.replace('lead', 'host');
@@ -74,19 +75,21 @@ export class communityPolicyRoles1688042931820 implements MigrationInterface {
         newHostRolePolicy.maxOrg = 1;
         newHostRolePolicy.enabled = true;
       }
+      const newHostRolePolicyStr = JSON.stringify(newHostRolePolicy);
 
       await queryRunner.query(
-        `UPDATE community_policy SET member = '${escapeString(
-          JSON.stringify(newMemberRolePolicy)
-        )}',
+        `UPDATE community_policy SET
+                                       member = '${escapeString(
+                                         newMemberPolicyStr
+                                       )}',
                                        lead = '${escapeString(
-                                         JSON.stringify(newLeadRolePolicy)
+                                         newLeadPolicyStr
                                        )}',
                                        admin = '${escapeString(
-                                         JSON.stringify(newAdminRolePolicy)
+                                         newAdminPolicyStr
                                        )}',
                                        host = '${escapeString(
-                                         JSON.stringify(newHostRolePolicy)
+                                         newHostRolePolicyStr
                                        )}' WHERE id = '${communityPolicy.id}'`
       );
     }
@@ -131,6 +134,7 @@ export class communityPolicyRoles1688042931820 implements MigrationInterface {
       const newMemberRolePolicy: oldCommunityRolePolicy = {
         ...oldMemberRolePolicy,
       };
+      const newMemberRolePolicyStr = JSON.stringify(newMemberRolePolicy);
 
       // Update for leads
       const oldLeadRolePolicy: newCommunityRolePolicy = JSON.parse(
@@ -139,13 +143,14 @@ export class communityPolicyRoles1688042931820 implements MigrationInterface {
       const newLeadRolePolicy: oldCommunityRolePolicy = {
         ...oldLeadRolePolicy,
       };
+      const newLeadRolePolicyStr = JSON.stringify(newLeadRolePolicy);
 
       await queryRunner.query(
         `UPDATE community_policy SET member = '${escapeString(
-          JSON.stringify(newMemberRolePolicy)
+          newMemberRolePolicyStr
         )}',
                                      lead = '${escapeString(
-                                       JSON.stringify(newLeadRolePolicy)
+                                       newLeadRolePolicyStr
                                      )}' WHERE id = '${communityPolicy.id}'`
       );
       await queryRunner.query(
