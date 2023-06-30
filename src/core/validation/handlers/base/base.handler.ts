@@ -68,7 +68,7 @@ import { CreateInvitationExternalUserOnCommunityInput } from '@domain/community/
 import { InnovationFlowEvent } from '@domain/challenge/innovation-flow/dto/innovation.flow.dto.event';
 import {
   UpdateInnovationFlowInput,
-  UpdateInnovationFlowTemplateInput,
+  UpdateInnovationFlowLifecycleTemplateInput,
 } from '@domain/challenge/innovation-flow';
 
 export class BaseHandler extends AbstractHandler {
@@ -81,7 +81,7 @@ export class BaseHandler extends AbstractHandler {
       WhiteboardCheckoutEventInput,
       InnovationFlowEvent,
       UpdateInnovationFlowInput,
-      UpdateInnovationFlowTemplateInput,
+      UpdateInnovationFlowLifecycleTemplateInput,
       RoomSendMessageInput,
       OrganizationVerificationEventInput,
       ProjectEventInput,

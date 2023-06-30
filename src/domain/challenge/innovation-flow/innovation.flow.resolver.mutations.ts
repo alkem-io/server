@@ -8,7 +8,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IInnovationFlow } from './innovation.flow.interface';
 import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
-import { UpdateInnovationFlowTemplateInput } from './dto/innovation.flow.dto.update.template';
+import { UpdateInnovationFlowLifecycleTemplateInput } from './dto/innovation.flow.dto.update.lifecycle.template';
 import { InnovationFlowEvent } from './dto/innovation.flow.dto.event';
 import { InnovationFlowLifecycleOptionsProviderOpportunity } from './innovation.flow.lifecycle.options.provider.opportunity';
 import { InnovationFlowLifecycleOptionsProviderChallenge } from './innovation.flow.lifecycle.options.provider.challenge';
@@ -53,7 +53,7 @@ export class InnovationFlowResolverMutations {
   async updateInnovationFlowTemplate(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('innovationFlowData')
-    innovationFlowData: UpdateInnovationFlowTemplateInput
+    innovationFlowData: UpdateInnovationFlowLifecycleTemplateInput
   ): Promise<IInnovationFlow> {
     const innovationFlow =
       await this.innovationFlowService.getInnovationFlowOrFail(

@@ -1,0 +1,14 @@
+mutation updateInnovationFlowTemplate($innovationFlowData: UpdateInnovationFlowLifecycleTemplateInput!) {
+  updateInnovationFlowTemplate(innovationFlowData: $innovationFlowData) {
+    id
+  }
+}
+
+
+query variables:
+{
+  "innovationFlowData": {
+    "innovationFlowID": "uuid",
+    "innovationFlowTemplateID": "uuid"
+  }
+}

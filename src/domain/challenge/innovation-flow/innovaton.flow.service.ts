@@ -24,7 +24,7 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ILifecycle } from '@domain/common/lifecycle';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
-import { UpdateInnovationFlowTemplateInput } from './dto/innovation.flow.dto.update.template';
+import { UpdateInnovationFlowLifecycleTemplateInput } from './dto/innovation.flow.dto.update.lifecycle.template';
 
 @Injectable()
 export class InnovationFlowService {
@@ -188,7 +188,7 @@ export class InnovationFlowService {
   }
 
   async updateInnovationFlowTemplate(
-    innovationFlowTemplateData: UpdateInnovationFlowTemplateInput
+    innovationFlowTemplateData: UpdateInnovationFlowLifecycleTemplateInput
   ): Promise<IInnovationFlow> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowTemplateData.innovationFlowID,
