@@ -50,7 +50,7 @@ export class InnovationFlowResolverMutations {
     description: 'Updates the template for the specified Innovation Flow.',
   })
   @Profiling.api
-  async updateInnovationFlowTemplate(
+  async updateInnovationFlowLifecycleTemplate(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('innovationFlowData')
     innovationFlowData: UpdateInnovationFlowLifecycleTemplateInput
