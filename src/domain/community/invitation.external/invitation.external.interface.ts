@@ -20,7 +20,8 @@ export abstract class IInvitationExternal extends IAuthorizable {
   })
   profileCreated!: boolean;
 
-  welcomeMessage!: string;
+  @Field(() => String, { nullable: true })
+  welcomeMessage?: string;
 
   createdBy!: string;
 

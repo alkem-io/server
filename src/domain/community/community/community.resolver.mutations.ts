@@ -46,7 +46,7 @@ import { InvitationService } from '../invitation/invitation.service';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation';
 import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
 import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecycle.invitation.options.provider';
-import { IInvitation } from '../invitation';
+import { CreateInvitationInput, IInvitation } from '../invitation';
 import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
 import { CreateInvitationExternalUserOnCommunityInput } from './dto/community.dto.invite.external.user';
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
@@ -383,7 +383,7 @@ export class CommunityResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IInvitation, {
+  @Mutation(() => [IInvitation], {
     description:
       'Invite an existing User to join the specified Community as a member.',
   })
@@ -392,7 +392,7 @@ export class CommunityResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('invitationData')
     invitationData: CreateInvitationExistingUserOnCommunityInput
-  ): Promise<IInvitation> {
+  ): Promise<IInvitation[]> {
     const community = await this.communityService.getCommunityOrFail(
       invitationData.communityID
     );
@@ -404,30 +404,36 @@ export class CommunityResolverMutations {
       `create invitation community: ${community.id}`
     );
 
-    const input: CreateInvitationExistingUserOnCommunityInput = {
-      communityID: community.id,
-      invitedUser: invitationData.invitedUser,
-      createdBy: agentInfo.userID,
-    };
-    const invitation = await this.communityService.createInvitationExistingUser(
-      input
-    );
+    const invitations: IInvitation[] = [];
 
-    const savedInvitation =
-      await this.invitationAuthorizationService.applyAuthorizationPolicy(
-        invitation,
-        community.authorization
-      );
+    for (const invitedUser of invitationData.invitedUsers) {
+      const input: CreateInvitationInput = {
+        communityID: community.id,
+        invitedUser: invitedUser,
+        createdBy: agentInfo.userID,
+        welcomeMessage: invitationData.welcomeMessage,
+      };
+      const invitation =
+        await this.communityService.createInvitationExistingUser(input);
 
-    // Send the notification
-    const notificationInput: NotificationInputCommunityInvitation = {
-      triggeredBy: agentInfo.userID,
-      community: community,
-      invitedUser: invitationData.invitedUser,
-    };
-    await this.notificationAdapter.invitationCreated(notificationInput);
+      const savedInvitation =
+        await this.invitationAuthorizationService.applyAuthorizationPolicy(
+          invitation,
+          community.authorization
+        );
 
-    return savedInvitation;
+      // Send the notification
+      const notificationInput: NotificationInputCommunityInvitation = {
+        triggeredBy: agentInfo.userID,
+        community: community,
+        invitedUser: invitedUser,
+      };
+      await this.notificationAdapter.invitationCreated(notificationInput);
+
+      invitations.push(savedInvitation);
+    }
+
+    return invitations;
   }
 
   @UseGuards(GraphqlGuard)

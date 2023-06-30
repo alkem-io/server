@@ -19,6 +19,7 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { InnovationHubService } from '@domain/innovation-hub';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
+import { CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER } from '@common/constants';
 
 @Injectable()
 export class PlatformAuthorizationService {
@@ -84,6 +85,10 @@ export class PlatformAuthorizationService {
         platform.storageBucket,
         platform.authorization
       );
+    platform.storageBucket.authorization =
+      this.extendStorageAuthorizationPolicy(
+        platform.storageBucket.authorization
+      );
 
     const innovationHubs = await this.innovationHubService.getInnovationHubs({
       relations: [
@@ -128,5 +133,34 @@ export class PlatformAuthorizationService {
     );
 
     return authorization;
+  }
+
+  private extendStorageAuthorizationPolicy(
+    storageAuthorization: IAuthorizationPolicy | undefined
+  ): IAuthorizationPolicy {
+    if (!storageAuthorization)
+      throw new EntityNotInitializedException(
+        'Authorization definition not found for Platform Communication',
+        LogContext.PLATFORM
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Any member can upload
+    const registeredUserUpload =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.FILE_UPLOAD],
+        [AuthorizationCredential.GLOBAL_REGISTERED],
+        CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER
+      );
+    registeredUserUpload.cascade = false;
+    newRules.push(registeredUserUpload);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      storageAuthorization,
+      newRules
+    );
+
+    return storageAuthorization;
   }
 }

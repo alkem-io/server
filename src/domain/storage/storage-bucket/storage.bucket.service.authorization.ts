@@ -7,6 +7,12 @@ import { StorageBucketService } from './storage.bucket.service';
 import { IStorageBucket } from './storage.bucket.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { DocumentAuthorizationService } from '../document/document.service.authorization';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { AuthorizationPrivilege } from '@common/enums';
+import {
+  POLICY_RULE_STORAGE_BUCKET_FILE_UPLOAD,
+  POLICY_RULE_PLATFORM_DELETE,
+} from '@common/constants';
 
 @Injectable()
 export class StorageBucketAuthorizationService {
@@ -32,6 +38,10 @@ export class StorageBucketAuthorizationService {
         parentAuthorization
       );
 
+    storageBucket.authorization = this.appendPrivilegeRules(
+      storageBucket.authorization
+    );
+
     // Cascade down
     const storagePropagated = await this.propagateAuthorizationToChildEntities(
       storageBucket
@@ -56,5 +66,30 @@ export class StorageBucketAuthorizationService {
     }
 
     return storageBucket;
+  }
+
+  private appendPrivilegeRules(
+    authorization: IAuthorizationPolicy
+  ): IAuthorizationPolicy {
+    const privilegeRules: AuthorizationPolicyRulePrivilege[] = [];
+
+    const createPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.FILE_UPLOAD],
+      AuthorizationPrivilege.UPDATE,
+      POLICY_RULE_STORAGE_BUCKET_FILE_UPLOAD
+    );
+    privilegeRules.push(createPrivilege);
+
+    const deletePrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.FILE_DELETE],
+      AuthorizationPrivilege.DELETE,
+      POLICY_RULE_PLATFORM_DELETE
+    );
+    privilegeRules.push(deletePrivilege);
+
+    return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+      authorization,
+      privilegeRules
+    );
   }
 }
