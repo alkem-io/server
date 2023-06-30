@@ -14,9 +14,9 @@ import { UserAuthorizationService } from '@domain/community/user/user.service.au
 import { IInvitation } from '@domain/community/invitation/invitation.interface';
 import { InvitationExternalService } from '@domain/community/invitation.external/invitation.external.service';
 import { CommunityService } from '@domain/community/community/community.service';
-import { CreateInvitationExistingUserOnCommunityInput } from '@domain/community/community/dto/community.dto.invite.existing.user';
 import { InvitationAuthorizationService } from '@domain/community/invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { CreateInvitationInput } from '@domain/community/invitation/dto/invitation.dto.create';
 
 export class RegistrationService {
   constructor(
@@ -118,7 +118,7 @@ export class RegistrationService {
           LogContext.COMMUNITY
         );
       }
-      const invitationInput: CreateInvitationExistingUserOnCommunityInput = {
+      const invitationInput: CreateInvitationInput = {
         invitedUser: user.id,
         communityID: community.id,
         createdBy: externalInvitation.createdBy,
