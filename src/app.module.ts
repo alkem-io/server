@@ -57,6 +57,7 @@ import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
 import { AdminStorageModule } from '@platform/admin/storage/admin.storage.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
+import { HttpExceptionFilter } from '@core/error-handling/http.exceptionss.filter';
 
 @Module({
   imports: [
@@ -228,6 +229,10 @@ import { MessageReactionModule } from '@domain/communication/message.reaction/me
     {
       provide: APP_FILTER,
       useClass: HttpExceptionsFilter,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
     },
     {
       provide: APP_PIPE,

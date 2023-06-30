@@ -20,7 +20,7 @@ const bootstrap = async () => {
   const bootstrapService: BootstrapService = app.get(BootstrapService);
 
   app.useLogger(logger);
-  app.useGlobalFilters(new HttpExceptionsFilter(logger));
+  //app.useGlobalFilters(new HttpExceptionsFilter(logger));
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
   await bootstrapService.bootstrap();

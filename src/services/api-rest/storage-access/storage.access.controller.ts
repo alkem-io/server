@@ -1,6 +1,7 @@
 import {
+  BadRequestException,
   Controller,
-  Get,
+  Get, HttpCode, HttpException, HttpStatus,
   Inject,
   LoggerService,
   Param,
@@ -28,19 +29,35 @@ export class StorageAccessController {
 
   @UseGuards(RestGuard)
   @Get('document/:id')
+  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.NOT_FOUND)
+  @HttpCode(HttpStatus.FORBIDDEN)
   async document(
     @CurrentUser() agentInfo: AgentInfo,
     @Param('id') id: string,
     @Res({ passthrough: true }) res: Response
-  ): Promise<StreamableFile> {
+  ): Promise<StreamableFile | void> {
     const document = await this.documentService.getDocumentOrFail(id);
 
-    await this.authorizationService.grantAccessOrFail(
+    const result = await this.authorizationService.grantAccessOrFail(
       agentInfo,
       document.authorization,
       AuthorizationPrivilege.READ,
       `Read document: ${document.displayName}`
     );
+
+    // try {
+    //   await this.authorizationService.grantAccessOrFail(
+    //     agentInfo,
+    //     document.authorization,
+    //     AuthorizationPrivilege.READ,
+    //     `Read document: ${document.displayName}`
+    //   );
+    // } catch (e: any) {
+    //   // throw new HttpException('Forbidden', HttpStatus.FORBIDDEN);
+    //   // throw new BadRequestException(e);
+    //   return;
+    // }
 
     res.setHeader('Content-Type', `${document.mimeType}`);
 
