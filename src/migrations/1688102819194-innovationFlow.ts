@@ -206,6 +206,12 @@ export class innovationFlow1688102819194 implements MigrationInterface {
                 INSERT INTO authorization_policy (id, createdDate, updatedDate, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules)
                                           VALUES ('${profileVisualAuthID}', NOW(), NOW(), 1, '', '', 0, '')
                 `);
+
+    await queryRunner.query(
+      `INSERT INTO location (id, version, city, country)
+                        values ('${profileLocationID}', 1,  '', '')`
+    );
+
     await queryRunner.query(
       `INSERT INTO profile (id, version, authorizationId, locationId, description, displayName)
             VALUES ('${profileID}',
@@ -215,14 +221,12 @@ export class innovationFlow1688102819194 implements MigrationInterface {
                     '',
                     '')`
     );
+
     await queryRunner.query(
       `INSERT INTO visual (id, createdDate, updatedDate, version, name, uri, minWidth, maxWidth, minHeight, maxHeight, aspectRatio, allowedTypes, authorizationId, profileId)
-          VALUES ('${profileVisualID}', NOW(), NOW(), 1, '${templateVisual.name}', '', '${templateVisual.minWidth}', '${templateVisual.maxWidth}', '${templateVisual.minHeight}', '${templateVisual.maxHeight}', '${templateVisual.aspectRatio}', '${allowedTypes}', '${profileVisualAuthID}', '${profileID}')`
+            VALUES ('${profileVisualID}', NOW(), NOW(), 1, '${templateVisual.name}', '', '${templateVisual.minWidth}', '${templateVisual.maxWidth}', '${templateVisual.minHeight}', '${templateVisual.maxHeight}', '${templateVisual.aspectRatio}', '${allowedTypes}', '${profileVisualAuthID}', '${profileID}')`
     );
-    await queryRunner.query(
-      `INSERT INTO location (id, version, city, country)
-            values ('${profileLocationID}', 1,  '', '')`
-    );
+
     await queryRunner.query(
       `INSERT INTO innovation_flow (id, version, authorizationId, profileId, lifecycleId, type, spaceID)
             VALUES ('${innovationFlowID}',
