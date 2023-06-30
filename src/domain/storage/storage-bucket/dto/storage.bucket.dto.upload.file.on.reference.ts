@@ -1,7 +1,7 @@
 import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
-export class StorageBucketUploadFileInput {
+export class StorageBucketUploadFileOnReferenceInput {
   @Field({ nullable: false })
-  storageBucketId!: string;
+  referenceID!: string;
 }

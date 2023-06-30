@@ -19,13 +19,13 @@ mutation createInnovationHub($input: CreateInnovationHubInput!){
 
 query variables:
 {
-    "input": {
-      "subdomain": "test",
-      "type": "LIST",
-      "nameID": "test-space",
-      "profileData": {
-        "displayName": "test space"
-      },
-      "spaceListFilter": ["889ed0cf-4cd9-41d6-8ce0-d27b65cb149e"]
-    }
+  "input": {
+    "subdomain": "test",
+    "type": "LIST",
+    "nameID": "test-space",
+    "profileData": {
+      "displayName": "test space"
+    },
+    "spaceListFilter": ["889ed0cf-4cd9-41d6-8ce0-d27b65cb149e"]
   }
+}
