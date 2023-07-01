@@ -1,8 +1,9 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { TagsetTemplateSet } from '@domain/common/tagset-template-set/tagset.template.set.entity';
 import { BaseAlkemioEntity } from '../entity/base-entity';
 import { TagsetType } from '@common/enums/tagset.type';
+import { Tagset } from '../tagset/tagset.entity';
 
 export enum RestrictedTagsetTemplateNames {
   DEFAULT = 'default',
@@ -32,6 +33,12 @@ export class TagsetTemplate
 
   @Column('simple-array')
   allowedValues!: string[];
+
+  @OneToMany(() => Tagset, tagset => tagset.tagsetTemplate, {
+    eager: false,
+    cascade: true,
+  })
+  tagsets?: Tagset[];
 
   @ManyToOne(
     () => TagsetTemplateSet,

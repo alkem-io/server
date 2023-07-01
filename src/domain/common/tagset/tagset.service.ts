@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { RestrictedTagsetNames, Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -9,6 +9,7 @@ import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
@@ -16,6 +17,8 @@ import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { UpdateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.update';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { TagsetType } from '@common/enums/tagset.type';
+import { ITagsetTemplate } from '../tagset-template';
 
 @Injectable()
 export class TagsetService {
@@ -26,15 +29,26 @@ export class TagsetService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
-    const tagset = Tagset.create({ ...tagsetData });
+  async createTagset(
+    tagsetData: CreateTagsetInput,
+    tagsetTemplate?: ITagsetTemplate
+  ): Promise<ITagset> {
+    if (!tagsetData.type) tagsetData.type = TagsetType.FREEFORM;
+    const tagset: ITagset = Tagset.create({ ...tagsetData });
     tagset.authorization = new AuthorizationPolicy();
     if (!tagset.tags) tagset.tags = [];
+    tagset.tagsetTemplate = tagsetTemplate;
     return await this.tagsetRepository.save(tagset);
   }
 
-  async getTagsetOrFail(tagsetID: string): Promise<ITagset> {
-    const tagset = await this.tagsetRepository.findOneBy({ id: tagsetID });
+  async getTagsetOrFail(
+    tagsetID: string,
+    options?: FindOneOptions<Tagset>
+  ): Promise<ITagset> {
+    const tagset = await this.tagsetRepository.findOne({
+      where: { id: tagsetID },
+      ...options,
+    });
     if (!tagset)
       throw new EntityNotFoundException(
         `Tagset with id(${tagsetID}) not found!`,
@@ -93,6 +107,28 @@ export class TagsetService {
       }
     }
     return tagsets;
+  }
+
+  async getAllowedValues(tagset: ITagset): Promise<string[]> {
+    if (tagset.type === TagsetType.FREEFORM) return [];
+
+    const tagsetTemplate = await this.getTagsetTemplateOrFail(tagset.id);
+    return tagsetTemplate.allowedValues;
+  }
+
+  async getTagsetTemplateOrFail(tagsetID: string): Promise<ITagsetTemplate> {
+    const tagset = await this.getTagsetOrFail(tagsetID, {
+      relations: ['tagsetTemplate'],
+    });
+
+    const tagsetTemplate = tagset.tagsetTemplate;
+    if (!tagsetTemplate)
+      throw new RelationshipNotFoundException(
+        `Unable to load tagsetTemplate for Tagset: ${tagsetID} `,
+        LogContext.PROFILE
+      );
+
+    return tagsetTemplate;
   }
 
   // Get the default tagset

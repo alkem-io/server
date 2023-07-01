@@ -2,6 +2,8 @@ import { Column, Entity, ManyToOne } from 'typeorm';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { TagsetType } from '@common/enums/tagset.type';
+import { TagsetTemplate } from '../tagset-template';
 
 export enum RestrictedTagsetNames {
   DEFAULT = 'default',
@@ -19,6 +21,13 @@ export class Tagset extends AuthorizableEntity implements ITagset {
   })
   name!: string;
 
+  @Column('varchar', {
+    default: TagsetType.FREEFORM,
+    length: 255,
+    nullable: false,
+  })
+  type!: TagsetType;
+
   @Column('simple-array')
   tags!: string[];
 
@@ -28,6 +37,12 @@ export class Tagset extends AuthorizableEntity implements ITagset {
     onDelete: 'CASCADE',
   })
   profile?: Profile;
+
+  @ManyToOne(() => TagsetTemplate, tagsetTemplate => tagsetTemplate.tagsets, {
+    eager: false,
+    cascade: false,
+  })
+  tagsetTemplate?: TagsetTemplate;
 
   constructor() {
     super();
