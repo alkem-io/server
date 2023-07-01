@@ -130,11 +130,11 @@ export class CommunityPolicyService {
 
     const adminPolicy = this.deserializeRolePolicy(communityPolicy.admin);
     adminPolicy.credential.resourceID = resourceID;
-    communityPolicy.member = this.serializeRolePolicy(adminPolicy);
+    communityPolicy.admin = this.serializeRolePolicy(adminPolicy);
 
     const hostPolicy = this.deserializeRolePolicy(communityPolicy.host);
     hostPolicy.credential.resourceID = resourceID;
-    communityPolicy.member = this.serializeRolePolicy(hostPolicy);
+    communityPolicy.host = this.serializeRolePolicy(hostPolicy);
 
     return this.save(communityPolicy);
   }
