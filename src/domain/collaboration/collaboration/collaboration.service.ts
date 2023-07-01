@@ -87,6 +87,9 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
     }
+    collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
+      collaboration.id
+    );
     for (const calloutDefault of collaborationDefaults.callouts) {
       const communityTypeForDefault = calloutDefault.communityType;
       // If communityType is not specified then create the callout; otherwise only create
@@ -95,7 +98,10 @@ export class CollaborationService {
         !communityTypeForDefault ||
         communityTypeForDefault === communityType
       ) {
-        const callout = await this.calloutService.createCallout(calloutDefault);
+        const callout = await this.calloutService.createCallout(
+          calloutDefault,
+          collaboration.tagsetTemplateSet.tagsetTemplates
+        );
         // default callouts are already published
         callout.visibility = CalloutVisibility.PUBLISHED;
         collaboration.callouts.push(callout);
@@ -227,9 +233,9 @@ export class CollaborationService {
   ): Promise<ICallout> {
     const collaborationID = calloutData.collaborationID;
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
-      relations: ['callouts'],
+      relations: ['callouts', 'tagsetTemplateSet'],
     });
-    if (!collaboration.callouts)
+    if (!collaboration.callouts || !collaboration.tagsetTemplateSet)
       throw new EntityNotInitializedException(
         `Collaboration (${collaborationID}) not initialised`,
         LogContext.CONTEXT
@@ -263,8 +269,10 @@ export class CollaborationService {
         LogContext.CHALLENGES
       );
 
+    const tagsetTemplates = collaboration.tagsetTemplateSet.tagsetTemplates;
     const callout = await this.calloutService.createCallout(
       calloutData,
+      tagsetTemplates,
       userID
     );
     collaboration.callouts.push(callout);

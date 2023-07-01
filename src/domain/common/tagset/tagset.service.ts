@@ -180,7 +180,8 @@ export class TagsetService {
   async createTagsetWithName(
     tagsetable: ITagsetable,
     tagsetData: CreateTagsetInput,
-    checkForRestricted: boolean
+    checkForRestricted: boolean,
+    tagsetTemplate?: ITagsetTemplate
   ): Promise<ITagset> {
     // Check if the group already exists, if so log a warning
     if (this.hasTagsetWithName(tagsetable, tagsetData.name)) {
@@ -199,7 +200,7 @@ export class TagsetService {
       }
     }
 
-    return await this.createTagset(tagsetData);
+    return await this.createTagset(tagsetData, tagsetTemplate);
   }
 
   hasTag(tagset: ITagset, tagToCheck: string): boolean {

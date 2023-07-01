@@ -43,6 +43,9 @@ import { VisualType } from '@common/enums/visual.type';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { ITagsetTemplate } from '@domain/common/tagset-template';
+import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
+import { TagsetType } from '@common/enums/tagset.type';
 
 @Injectable()
 export class CalloutService {
@@ -62,6 +65,7 @@ export class CalloutService {
 
   public async createCallout(
     calloutData: CreateCalloutInput,
+    tagsetTemplates: ITagsetTemplate[],
     userID?: string
   ): Promise<ICallout> {
     if (
@@ -105,8 +109,22 @@ export class CalloutService {
 
     await this.profileService.addTagsetOnProfile(callout.profile, {
       name: RestrictedTagsetNames.DEFAULT,
+      type: TagsetType.FREEFORM,
       tags: calloutData.tags || [],
     });
+    for (const tagsetTemplate of tagsetTemplates) {
+      const tagsetInput: CreateTagsetInput = {
+        name: tagsetTemplate.name,
+        type: tagsetTemplate.type,
+        tags: [tagsetTemplate.allowedValues[0]],
+      };
+      await this.profileService.addTagsetOnProfile(
+        callout.profile,
+        tagsetInput,
+        true,
+        tagsetTemplate
+      );
+    }
 
     if (calloutData.type == CalloutType.POST_COLLECTION && postTemplateData) {
       callout.postTemplate = await this.postTemplateService.createPostTemplate(
