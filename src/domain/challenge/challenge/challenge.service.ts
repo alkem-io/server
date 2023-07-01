@@ -60,6 +60,9 @@ import { OperationNotAllowedException } from '@common/exceptions/operation.not.a
 import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { TagsetType } from '@common/enums/tagset.type';
+import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 
 @Injectable()
 export class ChallengeService {
@@ -74,6 +77,7 @@ export class ChallengeService {
     private preferenceSetService: PreferenceSetService,
     private storageBucketService: StorageBucketService,
     private innovationFlowService: InnovationFlowService,
+    private collaborationService: CollaborationService,
     private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -141,6 +145,26 @@ export class ChallengeService {
         this.createPreferenceDefaults()
       );
 
+    if (challenge.collaboration) {
+      const states = await this.innovationFlowService.getInnovationFlowStates(
+        challenge.innovationFlow
+      );
+      const tagsetTemplateData: CreateTagsetTemplateInput = {
+        name: 'STATES',
+        type: TagsetType.SELECT_ONE,
+        allowedValues: states,
+      };
+      challenge.collaboration =
+        await this.collaborationService.addTagsetTemplate(
+          challenge.collaboration,
+          tagsetTemplateData
+        );
+      challenge.collaboration =
+        await this.collaborationService.addDefaultCallouts(
+          challenge.collaboration,
+          CommunityType.CHALLENGE
+        );
+    }
     // save the challenge, just in case the lead orgs assignment fails. Note that
     // assigning lead orgs does not update the challenge entity
     const savedChallenge = await this.challengeRepository.save(challenge);

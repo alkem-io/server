@@ -12,7 +12,6 @@ import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 import { InnovationFlowLifecycleOptionsProviderChallenge } from './innovation.flow.lifecycle.options.provider.challenge';
 import { InnovationFlowLifecycleOptionsProviderOpportunity } from './innovation.flow.lifecycle.options.provider.opportunity';
-import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tagset.template.set.module';
 
 @Module({
   imports: [
@@ -21,7 +20,6 @@ import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tags
     LifecycleModule,
     InnovationFlowTemplateModule,
     ProfileModule,
-    TagsetTemplateSetModule,
     TypeOrmModule.forFeature([InnovationFlow]),
   ],
   providers: [

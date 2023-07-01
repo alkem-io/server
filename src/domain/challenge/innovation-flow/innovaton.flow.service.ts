@@ -25,16 +25,12 @@ import { ILifecycle } from '@domain/common/lifecycle';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 import { UpdateInnovationFlowLifecycleTemplateInput } from './dto/innovation.flow.dto.update.lifecycle.template';
-import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
-import { CreateTagsetTemplateInput } from '@domain/common/tagset-template';
-import { TagsetType } from '@common/enums/tagset.type';
 
 @Injectable()
 export class InnovationFlowService {
   constructor(
     private profileService: ProfileService,
     private lifecycleService: LifecycleService,
-    private tagsetTemplateSetService: TagsetTemplateSetService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
     @InjectRepository(InnovationFlow)
     private innovationFlowRepository: Repository<InnovationFlow>,
@@ -59,8 +55,6 @@ export class InnovationFlowService {
     }
     const innovationFlow: IInnovationFlow = new InnovationFlow();
     innovationFlow.authorization = new AuthorizationPolicy();
-    innovationFlow.tagsetTemplateSet =
-      await this.tagsetTemplateSetService.createTagsetTemplateSet();
     innovationFlow.spaceID = innovationFlowData.spaceID;
     innovationFlow.type = innovationFlowData.type;
 
@@ -81,18 +75,6 @@ export class InnovationFlowService {
       innovationFlow.id,
       machineConfig
     );
-
-    const states = this.lifecycleService.getStates(innovationFlow.lifecycle);
-    const tagsetTemplateData: CreateTagsetTemplateInput = {
-      name: 'States',
-      type: TagsetType.SELECT_ONE,
-      allowedValues: states,
-    };
-    innovationFlow.tagsetTemplateSet =
-      await this.tagsetTemplateSetService.addTagsetTemplate(
-        innovationFlow.tagsetTemplateSet,
-        tagsetTemplateData
-      );
 
     return await this.innovationFlowRepository.save(innovationFlow);
   }
@@ -141,12 +123,6 @@ export class InnovationFlowService {
       await this.profileService.deleteProfile(innovationFlow.profile.id);
     }
 
-    if (innovationFlow.tagsetTemplateSet) {
-      await this.tagsetTemplateSetService.deleteTagsetTemplateSet(
-        innovationFlow.tagsetTemplateSet.id
-      );
-    }
-
     const result = await this.innovationFlowRepository.remove(
       innovationFlow as InnovationFlow
     );
@@ -172,6 +148,13 @@ export class InnovationFlowService {
         LogContext.CHALLENGES
       );
     return innovationFlow;
+  }
+
+  async getInnovationFlowStates(
+    innovationFlow: IInnovationFlow
+  ): Promise<string[]> {
+    const lifecycle = await this.getLifecycle(innovationFlow.id);
+    return await this.lifecycleService.getStates(lifecycle);
   }
 
   public async getProfile(

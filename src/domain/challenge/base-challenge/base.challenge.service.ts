@@ -96,7 +96,7 @@ export class BaseChallengeService {
     );
 
     baseChallenge.collaboration =
-      await this.collaborationService.createCollaboration(communityType);
+      await this.collaborationService.createCollaboration();
 
     baseChallenge.agent = await this.agentService.createAgent({
       parentDisplayID: `${baseChallenge.nameID}`,

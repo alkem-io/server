@@ -68,6 +68,10 @@ import { StorageBucketService } from '@domain/storage/storage-bucket/storage.buc
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { SpaceDisplayLocation } from '@common/enums/space.display.location';
+import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
+import { TagsetType } from '@common/enums/tagset.type';
 
 @Injectable()
 export class SpaceService {
@@ -86,6 +90,7 @@ export class SpaceService {
     private timelineService: TimelineService,
     private templatesSetService: TemplatesSetService,
     private storageBucketService: StorageBucketService,
+    private collaborationService: CollaborationService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -114,6 +119,24 @@ export class SpaceService {
       spaceCommunityPolicy,
       spaceCommunityApplicationForm
     );
+
+    if (space.collaboration) {
+      const locations = Object.values(SpaceDisplayLocation);
+      const tagsetTemplateData: CreateTagsetTemplateInput = {
+        name: 'DISPLAY_LOCATION',
+        type: TagsetType.SELECT_ONE,
+        allowedValues: locations,
+      };
+      space.collaboration = await this.collaborationService.addTagsetTemplate(
+        space.collaboration,
+        tagsetTemplateData
+      );
+
+      space.collaboration = await this.collaborationService.addDefaultCallouts(
+        space.collaboration,
+        CommunityType.CHALLENGE
+      );
+    }
 
     // set immediate community parent and  community policy
     if (space.community) {

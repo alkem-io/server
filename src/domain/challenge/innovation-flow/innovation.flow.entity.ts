@@ -4,7 +4,6 @@ import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
-import { TagsetTemplateSet } from '@domain/common/tagset-template-set';
 
 @Entity()
 export class InnovationFlow
@@ -30,11 +29,4 @@ export class InnovationFlow
 
   @Column('text', { nullable: false })
   type!: InnovationFlowType;
-
-  @OneToOne(() => TagsetTemplateSet, {
-    eager: false,
-    cascade: true,
-  })
-  @JoinColumn()
-  tagsetTemplateSet?: TagsetTemplateSet;
 }

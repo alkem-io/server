@@ -32,7 +32,7 @@ export class classificationTagsets1688193761861 implements MigrationInterface {
       'ALTER TABLE `tagset` ADD `type` varchar(255) NULL'
     );
     await queryRunner.query(
-      'ALTER TABLE `innovation_flow` ADD `tagsetTemplateSetId` char(36) NULL'
+      'ALTER TABLE `collaboration` ADD `tagsetTemplateSetId` char(36) NULL'
     );
 
     await queryRunner.query(
@@ -40,6 +40,9 @@ export class classificationTagsets1688193761861 implements MigrationInterface {
     );
     await queryRunner.query(
       'ALTER TABLE `tagset_template` ADD CONSTRAINT `FK_9ad35130cde781b69259eec7d85` FOREIGN KEY (`tagsetTemplateSetId`) REFERENCES `tagset_template_set`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
+    );
+    await queryRunner.query(
+      'ALTER TABLE `collaboration` ADD CONSTRAINT `FK_1a135130cde781b69259eec7d85` FOREIGN KEY (`tagsetTemplateSetId`) REFERENCES `tagset_template_set`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
 
     // Add type freeform to all existing tagsets
@@ -53,19 +56,7 @@ export class classificationTagsets1688193761861 implements MigrationInterface {
     }
 
     // Add tagset template set to each innovationFlow
-    const innovationFlows: { id: string }[] = await queryRunner.query(
-      `SELECT id FROM innovation_flow`
-    );
-    for (const innovationFlow of innovationFlows) {
-      const tagsetTemplateSetID = randomUUID();
-      await queryRunner.query(`
-                INSERT INTO tagset_template_set (id, createdDate, updatedDate, version)
-                                          VALUES ('${tagsetTemplateSetID}', NOW(), NOW(), 1)
-                `);
-      await queryRunner.query(
-        `UPDATE innovation_flow SET tagsetTemplateSetId = '${tagsetTemplateSetID}' WHERE (id = '${innovationFlow.id}')`
-      );
-    }
+    await this.addTagsetTemplateToEntity(queryRunner, 'collaboration');
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -77,8 +68,13 @@ export class classificationTagsets1688193761861 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`tagset_template\` DROP FOREIGN KEY \`FK_9ad35130cde781b69259eec7d85\``
     );
+    // collaboration ==> tagset_template_set
     await queryRunner.query(
-      'ALTER TABLE `innovation_flow` DROP COLUMN `tagsetTemplateSetId`'
+      `ALTER TABLE \`collaboration\` DROP FOREIGN KEY \`FK_9ad35130cde781b69259eec7d85\``
+    );
+
+    await queryRunner.query(
+      'ALTER TABLE `collaboration` DROP COLUMN `tagsetTemplateSetId`'
     );
     await queryRunner.query(
       'ALTER TABLE `tagset` DROP COLUMN `tagsetTemplateId`'
@@ -86,5 +82,24 @@ export class classificationTagsets1688193761861 implements MigrationInterface {
     await queryRunner.query('ALTER TABLE `tagset` DROP COLUMN `type`');
     await queryRunner.query('DROP TABLE `tagset_template_set`');
     await queryRunner.query('DROP TABLE `tagset_template`');
+  }
+
+  private async addTagsetTemplateToEntity(
+    queryRunner: QueryRunner,
+    entityName: string
+  ) {
+    const entities: { id: string }[] = await queryRunner.query(
+      `SELECT id FROM ${entityName}`
+    );
+    for (const entity of entities) {
+      const entityID = randomUUID();
+      await queryRunner.query(`
+                INSERT INTO tagset_template_set (id, createdDate, updatedDate, version)
+                                          VALUES ('${entityID}', NOW(), NOW(), 1)
+                `);
+      await queryRunner.query(
+        `UPDATE ${entityName} SET tagsetTemplateSetId = '${entityID}' WHERE (id = '${entity.id}')`
+      );
+    }
   }
 }
