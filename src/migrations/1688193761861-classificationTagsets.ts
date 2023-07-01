@@ -1,4 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import { randomUUID } from 'crypto';
 
 export class classificationTagsets1688193761861 implements MigrationInterface {
   name = 'classificationTagsets1688193761861';
@@ -40,6 +41,31 @@ export class classificationTagsets1688193761861 implements MigrationInterface {
     await queryRunner.query(
       'ALTER TABLE `tagset_template` ADD CONSTRAINT `FK_9ad35130cde781b69259eec7d85` FOREIGN KEY (`tagsetTemplateSetId`) REFERENCES `tagset_template_set`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
+
+    // Add type freeform to all existing tagsets
+    const tagsets: { id: string }[] = await queryRunner.query(
+      `SELECT id FROM tagset`
+    );
+    for (const tagset of tagsets) {
+      await queryRunner.query(
+        `UPDATE tagset SET type = 'freeform' WHERE (id = '${tagset.id}')`
+      );
+    }
+
+    // Add tagset template set to each innovationFlow
+    const innovationFlows: { id: string }[] = await queryRunner.query(
+      `SELECT id FROM innovation_flow`
+    );
+    for (const innovationFlow of innovationFlows) {
+      const tagsetTemplateSetID = randomUUID();
+      await queryRunner.query(`
+                INSERT INTO tagset_template_set (id, createdDate, updatedDate, version)
+                                          VALUES ('${tagsetTemplateSetID}', NOW(), NOW(), 1)
+                `);
+      await queryRunner.query(
+        `UPDATE innovation_flow SET tagsetTemplateSetId = '${tagsetTemplateSetID}' WHERE (id = '${innovationFlow.id}')`
+      );
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
