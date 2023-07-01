@@ -1,4 +1,4 @@
-export interface ITagsetTemplate {
+export interface ITagsetTemplateOld {
   name: string;
   placeholder?: string;
 }

@@ -33,6 +33,7 @@ import { getJourneyByCollaboration } from '@common/utils';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template';
+import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
 
 @Injectable()
 export class CollaborationService {
@@ -64,12 +65,9 @@ export class CollaborationService {
     collaboration: ICollaboration,
     tagsetTemplateData: CreateTagsetTemplateInput
   ): Promise<ICollaboration> {
-    if (!collaboration.tagsetTemplateSet) {
-      throw new EntityNotInitializedException(
-        `No tagset template set found for collaboration the given id: ${collaboration.id}`,
-        LogContext.COLLABORATION
-      );
-    }
+    collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
+      collaboration.id
+    );
     collaboration.tagsetTemplateSet =
       await this.tagsetTemplateSetService.addTagsetTemplate(
         collaboration.tagsetTemplateSet,
@@ -416,6 +414,23 @@ export class CollaborationService {
     collaboration.relations.push(relation);
     await this.collaborationRepository.save(collaboration);
     return relation;
+  }
+
+  public async getTagsetTemplatesSet(
+    collaborationID: string
+  ): Promise<ITagsetTemplateSet> {
+    const collaboration = await this.getCollaborationOrFail(collaborationID, {
+      relations: ['tagsetTemplateSet'],
+    });
+
+    if (!collaboration.tagsetTemplateSet) {
+      throw new EntityNotInitializedException(
+        `No tagset template set found for collaboration the given id: ${collaborationID}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    return collaboration.tagsetTemplateSet;
   }
 
   public async getRelationsOnCollaboration(

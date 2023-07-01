@@ -1,6 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { TagsetTemplate } from './user.template.entity';
-import { ITagsetTemplate } from './user.template.interface';
+import { ITagsetTemplateOld } from './user.template.interface';
 import { IOrganizationTemplate } from './organization.template.interface';
 
 @ObjectType()
@@ -15,7 +15,7 @@ export class OrganizationTemplate implements IOrganizationTemplate {
     nullable: true,
     description: 'Tagset templates.',
   })
-  tagsets?: ITagsetTemplate[];
+  tagsets?: ITagsetTemplateOld[];
 
   constructor(name: string) {
     this.name = name;

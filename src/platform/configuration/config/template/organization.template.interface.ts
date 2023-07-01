@@ -1,6 +1,6 @@
-import { ITagsetTemplate } from './user.template.interface';
+import { ITagsetTemplateOld } from './user.template.interface';
 
 export interface IOrganizationTemplate {
   name: string;
-  tagsets?: ITagsetTemplate[];
+  tagsets?: ITagsetTemplateOld[];
 }
