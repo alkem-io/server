@@ -7,6 +7,12 @@ export abstract class ITagsetTemplate extends IBaseAlkemio {
   @Field(() => String)
   name!: string;
 
+  @Field(() => String, {
+    description: 'For Tagsets of type SELECT_ONE, the default selected value.',
+    nullable: true,
+  })
+  defaultSelectedValue?: string;
+
   @Field(() => [String])
   allowedValues!: string[];
 

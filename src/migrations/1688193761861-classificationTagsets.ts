@@ -13,6 +13,7 @@ export class classificationTagsets1688193761861 implements MigrationInterface {
                                              \`name\` varchar(255) NULL,
                                              \`type\` varchar(255) NULL,
                                              \`allowedValues\` text NULL,
+                                             \`defaultSelectedValue\` varchar(255) NULL,
                                              \`tagsetTemplateSetId\` char(36) NULL,
                                               PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );

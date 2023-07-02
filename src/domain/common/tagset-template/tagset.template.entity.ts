@@ -34,6 +34,12 @@ export class TagsetTemplate
   @Column('simple-array')
   allowedValues!: string[];
 
+  @Column('varchar', {
+    length: 255,
+    nullable: true,
+  })
+  defaultSelectedValue?: string;
+
   @OneToMany(() => Tagset, tagset => tagset.tagsetTemplate, {
     eager: false,
     cascade: true,
