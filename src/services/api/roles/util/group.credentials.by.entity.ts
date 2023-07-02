@@ -28,17 +28,20 @@ export const groupCredentialsByEntity = (credentials: ICredential[]) => {
     if (
       credential.type === AuthorizationCredential.SPACE_ADMIN ||
       credential.type === AuthorizationCredential.SPACE_HOST ||
+      credential.type === AuthorizationCredential.SPACE_LEAD ||
       credential.type === AuthorizationCredential.SPACE_MEMBER
     ) {
       return setMap(map, 'spaces', credential);
     } else if (
       credential.type === AuthorizationCredential.CHALLENGE_ADMIN ||
+      credential.type === AuthorizationCredential.CHALLENGE_HOST ||
       credential.type === AuthorizationCredential.CHALLENGE_LEAD ||
       credential.type === AuthorizationCredential.CHALLENGE_MEMBER
     ) {
       return setMap(map, 'challenges', credential);
     } else if (
       credential.type === AuthorizationCredential.OPPORTUNITY_ADMIN ||
+      credential.type === AuthorizationCredential.OPPORTUNITY_HOST ||
       credential.type === AuthorizationCredential.OPPORTUNITY_LEAD ||
       credential.type === AuthorizationCredential.OPPORTUNITY_MEMBER
     ) {
