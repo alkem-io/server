@@ -29,4 +29,26 @@ export class CommunityPolicyResolverFields {
       CommunityRole.LEAD
     );
   }
+
+  @ResolveField('host', () => ICommunityRolePolicy, {
+    nullable: false,
+    description: 'The role policy that defines the hosts for this Community.',
+  })
+  host(@Parent() communityPolicy: ICommunityPolicy): ICommunityRolePolicy {
+    return this.communityPolicyService.getCommunityRolePolicy(
+      communityPolicy,
+      CommunityRole.HOST
+    );
+  }
+
+  @ResolveField('admin', () => ICommunityRolePolicy, {
+    nullable: false,
+    description: 'The role policy that defines the Admins for this Community.',
+  })
+  admin(@Parent() communityPolicy: ICommunityPolicy): ICommunityRolePolicy {
+    return this.communityPolicyService.getCommunityRolePolicy(
+      communityPolicy,
+      CommunityRole.ADMIN
+    );
+  }
 }

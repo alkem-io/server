@@ -195,7 +195,7 @@ export class CommunityService {
     for (const role of Object.values(CommunityRole)) {
       const users = await this.getUsersWithRole(community, role);
       for (const user of users) {
-        await this.removeUserFromRole(community, user.id, role);
+        await this.removeUserFromRole(community, user.id, role, false);
       }
 
       const organizations = await this.getOrganizationsWithRole(
@@ -203,12 +203,14 @@ export class CommunityService {
         role
       );
       for (const organization of organizations) {
-        await this.removeOrganizationFromRole(community, organization.id, role);
+        await this.removeOrganizationFromRole(
+          community,
+          organization.id,
+          role,
+          false
+        );
       }
     }
-
-    // Remove all credentials issued for admins
-    await this.removeCommunityUserAdmins(community);
 
     if (community.authorization)
       await this.authorizationPolicyService.delete(community.authorization);
@@ -570,7 +572,8 @@ export class CommunityService {
   async removeUserFromRole(
     community: ICommunity,
     userID: string,
-    role: CommunityRole
+    role: CommunityRole,
+    validatePolicyLimits = true
   ): Promise<IUser> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
 
@@ -578,7 +581,8 @@ export class CommunityService {
       community,
       agent,
       role,
-      CommunityContributorType.USER
+      CommunityContributorType.USER,
+      validatePolicyLimits
     );
 
     if (role === CommunityRole.MEMBER) {
@@ -599,7 +603,8 @@ export class CommunityService {
   async removeOrganizationFromRole(
     community: ICommunity,
     organizationID: string,
-    role: CommunityRole
+    role: CommunityRole,
+    validatePolicyLimits = true
   ): Promise<IOrganization> {
     const { organization, agent } =
       await this.organizationService.getOrganizationAndAgent(organizationID);
@@ -608,7 +613,8 @@ export class CommunityService {
       community,
       agent,
       role,
-      CommunityContributorType.ORGANIZATION
+      CommunityContributorType.ORGANIZATION,
+      validatePolicyLimits
     );
 
     return organization;
@@ -722,40 +728,23 @@ export class CommunityService {
     });
   }
 
-  private async removeCommunityUserAdmins(
-    community: ICommunity
-  ): Promise<void> {
-    const adminCredential = this.communityPolicyService.getCredentialForRole(
-      community.policy,
-      CommunityRole.ADMIN
-    );
-    const agents = await this.agentService.findAgentsWithMatchingCredentials(
-      adminCredential
-    );
-
-    for (const agent of agents) {
-      await this.agentService.revokeCredential({
-        agentID: agent.id,
-        type: adminCredential.type,
-        resourceID: adminCredential.resourceID,
-      });
-    }
-  }
-
   private async removeContributorFromRole(
     community: ICommunity,
     agent: IAgent,
     role: CommunityRole,
-    contributorType: CommunityContributorType
+    contributorType: CommunityContributorType,
+    validatePolicyLimits: boolean
   ): Promise<IAgent> {
     const communityPolicyRole = this.getCommunityPolicyForRole(community, role);
-    await this.validateCommunityPolicyLimits(
-      community,
-      communityPolicyRole,
-      role,
-      CommunityContributorsUpdateType.REMOVE,
-      contributorType
-    );
+    if (validatePolicyLimits) {
+      await this.validateCommunityPolicyLimits(
+        community,
+        communityPolicyRole,
+        role,
+        CommunityContributorsUpdateType.REMOVE,
+        contributorType
+      );
+    }
 
     return await this.agentService.revokeCredential({
       agentID: agent.id,
@@ -1032,21 +1021,6 @@ export class CommunityService {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
       CommunityRole.MEMBER
-    );
-
-    const credentialMatches =
-      await this.agentService.countAgentsWithMatchingCredentials({
-        type: membershipCredential.type,
-        resourceID: membershipCredential.resourceID,
-      });
-
-    return credentialMatches;
-  }
-
-  async getLeadsCount(community: ICommunity): Promise<number> {
-    const membershipCredential = this.getCredentialDefinitionForRole(
-      community,
-      CommunityRole.LEAD
     );
 
     const credentialMatches =

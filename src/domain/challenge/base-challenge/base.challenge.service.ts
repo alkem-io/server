@@ -24,8 +24,6 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunityType } from '@common/enums/community.type';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
-import { CommunityRole } from '@common/enums/community.role';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
@@ -245,17 +243,6 @@ export class BaseChallengeService {
   ): Promise<ICommunityPolicy> {
     const community = await this.getCommunity(baseChallengeId, repository);
     return this.communityService.getCommunityPolicy(community);
-  }
-
-  public async getCommunityLeadershipCredential(
-    baseChallengeId: string,
-    repository: Repository<BaseChallenge>
-  ): Promise<CredentialDefinition> {
-    const community = await this.getCommunity(baseChallengeId, repository);
-    return this.communityService.getCredentialDefinitionForRole(
-      community,
-      CommunityRole.LEAD
-    );
   }
 
   public async getContext(

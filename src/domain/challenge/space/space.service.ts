@@ -275,18 +275,6 @@ export class SpaceService {
       this.spaceRepository
     );
 
-    // Remove any host credentials
-    const hostOrg = await this.getHost(space.id);
-    if (hostOrg) {
-      const agentHostOrg = await this.organizationService.getAgent(hostOrg);
-      hostOrg.agent = await this.agentService.revokeCredential({
-        agentID: agentHostOrg.id,
-        type: AuthorizationCredential.SPACE_HOST,
-        resourceID: space.id,
-      });
-      await this.organizationService.save(hostOrg);
-    }
-
     if (space.preferenceSet) {
       await this.preferenceSetService.deletePreferenceSet(
         space.preferenceSet.id

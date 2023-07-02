@@ -164,13 +164,6 @@ export class ChallengeService {
     // assigning lead orgs does not update the challenge entity
     const savedChallenge = await this.challengeRepository.save(challenge);
 
-    if (challengeData.leadOrganizations) {
-      await this.setChallengeLeads(
-        challenge.id,
-        challengeData.leadOrganizations
-      );
-    }
-
     if (agentInfo && challenge.community) {
       await this.communityService.assignUserToRole(
         challenge.community,
@@ -361,53 +354,6 @@ export class ChallengeService {
     }
 
     return challenge;
-  }
-
-  async setChallengeLeads(
-    challengeID: string,
-    challengeLeadsIDs: string[]
-  ): Promise<IChallenge> {
-    const existingLeads = await this.getLeadOrganizations(challengeID);
-    const community = await this.getCommunity(challengeID);
-
-    // first remove any existing leads that are not in the new set
-    for (const existingLeadOrg of existingLeads) {
-      let inNewList = false;
-      for (const challengeLeadID of challengeLeadsIDs) {
-        if (
-          challengeLeadID === existingLeadOrg.id ||
-          challengeLeadID === existingLeadOrg.nameID
-        ) {
-          inNewList = true;
-        }
-      }
-      if (!inNewList) {
-        await this.communityService.removeOrganizationFromRole(
-          community,
-          existingLeadOrg.id,
-          CommunityRole.LEAD
-        );
-      }
-    }
-
-    // add any new ones
-    for (const challengeLeadID of challengeLeadsIDs) {
-      const organization = await this.organizationService.getOrganizationOrFail(
-        challengeLeadID
-      );
-      const existingLead = existingLeads.find(
-        leadOrg => leadOrg.id === organization.id
-      );
-      if (!existingLead) {
-        await this.communityService.assignOrganizationToRole(
-          community,
-          organization.id,
-          CommunityRole.LEAD
-        );
-      }
-    }
-
-    return await this.getChallengeOrFail(challengeID);
   }
 
   async getCommunity(challengeId: string): Promise<ICommunity> {
