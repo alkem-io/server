@@ -582,7 +582,7 @@ export class SpaceService {
     if (!storageBucket) {
       throw new EntityNotFoundException(
         `Unable to find storagebucket for space with nameID: ${spaceWithStorageBucket.nameID}`,
-        LogContext.COMMUNITY
+        LogContext.STORAGE_BUCKET
       );
     }
 

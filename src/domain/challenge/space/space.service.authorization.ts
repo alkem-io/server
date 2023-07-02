@@ -127,7 +127,7 @@ export class SpaceAuthorizationService {
 
         spaceSaved.storageBucket =
           await this.spaceService.getStorageBucketOrFail(spaceSaved.id);
-        spaceSaved.community.authorization =
+        spaceSaved.storageBucket.authorization =
           this.extendStorageAuthorizationPolicy(
             spaceSaved.storageBucket.authorization,
             spacePolicy
@@ -520,12 +520,10 @@ export class SpaceAuthorizationService {
       newRules.push(hostOrgMembersCanJoin);
     }
 
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       communityAuthorization,
       newRules
     );
-
-    return communityAuthorization;
   }
 
   private extendStorageAuthorizationPolicy(
@@ -555,12 +553,10 @@ export class SpaceAuthorizationService {
     membersCanUpload.cascade = false;
     newRules.push(membersCanUpload);
 
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       storageAuthorization,
       newRules
     );
-
-    return storageAuthorization;
   }
 
   appendVerifiedCredentialRules(
