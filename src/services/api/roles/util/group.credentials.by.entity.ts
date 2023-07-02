@@ -94,7 +94,10 @@ const credentialTypeToRole = (
     [AuthorizationCredential.ORGANIZATION_ADMIN]: CredentialRole.ADMIN,
 
     [AuthorizationCredential.SPACE_HOST]: CredentialRole.HOST,
+    [AuthorizationCredential.CHALLENGE_HOST]: CredentialRole.HOST,
+    [AuthorizationCredential.OPPORTUNITY_HOST]: CredentialRole.HOST,
 
+    [AuthorizationCredential.SPACE_LEAD]: CredentialRole.LEAD,
     [AuthorizationCredential.CHALLENGE_LEAD]: CredentialRole.LEAD,
     [AuthorizationCredential.OPPORTUNITY_LEAD]: CredentialRole.LEAD,
 
