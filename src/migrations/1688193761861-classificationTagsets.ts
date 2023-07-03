@@ -140,7 +140,7 @@ export class classificationTagsets1688193761861 implements MigrationInterface {
           INSERT INTO tagset_template (id, createdDate, updatedDate, version, name, type, allowedValues, defaultSelectedValue, tagsetTemplateSetId)
                                 VALUES ('${tagsetTemplateID}', NOW(), NOW(), 1,
                                 '${tagsetTemplateName}',
-                                'select_one',
+                                'select-one',
                                 '${allowedValues}',
                                 '${tagsetTemplateDefaultSelectedValue}',
                                 '${collaboration.tagsetTemplateSetId}'
@@ -160,7 +160,7 @@ export class classificationTagsets1688193761861 implements MigrationInterface {
                                name, type, tagsetTemplateId, tags, profileId)
                           VALUES ('${tagsetID}', NOW(), NOW(), 1,
                                 '${tagsetTemplateName}',
-                                'select_one',
+                                'select-one',
                                 '${tagsetTemplateID}',
                                 '${tags}',
                                 '${callout.profileId}'
