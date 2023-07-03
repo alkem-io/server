@@ -62,7 +62,7 @@ Login with demo auth provider and extract the access token:
 ```bash
 actionUrl=$(\
     curl -s -X GET -H "Accept: application/json" \
-    "http://localhost:3000/identity/ory/kratos/public/self-service/login/api" \
+    "http://localhost:3000/ory/kratos/public/self-service/login/api" \
     | jq -r '.ui.action'\
     )
 sessionToken=$(\
@@ -71,8 +71,6 @@ curl -s -X POST -H  "Accept: application/json" -H "Content-Type: application/jso
     "$actionUrl" | jq -r '.session_token' \
     )
 ```
-
-
 
 You can test (assuming default endpoint configuration) creating a file and then uploading it with the following CURL request:
 
