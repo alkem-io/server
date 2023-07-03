@@ -1,6 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { escapeString } from './utils/escape-string';
 
 export class classificationTagsets1688193761861 implements MigrationInterface {
   name = 'classificationTagsets1688193761861';
@@ -142,7 +141,7 @@ export class classificationTagsets1688193761861 implements MigrationInterface {
                                 VALUES ('${tagsetTemplateID}', NOW(), NOW(), 1,
                                 '${tagsetTemplateName}',
                                 'select_one',
-                                '${escapeString(allowedValues)}',
+                                '${allowedValues}',
                                 '${tagsetTemplateDefaultSelectedValue}',
                                 '${collaboration.tagsetTemplateSetId}'
                                 )
@@ -163,7 +162,7 @@ export class classificationTagsets1688193761861 implements MigrationInterface {
                                 '${tagsetTemplateName}',
                                 'select_one',
                                 '${tagsetTemplateID}',
-                                '${escapeString(tags)}',
+                                '${tags}',
                                 '${callout.profileId}'
                                 )
           `);

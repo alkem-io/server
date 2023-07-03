@@ -116,7 +116,10 @@ export class CalloutService {
       const tagsetInput: CreateTagsetInput = {
         name: tagsetTemplate.name,
         type: tagsetTemplate.type,
-        tags: [tagsetTemplate.allowedValues[0]],
+        tags: [
+          tagsetTemplate.defaultSelectedValue ||
+            tagsetTemplate.allowedValues[0],
+        ],
       };
       await this.profileService.addTagsetOnProfile(
         callout.profile,
