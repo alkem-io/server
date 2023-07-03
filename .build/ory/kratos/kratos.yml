@@ -36,7 +36,7 @@ selfservice:
           - id: microsoft # this is `<provider-id>` in the Authorization callback URL. DO NOT CHANGE IT ONCE SET!
             provider: microsoft
             client_id: 1045418f-c674-44d5-808c-060922be5a4a # This is the the Application (client) ID from the App Registration
-            client_secret: yKv8Q~m6jFjd8jD.pmkdySek7tvbvmk9msr-CdxX # This is the generated Secret value from the App Registration
+            client_secret: OPH8Q~PV8~N1y-21idQq2hIKU5q0aOcnME1cRcg~ # This is the generated Secret value from the App Registration
             microsoft_tenant: d7cd650f-6063-4276-8982-07e68da3c582 # This allows you to select the tenant.
             mapper_url: file:///etc/config/kratos/oidc/oidc.microsoft.jsonnet
             # Alternatively, use an URL:
