@@ -24,6 +24,7 @@ import { Visual } from '@domain/common/visual';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { StorageBucketUploadFileInput } from './dto/storage.bucket.dto.upload.file';
+import { StorageBucketUploadFileOnReferenceInput } from './dto/storage.bucket.dto.upload.file.on.reference';
 
 @Resolver()
 export class StorageBucketResolverMutations {
@@ -72,12 +73,12 @@ export class StorageBucketResolverMutations {
     const storageBucket =
       await this.storageBucketService.getStorageBucketOrFail(storageBucketId);
     // Also check that the acting agent is allowed to upload
-    // this.authorizationService.grantAccessOrFail(
-    //   agentInfo,
-    //   storageBucket.authorization,
-    //   AuthorizationPrivilege.FILE_UPLOAD,
-    //   `visual image upload on storage space: ${visual.id}`
-    // );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      storageBucket.authorization,
+      AuthorizationPrivilege.FILE_UPLOAD,
+      `visual image upload on storage space: ${visual.id}`
+    );
     const readStream = createReadStream();
 
     const visualDocument = await this.storageBucketService.uploadImageOnVisual(
@@ -110,7 +111,7 @@ export class StorageBucketResolverMutations {
   @Profiling.api
   async uploadFileOnReference(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('uploadData') uploadData: StorageBucketUploadFileInput,
+    @Args('uploadData') uploadData: StorageBucketUploadFileOnReferenceInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
   ): Promise<IReference> {
@@ -144,7 +145,7 @@ export class StorageBucketResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       storageBucket.authorization,
-      AuthorizationPrivilege.READ, //FILE_UPLOAD,
+      AuthorizationPrivilege.FILE_UPLOAD,
       `create document on storage: ${storageBucket.id}`
     );
 
@@ -169,5 +170,48 @@ export class StorageBucketResolverMutations {
       uri: this.documentService.getPubliclyAccessibleURL(documentAuthorized),
     };
     return await this.referenceService.updateReference(updateData);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => String, {
+    description:
+      'Create a new Document on the Storage and return the public Url.',
+  })
+  @Profiling.api
+  async uploadFileOnStorageBucket(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('uploadData') uploadData: StorageBucketUploadFileInput,
+    @Args({ name: 'file', type: () => GraphQLUpload })
+    { createReadStream, filename, mimetype }: FileUpload
+  ): Promise<string> {
+    const storageBucket =
+      await this.storageBucketService.getStorageBucketOrFail(
+        uploadData.storageBucketId
+      );
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      storageBucket.authorization,
+      AuthorizationPrivilege.FILE_UPLOAD,
+      `create document on storage: ${storageBucket.id}`
+    );
+
+    const readStream = createReadStream();
+
+    const document = await this.storageBucketService.uploadFileAsDocument(
+      storageBucket,
+      readStream,
+      filename,
+      mimetype,
+      agentInfo.userID
+    );
+
+    const documentAuthorized =
+      await this.documentAuthorizationService.applyAuthorizationPolicy(
+        document,
+        storageBucket.authorization
+      );
+
+    return this.documentService.getPubliclyAccessibleURL(documentAuthorized);
   }
 }

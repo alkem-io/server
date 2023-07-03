@@ -149,6 +149,14 @@ http:
       entryPoints:
         - 'web'
 
+    api-private-non-interactive-rest:
+      rule: 'PathPrefix(`/api/private/non-interactive/rest`)'
+      service: 'alkemio-server'
+      middlewares:
+        - strip-api-private-non-interactive-prefix
+      entryPoints:
+        - 'web'
+
     kratos-public:
       rule: 'PathPrefix(`/identity/ory/kratos/public`)'
       service: 'kratos-public'

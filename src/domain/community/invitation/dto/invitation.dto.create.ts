@@ -1,4 +1,4 @@
-import { UUID_LENGTH } from '@common/constants';
+import { MID_TEXT_LENGTH, UUID_LENGTH } from '@common/constants';
 import { UUID } from '@domain/common/scalars';
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional, MaxLength } from 'class-validator';
@@ -12,6 +12,11 @@ export class CreateInvitationInput {
   @IsOptional()
   @MaxLength(UUID_LENGTH)
   invitedUser!: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @MaxLength(MID_TEXT_LENGTH)
+  welcomeMessage?: string;
 
   createdBy!: string;
 

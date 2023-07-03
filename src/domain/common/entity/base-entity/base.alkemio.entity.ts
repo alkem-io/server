@@ -1,13 +1,18 @@
 import {
   BaseEntity,
+  Column,
   CreateDateColumn,
-  PrimaryGeneratedColumn,
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
+import { UUID_LENGTH } from '@common/constants';
 
 export abstract class BaseAlkemioEntity extends BaseEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @Column('char', {
+    length: UUID_LENGTH,
+    primary: true,
+    generated: 'uuid',
+  })
   id!: string;
 
   @CreateDateColumn()

@@ -25,4 +25,7 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
 
   @Column('char', { length: 36, nullable: true })
   createdBy!: string;
+
+  @Column('varchar', { length: 512, nullable: true })
+  welcomeMessage?: string;
 }

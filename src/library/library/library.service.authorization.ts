@@ -8,6 +8,14 @@ import { ILibrary } from './library.interface';
 import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
+import { EntityNotInitializedException } from '@common/exceptions';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { CREDENTIAL_RULE_TYPES_LIBRARY_FILE_UPLOAD_ANY_USER } from '@common/constants';
 
 @Injectable()
 export class LibraryAuthorizationService {
@@ -61,7 +69,41 @@ export class LibraryAuthorizationService {
         library.storageBucket,
         library.authorization
       );
+    library.storageBucket.authorization = this.extendStorageAuthorizationPolicy(
+      library.storageBucket.authorization,
+      library
+    );
 
     return library;
+  }
+
+  private extendStorageAuthorizationPolicy(
+    storageAuthorization: IAuthorizationPolicy | undefined,
+    library: ILibrary
+  ): IAuthorizationPolicy {
+    if (!storageAuthorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${library.id}`,
+        LogContext.LIBRARY
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Any member can upload
+    const registeredUsersCanUpload =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.FILE_UPLOAD],
+        [AuthorizationCredential.GLOBAL_REGISTERED],
+        CREDENTIAL_RULE_TYPES_LIBRARY_FILE_UPLOAD_ANY_USER
+      );
+    registeredUsersCanUpload.cascade = false;
+    newRules.push(registeredUsersCanUpload);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      storageAuthorization,
+      newRules
+    );
+
+    return storageAuthorization;
   }
 }
