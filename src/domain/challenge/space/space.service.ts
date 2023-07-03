@@ -72,6 +72,7 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { SpaceDisplayLocation } from '@common/enums/space.display.location';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { TagsetType } from '@common/enums/tagset.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class SpaceService {
@@ -123,9 +124,10 @@ export class SpaceService {
     if (space.collaboration) {
       const locations = Object.values(SpaceDisplayLocation);
       const tagsetTemplateData: CreateTagsetTemplateInput = {
-        name: 'DISPLAY_LOCATION',
+        name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
         type: TagsetType.SELECT_ONE,
         allowedValues: locations,
+        defaultSelectedValue: SpaceDisplayLocation.KNOWEDGE_RIGHT,
       };
       space.collaboration = await this.collaborationService.addTagsetTemplate(
         space.collaboration,
@@ -134,7 +136,7 @@ export class SpaceService {
 
       space.collaboration = await this.collaborationService.addDefaultCallouts(
         space.collaboration,
-        CommunityType.CHALLENGE
+        CommunityType.SPACE
       );
     }
 

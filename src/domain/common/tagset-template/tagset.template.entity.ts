@@ -57,10 +57,16 @@ export class TagsetTemplate
   )
   tagsetTemplateSet?: TagsetTemplateSet;
 
-  constructor(name: string, type: TagsetType, allowedValues: string[]) {
+  constructor(
+    name: string,
+    type: TagsetType,
+    allowedValues: string[],
+    defaultSelectedValue?: string
+  ) {
     super();
     this.name = name;
     this.type = type;
     this.allowedValues = allowedValues;
+    this.defaultSelectedValue = defaultSelectedValue;
   }
 }

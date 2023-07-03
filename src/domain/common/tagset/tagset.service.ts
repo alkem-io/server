@@ -2,7 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { FindOneOptions, Repository } from 'typeorm';
-import { RestrictedTagsetNames, Tagset } from './tagset.entity';
+import { Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
@@ -19,6 +19,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { ITagsetTemplate } from '../tagset-template';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class TagsetService {
@@ -139,7 +140,7 @@ export class TagsetService {
         LogContext.COMMUNITY
       );
     const defaultTagset = tagsetable.tagsets.find(
-      t => t.name === RestrictedTagsetNames.DEFAULT
+      t => t.name === TagsetReservedName.DEFAULT
     );
     return defaultTagset;
   }

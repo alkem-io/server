@@ -4,18 +4,12 @@ import { Profile } from '@domain/common/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { TagsetType } from '@common/enums/tagset.type';
 import { TagsetTemplate } from '../tagset-template';
-
-export enum RestrictedTagsetNames {
-  DEFAULT = 'default',
-  SKILLS = 'skills',
-  CAPABILITIES = 'capabilities',
-  KEYWORDS = 'keywords',
-}
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Entity()
 export class Tagset extends AuthorizableEntity implements ITagset {
   @Column('varchar', {
-    default: RestrictedTagsetNames.DEFAULT,
+    default: TagsetReservedName.DEFAULT,
     length: 255,
     nullable: false,
   })

@@ -63,6 +63,8 @@ import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
+import { ChallengeDisplayLocation } from '@src/migrations/1688193761861-classificationTagsets';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class ChallengeService {
@@ -149,16 +151,31 @@ export class ChallengeService {
       const states = await this.innovationFlowService.getInnovationFlowStates(
         challenge.innovationFlow
       );
-      const tagsetTemplateData: CreateTagsetTemplateInput = {
-        name: 'STATES',
+      const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
+        name: TagsetReservedName.STATES,
         type: TagsetType.SELECT_ONE,
         allowedValues: states,
+        defaultSelectedValue: states[0],
+      };
+      challenge.collaboration =
+        await this.collaborationService.addTagsetTemplate(
+          challenge.collaboration,
+          tagsetTemplateDataStates
+        );
+
+      const locations = Object.values(ChallengeDisplayLocation);
+      const tagsetTemplateData: CreateTagsetTemplateInput = {
+        name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
+        type: TagsetType.SELECT_ONE,
+        allowedValues: locations,
+        defaultSelectedValue: ChallengeDisplayLocation.CONTRIBUTE_RIGHT,
       };
       challenge.collaboration =
         await this.collaborationService.addTagsetTemplate(
           challenge.collaboration,
           tagsetTemplateData
         );
+
       challenge.collaboration =
         await this.collaborationService.addDefaultCallouts(
           challenge.collaboration,

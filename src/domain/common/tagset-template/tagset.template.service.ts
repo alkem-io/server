@@ -24,7 +24,8 @@ export class TagsetTemplateService {
     const tagsetTemplate = new TagsetTemplate(
       tagsetTemplateData.name,
       tagsetTemplateData.type,
-      tagsetTemplateData.allowedValues
+      tagsetTemplateData.allowedValues,
+      tagsetTemplateData.defaultSelectedValue
     );
 
     return await this.tagsetTemplateRepository.save(tagsetTemplate);

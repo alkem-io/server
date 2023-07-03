@@ -6,4 +6,6 @@ export class CreateTagsetTemplateInput {
   type!: TagsetType;
 
   allowedValues!: string[];
+
+  defaultSelectedValue?: string;
 }

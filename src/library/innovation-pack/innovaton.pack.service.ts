@@ -28,7 +28,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class InnovationPackService {
@@ -58,7 +58,7 @@ export class InnovationPackService {
     );
 
     await this.profileService.addTagsetOnProfile(innovationPack.profile, {
-      name: RestrictedTagsetNames.DEFAULT,
+      name: TagsetReservedName.DEFAULT,
       tags: innovationPackData.tags ?? [],
     });
 

@@ -60,8 +60,8 @@ import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { VisualType } from '@common/enums/visual.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
@@ -124,11 +124,11 @@ export class UserService {
       avatarURL
     );
     await this.profileService.addTagsetOnProfile(user.profile, {
-      name: RestrictedTagsetNames.SKILLS,
+      name: TagsetReservedName.SKILLS,
       tags: [],
     });
     await this.profileService.addTagsetOnProfile(user.profile, {
-      name: RestrictedTagsetNames.KEYWORDS,
+      name: TagsetReservedName.KEYWORDS,
       tags: [],
     });
 

@@ -38,7 +38,6 @@ import { PostTemplateService } from '@domain/template/post-template/post.templat
 import { WhiteboardTemplateService } from '@domain/template/whiteboard-template/whiteboard.template.service';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { VisualType } from '@common/enums/visual.type';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
@@ -46,6 +45,7 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { TagsetType } from '@common/enums/tagset.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class CalloutService {
@@ -108,7 +108,7 @@ export class CalloutService {
     );
 
     await this.profileService.addTagsetOnProfile(callout.profile, {
-      name: RestrictedTagsetNames.DEFAULT,
+      name: TagsetReservedName.DEFAULT,
       type: TagsetType.FREEFORM,
       tags: calloutData.tags || [],
     });
