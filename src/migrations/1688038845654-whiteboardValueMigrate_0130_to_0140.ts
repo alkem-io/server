@@ -63,7 +63,59 @@ export class whiteboardValueMigrate_0130_to_0140_1688038845654
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    const canvases: { id: string }[] = await queryRunner.query(
+      `SELECT id from whiteboard`
+    );
+
+    for (const canvas of canvases) {
+      const [whiteboard]: { value: string }[] = await queryRunner.query(
+        'SELECT value from whiteboard where id = ?',
+        [canvas.id]
+      );
+
+      const migratedCompressedValue = await migrateDownValueAndCompress(
+        whiteboard.value
+      );
+
+      if (!migratedCompressedValue) {
+        // the value hasn't been migrated
+        // the value does not need migrating or check the log for errors
+        continue;
+      }
+
+      await queryRunner.query('UPDATE whiteboard SET value = ? WHERE id = ?', [
+        migratedCompressedValue,
+        canvas.id,
+      ]);
+    }
+
+    const whiteboardTemplates: { id: string }[] = await queryRunner.query(
+      `SELECT id from whiteboard_template`
+    );
+
+    for (const template of whiteboardTemplates) {
+      const [whiteboardTemplate]: { value: string }[] = await queryRunner.query(
+        'SELECT value from whiteboard_template where id = ?',
+        [template.id]
+      );
+
+      const migratedCompressedValue = await migrateDownValueAndCompress(
+        whiteboardTemplate.value
+      );
+
+      if (!migratedCompressedValue) {
+        // the value hasn't been migrated
+        // the value does not need migrating or check the log for errors
+        continue;
+      }
+
+      await queryRunner.query(
+        'UPDATE whiteboard_template SET value = ? WHERE id = ?',
+        [migratedCompressedValue, template.id]
+      );
+    }
+  }
 }
 
 const migrateValueAndCompress = async (compressedValue: string) => {
@@ -102,6 +154,43 @@ const migrateValueAndCompress = async (compressedValue: string) => {
       element.roundness =
         element.strokeSharpness === 'sharp' ? null : { type: 3 };
       delete element.strokeSharpness;
+    }
+  }
+
+  return compressText(JSON.stringify(canvasValue));
+};
+
+const migrateDownValueAndCompress = async (compressedValue: string) => {
+  if (!compressedValue) {
+    return undefined;
+  }
+
+  const decompressedValue = await decompressText(compressedValue);
+
+  let canvasValue;
+  try {
+    canvasValue = JSON.parse(decompressedValue);
+  } catch (error: any) {
+    console.log(
+      `Unable to parse value for whiteboard with id: '${
+        error?.message ?? error.toString()
+      }'`
+    );
+    return undefined;
+  }
+
+  if (!canvasValue.elements) {
+    return undefined;
+  }
+
+  for (const element of canvasValue.elements) {
+    if (element.type === 'text') {
+      continue;
+    }
+
+    if (element.roundness) {
+      element.strokeShaprness =
+        element.roundess === null ? 'sharp' : { type: 3 };
     }
   }
 
