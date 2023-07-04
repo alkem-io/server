@@ -230,6 +230,7 @@ export class RolesService {
       community.id,
       communityDisplayName,
       state,
+      invitation.welcomeMessage,
       invitation.id,
       community.spaceID,
       invitation.createdDate,

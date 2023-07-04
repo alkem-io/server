@@ -23,6 +23,12 @@ export class InvitationForRoleResult {
   })
   state: string;
 
+  @Field(() => String, {
+    description: 'The welcome message of the invitation.',
+    nullable: true,
+  })
+  welcomeMessage?: string;
+
   @Field(() => Date, {
     description: 'Date of creation',
   })
@@ -55,6 +61,7 @@ export class InvitationForRoleResult {
     communityID: string,
     displayName: string,
     state: string,
+    welcomeMessage: string | undefined,
     id: string,
     spaceID: string,
     createdDate: Date,
@@ -63,6 +70,7 @@ export class InvitationForRoleResult {
     this.displayName = displayName;
     this.communityID = communityID;
     this.state = state;
+    this.welcomeMessage = welcomeMessage;
     this.id = id;
     this.spaceID = spaceID;
     this.createdDate = createdDate;
