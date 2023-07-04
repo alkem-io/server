@@ -31,7 +31,7 @@ errors:
     redirect:
       enabled: true
       config:
-        to: http://localhost:3000/identity/login
+        to: http://localhost:3000/login
         when:
           - error:
               - unauthorized
