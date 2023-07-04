@@ -4,7 +4,6 @@ import { ChallengeService } from './challenge.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { IContext } from '@domain/context/context/context.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
-import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { UseGuards } from '@nestjs/common/decorators';
@@ -19,7 +18,6 @@ import { Loader } from '@core/dataloader/decorators';
 import {
   JourneyCollaborationLoaderCreator,
   JourneyCommunityLoaderCreator,
-  JourneyLifecycleLoaderCreator,
   JourneyContextLoaderCreator,
   PreferencesLoaderCreator,
   AgentLoaderCreator,
@@ -29,6 +27,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { ChallengeStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/challenge/challenge.storage.space.loader.creator';
+import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 
 @Resolver(() => IChallenge)
 export class ChallengeResolverFields {
@@ -116,17 +115,13 @@ export class ChallengeResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('lifecycle', () => ILifecycle, {
+  @ResolveField('innovationFlow', () => IInnovationFlow, {
     nullable: true,
-    description: 'The lifecycle for the Challenge.',
+    description: 'The InnovationFlow for the Challenge.',
   })
   @Profiling.api
-  async lifecycle(
-    @Parent() challenge: IChallenge,
-    @Loader(JourneyLifecycleLoaderCreator, { parentClassRef: Challenge })
-    loader: ILoader<ILifecycle>
-  ) {
-    return loader.load(challenge.id);
+  async innovationFlow(@Parent() challenge: IChallenge) {
+    return await this.challengeService.getInnovationFlow(challenge.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
