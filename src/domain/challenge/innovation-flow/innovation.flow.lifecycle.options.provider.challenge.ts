@@ -3,40 +3,40 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { ChallengeService } from './challenge.service';
-import { ChallengeEventInput } from '@domain/challenge/challenge/dto/challenge.dto.event';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { IChallenge } from './challenge.interface';
+import { InnovationFlowService } from './innovaton.flow.service';
+import { IInnovationFlow } from './innovation.flow.interface';
+import { InnovationFlowEvent } from './dto/innovation.flow.dto.event';
 
 @Injectable()
-export class ChallengeLifecycleOptionsProvider {
+export class InnovationFlowLifecycleOptionsProviderChallenge {
   constructor(
     private authorizationService: AuthorizationService,
     private lifecycleService: LifecycleService,
-    private challengeService: ChallengeService,
+    private innovationFlowService: InnovationFlowService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async eventOnChallenge(
-    eventData: ChallengeEventInput,
+    eventData: InnovationFlowEvent,
     agentInfo: AgentInfo
-  ): Promise<IChallenge> {
-    const challengeID = eventData.ID;
-    const challenge = await this.challengeService.getChallengeOrFail(
-      challengeID,
-      {
-        relations: ['agent'],
-      }
-    );
+  ): Promise<IInnovationFlow> {
+    const innovationFlowID = eventData.innovationFlowID;
+    const innovationFlow =
+      await this.innovationFlowService.getInnovationFlowOrFail(
+        innovationFlowID
+      );
 
-    const lifecycle = await this.challengeService.getLifecycle(challengeID);
+    const lifecycle = await this.innovationFlowService.getLifecycle(
+      innovationFlowID
+    );
 
     // Send the event, translated if needed
     this.logger.verbose?.(
-      `Event ${eventData.eventName} triggered on Opportunity: ${challengeID} using lifecycle ${lifecycle.id}`,
-      LogContext.COMMUNITY
+      `Event ${eventData.eventName} triggered on InnovationFlow: ${innovationFlowID} using lifecycle ${lifecycle.id}`,
+      LogContext.CHALLENGES
     );
     await this.lifecycleService.event(
       {
@@ -45,10 +45,12 @@ export class ChallengeLifecycleOptionsProvider {
       },
       this.challengeLifecycleMachineOptions,
       agentInfo,
-      challenge.authorization
+      innovationFlow.authorization
     );
 
-    return await this.challengeService.getChallengeOrFail(challengeID);
+    return await this.innovationFlowService.getInnovationFlowOrFail(
+      innovationFlowID
+    );
   }
 
   private challengeLifecycleMachineOptions: Partial<MachineOptions<any, any>> =

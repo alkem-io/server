@@ -1,8 +1,16 @@
 import { Project } from '@domain/collaboration/project/project.entity';
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
 import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.interface';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { BaseChallenge } from '@domain/challenge/base-challenge/base.challenge.entity';
+import { InnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.entity';
 
 @Entity()
 export class Opportunity extends BaseChallenge implements IOpportunity {
@@ -21,6 +29,14 @@ export class Opportunity extends BaseChallenge implements IOpportunity {
 
   @Column()
   spaceID?: string; //toDo make mandatory https://app.zenspace.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2196
+
+  @OneToOne(() => InnovationFlow, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  innovationFlow!: InnovationFlow;
 
   constructor() {
     super();

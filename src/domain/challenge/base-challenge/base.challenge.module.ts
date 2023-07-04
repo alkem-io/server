@@ -1,5 +1,4 @@
 import { AgentModule } from '@domain/agent/agent/agent.module';
-import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { ContextModule } from '@domain/context/context/context.module';
 import { Module } from '@nestjs/common';
@@ -20,7 +19,6 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
     ContextModule,
     CommunityModule,
     CommunityPolicyModule,
-    LifecycleModule,
     ProfileModule,
     NamingModule,
     CollaborationModule,
