@@ -471,7 +471,6 @@ export class CommunityResolverMutations {
         community.authorization
       );
 
-    // TODO - send a relevant notification
     const notificationInput: NotificationInputCommunityInvitationExternal = {
       triggeredBy: agentInfo.userID,
       community: community,
