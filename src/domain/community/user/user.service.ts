@@ -41,8 +41,6 @@ import { Cache, CachingConfig } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, In, Repository } from 'typeorm';
 import { DirectRoomResult } from './dto/user.dto.communication.room.direct.result';
-import { KonfigService } from '@src/platform/configuration/config/config.service';
-import { IUserTemplate } from '@src/platform/configuration';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
@@ -62,6 +60,8 @@ import { CommunityMemberCredentials } from './dto/user.dto.community.member.cred
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { userDefaults } from './user.defaults';
+
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
@@ -78,8 +78,7 @@ export class UserService {
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
-    private konfigService: KonfigService
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
   ) {}
 
   private getUserCommunicationIdCacheKey(communicationId: string): string {
@@ -192,7 +191,7 @@ export class UserService {
       result.referencesData = [];
     }
     // Get the template to populate with
-    const referenceTemplates = (await this.getUserTemplate())?.references;
+    const referenceTemplates = userDefaults.references;
     if (referenceTemplates) {
       for (const referenceTemplate of referenceTemplates) {
         const existingRef = result.referencesData?.find(
@@ -270,16 +269,6 @@ export class UserService {
     defaults.set(UserPreferenceType.NOTIFICATION_COMMENT_REPLY, 'true');
 
     return defaults;
-  }
-
-  private async getUserTemplate(): Promise<IUserTemplate | undefined> {
-    const template = await this.konfigService.getTemplate();
-    const userTemplates = template.users;
-    if (userTemplates && userTemplates.length > 0) {
-      // assume only one, which is the case currently + will be enforced later when we update template handling
-      return userTemplates[0];
-    }
-    return undefined;
   }
 
   async createUserFromAgentInfo(agentInfo: AgentInfo): Promise<IUser> {
