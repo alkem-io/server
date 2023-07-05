@@ -334,15 +334,6 @@ export class ChallengeService {
     );
   }
 
-  async getCommunityLeadershipCredential(
-    challengeId: string
-  ): Promise<CredentialDefinition> {
-    return await this.baseChallengeService.getCommunityLeadershipCredential(
-      challengeId,
-      this.challengeRepository
-    );
-  }
-
   async getInnovationFlow(challengeId: string): Promise<IInnovationFlow> {
     const challenge = await this.getChallengeOrFail(challengeId, {
       relations: ['innovationFlow'],
