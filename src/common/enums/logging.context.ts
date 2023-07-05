@@ -37,4 +37,5 @@ export enum LogContext {
   GEO = 'geo',
   CALENDAR = 'calendar',
   INNOVATION_HUB = 'innovation-hub',
+  CHAT_GUIDANCE = 'chat-guidance',
 }

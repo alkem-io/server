@@ -57,6 +57,7 @@ import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
 import { AdminStorageModule } from '@platform/admin/storage/admin.storage.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
+import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
 
 @Module({
   imports: [
@@ -214,6 +215,7 @@ import { MessageReactionModule } from '@domain/communication/message.reaction/me
     InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
+    ChatGuidanceModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [
