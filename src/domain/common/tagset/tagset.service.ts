@@ -70,8 +70,36 @@ export class TagsetService {
 
   async updateTagset(tagsetData: UpdateTagsetInput): Promise<ITagset> {
     const tagset = await this.getTagsetOrFail(tagsetData.ID);
+
+    if (tagsetData.tags) {
+      if (!this.isTagsListValid(tagset, tagsetData.tags)) {
+        throw new ValidationException(
+          'Not all tags are allowed',
+          LogContext.TAGSET
+        );
+      }
+      if (
+        tagset.type === TagsetType.SELECT_ONE &&
+        tagsetData.tags.length !== 1
+      ) {
+        throw new ValidationException(
+          'Tags array length should be one',
+          LogContext.TAGSET
+        );
+      }
+    }
+
     this.updateTagsetValues(tagset, tagsetData);
     return await this.tagsetRepository.save(tagset);
+  }
+
+  isTagsListValid(tagset: ITagset, tags: string[]): boolean {
+    if (!tagset.tagsetTemplate) {
+      return true;
+    }
+    return tags.every(tag =>
+      tagset.tagsetTemplate?.allowedValues.includes(tag)
+    );
   }
 
   updateTagsetValues(tagset: ITagset, tagsetData: UpdateTagsetInput): ITagset {
@@ -93,7 +121,7 @@ export class TagsetService {
     if (!tagsets)
       throw new EntityNotFoundException(
         'Not able to locate Tagsets',
-        LogContext.CHALLENGES
+        LogContext.TAGSET
       );
     if (tagsetsData) {
       for (const tagsetData of tagsetsData) {
@@ -102,7 +130,7 @@ export class TagsetService {
         if (!tagset)
           throw new EntityNotFoundException(
             `Unable to update Tagset with supplied ID: ${tagsetData.ID} - no such Tagset in parent entity.`,
-            LogContext.CHALLENGES
+            LogContext.TAGSET
           );
         this.updateTagsetValues(tagset, tagsetData);
       }
