@@ -29,6 +29,7 @@ import { MentionedEntityType } from '@domain/communication/messaging/mention.int
 import { NotificationInputForumDiscussionComment } from './dto/notification.dto.input.forum.discussion.comment';
 import { NotificationInputCommunityInvitation } from './dto/notification.dto.input.community.invitation';
 import { NotificationInputCommentReply } from './dto/notification.dto.input.comment.reply';
+import { NotificationInputCommunityInvitationExternal } from './dto/notification.dto.input.community.invitation.external';
 
 @Injectable()
 export class NotificationAdapter {
@@ -338,6 +339,23 @@ export class NotificationAdapter {
         eventData.triggeredBy,
         eventData.invitedUser,
         eventData.community
+      );
+
+    this.notificationsClient.emit<number>(event, payload);
+  }
+
+  public async externalInvitationCreated(
+    eventData: NotificationInputCommunityInvitationExternal
+  ): Promise<void> {
+    const event = NotificationEventType.COMMUNITY_EXTERNAL_INVITATION_CREATED;
+    this.logEventTriggered(eventData, event);
+
+    const payload =
+      await this.notificationPayloadBuilder.buildExternalInvitationCreatedNotificationPayload(
+        eventData.triggeredBy,
+        eventData.invitedUser,
+        eventData.community,
+        eventData.welcomeMessage
       );
 
     this.notificationsClient.emit<number>(event, payload);

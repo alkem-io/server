@@ -73,12 +73,12 @@ export class StorageBucketResolverMutations {
     const storageBucket =
       await this.storageBucketService.getStorageBucketOrFail(storageBucketId);
     // Also check that the acting agent is allowed to upload
-    // this.authorizationService.grantAccessOrFail(
-    //   agentInfo,
-    //   storageBucket.authorization,
-    //   AuthorizationPrivilege.FILE_UPLOAD,
-    //   `visual image upload on storage space: ${visual.id}`
-    // );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      storageBucket.authorization,
+      AuthorizationPrivilege.FILE_UPLOAD,
+      `visual image upload on storage space: ${visual.id}`
+    );
     const readStream = createReadStream();
 
     const visualDocument = await this.storageBucketService.uploadImageOnVisual(
@@ -145,7 +145,7 @@ export class StorageBucketResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       storageBucket.authorization,
-      AuthorizationPrivilege.READ, //FILE_UPLOAD,
+      AuthorizationPrivilege.FILE_UPLOAD,
       `create document on storage: ${storageBucket.id}`
     );
 

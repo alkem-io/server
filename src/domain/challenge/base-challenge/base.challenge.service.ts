@@ -6,8 +6,6 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.update';
-import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { IContext } from '@domain/context/context/context.interface';
@@ -45,7 +43,6 @@ export class BaseChallengeService {
     private communityService: CommunityService,
     private namingService: NamingService,
     private profileService: ProfileService,
-    private lifecycleService: LifecycleService,
     private collaborationService: CollaborationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -170,10 +167,6 @@ export class BaseChallengeService {
     const community = baseChallenge.community;
     if (community) {
       await this.communityService.removeCommunity(community.id);
-    }
-
-    if (baseChallenge.lifecycle) {
-      await this.lifecycleService.deleteLifecycle(baseChallenge.lifecycle.id);
     }
 
     if (baseChallenge.profile) {
@@ -336,28 +329,6 @@ export class BaseChallengeService {
         LogContext.AGENT
       );
     return agent;
-  }
-
-  public async getLifecycle(
-    challengeId: string,
-    repository: Repository<BaseChallenge>
-  ): Promise<ILifecycle> {
-    const challenge = await this.getBaseChallengeOrFail(
-      challengeId,
-      repository,
-      {
-        relations: ['lifecycle'],
-      }
-    );
-
-    if (!challenge.lifecycle) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Lifecycle for challenge ${challengeId} `,
-        LogContext.CHALLENGES
-      );
-    }
-
-    return challenge.lifecycle;
   }
 
   public async getMembersCount(
