@@ -10,6 +10,10 @@ export class Profiling {
     propertyKey: string,
     descriptor: PropertyDescriptor
   ) => {
+    if (!Profiling.logger.verbose) {
+      return descriptor;
+    }
+
     const originalMethod = descriptor.value;
     descriptor.value = new Proxy(originalMethod, {
       apply(target: any, thisArg: any, argArray: any[]): any {
