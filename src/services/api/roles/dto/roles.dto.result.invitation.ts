@@ -23,6 +23,12 @@ export class InvitationForRoleResult {
   })
   state: string;
 
+  @Field(() => UUID, {
+    description: 'ID for the user that created the invitation.',
+    nullable: false,
+  })
+  createdBy!: string;
+
   @Field(() => Date, {
     description: 'Date of creation',
   })
@@ -50,6 +56,11 @@ export class InvitationForRoleResult {
     nullable: true,
   })
   opportunityID?: string;
+  @Field(() => UUID, {
+    description: 'The welcome message of the invitation',
+    nullable: true,
+  })
+  welcomeMessage?: string;
 
   constructor(
     communityID: string,
