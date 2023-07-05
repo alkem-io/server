@@ -19,10 +19,10 @@ export class ChatGuidanceService {
       `Establishing session with question hook: ${question} for user ${agentInfo.email}`,
       LogContext.SSI_SOVRHD
     );
-    const response = await this.chatGuidanceAdapter.askQuestion(
-      question,
-      agentInfo
-    );
+    const response = await this.chatGuidanceAdapter.askQuestion({
+      question: question,
+      triggeredBy: agentInfo.userID,
+    });
     const answer = response.result;
     return {
       answer: answer,
