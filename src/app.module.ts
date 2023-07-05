@@ -10,7 +10,6 @@ import {
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
-import { HttpExceptionsFilter } from '@core/error-handling/http.exceptions.filter';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { SpaceModule } from '@domain/challenge/space/space.module';
@@ -57,7 +56,10 @@ import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
 import { AdminStorageModule } from '@platform/admin/storage/admin.storage.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
-import { HttpExceptionFilter } from '@core/error-handling/http.exceptionss.filter';
+import {
+  HttpExceptionFilter,
+  GraphqlExceptionFilter,
+} from '@core/error-handling';
 
 @Module({
   imports: [
@@ -228,7 +230,7 @@ import { HttpExceptionFilter } from '@core/error-handling/http.exceptionss.filte
     },
     {
       provide: APP_FILTER,
-      useClass: HttpExceptionsFilter,
+      useClass: GraphqlExceptionFilter,
     },
     {
       provide: APP_FILTER,

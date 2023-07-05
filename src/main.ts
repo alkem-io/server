@@ -5,7 +5,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AppModule } from './app.module';
 import './config/aliases';
 import { BootstrapService } from './core/bootstrap/bootstrap.service';
-import { HttpExceptionsFilter } from './core/error-handling/http.exceptions.filter';
 import { faviconMiddleware } from './core/middleware/favicon.middleware';
 import { useContainer } from 'class-validator';
 import { graphqlUploadExpress } from 'graphql-upload';
@@ -20,7 +19,6 @@ const bootstrap = async () => {
   const bootstrapService: BootstrapService = app.get(BootstrapService);
 
   app.useLogger(logger);
-  //app.useGlobalFilters(new HttpExceptionsFilter(logger));
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
   await bootstrapService.bootstrap();

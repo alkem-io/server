@@ -1,9 +1,10 @@
 import {
-  BadRequestException,
   Controller,
-  Get, HttpCode, HttpException, HttpStatus,
+  ForbiddenException,
+  Get,
   Inject,
   LoggerService,
+  NotFoundException,
   Param,
   Res,
   StreamableFile,
@@ -29,35 +30,32 @@ export class StorageAccessController {
 
   @UseGuards(RestGuard)
   @Get('document/:id')
-  @HttpCode(HttpStatus.OK)
-  @HttpCode(HttpStatus.NOT_FOUND)
-  @HttpCode(HttpStatus.FORBIDDEN)
   async document(
     @CurrentUser() agentInfo: AgentInfo,
     @Param('id') id: string,
     @Res({ passthrough: true }) res: Response
   ): Promise<StreamableFile | void> {
-    const document = await this.documentService.getDocumentOrFail(id);
+    let document;
+    try {
+      document = await this.documentService.getDocumentOrFail(id);
+    } catch (e) {
+      throw new NotFoundException(`Document with id '${id}' not found`);
+    }
 
-    const result = await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      document.authorization,
-      AuthorizationPrivilege.READ,
-      `Read document: ${document.displayName}`
-    );
-
-    // try {
-    //   await this.authorizationService.grantAccessOrFail(
-    //     agentInfo,
-    //     document.authorization,
-    //     AuthorizationPrivilege.READ,
-    //     `Read document: ${document.displayName}`
-    //   );
-    // } catch (e: any) {
-    //   // throw new HttpException('Forbidden', HttpStatus.FORBIDDEN);
-    //   // throw new BadRequestException(e);
-    //   return;
-    // }
+    try {
+      await this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        document.authorization,
+        AuthorizationPrivilege.READ,
+        `Read document: ${document.displayName}`
+      );
+    } catch (e: unknown) {
+      const err = e as Error;
+      throw new ForbiddenException(
+        'Unable to grant privileges for this resource',
+        err.message
+      );
+    }
 
     res.setHeader('Content-Type', `${document.mimeType}`);
 
