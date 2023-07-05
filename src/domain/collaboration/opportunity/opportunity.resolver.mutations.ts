@@ -109,31 +109,4 @@ export class OpportunityResolverMutations {
       );
     return await this.projectService.saveProject(project);
   }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IOpportunity, {
-    description: 'Trigger an event on the Opportunity.',
-  })
-  async eventOnOpportunity(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('opportunityEventData')
-    opportunityEventData: OpportunityEventInput
-  ): Promise<IOpportunity> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
-      opportunityEventData.ID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      opportunity.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `event on opportunity: ${opportunity.nameID}`
-    );
-    return await this.opportunityLifecycleOptionsProvider.eventOnOpportunity(
-      {
-        eventName: opportunityEventData.eventName,
-        ID: opportunityEventData.ID,
-      },
-      agentInfo
-    );
-  }
 }

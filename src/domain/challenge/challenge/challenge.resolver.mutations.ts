@@ -189,31 +189,4 @@ export class ChallengeResolverMutations {
     );
     return await this.challengeService.deleteChallenge(deleteData);
   }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IChallenge, {
-    description: 'Trigger an event on the Challenge.',
-  })
-  async eventOnChallenge(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('challengeEventData')
-    challengeEventData: ChallengeEventInput
-  ): Promise<IChallenge> {
-    const challenge = await this.challengeService.getChallengeOrFail(
-      challengeEventData.ID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      challenge.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `event on challenge: ${challenge.nameID}`
-    );
-    return await this.challengeLifecycleOptionsProvider.eventOnChallenge(
-      {
-        eventName: challengeEventData.eventName,
-        ID: challengeEventData.ID,
-      },
-      agentInfo
-    );
-  }
 }
