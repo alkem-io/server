@@ -314,6 +314,7 @@ export class ConversionService {
     orgMembers: IOrganization[],
     orgLeads: IOrganization[]
   ) {
+    // TODO: missing
     for (const userMember of userMembers) {
       await this.communityService.removeUserFromRole(
         community,

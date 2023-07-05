@@ -6,5 +6,7 @@ import { ObjectType } from '@nestjs/graphql';
 export abstract class ICommunityPolicy extends IBaseAlkemio {
   member!: string;
   lead!: string;
+  admin!: string;
+  host!: string;
   flags!: Map<CommunityPolicyFlag, boolean>;
 }

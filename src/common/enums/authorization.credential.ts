@@ -9,14 +9,17 @@ export enum AuthorizationCredential {
 
   USER_SELF_MANAGEMENT = 'user-self', // able to update a user
 
-  SPACE_ADMIN = 'space-admin',
   SPACE_HOST = 'space-host', // host for an space; can only be one...
+  SPACE_ADMIN = 'space-admin',
   SPACE_MEMBER = 'space-member',
+  SPACE_LEAD = 'space-lead',
 
+  CHALLENGE_HOST = 'challenge-host',
   CHALLENGE_ADMIN = 'challenge-admin',
   CHALLENGE_MEMBER = 'challenge-member',
   CHALLENGE_LEAD = 'challenge-lead',
 
+  OPPORTUNITY_HOST = 'opportunity-host',
   OPPORTUNITY_MEMBER = 'opportunity-member',
   OPPORTUNITY_ADMIN = 'opportunity-admin',
   OPPORTUNITY_LEAD = 'opportunity-lead',
