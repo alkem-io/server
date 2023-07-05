@@ -42,6 +42,7 @@ import {
   CommunityInvitationCreatedEventPayload,
   CollaborationWhiteboardCreatedEventPayload,
   CommentReplyEventPayload,
+  CommunityExternalInvitationCreatedEventPayload,
 } from '@alkemio/notifications-lib';
 
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
@@ -100,14 +101,31 @@ export class NotificationPayloadBuilder {
   }
 
   async buildInvitationCreatedNotificationPayload(
-    applicationCreatorID: string,
+    invitationCreatorID: string,
     invitedUserID: string,
     community: ICommunity
   ): Promise<CommunityInvitationCreatedEventPayload> {
     const journeyPayload = await this.buildJourneyPayload(community);
     const payload: CommunityInvitationCreatedEventPayload = {
-      triggeredBy: applicationCreatorID,
+      triggeredBy: invitationCreatorID,
       inviteeID: invitedUserID,
+      journey: journeyPayload,
+    };
+
+    return payload;
+  }
+
+  async buildExternalInvitationCreatedNotificationPayload(
+    invitationCreatorID: string,
+    invitedUserEmail: string,
+    community: ICommunity,
+    message?: string
+  ): Promise<CommunityExternalInvitationCreatedEventPayload> {
+    const journeyPayload = await this.buildJourneyPayload(community);
+    const payload: CommunityExternalInvitationCreatedEventPayload = {
+      triggeredBy: invitationCreatorID,
+      invitees: [{ email: invitedUserEmail }],
+      welcomeMessage: message,
       journey: journeyPayload,
     };
 

@@ -19,8 +19,6 @@ import { IOpportunity } from '@domain/collaboration/opportunity/opportunity.inte
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { IProject } from '@domain/collaboration/project/project.interface';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-import { ILifecycle } from '@domain/common/lifecycle';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { INVP, NVP } from '@domain/common/nvp';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { ICommunity } from '@domain/community/community';
@@ -29,7 +27,6 @@ import { IUserGroup } from '@domain/community/user-group';
 import { IContext } from '@domain/context/context';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { challengeInnovationFlowConfigDefault } from '@domain/template/templates-set/templates.set.default.innovation.flow.challenge';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
@@ -74,7 +71,6 @@ export class SpaceService {
   constructor(
     private agentService: AgentService,
     private organizationService: OrganizationService,
-    private lifecycleService: LifecycleService,
     private projectService: ProjectService,
     private opportunityService: OpportunityService,
     private baseChallengeService: BaseChallengeService,
@@ -150,14 +146,6 @@ export class SpaceService {
         minInnovationFlow: 1,
       },
       true
-    );
-
-    // Lifecycle
-
-    const machineConfig: any = challengeInnovationFlowConfigDefault;
-    space.lifecycle = await this.lifecycleService.createLifecycle(
-      space.id,
-      machineConfig
     );
 
     space.timeline = await this.timelineService.createTimeline();
@@ -764,13 +752,6 @@ export class SpaceService {
 
   public async getCollaboration(space: ISpace): Promise<ICollaboration> {
     return await this.baseChallengeService.getCollaboration(
-      space.id,
-      this.spaceRepository
-    );
-  }
-
-  async getLifecycle(space: ISpace): Promise<ILifecycle> {
-    return await this.baseChallengeService.getLifecycle(
       space.id,
       this.spaceRepository
     );

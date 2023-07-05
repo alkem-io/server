@@ -20,8 +20,6 @@ import { IProject } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
 import { ICommunity } from '@domain/community/community/community.interface';
-import { ILifecycle } from '@domain/common/lifecycle';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { NVP } from '@domain/common/nvp';
@@ -31,29 +29,27 @@ import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { IContext } from '@domain/context/context/context.interface';
-import { UpdateOpportunityInnovationFlowInput } from './dto/opportunity.dto.update.innovation.flow';
 import { ICollaboration } from '../collaboration/collaboration.interface';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
-import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { CreateProjectInput } from '../project/dto/project.dto.create';
-import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { CommunityRole } from '@common/enums/community.role';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
+import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.interface';
+import { InnovationFlowService } from '@domain/challenge/innovation-flow/innovaton.flow.service';
 
 @Injectable()
 export class OpportunityService {
   constructor(
     private baseChallengeService: BaseChallengeService,
     private projectService: ProjectService,
-    private lifecycleService: LifecycleService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService,
     private communityService: CommunityService,
     private userService: UserService,
     private agentService: AgentService,
+    private innovationFlowService: InnovationFlowService,
     private namingService: NamingService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -69,21 +65,6 @@ export class OpportunityService {
     storageBucketID: string,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
-    // Validate incoming data
-    if (opportunityData.innovationFlowTemplateID) {
-      await this.innovationFlowTemplateService.validateInnovationFlowDefinitionOrFail(
-        opportunityData.innovationFlowTemplateID,
-        spaceID,
-        InnovationFlowType.OPPORTUNITY
-      );
-    } else {
-      opportunityData.innovationFlowTemplateID =
-        await this.innovationFlowTemplateService.getDefaultInnovationFlowTemplateId(
-          spaceID,
-          InnovationFlowType.OPPORTUNITY
-        );
-    }
-
     if (!opportunityData.nameID) {
       opportunityData.nameID = this.namingService.createNameID(
         opportunityData.profileData?.displayName || ''
@@ -97,6 +78,12 @@ export class OpportunityService {
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
     opportunity.spaceID = spaceID;
     opportunity.projects = [];
+    opportunity.innovationFlow =
+      await this.innovationFlowService.createInnovationFlow({
+        type: InnovationFlowType.OPPORTUNITY,
+        spaceID: spaceID,
+        innovationFlowTemplateID: opportunityData.innovationFlowTemplateID,
+      });
 
     await this.baseChallengeService.initialise(
       opportunity,
@@ -139,49 +126,7 @@ export class OpportunityService {
       );
     }
 
-    if (opportunityData.innovationFlowTemplateID) {
-      const machineConfig: ILifecycleDefinition =
-        await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
-          opportunityData.innovationFlowTemplateID,
-          spaceID,
-          InnovationFlowType.OPPORTUNITY
-        );
-
-      opportunity.lifecycle = await this.lifecycleService.createLifecycle(
-        opportunity.id,
-        machineConfig
-      );
-    }
-
     return await this.saveOpportunity(opportunity);
-  }
-
-  async updateOpportunityInnovationFlow(
-    opportunityData: UpdateOpportunityInnovationFlowInput
-  ): Promise<IOpportunity> {
-    const opportunity = await this.getOpportunityOrFail(
-      opportunityData.opportunityID,
-      { relations: ['lifecycle'] }
-    );
-
-    if (!opportunity.lifecycle) {
-      throw new EntityNotInitializedException(
-        `Lifecycle of opportunity (${opportunity.id}) not initialized`,
-        LogContext.OPPORTUNITY
-      );
-    }
-
-    const machineConfig: ILifecycleDefinition =
-      await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
-        opportunityData.innovationFlowTemplateID,
-        this.getSpaceID(opportunity),
-        InnovationFlowType.OPPORTUNITY
-      );
-
-    opportunity.lifecycle.machineDef = JSON.stringify(machineConfig);
-    opportunity.lifecycle.machineState = '';
-
-    return await this.save(opportunity);
   }
 
   async save(opportunity: IOpportunity): Promise<IOpportunity> {
@@ -240,6 +185,21 @@ export class OpportunityService {
     }
 
     return opportunity;
+  }
+
+  async getInnovationFlow(opportunityID: string): Promise<IInnovationFlow> {
+    const opportunity = await this.getOpportunityOrFail(opportunityID, {
+      relations: ['innovationFlow'],
+    });
+
+    const innovationFlow = opportunity.innovationFlow;
+    if (!innovationFlow)
+      throw new RelationshipNotFoundException(
+        `Unable to load InnovationFlow for Opportunity ${opportunityID} `,
+        LogContext.CHALLENGES
+      );
+
+    return innovationFlow;
   }
 
   async getOpportunitiesInNameableScope(
@@ -312,13 +272,6 @@ export class OpportunityService {
 
   async getCommunity(opportunityId: string): Promise<ICommunity> {
     return await this.baseChallengeService.getCommunity(
-      opportunityId,
-      this.opportunityRepository
-    );
-  }
-
-  async getLifecycle(opportunityId: string): Promise<ILifecycle> {
-    return await this.baseChallengeService.getLifecycle(
       opportunityId,
       this.opportunityRepository
     );

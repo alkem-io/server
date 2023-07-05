@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
 import { JoinColumn, OneToOne } from 'typeorm';
-import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { Context } from '@domain/context/context/context.entity';
 import { IBaseChallenge } from './base.challenge.interface';
@@ -35,14 +34,6 @@ export abstract class BaseChallenge
   })
   @JoinColumn()
   community?: Community;
-
-  @OneToOne(() => Lifecycle, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  lifecycle!: Lifecycle;
 
   @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'SET NULL' })
   @JoinColumn()

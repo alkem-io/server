@@ -236,6 +236,9 @@ export class RolesService {
       invitation.updatedDate
     );
 
+    invitationResult.createdBy = invitation.createdBy;
+    invitationResult.welcomeMessage = invitation.welcomeMessage;
+
     const isSpaceCommunity = await this.communityService.isSpaceCommunity(
       community
     );

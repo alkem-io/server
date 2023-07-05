@@ -3,50 +3,54 @@ import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MachineOptions } from 'xstate';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { OpportunityService } from './opportunity.service';
-import {
-  OpportunityEventInput,
-  IOpportunity,
-} from '@domain/collaboration/opportunity';
 import { AgentInfo } from '@core/authentication';
+import { InnovationFlowService } from './innovaton.flow.service';
+import { InnovationFlowEvent } from './dto/innovation.flow.dto.event';
+import { IInnovationFlow } from './innovation.flow.interface';
 
 @Injectable()
-export class OpportunityLifecycleOptionsProvider {
+export class InnovationFlowLifecycleOptionsProviderOpportunity {
   constructor(
     private lifecycleService: LifecycleService,
-    private opportunityService: OpportunityService,
+    private innovationFlowService: InnovationFlowService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async eventOnOpportunity(
-    eventData: OpportunityEventInput,
+    eventData: InnovationFlowEvent,
     agentInfo: AgentInfo
-  ): Promise<IOpportunity> {
-    const opportunityID = eventData.ID;
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
-      opportunityID
+  ): Promise<IInnovationFlow> {
+    const innovationFlowID = eventData.innovationFlowID;
+    const innovationFlow =
+      await this.innovationFlowService.getInnovationFlowOrFail(
+        innovationFlowID
+      );
+
+    const lifecycle = await this.innovationFlowService.getLifecycle(
+      innovationFlowID
     );
-    const lifecycle = await this.opportunityService.getLifecycle(opportunityID);
 
     // Send the event, translated if needed
     this.logger.verbose?.(
-      `Event ${eventData.eventName} triggered on Opportunity: ${opportunityID} using lifecycle ${lifecycle.id}`,
-      LogContext.COMMUNITY
+      `Event ${eventData.eventName} triggered on InnovationFlow: ${innovationFlowID} using lifecycle ${lifecycle.id}`,
+      LogContext.CHALLENGES
     );
     await this.lifecycleService.event(
       {
         ID: lifecycle.id,
         eventName: eventData.eventName,
       },
-      this.challengeLifecycleMachineOptions,
+      this.opportunityLifecycleMachineOptions,
       agentInfo,
-      opportunity.authorization
+      innovationFlow.authorization
     );
 
-    return await this.opportunityService.getOpportunityOrFail(opportunityID);
+    return await this.innovationFlowService.getInnovationFlowOrFail(
+      innovationFlowID
+    );
   }
 
-  private challengeLifecycleMachineOptions: Partial<
+  private opportunityLifecycleMachineOptions: Partial<
     MachineOptions<any, any>
   > = {
     actions: {

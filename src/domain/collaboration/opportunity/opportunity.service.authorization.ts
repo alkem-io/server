@@ -20,6 +20,7 @@ import {
   CREDENTIAL_RULE_OPPORTUNITY_MEMBER,
   CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW,
 } from '@common/constants';
+import { InnovationFlowAuthorizationService } from '@domain/challenge/innovation-flow/innovation.flow.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
 
 @Injectable()
@@ -29,6 +30,7 @@ export class OpportunityAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private opportunityService: OpportunityService,
     private communityPolicyService: CommunityPolicyService,
+    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>
   ) {}
@@ -71,6 +73,14 @@ export class OpportunityAuthorizationService {
           );
       }
     }
+
+    opportunity.innovationFlow =
+      await this.opportunityService.getInnovationFlow(opportunity.id);
+    opportunity.innovationFlow =
+      await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
+        opportunity.innovationFlow,
+        opportunity.authorization
+      );
 
     return await this.opportunityRepository.save(opportunity);
   }
@@ -164,7 +174,6 @@ export class OpportunityAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW
       );
-    updateInnovationFlowRule.cascade = false;
     rules.push(updateInnovationFlowRule);
 
     return rules;

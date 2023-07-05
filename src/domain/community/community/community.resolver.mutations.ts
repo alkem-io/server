@@ -50,6 +50,7 @@ import { IUser } from '../user/user.interface';
 import { CreateInvitationExternalUserOnCommunityInput } from './dto/community.dto.invite.external.user';
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { IInvitationExternal } from '../invitation.external';
+import { NotificationInputCommunityInvitationExternal } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation.external';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -362,7 +363,13 @@ export class CommunityResolverMutations {
         community.authorization
       );
 
-    // TODO - send a relevant notification
+    const notificationInput: NotificationInputCommunityInvitationExternal = {
+      triggeredBy: agentInfo.userID,
+      community: community,
+      invitedUser: invitationData.email,
+      welcomeMessage: invitationData.welcomeMessage,
+    };
+    await this.notificationAdapter.externalInvitationCreated(notificationInput);
     return savedInvitation;
   }
 

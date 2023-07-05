@@ -6,18 +6,12 @@ import { IProject } from '@domain/collaboration/project';
 import { GraphqlGuard } from '@core/authorization';
 import { OpportunityService } from './opportunity.service';
 import { AuthorizationPrivilege } from '@common/enums';
-import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentInfo } from '@core/authentication';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IOpportunity } from './opportunity.interface';
-import {
-  DeleteOpportunityInput,
-  OpportunityEventInput,
-  UpdateOpportunityInput,
-} from './dto';
-import { UpdateOpportunityInnovationFlowInput } from './dto/opportunity.dto.update.innovation.flow';
+import { DeleteOpportunityInput, UpdateOpportunityInput } from './dto';
 import { ElasticsearchService } from '@services/external/elasticsearch';
 import { CreateProjectInput } from '../project/dto';
 
@@ -28,8 +22,7 @@ export class OpportunityResolverMutations {
     private projectService: ProjectService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
-    private opportunityService: OpportunityService,
-    private opportunityLifecycleOptionsProvider: OpportunityLifecycleOptionsProvider
+    private opportunityService: OpportunityService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -68,30 +61,6 @@ export class OpportunityResolverMutations {
     );
 
     return updatedOpportunity;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IOpportunity, {
-    description: 'Updates the Innovation Flow on the specified Opportunity.',
-  })
-  @Profiling.api
-  async updateOpportunityInnovationFlow(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('opportunityData')
-    opportunityData: UpdateOpportunityInnovationFlowInput
-  ): Promise<IOpportunity> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
-      opportunityData.opportunityID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      opportunity.authorization,
-      AuthorizationPrivilege.UPDATE_INNOVATION_FLOW,
-      `opportunity innovation flow update: ${opportunity.nameID}`
-    );
-    return await this.opportunityService.updateOpportunityInnovationFlow(
-      opportunityData
-    );
   }
 
   @UseGuards(GraphqlGuard)

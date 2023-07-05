@@ -38,6 +38,7 @@ import {
 } from '@common/constants';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
+import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -51,6 +52,7 @@ export class ChallengeAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private preferenceSetService: PreferenceSetService,
     private storageBucketAuthorizationService: StorageBucketAuthorizationService,
+    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
   ) {}
@@ -159,6 +161,14 @@ export class ChallengeAuthorizationService {
         challenge.authorization
       );
 
+    challenge.innovationFlow = await this.challengeService.getInnovationFlow(
+      challenge.id
+    );
+    challenge.innovationFlow =
+      await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
+        challenge.innovationFlow,
+        challenge.authorization
+      );
     return await this.challengeRepository.save(challenge);
   }
 
@@ -370,7 +380,6 @@ export class ChallengeAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW
       );
-    updateInnovationFlowRule.cascade = false;
     rules.push(updateInnovationFlowRule);
 
     if (

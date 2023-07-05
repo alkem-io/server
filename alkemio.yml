@@ -165,15 +165,15 @@ identity:
         jwks_uri: ${AUTH_ORY_KRATOS_JWKS_URI}:http://localhost:3000/jwks/.well-known/jwks.json
 
         # Ory Kratos Base Public URL. It is used as prefix for all Kratos flows.
-        # Locally, Kratos Public API works on http://localhost:3000/identity/ory/kratos/public and by default in k8s it works on https://[HOST]/identity/ory/kratos/public
+        # Locally, Kratos Public API works on http://localhost:3000/ory/kratos/public and by default in k8s it works on https://[HOST]/ory/kratos/public
         # NB: The default kratos.yml config defines the selfservice endpoints with base address http://localhost:3000/identity.
         # That is used as there is a reverse proxy in front of the Alkemio Web Client that forwards the calls to the Kratos Public URL.
-        # You can check the currently logged in user at http://localhost:3000/identity/ory/kratos/public/sessions/whoami.
-        kratos_public_base_url: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL}:http://localhost:3000/identity/ory/kratos/public
+        # You can check the currently logged in user at http://localhost:3000/ory/kratos/public/sessions/whoami.
+        kratos_public_base_url: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL}:http://localhost:3000/ory/kratos/public
 
         # Ory Kratos URL for usage by the Alkemio server when inside a cluster.
-        kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:3000/identity/ory/kratos/public
-        kratos_admin_base_url_server: ${AUTH_ORY_KRATOS_ADMIN_BASE_URL_SERVER}:http://localhost:3000/identity/ory/kratos
+        kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:3000/ory/kratos/public
+        kratos_admin_base_url_server: ${AUTH_ORY_KRATOS_ADMIN_BASE_URL_SERVER}:http://localhost:3000/ory/kratos
 
         # session can't be extended until *earliest_possible_extend* **hours** before it expires
         # default is 24
