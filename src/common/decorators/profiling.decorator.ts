@@ -10,7 +10,7 @@ export class Profiling {
     propertyKey: string,
     descriptor: PropertyDescriptor
   ) => {
-    if (!Profiling.logger.verbose) {
+    if (!Profiling.logger?.verbose) {
       return descriptor;
     }
 
