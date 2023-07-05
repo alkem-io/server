@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import type { Response } from 'express';
+import { GraphQLError } from 'graphql';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -50,11 +51,8 @@ export class StorageAccessController {
         `Read document: ${document.displayName}`
       );
     } catch (e: unknown) {
-      const err = e as Error;
-      throw new ForbiddenException(
-        'Unable to grant privileges for this resource',
-        err.message
-      );
+      const err = e as GraphQLError;
+      throw new ForbiddenException(err.message);
     }
 
     res.setHeader('Content-Type', `${document.mimeType}`);
