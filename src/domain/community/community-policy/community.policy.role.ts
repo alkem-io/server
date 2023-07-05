@@ -8,6 +8,7 @@ export class CommunityRolePolicy implements ICommunityRolePolicy {
   maxUser: number;
   minOrg: number;
   maxOrg: number;
+  enabled: boolean;
 
   constructor(credential: CredentialDefinition) {
     this.credential = credential;
@@ -16,5 +17,6 @@ export class CommunityRolePolicy implements ICommunityRolePolicy {
     this.maxOrg = -1;
     this.minUser = -1;
     this.maxUser = -1;
+    this.enabled = false;
   }
 }

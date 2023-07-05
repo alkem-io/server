@@ -10,9 +10,6 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AgentInfo } from '@core/authentication';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IUser } from '@domain/community/user/user.interface';
-import { RemoveOpportunityAdminInput } from './dto/opportunity.dto.remove.admin';
-import { AssignOpportunityAdminInput } from './dto/opportunity.dto.assign.admin';
 import { IOpportunity } from './opportunity.interface';
 import { DeleteOpportunityInput, UpdateOpportunityInput } from './dto';
 import { ElasticsearchService } from '@services/external/elasticsearch';
@@ -114,44 +111,29 @@ export class OpportunityResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Assigns a User as an Opportunity Admin.',
+  @Mutation(() => IOpportunity, {
+    description: 'Trigger an event on the Opportunity.',
   })
-  @Profiling.api
-  async assignUserAsOpportunityAdmin(
+  async eventOnOpportunity(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignOpportunityAdminInput
-  ): Promise<IUser> {
+    @Args('opportunityEventData')
+    opportunityEventData: OpportunityEventInput
+  ): Promise<IOpportunity> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
-      membershipData.opportunityID
+      opportunityEventData.ID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       opportunity.authorization,
-      AuthorizationPrivilege.GRANT,
-      `assign user opportunity admin: ${opportunity.nameID}`
+      AuthorizationPrivilege.UPDATE,
+      `event on opportunity: ${opportunity.nameID}`
     );
-    return await this.opportunityService.assignOpportunityAdmin(membershipData);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Removes a User from being an Opportunity Admin.',
-  })
-  @Profiling.api
-  async removeUserAsOpportunityAdmin(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveOpportunityAdminInput
-  ): Promise<IUser> {
-    const opportunity = await this.opportunityService.getOpportunityOrFail(
-      membershipData.opportunityID
+    return await this.opportunityLifecycleOptionsProvider.eventOnOpportunity(
+      {
+        eventName: opportunityEventData.eventName,
+        ID: opportunityEventData.ID,
+      },
+      agentInfo
     );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      opportunity.authorization,
-      AuthorizationPrivilege.GRANT,
-      `remove user opportunity admin: ${opportunity.nameID}`
-    );
-    return await this.opportunityService.removeOpportunityAdmin(membershipData);
   }
 }

@@ -35,10 +35,6 @@ import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { Space } from './space.entity';
 import { ISpace } from './space.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
-import { AssignSpaceAdminInput } from './dto/space.dto.assign.admin';
-import { IUser } from '@domain/community/user/user.interface';
-import { RemoveSpaceAdminInput } from './dto/space.dto.remove.admin';
-import { UserService } from '@domain/community/user/user.service';
 import { UpdateSpaceInput } from './dto/space.dto.update';
 import { CreateChallengeOnSpaceInput } from '../challenge/dto/challenge.dto.create.in.space';
 import { CommunityService } from '@domain/community/community/community.service';
@@ -68,6 +64,7 @@ import { StorageBucketService } from '@domain/storage/storage-bucket/storage.buc
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Injectable()
 export class SpaceService {
@@ -78,7 +75,6 @@ export class SpaceService {
     private opportunityService: OpportunityService,
     private baseChallengeService: BaseChallengeService,
     private namingService: NamingService,
-    private userService: UserService,
     private communityService: CommunityService,
     private challengeService: ChallengeService,
     private preferenceSetService: PreferenceSetService,
@@ -123,6 +119,22 @@ export class SpaceService {
           space.community,
           space.id
         );
+
+      if (agentInfo) {
+        await this.communityService.assignUserToRole(
+          space.community,
+          agentInfo?.userID,
+          CommunityRole.MEMBER,
+          agentInfo
+        );
+
+        await this.communityService.assignUserToRole(
+          space.community,
+          agentInfo?.userID,
+          CommunityRole.ADMIN,
+          agentInfo
+        );
+      }
     }
     space.preferenceSet = await this.preferenceSetService.createPreferenceSet(
       PreferenceDefinitionSet.SPACE,
@@ -143,14 +155,6 @@ export class SpaceService {
 
     await this.setSpaceHost(space.id, spaceData.hostID);
 
-    if (agentInfo) {
-      await this.assignMember(agentInfo.userID, space.id);
-
-      await this.assignSpaceAdmin({
-        spaceID: space.id,
-        userID: agentInfo.userID,
-      });
-    }
     return savedSpace;
   }
 
@@ -258,18 +262,6 @@ export class SpaceService {
       space.id,
       this.spaceRepository
     );
-
-    // Remove any host credentials
-    const hostOrg = await this.getHost(space.id);
-    if (hostOrg) {
-      const agentHostOrg = await this.organizationService.getAgent(hostOrg);
-      hostOrg.agent = await this.agentService.revokeCredential({
-        agentID: agentHostOrg.id,
-        type: AuthorizationCredential.SPACE_HOST,
-        resourceID: space.id,
-      });
-      await this.organizationService.save(hostOrg);
-    }
 
     if (space.preferenceSet) {
       await this.preferenceSetService.deletePreferenceSet(
@@ -967,48 +959,6 @@ export class SpaceService {
       );
     }
     return organizations[0];
-  }
-
-  async assignMember(userID: string, spaceId: string) {
-    const agent = await this.userService.getAgent(userID);
-    const space = await this.getSpaceOrFail(spaceId);
-
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.SPACE_MEMBER,
-      resourceID: space.id,
-    });
-
-    return await this.userService.getUserWithAgent(userID);
-  }
-
-  async assignSpaceAdmin(assignData: AssignSpaceAdminInput): Promise<IUser> {
-    const userID = assignData.userID;
-    const agent = await this.userService.getAgent(userID);
-    const space = await this.getSpaceOrFail(assignData.spaceID);
-
-    // assign the credential
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.SPACE_ADMIN,
-      resourceID: space.id,
-    });
-
-    return await this.userService.getUserWithAgent(userID);
-  }
-
-  async removeSpaceAdmin(removeData: RemoveSpaceAdminInput): Promise<IUser> {
-    const spaceID = removeData.spaceID;
-    const space = await this.getSpaceOrFail(spaceID);
-    const agent = await this.userService.getAgent(removeData.userID);
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.SPACE_ADMIN,
-      resourceID: space.id,
-    });
-
-    return await this.userService.getUserWithAgent(removeData.userID);
   }
 
   async getPreferences(space: ISpace): Promise<IPreference[]> {

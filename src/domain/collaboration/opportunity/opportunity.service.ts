@@ -14,7 +14,7 @@ import {
   opportunityCommunityPolicy,
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { IProject } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -24,10 +24,7 @@ import { INVP } from '@domain/common/nvp/nvp.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { NVP } from '@domain/common/nvp';
 import { UUID_LENGTH } from '@common/constants';
-import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
-import { AssignOpportunityAdminInput } from './dto/opportunity.dto.assign.admin';
-import { RemoveOpportunityAdminInput } from './dto/opportunity.dto.remove.admin';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
@@ -121,10 +118,12 @@ export class OpportunityService {
         agentInfo.userID,
         CommunityRole.LEAD
       );
-      await this.assignOpportunityAdmin({
-        userID: agentInfo.userID,
-        opportunityID: opportunity.id,
-      });
+
+      await this.communityService.assignUserToRole(
+        opportunity.community,
+        agentInfo.userID,
+        CommunityRole.ADMIN
+      );
     }
 
     return await this.saveOpportunity(opportunity);
@@ -407,41 +406,6 @@ export class OpportunityService {
     return await this.opportunityRepository.countBy({
       challenge: { id: challengeID },
     });
-  }
-
-  async assignOpportunityAdmin(
-    assignData: AssignOpportunityAdminInput
-  ): Promise<IUser> {
-    const userID = assignData.userID;
-    const agent = await this.userService.getAgent(userID);
-    const opportunity = await this.getOpportunityOrFail(
-      assignData.opportunityID
-    );
-
-    // assign the credential
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.OPPORTUNITY_ADMIN,
-      resourceID: opportunity.id,
-    });
-
-    return await this.userService.getUserWithAgent(userID);
-  }
-
-  async removeOpportunityAdmin(
-    removeData: RemoveOpportunityAdminInput
-  ): Promise<IUser> {
-    const opportunityID = removeData.opportunityID;
-    const opportunity = await this.getOpportunityOrFail(opportunityID);
-    const agent = await this.userService.getAgent(removeData.userID);
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.OPPORTUNITY_ADMIN,
-      resourceID: opportunity.id,
-    });
-
-    return await this.userService.getUserWithAgent(removeData.userID);
   }
 
   async getOpportunityForCommunity(

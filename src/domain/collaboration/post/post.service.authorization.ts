@@ -21,6 +21,7 @@ import {
 } from '@common/constants';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Injectable()
 export class PostAuthorizationService {
@@ -110,8 +111,10 @@ export class PostAuthorizationService {
     newRules.push(manageCreatedPostPolicy);
 
     // Allow space admins to move post
-    const credentials =
-      this.communityPolicyService.getAdminCredentials(communityPolicy);
+    const credentials = this.communityPolicyService.getAllCredentialsForRole(
+      communityPolicy,
+      CommunityRole.ADMIN
+    );
     credentials.push({
       type: AuthorizationCredential.GLOBAL_ADMIN,
       resourceID: '',

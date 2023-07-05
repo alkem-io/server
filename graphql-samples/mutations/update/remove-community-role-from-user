@@ -1,0 +1,14 @@
+mutation removeCommunityRoleFromUser($roleData: RemoveCommunityRoleFromUserInput!) {
+  removeCommunityRoleFromUser(roleData: $roleData) {
+    id,
+  }
+}
+
+Variables:
+{
+  "roleData": {
+    "userID": "uuid",
+    "communityID": "uuid",
+    "role": "MEMBER"
+  }
+}
