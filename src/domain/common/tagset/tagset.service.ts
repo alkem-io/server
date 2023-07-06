@@ -69,37 +69,46 @@ export class TagsetService {
   }
 
   async updateTagset(tagsetData: UpdateTagsetInput): Promise<ITagset> {
-    const tagset = await this.getTagsetOrFail(tagsetData.ID);
+    const tagset = await this.getTagsetOrFail(tagsetData.ID, {
+      relations: ['tagsetTemplate'],
+    });
 
-    if (tagsetData.tags) {
-      if (!this.isTagsListValid(tagset, tagsetData.tags)) {
-        throw new ValidationException(
-          'Not all tags are allowed',
-          LogContext.TAGSET
-        );
-      }
-      if (
-        tagset.type === TagsetType.SELECT_ONE &&
-        tagsetData.tags.length !== 1
-      ) {
-        throw new ValidationException(
-          'Tags array length should be one',
-          LogContext.TAGSET
-        );
-      }
+    switch (tagset.type) {
+      case TagsetType.FREEFORM:
+        break;
+      case TagsetType.SELECT_ONE:
+      case TagsetType.SELECT_MANY:
+        const tagsetTemplate = tagset.tagsetTemplate;
+        if (!tagsetTemplate) {
+          throw new EntityNotFoundException(
+            'Unable to load tagset template for tagset with allowedValues',
+            LogContext.TAGSET
+          );
+        }
+        const tags = tagsetData.tags;
+        if (tagset.type === TagsetType.SELECT_ONE) {
+          if (tags.length !== 1) {
+            throw new ValidationException(
+              'Tags array length should be exactly one',
+              LogContext.TAGSET
+            );
+          }
+        }
+        this.validateForAllowedValues(tags, tagsetTemplate.allowedValues);
     }
 
     this.updateTagsetValues(tagset, tagsetData);
     return await this.tagsetRepository.save(tagset);
   }
 
-  isTagsListValid(tagset: ITagset, tags: string[]): boolean {
-    if (!tagset.tagsetTemplate) {
-      return true;
+  validateForAllowedValues(tags: string[], allowedValues: string[]) {
+    const result = tags.every(tag => allowedValues.includes(tag));
+    if (!result) {
+      throw new ValidationException(
+        `Provided tags (${tags}) has values that are not in allowedValues: ${allowedValues}`,
+        LogContext.TAGSET
+      );
     }
-    return tags.every(tag =>
-      tagset.tagsetTemplate?.allowedValues.includes(tag)
-    );
   }
 
   updateTagsetValues(tagset: ITagset, tagsetData: UpdateTagsetInput): ITagset {
