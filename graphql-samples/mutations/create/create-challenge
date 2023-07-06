@@ -12,7 +12,7 @@ query variables:
     "spaceID": "1",
     "innovationFlowTemplateID": "uuid",
     "nameID": "balance-grid",
-    "profiledata": {
+    "profileData": {
       "displayName": "Balance the grid",
       "tagline": "How might we incentivize consumers to communicate energy demand and production to allow all stakeholders to balance the grid?",
       "references": [
