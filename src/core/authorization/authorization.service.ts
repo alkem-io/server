@@ -87,7 +87,12 @@ export class AuthorizationService {
     authorization: IAuthorizationPolicy | undefined,
     privilegeRequired: AuthorizationPrivilege
   ): boolean {
-    if (!authorization) throw new Error();
+    if (!authorization) {
+      throw new ForbiddenException(
+        'Authorization: no definition provided',
+        LogContext.AUTH_POLICY
+      );
+    }
     if (
       authorization.anonymousReadAccess &&
       privilegeRequired === AuthorizationPrivilege.READ
