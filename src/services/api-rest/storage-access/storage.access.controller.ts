@@ -1,8 +1,10 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Inject,
   LoggerService,
+  NotFoundException,
   Param,
   Res,
   StreamableFile,
@@ -10,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import type { Response } from 'express';
+import { GraphQLError } from 'graphql';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication';
 import { AuthorizationPrivilege } from '@common/enums';
@@ -32,15 +35,25 @@ export class StorageAccessController {
     @CurrentUser() agentInfo: AgentInfo,
     @Param('id') id: string,
     @Res({ passthrough: true }) res: Response
-  ): Promise<StreamableFile> {
-    const document = await this.documentService.getDocumentOrFail(id);
+  ): Promise<StreamableFile | void> {
+    let document;
+    try {
+      document = await this.documentService.getDocumentOrFail(id);
+    } catch (e) {
+      throw new NotFoundException(`Document with id '${id}' not found`);
+    }
 
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      document.authorization,
-      AuthorizationPrivilege.READ,
-      `Read document: ${document.displayName}`
-    );
+    try {
+      await this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        document.authorization,
+        AuthorizationPrivilege.READ,
+        `Read document: ${document.displayName}`
+      );
+    } catch (e: unknown) {
+      const err = e as GraphQLError;
+      throw new ForbiddenException(err.message);
+    }
 
     res.setHeader('Content-Type', `${document.mimeType}`);
 
