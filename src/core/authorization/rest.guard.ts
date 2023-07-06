@@ -32,7 +32,6 @@ export class RestGuard extends AuthGuard([
     if (err) {
       this.logger.error(`error: ${err}`, LogContext.AUTH);
       throw new HttpException('Forbidden', HttpStatus.FORBIDDEN);
-     // throw new AuthenticationException(err);
     }
 
     // authorize the access to the requested resource...
