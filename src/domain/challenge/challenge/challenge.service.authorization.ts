@@ -380,6 +380,7 @@ export class ChallengeAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW
       );
+    updateInnovationFlowRule.cascade = false;
     rules.push(updateInnovationFlowRule);
 
     if (
