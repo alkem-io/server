@@ -1,0 +1,14 @@
+mutation assignCommunityRoleToOrganization($roleData: AssignCommunityRoleToOrganizationInput!) {
+  assignCommunityRoleToOrganization(roleData: $roleData) {
+    id,
+  }
+}
+
+Variables:
+{
+  "roleData": {
+    "organizationID": "uuid",
+    "communityID": "uuid",
+    "role": "MEMBER"
+  }
+}

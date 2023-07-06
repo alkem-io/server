@@ -92,7 +92,9 @@ export class CommunityService {
     community.authorization = new AuthorizationPolicy();
     community.policy = await this.communityPolicyService.createCommunityPolicy(
       policy.member,
-      policy.lead
+      policy.lead,
+      policy.admin,
+      policy.host
     );
     community.spaceID = spaceID;
     community.applicationForm = await this.formService.createForm(
@@ -193,7 +195,7 @@ export class CommunityService {
     for (const role of Object.values(CommunityRole)) {
       const users = await this.getUsersWithRole(community, role);
       for (const user of users) {
-        await this.removeUserFromRole(community, user.id, role);
+        await this.removeUserFromRole(community, user.id, role, false);
       }
 
       const organizations = await this.getOrganizationsWithRole(
@@ -201,12 +203,14 @@ export class CommunityService {
         role
       );
       for (const organization of organizations) {
-        await this.removeOrganizationFromRole(community, organization.id, role);
+        await this.removeOrganizationFromRole(
+          community,
+          organization.id,
+          role,
+          false
+        );
       }
     }
-
-    // Remove all credentials issued for admins
-    await this.removeCommunityUserAdmins(community);
 
     if (community.authorization)
       await this.authorizationPolicyService.delete(community.authorization);
@@ -443,7 +447,7 @@ export class CommunityService {
     userID: string,
     role: CommunityRole,
     agentInfo?: AgentInfo
-  ): Promise<ICommunity> {
+  ): Promise<IUser> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
     const hasMemberRoleInParent = await this.isMemberInParentCommunity(
       agent,
@@ -480,7 +484,7 @@ export class CommunityService {
       }
     }
 
-    return community;
+    return user;
   }
 
   private async addMemberToCommunication(
@@ -551,7 +555,7 @@ export class CommunityService {
     community: ICommunity,
     organizationID: string,
     role: CommunityRole
-  ): Promise<ICommunity> {
+  ): Promise<IOrganization> {
     const { organization, agent } =
       await this.organizationService.getOrganizationAndAgent(organizationID);
 
@@ -562,21 +566,23 @@ export class CommunityService {
       CommunityContributorType.ORGANIZATION
     );
 
-    return community;
+    return organization;
   }
 
   async removeUserFromRole(
     community: ICommunity,
     userID: string,
-    role: CommunityRole
-  ): Promise<ICommunity> {
+    role: CommunityRole,
+    validatePolicyLimits = true
+  ): Promise<IUser> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
 
     user.agent = await this.removeContributorFromRole(
       community,
       agent,
       role,
-      CommunityContributorType.USER
+      CommunityContributorType.USER,
+      validatePolicyLimits
     );
 
     if (role === CommunityRole.MEMBER) {
@@ -591,14 +597,15 @@ export class CommunityService {
         );
     }
 
-    return community;
+    return user;
   }
 
   async removeOrganizationFromRole(
     community: ICommunity,
     organizationID: string,
-    role: CommunityRole
-  ): Promise<ICommunity> {
+    role: CommunityRole,
+    validatePolicyLimits = true
+  ): Promise<IOrganization> {
     const { organization, agent } =
       await this.organizationService.getOrganizationAndAgent(organizationID);
 
@@ -606,10 +613,11 @@ export class CommunityService {
       community,
       agent,
       role,
-      CommunityContributorType.ORGANIZATION
+      CommunityContributorType.ORGANIZATION,
+      validatePolicyLimits
     );
 
-    return community;
+    return organization;
   }
 
   private async validateUserCommunityPolicy(
@@ -720,39 +728,23 @@ export class CommunityService {
     });
   }
 
-  private async removeCommunityUserAdmins(
-    community: ICommunity
-  ): Promise<void> {
-    const adminCredential = this.communityPolicyService.getAdminCredential(
-      community.policy
-    );
-    const agents = await this.agentService.findAgentsWithMatchingCredentials(
-      adminCredential
-    );
-
-    for (const agent of agents) {
-      await this.agentService.revokeCredential({
-        agentID: agent.id,
-        type: adminCredential.type,
-        resourceID: adminCredential.resourceID,
-      });
-    }
-  }
-
   private async removeContributorFromRole(
     community: ICommunity,
     agent: IAgent,
     role: CommunityRole,
-    contributorType: CommunityContributorType
+    contributorType: CommunityContributorType,
+    validatePolicyLimits: boolean
   ): Promise<IAgent> {
     const communityPolicyRole = this.getCommunityPolicyForRole(community, role);
-    await this.validateCommunityPolicyLimits(
-      community,
-      communityPolicyRole,
-      role,
-      CommunityContributorsUpdateType.REMOVE,
-      contributorType
-    );
+    if (validatePolicyLimits) {
+      await this.validateCommunityPolicyLimits(
+        community,
+        communityPolicyRole,
+        role,
+        CommunityContributorsUpdateType.REMOVE,
+        contributorType
+      );
+    }
 
     return await this.agentService.revokeCredential({
       agentID: agent.id,
@@ -1029,21 +1021,6 @@ export class CommunityService {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
       CommunityRole.MEMBER
-    );
-
-    const credentialMatches =
-      await this.agentService.countAgentsWithMatchingCredentials({
-        type: membershipCredential.type,
-        resourceID: membershipCredential.resourceID,
-      });
-
-    return credentialMatches;
-  }
-
-  async getLeadsCount(community: ICommunity): Promise<number> {
-    const membershipCredential = this.getCredentialDefinitionForRole(
-      community,
-      CommunityRole.LEAD
     );
 
     const credentialMatches =

@@ -15,9 +15,6 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SpaceAuthorizationService } from './space.service.authorization';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { ISpace } from './space.interface';
-import { IUser } from '@domain/community/user/user.interface';
-import { AssignSpaceAdminInput } from './dto/space.dto.assign.admin';
-import { RemoveSpaceAdminInput } from './dto/space.dto.remove.admin';
 import { SpaceAuthorizationResetInput } from './dto/space.dto.reset.authorization';
 import { CreateChallengeOnSpaceInput } from '../challenge/dto/challenge.dto.create.in.space';
 import { PreferenceService } from '@domain/common/preference/preference.service';
@@ -178,6 +175,7 @@ export class SpaceResolverMutations {
     await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
     return preferenceUpdated;
   }
+
   // create mutation here because authorization policies need to be reset
   // resetting works only on top level entities
   // this way we avoid the complexity and circular dependencies introduced
@@ -324,47 +322,5 @@ export class SpaceResolverMutations {
       `reset authorization definition: ${agentInfo.email}`
     );
     return await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Assigns a User as an Space Admin.',
-  })
-  @Profiling.api
-  async assignUserAsSpaceAdmin(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: AssignSpaceAdminInput
-  ): Promise<IUser> {
-    const space = await this.spaceService.getSpaceOrFail(
-      membershipData.spaceID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      space.authorization,
-      AuthorizationPrivilege.GRANT,
-      `assign user space admin: ${space.nameID}`
-    );
-    return await this.spaceService.assignSpaceAdmin(membershipData);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Removes a User from being an Space Admin.',
-  })
-  @Profiling.api
-  async removeUserAsSpaceAdmin(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('membershipData') membershipData: RemoveSpaceAdminInput
-  ): Promise<IUser> {
-    const space = await this.spaceService.getSpaceOrFail(
-      membershipData.spaceID
-    );
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      space.authorization,
-      AuthorizationPrivilege.GRANT,
-      `remove user space admin: ${space.nameID}`
-    );
-    return await this.spaceService.removeSpaceAdmin(membershipData);
   }
 }

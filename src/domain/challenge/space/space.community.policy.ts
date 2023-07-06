@@ -3,6 +3,7 @@ import { ICommunityPolicyDefinition } from '@domain/community/community-policy/c
 
 export const spaceCommunityPolicy: ICommunityPolicyDefinition = {
   member: {
+    enabled: true,
     credential: {
       type: AuthorizationCredential.SPACE_MEMBER,
       resourceID: '',
@@ -14,14 +15,40 @@ export const spaceCommunityPolicy: ICommunityPolicyDefinition = {
     maxUser: -1,
   },
   lead: {
+    enabled: true,
+    credential: {
+      type: AuthorizationCredential.SPACE_LEAD,
+      resourceID: '',
+    },
+    parentCredentials: [],
+    minOrg: 0,
+    maxOrg: 2,
+    minUser: 0,
+    maxUser: 2,
+  },
+
+  admin: {
+    enabled: true,
+    credential: {
+      type: AuthorizationCredential.SPACE_ADMIN,
+      resourceID: '',
+    },
+    parentCredentials: [],
+    minOrg: 0,
+    maxOrg: 0,
+    minUser: 0,
+    maxUser: -1,
+  },
+  host: {
+    enabled: true,
     credential: {
       type: AuthorizationCredential.SPACE_HOST,
       resourceID: '',
     },
     parentCredentials: [],
-    minOrg: 0,
+    minOrg: 1,
     maxOrg: 1,
     minUser: 0,
-    maxUser: 2,
+    maxUser: 0,
   },
 };

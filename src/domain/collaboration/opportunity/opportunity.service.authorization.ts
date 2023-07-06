@@ -21,6 +21,7 @@ import {
   CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW,
 } from '@common/constants';
 import { InnovationFlowAuthorizationService } from '@domain/challenge/innovation-flow/innovation.flow.service.authorization';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Injectable()
 export class OpportunityAuthorizationService {
@@ -141,7 +142,12 @@ export class OpportunityAuthorizationService {
           AuthorizationPrivilege.GRANT,
           AuthorizationPrivilege.DELETE,
         ],
-        [this.communityPolicyService.getAdminCredential(policy)],
+        [
+          this.communityPolicyService.getCredentialForRole(
+            policy,
+            CommunityRole.ADMIN
+          ),
+        ],
         CREDENTIAL_RULE_OPPORTUNITY_ADMIN
       );
     rules.push(opportunityAdmin);
@@ -149,7 +155,12 @@ export class OpportunityAuthorizationService {
     const opportunityMember =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.READ],
-        [this.communityPolicyService.getMembershipCredential(policy)],
+        [
+          this.communityPolicyService.getCredentialForRole(
+            policy,
+            CommunityRole.MEMBER
+          ),
+        ],
         CREDENTIAL_RULE_OPPORTUNITY_MEMBER
       );
     rules.push(opportunityMember);

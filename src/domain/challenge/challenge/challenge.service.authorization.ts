@@ -37,6 +37,7 @@ import {
   CREDENTIAL_RULE_CHALLENGE_FILE_UPLOAD,
 } from '@common/constants';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
+import { CommunityRole } from '@common/enums/community.role';
 import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 
 @Injectable()
@@ -303,7 +304,12 @@ export class ChallengeAuthorizationService {
           AuthorizationPrivilege.GRANT,
           AuthorizationPrivilege.DELETE,
         ],
-        [...this.communityPolicyService.getAdminCredentials(policy)],
+        [
+          ...this.communityPolicyService.getAllCredentialsForRole(
+            policy,
+            CommunityRole.ADMIN
+          ),
+        ],
         CREDENTIAL_RULE_CHALLENGE_SPACE_ADMINS
       );
     rules.push(challengeSpaceAdmins);
@@ -342,7 +348,12 @@ export class ChallengeAuthorizationService {
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.DELETE,
       ],
-      [this.communityPolicyService.getAdminCredential(policy)],
+      [
+        this.communityPolicyService.getCredentialForRole(
+          policy,
+          CommunityRole.ADMIN
+        ),
+      ],
       CREDENTIAL_RULE_CHALLENGE_ADMINS
     );
     rules.push(challengeAdmin);
@@ -350,7 +361,12 @@ export class ChallengeAuthorizationService {
     const challengeMember =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.READ],
-        [this.communityPolicyService.getMembershipCredential(policy)],
+        [
+          this.communityPolicyService.getCredentialForRole(
+            policy,
+            CommunityRole.MEMBER
+          ),
+        ],
         CREDENTIAL_RULE_CHALLENGE_MEMBER_READ
       );
     rules.push(challengeMember);
@@ -388,7 +404,10 @@ export class ChallengeAuthorizationService {
 
   private getContributorCriteria(policy: ICommunityPolicy) {
     const criteria = [
-      this.communityPolicyService.getMembershipCredential(policy),
+      this.communityPolicyService.getCredentialForRole(
+        policy,
+        CommunityRole.MEMBER
+      ),
     ];
     if (
       this.communityPolicyService.getFlag(
@@ -397,7 +416,10 @@ export class ChallengeAuthorizationService {
       )
     ) {
       criteria.push(
-        this.communityPolicyService.getParentMembershipCredential(policy)
+        this.communityPolicyService.getDirectParentCredentialForRole(
+          policy,
+          CommunityRole.MEMBER
+        )
       );
     }
     return criteria;
@@ -454,7 +476,10 @@ export class ChallengeAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     const parentCommunityCredential =
-      this.communityPolicyService.getParentMembershipCredential(policy);
+      this.communityPolicyService.getDirectParentCredentialForRole(
+        policy,
+        CommunityRole.MEMBER
+      );
 
     // Allow member of the parent community to Apply
     const allowSpaceMembersToApply = this.communityPolicyService.getFlag(

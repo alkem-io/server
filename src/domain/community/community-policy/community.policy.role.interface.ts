@@ -3,6 +3,11 @@ import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('CommunityRolePolicy')
 export abstract class ICommunityRolePolicy {
+  @Field(() => Boolean, {
+    description: 'Is this role enabled for this Community',
+  })
+  enabled!: boolean;
+
   @Field(() => ICredentialDefinition, {
     description: 'The CredentialDefinition that is associated with this role',
   })

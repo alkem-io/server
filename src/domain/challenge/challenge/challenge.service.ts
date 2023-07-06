@@ -33,9 +33,6 @@ import { IChallenge } from './challenge.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { UserService } from '@domain/community/user/user.service';
-import { IUser } from '@domain/community/user/user.interface';
-import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
-import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
@@ -44,7 +41,6 @@ import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
 import { challengeCommunityApplicationForm } from './challenge.community.application.form';
@@ -145,13 +141,6 @@ export class ChallengeService {
     // assigning lead orgs does not update the challenge entity
     const savedChallenge = await this.challengeRepository.save(challenge);
 
-    if (challengeData.leadOrganizations) {
-      await this.setChallengeLeads(
-        challenge.id,
-        challengeData.leadOrganizations
-      );
-    }
-
     if (agentInfo && challenge.community) {
       await this.communityService.assignUserToRole(
         challenge.community,
@@ -165,10 +154,11 @@ export class ChallengeService {
         CommunityRole.LEAD
       );
 
-      await this.assignChallengeAdmin({
-        userID: agentInfo.userID,
-        challengeID: challenge.id,
-      });
+      await this.communityService.assignUserToRole(
+        challenge.community,
+        agentInfo.userID,
+        CommunityRole.ADMIN
+      );
     }
 
     return savedChallenge;
@@ -323,53 +313,6 @@ export class ChallengeService {
     return challenge;
   }
 
-  async setChallengeLeads(
-    challengeID: string,
-    challengeLeadsIDs: string[]
-  ): Promise<IChallenge> {
-    const existingLeads = await this.getLeadOrganizations(challengeID);
-    const community = await this.getCommunity(challengeID);
-
-    // first remove any existing leads that are not in the new set
-    for (const existingLeadOrg of existingLeads) {
-      let inNewList = false;
-      for (const challengeLeadID of challengeLeadsIDs) {
-        if (
-          challengeLeadID === existingLeadOrg.id ||
-          challengeLeadID === existingLeadOrg.nameID
-        ) {
-          inNewList = true;
-        }
-      }
-      if (!inNewList) {
-        await this.communityService.removeOrganizationFromRole(
-          community,
-          existingLeadOrg.id,
-          CommunityRole.LEAD
-        );
-      }
-    }
-
-    // add any new ones
-    for (const challengeLeadID of challengeLeadsIDs) {
-      const organization = await this.organizationService.getOrganizationOrFail(
-        challengeLeadID
-      );
-      const existingLead = existingLeads.find(
-        leadOrg => leadOrg.id === organization.id
-      );
-      if (!existingLead) {
-        await this.communityService.assignOrganizationToRole(
-          community,
-          organization.id,
-          CommunityRole.LEAD
-        );
-      }
-    }
-
-    return await this.getChallengeOrFail(challengeID);
-  }
-
   async getCommunity(challengeId: string): Promise<ICommunity> {
     return await this.baseChallengeService.getCommunity(
       challengeId,
@@ -386,15 +329,6 @@ export class ChallengeService {
 
   async getCommunityPolicy(challengeId: string): Promise<ICommunityPolicy> {
     return await this.baseChallengeService.getCommunityPolicy(
-      challengeId,
-      this.challengeRepository
-    );
-  }
-
-  async getCommunityLeadershipCredential(
-    challengeId: string
-  ): Promise<CredentialDefinition> {
-    return await this.baseChallengeService.getCommunityLeadershipCredential(
       challengeId,
       this.challengeRepository
     );
@@ -733,39 +667,6 @@ export class ChallengeService {
     }
 
     return storageBucket;
-  }
-
-  async assignChallengeAdmin(
-    assignData: AssignChallengeAdminInput
-  ): Promise<IUser> {
-    const userID = assignData.userID;
-    const agent = await this.userService.getAgent(userID);
-    await this.getChallengeOrFail(assignData.challengeID);
-
-    // assign the credential
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.CHALLENGE_ADMIN,
-      resourceID: assignData.challengeID,
-    });
-
-    return await this.userService.getUserWithAgent(userID);
-  }
-
-  async removeChallengeAdmin(
-    removeData: RemoveChallengeAdminInput
-  ): Promise<IUser> {
-    const challengeID = removeData.challengeID;
-    await this.getChallengeOrFail(challengeID);
-    const agent = await this.userService.getAgent(removeData.userID);
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.CHALLENGE_ADMIN,
-      resourceID: challengeID,
-    });
-
-    return await this.userService.getUserWithAgent(removeData.userID);
   }
 
   createPreferenceDefaults(): Map<PreferenceType, string> {
