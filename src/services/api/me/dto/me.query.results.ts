@@ -10,22 +10,8 @@ export class MeQueryResults {
     description: 'The current authenticated user',
   })
   user!: IUser;
-
-  @Field(() => [IInvitation], {
-    description: 'The invitations of the current authenticated user ',
-    defaultValue: [],
-  })
+  // exposed through the field resolver
   invitations!: IInvitation[];
-
-  @Field(() => [IApplication], {
-    description: 'The applications of the current authenticated user ',
-    defaultValue: [],
-  })
   applications!: IApplication[];
-
-  @Field(() => [ISpace], {
-    description: 'The Spaces which the current authenticated user is member of',
-    defaultValue: [],
-  })
   spaceMemberships!: ISpace[];
 }

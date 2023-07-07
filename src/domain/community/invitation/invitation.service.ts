@@ -13,11 +13,12 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { invitationLifecycleConfig } from '@domain/community/invitation/invitation.lifecycle.config';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { asyncFilter } from '@common/utils';
 import { IUser } from '../user';
 import { UserService } from '../user/user.service';
 
@@ -130,11 +131,35 @@ export class InvitationService {
     return [];
   }
 
-  async findInvitationsForUser(userID: string): Promise<IInvitation[]> {
-    return this.invitationRepository.find({
+  async findInvitationsForUser(
+    userID: string,
+    states: string[] = []
+  ): Promise<IInvitation[]> {
+    const findOpts: FindManyOptions<Invitation> = {
       where: { invitedUser: userID },
-      relations: ['community'],
-    });
+    };
+
+    if (states.length) {
+      findOpts.relations = {
+        lifecycle: true,
+      };
+      findOpts.select = {
+        lifecycle: {
+          machineState: true,
+          machineDef: true,
+        },
+      };
+    }
+
+    const invitations = await this.invitationRepository.find(findOpts);
+
+    if (states.length) {
+      return asyncFilter(invitations, async app =>
+        states.includes(await this.getInvitationState(app.id))
+      );
+    }
+
+    return invitations;
   }
 
   async isFinalizedInvitation(invitationID: string): Promise<boolean> {

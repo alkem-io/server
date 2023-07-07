@@ -1,88 +1,44 @@
 import { Injectable } from '@nestjs/common';
-import { MeQueryResults } from '@services/api/me/dto';
 import { UserService } from '@domain/community/user/user.service';
-import { IUser } from '@domain/community/user';
-import { ApplicationForRoleResult } from '@services/api/roles/dto/roles.dto.result.application';
-import { InvitationForRoleResult } from '@services/api/roles/dto/roles.dto.result.invitation';
 import { ApplicationService } from '@domain/community/application/application.service';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { IInvitation } from '@domain/community/invitation';
 import { IApplication } from '@domain/community/application';
-import { asyncFilter } from '@common/utils';
-
-export type BuildMeResultsOpts = {
-  user: boolean;
-  invitations: boolean;
-  applications: boolean;
-  spaces: boolean;
-};
+import { ICredential } from '@src/domain';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
+import { SpaceService } from '@domain/challenge/space/space.service';
 
 @Injectable()
 export class MeService {
   constructor(
     private userService: UserService,
     private applicationService: ApplicationService,
-    private invitationService: InvitationService
+    private invitationService: InvitationService,
+    private spaceService: SpaceService
   ) {}
 
-  public async buildMeResults(userId: string, opts?: BuildMeResultsOpts) {
-    const {
-      user = true,
-      applications = true,
-      invitations = true,
-      spaces = true,
-    } = opts ?? {};
-
-    const results: MeQueryResults = {} as MeQueryResults;
-
-    if (user) {
-      results.user = await this.userService.getUserOrFail(userId);
-    }
-
-    if (applications) {
-      // this will return all applications
-      // the code before returned only NOT finalized apps
-      // todo: what should we return
-      results.applications = await this.getUserApplications(userId);
-    }
-
-    if (invitations) {
-      // this will return all applications
-      // the code before returned only NOT finalized invites
-      // todo: what should we return
-      results.invitations = await this.getUserInvitations(userId);
-    }
-
-    if (spaces) {
-      // previously the a custom result object was returned with all it's parent memberships
-      // but now we are returning the whole object
-      // todo how should we return all the parent memberships
-      results.spaceMemberships = [];
-    }
-
-    return results;
+  public getUserInvitations(
+    userId: string,
+    states?: string[]
+  ): Promise<IInvitation[]> {
+    return this.invitationService.findInvitationsForUser(userId, states);
   }
 
-  private async getUserApplications(userId: string): Promise<IApplication[]> {
-    const applications = await this.applicationService.findApplicationsForUser(
-      userId
-    );
-
-    return asyncFilter(
-      applications,
-      async app =>
-        !(await this.applicationService.isFinalizedApplication(app.id))
-    );
+  public getUserApplications(
+    userId: string,
+    states?: string[]
+  ): Promise<IApplication[]> {
+    return this.applicationService.findApplicationsForUser(userId, states);
   }
 
-  private async getUserInvitations(userId: string): Promise<IInvitation[]> {
-    const invitations = await this.invitationService.findInvitationsForUser(
-      userId
-    );
+  public getSpaceMemberships(
+    credentials: ICredential[],
+    visibilities: SpaceVisibility[] = []
+  ) {
+    const credentialMap = groupCredentialsByEntity(credentials);
+    const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
 
-    return asyncFilter(
-      invitations,
-      async inv => !(await this.invitationService.isFinalizedInvitation(inv.id))
-    );
+    return this.spaceService.getSpacesByVisibilities(spaceIds, visibilities);
   }
 }

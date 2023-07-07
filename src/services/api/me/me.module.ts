@@ -5,6 +5,8 @@ import { InvitationModule } from '@domain/community/invitation/invitation.module
 import { UserModule } from '@domain/community/user/user.module';
 import { MeService } from './me.service';
 import { MeResolverQueries } from './me.resolver.queries';
+import { MeResolverFields } from './me.resolver.fields';
+import { SpaceModule } from '@domain/challenge/space/space.module';
 
 @Module({
   imports: [
@@ -12,8 +14,9 @@ import { MeResolverQueries } from './me.resolver.queries';
     ApplicationModule,
     InvitationModule,
     UserModule,
+    SpaceModule,
   ],
-  providers: [MeService, MeResolverQueries],
+  providers: [MeService, MeResolverQueries, MeResolverFields],
   exports: [MeService],
 })
 export class MeModule {}

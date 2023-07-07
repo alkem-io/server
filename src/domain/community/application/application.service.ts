@@ -13,7 +13,7 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { NVPService } from '@domain/common/nvp/nvp.service';
 import { UserService } from '@domain/community/user/user.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
@@ -22,6 +22,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { IQuestion } from '@domain/common/question/question.interface';
+import { asyncFilter } from '@common/utils';
 
 @Injectable()
 export class ApplicationService {
@@ -77,10 +78,6 @@ export class ApplicationService {
     return result;
   }
 
-  async getApplications() {
-    return (await this.applicationRepository.find()) || [];
-  }
-
   async getApplicationOrFail(
     applicationId: string,
     options?: FindOneOptions<Application>
@@ -118,7 +115,12 @@ export class ApplicationService {
   }
 
   async getApplicationState(applicationID: string): Promise<string> {
-    const application = await this.getApplicationOrFail(applicationID);
+    const application = await this.getApplicationOrFail(applicationID, {
+      relations: {
+        lifecycle: true,
+      },
+    });
+
     const lifecycle = application.lifecycle;
     if (lifecycle) {
       return await this.lifecycleService.getState(lifecycle);
@@ -145,16 +147,35 @@ export class ApplicationService {
     return [];
   }
 
-  public findApplicationsForUser(userID: string): Promise<IApplication[]> {
-    return this.applicationRepository
-      .createQueryBuilder('application')
-      .leftJoinAndSelect('application.user', 'user')
-      .leftJoinAndSelect('application.community', 'community')
-      .where('user.id = :userID')
-      .setParameters({
-        userID: `${userID}`,
-      })
-      .getMany();
+  public async findApplicationsForUser(
+    userID: string,
+    states: string[] = []
+  ): Promise<IApplication[]> {
+    const findOpts: FindManyOptions<Application> = {
+      where: { user: { id: userID } },
+    };
+
+    if (states.length) {
+      findOpts.relations = {
+        lifecycle: true,
+      };
+      findOpts.select = {
+        lifecycle: {
+          machineState: true,
+          machineDef: true,
+        },
+      };
+    }
+
+    const applications = await this.applicationRepository.find(findOpts);
+
+    if (states.length) {
+      return asyncFilter(applications, async app =>
+        states.includes(await this.getApplicationState(app.id))
+      );
+    }
+
+    return applications;
   }
 
   async isFinalizedApplication(applicationID: string): Promise<boolean> {

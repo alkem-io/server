@@ -481,7 +481,19 @@ export class SpaceService {
     return challengeAndOpportunitiesCount;
   }
 
-  async getSpacesById(
+  public getSpacesByVisibilities(
+    spaceIds: string[],
+    visibilities: SpaceVisibility[] = []
+  ) {
+    return this.spaceRepository.find({
+      where: {
+        id: In(spaceIds),
+        visibility: visibilities.length ? In(visibilities) : undefined,
+      },
+    });
+  }
+
+  public getSpacesById(
     spaceIdsOrNameIds: string[],
     options?: FindManyOptions<Space>
   ) {
