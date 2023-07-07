@@ -107,7 +107,7 @@ export class communityPolicyRoles1688042931820 implements MigrationInterface {
       // Clone + assign a space-lead credential
       const credID = randomUUID();
       await queryRunner.query(
-        `INSERT INTO credential (id, version resourceID, type, agentId)
+        `INSERT INTO credential (id, version, resourceID, type, agentId)
             VALUES ('${credID}',
                     1,
                     '${spaceHostCred.resourceID}',
