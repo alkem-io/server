@@ -26,17 +26,14 @@ export class MeResolverFields {
   })
   @Profiling.api
   async user(@CurrentUser() agentInfo: AgentInfo): Promise<IUser | null> {
-    const userID = agentInfo.userID;
-    if (!userID) {
+    const email = agentInfo.email;
+    if (!email) {
       throw new AuthenticationException(
         'Unable to retrieve authenticated user; no identifier'
       );
     }
-    try {
-      return this.userService.getUserOrFail(userID);
-    } catch (e) {
-      return null;
-    }
+
+    return this.userService.getUserByEmail(email);
   }
 
   @UseGuards(GraphqlGuard)
