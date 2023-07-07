@@ -12,7 +12,7 @@ export class MeResolverQueries {
     description: 'Information about the current authenticated user',
   })
   @Profiling.api
-  async me2(): Promise<MeQueryResults> {
+  async me(): Promise<MeQueryResults> {
     return {} as MeQueryResults;
   }
 }
