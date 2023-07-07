@@ -7,7 +7,6 @@ import { IReference } from '@domain/common/reference/reference.interface';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ILocation } from '@domain/common/location/location.interface';
 import { VisualType } from '@common/enums/visual.type';
-import { RestrictedTagsetNames } from '../tagset/tagset.entity';
 import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { IProfile } from './profile.interface';
@@ -23,6 +22,7 @@ import {
 } from '@core/dataloader/creators';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketResolverService } from '@services/infrastructure/entity-resolver/storage.bucket.resolver.service';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
@@ -85,7 +85,7 @@ export class ProfileResolverFields {
   ): Promise<ITagset> {
     const tagsets = await loader.load(profile.id);
     const defaultTagset = tagsets.find(
-      t => t.name === RestrictedTagsetNames.DEFAULT
+      t => t.name === TagsetReservedName.DEFAULT
     );
     if (!defaultTagset) {
       throw new EntityNotFoundException(

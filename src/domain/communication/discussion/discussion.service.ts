@@ -17,11 +17,11 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IRoom } from '../room/room.interface';
 import { RoomType } from '@common/enums/room.type';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class DiscussionService {
@@ -53,7 +53,7 @@ export class DiscussionService {
     );
 
     await this.profileService.addTagsetOnProfile(discussion.profile, {
-      name: RestrictedTagsetNames.DEFAULT,
+      name: TagsetReservedName.DEFAULT,
       tags: discussionData.tags || [],
     });
 

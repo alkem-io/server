@@ -15,6 +15,9 @@ import { CreateTagsetOnProfileInput } from './dto';
 import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.reference';
 import { IProfile } from './profile.interface';
 import { UpdateProfileDirectInput } from './dto/profile.dto.update.direct';
+import { TagsetType } from '@common/enums/tagset.type';
+import { NotSupportedException } from '@common/exceptions';
+import { LogContext } from '@common/enums';
 
 @Resolver()
 export class ProfileResolverMutations {
@@ -44,6 +47,16 @@ export class ProfileResolverMutations {
       AuthorizationPrivilege.CREATE,
       `profile: ${profile.id}`
     );
+
+    // do not for now allow api access for creating non-freeform tagsets
+    if (tagsetData.type && tagsetData.type !== TagsetType.FREEFORM) {
+      throw new NotSupportedException(
+        `Creating of Tagsets not of type FREEFORM not yet supported: ${JSON.stringify(
+          tagsetData
+        )}`,
+        LogContext.PROFILE
+      );
+    }
 
     const tagset = await this.profileService.addTagsetOnProfile(
       profile,

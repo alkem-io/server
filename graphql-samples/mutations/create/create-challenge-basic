@@ -1,0 +1,18 @@
+mutation CreateChallenge($challengeData: CreateChallengeOnSpaceInput!) {
+  createChallenge(challengeData: $challengeData) {
+    nameID,
+    id
+  }
+}
+
+
+{
+  "challengeData":
+  {
+    "spaceID": "eco1",
+    "nameID": "simple",
+    "profileData": {
+      "displayName": "simple challenge"
+    },
+  }
+}

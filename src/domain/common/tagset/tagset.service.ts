@@ -1,14 +1,15 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { Repository } from 'typeorm';
-import { RestrictedTagsetNames, Tagset } from './tagset.entity';
+import { FindOneOptions, Repository } from 'typeorm';
+import { Tagset } from './tagset.entity';
 import { ITagset } from './tagset.interface';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
@@ -16,6 +17,9 @@ import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { UpdateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.update';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
+import { TagsetType } from '@common/enums/tagset.type';
+import { ITagsetTemplate } from '../tagset-template';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class TagsetService {
@@ -26,15 +30,26 @@ export class TagsetService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
-    const tagset = Tagset.create({ ...tagsetData });
+  async createTagset(
+    tagsetData: CreateTagsetInput,
+    tagsetTemplate?: ITagsetTemplate
+  ): Promise<ITagset> {
+    if (!tagsetData.type) tagsetData.type = TagsetType.FREEFORM;
+    const tagset: ITagset = Tagset.create({ ...tagsetData });
     tagset.authorization = new AuthorizationPolicy();
     if (!tagset.tags) tagset.tags = [];
+    tagset.tagsetTemplate = tagsetTemplate;
     return await this.tagsetRepository.save(tagset);
   }
 
-  async getTagsetOrFail(tagsetID: string): Promise<ITagset> {
-    const tagset = await this.tagsetRepository.findOneBy({ id: tagsetID });
+  async getTagsetOrFail(
+    tagsetID: string,
+    options?: FindOneOptions<Tagset>
+  ): Promise<ITagset> {
+    const tagset = await this.tagsetRepository.findOne({
+      where: { id: tagsetID },
+      ...options,
+    });
     if (!tagset)
       throw new EntityNotFoundException(
         `Tagset with id(${tagsetID}) not found!`,
@@ -54,9 +69,46 @@ export class TagsetService {
   }
 
   async updateTagset(tagsetData: UpdateTagsetInput): Promise<ITagset> {
-    const tagset = await this.getTagsetOrFail(tagsetData.ID);
+    const tagset = await this.getTagsetOrFail(tagsetData.ID, {
+      relations: ['tagsetTemplate'],
+    });
+
+    switch (tagset.type) {
+      case TagsetType.FREEFORM:
+        break;
+      case TagsetType.SELECT_ONE:
+      case TagsetType.SELECT_MANY:
+        const tagsetTemplate = tagset.tagsetTemplate;
+        if (!tagsetTemplate) {
+          throw new EntityNotFoundException(
+            'Unable to load tagset template for tagset with allowedValues',
+            LogContext.TAGSET
+          );
+        }
+        const tags = tagsetData.tags;
+        if (tagset.type === TagsetType.SELECT_ONE) {
+          if (tags.length !== 1) {
+            throw new ValidationException(
+              'Tags array length should be exactly one',
+              LogContext.TAGSET
+            );
+          }
+        }
+        this.validateForAllowedValues(tags, tagsetTemplate.allowedValues);
+    }
+
     this.updateTagsetValues(tagset, tagsetData);
     return await this.tagsetRepository.save(tagset);
+  }
+
+  validateForAllowedValues(tags: string[], allowedValues: string[]) {
+    const result = tags.every(tag => allowedValues.includes(tag));
+    if (!result) {
+      throw new ValidationException(
+        `Provided tags (${tags}) has values that are not in allowedValues: ${allowedValues}`,
+        LogContext.TAGSET
+      );
+    }
   }
 
   updateTagsetValues(tagset: ITagset, tagsetData: UpdateTagsetInput): ITagset {
@@ -78,7 +130,7 @@ export class TagsetService {
     if (!tagsets)
       throw new EntityNotFoundException(
         'Not able to locate Tagsets',
-        LogContext.CHALLENGES
+        LogContext.TAGSET
       );
     if (tagsetsData) {
       for (const tagsetData of tagsetsData) {
@@ -87,12 +139,34 @@ export class TagsetService {
         if (!tagset)
           throw new EntityNotFoundException(
             `Unable to update Tagset with supplied ID: ${tagsetData.ID} - no such Tagset in parent entity.`,
-            LogContext.CHALLENGES
+            LogContext.TAGSET
           );
         this.updateTagsetValues(tagset, tagsetData);
       }
     }
     return tagsets;
+  }
+
+  async getAllowedValues(tagset: ITagset): Promise<string[]> {
+    if (tagset.type === TagsetType.FREEFORM) return [];
+
+    const tagsetTemplate = await this.getTagsetTemplateOrFail(tagset.id);
+    return tagsetTemplate.allowedValues;
+  }
+
+  async getTagsetTemplateOrFail(tagsetID: string): Promise<ITagsetTemplate> {
+    const tagset = await this.getTagsetOrFail(tagsetID, {
+      relations: ['tagsetTemplate'],
+    });
+
+    const tagsetTemplate = tagset.tagsetTemplate;
+    if (!tagsetTemplate)
+      throw new RelationshipNotFoundException(
+        `Unable to load tagsetTemplate for Tagset: ${tagsetID} `,
+        LogContext.PROFILE
+      );
+
+    return tagsetTemplate;
   }
 
   // Get the default tagset
@@ -103,7 +177,7 @@ export class TagsetService {
         LogContext.COMMUNITY
       );
     const defaultTagset = tagsetable.tagsets.find(
-      t => t.name === RestrictedTagsetNames.DEFAULT
+      t => t.name === TagsetReservedName.DEFAULT
     );
     return defaultTagset;
   }
@@ -144,7 +218,8 @@ export class TagsetService {
   async createTagsetWithName(
     tagsetable: ITagsetable,
     tagsetData: CreateTagsetInput,
-    checkForRestricted: boolean
+    checkForRestricted: boolean,
+    tagsetTemplate?: ITagsetTemplate
   ): Promise<ITagset> {
     // Check if the group already exists, if so log a warning
     if (this.hasTagsetWithName(tagsetable, tagsetData.name)) {
@@ -163,7 +238,7 @@ export class TagsetService {
       }
     }
 
-    return await this.createTagset(tagsetData);
+    return await this.createTagset(tagsetData, tagsetTemplate);
   }
 
   hasTag(tagset: ITagset, tagToCheck: string): boolean {
