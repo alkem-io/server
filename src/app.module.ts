@@ -60,6 +60,7 @@ import {
   HttpExceptionFilter,
   GraphqlExceptionFilter,
 } from '@core/error-handling';
+import { MeModule } from '@services/api/me';
 
 @Module({
   imports: [
@@ -217,6 +218,7 @@ import {
     InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
+    MeModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

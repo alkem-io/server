@@ -46,8 +46,8 @@
     }
   },
   "dependencies": {
-    "@alkemio/notifications-lib": "^0.6.0",
     "@alkemio/matrix-adapter-lib": "^0.3.6",
+    "@alkemio/notifications-lib": "^0.6.0",
     "@apollo/server": "^4.6.0",
     "@elastic/elasticsearch": "^8.4.0",
     "@nestjs/apollo": "^10.0.6",
@@ -76,6 +76,7 @@
     "file-type": "^16.5.3",
     "graphql": "^16.6.0",
     "graphql-amqp-subscriptions": "^1.2.0",
+    "graphql-fields-list": "^2.2.4",
     "graphql-subscriptions": "^2.0.0",
     "graphql-type-json": "^0.3.2",
     "graphql-upload": "^13.0.0",

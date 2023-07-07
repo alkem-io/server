@@ -131,13 +131,10 @@ export class InvitationService {
   }
 
   async findInvitationsForUser(userID: string): Promise<IInvitation[]> {
-    const existingInvitations = await this.invitationRepository.find({
+    return this.invitationRepository.find({
       where: { invitedUser: userID },
       relations: ['community'],
     });
-
-    if (existingInvitations.length > 0) return existingInvitations;
-    return [];
   }
 
   async isFinalizedInvitation(invitationID: string): Promise<boolean> {

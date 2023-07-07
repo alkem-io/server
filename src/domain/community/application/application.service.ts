@@ -145,8 +145,8 @@ export class ApplicationService {
     return [];
   }
 
-  async findApplicationsForUser(userID: string): Promise<IApplication[]> {
-    const existingApplications = await this.applicationRepository
+  public findApplicationsForUser(userID: string): Promise<IApplication[]> {
+    return this.applicationRepository
       .createQueryBuilder('application')
       .leftJoinAndSelect('application.user', 'user')
       .leftJoinAndSelect('application.community', 'community')
@@ -155,8 +155,6 @@ export class ApplicationService {
         userID: `${userID}`,
       })
       .getMany();
-    if (existingApplications.length > 0) return existingApplications;
-    return [];
   }
 
   async isFinalizedApplication(applicationID: string): Promise<boolean> {
