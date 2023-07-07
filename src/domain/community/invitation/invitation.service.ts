@@ -136,11 +136,13 @@ export class InvitationService {
     states: string[] = []
   ): Promise<IInvitation[]> {
     const findOpts: FindManyOptions<Invitation> = {
+      relations: { community: true },
       where: { invitedUser: userID },
     };
 
     if (states.length) {
       findOpts.relations = {
+        ...findOpts.relations,
         lifecycle: true,
       };
       findOpts.select = {

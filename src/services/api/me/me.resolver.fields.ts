@@ -20,18 +20,23 @@ export class MeResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField(() => IUser, {
-    nullable: false,
-    description: 'The currently logged in user',
+    nullable: true,
+    description:
+      'The current authenticated User;  null if not yet registered on the platform',
   })
   @Profiling.api
-  async user(@CurrentUser() agentInfo: AgentInfo): Promise<IUser> {
+  async user(@CurrentUser() agentInfo: AgentInfo): Promise<IUser | null> {
     const userID = agentInfo.userID;
     if (!userID) {
       throw new AuthenticationException(
         'Unable to retrieve authenticated user; no identifier'
       );
     }
-    return this.userService.getUserOrFail(userID);
+    try {
+      return this.userService.getUserOrFail(userID);
+    } catch (e) {
+      return null;
+    }
   }
 
   @UseGuards(GraphqlGuard)

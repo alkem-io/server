@@ -152,11 +152,13 @@ export class ApplicationService {
     states: string[] = []
   ): Promise<IApplication[]> {
     const findOpts: FindManyOptions<Application> = {
+      relations: { community: true },
       where: { user: { id: userID } },
     };
 
     if (states.length) {
       findOpts.relations = {
+        ...findOpts.relations,
         lifecycle: true,
       };
       findOpts.select = {
