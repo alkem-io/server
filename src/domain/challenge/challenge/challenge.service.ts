@@ -56,6 +56,11 @@ import { OperationNotAllowedException } from '@common/exceptions/operation.not.a
 import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service';
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { TagsetType } from '@common/enums/tagset.type';
+import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
+import { ChallengeDisplayLocation } from '@src/migrations/1688193761861-classificationTagsets';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class ChallengeService {
@@ -70,6 +75,7 @@ export class ChallengeService {
     private preferenceSetService: PreferenceSetService,
     private storageBucketService: StorageBucketService,
     private innovationFlowService: InnovationFlowService,
+    private collaborationService: CollaborationService,
     private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -137,6 +143,41 @@ export class ChallengeService {
         this.createPreferenceDefaults()
       );
 
+    if (challenge.collaboration) {
+      const states = await this.innovationFlowService.getInnovationFlowStates(
+        challenge.innovationFlow
+      );
+      const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
+        name: TagsetReservedName.STATES,
+        type: TagsetType.SELECT_ONE,
+        allowedValues: states,
+        defaultSelectedValue: states[0],
+      };
+      challenge.collaboration =
+        await this.collaborationService.addTagsetTemplate(
+          challenge.collaboration,
+          tagsetTemplateDataStates
+        );
+
+      const locations = Object.values(ChallengeDisplayLocation);
+      const tagsetTemplateData: CreateTagsetTemplateInput = {
+        name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
+        type: TagsetType.SELECT_ONE,
+        allowedValues: locations,
+        defaultSelectedValue: ChallengeDisplayLocation.CONTRIBUTE_RIGHT,
+      };
+      challenge.collaboration =
+        await this.collaborationService.addTagsetTemplate(
+          challenge.collaboration,
+          tagsetTemplateData
+        );
+
+      challenge.collaboration =
+        await this.collaborationService.addDefaultCallouts(
+          challenge.collaboration,
+          CommunityType.CHALLENGE
+        );
+    }
     // save the challenge, just in case the lead orgs assignment fails. Note that
     // assigning lead orgs does not update the challenge entity
     const savedChallenge = await this.challengeRepository.save(challenge);

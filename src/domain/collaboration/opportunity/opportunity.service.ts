@@ -40,6 +40,9 @@ import { CommunityRole } from '@common/enums/community.role';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
 import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.interface';
 import { InnovationFlowService } from '@domain/challenge/innovation-flow/innovaton.flow.service';
+import { CollaborationService } from '../collaboration/collaboration.service';
+import { TagsetType } from '@common/enums/tagset.type';
+import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 
 @Injectable()
 export class OpportunityService {
@@ -50,6 +53,7 @@ export class OpportunityService {
     private userService: UserService,
     private agentService: AgentService,
     private innovationFlowService: InnovationFlowService,
+    private collaborationService: CollaborationService,
     private namingService: NamingService,
     @InjectRepository(Opportunity)
     private opportunityRepository: Repository<Opportunity>,
@@ -95,6 +99,27 @@ export class OpportunityService {
     );
 
     await this.opportunityRepository.save(opportunity);
+
+    if (opportunity.collaboration) {
+      const states = await this.innovationFlowService.getInnovationFlowStates(
+        opportunity.innovationFlow
+      );
+      const tagsetTemplateData: CreateTagsetTemplateInput = {
+        name: 'STATES',
+        type: TagsetType.SELECT_ONE,
+        allowedValues: states,
+      };
+      opportunity.collaboration =
+        await this.collaborationService.addTagsetTemplate(
+          opportunity.collaboration,
+          tagsetTemplateData
+        );
+      opportunity.collaboration =
+        await this.collaborationService.addDefaultCallouts(
+          opportunity.collaboration,
+          CommunityType.OPPORTUNITY
+        );
+    }
 
     // set immediate community parent
     if (opportunity.community) {

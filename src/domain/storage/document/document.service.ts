@@ -12,12 +12,12 @@ import { UpdateDocumentInput } from './dto/document.dto.update';
 import { CreateDocumentInput } from './dto/document.dto.create';
 import { Document } from './document.entity';
 import { IDocument } from './document.interface';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
 import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
 import { ConfigService } from '@nestjs/config';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class DocumentService {
@@ -36,7 +36,7 @@ export class DocumentService {
   ): Promise<Document> {
     const document: IDocument = Document.create({ ...documentInput });
     document.tagset = await this.tagsetService.createTagset({
-      name: RestrictedTagsetNames.DEFAULT,
+      name: TagsetReservedName.DEFAULT,
       tags: [],
     });
 
