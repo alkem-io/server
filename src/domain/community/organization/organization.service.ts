@@ -50,10 +50,10 @@ import { CreateUserGroupInput } from '../user-group/dto/user-group.dto.create';
 import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { Organization } from './organization.entity';
 import { IOrganization } from './organization.interface';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { VisualType } from '@common/enums/visual.type';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class OrganizationService {
@@ -91,11 +91,11 @@ export class OrganizationService {
       organizationData.profileData
     );
     await this.profileService.addTagsetOnProfile(organization.profile, {
-      name: RestrictedTagsetNames.KEYWORDS,
+      name: TagsetReservedName.KEYWORDS,
       tags: [],
     });
     await this.profileService.addTagsetOnProfile(organization.profile, {
-      name: RestrictedTagsetNames.CAPABILITIES,
+      name: TagsetReservedName.CAPABILITIES,
       tags: [],
     });
     // Set the visuals

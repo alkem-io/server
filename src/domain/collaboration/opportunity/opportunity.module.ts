@@ -17,6 +17,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { InnovationFlowModule } from '@domain/challenge/innovation-flow/innovation.flow.module';
+import { CollaborationModule } from '../collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { InnovationFlowModule } from '@domain/challenge/innovation-flow/innovati
     UserModule,
     AgentModule,
     CommunityPolicyModule,
+    CollaborationModule,
     InnovationFlowModule,
     NamingModule,
     ElasticsearchModule,

@@ -15,7 +15,6 @@ import { CommunicationAdapterModule } from '@services/adapters/communication-ada
 import { RoomModule } from '@domain/communication/room/room.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
-import { ConfigModule } from '@nestjs/config';
 import { PreferenceSetModule } from '@domain/common/preference-set/preference.set.module';
 import { PreferenceModule } from '@domain/common/preference';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
@@ -45,7 +44,6 @@ import {
     KonfigModule,
     MessagingModule,
     TypeOrmModule.forFeature([User]),
-    ConfigModule,
   ],
   providers: [
     UserService,

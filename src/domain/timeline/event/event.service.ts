@@ -13,9 +13,9 @@ import { CalendarEvent } from './event.entity';
 import { ICalendarEvent } from './event.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class CalendarEventService {
@@ -38,7 +38,7 @@ export class CalendarEventService {
       calendarEventInput.profileData
     );
     await this.profileService.addTagsetOnProfile(calendarEvent.profile, {
-      name: RestrictedTagsetNames.DEFAULT,
+      name: TagsetReservedName.DEFAULT,
       tags: calendarEventInput.tags || [],
     });
     calendarEvent.authorization = new AuthorizationPolicy();

@@ -111,7 +111,7 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowID,
       {
-        relations: ['lifecycle', 'profile'],
+        relations: ['lifecycle', 'profile', 'tagsetTemplateSet'],
       }
     );
 
@@ -148,6 +148,13 @@ export class InnovationFlowService {
         LogContext.CHALLENGES
       );
     return innovationFlow;
+  }
+
+  async getInnovationFlowStates(
+    innovationFlow: IInnovationFlow
+  ): Promise<string[]> {
+    const lifecycle = await this.getLifecycle(innovationFlow.id);
+    return await this.lifecycleService.getStates(lifecycle);
   }
 
   public async getProfile(

@@ -1,8 +1,9 @@
-import { Entity, OneToMany } from 'typeorm';
+import { Entity, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Relation } from '@domain/collaboration/relation/relation.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { TagsetTemplateSet } from '@domain/common/tagset-template-set';
 
 @Entity()
 export class Collaboration
@@ -20,4 +21,11 @@ export class Collaboration
     cascade: true,
   })
   relations?: Relation[];
+
+  @OneToOne(() => TagsetTemplateSet, {
+    eager: false,
+    cascade: true,
+  })
+  @JoinColumn()
+  tagsetTemplateSet?: TagsetTemplateSet;
 }

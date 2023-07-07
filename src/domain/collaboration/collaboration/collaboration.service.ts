@@ -31,6 +31,9 @@ import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.d
 import { Space } from '@domain/challenge/space/space.entity';
 import { getJourneyByCollaboration } from '@common/utils';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
+import { CreateTagsetTemplateInput } from '@domain/common/tagset-template';
+import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
 
 @Injectable()
 export class CollaborationService {
@@ -40,22 +43,53 @@ export class CollaborationService {
     private calloutService: CalloutService,
     private namingService: NamingService,
     private relationService: RelationService,
+    private tagsetTemplateSetService: TagsetTemplateSetService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
     @InjectEntityManager('default')
     private entityManager: EntityManager
   ) {}
 
-  async createCollaboration(
-    communityType: CommunityType
-  ): Promise<ICollaboration> {
+  async createCollaboration(): Promise<ICollaboration> {
     const collaboration: ICollaboration = Collaboration.create();
     collaboration.authorization = new AuthorizationPolicy();
     collaboration.relations = [];
     collaboration.callouts = [];
+    collaboration.tagsetTemplateSet =
+      await this.tagsetTemplateSetService.createTagsetTemplateSet();
 
-    const savedCollaboration = await this.save(collaboration);
+    return await this.save(collaboration);
+  }
 
+  public async addTagsetTemplate(
+    collaboration: ICollaboration,
+    tagsetTemplateData: CreateTagsetTemplateInput
+  ): Promise<ICollaboration> {
+    collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
+      collaboration.id
+    );
+    collaboration.tagsetTemplateSet =
+      await this.tagsetTemplateSetService.addTagsetTemplate(
+        collaboration.tagsetTemplateSet,
+        tagsetTemplateData
+      );
+
+    return await this.save(collaboration);
+  }
+
+  public async addDefaultCallouts(
+    collaboration: ICollaboration,
+    communityType: CommunityType
+  ) {
+    if (!collaboration.callouts) {
+      throw new EntityNotInitializedException(
+        `No callouts found for collaboration the given id: ${collaboration.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+    collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
+      collaboration.id
+    );
     for (const calloutDefault of collaborationDefaults.callouts) {
       const communityTypeForDefault = calloutDefault.communityType;
       // If communityType is not specified then create the callout; otherwise only create
@@ -64,13 +98,16 @@ export class CollaborationService {
         !communityTypeForDefault ||
         communityTypeForDefault === communityType
       ) {
-        const callout = await this.calloutService.createCallout(calloutDefault);
+        const callout = await this.calloutService.createCallout(
+          calloutDefault,
+          collaboration.tagsetTemplateSet.tagsetTemplates
+        );
         // default callouts are already published
         callout.visibility = CalloutVisibility.PUBLISHED;
-        savedCollaboration.callouts?.push(callout);
+        collaboration.callouts.push(callout);
       }
     }
-    return collaboration;
+    return await this.save(collaboration);
   }
 
   async save(collaboration: ICollaboration): Promise<ICollaboration> {
@@ -88,7 +125,7 @@ export class CollaborationService {
     if (!collaboration)
       throw new EntityNotFoundException(
         `No Collaboration found with the given id: ${collaborationID}`,
-        LogContext.CONTEXT
+        LogContext.COLLABORATION
       );
     return collaboration;
   }
@@ -196,9 +233,9 @@ export class CollaborationService {
   ): Promise<ICallout> {
     const collaborationID = calloutData.collaborationID;
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
-      relations: ['callouts'],
+      relations: ['callouts', 'tagsetTemplateSet'],
     });
-    if (!collaboration.callouts)
+    if (!collaboration.callouts || !collaboration.tagsetTemplateSet)
       throw new EntityNotInitializedException(
         `Collaboration (${collaborationID}) not initialised`,
         LogContext.CONTEXT
@@ -232,8 +269,10 @@ export class CollaborationService {
         LogContext.CHALLENGES
       );
 
+    const tagsetTemplates = collaboration.tagsetTemplateSet.tagsetTemplates;
     const callout = await this.calloutService.createCallout(
       calloutData,
+      tagsetTemplates,
       userID
     );
     collaboration.callouts.push(callout);
@@ -383,6 +422,23 @@ export class CollaborationService {
     collaboration.relations.push(relation);
     await this.collaborationRepository.save(collaboration);
     return relation;
+  }
+
+  public async getTagsetTemplatesSet(
+    collaborationID: string
+  ): Promise<ITagsetTemplateSet> {
+    const collaboration = await this.getCollaborationOrFail(collaborationID, {
+      relations: ['tagsetTemplateSet'],
+    });
+
+    if (!collaboration.tagsetTemplateSet) {
+      throw new EntityNotInitializedException(
+        `No tagset template set found for collaboration the given id: ${collaborationID}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    return collaboration.tagsetTemplateSet;
   }
 
   public async getRelationsOnCollaboration(

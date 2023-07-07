@@ -1,36 +1,6 @@
 {
   "name": "default-ux-template",
   "description": "sample space template; used by Alkemio Web Client to configure the display / options to end users",
-  "users": [
-    {
-      "name": "default",
-      "references": [
-        {
-          "name": "linkedin",
-          "description": "User profile on LinkedIn",
-
-          "uri": ""
-        },
-        {
-          "name": "github",
-          "description": "User profile on GitSpace",
-          "uri": ""
-        },
-        {
-          "name": "twitter",
-          "description": "User profile on Twitter",
-          "uri": ""
-        }
-      ]
-    }
-  ],
-  "opportunities": [
-    {
-      "name": "default",
-      "actorGroups": ["key_users", "stakeholders"],
-      "relations": ["members", "groups"]
-    }
-  ],
   "challenges": [
     {
       "name": "default",
