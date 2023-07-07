@@ -6,16 +6,13 @@ import { Args, ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { MeQueryResults } from '@services/api/me/dto';
 import { IInvitation } from '@domain/community/invitation';
-import { MeService } from './me.service';
 import { IApplication } from '@domain/community/application';
 import { IUser } from '@domain/community/user';
-import {
-  AuthenticationException,
-  UserNotRegisteredException,
-} from '@common/exceptions';
+import { AuthenticationException } from '@common/exceptions';
 import { UserService } from '@domain/community/user/user.service';
 import { ISpace } from '@domain/challenge/space/space.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
+import { MeService } from './me.service';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
@@ -28,17 +25,13 @@ export class MeResolverFields {
   })
   @Profiling.api
   async user(@CurrentUser() agentInfo: AgentInfo): Promise<IUser> {
-    const email = agentInfo.email;
-    if (!email || email.length == 0) {
+    const userID = agentInfo.userID;
+    if (!userID) {
       throw new AuthenticationException(
         'Unable to retrieve authenticated user; no identifier'
       );
     }
-    const user = await this.userService.getUserByEmail(email);
-    if (!user) {
-      throw new UserNotRegisteredException();
-    }
-    return user;
+    return this.userService.getUserOrFail(userID);
   }
 
   @UseGuards(GraphqlGuard)
@@ -82,7 +75,7 @@ export class MeResolverFields {
     description: 'The applications of the current authenticated user',
   })
   @Profiling.api
-  public async spaceMemberships(
+  public spaceMemberships(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
       name: 'visibilities',
