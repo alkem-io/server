@@ -25,12 +25,15 @@ import { ILocation, LocationService } from '@domain/common/location';
 import { VisualType } from '@common/enums/visual.type';
 import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
+import { TagsetTemplateService } from '../tagset-template/tagset.template.service';
+import { UpdateProfileSelectTagsetInput } from './dto/profile.dto.update.select.tagset';
 
 @Injectable()
 export class ProfileService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private tagsetService: TagsetService,
+    private tagsetTemplateService: TagsetTemplateService,
     private referenceService: ReferenceService,
     private visualService: VisualService,
     private locationService: LocationService,
@@ -210,7 +213,7 @@ export class ProfileService {
   ): Promise<ITagset> {
     profile.tagsets = await this.getTagsets(profile);
     const tagset = await this.tagsetService.createTagsetWithName(
-      profile,
+      profile.tagsets,
       tagsetData,
       checkForRestricted,
       tagsetTemplate
@@ -340,5 +343,41 @@ export class ProfileService {
       );
     }
     return profile.location;
+  }
+
+  async getTagset(profileID: string, tagsetName: string): Promise<ITagset> {
+    const profile = await this.getProfileOrFail(profileID, {
+      relations: ['tagsets'],
+    });
+    if (!profile.tagsets) {
+      throw new EntityNotInitializedException(
+        `Profile not initialized: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return this.tagsetService.getTagsetByName(profile.tagsets, tagsetName);
+  }
+
+  async updateSelectTagset(
+    updateData: UpdateProfileSelectTagsetInput
+  ): Promise<ITagset> {
+    const tagset = await this.getTagset(
+      updateData.profileID,
+      updateData.tagsetName
+    );
+    if (updateData.tags) {
+      tagset.tags = updateData.tags;
+      await this.tagsetService.saveTagset(tagset);
+    }
+
+    if (updateData.allowedValues) {
+      const tagsetTemplate = await this.tagsetService.getTagsetTemplateOrFail(
+        tagset.id
+      );
+      await this.tagsetTemplateService.updateTagsetTemplate(tagsetTemplate, {
+        allowedValues: updateData.allowedValues,
+      });
+    }
+    return tagset;
   }
 }

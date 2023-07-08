@@ -32,6 +32,4 @@ export abstract class IProfile extends IAuthorizable {
   visuals?: IVisual[];
 
   location?: ILocation;
-
-  restrictedTagsetNames?: string[];
 }

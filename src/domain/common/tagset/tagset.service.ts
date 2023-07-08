@@ -8,11 +8,9 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
-  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { ITagsetable } from '@src/common/interfaces/tagsetable.interface';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { UpdateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.update';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -20,6 +18,7 @@ import { AuthorizationPolicyService } from '../authorization-policy/authorizatio
 import { TagsetType } from '@common/enums/tagset.type';
 import { ITagsetTemplate } from '../tagset-template';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetNotFoundException } from '@common/exceptions/tagset.not.found.exception';
 
 @Injectable()
 export class TagsetService {
@@ -170,26 +169,16 @@ export class TagsetService {
   }
 
   // Get the default tagset
-  defaultTagset(tagsetable: ITagsetable): ITagset | undefined {
-    if (!tagsetable.tagsets)
-      throw new EntityNotInitializedException(
-        'Tagsets not initialised',
-        LogContext.COMMUNITY
-      );
-    const defaultTagset = tagsetable.tagsets.find(
+  defaultTagset(tagsets: ITagset[]): ITagset | undefined {
+    const defaultTagset = tagsets.find(
       t => t.name === TagsetReservedName.DEFAULT
     );
     return defaultTagset;
   }
 
-  hasTagsetWithName(tagsetable: ITagsetable, name: string): boolean {
-    // Double check groups array is initialised
-    if (!tagsetable.tagsets) {
-      throw new Error('Non-initialised Tagsets submitted');
-    }
-
+  hasTagsetWithName(tagsets: ITagset[], name: string): boolean {
     // Find the right group
-    for (const tagset of tagsetable.tagsets) {
+    for (const tagset of tagsets) {
       if (tagset.name === name) {
         return true;
       }
@@ -199,43 +188,34 @@ export class TagsetService {
     return false;
   }
 
-  getTagsetByName(tagsetable: ITagsetable, name: string): ITagset {
-    // Double check groups array is initialised
-    if (!tagsetable.tagsets) {
-      throw new Error('Non-initialised tagsetable submitted');
-    }
-
-    for (const tagset of tagsetable.tagsets) {
+  getTagsetByName(tagsets: ITagset[], name: string): ITagset {
+    for (const tagset of tagsets) {
       if (tagset.name === name) {
         return tagset;
       }
     }
 
-    // If get here then no match group was found
-    throw new Error('Unable to find tagset with the name:' + { name });
+    // If get here then no match was found
+    throw new TagsetNotFoundException(
+      `Unable to find tagset with the name: + ${name} in provided tagsets: ${JSON.stringify(
+        tagsets
+      )}`,
+      LogContext.PROFILE
+    );
   }
 
   async createTagsetWithName(
-    tagsetable: ITagsetable,
+    existingTagsets: ITagset[],
     tagsetData: CreateTagsetInput,
     checkForRestricted: boolean,
     tagsetTemplate?: ITagsetTemplate
   ): Promise<ITagset> {
     // Check if the group already exists, if so log a warning
-    if (this.hasTagsetWithName(tagsetable, tagsetData.name)) {
+    if (this.hasTagsetWithName(existingTagsets, tagsetData.name)) {
       throw new ValidationException(
         `Already exists a Tagset with the given name: ${tagsetData.name}`,
         LogContext.COMMUNITY
       );
-    }
-
-    if (checkForRestricted) {
-      if (tagsetable.restrictedTagsetNames?.includes(tagsetData.name)) {
-        throw new ValidationException(
-          `Restricted Tagset name: ${tagsetData.name}`,
-          LogContext.COMMUNITY
-        );
-      }
     }
 
     return await this.createTagset(tagsetData, tagsetTemplate);
