@@ -357,7 +357,7 @@ export class CalloutService {
     if (callout.type === CalloutType.POST_COLLECTION) {
       return await this.postService.getPostsInCalloutCount(callout.id);
     } else if (callout.type === CalloutType.WHITEBOARD_COLLECTION) {
-      return await this.whiteboardService.getWhiteboardesInCalloutCount(
+      return await this.whiteboardService.getWhiteboardsInCalloutCount(
         callout.id
       );
     } else if (callout.type === CalloutType.LINK_COLLECTION) {
@@ -499,7 +499,7 @@ export class CalloutService {
     return whiteboard;
   }
 
-  public async getWhiteboardesFromCallout(
+  public async getWhiteboardsFromCallout(
     callout: ICallout,
     relations: FindOptionsRelationByString = [],
     whiteboardIDs?: string[],

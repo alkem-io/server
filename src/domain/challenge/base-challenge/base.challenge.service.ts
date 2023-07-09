@@ -338,7 +338,7 @@ export class BaseChallengeService {
     return await this.collaborationService.getPostsCount(collaboration);
   }
 
-  public async getWhiteboardesCount(
+  public async getWhiteboardsCount(
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
@@ -346,7 +346,7 @@ export class BaseChallengeService {
       baseChallenge.id,
       repository
     );
-    return await this.collaborationService.getWhiteboardesCount(collaboration);
+    return await this.collaborationService.getWhiteboardsCount(collaboration);
   }
 
   public async getRelationsCount(

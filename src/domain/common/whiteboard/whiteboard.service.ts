@@ -210,7 +210,7 @@ export class WhiteboardService {
     return whiteboardWithCheckout.checkout;
   }
 
-  async getWhiteboardesInCalloutCount(calloutId: string): Promise<number> {
+  async getWhiteboardsInCalloutCount(calloutId: string): Promise<number> {
     return await this.whiteboardRepository.countBy({
       callout: { id: calloutId },
     });

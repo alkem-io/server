@@ -470,7 +470,7 @@ export class CollaborationService {
     return result.postsCount;
   }
 
-  public async getWhiteboardesCount(
+  public async getWhiteboardsCount(
     collaboration: ICollaboration
   ): Promise<number> {
     const [result]: {

@@ -110,7 +110,7 @@ export class CalloutResolverFields {
       name: 'limit',
       type: () => Float,
       description:
-        'The number of Whiteboardes to return; if omitted return all Whiteboardes.',
+        'The number of Whiteboards to return; if omitted return all Whiteboards.',
       nullable: true,
     })
     limit: number,
@@ -118,12 +118,12 @@ export class CalloutResolverFields {
       name: 'shuffle',
       type: () => Boolean,
       description:
-        'If true and limit is specified then return the Whiteboardes based on a random selection. Defaults to false.',
+        'If true and limit is specified then return the Whiteboards based on a random selection. Defaults to false.',
       nullable: true,
     })
     shuffle: boolean
   ): Promise<IWhiteboard[]> {
-    return await this.calloutService.getWhiteboardesFromCallout(
+    return await this.calloutService.getWhiteboardsFromCallout(
       callout,
       ['whiteboards.checkout'],
       ids,

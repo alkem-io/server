@@ -931,9 +931,9 @@ export class SpaceService {
     postsTopic.id = `posts-${space.id}`;
     metrics.push(postsTopic);
 
-    // Whiteboardes
+    // Whiteboards
     const whiteboardsCount =
-      await this.baseChallengeService.getWhiteboardesCount(
+      await this.baseChallengeService.getWhiteboardsCount(
         space,
         this.spaceRepository
       );

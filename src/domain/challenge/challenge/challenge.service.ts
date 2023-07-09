@@ -661,9 +661,9 @@ export class ChallengeService {
     postsTopic.id = `posts-${challenge.id}`;
     metrics.push(postsTopic);
 
-    // Whiteboardes
+    // Whiteboards
     const whiteboardsCount =
-      await this.baseChallengeService.getWhiteboardesCount(
+      await this.baseChallengeService.getWhiteboardsCount(
         challenge,
         this.challengeRepository
       );

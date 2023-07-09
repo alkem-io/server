@@ -396,9 +396,9 @@ export class OpportunityService {
     postsTopic.id = `posts-${opportunity.id}`;
     metrics.push(postsTopic);
 
-    // Whiteboardes
+    // Whiteboards
     const whiteboardsCount =
-      await this.baseChallengeService.getWhiteboardesCount(
+      await this.baseChallengeService.getWhiteboardsCount(
         opportunity,
         this.opportunityRepository
       );
