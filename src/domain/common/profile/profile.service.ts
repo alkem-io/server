@@ -76,9 +76,13 @@ export class ProfileService {
 
     profile.tagsets = [];
     if (tagsetTemplates) {
-      await this.addTagsetsUsingTagsetTemplates(profile, tagsetTemplates);
+      const updatedProfile = await this.addTagsetsUsingTagsetTemplates(
+        profile,
+        tagsetTemplates
+      );
+      profile.tagsets = updatedProfile.tagsets;
     }
-    if (profileData?.tagsets) {
+    if (profileData?.tagsets && profile.tagsets) {
       for (const tagsetData of profileData.tagsets) {
         const existingTagset = this.tagsetService.getTagsetByName(
           profile.tagsets,
@@ -377,7 +381,10 @@ export class ProfileService {
         LogContext.COMMUNITY
       );
     }
-    return this.tagsetService.getTagsetByName(profile.tagsets, tagsetName);
+    return this.tagsetService.getTagsetByNameOrFail(
+      profile.tagsets,
+      tagsetName
+    );
   }
 
   async updateSelectTagset(

@@ -127,7 +127,7 @@ export class TagsetService {
     tagsetName: string,
     tags: string[]
   ): ITagset {
-    const tagset = this.getTagsetByName(tagsets, tagsetName);
+    const tagset = this.getTagsetByNameOrFail(tagsets, tagsetName);
     tagset.tags = tags;
     return tagset;
   }
@@ -198,20 +198,37 @@ export class TagsetService {
     return false;
   }
 
-  getTagsetByName(tagsets: ITagset[], name: string): ITagset {
+  getTagsetByName(tagsets: ITagset[], name: string): ITagset | undefined {
+    //
+    if (name === '') {
+      throw new TagsetNotFoundException(
+        `Name not specified when looking up in provided tagsets: ${JSON.stringify(
+          tagsets
+        )}`,
+        LogContext.PROFILE
+      );
+    }
+
     for (const tagset of tagsets) {
       if (tagset.name === name) {
         return tagset;
       }
     }
 
-    // If get here then no match was found
-    throw new TagsetNotFoundException(
-      `Unable to find tagset with the name: + ${name} in provided tagsets: ${JSON.stringify(
-        tagsets
-      )}`,
-      LogContext.PROFILE
-    );
+    return undefined;
+  }
+
+  getTagsetByNameOrFail(tagsets: ITagset[], name: string): ITagset {
+    const tagset = this.getTagsetByName(tagsets, name);
+    if (!tagset) {
+      throw new TagsetNotFoundException(
+        `Unable to find tagset with the name: + ${name} in provided tagsets: ${JSON.stringify(
+          tagsets
+        )}`,
+        LogContext.PROFILE
+      );
+    }
+    return tagset;
   }
 
   async createTagsetWithName(

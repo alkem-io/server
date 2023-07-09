@@ -126,7 +126,7 @@ export class SpaceService {
         allowedValues: locations,
         defaultSelectedValue: SpaceDisplayLocation.KNOWEDGE_RIGHT,
       };
-      space.collaboration = await this.collaborationService.addTagsetTemplate(
+      await this.collaborationService.addTagsetTemplate(
         space.collaboration,
         tagsetTemplateData
       );

@@ -84,12 +84,10 @@ export class CollaborationService {
     collaboration: ICollaboration,
     calloutsData: CreateCalloutInput[]
   ) {
-    if (!collaboration.callouts) {
-      throw new EntityNotInitializedException(
-        `No callouts found for collaboration the given id: ${collaboration.id}`,
-        LogContext.COLLABORATION
-      );
-    }
+    collaboration.callouts = await this.getCalloutsOnCollaboration(
+      collaboration
+    );
+
     collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
       collaboration.id
     );
