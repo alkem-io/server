@@ -93,7 +93,7 @@ export class OpportunityService {
 
     if (opportunity.collaboration) {
       const tagsetTemplateData: CreateTagsetTemplateInput = {
-        name: 'STATES',
+        name: TagsetReservedName.FLOW_STATE,
         type: TagsetType.SELECT_ONE,
         allowedValues: [],
       };
@@ -121,7 +121,7 @@ export class OpportunityService {
         stateTagsetTemplate
       );
       const stateTagset = opportunity.innovationFlow.profile.tagsets?.find(
-        t => (t.name = TagsetReservedName.STATES)
+        t => (t.name = TagsetReservedName.FLOW_STATE)
       );
       if (!stateTagset) {
         throw new EntityNotInitializedException(

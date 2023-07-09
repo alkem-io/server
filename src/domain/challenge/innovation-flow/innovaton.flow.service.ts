@@ -307,7 +307,7 @@ export class InnovationFlowService {
     const updateData: UpdateProfileSelectTagsetInput = {
       profileID: innovationFlow.profile.id,
       allowedValues: states,
-      tagsetName: TagsetReservedName.STATES.valueOf(),
+      tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
       tags: [state],
     };
     return await this.profileService.updateSelectTagset(updateData);
