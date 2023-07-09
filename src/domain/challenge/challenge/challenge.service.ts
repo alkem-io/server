@@ -61,7 +61,7 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { ChallengeDisplayLocation } from '@src/migrations/1688193761861-classificationTagsets';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-
+import { challengeDefaultCallouts } from './challenge.default.callouts';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -109,13 +109,6 @@ export class ChallengeService {
     challenge.storageBucket =
       await this.storageBucketService.createStorageBucket();
 
-    challenge.innovationFlow =
-      await this.innovationFlowService.createInnovationFlow({
-        type: InnovationFlowType.CHALLENGE,
-        spaceID: spaceID,
-        innovationFlowTemplateID: challengeData.innovationFlowTemplateID,
-      });
-
     await this.baseChallengeService.initialise(
       challenge,
       challengeData,
@@ -143,44 +136,63 @@ export class ChallengeService {
         this.createPreferenceDefaults()
       );
 
-    if (challenge.collaboration) {
-      const states = await this.innovationFlowService.getInnovationFlowStates(
-        challenge.innovationFlow
+    if (!challenge.collaboration) {
+      throw new EntityNotInitializedException(
+        `Collaboration not initialized on Challenge: ${challenge.nameID}`,
+        LogContext.CHALLENGES
       );
-      const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
-        name: TagsetReservedName.STATES,
-        type: TagsetType.SELECT_ONE,
-        allowedValues: states,
-        defaultSelectedValue: states[0],
-      };
-      challenge.collaboration =
-        await this.collaborationService.addTagsetTemplate(
-          challenge.collaboration,
-          tagsetTemplateDataStates
-        );
-
-      const locations = Object.values(ChallengeDisplayLocation);
-      const tagsetTemplateData: CreateTagsetTemplateInput = {
-        name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
-        type: TagsetType.SELECT_ONE,
-        allowedValues: locations,
-        defaultSelectedValue: ChallengeDisplayLocation.CONTRIBUTE_RIGHT,
-      };
-      challenge.collaboration =
-        await this.collaborationService.addTagsetTemplate(
-          challenge.collaboration,
-          tagsetTemplateData
-        );
-
-      challenge.collaboration =
-        await this.collaborationService.addDefaultCallouts(
-          challenge.collaboration,
-          CommunityType.CHALLENGE
-        );
     }
+
+    const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
+      name: TagsetReservedName.STATES,
+      type: TagsetType.SELECT_ONE,
+      allowedValues: [],
+    };
+    const statesTagssetTemplate =
+      await this.collaborationService.addTagsetTemplate(
+        challenge.collaboration,
+        tagsetTemplateDataStates
+      );
+
+    const locations = Object.values(ChallengeDisplayLocation);
+    const tagsetTemplateData: CreateTagsetTemplateInput = {
+      name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
+      type: TagsetType.SELECT_ONE,
+      allowedValues: locations,
+      defaultSelectedValue: ChallengeDisplayLocation.CONTRIBUTE_RIGHT,
+    };
+    await this.collaborationService.addTagsetTemplate(
+      challenge.collaboration,
+      tagsetTemplateData
+    );
+
+    // Note: need to create the innovation flow after creation of
+    // tagsetTemplates on Collabration so can pass it in to the InnovationFlow
+    challenge.innovationFlow =
+      await this.innovationFlowService.createInnovationFlow(
+        {
+          type: InnovationFlowType.CHALLENGE,
+          spaceID: spaceID,
+          innovationFlowTemplateID: challengeData.innovationFlowTemplateID,
+        },
+        [statesTagssetTemplate]
+      );
+
     // save the challenge, just in case the lead orgs assignment fails. Note that
     // assigning lead orgs does not update the challenge entity
     const savedChallenge = await this.challengeRepository.save(challenge);
+
+    // This will update the values of the states tagsetTemplate, so do this
+    // after saving the collaboration
+    await this.innovationFlowService.updateStatesTagsetTemplateToMatchLifecycle(
+      challenge.innovationFlow.id
+    );
+    // Finally create
+    challenge.collaboration =
+      await this.collaborationService.addDefaultCallouts(
+        challenge.collaboration,
+        challengeDefaultCallouts
+      );
 
     if (agentInfo && challenge.community) {
       await this.communityService.assignUserToRole(

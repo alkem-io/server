@@ -70,6 +70,7 @@ import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/ta
 import { TagsetType } from '@common/enums/tagset.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CommunityRole } from '@common/enums/community.role';
+import { spaceDefaultCallouts } from './space.default.callouts';
 
 @Injectable()
 export class SpaceService {
@@ -132,7 +133,7 @@ export class SpaceService {
 
       space.collaboration = await this.collaborationService.addDefaultCallouts(
         space.collaboration,
-        CommunityType.SPACE
+        spaceDefaultCallouts
       );
     }
 

@@ -20,9 +20,7 @@ import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { RelationService } from '@domain/collaboration/relation/relation.service';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { collaborationDefaults } from './collaboration.defaults';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
-import { CommunityType } from '@common/enums/community.type';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
 import { AgentInfo } from '@core/authentication/agent-info';
@@ -32,8 +30,12 @@ import { Space } from '@domain/challenge/space/space.entity';
 import { getJourneyByCollaboration } from '@common/utils';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
-import { CreateTagsetTemplateInput } from '@domain/common/tagset-template';
+import {
+  CreateTagsetTemplateInput,
+  ITagsetTemplate,
+} from '@domain/common/tagset-template';
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
+import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
 
 @Injectable()
 export class CollaborationService {
@@ -64,22 +66,23 @@ export class CollaborationService {
   public async addTagsetTemplate(
     collaboration: ICollaboration,
     tagsetTemplateData: CreateTagsetTemplateInput
-  ): Promise<ICollaboration> {
+  ): Promise<ITagsetTemplate> {
     collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
       collaboration.id
     );
-    collaboration.tagsetTemplateSet =
+    const tagsetTemplate =
       await this.tagsetTemplateSetService.addTagsetTemplate(
         collaboration.tagsetTemplateSet,
         tagsetTemplateData
       );
 
-    return await this.save(collaboration);
+    await this.save(collaboration);
+    return tagsetTemplate;
   }
 
   public async addDefaultCallouts(
     collaboration: ICollaboration,
-    communityType: CommunityType
+    calloutsData: CreateCalloutInput[]
   ) {
     if (!collaboration.callouts) {
       throw new EntityNotInitializedException(
@@ -90,22 +93,14 @@ export class CollaborationService {
     collaboration.tagsetTemplateSet = await this.getTagsetTemplatesSet(
       collaboration.id
     );
-    for (const calloutDefault of collaborationDefaults.callouts) {
-      const communityTypeForDefault = calloutDefault.communityType;
-      // If communityType is not specified then create the callout; otherwise only create
-      //  when it matches the given communityType
-      if (
-        !communityTypeForDefault ||
-        communityTypeForDefault === communityType
-      ) {
-        const callout = await this.calloutService.createCallout(
-          calloutDefault,
-          collaboration.tagsetTemplateSet.tagsetTemplates
-        );
-        // default callouts are already published
-        callout.visibility = CalloutVisibility.PUBLISHED;
-        collaboration.callouts.push(callout);
-      }
+    for (const calloutDefault of calloutsData) {
+      const callout = await this.calloutService.createCallout(
+        calloutDefault,
+        collaboration.tagsetTemplateSet.tagsetTemplates
+      );
+      // default callouts are already published
+      callout.visibility = CalloutVisibility.PUBLISHED;
+      collaboration.callouts.push(callout);
     }
     return await this.save(collaboration);
   }

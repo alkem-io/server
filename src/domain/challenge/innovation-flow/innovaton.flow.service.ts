@@ -28,6 +28,7 @@ import { UpdateInnovationFlowLifecycleTemplateInput } from './dto/innovation.flo
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { UpdateProfileSelectTagsetInput } from '@domain/common/profile/dto/profile.dto.update.select.tagset';
 import { ITagset } from '@domain/common/tagset';
+import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 
 @Injectable()
 export class InnovationFlowService {
@@ -41,7 +42,8 @@ export class InnovationFlowService {
   ) {}
 
   async createInnovationFlow(
-    innovationFlowData: CreateInnovationFlowInput
+    innovationFlowData: CreateInnovationFlowInput,
+    tagsetTemplates: ITagsetTemplate[]
   ): Promise<IInnovationFlow> {
     if (innovationFlowData.innovationFlowTemplateID) {
       await this.innovationFlowTemplateService.validateInnovationFlowDefinitionOrFail(
@@ -66,6 +68,11 @@ export class InnovationFlowService {
       innovationFlow.profile,
       VisualType.CARD
     );
+    innovationFlow.profile =
+      await this.profileService.addTagsetsUsingTagsetTemplates(
+        innovationFlow.profile,
+        tagsetTemplates
+      );
 
     const machineConfig: ILifecycleDefinition =
       await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(

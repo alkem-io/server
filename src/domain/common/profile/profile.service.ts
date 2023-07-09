@@ -380,4 +380,22 @@ export class ProfileService {
     }
     return tagset;
   }
+
+  public async addTagsetsUsingTagsetTemplates(
+    profile: IProfile,
+    tagsetTemplates: ITagsetTemplate[]
+  ): Promise<IProfile> {
+    for (const tagsetTemplate of tagsetTemplates) {
+      const tagsetInput: CreateTagsetInput = {
+        name: tagsetTemplate.name,
+        type: tagsetTemplate.type,
+        tags: [
+          tagsetTemplate.defaultSelectedValue ||
+            tagsetTemplate.allowedValues[0],
+        ],
+      };
+      await this.addTagsetOnProfile(profile, tagsetInput, true, tagsetTemplate);
+    }
+    return await this.getProfileOrFail(profile.id);
+  }
 }
