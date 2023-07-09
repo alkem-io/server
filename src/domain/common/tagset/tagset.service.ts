@@ -122,6 +122,16 @@ export class TagsetService {
     return tagset;
   }
 
+  updateTagsOnTagsetByName(
+    tagsets: ITagset[],
+    tagsetName: string,
+    tags: string[]
+  ): ITagset {
+    const tagset = this.getTagsetByName(tagsets, tagsetName);
+    tagset.tags = tags;
+    return tagset;
+  }
+
   updateTagsets(
     tagsets: ITagset[] | undefined,
     tagsetsData: UpdateTagsetInput[]
@@ -207,7 +217,6 @@ export class TagsetService {
   async createTagsetWithName(
     existingTagsets: ITagset[],
     tagsetData: CreateTagsetInput,
-    checkForRestricted: boolean,
     tagsetTemplate?: ITagsetTemplate
   ): Promise<ITagset> {
     // Check if the group already exists, if so log a warning

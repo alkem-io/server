@@ -45,6 +45,7 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
 import { TagsetType } from '@common/enums/tagset.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { CreateTagsetInput } from '@domain/common/tagset';
 
 @Injectable()
 export class CalloutService {
@@ -102,17 +103,17 @@ export class CalloutService {
       nameID: calloutData.nameID ?? calloutNameID,
     };
     const callout: ICallout = Callout.create(calloutCreationData);
-    callout.profile = await this.profileService.createProfile(
-      calloutData.profile
-    );
 
-    await this.profileService.addTagsetOnProfile(callout.profile, {
+    const defaultTagsetTemplate: CreateTagsetInput = {
       name: TagsetReservedName.DEFAULT,
       type: TagsetType.FREEFORM,
       tags: calloutData.tags || [],
-    });
-    callout.profile = await this.profileService.addTagsetsUsingTagsetTemplates(
-      callout.profile,
+    };
+    if (calloutData.profile.tagsets) {
+      calloutData.profile.tagsets?.push(defaultTagsetTemplate);
+    }
+    callout.profile = await this.profileService.createProfile(
+      calloutData.profile,
       tagsetTemplates
     );
 

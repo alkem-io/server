@@ -44,7 +44,10 @@ export class ProfileService {
 
   // Create an empty profile, that the creating entity then has to
   // add tagets / visuals to.
-  async createProfile(profileData?: CreateProfileInput): Promise<IProfile> {
+  async createProfile(
+    profileData?: CreateProfileInput,
+    tagsetTemplates?: ITagsetTemplate[]
+  ): Promise<IProfile> {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
       tagline: profileData?.tagline,
@@ -65,14 +68,34 @@ export class ProfileService {
         profile.references.push(reference);
       }
     }
-
-    profile.tagsets = [];
-
     await this.profileRepository.save(profile);
     this.logger.verbose?.(
       `Created new profile with id: ${profile.id}`,
       LogContext.COMMUNITY
     );
+
+    profile.tagsets = [];
+    if (tagsetTemplates) {
+      await this.addTagsetsUsingTagsetTemplates(profile, tagsetTemplates);
+    }
+    if (profileData?.tagsets) {
+      for (const tagsetData of profileData.tagsets) {
+        const existingTagset = this.tagsetService.getTagsetByName(
+          profile.tagsets,
+          tagsetData.name
+        );
+        if (existingTagset && tagsetData.tags) {
+          this.tagsetService.updateTagsOnTagsetByName(
+            profile.tagsets,
+            tagsetData.name,
+            tagsetData.tags
+          );
+        } else {
+          await this.addTagsetOnProfile(profile, tagsetData);
+        }
+      }
+    }
+
     return profile;
   }
 
@@ -167,6 +190,7 @@ export class ProfileService {
 
     return await this.profileRepository.remove(profile as Profile);
   }
+
   async save(profile: IProfile): Promise<IProfile> {
     return await this.profileRepository.save(profile);
   }
@@ -208,14 +232,12 @@ export class ProfileService {
   async addTagsetOnProfile(
     profile: IProfile,
     tagsetData: CreateTagsetInput,
-    checkForRestricted = false,
     tagsetTemplate?: ITagsetTemplate
   ): Promise<ITagset> {
     profile.tagsets = await this.getTagsets(profile);
     const tagset = await this.tagsetService.createTagsetWithName(
       profile.tagsets,
       tagsetData,
-      checkForRestricted,
       tagsetTemplate
     );
     profile.tagsets.push(tagset);
@@ -394,7 +416,7 @@ export class ProfileService {
             tagsetTemplate.allowedValues[0],
         ],
       };
-      await this.addTagsetOnProfile(profile, tagsetInput, true, tagsetTemplate);
+      await this.addTagsetOnProfile(profile, tagsetInput, tagsetTemplate);
     }
     return await this.getProfileOrFail(profile.id);
   }

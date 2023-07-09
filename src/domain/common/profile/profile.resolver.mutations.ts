@@ -60,8 +60,7 @@ export class ProfileResolverMutations {
 
     const tagset = await this.profileService.addTagsetOnProfile(
       profile,
-      tagsetData,
-      true
+      tagsetData
     );
     tagset.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
