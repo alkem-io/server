@@ -42,6 +42,7 @@ import { CollaborationService } from '../collaboration/collaboration.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { opportunityDefaultCallouts } from './opportunity.default.callouts';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -96,7 +97,7 @@ export class OpportunityService {
         type: TagsetType.SELECT_ONE,
         allowedValues: [],
       };
-      const statesTagsetTemplate =
+      const stateTagsetTemplate =
         await this.collaborationService.addTagsetTemplate(
           opportunity.collaboration,
           tagsetTemplateData
@@ -112,11 +113,27 @@ export class OpportunityService {
               displayName: '',
             },
           },
-          [statesTagsetTemplate]
+          [stateTagsetTemplate]
         );
-      await this.innovationFlowService.updateStatesTagsetTemplateToMatchLifecycle(
-        opportunity.innovationFlow.id
+
+      await this.innovationFlowService.updateFlowStateTagsetTemplateForLifecycle(
+        opportunity.innovationFlow,
+        stateTagsetTemplate
       );
+      const stateTagset = opportunity.innovationFlow.profile.tagsets?.find(
+        t => (t.name = TagsetReservedName.STATES)
+      );
+      if (!stateTagset) {
+        throw new EntityNotInitializedException(
+          `State tagset not found on Opportunity InnovationFlow: ${opportunity.nameID}`,
+          LogContext.CHALLENGES
+        );
+      }
+      await this.innovationFlowService.updateStateTagsetForLifecycle(
+        opportunity.innovationFlow,
+        stateTagset
+      );
+
       opportunity.collaboration =
         await this.collaborationService.addDefaultCallouts(
           opportunity.collaboration,

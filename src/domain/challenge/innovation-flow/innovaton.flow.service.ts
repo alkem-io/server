@@ -29,6 +29,8 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { UpdateProfileSelectTagsetInput } from '@domain/common/profile/dto/profile.dto.update.select.tagset';
 import { ITagset } from '@domain/common/tagset';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
+import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
 
 @Injectable()
 export class InnovationFlowService {
@@ -36,6 +38,8 @@ export class InnovationFlowService {
     private profileService: ProfileService,
     private lifecycleService: LifecycleService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
+    private tagsetService: TagsetService,
+    private tagsetTemplateService: TagsetTemplateService,
     @InjectRepository(InnovationFlow)
     private innovationFlowRepository: Repository<InnovationFlow>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -240,6 +244,44 @@ export class InnovationFlowService {
     innovationFlow.lifecycle.machineState = '';
 
     return await this.innovationFlowRepository.save(innovationFlow);
+  }
+
+  async updateFlowStateTagsetTemplateForLifecycle(
+    innovationFlow: IInnovationFlow,
+    tagsetTemplate: ITagsetTemplate
+  ): Promise<ITagsetTemplate> {
+    if (!innovationFlow.lifecycle) {
+      throw new EntityNotInitializedException(
+        `Lifecycle or Profile of Innovation Flow (${innovationFlow.id}) not initialized`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    tagsetTemplate.allowedValues = this.lifecycleService.getStates(
+      innovationFlow.lifecycle
+    );
+    tagsetTemplate.defaultSelectedValue = this.lifecycleService.getState(
+      innovationFlow.lifecycle
+    );
+
+    return await this.tagsetTemplateService.save(tagsetTemplate);
+  }
+
+  async updateStateTagsetForLifecycle(
+    innovationFlow: IInnovationFlow,
+    stateTagset: ITagset
+  ): Promise<ITagset> {
+    if (!innovationFlow.lifecycle) {
+      throw new EntityNotInitializedException(
+        `Lifecycle or Profile of Innovation Flow (${innovationFlow.id}) not initialized`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    const state = this.lifecycleService.getState(innovationFlow.lifecycle);
+    stateTagset.tags = [state];
+
+    return await this.tagsetService.save(stateTagset);
   }
 
   async updateStatesTagsetTemplateToMatchLifecycle(

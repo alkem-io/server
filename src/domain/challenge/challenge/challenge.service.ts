@@ -179,16 +179,26 @@ export class ChallengeService {
         [statesTagssetTemplate]
       );
 
-    // save the challenge, just in case the lead orgs assignment fails. Note that
-    // assigning lead orgs does not update the challenge entity
     const savedChallenge = await this.challengeRepository.save(challenge);
 
-    // This will update the values of the states tagsetTemplate, so do this
-    // after saving the collaboration
-    await this.innovationFlowService.updateStatesTagsetTemplateToMatchLifecycle(
-      challenge.innovationFlow.id
+    await this.innovationFlowService.updateFlowStateTagsetTemplateForLifecycle(
+      challenge.innovationFlow,
+      statesTagssetTemplate
     );
-    // Finally create
+    const stateTagset = savedChallenge.innovationFlow.profile.tagsets?.find(
+      t => (t.name = TagsetReservedName.STATES)
+    );
+    if (!stateTagset) {
+      throw new EntityNotInitializedException(
+        `State tagset not found on InnovationFlow: ${challenge.nameID}`,
+        LogContext.CHALLENGES
+      );
+    }
+    await this.innovationFlowService.updateStateTagsetForLifecycle(
+      challenge.innovationFlow,
+      stateTagset
+    );
+    // Finally create default callouts
     challenge.collaboration =
       await this.collaborationService.addDefaultCallouts(
         challenge.collaboration,
