@@ -118,24 +118,30 @@ export class SpaceService {
       spaceCommunityApplicationForm
     );
 
-    if (space.collaboration) {
-      const locations = Object.values(SpaceDisplayLocation);
-      const tagsetTemplateData: CreateTagsetTemplateInput = {
-        name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
-        type: TagsetType.SELECT_ONE,
-        allowedValues: locations,
-        defaultSelectedValue: SpaceDisplayLocation.KNOWEDGE_RIGHT,
-      };
-      await this.collaborationService.addTagsetTemplate(
-        space.collaboration,
-        tagsetTemplateData
-      );
-
-      space.collaboration = await this.collaborationService.addDefaultCallouts(
-        space.collaboration,
-        spaceDefaultCallouts
+    if (!space.collaboration) {
+      throw new EntityNotInitializedException(
+        `Collaboration not initialized on Space: ${space.nameID}`,
+        LogContext.CHALLENGES
       );
     }
+
+    const locations = Object.values(SpaceDisplayLocation);
+    const tagsetTemplateData: CreateTagsetTemplateInput = {
+      name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
+      type: TagsetType.SELECT_ONE,
+      allowedValues: locations,
+      defaultSelectedValue: SpaceDisplayLocation.KNOWEDGE_RIGHT,
+    };
+    await this.collaborationService.addTagsetTemplate(
+      space.collaboration,
+      tagsetTemplateData
+    );
+
+    space.collaboration = await this.collaborationService.addDefaultCallouts(
+      space.collaboration,
+      spaceDefaultCallouts
+    );
+    await this.save(space);
 
     // set immediate community parent and  community policy
     if (space.community) {

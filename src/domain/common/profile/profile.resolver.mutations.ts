@@ -67,7 +67,7 @@ export class ProfileResolverMutations {
         tagset.authorization,
         profile.authorization
       );
-    return await this.tagsetService.saveTagset(tagset);
+    return await this.tagsetService.save(tagset);
   }
 
   @UseGuards(GraphqlGuard)

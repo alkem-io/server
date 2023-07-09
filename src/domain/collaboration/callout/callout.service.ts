@@ -104,17 +104,24 @@ export class CalloutService {
     };
     const callout: ICallout = Callout.create(calloutCreationData);
 
-    const defaultTagsetTemplate: CreateTagsetInput = {
+    // To consider also having the default tagset as a template tagset
+    const defaultTagset: CreateTagsetInput = {
       name: TagsetReservedName.DEFAULT,
       type: TagsetType.FREEFORM,
-      tags: calloutData.tags || [],
+      tags: calloutData.tags,
     };
-    if (calloutData.profile.tagsets) {
-      calloutData.profile.tagsets?.push(defaultTagsetTemplate);
-    }
+    const tagsetInputsFromTemplates =
+      this.profileService.convertTagsetTemplatesToCreateTagsetInput(
+        tagsetTemplates
+      );
+    const tagsetInputs = [defaultTagset, ...tagsetInputsFromTemplates];
+
+    calloutData.profile.tagsets = this.profileService.updateProfileTagsetInputs(
+      calloutData.profile.tagsets,
+      tagsetInputs
+    );
     callout.profile = await this.profileService.createProfile(
-      calloutData.profile,
-      tagsetTemplates
+      calloutData.profile
     );
 
     if (calloutData.type == CalloutType.POST_COLLECTION && postTemplateData) {

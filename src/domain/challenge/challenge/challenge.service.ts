@@ -32,7 +32,6 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ProjectService } from '@domain/collaboration/project/project.service';
-import { UserService } from '@domain/community/user/user.service';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
@@ -71,7 +70,6 @@ export class ChallengeService {
     private projectService: ProjectService,
     private baseChallengeService: BaseChallengeService,
     private organizationService: OrganizationService,
-    private userService: UserService,
     private preferenceSetService: PreferenceSetService,
     private storageBucketService: StorageBucketService,
     private innovationFlowService: InnovationFlowService,
@@ -174,6 +172,9 @@ export class ChallengeService {
           type: InnovationFlowType.CHALLENGE,
           spaceID: spaceID,
           innovationFlowTemplateID: challengeData.innovationFlowTemplateID,
+          profile: {
+            displayName: '',
+          },
         },
         [statesTagssetTemplate]
       );

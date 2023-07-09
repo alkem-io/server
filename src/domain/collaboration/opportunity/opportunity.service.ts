@@ -108,6 +108,9 @@ export class OpportunityService {
             type: InnovationFlowType.OPPORTUNITY,
             spaceID: spaceID,
             innovationFlowTemplateID: opportunityData.innovationFlowTemplateID,
+            profile: {
+              displayName: '',
+            },
           },
           [statesTagsetTemplate]
         );

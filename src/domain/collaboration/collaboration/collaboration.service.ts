@@ -83,7 +83,7 @@ export class CollaborationService {
   public async addDefaultCallouts(
     collaboration: ICollaboration,
     calloutsData: CreateCalloutInput[]
-  ) {
+  ): Promise<ICollaboration> {
     collaboration.callouts = await this.getCalloutsOnCollaboration(
       collaboration
     );

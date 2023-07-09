@@ -29,15 +29,12 @@ export class TagsetService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createTagset(
-    tagsetData: CreateTagsetInput,
-    tagsetTemplate?: ITagsetTemplate
-  ): Promise<ITagset> {
+  async createTagset(tagsetData: CreateTagsetInput): Promise<ITagset> {
     if (!tagsetData.type) tagsetData.type = TagsetType.FREEFORM;
     const tagset: ITagset = Tagset.create({ ...tagsetData });
     tagset.authorization = new AuthorizationPolicy();
     if (!tagset.tags) tagset.tags = [];
-    tagset.tagsetTemplate = tagsetTemplate;
+    tagset.tagsetTemplate = tagsetData.tagsetTemplate;
     return await this.tagsetRepository.save(tagset);
   }
 
@@ -233,8 +230,7 @@ export class TagsetService {
 
   async createTagsetWithName(
     existingTagsets: ITagset[],
-    tagsetData: CreateTagsetInput,
-    tagsetTemplate?: ITagsetTemplate
+    tagsetData: CreateTagsetInput
   ): Promise<ITagset> {
     // Check if the group already exists, if so log a warning
     if (this.hasTagsetWithName(existingTagsets, tagsetData.name)) {
@@ -244,17 +240,10 @@ export class TagsetService {
       );
     }
 
-    return await this.createTagset(tagsetData, tagsetTemplate);
+    return await this.createTagset(tagsetData);
   }
 
-  hasTag(tagset: ITagset, tagToCheck: string): boolean {
-    for (const tag of tagset.tags) {
-      if (tag === tagToCheck) return true;
-    }
-    return false;
-  }
-
-  async saveTagset(tagset: ITagset): Promise<ITagset> {
+  async save(tagset: ITagset): Promise<ITagset> {
     return await this.tagsetRepository.save(tagset);
   }
 }

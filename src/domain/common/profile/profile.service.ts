@@ -44,10 +44,7 @@ export class ProfileService {
 
   // Create an empty profile, that the creating entity then has to
   // add tagets / visuals to.
-  async createProfile(
-    profileData?: CreateProfileInput,
-    tagsetTemplates?: ITagsetTemplate[]
-  ): Promise<IProfile> {
+  async createProfile(profileData?: CreateProfileInput): Promise<IProfile> {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
       tagline: profileData?.tagline,
@@ -75,32 +72,17 @@ export class ProfileService {
     );
 
     profile.tagsets = [];
-    if (tagsetTemplates) {
-      const updatedProfile = await this.addTagsetsUsingTagsetTemplates(
-        profile,
-        tagsetTemplates
-      );
-      profile.tagsets = updatedProfile.tagsets;
-    }
-    if (profileData?.tagsets && profile.tagsets) {
-      for (const tagsetData of profileData.tagsets) {
-        const existingTagset = this.tagsetService.getTagsetByName(
+    if (profileData?.tagsets) {
+      for (const tagsetData of profileData?.tagsets) {
+        const tagset = await this.tagsetService.createTagsetWithName(
           profile.tagsets,
-          tagsetData.name
+          tagsetData
         );
-        if (existingTagset && tagsetData.tags) {
-          this.tagsetService.updateTagsOnTagsetByName(
-            profile.tagsets,
-            tagsetData.name,
-            tagsetData.tags
-          );
-        } else {
-          await this.addTagsetOnProfile(profile, tagsetData);
-        }
+        profile.tagsets.push(tagset);
       }
     }
 
-    return profile;
+    return await this.save(profile);
   }
 
   async updateProfile(
@@ -235,14 +217,12 @@ export class ProfileService {
 
   async addTagsetOnProfile(
     profile: IProfile,
-    tagsetData: CreateTagsetInput,
-    tagsetTemplate?: ITagsetTemplate
+    tagsetData: CreateTagsetInput
   ): Promise<ITagset> {
     profile.tagsets = await this.getTagsets(profile);
     const tagset = await this.tagsetService.createTagsetWithName(
       profile.tagsets,
-      tagsetData,
-      tagsetTemplate
+      tagsetData
     );
     profile.tagsets.push(tagset);
 
@@ -396,7 +376,7 @@ export class ProfileService {
     );
     if (updateData.tags) {
       tagset.tags = updateData.tags;
-      await this.tagsetService.saveTagset(tagset);
+      await this.tagsetService.save(tagset);
     }
 
     if (updateData.allowedValues) {
@@ -410,21 +390,44 @@ export class ProfileService {
     return tagset;
   }
 
-  public async addTagsetsUsingTagsetTemplates(
-    profile: IProfile,
+  public convertTagsetTemplatesToCreateTagsetInput(
     tagsetTemplates: ITagsetTemplate[]
-  ): Promise<IProfile> {
+  ): CreateTagsetInput[] {
+    const result: CreateTagsetInput[] = [];
     for (const tagsetTemplate of tagsetTemplates) {
-      const tagsetInput: CreateTagsetInput = {
+      const input: CreateTagsetInput = {
         name: tagsetTemplate.name,
         type: tagsetTemplate.type,
-        tags: [
-          tagsetTemplate.defaultSelectedValue ||
-            tagsetTemplate.allowedValues[0],
-        ],
+        tagsetTemplate: tagsetTemplate,
+        tags: tagsetTemplate.defaultSelectedValue
+          ? [tagsetTemplate.defaultSelectedValue]
+          : undefined,
       };
-      await this.addTagsetOnProfile(profile, tagsetInput, tagsetTemplate);
+      result.push(input);
     }
-    return await this.getProfileOrFail(profile.id);
+    return result;
+  }
+
+  // Note: purovided data has priority when it comes to tags
+  public updateProfileTagsetInputs(
+    tagsetInputDtata: CreateTagsetInput[] | undefined,
+    additionalTagsetInputs: CreateTagsetInput[]
+  ): CreateTagsetInput[] {
+    const result: CreateTagsetInput[] = [...additionalTagsetInputs];
+
+    if (!tagsetInputDtata) return result;
+
+    for (const tagsetInput of tagsetInputDtata) {
+      const existingInput = result.find(t => t.name === tagsetInput.name);
+      if (existingInput) {
+        // Do not change type, name etc - only tags
+        if (tagsetInput.tags) {
+          existingInput.tags = tagsetInput.tags;
+        }
+      } else {
+        result.push(tagsetInput);
+      }
+    }
+    return result;
   }
 }

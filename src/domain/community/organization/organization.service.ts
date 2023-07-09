@@ -364,7 +364,7 @@ export class OrganizationService {
     if (!organization)
       throw new EntityNotFoundException(
         `Unable to find Organization with ID: ${organizationID}`,
-        LogContext.CHALLENGES
+        LogContext.COMMUNITY
       );
     return organization;
   }

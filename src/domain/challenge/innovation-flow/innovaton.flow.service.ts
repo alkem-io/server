@@ -63,16 +63,24 @@ export class InnovationFlowService {
     innovationFlow.spaceID = innovationFlowData.spaceID;
     innovationFlow.type = innovationFlowData.type;
 
-    innovationFlow.profile = await this.profileService.createProfile();
+    const tagsetInputs =
+      this.profileService.convertTagsetTemplatesToCreateTagsetInput(
+        tagsetTemplates
+      );
+
+    innovationFlowData.profile.tagsets =
+      this.profileService.updateProfileTagsetInputs(
+        innovationFlowData.profile.tagsets,
+        tagsetInputs
+      );
+    innovationFlow.profile = await this.profileService.createProfile(
+      innovationFlowData.profile
+    );
+
     await this.profileService.addVisualOnProfile(
       innovationFlow.profile,
       VisualType.CARD
     );
-    innovationFlow.profile =
-      await this.profileService.addTagsetsUsingTagsetTemplates(
-        innovationFlow.profile,
-        tagsetTemplates
-      );
 
     const machineConfig: ILifecycleDefinition =
       await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
