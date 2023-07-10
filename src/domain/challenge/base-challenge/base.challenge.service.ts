@@ -146,7 +146,6 @@ export class BaseChallengeService {
           'collaboration',
           'community',
           'context',
-          'lifecycle',
           'agent',
           'profile',
         ],
