@@ -118,9 +118,13 @@ export class CollaborationService {
     collaborationID: string,
     options?: FindOneOptions<Collaboration>
   ): Promise<ICollaboration | never> {
+    const { where, ...rest } = options ?? {};
     const collaboration = await this.collaborationRepository.findOne({
-      where: { id: collaborationID },
-      ...options,
+      where: {
+        ...where,
+        id: collaborationID,
+      },
+      ...rest,
     });
     if (!collaboration)
       throw new EntityNotFoundException(
@@ -289,15 +293,22 @@ export class CollaborationService {
     const collaborationLoaded = await this.getCollaborationOrFail(
       collaboration.id,
       {
-        relations: ['callouts'],
+        relations: {
+          callouts: {
+            profile: {
+              tagsets: true,
+            },
+          },
+        },
       }
     );
     const allCallouts = collaborationLoaded.callouts;
-    if (!allCallouts)
+    if (!allCallouts) {
       throw new EntityNotFoundException(
-        `Callout not initialised, no whiteboards: ${collaboration.id}`,
+        `Callouts not initialised on Collaboration: ${collaboration.id}`,
         LogContext.COLLABORATION
       );
+    }
 
     // First filter the callouts the current user has READ privilege to
     const readableCallouts = allCallouts.filter(callout =>
@@ -305,11 +316,21 @@ export class CollaborationService {
     );
 
     // Filter by Callout group
-    const availableCallouts = args.groups
-      ? readableCallouts.filter(
-          callout => callout.group && args.groups?.includes(callout.group)
-        )
-      : readableCallouts;
+    let availableCallouts =
+      args.groups && args.groups.length
+        ? readableCallouts.filter(
+            callout => callout.group && args.groups?.includes(callout.group)
+          )
+        : readableCallouts;
+
+    availableCallouts =
+      args.tags && args.tags.length
+        ? readableCallouts.filter(callout =>
+            callout.profile?.tagsets?.some(tagset =>
+              tagset.tags.some(tag => args.tags?.includes(tag))
+            )
+          )
+        : availableCallouts;
 
     // parameter order: (a) by IDs (b) by activity (c) shuffle (d) sort order
     // (a) by IDs, results in order specified by IDs
@@ -360,10 +381,7 @@ export class CollaborationService {
       results = limitAndShuffle(availableCallouts, args.limit, false);
     }
 
-    const sortedCallouts = results.sort((a, b) =>
-      a.sortOrder > b.sortOrder ? 1 : -1
-    );
-    return sortedCallouts;
+    return results.sort((a, b) => (a.sortOrder > b.sortOrder ? 1 : -1));
   }
 
   private hasAgentAccessToCallout(

@@ -40,4 +40,11 @@ export class CollaborationArgsCallouts {
     nullable: true,
   })
   groups?: string[];
+
+  @Field(() => [String], {
+    name: 'tags',
+    description: 'Return only Callouts with one of these tags.',
+    nullable: true,
+  })
+  tags?: string[];
 }
