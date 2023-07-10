@@ -6,6 +6,8 @@ export const CREDENTIAL_RULE_CHALLENGE_MEMBER_READ =
   'credentialRule-challengeMemberRead';
 export const CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY =
   'credentialRule-challengeCreateOpportunity';
+export const CREDENTIAL_RULE_CHALLENGE_FILE_UPLOAD =
+  'credentialRule-challengeMemberFileUpload';
 export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN =
   'credentialRule-challengeSpaceMemberJoin';
 export const CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY =
@@ -19,6 +21,8 @@ export const CREDENTIAL_RULE_SPACE_MEMBERS_READ =
   'credentialRule-spaceMembersRead';
 export const CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN =
   'credentialRule-spaceHostAssociatesJoin';
+export const CREDENTIAL_RULE_SPACE_FILE_UPLOAD =
+  'credentialRule-spaceMemberFileUpload';
 export const CREDENTIAL_RULE_POST_CREATED_BY = 'credentialRule-postCreatedBy';
 export const CREDENTIAL_RULE_POST_ADMINS_MOVE = 'credentialRule-postAdminsMove';
 export const CREDENTIAL_RULE_CALLOUT_CREATED_BY =
@@ -64,3 +68,5 @@ export const CREDENTIAL_RULE_DOCUMENT_CREATED_BY =
   'credentialRule-documentCreatedBy';
 export const CREDENTIAL_RULE_LIBRARY_INNOVATION_PACK_PROVIDER_ADMIN =
   'credentialRule-libraryInnovationPackProvider';
+export const CREDENTIAL_RULE_ORGANIZATION_FILE_UPLOAD =
+  'credentialRule-organizationAssociateFileUpload';

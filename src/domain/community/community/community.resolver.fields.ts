@@ -24,6 +24,7 @@ import { IForm } from '@domain/common/form/form.interface';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { AgentInfo } from '@core/authentication';
 import { IInvitation } from '../invitation';
+import { IInvitationExternal } from '../invitation.external';
 
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
@@ -76,20 +77,6 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('memberOrganizations', () => [IOrganization], {
-    nullable: true,
-    description: 'All Organizations that are contributing to this Community.',
-  })
-  @Profiling.api
-  async memberOrganizations(@Parent() community: Community) {
-    return await this.communityService.getOrganizationsWithRole(
-      community,
-      CommunityRole.MEMBER
-    );
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
   @ResolveField('availableMemberUsers', () => PaginatedUsers, {
     nullable: true,
     description: 'All available users that are potential Community members.',
@@ -131,29 +118,35 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('leadUsers', () => [IUser], {
+  @ResolveField('usersInRole', () => [IUser], {
     nullable: true,
-    description: 'All users that are leads in this Community.',
+    description: 'All users that have the specified Role in this Community.',
   })
   @Profiling.api
-  async leadUsers(@Parent() community: Community) {
-    return await this.communityService.getUsersWithRole(
-      community,
-      CommunityRole.LEAD
-    );
+  async usersInRole(
+    @Parent() community: Community,
+    @Args('role', { type: () => CommunityRole, nullable: false })
+    role: CommunityRole
+  ) {
+    return await this.communityService.getUsersWithRole(community, role);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('leadOrganizations', () => [IOrganization], {
+  @ResolveField('organizationsInRole', () => [IOrganization], {
     nullable: true,
-    description: 'All Organizations that are leads in this Community.',
+    description:
+      'All Organizations that have the specified Role in this Community.',
   })
   @Profiling.api
-  async leadOrganizations(@Parent() community: Community) {
+  async organizationsInRole(
+    @Parent() community: Community,
+    @Args('role', { type: () => CommunityRole, nullable: false })
+    role: CommunityRole
+  ): Promise<IOrganization[]> {
     return await this.communityService.getOrganizationsWithRole(
       community,
-      CommunityRole.LEAD
+      role
     );
   }
 
@@ -207,9 +200,23 @@ export class CommunityResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
+  @ResolveField('invitationsExternal', () => [IInvitationExternal], {
+    nullable: true,
+    description:
+      'Invitations to join this Community for users not yet on the Alkemio platform.',
+  })
+  @Profiling.api
+  async invitationsExternal(
+    @Parent() community: Community
+  ): Promise<IInvitationExternal[]> {
+    return await this.communityService.getExternalInvitations(community);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {
     nullable: true,
-    description: 'Application available for this community.',
+    description: 'Applications available for this community.',
   })
   @Profiling.api
   async applications(@Parent() community: Community) {

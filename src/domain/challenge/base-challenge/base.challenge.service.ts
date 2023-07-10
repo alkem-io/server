@@ -6,8 +6,6 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { UpdateBaseChallengeInput } from '@domain/challenge/base-challenge/base.challenge.dto.update';
-import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { ICommunity } from '@domain/community/community/community.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { IContext } from '@domain/context/context/context.interface';
@@ -24,17 +22,15 @@ import { IAgent } from '@domain/agent/agent/agent.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunityType } from '@common/enums/community.type';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
-import { CommunityRole } from '@common/enums/community.role';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { ICommunityPolicyDefinition } from '@domain/community/community-policy/community.policy.definition';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { IProfile } from '@domain/common/profile';
 import { VisualType } from '@common/enums/visual.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class BaseChallengeService {
@@ -45,7 +41,6 @@ export class BaseChallengeService {
     private communityService: CommunityService,
     private namingService: NamingService,
     private profileService: ProfileService,
-    private lifecycleService: LifecycleService,
     private collaborationService: CollaborationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -81,7 +76,7 @@ export class BaseChallengeService {
       baseChallengeData.profileData
     );
     await this.profileService.addTagsetOnProfile(baseChallenge.profile, {
-      name: RestrictedTagsetNames.DEFAULT,
+      name: TagsetReservedName.DEFAULT,
       tags: baseChallengeData.tags,
     });
     // add the visuals
@@ -99,7 +94,7 @@ export class BaseChallengeService {
     );
 
     baseChallenge.collaboration =
-      await this.collaborationService.createCollaboration(communityType);
+      await this.collaborationService.createCollaboration();
 
     baseChallenge.agent = await this.agentService.createAgent({
       parentDisplayID: `${baseChallenge.nameID}`,
@@ -151,7 +146,6 @@ export class BaseChallengeService {
           'collaboration',
           'community',
           'context',
-          'lifecycle',
           'agent',
           'profile',
         ],
@@ -170,10 +164,6 @@ export class BaseChallengeService {
     const community = baseChallenge.community;
     if (community) {
       await this.communityService.removeCommunity(community.id);
-    }
-
-    if (baseChallenge.lifecycle) {
-      await this.lifecycleService.deleteLifecycle(baseChallenge.lifecycle.id);
     }
 
     if (baseChallenge.profile) {
@@ -245,17 +235,6 @@ export class BaseChallengeService {
   ): Promise<ICommunityPolicy> {
     const community = await this.getCommunity(baseChallengeId, repository);
     return this.communityService.getCommunityPolicy(community);
-  }
-
-  public async getCommunityLeadershipCredential(
-    baseChallengeId: string,
-    repository: Repository<BaseChallenge>
-  ): Promise<CredentialDefinition> {
-    const community = await this.getCommunity(baseChallengeId, repository);
-    return this.communityService.getCredentialDefinitionForRole(
-      community,
-      CommunityRole.LEAD
-    );
   }
 
   public async getContext(
@@ -336,28 +315,6 @@ export class BaseChallengeService {
         LogContext.AGENT
       );
     return agent;
-  }
-
-  public async getLifecycle(
-    challengeId: string,
-    repository: Repository<BaseChallenge>
-  ): Promise<ILifecycle> {
-    const challenge = await this.getBaseChallengeOrFail(
-      challengeId,
-      repository,
-      {
-        relations: ['lifecycle'],
-      }
-    );
-
-    if (!challenge.lifecycle) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Lifecycle for challenge ${challengeId} `,
-        LogContext.CHALLENGES
-      );
-    }
-
-    return challenge.lifecycle;
   }
 
   public async getMembersCount(

@@ -11,6 +11,12 @@ import { OrganizationVerificationEnum } from '@common/enums/organization.verific
 import { OrganizationPreferenceType } from '@common/enums/organization.preference.type';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
+import { IInvitation } from '@domain/community/invitation/invitation.interface';
+import { InvitationExternalService } from '@domain/community/invitation.external/invitation.external.service';
+import { CommunityService } from '@domain/community/community/community.service';
+import { InvitationAuthorizationService } from '@domain/community/invitation/invitation.service.authorization';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { CreateInvitationInput } from '@domain/community/invitation/dto/invitation.dto.create';
 
 export class RegistrationService {
   constructor(
@@ -18,6 +24,9 @@ export class RegistrationService {
     private organizationService: OrganizationService,
     private preferenceSetService: PreferenceSetService,
     private userAuthorizationService: UserAuthorizationService,
+    private communityService: CommunityService,
+    private invitationExternalService: InvitationExternalService,
+    private invitationAuthorizationService: InvitationAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -92,5 +101,41 @@ export class RegistrationService {
       LogContext.COMMUNITY
     );
     return true;
+  }
+
+  public async processPendingInvitations(user: IUser): Promise<IInvitation[]> {
+    const externalInvitations =
+      await this.invitationExternalService.findInvitationExternalsForUser(
+        user.email
+      );
+
+    const invitations: IInvitation[] = [];
+    for (const externalInvitation of externalInvitations) {
+      const community = externalInvitation.community;
+      if (!community) {
+        throw new RelationshipNotFoundException(
+          `Unable to load Community that created invitationExternal ${externalInvitation.id} `,
+          LogContext.COMMUNITY
+        );
+      }
+      const invitationInput: CreateInvitationInput = {
+        invitedUser: user.id,
+        communityID: community.id,
+        createdBy: externalInvitation.createdBy,
+      };
+      const invitation =
+        await this.communityService.createInvitationExistingUser(
+          invitationInput
+        );
+      await this.invitationAuthorizationService.applyAuthorizationPolicy(
+        invitation,
+        community.authorization
+      );
+      invitations.push(invitation);
+      await this.invitationExternalService.recordProfileCreated(
+        externalInvitation
+      );
+    }
+    return invitations;
   }
 }

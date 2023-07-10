@@ -18,6 +18,7 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
 import { CollaborationResolverQueries } from './collaboration.resolver.queries';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tagset.template.set.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     RelationModule,
     WhiteboardModule,
     PostModule,
+    TagsetTemplateSetModule,
     TypeOrmModule.forFeature([Collaboration]),
   ],
   providers: [

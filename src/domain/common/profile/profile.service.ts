@@ -24,6 +24,7 @@ import { CreateReferenceOnProfileInput } from './dto/profile.dto.create.referenc
 import { ILocation, LocationService } from '@domain/common/location';
 import { VisualType } from '@common/enums/visual.type';
 import { CreateTagsetInput } from '../tagset';
+import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 
 @Injectable()
 export class ProfileService {
@@ -204,13 +205,15 @@ export class ProfileService {
   async addTagsetOnProfile(
     profile: IProfile,
     tagsetData: CreateTagsetInput,
-    checkForRestricted = false
+    checkForRestricted = false,
+    tagsetTemplate?: ITagsetTemplate
   ): Promise<ITagset> {
     profile.tagsets = await this.getTagsets(profile);
     const tagset = await this.tagsetService.createTagsetWithName(
       profile,
       tagsetData,
-      checkForRestricted
+      checkForRestricted,
+      tagsetTemplate
     );
     profile.tagsets.push(tagset);
 

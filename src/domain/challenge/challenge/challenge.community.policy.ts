@@ -3,6 +3,7 @@ import { ICommunityPolicyDefinition } from '@domain/community/community-policy/c
 
 export const challengeCommunityPolicy: ICommunityPolicyDefinition = {
   member: {
+    enabled: true,
     credential: {
       type: AuthorizationCredential.CHALLENGE_MEMBER,
       resourceID: '',
@@ -14,6 +15,7 @@ export const challengeCommunityPolicy: ICommunityPolicyDefinition = {
     maxUser: -1,
   },
   lead: {
+    enabled: true,
     credential: {
       type: AuthorizationCredential.CHALLENGE_LEAD,
       resourceID: '',
@@ -23,5 +25,29 @@ export const challengeCommunityPolicy: ICommunityPolicyDefinition = {
     maxOrg: 9,
     minUser: 0,
     maxUser: 2,
+  },
+  admin: {
+    enabled: true,
+    credential: {
+      type: AuthorizationCredential.CHALLENGE_ADMIN,
+      resourceID: '',
+    },
+    parentCredentials: [],
+    minOrg: 0,
+    maxOrg: 0,
+    minUser: 0,
+    maxUser: -1,
+  },
+  host: {
+    enabled: false,
+    credential: {
+      type: AuthorizationCredential.CHALLENGE_HOST,
+      resourceID: '',
+    },
+    parentCredentials: [],
+    minOrg: 0,
+    maxOrg: 0,
+    minUser: 0,
+    maxUser: 0,
   },
 };

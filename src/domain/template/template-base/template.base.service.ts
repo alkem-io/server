@@ -1,12 +1,12 @@
 import { VisualType } from '@common/enums/visual.type';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CreateTemplateBaseInput } from './dto/template.base.dto.create';
 import { UpdateTemplateBaseInput } from './dto/template.base.dto.update';
 import { ITemplateBase } from './template.base.interface';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class TemplateBaseService {
@@ -27,7 +27,7 @@ export class TemplateBaseService {
       baseTemplateData.profile
     );
     await this.profileService.addTagsetOnProfile(baseTemplate.profile, {
-      name: RestrictedTagsetNames.DEFAULT,
+      name: TagsetReservedName.DEFAULT,
       tags: baseTemplateData.tags,
     });
     await this.profileService.addVisualOnProfile(

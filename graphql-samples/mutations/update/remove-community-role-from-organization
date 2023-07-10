@@ -1,0 +1,14 @@
+mutation removeCommunityRoleFromOrganization($roleData: RemoveCommunityRoleFromOrganizationInput!) {
+  removeCommunityRoleFromOrganization(roleData: $roleData) {
+    id,
+  }
+}
+
+Variables:
+{
+  "roleData": {
+    "organizationID": "uuid",
+    "communityID": "uuid",
+    "role": "MEMBER"
+  }
+}

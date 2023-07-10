@@ -87,13 +87,13 @@ http:
     strip-kratos-prefix:
       stripPrefix:
         prefixes:
-          - /identity/ory/kratos
+          - /ory/kratos
         forceSlash: false
 
     strip-kratos-public-prefix:
       stripPrefix:
         prefixes:
-          - /identity/ory/kratos/public
+          - /ory/kratos/public
         forceSlash: false
 
     strip-oathkeeper-jwks-prefix:
@@ -149,8 +149,16 @@ http:
       entryPoints:
         - 'web'
 
+    api-private-non-interactive-rest:
+      rule: 'PathPrefix(`/api/private/non-interactive/rest`)'
+      service: 'alkemio-server'
+      middlewares:
+        - strip-api-private-non-interactive-prefix
+      entryPoints:
+        - 'web'
+
     kratos-public:
-      rule: 'PathPrefix(`/identity/ory/kratos/public`)'
+      rule: 'PathPrefix(`/ory/kratos/public`)'
       service: 'kratos-public'
       middlewares:
         - strip-kratos-public-prefix
@@ -158,7 +166,7 @@ http:
         - 'web'
 
     kratos-admin:
-      rule: 'PathPrefix(`/identity/ory/kratos/admin`)'
+      rule: 'PathPrefix(`/ory/kratos/admin`)'
       service: 'kratos-admin'
       middlewares:
         - strip-kratos-prefix

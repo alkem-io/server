@@ -34,8 +34,11 @@ import {
   CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY,
   CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY,
   CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN,
+  CREDENTIAL_RULE_CHALLENGE_FILE_UPLOAD,
 } from '@common/constants';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
+import { CommunityRole } from '@common/enums/community.role';
+import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -49,6 +52,7 @@ export class ChallengeAuthorizationService {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private preferenceSetService: PreferenceSetService,
     private storageBucketAuthorizationService: StorageBucketAuthorizationService,
+    private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>
   ) {}
@@ -105,6 +109,14 @@ export class ChallengeAuthorizationService {
       communityPolicy
     );
 
+    challenge.storageBucket =
+      await this.challengeService.getStorageBucketOrFail(challenge.id);
+    challenge.storageBucket.authorization =
+      this.extendStorageAuthorizationPolicy(
+        challenge.storageBucket.authorization,
+        communityPolicy
+      );
+
     // Cascade
     challenge.childChallenges = await this.challengeService.getChildChallenges(
       challenge
@@ -149,6 +161,14 @@ export class ChallengeAuthorizationService {
         challenge.authorization
       );
 
+    challenge.innovationFlow = await this.challengeService.getInnovationFlow(
+      challenge.id
+    );
+    challenge.innovationFlow =
+      await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
+        challenge.innovationFlow,
+        challenge.authorization
+      );
     return await this.challengeRepository.save(challenge);
   }
 
@@ -284,7 +304,12 @@ export class ChallengeAuthorizationService {
           AuthorizationPrivilege.GRANT,
           AuthorizationPrivilege.DELETE,
         ],
-        [...this.communityPolicyService.getAdminCredentials(policy)],
+        [
+          ...this.communityPolicyService.getAllCredentialsForRole(
+            policy,
+            CommunityRole.ADMIN
+          ),
+        ],
         CREDENTIAL_RULE_CHALLENGE_SPACE_ADMINS
       );
     rules.push(challengeSpaceAdmins);
@@ -323,7 +348,12 @@ export class ChallengeAuthorizationService {
         AuthorizationPrivilege.GRANT,
         AuthorizationPrivilege.DELETE,
       ],
-      [this.communityPolicyService.getAdminCredential(policy)],
+      [
+        this.communityPolicyService.getCredentialForRole(
+          policy,
+          CommunityRole.ADMIN
+        ),
+      ],
       CREDENTIAL_RULE_CHALLENGE_ADMINS
     );
     rules.push(challengeAdmin);
@@ -331,7 +361,12 @@ export class ChallengeAuthorizationService {
     const challengeMember =
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.READ],
-        [this.communityPolicyService.getMembershipCredential(policy)],
+        [
+          this.communityPolicyService.getCredentialForRole(
+            policy,
+            CommunityRole.MEMBER
+          ),
+        ],
         CREDENTIAL_RULE_CHALLENGE_MEMBER_READ
       );
     rules.push(challengeMember);
@@ -370,7 +405,10 @@ export class ChallengeAuthorizationService {
 
   private getContributorCriteria(policy: ICommunityPolicy) {
     const criteria = [
-      this.communityPolicyService.getMembershipCredential(policy),
+      this.communityPolicyService.getCredentialForRole(
+        policy,
+        CommunityRole.MEMBER
+      ),
     ];
     if (
       this.communityPolicyService.getFlag(
@@ -379,7 +417,10 @@ export class ChallengeAuthorizationService {
       )
     ) {
       criteria.push(
-        this.communityPolicyService.getParentMembershipCredential(policy)
+        this.communityPolicyService.getDirectParentCredentialForRole(
+          policy,
+          CommunityRole.MEMBER
+        )
       );
     }
     return criteria;
@@ -436,7 +477,10 @@ export class ChallengeAuthorizationService {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
     const parentCommunityCredential =
-      this.communityPolicyService.getParentMembershipCredential(policy);
+      this.communityPolicyService.getDirectParentCredentialForRole(
+        policy,
+        CommunityRole.MEMBER
+      );
 
     // Allow member of the parent community to Apply
     const allowSpaceMembersToApply = this.communityPolicyService.getFlag(
@@ -476,6 +520,36 @@ export class ChallengeAuthorizationService {
     );
 
     return authorization;
+  }
+
+  private extendStorageAuthorizationPolicy(
+    storageAuthorization: IAuthorizationPolicy | undefined,
+    policy: ICommunityPolicy
+  ): IAuthorizationPolicy {
+    if (!storageAuthorization)
+      throw new EntityNotInitializedException(
+        `Authorization definition not found for: ${JSON.stringify(policy)}`,
+        LogContext.CHALLENGES
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+
+    // Any member can upload
+    const membersCanUpload =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.FILE_UPLOAD],
+        this.getContributorCriteria(policy),
+        CREDENTIAL_RULE_CHALLENGE_FILE_UPLOAD
+      );
+    membersCanUpload.cascade = false;
+    newRules.push(membersCanUpload);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      storageAuthorization,
+      newRules
+    );
+
+    return storageAuthorization;
   }
 
   private appendPrivilegeRules(

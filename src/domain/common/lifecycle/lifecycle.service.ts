@@ -160,6 +160,12 @@ export class LifecycleService {
     return state.value.toString();
   }
 
+  getStates(lifecycle: ILifecycle): string[] {
+    const restoredStateDef = this.getRestoredStateDefinition(lifecycle);
+    const state = State.create(restoredStateDef);
+    return state.toStrings();
+  }
+
   isFinalState(lifecycle: ILifecycle): boolean {
     const restoredState = this.getRestoredState(lifecycle);
     const isFinal = restoredState.done;

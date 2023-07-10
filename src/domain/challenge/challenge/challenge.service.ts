@@ -8,7 +8,6 @@ import {
   DeleteChallengeInput,
   UpdateChallengeInput,
 } from '@domain/challenge/challenge';
-import { ILifecycle } from '@domain/common/lifecycle';
 import { IContext } from '@domain/context/context';
 import { NVP } from '@domain/common/nvp';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
@@ -26,7 +25,6 @@ import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IOrganization } from '@domain/community/organization';
 import { ICommunity } from '@domain/community/community';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { UUID_LENGTH } from '@common/constants';
 import { IAgent } from '@domain/agent/agent';
@@ -35,9 +33,6 @@ import { IChallenge } from './challenge.interface';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { UserService } from '@domain/community/user/user.service';
-import { IUser } from '@domain/community/user/user.interface';
-import { AssignChallengeAdminInput } from './dto/challenge.dto.assign.admin';
-import { RemoveChallengeAdminInput } from './dto/challenge.dto.remove.admin';
 import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.challenge';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
@@ -46,23 +41,26 @@ import { IPreferenceSet } from '@domain/common/preference-set';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { PreferenceType } from '@common/enums/preference.type';
-import { CredentialDefinition } from '@domain/agent/credential/credential.definition';
 import { CommunityRole } from '@common/enums/community.role';
 import { challengeCommunityPolicy } from './challenge.community.policy';
 import { challengeCommunityApplicationForm } from './challenge.community.application.form';
-import { UpdateChallengeInnovationFlowInput } from './dto/challenge.dto.update.innovation.flow';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { InnovationFlowType } from '@common/enums/innovation.flow.type';
-import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
+import { InnovationFlowService } from '../innovation-flow/innovaton.flow.service';
+import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
+import { InnovationFlowType } from '@common/enums/innovation.flow.type';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { TagsetType } from '@common/enums/tagset.type';
+import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
+import { ChallengeDisplayLocation } from '@src/migrations/1688193761861-classificationTagsets';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class ChallengeService {
@@ -72,12 +70,12 @@ export class ChallengeService {
     private opportunityService: OpportunityService,
     private projectService: ProjectService,
     private baseChallengeService: BaseChallengeService,
-    private lifecycleService: LifecycleService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService,
     private organizationService: OrganizationService,
     private userService: UserService,
     private preferenceSetService: PreferenceSetService,
     private storageBucketService: StorageBucketService,
+    private innovationFlowService: InnovationFlowService,
+    private collaborationService: CollaborationService,
     private namingService: NamingService,
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
@@ -92,20 +90,6 @@ export class ChallengeService {
     spaceID: string,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
-    if (challengeData.innovationFlowTemplateID) {
-      await this.innovationFlowTemplateService.validateInnovationFlowDefinitionOrFail(
-        challengeData.innovationFlowTemplateID,
-        spaceID,
-        InnovationFlowType.CHALLENGE
-      );
-    } else {
-      challengeData.innovationFlowTemplateID =
-        await this.innovationFlowTemplateService.getDefaultInnovationFlowTemplateId(
-          spaceID,
-          InnovationFlowType.CHALLENGE
-        );
-    }
-
     if (!challengeData.nameID) {
       challengeData.nameID = this.namingService.createNameID(
         challengeData.profileData.displayName
@@ -124,6 +108,13 @@ export class ChallengeService {
 
     challenge.storageBucket =
       await this.storageBucketService.createStorageBucket();
+
+    challenge.innovationFlow =
+      await this.innovationFlowService.createInnovationFlow({
+        type: InnovationFlowType.CHALLENGE,
+        spaceID: spaceID,
+        innovationFlowTemplateID: challengeData.innovationFlowTemplateID,
+      });
 
     await this.baseChallengeService.initialise(
       challenge,
@@ -152,28 +143,44 @@ export class ChallengeService {
         this.createPreferenceDefaults()
       );
 
-    const machineConfig: ILifecycleDefinition =
-      await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
-        challengeData.innovationFlowTemplateID,
-        spaceID,
-        InnovationFlowType.CHALLENGE
+    if (challenge.collaboration) {
+      const states = await this.innovationFlowService.getInnovationFlowStates(
+        challenge.innovationFlow
       );
+      const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
+        name: TagsetReservedName.STATES,
+        type: TagsetType.SELECT_ONE,
+        allowedValues: states,
+        defaultSelectedValue: states[0],
+      };
+      challenge.collaboration =
+        await this.collaborationService.addTagsetTemplate(
+          challenge.collaboration,
+          tagsetTemplateDataStates
+        );
 
-    challenge.lifecycle = await this.lifecycleService.createLifecycle(
-      challenge.id,
-      machineConfig
-    );
+      const locations = Object.values(ChallengeDisplayLocation);
+      const tagsetTemplateData: CreateTagsetTemplateInput = {
+        name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
+        type: TagsetType.SELECT_ONE,
+        allowedValues: locations,
+        defaultSelectedValue: ChallengeDisplayLocation.CONTRIBUTE_RIGHT,
+      };
+      challenge.collaboration =
+        await this.collaborationService.addTagsetTemplate(
+          challenge.collaboration,
+          tagsetTemplateData
+        );
 
+      challenge.collaboration =
+        await this.collaborationService.addDefaultCallouts(
+          challenge.collaboration,
+          CommunityType.CHALLENGE
+        );
+    }
     // save the challenge, just in case the lead orgs assignment fails. Note that
     // assigning lead orgs does not update the challenge entity
     const savedChallenge = await this.challengeRepository.save(challenge);
-
-    if (challengeData.leadOrganizations) {
-      await this.setChallengeLeads(
-        challenge.id,
-        challengeData.leadOrganizations
-      );
-    }
 
     if (agentInfo && challenge.community) {
       await this.communityService.assignUserToRole(
@@ -188,10 +195,11 @@ export class ChallengeService {
         CommunityRole.LEAD
       );
 
-      await this.assignChallengeAdmin({
-        userID: agentInfo.userID,
-        challengeID: challenge.id,
-      });
+      await this.communityService.assignUserToRole(
+        challenge.community,
+        agentInfo.userID,
+        CommunityRole.ADMIN
+      );
     }
 
     return savedChallenge;
@@ -223,33 +231,6 @@ export class ChallengeService {
     return challenge;
   }
 
-  async updateChallengeInnovationFlow(
-    challengeData: UpdateChallengeInnovationFlowInput
-  ): Promise<IChallenge> {
-    const challenge = await this.getChallengeOrFail(challengeData.challengeID, {
-      relations: ['lifecycle'],
-    });
-
-    if (!challenge.lifecycle) {
-      throw new EntityNotInitializedException(
-        `Lifecycle of challenge (${challenge.id}) not initialized`,
-        LogContext.CHALLENGES
-      );
-    }
-
-    const machineConfig: ILifecycleDefinition =
-      await this.innovationFlowTemplateService.getInnovationFlowDefinitionFromTemplate(
-        challengeData.innovationFlowTemplateID,
-        this.getSpaceID(challenge),
-        InnovationFlowType.CHALLENGE
-      );
-
-    challenge.lifecycle.machineDef = JSON.stringify(machineConfig);
-    challenge.lifecycle.machineState = '';
-
-    return await this.challengeRepository.save(challenge);
-  }
-
   async deleteChallenge(deleteData: DeleteChallengeInput): Promise<IChallenge> {
     const challengeID = deleteData.ID;
     // Note need to load it in with all contained entities so can remove fully
@@ -257,6 +238,7 @@ export class ChallengeService {
       relations: [
         'childChallenges',
         'opportunities',
+        'innovationFlow',
         'preferenceSet',
         'preferenceSet.preferences',
       ],
@@ -292,6 +274,12 @@ export class ChallengeService {
     if (challenge.preferenceSet) {
       await this.preferenceSetService.deletePreferenceSet(
         challenge.preferenceSet.id
+      );
+    }
+
+    if (challenge.innovationFlow) {
+      await this.innovationFlowService.deleteInnovationFlow(
+        challenge.innovationFlow.id
       );
     }
 
@@ -366,53 +354,6 @@ export class ChallengeService {
     return challenge;
   }
 
-  async setChallengeLeads(
-    challengeID: string,
-    challengeLeadsIDs: string[]
-  ): Promise<IChallenge> {
-    const existingLeads = await this.getLeadOrganizations(challengeID);
-    const community = await this.getCommunity(challengeID);
-
-    // first remove any existing leads that are not in the new set
-    for (const existingLeadOrg of existingLeads) {
-      let inNewList = false;
-      for (const challengeLeadID of challengeLeadsIDs) {
-        if (
-          challengeLeadID === existingLeadOrg.id ||
-          challengeLeadID === existingLeadOrg.nameID
-        ) {
-          inNewList = true;
-        }
-      }
-      if (!inNewList) {
-        await this.communityService.removeOrganizationFromRole(
-          community,
-          existingLeadOrg.id,
-          CommunityRole.LEAD
-        );
-      }
-    }
-
-    // add any new ones
-    for (const challengeLeadID of challengeLeadsIDs) {
-      const organization = await this.organizationService.getOrganizationOrFail(
-        challengeLeadID
-      );
-      const existingLead = existingLeads.find(
-        leadOrg => leadOrg.id === organization.id
-      );
-      if (!existingLead) {
-        await this.communityService.assignOrganizationToRole(
-          community,
-          organization.id,
-          CommunityRole.LEAD
-        );
-      }
-    }
-
-    return await this.getChallengeOrFail(challengeID);
-  }
-
   async getCommunity(challengeId: string): Promise<ICommunity> {
     return await this.baseChallengeService.getCommunity(
       challengeId,
@@ -434,20 +375,19 @@ export class ChallengeService {
     );
   }
 
-  async getCommunityLeadershipCredential(
-    challengeId: string
-  ): Promise<CredentialDefinition> {
-    return await this.baseChallengeService.getCommunityLeadershipCredential(
-      challengeId,
-      this.challengeRepository
-    );
-  }
+  async getInnovationFlow(challengeId: string): Promise<IInnovationFlow> {
+    const challenge = await this.getChallengeOrFail(challengeId, {
+      relations: ['innovationFlow'],
+    });
 
-  async getLifecycle(challengeId: string): Promise<ILifecycle> {
-    return await this.baseChallengeService.getLifecycle(
-      challengeId,
-      this.challengeRepository
-    );
+    const innovationFlow = challenge.innovationFlow;
+    if (!innovationFlow)
+      throw new RelationshipNotFoundException(
+        `Unable to load InnovationFlow for challenge ${challengeId} `,
+        LogContext.CHALLENGES
+      );
+
+    return innovationFlow;
   }
 
   async getContext(challengeId: string): Promise<IContext> {
@@ -768,39 +708,6 @@ export class ChallengeService {
     }
 
     return storageBucket;
-  }
-
-  async assignChallengeAdmin(
-    assignData: AssignChallengeAdminInput
-  ): Promise<IUser> {
-    const userID = assignData.userID;
-    const agent = await this.userService.getAgent(userID);
-    await this.getChallengeOrFail(assignData.challengeID);
-
-    // assign the credential
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.CHALLENGE_ADMIN,
-      resourceID: assignData.challengeID,
-    });
-
-    return await this.userService.getUserWithAgent(userID);
-  }
-
-  async removeChallengeAdmin(
-    removeData: RemoveChallengeAdminInput
-  ): Promise<IUser> {
-    const challengeID = removeData.challengeID;
-    await this.getChallengeOrFail(challengeID);
-    const agent = await this.userService.getAgent(removeData.userID);
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.CHALLENGE_ADMIN,
-      resourceID: challengeID,
-    });
-
-    return await this.userService.getUserWithAgent(removeData.userID);
   }
 
   createPreferenceDefaults(): Map<PreferenceType, string> {

@@ -23,6 +23,7 @@ import {
   POLICY_RULE_COLLABORATION_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
 } from '@common/constants';
+import { CommunityRole } from '@common/enums/community.role';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -92,7 +93,10 @@ export class CollaborationAuthorizationService {
   ): ICredentialDefinition[] {
     // add challenge members
     const contributors = [
-      this.communityPolicyService.getMembershipCredential(policy),
+      this.communityPolicyService.getCredentialForRole(
+        policy,
+        CommunityRole.MEMBER
+      ),
     ];
     // optionally add space members
     if (
@@ -102,7 +106,10 @@ export class CollaborationAuthorizationService {
       )
     ) {
       const parentCredentials =
-        this.communityPolicyService.getParentMembershipCredentials(policy);
+        this.communityPolicyService.getParentCredentialsForRole(
+          policy,
+          CommunityRole.MEMBER
+        );
       contributors.push(...parentCredentials);
     }
 

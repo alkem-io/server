@@ -7,8 +7,6 @@ import { RelationModule } from '@domain/collaboration/relation/relation.module';
 import { OpportunityResolverFields } from './opportunity.resolver.fields';
 import { OpportunityResolverMutations } from './opportunity.resolver.mutations';
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
-import { OpportunityLifecycleOptionsProvider } from './opportunity.lifecycle.options.provider';
-import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { OpportunityAuthorizationService } from './opportunity.service.authorization';
@@ -18,7 +16,8 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
-import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
+import { InnovationFlowModule } from '@domain/challenge/innovation-flow/innovation.flow.module';
+import { CollaborationModule } from '../collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -28,11 +27,11 @@ import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-t
     RelationModule,
     BaseChallengeModule,
     CommunityModule,
-    LifecycleModule,
-    InnovationFlowTemplateModule,
     UserModule,
     AgentModule,
     CommunityPolicyModule,
+    CollaborationModule,
+    InnovationFlowModule,
     NamingModule,
     ElasticsearchModule,
     TypeOrmModule.forFeature([Opportunity]),
@@ -41,7 +40,6 @@ import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-t
     OpportunityService,
     OpportunityResolverFields,
     OpportunityResolverMutations,
-    OpportunityLifecycleOptionsProvider,
     OpportunityAuthorizationService,
   ],
   exports: [OpportunityService, OpportunityAuthorizationService],

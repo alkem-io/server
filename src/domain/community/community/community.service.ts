@@ -53,8 +53,12 @@ import { UpdateFormInput } from '@domain/common/form/dto/form.dto.update';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { InvitationService } from '../invitation/invitation.service';
 import { IInvitation } from '../invitation/invitation.interface';
-import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
+import { CreateInvitationExternalUserOnCommunityInput } from './dto/community.dto.invite.external.user';
+import { IInvitationExternal } from '../invitation.external';
+import { InvitationExternalService } from '../invitation.external/invitation.external.service';
+import { CreateInvitationExternalInput } from '../invitation.external/dto/invitation.external.dto.create';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 
 @Injectable()
 export class CommunityService {
@@ -67,6 +71,7 @@ export class CommunityService {
     private userGroupService: UserGroupService,
     private applicationService: ApplicationService,
     private invitationService: InvitationService,
+    private invitationExternalService: InvitationExternalService,
     private communicationService: CommunicationService,
     private communityResolverService: CommunityResolverService,
     private formService: FormService,
@@ -87,7 +92,9 @@ export class CommunityService {
     community.authorization = new AuthorizationPolicy();
     community.policy = await this.communityPolicyService.createCommunityPolicy(
       policy.member,
-      policy.lead
+      policy.lead,
+      policy.admin,
+      policy.host
     );
     community.spaceID = spaceID;
     community.applicationForm = await this.formService.createForm(
@@ -96,6 +103,7 @@ export class CommunityService {
 
     community.applications = [];
     community.invitations = [];
+    community.externalInvitations = [];
 
     community.groups = [];
     community.communication =
@@ -167,6 +175,7 @@ export class CommunityService {
       relations: [
         'applications',
         'invitations',
+        'externalInvitations',
         'groups',
         'communication',
         'applicationForm',
@@ -186,7 +195,7 @@ export class CommunityService {
     for (const role of Object.values(CommunityRole)) {
       const users = await this.getUsersWithRole(community, role);
       for (const user of users) {
-        await this.removeUserFromRole(community, user.id, role);
+        await this.removeUserFromRole(community, user.id, role, false);
       }
 
       const organizations = await this.getOrganizationsWithRole(
@@ -194,12 +203,14 @@ export class CommunityService {
         role
       );
       for (const organization of organizations) {
-        await this.removeOrganizationFromRole(community, organization.id, role);
+        await this.removeOrganizationFromRole(
+          community,
+          organization.id,
+          role,
+          false
+        );
       }
     }
-
-    // Remove all credentials issued for admins
-    await this.removeCommunityUserAdmins(community);
 
     if (community.authorization)
       await this.authorizationPolicyService.delete(community.authorization);
@@ -218,6 +229,13 @@ export class CommunityService {
       for (const invitation of community.invitations) {
         await this.invitationService.deleteInvitation({
           ID: invitation.id,
+        });
+      }
+    }
+    if (community.externalInvitations) {
+      for (const externalInvitation of community.externalInvitations) {
+        await this.invitationExternalService.deleteInvitationExternal({
+          ID: externalInvitation.id,
         });
       }
     }
@@ -429,7 +447,7 @@ export class CommunityService {
     userID: string,
     role: CommunityRole,
     agentInfo?: AgentInfo
-  ): Promise<ICommunity> {
+  ): Promise<IUser> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
     const hasMemberRoleInParent = await this.isMemberInParentCommunity(
       agent,
@@ -466,7 +484,7 @@ export class CommunityService {
       }
     }
 
-    return community;
+    return user;
   }
 
   private async addMemberToCommunication(
@@ -537,7 +555,7 @@ export class CommunityService {
     community: ICommunity,
     organizationID: string,
     role: CommunityRole
-  ): Promise<ICommunity> {
+  ): Promise<IOrganization> {
     const { organization, agent } =
       await this.organizationService.getOrganizationAndAgent(organizationID);
 
@@ -548,21 +566,23 @@ export class CommunityService {
       CommunityContributorType.ORGANIZATION
     );
 
-    return community;
+    return organization;
   }
 
   async removeUserFromRole(
     community: ICommunity,
     userID: string,
-    role: CommunityRole
-  ): Promise<ICommunity> {
+    role: CommunityRole,
+    validatePolicyLimits = true
+  ): Promise<IUser> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
 
     user.agent = await this.removeContributorFromRole(
       community,
       agent,
       role,
-      CommunityContributorType.USER
+      CommunityContributorType.USER,
+      validatePolicyLimits
     );
 
     if (role === CommunityRole.MEMBER) {
@@ -577,14 +597,15 @@ export class CommunityService {
         );
     }
 
-    return community;
+    return user;
   }
 
   async removeOrganizationFromRole(
     community: ICommunity,
     organizationID: string,
-    role: CommunityRole
-  ): Promise<ICommunity> {
+    role: CommunityRole,
+    validatePolicyLimits = true
+  ): Promise<IOrganization> {
     const { organization, agent } =
       await this.organizationService.getOrganizationAndAgent(organizationID);
 
@@ -592,10 +613,11 @@ export class CommunityService {
       community,
       agent,
       role,
-      CommunityContributorType.ORGANIZATION
+      CommunityContributorType.ORGANIZATION,
+      validatePolicyLimits
     );
 
-    return community;
+    return organization;
   }
 
   private async validateUserCommunityPolicy(
@@ -706,39 +728,23 @@ export class CommunityService {
     });
   }
 
-  private async removeCommunityUserAdmins(
-    community: ICommunity
-  ): Promise<void> {
-    const adminCredential = this.communityPolicyService.getAdminCredential(
-      community.policy
-    );
-    const agents = await this.agentService.findAgentsWithMatchingCredentials(
-      adminCredential
-    );
-
-    for (const agent of agents) {
-      await this.agentService.revokeCredential({
-        agentID: agent.id,
-        type: adminCredential.type,
-        resourceID: adminCredential.resourceID,
-      });
-    }
-  }
-
   private async removeContributorFromRole(
     community: ICommunity,
     agent: IAgent,
     role: CommunityRole,
-    contributorType: CommunityContributorType
+    contributorType: CommunityContributorType,
+    validatePolicyLimits: boolean
   ): Promise<IAgent> {
     const communityPolicyRole = this.getCommunityPolicyForRole(community, role);
-    await this.validateCommunityPolicyLimits(
-      community,
-      communityPolicyRole,
-      role,
-      CommunityContributorsUpdateType.REMOVE,
-      contributorType
-    );
+    if (validatePolicyLimits) {
+      await this.validateCommunityPolicyLimits(
+        community,
+        communityPolicyRole,
+        role,
+        CommunityContributorsUpdateType.REMOVE,
+        contributorType
+      );
+    }
 
     return await this.agentService.revokeCredential({
       agentID: agent.id,
@@ -799,7 +805,7 @@ export class CommunityService {
       relations: ['applications', 'parentCommunity'],
     });
 
-    await this.validateUserAbleToApply(user, agent, community);
+    await this.validateApplicationFromUser(user, agent, community);
 
     const spaceID = community.spaceID;
     if (!spaceID)
@@ -817,8 +823,8 @@ export class CommunityService {
     return application;
   }
 
-  async createInvitation(
-    invitationData: CreateInvitationExistingUserOnCommunityInput
+  async createInvitationExistingUser(
+    invitationData: CreateInvitationInput
   ): Promise<IInvitation> {
     const { user, agent } = await this.userService.getUserAndAgent(
       invitationData.invitedUser
@@ -830,7 +836,7 @@ export class CommunityService {
       }
     );
 
-    await this.validateUserAbleToInvite(user, agent, community);
+    await this.validateInvitationToExistingUser(user, agent, community);
 
     const invitation = await this.invitationService.createInvitation(
       invitationData
@@ -841,7 +847,33 @@ export class CommunityService {
     return invitation;
   }
 
-  private async validateUserAbleToApply(
+  async createInvitationExternalUser(
+    invitationData: CreateInvitationExternalUserOnCommunityInput,
+    agentInfo: AgentInfo
+  ): Promise<IInvitationExternal> {
+    await this.validateInvitationToExternalUser(invitationData.email);
+    const community = await this.getCommunityOrFail(
+      invitationData.communityID,
+      {
+        relations: ['externalInvitations'],
+      }
+    );
+
+    const externalInvitationInput: CreateInvitationExternalInput = {
+      ...invitationData,
+      createdBy: agentInfo.userID,
+    };
+    const externalInvitation =
+      await this.invitationExternalService.createInvitationExternal(
+        externalInvitationInput
+      );
+    community.externalInvitations?.push(externalInvitation);
+    await this.communityRepository.save(community);
+
+    return externalInvitation;
+  }
+
+  private async validateApplicationFromUser(
     user: IUser,
     agent: IAgent,
     community: ICommunity
@@ -874,7 +906,7 @@ export class CommunityService {
       );
   }
 
-  private async validateUserAbleToInvite(
+  private async validateInvitationToExistingUser(
     user: IUser,
     agent: IAgent,
     community: ICommunity
@@ -905,6 +937,28 @@ export class CommunityService {
         `User ${user.nameID} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
+  }
+
+  private async validateInvitationToExternalUser(email: string) {
+    // Check if a user with the provided email address already exists or not
+    const isExistingUser = await this.userService.isRegisteredUser(email);
+    if (isExistingUser) {
+      throw new InvalidStateTransitionException(
+        `User with the provided email address already exists: ${email}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    const existingExternalInvitation =
+      await this.invitationExternalService.findInvitationExternalsForUser(
+        email
+      );
+    if (existingExternalInvitation.length > 0) {
+      throw new InvalidStateTransitionException(
+        `An invitation with the provided email address already exists: ${email}`,
+        LogContext.COMMUNITY
+      );
+    }
   }
 
   async getCommunityInNameableScopeOrFail(
@@ -940,6 +994,15 @@ export class CommunityService {
     return communityApps?.invitations || [];
   }
 
+  async getExternalInvitations(
+    community: ICommunity
+  ): Promise<IInvitationExternal[]> {
+    const communityApps = await this.getCommunityOrFail(community.id, {
+      relations: ['externalInvitations'],
+    });
+    return communityApps?.externalInvitations || [];
+  }
+
   async getApplicationForm(community: ICommunity): Promise<IForm> {
     const communityForm = await this.getCommunityOrFail(community.id, {
       relations: ['applicationForm'],
@@ -958,21 +1021,6 @@ export class CommunityService {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
       CommunityRole.MEMBER
-    );
-
-    const credentialMatches =
-      await this.agentService.countAgentsWithMatchingCredentials({
-        type: membershipCredential.type,
-        resourceID: membershipCredential.resourceID,
-      });
-
-    return credentialMatches;
-  }
-
-  async getLeadsCount(community: ICommunity): Promise<number> {
-    const membershipCredential = this.getCredentialDefinitionForRole(
-      community,
-      CommunityRole.LEAD
     );
 
     const credentialMatches =

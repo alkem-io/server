@@ -7,10 +7,8 @@ import { ChallengeResolverMutations } from './challenge.resolver.mutations';
 import { ChallengeService } from './challenge.service';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
-import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
-import { ChallengeLifecycleOptionsProvider } from '@domain/challenge/challenge/challenge.lifecycle.options.provider';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
@@ -27,9 +25,10 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
-import { InnovationFlowTemplateModule } from '@domain/template/innovation-flow-template/innovation.flow.template.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { ChallengeStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/challenge/challenge.storage.space.loader.creator';
+import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module';
+import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -45,8 +44,7 @@ import { ChallengeStorageBucketLoaderCreator } from '@core/dataloader/creators/l
     OpportunityModule,
     OrganizationModule,
     NamingModule,
-    LifecycleModule,
-    InnovationFlowTemplateModule,
+    InnovationFlowModule,
     PlatformAuthorizationPolicyModule,
     ProjectModule,
     UserModule,
@@ -56,13 +54,13 @@ import { ChallengeStorageBucketLoaderCreator } from '@core/dataloader/creators/l
     TypeOrmModule.forFeature([Challenge]),
     LoaderCreatorModule,
     StorageBucketModule,
+    CollaborationModule,
   ],
   providers: [
     ChallengeService,
     ChallengeAuthorizationService,
     ChallengeResolverMutations,
     ChallengeResolverFields,
-    ChallengeLifecycleOptionsProvider,
     ChallengeResolverSubscriptions,
     ChallengeStorageBucketLoaderCreator,
   ],
