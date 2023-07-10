@@ -111,7 +111,7 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowID,
       {
-        relations: ['lifecycle', 'profile', 'tagsetTemplateSet'],
+        relations: ['lifecycle', 'profile'],
       }
     );
 
