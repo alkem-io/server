@@ -29,7 +29,7 @@ export class AuthorizationService {
     const auth = this.validateAuthorization(authorization);
     if (this.isAccessGranted(agentInfo, auth, privilegeRequired)) return true;
 
-    const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg}`;
+    const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg} user: ${agentInfo.userID}`;
     this.logCredentialCheckFailDetails(errorMsg, agentInfo, auth);
 
     // If get to here then no match was found
