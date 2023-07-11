@@ -478,7 +478,7 @@ export class CommunityService {
         community: community,
         user: user,
       };
-      this.activityAdapter.memberJoined(activityLogInput);
+      await this.activityAdapter.memberJoined(activityLogInput);
       if (community.type === CommunityType.SPACE) {
         // todo: community joined
       }

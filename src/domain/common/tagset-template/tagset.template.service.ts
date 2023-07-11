@@ -1,6 +1,5 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-
 import { Repository } from 'typeorm';
 import { TagsetTemplate } from './tagset.template.entity';
 import { ITagsetTemplate } from './tagset.template.interface';
@@ -58,19 +57,9 @@ export class TagsetTemplateService {
   }
 
   async updateTagsetTemplate(
-    tagsetTemplateData: UpdateTagsetTemplateInput
-  ): Promise<ITagsetTemplate> {
-    const tagsetTemplate = await this.getTagsetTemplateOrFail(
-      tagsetTemplateData.ID
-    );
-    this.updateTagsetTemplateValues(tagsetTemplate, tagsetTemplateData);
-    return await this.tagsetTemplateRepository.save(tagsetTemplate);
-  }
-
-  updateTagsetTemplateValues(
     tagsetTemplate: ITagsetTemplate,
     tagsetTemplateData: UpdateTagsetTemplateInput
-  ): ITagsetTemplate {
+  ): Promise<ITagsetTemplate> {
     if (tagsetTemplateData.name) {
       tagsetTemplate.name = tagsetTemplateData.name;
     }
@@ -79,7 +68,12 @@ export class TagsetTemplateService {
       tagsetTemplate.allowedValues = tagsetTemplateData.allowedValues;
     }
 
-    return tagsetTemplate;
+    if (tagsetTemplateData.defaultSelectedValue) {
+      tagsetTemplate.defaultSelectedValue =
+        tagsetTemplateData.defaultSelectedValue;
+    }
+
+    return await this.save(tagsetTemplate);
   }
 
   async save(tagsetTemplate: ITagsetTemplate): Promise<ITagsetTemplate> {

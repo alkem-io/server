@@ -16,6 +16,9 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 
+export const EMPTY_WHITEBOARD_VALUE =
+  '{\n  "type": "excalidraw",\n  "version": 2,\n  "source": "",\n  "elements": [],\n  "appState": {\n    "gridSize": 20,\n    "viewBackgroundColor": "#ffffff"\n  },\n  "files": {}\n}';
+
 @Entity()
 export class Whiteboard extends NameableEntity implements IWhiteboard {
   constructor(value?: string) {
