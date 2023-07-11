@@ -1,5 +1,6 @@
-import { UUID_NAMEID } from '@domain/common/scalars';
 import { ArgsType, Field, Float } from '@nestjs/graphql';
+import { UUID_NAMEID } from '@domain/common/scalars';
+import { TagsetArgs } from '@common/args/tagset.args';
 
 @ArgsType()
 export class CollaborationArgsCallouts {
@@ -41,10 +42,10 @@ export class CollaborationArgsCallouts {
   })
   groups?: string[];
 
-  @Field(() => [String], {
-    name: 'tags',
-    description: 'Return only Callouts with one of these tags.',
+  @Field(() => [TagsetArgs], {
+    name: 'tagsets',
+    description: 'A filter .',
     nullable: true,
   })
-  tags?: string[];
+  tagsets?: TagsetArgs[];
 }

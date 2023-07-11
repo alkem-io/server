@@ -317,10 +317,19 @@ export class CollaborationService {
         : readableCallouts;
 
     availableCallouts =
-      args.tags && args.tags.length
+      args.tagsets && args.tagsets.length
         ? readableCallouts.filter(callout =>
-            callout.profile?.tagsets?.some(tagset =>
-              tagset.tags.some(tag => args.tags?.includes(tag))
+            // ANY of the callouts tagset
+            callout.profile?.tagsets?.some(calloutTagset =>
+              // to contain ANY of the tagsets defined in the filter
+              args?.tagsets?.some(
+                argTagset =>
+                  argTagset.name === calloutTagset.name &&
+                  // to contain ANY of the tags in the defined tagset in the filter
+                  argTagset.tags.some(argTag =>
+                    calloutTagset.tags.includes(argTag)
+                  )
+              )
             )
           )
         : availableCallouts;
