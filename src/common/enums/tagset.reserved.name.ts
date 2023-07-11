@@ -4,7 +4,7 @@ export enum TagsetReservedName {
   DEFAULT = 'default',
   DISPLAY_LOCATION_SPACE = 'display-location-space',
   DISPLAY_LOCATION_CHALLENGE = 'display-location-challenge',
-  STATES = 'states',
+  FLOW_STATE = 'flow-state',
   SKILLS = 'skills',
   CAPABILITIES = 'capabilities',
   KEYWORDS = 'keywords',

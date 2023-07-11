@@ -12,6 +12,8 @@ import { UpdateInnovationFlowLifecycleTemplateInput } from './dto/innovation.flo
 import { InnovationFlowEvent } from './dto/innovation.flow.dto.event';
 import { InnovationFlowLifecycleOptionsProviderOpportunity } from './innovation.flow.lifecycle.options.provider.opportunity';
 import { InnovationFlowLifecycleOptionsProviderChallenge } from './innovation.flow.lifecycle.options.provider.challenge';
+import { AdminInnovationFlowSynchronizeStatesInput } from './dto/innovation.flow.dto.admin.synchronize.states';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
 
 @Resolver()
 export class InnovationFlowResolverMutations {
@@ -117,6 +119,32 @@ export class InnovationFlowResolverMutations {
     return await this.challengeLifecycleOptionsProvider.eventOnChallenge(
       innovationFlowEventData,
       agentInfo
+    );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ITagset, {
+    description:
+      'Updates the States tagset to be synchronized with the Lifecycle states.',
+  })
+  @Profiling.api
+  async adminInnovationFlowSynchronizeStates(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('innovationFlowData')
+    innovationFlowData: AdminInnovationFlowSynchronizeStatesInput
+  ): Promise<ITagset> {
+    const innovationFlow =
+      await this.innovationFlowService.getInnovationFlowOrFail(
+        innovationFlowData.innovationFlowID
+      );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      innovationFlow.authorization,
+      AuthorizationPrivilege.UPDATE_INNOVATION_FLOW,
+      `innovation flow admin synchronize states: ${innovationFlow.id}`
+    );
+    return await this.innovationFlowService.updateStatesTagsetTemplateToMatchLifecycle(
+      innovationFlowData.innovationFlowID
     );
   }
 }

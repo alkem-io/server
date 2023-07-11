@@ -85,7 +85,7 @@ export class WhiteboardResolverSubscriptions {
     @Args({
       name: 'whiteboardIDs',
       type: () => [UUID],
-      description: 'The IDs of the Whiteboardes to subscribe to.',
+      description: 'The IDs of the Whiteboards to subscribe to.',
       nullable: false,
     })
     whiteboardIDs: string[]

@@ -1,6 +1,4 @@
-import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
-
-export class UpdateTagsetTemplateInput extends UpdateBaseAlkemioInput {
+export class UpdateTagsetTemplateInput {
   name?: string;
 
   defaultSelectedValue?: string;

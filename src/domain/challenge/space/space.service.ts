@@ -70,6 +70,7 @@ import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/ta
 import { TagsetType } from '@common/enums/tagset.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CommunityRole } from '@common/enums/community.role';
+import { spaceDefaultCallouts } from './space.default.callouts';
 
 @Injectable()
 export class SpaceService {
@@ -117,24 +118,30 @@ export class SpaceService {
       spaceCommunityApplicationForm
     );
 
-    if (space.collaboration) {
-      const locations = Object.values(SpaceDisplayLocation);
-      const tagsetTemplateData: CreateTagsetTemplateInput = {
-        name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
-        type: TagsetType.SELECT_ONE,
-        allowedValues: locations,
-        defaultSelectedValue: SpaceDisplayLocation.KNOWEDGE_RIGHT,
-      };
-      space.collaboration = await this.collaborationService.addTagsetTemplate(
-        space.collaboration,
-        tagsetTemplateData
-      );
-
-      space.collaboration = await this.collaborationService.addDefaultCallouts(
-        space.collaboration,
-        CommunityType.SPACE
+    if (!space.collaboration) {
+      throw new EntityNotInitializedException(
+        `Collaboration not initialized on Space: ${space.nameID}`,
+        LogContext.CHALLENGES
       );
     }
+
+    const locations = Object.values(SpaceDisplayLocation);
+    const tagsetTemplateData: CreateTagsetTemplateInput = {
+      name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
+      type: TagsetType.SELECT_ONE,
+      allowedValues: locations,
+      defaultSelectedValue: SpaceDisplayLocation.KNOWEDGE_RIGHT,
+    };
+    await this.collaborationService.addTagsetTemplate(
+      space.collaboration,
+      tagsetTemplateData
+    );
+
+    space.collaboration = await this.collaborationService.addDefaultCallouts(
+      space.collaboration,
+      spaceDefaultCallouts
+    );
+    await this.save(space);
 
     // set immediate community parent and  community policy
     if (space.community) {
@@ -930,9 +937,9 @@ export class SpaceService {
     postsTopic.id = `posts-${space.id}`;
     metrics.push(postsTopic);
 
-    // Whiteboardes
+    // Whiteboards
     const whiteboardsCount =
-      await this.baseChallengeService.getWhiteboardesCount(
+      await this.baseChallengeService.getWhiteboardsCount(
         space,
         this.spaceRepository
       );
