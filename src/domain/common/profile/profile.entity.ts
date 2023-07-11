@@ -43,8 +43,6 @@ export class Profile extends AuthorizableEntity implements IProfile {
   @JoinColumn()
   location?: Location;
 
-  restrictedTagsetNames?: string[];
-
   // Constructor
   constructor() {
     super();

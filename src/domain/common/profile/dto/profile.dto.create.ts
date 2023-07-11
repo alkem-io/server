@@ -14,6 +14,7 @@ import { CreateReferenceInput } from '@domain/common/reference';
 import { CreateLocationInput } from '@domain/common/location/dto';
 import { Type } from 'class-transformer';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { CreateTagsetInput } from '@domain/common/tagset';
 
 @InputType()
 export class CreateProfileInput {
@@ -49,6 +50,12 @@ export class CreateProfileInput {
   @ValidateNested({ each: true })
   @Type(() => CreateReferenceInput)
   referencesData?: CreateReferenceInput[];
+
+  @Field(() => [CreateTagsetInput], { nullable: true })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => CreateTagsetInput)
+  tagsets?: CreateTagsetInput[];
 
   @Field({
     nullable: true,

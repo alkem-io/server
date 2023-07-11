@@ -43,9 +43,9 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
-import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { TagsetType } from '@common/enums/tagset.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { CreateTagsetInput } from '@domain/common/tagset';
 
 @Injectable()
 export class CalloutService {
@@ -103,31 +103,26 @@ export class CalloutService {
       nameID: calloutData.nameID ?? calloutNameID,
     };
     const callout: ICallout = Callout.create(calloutCreationData);
+
+    // To consider also having the default tagset as a template tagset
+    const defaultTagset: CreateTagsetInput = {
+      name: TagsetReservedName.DEFAULT,
+      type: TagsetType.FREEFORM,
+      tags: calloutData.tags,
+    };
+    const tagsetInputsFromTemplates =
+      this.profileService.convertTagsetTemplatesToCreateTagsetInput(
+        tagsetTemplates
+      );
+    const tagsetInputs = [defaultTagset, ...tagsetInputsFromTemplates];
+
+    calloutData.profile.tagsets = this.profileService.updateProfileTagsetInputs(
+      calloutData.profile.tagsets,
+      tagsetInputs
+    );
     callout.profile = await this.profileService.createProfile(
       calloutData.profile
     );
-
-    await this.profileService.addTagsetOnProfile(callout.profile, {
-      name: TagsetReservedName.DEFAULT,
-      type: TagsetType.FREEFORM,
-      tags: calloutData.tags || [],
-    });
-    for (const tagsetTemplate of tagsetTemplates) {
-      const tagsetInput: CreateTagsetInput = {
-        name: tagsetTemplate.name,
-        type: tagsetTemplate.type,
-        tags: [
-          tagsetTemplate.defaultSelectedValue ||
-            tagsetTemplate.allowedValues[0],
-        ],
-      };
-      await this.profileService.addTagsetOnProfile(
-        callout.profile,
-        tagsetInput,
-        true,
-        tagsetTemplate
-      );
-    }
 
     if (calloutData.type == CalloutType.POST_COLLECTION && postTemplateData) {
       callout.postTemplate = await this.postTemplateService.createPostTemplate(
@@ -369,7 +364,7 @@ export class CalloutService {
     if (callout.type === CalloutType.POST_COLLECTION) {
       return await this.postService.getPostsInCalloutCount(callout.id);
     } else if (callout.type === CalloutType.WHITEBOARD_COLLECTION) {
-      return await this.whiteboardService.getWhiteboardesInCalloutCount(
+      return await this.whiteboardService.getWhiteboardsInCalloutCount(
         callout.id
       );
     } else if (callout.type === CalloutType.LINK_COLLECTION) {
@@ -511,7 +506,7 @@ export class CalloutService {
     return whiteboard;
   }
 
-  public async getWhiteboardesFromCallout(
+  public async getWhiteboardsFromCallout(
     callout: ICallout,
     relations: FindOptionsRelationByString = [],
     whiteboardIDs?: string[],

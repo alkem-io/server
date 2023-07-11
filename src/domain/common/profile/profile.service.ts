@@ -25,12 +25,15 @@ import { ILocation, LocationService } from '@domain/common/location';
 import { VisualType } from '@common/enums/visual.type';
 import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
+import { TagsetTemplateService } from '../tagset-template/tagset.template.service';
+import { UpdateProfileSelectTagsetInput } from './dto/profile.dto.update.select.tagset';
 
 @Injectable()
 export class ProfileService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private tagsetService: TagsetService,
+    private tagsetTemplateService: TagsetTemplateService,
     private referenceService: ReferenceService,
     private visualService: VisualService,
     private locationService: LocationService,
@@ -62,15 +65,24 @@ export class ProfileService {
         profile.references.push(reference);
       }
     }
-
-    profile.tagsets = [];
-
     await this.profileRepository.save(profile);
     this.logger.verbose?.(
       `Created new profile with id: ${profile.id}`,
       LogContext.COMMUNITY
     );
-    return profile;
+
+    profile.tagsets = [];
+    if (profileData?.tagsets) {
+      for (const tagsetData of profileData?.tagsets) {
+        const tagset = await this.tagsetService.createTagsetWithName(
+          profile.tagsets,
+          tagsetData
+        );
+        profile.tagsets.push(tagset);
+      }
+    }
+
+    return await this.save(profile);
   }
 
   async updateProfile(
@@ -164,6 +176,7 @@ export class ProfileService {
 
     return await this.profileRepository.remove(profile as Profile);
   }
+
   async save(profile: IProfile): Promise<IProfile> {
     return await this.profileRepository.save(profile);
   }
@@ -204,16 +217,12 @@ export class ProfileService {
 
   async addTagsetOnProfile(
     profile: IProfile,
-    tagsetData: CreateTagsetInput,
-    checkForRestricted = false,
-    tagsetTemplate?: ITagsetTemplate
+    tagsetData: CreateTagsetInput
   ): Promise<ITagset> {
     profile.tagsets = await this.getTagsets(profile);
     const tagset = await this.tagsetService.createTagsetWithName(
-      profile,
-      tagsetData,
-      checkForRestricted,
-      tagsetTemplate
+      profile.tagsets,
+      tagsetData
     );
     profile.tagsets.push(tagset);
 
@@ -340,5 +349,85 @@ export class ProfileService {
       );
     }
     return profile.location;
+  }
+
+  async getTagset(profileID: string, tagsetName: string): Promise<ITagset> {
+    const profile = await this.getProfileOrFail(profileID, {
+      relations: ['tagsets'],
+    });
+    if (!profile.tagsets) {
+      throw new EntityNotInitializedException(
+        `Profile not initialized: ${profile.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return this.tagsetService.getTagsetByNameOrFail(
+      profile.tagsets,
+      tagsetName
+    );
+  }
+
+  async updateSelectTagset(
+    updateData: UpdateProfileSelectTagsetInput
+  ): Promise<ITagset> {
+    const tagset = await this.getTagset(
+      updateData.profileID,
+      updateData.tagsetName
+    );
+    if (updateData.tags) {
+      tagset.tags = updateData.tags;
+      await this.tagsetService.save(tagset);
+    }
+
+    if (updateData.allowedValues) {
+      const tagsetTemplate = await this.tagsetService.getTagsetTemplateOrFail(
+        tagset.id
+      );
+      await this.tagsetTemplateService.updateTagsetTemplate(tagsetTemplate, {
+        allowedValues: updateData.allowedValues,
+      });
+    }
+    return tagset;
+  }
+
+  public convertTagsetTemplatesToCreateTagsetInput(
+    tagsetTemplates: ITagsetTemplate[]
+  ): CreateTagsetInput[] {
+    const result: CreateTagsetInput[] = [];
+    for (const tagsetTemplate of tagsetTemplates) {
+      const input: CreateTagsetInput = {
+        name: tagsetTemplate.name,
+        type: tagsetTemplate.type,
+        tagsetTemplate: tagsetTemplate,
+        tags: tagsetTemplate.defaultSelectedValue
+          ? [tagsetTemplate.defaultSelectedValue]
+          : undefined,
+      };
+      result.push(input);
+    }
+    return result;
+  }
+
+  // Note: purovided data has priority when it comes to tags
+  public updateProfileTagsetInputs(
+    tagsetInputDtata: CreateTagsetInput[] | undefined,
+    additionalTagsetInputs: CreateTagsetInput[]
+  ): CreateTagsetInput[] {
+    const result: CreateTagsetInput[] = [...additionalTagsetInputs];
+
+    if (!tagsetInputDtata) return result;
+
+    for (const tagsetInput of tagsetInputDtata) {
+      const existingInput = result.find(t => t.name === tagsetInput.name);
+      if (existingInput) {
+        // Do not change type, name etc - only tags
+        if (tagsetInput.tags) {
+          existingInput.tags = tagsetInput.tags;
+        }
+      } else {
+        result.push(tagsetInput);
+      }
+    }
+    return result;
   }
 }

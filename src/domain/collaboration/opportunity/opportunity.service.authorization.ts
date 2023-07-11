@@ -8,7 +8,6 @@ import { IOpportunity } from './opportunity.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { OpportunityService } from './opportunity.service';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
@@ -18,7 +17,6 @@ import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import {
   CREDENTIAL_RULE_OPPORTUNITY_ADMIN,
   CREDENTIAL_RULE_OPPORTUNITY_MEMBER,
-  CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW,
 } from '@common/constants';
 import { InnovationFlowAuthorizationService } from '@domain/challenge/innovation-flow/innovation.flow.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
@@ -164,18 +162,6 @@ export class OpportunityAuthorizationService {
         CREDENTIAL_RULE_OPPORTUNITY_MEMBER
       );
     rules.push(opportunityMember);
-
-    const updateInnovationFlowRule =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-        ],
-        CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW
-      );
-    updateInnovationFlowRule.cascade = false;
-    rules.push(updateInnovationFlowRule);
 
     return rules;
   }

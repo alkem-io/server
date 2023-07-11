@@ -60,15 +60,14 @@ export class ProfileResolverMutations {
 
     const tagset = await this.profileService.addTagsetOnProfile(
       profile,
-      tagsetData,
-      true
+      tagsetData
     );
     tagset.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         tagset.authorization,
         profile.authorization
       );
-    return await this.tagsetService.saveTagset(tagset);
+    return await this.tagsetService.save(tagset);
   }
 
   @UseGuards(GraphqlGuard)

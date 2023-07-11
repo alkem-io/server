@@ -46,7 +46,7 @@ export abstract class ICallout extends INameable {
 
   @Field(() => [IWhiteboard], {
     nullable: true,
-    description: 'The Whiteboardes associated with this Callout.',
+    description: 'The Whiteboards associated with this Callout.',
   })
   whiteboards?: IWhiteboard[];
 
