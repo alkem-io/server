@@ -305,4 +305,20 @@ export class TemplatesSetService {
   convertPolicy(policy: ITemplatesSetPolicy): string {
     return JSON.stringify(policy);
   }
+
+  async getTemplatesCount(templatesSetID: string): Promise<number> {
+    const whiteboardTemplatesCount =
+      await this.whiteboardTemplateService.getCountInTemplatesSet(
+        templatesSetID
+      );
+
+    const postTemplatesCount =
+      await this.postTemplateService.getCountInTemplatesSet(templatesSetID);
+
+    const innovationFlowsCount =
+      await this.innovationFlowTemplateService.getCountInTemplatesSet(
+        templatesSetID
+      );
+    return whiteboardTemplatesCount + postTemplatesCount + innovationFlowsCount;
+  }
 }

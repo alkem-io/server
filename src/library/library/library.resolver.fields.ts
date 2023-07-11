@@ -44,4 +44,16 @@ export class LibraryResolverFields {
   async storageBucket(@Parent() library: ILibrary): Promise<IStorageBucket> {
     return await this.libraryService.getStorageBucket(library);
   }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('innovationPacks', () => [IInnovationPack], {
+    nullable: false,
+    description: 'The Innovation Packs in the platform Innovation Library.',
+  })
+  @UseGuards(GraphqlGuard)
+  async innovationPacks(
+    @Parent() library: ILibrary
+  ): Promise<IInnovationPack[]> {
+    return await this.libraryService.getInnovationPacks(library);
+  }
 }

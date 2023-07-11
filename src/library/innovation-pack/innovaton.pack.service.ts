@@ -293,4 +293,8 @@ export class InnovationPackService {
     }
     return organizations[0];
   }
+
+  async getTemplatesCount(innovationPackID: string): Promise<number> {
+    return await this.templatesSetService.getTemplatesCount(innovationPackID);
+  }
 }

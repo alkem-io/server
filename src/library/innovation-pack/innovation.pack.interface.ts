@@ -5,4 +5,7 @@ import { INameable } from '@domain/common/entity/nameable-entity/nameable.interf
 @ObjectType('InnovationPack')
 export abstract class IInnovationPack extends INameable {
   templatesSet?: ITemplatesSet;
+
+  // Only used internally
+  templatesCount!: number;
 }
