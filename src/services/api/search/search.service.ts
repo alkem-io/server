@@ -66,7 +66,14 @@ class Match {
   key = 0;
   score = 0;
   terms: string[] = [];
-  entity!: User | UserGroup | Organization | Space | Challenge | Opportunity;
+  entity!:
+    | User
+    | UserGroup
+    | Organization
+    | Space
+    | Challenge
+    | Opportunity
+    | Post;
   type!: SearchResultType;
 }
 
@@ -148,6 +155,7 @@ export class SearchService {
         groupResults,
         organizationResults,
         postResults,
+        postIDsFilter,
         userIDsFilter,
         entityTypesFilter
       );
@@ -691,25 +699,32 @@ export class SearchService {
     groupResults: Map<number, Match>,
     organizationResults: Map<number, Match>,
     postResults: Map<number, Match>,
+    postIDsFilter: string[] | undefined,
     usersFilter: string[] | undefined,
     entityTypesFilter?: string[]
   ) {
     const [searchUsers, searchGroups, searchOrganizations, searchPosts] =
       await this.searchBy(agentInfo, entityTypesFilter);
 
-    if (searchUsers)
+    if (searchUsers) {
       await this.searchUsersByTagsets(terms, tagsets, userResults, usersFilter);
+    }
 
-    if (searchGroups)
+    if (searchGroups) {
       await this.searchGroupsByTagsets(terms, tagsets, groupResults);
+    }
 
-    if (searchOrganizations)
+    if (searchOrganizations) {
       await this.searchOrganizationsByTagsets(
         terms,
         tagsets,
         organizationResults
       );
-    if (searchPosts) await this.searchPostsByTagsets(terms, postResults);
+    }
+
+    if (searchPosts) {
+      await this.searchPostsByTagsets(terms, postResults, postIDsFilter);
+    }
   }
 
   async searchUsersByTagsets(
@@ -804,15 +819,26 @@ export class SearchService {
     }
   }
 
-  async searchPostsByTagsets(terms: string[], postResults: Map<number, Match>) {
+  async searchPostsByTagsets(
+    terms: string[],
+    postResults: Map<number, Match>,
+    postIDsFilter: string[] = []
+  ) {
     for (const term of terms) {
-      const postMatches = await this.postRepository
+      const query = this.postRepository
         .createQueryBuilder('post')
         .leftJoinAndSelect('post.profile', 'profile')
         .leftJoinAndSelect('profile.tagsets', 'tagset')
         .where('find_in_set(:term, tagset.tags)')
-        .setParameters({ term: `${term}` })
-        .getMany();
+        .setParameters({ term: `${term}` });
+
+      if (postIDsFilter.length) {
+        query
+          .andWhere('post.id in (:postIDsFilter)')
+          .setParameter('postIDsFilter', postIDsFilter.toString());
+      }
+
+      const postMatches = await query.getMany();
 
       // Create results for each match
       await this.buildMatchingResults(
