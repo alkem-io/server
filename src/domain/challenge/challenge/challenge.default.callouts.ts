@@ -87,7 +87,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     profile: {
       displayName: 'Collaborate visually',
       description:
-        'Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
+        '🎨 Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
     },
     nameID: `${CalloutType.WHITEBOARD_COLLECTION}`,
     state: CalloutState.OPEN,
