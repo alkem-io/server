@@ -63,7 +63,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     profile: {
       displayName: 'Contribute',
       description:
-        'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
+        '✍️ Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
       tagsets: [
         {
           name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
@@ -77,7 +77,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     postTemplate: {
       type: 'contribution',
       defaultDescription:
-        'Please share your contribution. The more details the better!',
+        '✍️ Please share your contribution. The more details the better!',
       profile: {
         displayName: 'contribution',
         description:
