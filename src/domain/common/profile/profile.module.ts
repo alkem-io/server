@@ -12,12 +12,14 @@ import { VisualModule } from '@domain/common/visual/visual.module';
 import { ProfileResolverFields } from './profile.resolver.fields';
 import { LocationModule } from '@domain/common/location';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { TagsetTemplateModule } from '../tagset-template/tagset.template.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
     TagsetModule,
+    TagsetTemplateModule,
     ReferenceModule,
     TypeOrmModule.forFeature([Profile]),
     VisualModule,

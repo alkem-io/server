@@ -1,5 +1,5 @@
-export const CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW =
-  'credentialRuleTypes-challengeInnovationFlow';
+export const CREDENTIAL_RULE_TYPES_INNOVATION_FLOW_UPDATE =
+  'credentialRuleTypes-innovationFlowUpdate';
 export const CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_RESET =
   'credentialRuleTypes-spaceAuthorizationReset';
 export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ =
@@ -14,8 +14,6 @@ export const CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS =
   'credentialRuleTypes-calloutUpdatePublisherGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED =
   'credentialRuleTypes-collaborationCreateRelationRegistered';
-export const CREDENTIAL_RULE_TYPES_OPPORTUNITY_UPDATE_INNOVATION_FLOW =
-  'credentialRuleTypes-opportunityUpdateInnovationFLow';
 export const CREDENTIAL_RULE_TYPES_RELATION_CREATED_GLOBAL_REGISTERED =
   'credentialRuleTypes-relationCreateGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL =

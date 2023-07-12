@@ -101,7 +101,7 @@ export class TagsetTemplateSetService {
   async addTagsetTemplate(
     tagsetTemplateSet: ITagsetTemplateSet,
     tagsetTemplateData: CreateTagsetTemplateInput
-  ): Promise<ITagsetTemplateSet> {
+  ): Promise<ITagsetTemplate> {
     // Check if the group already exists, if so log a warning
     if (
       this.hasTagsetTemplateWithName(tagsetTemplateSet, tagsetTemplateData.name)
@@ -116,6 +116,7 @@ export class TagsetTemplateSetService {
       await this.tagsetTemplateService.createTagsetTemplate(tagsetTemplateData);
     tagsetTemplateSet.tagsetTemplates.push(tagsetTemplate);
 
-    return await this.save(tagsetTemplateSet);
+    await this.save(tagsetTemplateSet);
+    return tagsetTemplate;
   }
 }

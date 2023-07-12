@@ -79,7 +79,7 @@ export class CalloutAuthorizationService {
         callout.authorization
       );
 
-    callout.whiteboards = await this.calloutService.getWhiteboardesFromCallout(
+    callout.whiteboards = await this.calloutService.getWhiteboardsFromCallout(
       callout,
       ['whiteboards.checkout']
     );

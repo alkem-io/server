@@ -161,9 +161,12 @@ export class LifecycleService {
   }
 
   getStates(lifecycle: ILifecycle): string[] {
-    const restoredStateDef = this.getRestoredStateDefinition(lifecycle);
-    const state = State.create(restoredStateDef);
-    return state.toStrings();
+    const machineDef = this.deserializeLifecycleDefinition(
+      lifecycle.machineDef
+    );
+    const machine = createMachine(machineDef);
+    const states = machine.states;
+    return Object.keys(states);
   }
 
   isFinalState(lifecycle: ILifecycle): boolean {

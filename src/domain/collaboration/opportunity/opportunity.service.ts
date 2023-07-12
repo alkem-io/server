@@ -24,8 +24,6 @@ import { INVP } from '@domain/common/nvp/nvp.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { NVP } from '@domain/common/nvp';
 import { UUID_LENGTH } from '@common/constants';
-import { UserService } from '@domain/community/user/user.service';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { CommunityType } from '@common/enums/community.type';
 import { AgentInfo } from '@src/core/authentication/agent-info';
 import { IContext } from '@domain/context/context/context.interface';
@@ -43,15 +41,14 @@ import { InnovationFlowService } from '@domain/challenge/innovation-flow/innovat
 import { CollaborationService } from '../collaboration/collaboration.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
-
+import { opportunityDefaultCallouts } from './opportunity.default.callouts';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 @Injectable()
 export class OpportunityService {
   constructor(
     private baseChallengeService: BaseChallengeService,
     private projectService: ProjectService,
     private communityService: CommunityService,
-    private userService: UserService,
-    private agentService: AgentService,
     private innovationFlowService: InnovationFlowService,
     private collaborationService: CollaborationService,
     private namingService: NamingService,
@@ -82,12 +79,6 @@ export class OpportunityService {
     const opportunity: IOpportunity = Opportunity.create(opportunityData);
     opportunity.spaceID = spaceID;
     opportunity.projects = [];
-    opportunity.innovationFlow =
-      await this.innovationFlowService.createInnovationFlow({
-        type: InnovationFlowType.OPPORTUNITY,
-        spaceID: spaceID,
-        innovationFlowTemplateID: opportunityData.innovationFlowTemplateID,
-      });
 
     await this.baseChallengeService.initialise(
       opportunity,
@@ -101,23 +92,52 @@ export class OpportunityService {
     await this.opportunityRepository.save(opportunity);
 
     if (opportunity.collaboration) {
-      const states = await this.innovationFlowService.getInnovationFlowStates(
-        opportunity.innovationFlow
-      );
       const tagsetTemplateData: CreateTagsetTemplateInput = {
-        name: 'STATES',
+        name: TagsetReservedName.FLOW_STATE,
         type: TagsetType.SELECT_ONE,
-        allowedValues: states,
+        allowedValues: [],
       };
-      opportunity.collaboration =
+      const stateTagsetTemplate =
         await this.collaborationService.addTagsetTemplate(
           opportunity.collaboration,
           tagsetTemplateData
         );
+
+      opportunity.innovationFlow =
+        await this.innovationFlowService.createInnovationFlow(
+          {
+            type: InnovationFlowType.OPPORTUNITY,
+            spaceID: spaceID,
+            innovationFlowTemplateID: opportunityData.innovationFlowTemplateID,
+            profile: {
+              displayName: '',
+            },
+          },
+          [stateTagsetTemplate]
+        );
+
+      await this.innovationFlowService.updateFlowStateTagsetTemplateForLifecycle(
+        opportunity.innovationFlow,
+        stateTagsetTemplate
+      );
+      const stateTagset = opportunity.innovationFlow.profile.tagsets?.find(
+        t => (t.name = TagsetReservedName.FLOW_STATE)
+      );
+      if (!stateTagset) {
+        throw new EntityNotInitializedException(
+          `State tagset not found on Opportunity InnovationFlow: ${opportunity.nameID}`,
+          LogContext.CHALLENGES
+        );
+      }
+      await this.innovationFlowService.updateStateTagsetForLifecycle(
+        opportunity.innovationFlow,
+        stateTagset
+      );
+
       opportunity.collaboration =
         await this.collaborationService.addDefaultCallouts(
           opportunity.collaboration,
-          CommunityType.OPPORTUNITY
+          opportunityDefaultCallouts
         );
     }
 
@@ -396,9 +416,9 @@ export class OpportunityService {
     postsTopic.id = `posts-${opportunity.id}`;
     metrics.push(postsTopic);
 
-    // Whiteboardes
+    // Whiteboards
     const whiteboardsCount =
-      await this.baseChallengeService.getWhiteboardesCount(
+      await this.baseChallengeService.getWhiteboardsCount(
         opportunity,
         this.opportunityRepository
       );

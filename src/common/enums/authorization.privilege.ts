@@ -24,7 +24,7 @@ export enum AuthorizationPrivilege {
   FILE_DELETE = 'file-delete',
   READ_USERS = 'read-users',
   UPDATE_WHITEBOARD = 'update-whiteboard',
-  UPDATE_INNOVATION_FLOW = 'update-lifecycle',
+  UPDATE_INNOVATION_FLOW = 'update-innovation-flow',
   COMMUNITY_JOIN = 'community-join',
   COMMUNITY_APPLY = 'community-apply',
   COMMUNITY_INVITE = 'community-invite',
