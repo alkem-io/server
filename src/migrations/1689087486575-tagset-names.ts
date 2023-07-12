@@ -37,6 +37,23 @@ export class tagsetNames1689087486575 implements MigrationInterface {
         [tagsetTemplateString, tagsetTemplate.id]
       );
     }
+
+    const flowStateTagsets = await queryRunner.query(`
+      SELECT t.*, tt.defaultSelectedValue
+      FROM tagset t
+      INNER JOIN tagset_template tt
+      ON t.tagsetTemplateId = tt.id
+      WHERE t.name = 'flow-state'
+    `);
+
+    // Iterate through each record
+    for (const tagset of flowStateTagsets) {
+      // Update the 'tags' field with new value
+      await queryRunner.query(`UPDATE tagset SET tags = ? WHERE id = ?`, [
+        tagset.defaultSelectedValue,
+        tagset.id,
+      ]);
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
