@@ -11,7 +11,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     profile: {
       displayName: 'Why do you care about this Challenge?',
       description:
-        'Please share why this Challenge is important to you as well as any relevant thoughts, experience or expertise.',
+        '👋 Please share a few words about yourself to help the community get to know each other. For example, why is this Challenge important to you, or relevant thoughts, experience or expertise.',
       tagsets: [
         {
           name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
@@ -26,8 +26,8 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
   {
     type: CalloutType.LINK_COLLECTION,
     profile: {
-      displayName: 'Recommended by the Host',
-      description: 'Please find below quick start links.',
+      displayName: 'Recommended by the Leads',
+      description: 'Some quick links to get started 💥',
       tagsets: [
         {
           name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,

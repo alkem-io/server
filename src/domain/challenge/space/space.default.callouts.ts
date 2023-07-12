@@ -10,9 +10,9 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     nameID: 'space-welcome',
     type: CalloutType.POST,
     profile: {
-      displayName: 'Welcome, please introduce yourself to the community!',
+      displayName: 'Welcome to the community!',
       description:
-        'Please share a few words about yourself to help the community get to know each other. What brings you to this Space and motivates you to work on these Challenges?',
+        '👋 Please share a few words about yourself to help the community get to know each other. What brings you to this Space and motivates you to work on these Challenges?',
       tagsets: [
         {
           name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
@@ -27,8 +27,8 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
     type: CalloutType.LINK_COLLECTION,
     profile: {
-      displayName: 'Recommended by the Host',
-      description: 'Please find below quick start links.',
+      displayName: 'Recommended by the Leads',
+      description: 'Some quick links to get started 💥',
       tagsets: [
         {
           name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
@@ -85,6 +85,22 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       },
     },
     group: 'KNOWLEDGE',
+  },
+  {
+    type: CalloutType.LINK_COLLECTION,
+    profile: {
+      displayName: 'Reference / relevant documents',
+      description: 'Please add links to documents with reference material.💥',
+      tagsets: [
+        {
+          name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
+          tags: [SpaceDisplayLocation.KNOWEDGE_RIGHT],
+        },
+      ],
+    },
+    nameID: 'documents',
+    state: CalloutState.OPEN,
+    sortOrder: 3,
   },
   {
     type: CalloutType.WHITEBOARD_COLLECTION,
