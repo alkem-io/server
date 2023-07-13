@@ -130,12 +130,12 @@ export class InnovationFlowResolverMutations {
   @Profiling.api
   async adminInnovationFlowSynchronizeStates(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('syncData')
-    syncData: AdminInnovationFlowSynchronizeStatesInput
+    @Args('innovationFlowData')
+    innovationFlowData: AdminInnovationFlowSynchronizeStatesInput
   ): Promise<ITagset> {
     const innovationFlow =
       await this.innovationFlowService.getInnovationFlowOrFail(
-        syncData.innovationFlowID
+        innovationFlowData.innovationFlowID
       );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -144,8 +144,7 @@ export class InnovationFlowResolverMutations {
       `innovation flow admin synchronize states: ${innovationFlow.id}`
     );
     return await this.innovationFlowService.updateStatesTagsetTemplateToMatchLifecycle(
-      syncData.innovationFlowID,
-      syncData.profileID
+      innovationFlowData.innovationFlowID
     );
   }
 }

@@ -285,19 +285,18 @@ export class InnovationFlowService {
   }
 
   async updateStatesTagsetTemplateToMatchLifecycle(
-    innovationFlowID: string,
-    profileID: string
+    innovationFlowID: string
   ): Promise<ITagset> {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowID,
       {
-        relations: ['lifecycle'],
+        relations: ['lifecycle', 'profile'],
       }
     );
 
-    if (!innovationFlow.lifecycle) {
+    if (!innovationFlow.lifecycle || !innovationFlow.profile) {
       throw new EntityNotInitializedException(
-        `Lifecycle  of Innovation Flow (${innovationFlow.id}) not initialized`,
+        `Lifecycle or Profile of Innovation Flow (${innovationFlow.id}) not initialized`,
         LogContext.CHALLENGES
       );
     }
@@ -306,7 +305,7 @@ export class InnovationFlowService {
     const state = this.lifecycleService.getState(innovationFlow.lifecycle);
 
     const updateData: UpdateProfileSelectTagsetInput = {
-      profileID: profileID,
+      profileID: innovationFlow.profile.id,
       allowedValues: states,
       tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
       tags: [state],

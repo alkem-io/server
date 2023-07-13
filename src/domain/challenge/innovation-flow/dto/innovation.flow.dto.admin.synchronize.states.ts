@@ -9,11 +9,4 @@ export class AdminInnovationFlowSynchronizeStatesInput {
   })
   @IsOptional()
   innovationFlowID!: string;
-
-  @Field(() => UUID, {
-    description:
-      'ID of the Profile of the Entity (Usually Callout) that needs to be updated',
-  })
-  @IsOptional()
-  profileID!: string;
 }
