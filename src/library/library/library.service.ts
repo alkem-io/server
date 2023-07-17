@@ -46,7 +46,20 @@ export class LibraryService {
         LogContext.LIBRARY
       );
 
-    return innovationPacks;
+    // Sort based on the amount of Templates in the InnovationPacks
+    const innovationPacksWithCounts = await Promise.all(
+      innovationPacks.map(async innovationPack => {
+        const templatesCount =
+          await this.innovationPackService.getTemplatesCount(innovationPack.id);
+        return { ...innovationPack, templatesCount };
+      })
+    );
+
+    const sortedPacks = innovationPacksWithCounts.sort((a, b) =>
+      a.templatesCount < b.templatesCount ? 1 : -1
+    );
+
+    return sortedPacks;
   }
 
   public async createInnovationPack(
