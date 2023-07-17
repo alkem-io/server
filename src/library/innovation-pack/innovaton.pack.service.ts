@@ -295,6 +295,21 @@ export class InnovationPackService {
   }
 
   async getTemplatesCount(innovationPackID: string): Promise<number> {
-    return await this.templatesSetService.getTemplatesCount(innovationPackID);
+    const innovationPack = await this.getInnovationPackOrFail(
+      innovationPackID,
+      {
+        relations: {
+          templatesSet: true,
+        },
+      }
+    );
+    const templatesSetId = innovationPack.templatesSet?.id;
+    if (!templatesSetId) {
+      throw new EntityNotFoundException(
+        `TemplatesSet for InnovationPack ${innovationPackID} not found!`,
+        LogContext.CHALLENGES
+      );
+    }
+    return await this.templatesSetService.getTemplatesCount(templatesSetId);
   }
 }
