@@ -186,7 +186,7 @@ export class ChallengeService {
       statesTagssetTemplate
     );
     const stateTagset = savedChallenge.innovationFlow.profile.tagsets?.find(
-      t => (t.name = TagsetReservedName.FLOW_STATE)
+      t => t.tagsetTemplate?.name === TagsetReservedName.FLOW_STATE
     );
     if (!stateTagset) {
       throw new EntityNotInitializedException(
