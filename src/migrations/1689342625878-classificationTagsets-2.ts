@@ -95,8 +95,10 @@ export class classificationTagsets21689342625878 implements MigrationInterface {
 
       await queryRunner.query(`
             INSERT INTO tagset (id, createdDate, updatedDate, version,
-                                  tagsetTemplateId, tags, profileId)
+                                  name, type, tagsetTemplateId, tags, profileId)
                             VALUES ('${tagsetID}', NOW(), NOW(), 1,
+                                  '${tagsetTemplateName}',
+                                  'select-one',
                                   '${tagsetTemplateID}',
                                   '${tags}',
                                   '${callout.profileId}'
@@ -140,8 +142,10 @@ export class classificationTagsets21689342625878 implements MigrationInterface {
                   `);
     await queryRunner.query(`
             INSERT INTO tagset (id, createdDate, updatedDate, version,
-                                   tagsetTemplateId, tags, profileId)
+                                    name, type, tagsetTemplateId, tags, profileId)
                             VALUES ('${tagsetID}', NOW(), NOW(), 1,
+                                  '${tagsetTemplateName}',
+                                  'select-one',
                                   '${tagsetTemplateID}',
                                   'new',
                                   '${innovationFlow.profileId}'
