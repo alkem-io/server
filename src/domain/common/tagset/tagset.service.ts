@@ -109,7 +109,7 @@ export class TagsetService {
 
   updateTagsetValues(tagset: ITagset, tagsetData: UpdateTagsetInput): ITagset {
     if (tagsetData.name) {
-      if (tagset.tagsetTemplate) tagset.name = tagsetData.name;
+      tagset.name = tagsetData.name;
     }
 
     if (tagsetData.tags) {
