@@ -47,13 +47,18 @@ export class LibraryService {
       );
 
     // Sort based on the amount of Templates in the InnovationPacks
-    for (const innovationPack of innovationPacks) {
-      innovationPack.templatesCount =
-        await this.innovationPackService.getTemplatesCount(innovationPack.id);
-    }
-    const sortedPacks = innovationPacks.sort((a, b) =>
+    const innovationPacksWithCounts = await Promise.all(
+      innovationPacks.map(async innovationPack => {
+        const templatesCount =
+          await this.innovationPackService.getTemplatesCount(innovationPack.id);
+        return { ...innovationPack, templatesCount };
+      })
+    );
+
+    const sortedPacks = innovationPacksWithCounts.sort((a, b) =>
       a.templatesCount < b.templatesCount ? 1 : -1
     );
+
     return sortedPacks;
   }
 
