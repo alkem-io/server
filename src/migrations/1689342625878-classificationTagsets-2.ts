@@ -3,7 +3,6 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class classificationTagsets21689342625878 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Add display location tagset to each of the spaces
     const challenges: {
       id: string;
       collaborationId: string;
@@ -90,8 +89,11 @@ export class classificationTagsets21689342625878 implements MigrationInterface {
                                     VALUES ('${tagsetAuthID}', NOW(), NOW(), 1, '', '', 0, '')
                   `);
       let tags;
-      if (tagsetTemplateName === TagsetReservedName.STATES) tags = 'new';
-      else tags = callout.group;
+      if (tagsetTemplateName === TagsetReservedName.STATES) {
+        tags = 'new';
+      } else {
+        tags = callout.group;
+      }
 
       await queryRunner.query(`
             INSERT INTO tagset (id, createdDate, updatedDate, version,
