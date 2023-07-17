@@ -3,10 +3,6 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class classificationTagsets21689342625878 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    //cleanup
-    // await queryRunner.query('ALTER TABLE `tagset` DROP COLUMN `type`');
-    // await queryRunner.query('ALTER TABLE `tagset` DROP COLUMN `name`');
-
     // Add display location tagset to each of the spaces
     const challenges: {
       id: string;
@@ -55,14 +51,7 @@ export class classificationTagsets21689342625878 implements MigrationInterface {
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      'ALTER TABLE `tagset` ADD `type` varchar(255) NULL'
-    );
-    await queryRunner.query(
-      'ALTER TABLE `tagset` ADD `name` varchar(255) NULL'
-    );
-  }
+  public async down(queryRunner: QueryRunner): Promise<void> {}
 
   private async addTagsetTemplateToCollaboration(
     queryRunner: QueryRunner,

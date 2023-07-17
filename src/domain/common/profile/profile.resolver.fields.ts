@@ -85,7 +85,7 @@ export class ProfileResolverFields {
   ): Promise<ITagset> {
     const tagsets = await loader.load(profile.id);
     const defaultTagset = tagsets.find(
-      t => t.name === TagsetReservedName.DEFAULT
+      t => t.tagsetTemplate?.name === TagsetReservedName.DEFAULT
     );
     if (!defaultTagset) {
       throw new EntityNotFoundException(

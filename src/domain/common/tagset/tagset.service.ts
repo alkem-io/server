@@ -109,7 +109,7 @@ export class TagsetService {
 
   updateTagsetValues(tagset: ITagset, tagsetData: UpdateTagsetInput): ITagset {
     if (tagsetData.name) {
-      tagset.name = tagsetData.name;
+      if (tagset.tagsetTemplate) tagset.name = tagsetData.name;
     }
 
     if (tagsetData.tags) {
@@ -178,7 +178,7 @@ export class TagsetService {
   // Get the default tagset
   defaultTagset(tagsets: ITagset[]): ITagset | undefined {
     const defaultTagset = tagsets.find(
-      t => t.name === TagsetReservedName.DEFAULT
+      t => t.tagsetTemplate?.name === TagsetReservedName.DEFAULT
     );
     return defaultTagset;
   }
