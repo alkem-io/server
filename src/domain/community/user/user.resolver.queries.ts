@@ -1,7 +1,6 @@
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
-import { UserNotRegisteredException } from '@common/exceptions/registration.exception';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
@@ -103,46 +102,6 @@ export class UserResolverQueries {
       `users query: ${agentInfo.email}`
     );
     return await this.userService.getUsersByIDs(ids);
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Query(() => Boolean, {
-    nullable: false,
-    description: 'Check if the currently logged in user has a User profile',
-  })
-  @Profiling.api
-  async meHasProfile(@CurrentUser() agentInfo: AgentInfo): Promise<boolean> {
-    const email = agentInfo.email;
-    if (!email || email.length == 0) {
-      throw new AuthenticationException(
-        'Unable to retrieve authenticated user; no identifier'
-      );
-    }
-    const user = await this.userService.getUserByEmail(email);
-    if (!user) {
-      return false;
-    }
-    return true;
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Query(() => IUser, {
-    nullable: false,
-    description: 'The currently logged in user',
-  })
-  @Profiling.api
-  async me(@CurrentUser() agentInfo: AgentInfo): Promise<IUser> {
-    const email = agentInfo.email;
-    if (!email || email.length == 0) {
-      throw new AuthenticationException(
-        'Unable to retrieve authenticated user; no identifier'
-      );
-    }
-    const user = await this.userService.getUserByEmail(email);
-    if (!user) {
-      throw new UserNotRegisteredException();
-    }
-    return user;
   }
 
   @UseGuards(GraphqlGuard)

@@ -178,7 +178,7 @@ export class TagsetService {
   // Get the default tagset
   defaultTagset(tagsets: ITagset[]): ITagset | undefined {
     const defaultTagset = tagsets.find(
-      t => t.name === TagsetReservedName.DEFAULT
+      t => t.tagsetTemplate?.name === TagsetReservedName.DEFAULT
     );
     return defaultTagset;
   }
