@@ -35,6 +35,7 @@ import { ISearchResults } from './dto/search.result.dto';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { ISearchResultBuilder } from './search.result.builder.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -66,7 +67,14 @@ class Match {
   key = 0;
   score = 0;
   terms: string[] = [];
-  entity!: User | UserGroup | Organization | Space | Challenge | Opportunity;
+  entity!:
+    | User
+    | UserGroup
+    | Organization
+    | Space
+    | Challenge
+    | Opportunity
+    | Post;
   type!: SearchResultType;
 }
 
@@ -148,6 +156,7 @@ export class SearchService {
         groupResults,
         organizationResults,
         postResults,
+        postIDsFilter,
         userIDsFilter,
         entityTypesFilter
       );
@@ -450,11 +459,9 @@ export class SearchService {
         .getMany();
       // Only show spaces that the current user has read access to
       for (const space of spaceMatches) {
-        // Create results for each match directly, assigning in a different score depending on whether the user has read access or not
-        const score_increment = this.getScoreIncrement(
-          space.authorization,
-          agentInfo
-        );
+        // Score depends on various factors, hardcoded for now
+        const score_increment = this.getScoreIncrementSpace(space, agentInfo);
+
         await this.buildMatchingResult(
           space,
           spaceResults,
@@ -467,7 +474,20 @@ export class SearchService {
   }
 
   // Determine the score increment based on whether the user has read access or not
-  private getScoreIncrement(
+  private getScoreIncrementSpace(space: ISpace, agentInfo: AgentInfo): number {
+    switch (space.visibility) {
+      case SpaceVisibility.ACTIVE:
+        return this.getScoreIncrementReadAccess(space.authorization, agentInfo);
+      case SpaceVisibility.DEMO:
+        return SCORE_INCREMENT / 2;
+      case SpaceVisibility.ARCHIVED:
+        return 0;
+    }
+    return SCORE_INCREMENT;
+  }
+
+  // Determine the score increment based on whether the user has read access or not
+  private getScoreIncrementReadAccess(
     authorization: IAuthorizationPolicy | undefined,
     agentInfo: AgentInfo
   ): number {
@@ -691,25 +711,32 @@ export class SearchService {
     groupResults: Map<number, Match>,
     organizationResults: Map<number, Match>,
     postResults: Map<number, Match>,
+    postIDsFilter: string[] | undefined,
     usersFilter: string[] | undefined,
     entityTypesFilter?: string[]
   ) {
     const [searchUsers, searchGroups, searchOrganizations, searchPosts] =
       await this.searchBy(agentInfo, entityTypesFilter);
 
-    if (searchUsers)
+    if (searchUsers) {
       await this.searchUsersByTagsets(terms, tagsets, userResults, usersFilter);
+    }
 
-    if (searchGroups)
+    if (searchGroups) {
       await this.searchGroupsByTagsets(terms, tagsets, groupResults);
+    }
 
-    if (searchOrganizations)
+    if (searchOrganizations) {
       await this.searchOrganizationsByTagsets(
         terms,
         tagsets,
         organizationResults
       );
-    if (searchPosts) await this.searchPostsByTagsets(terms, postResults);
+    }
+
+    if (searchPosts) {
+      await this.searchPostsByTagsets(terms, postResults, postIDsFilter);
+    }
   }
 
   async searchUsersByTagsets(
@@ -804,15 +831,26 @@ export class SearchService {
     }
   }
 
-  async searchPostsByTagsets(terms: string[], postResults: Map<number, Match>) {
+  async searchPostsByTagsets(
+    terms: string[],
+    postResults: Map<number, Match>,
+    postIDsFilter: string[] = []
+  ) {
     for (const term of terms) {
-      const postMatches = await this.postRepository
+      const query = this.postRepository
         .createQueryBuilder('post')
         .leftJoinAndSelect('post.profile', 'profile')
         .leftJoinAndSelect('profile.tagsets', 'tagset')
         .where('find_in_set(:term, tagset.tags)')
-        .setParameters({ term: `${term}` })
-        .getMany();
+        .setParameters({ term: `${term}` });
+
+      if (postIDsFilter.length) {
+        query
+          .andWhere('post.id in (:postIDsFilter)')
+          .setParameter('postIDsFilter', postIDsFilter.toString());
+      }
+
+      const postMatches = await query.getMany();
 
       // Create results for each match
       await this.buildMatchingResults(

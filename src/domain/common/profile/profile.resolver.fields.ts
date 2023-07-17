@@ -23,6 +23,7 @@ import {
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketResolverService } from '@services/infrastructure/entity-resolver/storage.bucket.resolver.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
@@ -85,7 +86,8 @@ export class ProfileResolverFields {
   ): Promise<ITagset> {
     const tagsets = await loader.load(profile.id);
     const defaultTagset = tagsets.find(
-      t => t.name === TagsetReservedName.DEFAULT
+      t =>
+        t.type === TagsetType.FREEFORM && t.name === TagsetReservedName.DEFAULT
     );
     if (!defaultTagset) {
       throw new EntityNotFoundException(

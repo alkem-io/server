@@ -11,7 +11,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     profile: {
       displayName: 'Why do you care about this Challenge?',
       description:
-        'Please share why this Challenge is important to you as well as any relevant thoughts, experience or expertise.',
+        '👋 Please share a few words about yourself to help the community get to know each other. For example, why is this Challenge important to you, or relevant thoughts, experience or expertise.',
       tagsets: [
         {
           name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
@@ -26,8 +26,8 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
   {
     type: CalloutType.LINK_COLLECTION,
     profile: {
-      displayName: 'Recommended by the Host',
-      description: 'Please find below quick start links.',
+      displayName: 'Recommended by the Leads',
+      description: 'Some quick links to get started 💥',
       tagsets: [
         {
           name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
@@ -43,7 +43,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     type: CalloutType.POST,
     profile: {
       displayName: 'Suggestions, Questions, and Feedback',
-      description: 'Please share it here :)',
+      description: '✍️ Please share it here :)',
       tagsets: [
         {
           name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
@@ -60,7 +60,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     profile: {
       displayName: 'Contribute',
       description:
-        'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
+        '✍️ Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
       tagsets: [
         {
           name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
@@ -74,7 +74,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     postTemplate: {
       type: 'contribution',
       defaultDescription:
-        'Please share your contribution. The more details the better!',
+        '✍️ Please share your contribution. The more details the better!',
       profile: {
         displayName: 'contribution',
         description:
@@ -87,7 +87,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     profile: {
       displayName: 'Collaborate visually',
       description:
-        'Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
+        '🎨 Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
     },
     nameID: `${CalloutType.WHITEBOARD_COLLECTION}`,
     state: CalloutState.OPEN,

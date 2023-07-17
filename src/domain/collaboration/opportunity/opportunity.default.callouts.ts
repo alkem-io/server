@@ -1,5 +1,7 @@
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
+import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
 
@@ -9,6 +11,12 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     profile: {
       displayName: 'Recommended by the Host',
       description: 'Please find below quick start links.',
+      tagsets: [
+        {
+          name: TagsetReservedName.DISPLAY_LOCATION_OPPORTUNITY,
+          tags: [OpportunityDisplayLocation.HOME_TOP],
+        },
+      ],
     },
     nameID: 'recommendations',
     state: CalloutState.CLOSED,
@@ -19,6 +27,12 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     profile: {
       displayName: 'Suggestions, Questions, and Feedback',
       description: 'Please share it here :)',
+      tagsets: [
+        {
+          name: TagsetReservedName.DISPLAY_LOCATION_OPPORTUNITY,
+          tags: [OpportunityDisplayLocation.HOME_RIGHT],
+        },
+      ],
     },
     nameID: 'suggestions',
     state: CalloutState.OPEN,
@@ -30,6 +44,12 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       displayName: 'Contribute',
       description:
         'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
+      tagsets: [
+        {
+          name: TagsetReservedName.DISPLAY_LOCATION_OPPORTUNITY,
+          tags: [OpportunityDisplayLocation.CONTRIBUTE_RIGHT],
+        },
+      ],
     },
     nameID: `${CalloutType.POST_COLLECTION}-default`,
     state: CalloutState.OPEN,
@@ -42,6 +62,12 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         displayName: 'contribution',
         description:
           'To share contributions with detailed explanations how they help.',
+        tagsets: [
+          {
+            name: TagsetReservedName.DISPLAY_LOCATION_OPPORTUNITY,
+            tags: [OpportunityDisplayLocation.CONTRIBUTE_RIGHT],
+          },
+        ],
       },
     },
   },
@@ -60,6 +86,12 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       profile: {
         displayName: 'blank whiteboard',
         description: 'A blank whiteboard to be worked further.',
+        tagsets: [
+          {
+            name: TagsetReservedName.DISPLAY_LOCATION_OPPORTUNITY,
+            tags: [OpportunityDisplayLocation.CONTRIBUTE],
+          },
+        ],
       },
     },
   },

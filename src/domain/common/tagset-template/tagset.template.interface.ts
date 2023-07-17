@@ -1,6 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseAlkemio } from '../entity/base-entity';
 import { TagsetType } from '@common/enums/tagset.type';
+import { ITagset } from '../tagset/tagset.interface';
 
 @ObjectType('TagsetTemplate')
 export abstract class ITagsetTemplate extends IBaseAlkemio {
@@ -18,4 +19,6 @@ export abstract class ITagsetTemplate extends IBaseAlkemio {
 
   @Field(() => TagsetType)
   type!: TagsetType;
+
+  tagsets?: ITagset[];
 }

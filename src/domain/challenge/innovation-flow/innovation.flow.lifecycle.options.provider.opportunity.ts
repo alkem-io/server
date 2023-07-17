@@ -45,6 +45,10 @@ export class InnovationFlowLifecycleOptionsProviderOpportunity {
       innovationFlow.authorization
     );
 
+    await this.innovationFlowService.updateStatesTagsetTemplateToMatchLifecycle(
+      innovationFlowID
+    );
+
     return await this.innovationFlowService.getInnovationFlowOrFail(
       innovationFlowID
     );
