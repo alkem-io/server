@@ -3,6 +3,7 @@ import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ValidationException,
 } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -111,9 +112,29 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowData.innovationFlowID,
       {
-        relations: ['profile'],
+        relations: ['profile', 'lifecycle'],
       }
     );
+
+    const visibleStates = innovationFlowData.visibleStates;
+    if (visibleStates && innovationFlow.lifecycle) {
+      const states = this.lifecycleService.getStates(innovationFlow.lifecycle);
+      for (const visibleState of visibleStates) {
+        if (!states.includes(visibleState)) {
+          throw new ValidationException(
+            `Provided set of visibleStates (${visibleStates}) has value '${visibleState}'
+            that is not in the Lifecycle states: ${states}`,
+            LogContext.CHALLENGES
+          );
+        }
+      }
+      const updateData: UpdateProfileSelectTagsetInput = {
+        profileID: innovationFlow.profile.id,
+        allowedValues: innovationFlowData.visibleStates,
+        tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
+      };
+      await this.profileService.updateSelectTagset(updateData);
+    }
 
     if (innovationFlowData.profileData) {
       innovationFlow.profile = await this.profileService.updateProfile(
@@ -121,8 +142,6 @@ export class InnovationFlowService {
         innovationFlowData.profileData
       );
     }
-
-    // tbd - create the lifecycle
 
     return await this.innovationFlowRepository.save(innovationFlow);
   }

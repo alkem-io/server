@@ -20,4 +20,11 @@ export class UpdateInnovationFlowInput {
   @ValidateNested()
   @Type(() => UpdateProfileInput)
   profileData?: UpdateProfileInput;
+
+  @Field(() => [String], {
+    nullable: true,
+    description: 'The states on this InnovationFlow that should be selectable.',
+  })
+  @IsOptional()
+  visibleStates?: string[];
 }
