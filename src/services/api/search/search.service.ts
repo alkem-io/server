@@ -35,6 +35,7 @@ import { ISearchResults } from './dto/search.result.dto';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { ISearchResultBuilder } from './search.result.builder.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { SpaceVisibility } from '@common/enums/space.visibility';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -458,11 +459,9 @@ export class SearchService {
         .getMany();
       // Only show spaces that the current user has read access to
       for (const space of spaceMatches) {
-        // Create results for each match directly, assigning in a different score depending on whether the user has read access or not
-        const score_increment = this.getScoreIncrement(
-          space.authorization,
-          agentInfo
-        );
+        // Score depends on various factors, hardcoded for now
+        const score_increment = this.getScoreIncrementSpace(space, agentInfo);
+
         await this.buildMatchingResult(
           space,
           spaceResults,
@@ -475,7 +474,20 @@ export class SearchService {
   }
 
   // Determine the score increment based on whether the user has read access or not
-  private getScoreIncrement(
+  private getScoreIncrementSpace(space: ISpace, agentInfo: AgentInfo): number {
+    switch (space.visibility) {
+      case SpaceVisibility.ACTIVE:
+        return this.getScoreIncrementReadAccess(space.authorization, agentInfo);
+      case SpaceVisibility.DEMO:
+        return SCORE_INCREMENT / 2;
+      case SpaceVisibility.ARCHIVED:
+        return 0;
+    }
+    return SCORE_INCREMENT;
+  }
+
+  // Determine the score increment based on whether the user has read access or not
+  private getScoreIncrementReadAccess(
     authorization: IAuthorizationPolicy | undefined,
     agentInfo: AgentInfo
   ): number {
