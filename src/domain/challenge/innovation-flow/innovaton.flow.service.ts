@@ -262,7 +262,11 @@ export class InnovationFlowService {
     innovationFlow.lifecycle.machineDef = JSON.stringify(machineConfig);
     innovationFlow.lifecycle.machineState = '';
 
-    return await this.innovationFlowRepository.save(innovationFlow);
+    const updatedInnovationFlow = await this.innovationFlowRepository.save(
+      innovationFlow
+    );
+    await this.updateStatesTagsetTemplateToMatchLifecycle(innovationFlow.id);
+    return updatedInnovationFlow;
   }
 
   async updateFlowStateTagsetTemplateForLifecycle(
