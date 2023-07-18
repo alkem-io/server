@@ -128,9 +128,14 @@ export class InnovationFlowService {
           );
         }
       }
+
+      const defaultSelectedValue = this.lifecycleService.getState(
+        innovationFlow.lifecycle
+      );
       const updateData: UpdateProfileSelectTagsetInput = {
         profileID: innovationFlow.profile.id,
         allowedValues: innovationFlowData.visibleStates,
+        defaultSelectedValue: defaultSelectedValue,
         tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
       };
       await this.profileService.updateSelectTagset(updateData);
@@ -331,6 +336,7 @@ export class InnovationFlowService {
       profileID: innovationFlow.profile.id,
       allowedValues: states,
       tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
+      defaultSelectedValue: state,
       tags: [state],
     };
     return await this.profileService.updateSelectTagset(updateData);

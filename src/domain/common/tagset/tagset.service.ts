@@ -162,7 +162,7 @@ export class TagsetService {
 
   async getTagsetTemplateOrFail(tagsetID: string): Promise<ITagsetTemplate> {
     const tagset = await this.getTagsetOrFail(tagsetID, {
-      relations: ['tagsetTemplate'],
+      relations: ['tagsetTemplate', 'tagsetTemplate.tagsets'],
     });
 
     const tagsetTemplate = tagset.tagsetTemplate;

@@ -385,6 +385,7 @@ export class ProfileService {
       );
       await this.tagsetTemplateService.updateTagsetTemplate(tagsetTemplate, {
         allowedValues: updateData.allowedValues,
+        defaultSelectedValue: updateData.defaultSelectedValue,
       });
     }
     return tagset;
