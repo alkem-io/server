@@ -160,9 +160,14 @@ export class TagsetService {
     return tagsetTemplate.allowedValues;
   }
 
-  async getTagsetTemplateOrFail(tagsetID: string): Promise<ITagsetTemplate> {
+  async getTagsetTemplateOrFail(
+    tagsetID: string,
+    loadTagsets = false
+  ): Promise<ITagsetTemplate> {
     const tagset = await this.getTagsetOrFail(tagsetID, {
-      relations: ['tagsetTemplate'],
+      relations: loadTagsets
+        ? ['tagsetTemplate', 'tagsetTemplate.tagsets']
+        : ['tagsetTemplate'],
     });
 
     const tagsetTemplate = tagset.tagsetTemplate;
