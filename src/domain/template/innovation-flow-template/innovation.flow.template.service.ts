@@ -189,4 +189,12 @@ export class InnovationFlowTemplateService {
 
     return queryResult.spaceCount === '1';
   }
+
+  async getCountInTemplatesSet(templatesSetID: string): Promise<number> {
+    return await this.innovationFlowTemplateRepository.countBy({
+      templatesSet: {
+        id: templatesSetID,
+      },
+    });
+  }
 }

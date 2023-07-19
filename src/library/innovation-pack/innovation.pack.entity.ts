@@ -21,7 +21,5 @@ export class InnovationPack extends NameableEntity implements IInnovationPack {
   @JoinColumn()
   templatesSet?: TemplatesSet;
 
-  constructor() {
-    super();
-  }
+  templatesCount = 0;
 }

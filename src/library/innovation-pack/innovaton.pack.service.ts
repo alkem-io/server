@@ -293,4 +293,23 @@ export class InnovationPackService {
     }
     return organizations[0];
   }
+
+  async getTemplatesCount(innovationPackID: string): Promise<number> {
+    const innovationPack = await this.getInnovationPackOrFail(
+      innovationPackID,
+      {
+        relations: {
+          templatesSet: true,
+        },
+      }
+    );
+    const templatesSetId = innovationPack.templatesSet?.id;
+    if (!templatesSetId) {
+      throw new EntityNotFoundException(
+        `TemplatesSet for InnovationPack ${innovationPackID} not found!`,
+        LogContext.CHALLENGES
+      );
+    }
+    return await this.templatesSetService.getTemplatesCount(templatesSetId);
+  }
 }

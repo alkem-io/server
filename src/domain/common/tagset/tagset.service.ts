@@ -160,9 +160,14 @@ export class TagsetService {
     return tagsetTemplate.allowedValues;
   }
 
-  async getTagsetTemplateOrFail(tagsetID: string): Promise<ITagsetTemplate> {
+  async getTagsetTemplateOrFail(
+    tagsetID: string,
+    loadTagsets = false
+  ): Promise<ITagsetTemplate> {
     const tagset = await this.getTagsetOrFail(tagsetID, {
-      relations: ['tagsetTemplate'],
+      relations: loadTagsets
+        ? ['tagsetTemplate', 'tagsetTemplate.tagsets']
+        : ['tagsetTemplate'],
     });
 
     const tagsetTemplate = tagset.tagsetTemplate;
@@ -178,7 +183,7 @@ export class TagsetService {
   // Get the default tagset
   defaultTagset(tagsets: ITagset[]): ITagset | undefined {
     const defaultTagset = tagsets.find(
-      t => t.name === TagsetReservedName.DEFAULT
+      t => t.tagsetTemplate?.name === TagsetReservedName.DEFAULT
     );
     return defaultTagset;
   }

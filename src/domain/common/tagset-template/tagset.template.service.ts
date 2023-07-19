@@ -72,6 +72,15 @@ export class TagsetTemplateService {
       tagsetTemplate.defaultSelectedValue =
         tagsetTemplateData.defaultSelectedValue;
     }
+    if (tagsetTemplate.tagsets)
+      for (const tagset of tagsetTemplate.tagsets) {
+        const isNameAllowed = tagsetTemplate.allowedValues.some(allowedValue =>
+          tagset.tags.includes(allowedValue)
+        );
+        if (!isNameAllowed && tagsetTemplate.defaultSelectedValue) {
+          tagset.tags = [tagsetTemplate.defaultSelectedValue];
+        }
+      }
 
     return await this.save(tagsetTemplate);
   }
