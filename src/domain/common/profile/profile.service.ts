@@ -381,7 +381,8 @@ export class ProfileService {
 
     if (updateData.allowedValues) {
       const tagsetTemplate = await this.tagsetService.getTagsetTemplateOrFail(
-        tagset.id
+        tagset.id,
+        true
       );
       await this.tagsetTemplateService.updateTagsetTemplate(tagsetTemplate, {
         allowedValues: updateData.allowedValues,
