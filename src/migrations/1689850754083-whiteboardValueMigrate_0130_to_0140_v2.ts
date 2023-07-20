@@ -1,12 +1,7 @@
+import { decompressText, compressText } from '@common/utils/compression.util';
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { compressText, decompressText } from '@common/utils/compression.util';
 
-// https://github.com/excalidraw/excalidraw/releases/tag/v0.14.0
-// strokeSharpness renamed to roundness and value changed
-// strokeSharpness = 'sharp' changed to roundness = null
-// strokeSharpness = 'round' changed to roundness = { type: 3 }
-
-export class whiteboardValueMigrate_0130_to_0140_1688038845654
+export class whiteboardValueMigrate0130To0140V21689850754083
   implements MigrationInterface
 {
   public async up(queryRunner: QueryRunner): Promise<void> {
