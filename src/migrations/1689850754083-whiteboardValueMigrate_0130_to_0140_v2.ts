@@ -146,6 +146,17 @@ const migrateValueAndCompress = async (compressedValue: string) => {
         element.strokeSharpness === 'sharp' ? null : { type: 3 };
       delete element.strokeSharpness;
     }
+
+    if (element.type === 'text') {
+      element.frameId = element.frameId === undefined ? null : element.frameId;
+      element.boundElements =
+        element.boundElements === undefined ? null : element.boundElements;
+      element.link = element.link === undefined ? null : element.link;
+      element.isFrameName =
+        element.isFrameName === undefined ? false : element.isFrameName;
+      element.lineHeight =
+        element.lineHeight === undefined ? 1.25 : element.lineHeight;
+    }
   }
 
   return compressText(JSON.stringify(canvasValue));
@@ -183,6 +194,14 @@ const migrateDownValueAndCompress = async (compressedValue: string) => {
       element.strokeSharpness =
         element.roundness?.type === 3 ? 'round' : 'sharp';
       delete element.strokeSharpness;
+    }
+
+    if (element.type === 'text') {
+      delete element.frameId;
+      delete element.boundElements;
+      delete element.link;
+      delete element.lineHeight;
+      delete element.isFrameName;
     }
   }
 
