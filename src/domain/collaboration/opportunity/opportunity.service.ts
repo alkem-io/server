@@ -43,6 +43,7 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
 import { opportunityDefaultCallouts } from './opportunity.default.callouts';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -92,7 +93,7 @@ export class OpportunityService {
     await this.opportunityRepository.save(opportunity);
 
     if (opportunity.collaboration) {
-      const tagsetTemplateData: CreateTagsetTemplateInput = {
+      const tagsetTemplateDataStates: CreateTagsetTemplateInput = {
         name: TagsetReservedName.FLOW_STATE,
         type: TagsetType.SELECT_ONE,
         allowedValues: [],
@@ -100,8 +101,20 @@ export class OpportunityService {
       const stateTagsetTemplate =
         await this.collaborationService.addTagsetTemplate(
           opportunity.collaboration,
-          tagsetTemplateData
+          tagsetTemplateDataStates
         );
+
+      const locations = Object.values(OpportunityDisplayLocation);
+      const tagsetTemplateData: CreateTagsetTemplateInput = {
+        name: TagsetReservedName.DISPLAY_LOCATION_OPPORTUNITY,
+        type: TagsetType.SELECT_ONE,
+        allowedValues: locations,
+        defaultSelectedValue: OpportunityDisplayLocation.CONTRIBUTE_RIGHT,
+      };
+      await this.collaborationService.addTagsetTemplate(
+        opportunity.collaboration,
+        tagsetTemplateData
+      );
 
       opportunity.innovationFlow =
         await this.innovationFlowService.createInnovationFlow(
