@@ -1,6 +1,7 @@
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
 import { SpaceDisplayLocation } from '@src/migrations/1688193761861-classificationTagsets';
@@ -16,6 +17,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
+          type: TagsetType.SELECT_ONE,
           tags: [SpaceDisplayLocation.COMMUNITY_LEFT],
         },
       ],
@@ -32,6 +34,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
+          type: TagsetType.SELECT_ONE,
           tags: [SpaceDisplayLocation.HOME_TOP],
         },
       ],
@@ -49,6 +52,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
+          type: TagsetType.SELECT_ONE,
           tags: [SpaceDisplayLocation.HOME_RIGHT],
         },
       ],
@@ -67,6 +71,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
+          type: TagsetType.SELECT_ONE,
           tags: [SpaceDisplayLocation.KNOWEDGE_RIGHT],
         },
       ],
@@ -94,6 +99,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
+          type: TagsetType.SELECT_ONE,
           tags: [SpaceDisplayLocation.KNOWEDGE_RIGHT],
         },
       ],
@@ -120,6 +126,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         tagsets: [
           {
             name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
+            type: TagsetType.SELECT_ONE,
             tags: [SpaceDisplayLocation.KNOWEDGE_RIGHT],
           },
         ],
