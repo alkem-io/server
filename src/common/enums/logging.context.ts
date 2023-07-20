@@ -38,4 +38,5 @@ export enum LogContext {
   CALENDAR = 'calendar',
   INNOVATION_HUB = 'innovation-hub',
   TAGSET = 'tagset',
+  EXCALIDRAW_SERVER = 'excalidraw-server',
 }

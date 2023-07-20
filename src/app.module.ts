@@ -61,6 +61,7 @@ import {
   GraphqlExceptionFilter,
 } from '@core/error-handling';
 import { MeModule } from '@services/api/me';
+import { ExcalidrawServerModule } from '@services/external/excalidraw-backend';
 
 @Module({
   imports: [
@@ -219,6 +220,7 @@ import { MeModule } from '@services/api/me';
     SsiCredentialFlowModule,
     StorageAccessModule,
     MeModule,
+    ExcalidrawServerModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [
