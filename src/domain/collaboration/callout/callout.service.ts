@@ -46,6 +46,7 @@ import { ITagsetTemplate } from '@domain/common/tagset-template';
 import { TagsetType } from '@common/enums/tagset.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CreateTagsetInput } from '@domain/common/tagset';
+import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 
 @Injectable()
 export class CalloutService {
@@ -123,6 +124,10 @@ export class CalloutService {
     callout.profile = await this.profileService.createProfile(
       calloutData.profile
     );
+
+    if (calloutData.group) {
+      this.updateCalloutDisplayLocationTagsetValue(callout, calloutData.group);
+    }
 
     if (calloutData.type == CalloutType.POST_COLLECTION && postTemplateData) {
       callout.postTemplate = await this.postTemplateService.createPostTemplate(
@@ -283,9 +288,30 @@ export class CalloutService {
         );
     }
 
-    if (calloutUpdateData.group) callout.group = calloutUpdateData.group;
+    if (calloutUpdateData.group) {
+      this.updateCalloutDisplayLocationTagsetValue(
+        callout,
+        calloutUpdateData.group
+      );
+    }
 
     return await this.calloutRepository.save(callout);
+  }
+
+  updateCalloutDisplayLocationTagsetValue(
+    callout: ICallout,
+    group: CalloutDisplayLocation
+  ) {
+    const displayLocationTagset = callout.profile.tagsets?.find(
+      tagset => tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION
+    );
+    if (!displayLocationTagset) {
+      throw new EntityNotFoundException(
+        `Callout display location tagset not found for profile: ${callout.profile.id}`,
+        LogContext.TAGSET
+      );
+    }
+    displayLocationTagset.tags = [group];
   }
 
   async save(callout: ICallout): Promise<ICallout> {

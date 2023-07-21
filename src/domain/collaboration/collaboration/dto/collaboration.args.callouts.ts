@@ -1,6 +1,7 @@
 import { ArgsType, Field, Float } from '@nestjs/graphql';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { TagsetArgs } from '@common/args/tagset.args';
+import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 
 @ArgsType()
 export class CollaborationArgsCallouts {
@@ -35,12 +36,12 @@ export class CollaborationArgsCallouts {
   })
   sortByActivity?: boolean;
 
-  @Field(() => [String], {
+  @Field(() => [CalloutDisplayLocation], {
     name: 'groups',
     description: 'Return only Callouts from this group.',
     nullable: true,
   })
-  groups?: string[];
+  groups?: CalloutDisplayLocation[];
 
   @Field(() => [TagsetArgs], {
     name: 'tagsets',

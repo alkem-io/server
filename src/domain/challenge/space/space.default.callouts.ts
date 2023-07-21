@@ -1,9 +1,11 @@
+import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
+import { CommonDisplayLocation } from '@common/enums/common.display.location';
+import { SpaceDisplayLocation } from '@common/enums/space.display.location';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
-import { SpaceDisplayLocation } from '@src/migrations/1688193761861-classificationTagsets';
 
 export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
@@ -15,14 +17,14 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         '👋 Please share a few words about yourself to help the community get to know each other. What brings you to this Space and motivates you to work on these Challenges?',
       tagsets: [
         {
-          name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           tags: [SpaceDisplayLocation.COMMUNITY_LEFT],
         },
       ],
     },
     state: CalloutState.OPEN,
     sortOrder: 1,
-    group: 'COMMUNITY_1',
+    group: CalloutDisplayLocation.SPACE_COMMUNITY_LEFT,
   },
   {
     type: CalloutType.LINK_COLLECTION,
@@ -31,15 +33,15 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       description: 'Some quick links to get started 💥',
       tagsets: [
         {
-          name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
-          tags: [SpaceDisplayLocation.HOME_TOP],
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          tags: [CommonDisplayLocation.HOME_TOP],
         },
       ],
     },
     nameID: 'recommendations',
     state: CalloutState.CLOSED,
     sortOrder: 3,
-    group: 'HOME_0',
+    group: CalloutDisplayLocation.COMMON_HOME_TOP,
   },
   {
     type: CalloutType.POST,
@@ -48,15 +50,15 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       description: 'Please share it here :)',
       tagsets: [
         {
-          name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
-          tags: [SpaceDisplayLocation.HOME_RIGHT],
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          tags: [CommonDisplayLocation.HOME_RIGHT],
         },
       ],
     },
     nameID: 'suggestions',
     state: CalloutState.OPEN,
     sortOrder: 3,
-    group: 'HOME_2',
+    group: CalloutDisplayLocation.COMMON_HOME_RIGHT,
   },
   {
     type: CalloutType.POST_COLLECTION,
@@ -66,8 +68,8 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         '✍️ Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
       tagsets: [
         {
-          name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
-          tags: [SpaceDisplayLocation.KNOWEDGE_RIGHT],
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          tags: [CommonDisplayLocation.KNOWLEDGE_RIGHT],
         },
       ],
     },
@@ -84,7 +86,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
           'To share contributions with detailed explanations how they help.',
       },
     },
-    group: 'KNOWLEDGE',
+    group: CalloutDisplayLocation.COMMON_KNOWLEDGE_RIGHT,
   },
   {
     type: CalloutType.LINK_COLLECTION,
@@ -93,8 +95,8 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       description: 'Please add links to documents with reference material.💥',
       tagsets: [
         {
-          name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
-          tags: [SpaceDisplayLocation.KNOWEDGE_RIGHT],
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          tags: [CommonDisplayLocation.KNOWLEDGE_RIGHT],
         },
       ],
     },
@@ -119,12 +121,12 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         description: 'A blank whiteboard to be worked further.',
         tagsets: [
           {
-            name: TagsetReservedName.DISPLAY_LOCATION_SPACE,
-            tags: [SpaceDisplayLocation.KNOWEDGE_RIGHT],
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            tags: [CommonDisplayLocation.KNOWLEDGE_RIGHT],
           },
         ],
       },
     },
-    group: 'KNOWLEDGE',
+    group: CalloutDisplayLocation.COMMON_KNOWLEDGE_RIGHT,
   },
 ];

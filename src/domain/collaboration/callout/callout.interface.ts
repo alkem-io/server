@@ -26,12 +26,6 @@ export abstract class ICallout extends INameable {
   })
   visibility!: CalloutVisibility;
 
-  @Field(() => String, {
-    nullable: true,
-    description: 'Callout group.',
-  })
-  group?: string;
-
   @Field(() => [IPost], {
     nullable: true,
     description: 'The Posts associated with this Callout.',
