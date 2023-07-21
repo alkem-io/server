@@ -93,6 +93,13 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       displayName: 'Collaborate visually',
       description:
         '🎨 Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
+      tagsets: [
+        {
+          name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
+          type: TagsetType.SELECT_ONE,
+          tags: [ChallengeDisplayLocation.CONTRIBUTE],
+        },
+      ],
     },
     nameID: `${CalloutType.WHITEBOARD_COLLECTION}`,
     state: CalloutState.OPEN,
@@ -102,13 +109,6 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       profile: {
         displayName: 'blank whiteboard',
         description: 'A blank whiteboard to be worked further.',
-        tagsets: [
-          {
-            name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
-            type: TagsetType.SELECT_ONE,
-            tags: [ChallengeDisplayLocation.CONTRIBUTE],
-          },
-        ],
       },
     },
   },

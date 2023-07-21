@@ -66,13 +66,6 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         displayName: 'contribution',
         description:
           'To share contributions with detailed explanations how they help.',
-        tagsets: [
-          {
-            name: TagsetReservedName.DISPLAY_LOCATION_OPPORTUNITY,
-            type: TagsetType.SELECT_ONE,
-            tags: [OpportunityDisplayLocation.CONTRIBUTE_RIGHT],
-          },
-        ],
       },
     },
   },
@@ -82,6 +75,13 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       displayName: 'Collaborate visually',
       description:
         'Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
+      tagsets: [
+        {
+          name: TagsetReservedName.DISPLAY_LOCATION_OPPORTUNITY,
+          type: TagsetType.SELECT_ONE,
+          tags: [OpportunityDisplayLocation.CONTRIBUTE],
+        },
+      ],
     },
     nameID: `${CalloutType.WHITEBOARD_COLLECTION}`,
     state: CalloutState.OPEN,
@@ -91,13 +91,6 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       profile: {
         displayName: 'blank whiteboard',
         description: 'A blank whiteboard to be worked further.',
-        tagsets: [
-          {
-            name: TagsetReservedName.DISPLAY_LOCATION_OPPORTUNITY,
-            type: TagsetType.SELECT_ONE,
-            tags: [OpportunityDisplayLocation.CONTRIBUTE],
-          },
-        ],
       },
     },
   },
