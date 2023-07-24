@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
-  AuthorizationCredential,
   AuthorizationPrivilege,
   AuthorizationVerifiedCredential,
   LogContext,
@@ -30,7 +29,6 @@ import {
   CREDENTIAL_RULE_CHALLENGE_SPACE_ADMINS,
   CREDENTIAL_RULE_CHALLENGE_ADMINS,
   CREDENTIAL_RULE_CHALLENGE_MEMBER_READ,
-  CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW,
   CREDENTIAL_RULE_CHALLENGE_CREATE_OPPORTUNITY,
   CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY,
   CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN,
@@ -370,17 +368,6 @@ export class ChallengeAuthorizationService {
         CREDENTIAL_RULE_CHALLENGE_MEMBER_READ
       );
     rules.push(challengeMember);
-
-    const updateInnovationFlowRule =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.UPDATE_INNOVATION_FLOW],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-        ],
-        CREDENTIAL_RULE_TYPES_CHALLENGE_INNOVATION_FLOW
-      );
-    rules.push(updateInnovationFlowRule);
 
     if (
       this.communityPolicyService.getFlag(

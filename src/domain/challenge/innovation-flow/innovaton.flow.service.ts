@@ -3,6 +3,7 @@ import { LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ValidationException,
 } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -25,6 +26,12 @@ import { ILifecycle } from '@domain/common/lifecycle';
 import { InnovationFlowTemplateService } from '@domain/template/innovation-flow-template/innovation.flow.template.service';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
 import { UpdateInnovationFlowLifecycleTemplateInput } from './dto/innovation.flow.dto.update.lifecycle.template';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { UpdateProfileSelectTagsetInput } from '@domain/common/profile/dto/profile.dto.update.select.tagset';
+import { ITagset } from '@domain/common/tagset';
+import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
+import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
 
 @Injectable()
 export class InnovationFlowService {
@@ -32,13 +39,16 @@ export class InnovationFlowService {
     private profileService: ProfileService,
     private lifecycleService: LifecycleService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
+    private tagsetService: TagsetService,
+    private tagsetTemplateService: TagsetTemplateService,
     @InjectRepository(InnovationFlow)
     private innovationFlowRepository: Repository<InnovationFlow>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createInnovationFlow(
-    innovationFlowData: CreateInnovationFlowInput
+    innovationFlowData: CreateInnovationFlowInput,
+    tagsetTemplates: ITagsetTemplate[]
   ): Promise<IInnovationFlow> {
     if (innovationFlowData.innovationFlowTemplateID) {
       await this.innovationFlowTemplateService.validateInnovationFlowDefinitionOrFail(
@@ -58,7 +68,20 @@ export class InnovationFlowService {
     innovationFlow.spaceID = innovationFlowData.spaceID;
     innovationFlow.type = innovationFlowData.type;
 
-    innovationFlow.profile = await this.profileService.createProfile();
+    const tagsetInputs =
+      this.profileService.convertTagsetTemplatesToCreateTagsetInput(
+        tagsetTemplates
+      );
+
+    innovationFlowData.profile.tagsets =
+      this.profileService.updateProfileTagsetInputs(
+        innovationFlowData.profile.tagsets,
+        tagsetInputs
+      );
+    innovationFlow.profile = await this.profileService.createProfile(
+      innovationFlowData.profile
+    );
+
     await this.profileService.addVisualOnProfile(
       innovationFlow.profile,
       VisualType.CARD
@@ -89,9 +112,34 @@ export class InnovationFlowService {
     const innovationFlow = await this.getInnovationFlowOrFail(
       innovationFlowData.innovationFlowID,
       {
-        relations: ['profile'],
+        relations: ['profile', 'lifecycle'],
       }
     );
+
+    const visibleStates = innovationFlowData.visibleStates;
+    if (visibleStates && innovationFlow.lifecycle) {
+      const states = this.lifecycleService.getStates(innovationFlow.lifecycle);
+      for (const visibleState of visibleStates) {
+        if (!states.includes(visibleState)) {
+          throw new ValidationException(
+            `Provided set of visibleStates (${visibleStates}) has value '${visibleState}'
+            that is not in the Lifecycle states: ${states}`,
+            LogContext.CHALLENGES
+          );
+        }
+      }
+
+      const defaultSelectedValue = this.lifecycleService.getState(
+        innovationFlow.lifecycle
+      );
+      const updateData: UpdateProfileSelectTagsetInput = {
+        profileID: innovationFlow.profile.id,
+        allowedValues: innovationFlowData.visibleStates,
+        defaultSelectedValue: defaultSelectedValue,
+        tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
+      };
+      await this.profileService.updateSelectTagset(updateData);
+    }
 
     if (innovationFlowData.profileData) {
       innovationFlow.profile = await this.profileService.updateProfile(
@@ -99,8 +147,6 @@ export class InnovationFlowService {
         innovationFlowData.profileData
       );
     }
-
-    // tbd - create the lifecycle
 
     return await this.innovationFlowRepository.save(innovationFlow);
   }
@@ -148,6 +194,13 @@ export class InnovationFlowService {
         LogContext.CHALLENGES
       );
     return innovationFlow;
+  }
+
+  async getInnovationFlowStates(
+    innovationFlow: IInnovationFlow
+  ): Promise<string[]> {
+    const lifecycle = await this.getLifecycle(innovationFlow.id);
+    return await this.lifecycleService.getStates(lifecycle);
   }
 
   public async getProfile(
@@ -214,6 +267,78 @@ export class InnovationFlowService {
     innovationFlow.lifecycle.machineDef = JSON.stringify(machineConfig);
     innovationFlow.lifecycle.machineState = '';
 
-    return await this.innovationFlowRepository.save(innovationFlow);
+    const updatedInnovationFlow = await this.innovationFlowRepository.save(
+      innovationFlow
+    );
+    await this.updateStatesTagsetTemplateToMatchLifecycle(innovationFlow.id);
+    return updatedInnovationFlow;
+  }
+
+  async updateFlowStateTagsetTemplateForLifecycle(
+    innovationFlow: IInnovationFlow,
+    tagsetTemplate: ITagsetTemplate
+  ): Promise<ITagsetTemplate> {
+    if (!innovationFlow.lifecycle) {
+      throw new EntityNotInitializedException(
+        `Lifecycle or Profile of Innovation Flow (${innovationFlow.id}) not initialized`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    tagsetTemplate.allowedValues = this.lifecycleService.getStates(
+      innovationFlow.lifecycle
+    );
+    tagsetTemplate.defaultSelectedValue = this.lifecycleService.getState(
+      innovationFlow.lifecycle
+    );
+
+    return await this.tagsetTemplateService.save(tagsetTemplate);
+  }
+
+  async updateStateTagsetForLifecycle(
+    innovationFlow: IInnovationFlow,
+    stateTagset: ITagset
+  ): Promise<ITagset> {
+    if (!innovationFlow.lifecycle) {
+      throw new EntityNotInitializedException(
+        `Lifecycle or Profile of Innovation Flow (${innovationFlow.id}) not initialized`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    const state = this.lifecycleService.getState(innovationFlow.lifecycle);
+    stateTagset.tags = [state];
+
+    return await this.tagsetService.save(stateTagset);
+  }
+
+  async updateStatesTagsetTemplateToMatchLifecycle(
+    innovationFlowID: string
+  ): Promise<ITagset> {
+    const innovationFlow = await this.getInnovationFlowOrFail(
+      innovationFlowID,
+      {
+        relations: ['lifecycle', 'profile'],
+      }
+    );
+
+    if (!innovationFlow.lifecycle || !innovationFlow.profile) {
+      throw new EntityNotInitializedException(
+        `Lifecycle or Profile of Innovation Flow (${innovationFlow.id}) not initialized`,
+        LogContext.CHALLENGES
+      );
+    }
+
+    const states = this.lifecycleService.getStates(innovationFlow.lifecycle);
+    const state = this.lifecycleService.getState(innovationFlow.lifecycle);
+
+    const updateData: UpdateProfileSelectTagsetInput = {
+      profileID: innovationFlow.profile.id,
+      allowedValues: states,
+      tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
+      defaultSelectedValue: state,
+      tags: [state],
+    };
+    return await this.profileService.updateSelectTagset(updateData);
   }
 }

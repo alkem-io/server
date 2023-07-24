@@ -17,6 +17,7 @@ import { AgentInfo } from '@core/authentication/agent-info';
 import { Loader } from '@core/dataloader/decorators';
 import { CollaborationRelationsLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 
 @Resolver(() => ICollaboration)
 export class CollaborationResolverFields {
@@ -53,5 +54,20 @@ export class CollaborationResolverFields {
       args,
       agentInfo
     );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('tagsetTemplates', () => [ITagsetTemplate], {
+    nullable: true,
+    description: 'The tagset templates on this Collaboration.',
+  })
+  @Profiling.api
+  async tagsetTemplates(
+    @Parent() collaboration: Collaboration
+  ): Promise<ITagsetTemplate[]> {
+    const tagsetTemplateSet =
+      await this.collaborationService.getTagsetTemplatesSet(collaboration.id);
+    return tagsetTemplateSet.tagsetTemplates;
   }
 }

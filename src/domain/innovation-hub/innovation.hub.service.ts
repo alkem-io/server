@@ -7,7 +7,6 @@ import {
 } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { RestrictedTagsetNames } from '@domain/common/tagset';
 import { VisualType } from '@common/enums/visual.type';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IInnovationHub, InnovationHub, InnovationHubType } from './types';
@@ -16,6 +15,7 @@ import { InnovationHubAuthorizationService } from './innovation.hub.service.auth
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class InnovationHubService {
@@ -76,7 +76,7 @@ export class InnovationHubService {
     );
 
     await this.profileService.addTagsetOnProfile(hub.profile, {
-      name: RestrictedTagsetNames.DEFAULT,
+      name: TagsetReservedName.DEFAULT,
       tags: [],
     });
 

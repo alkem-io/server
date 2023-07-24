@@ -88,7 +88,7 @@ export const collaborationDefaults: any = {
       profile: {
         displayName: 'Collaborate visually',
         description:
-          'Collaborate visually using Whiteboardes. Create a new Whiteboard from a template, or explore Whiteboardes already created.',
+          'Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
       },
       nameID: `${CalloutType.WHITEBOARD_COLLECTION}`,
       visibility: CalloutVisibility.PUBLISHED,

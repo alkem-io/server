@@ -105,4 +105,12 @@ export class WhiteboardTemplateService {
   ): Promise<IWhiteboardTemplate> {
     return await this.whiteboardTemplateRepository.save(whiteboardTemplate);
   }
+
+  async getCountInTemplatesSet(templatesSetID: string): Promise<number> {
+    return await this.whiteboardTemplateRepository.countBy({
+      templatesSet: {
+        id: templatesSetID,
+      },
+    });
+  }
 }

@@ -28,7 +28,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy/authori
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class InnovationPackService {
@@ -58,7 +58,7 @@ export class InnovationPackService {
     );
 
     await this.profileService.addTagsetOnProfile(innovationPack.profile, {
-      name: RestrictedTagsetNames.DEFAULT,
+      name: TagsetReservedName.DEFAULT,
       tags: innovationPackData.tags ?? [],
     });
 
@@ -292,5 +292,24 @@ export class InnovationPackService {
       );
     }
     return organizations[0];
+  }
+
+  async getTemplatesCount(innovationPackID: string): Promise<number> {
+    const innovationPack = await this.getInnovationPackOrFail(
+      innovationPackID,
+      {
+        relations: {
+          templatesSet: true,
+        },
+      }
+    );
+    const templatesSetId = innovationPack.templatesSet?.id;
+    if (!templatesSetId) {
+      throw new EntityNotFoundException(
+        `TemplatesSet for InnovationPack ${innovationPackID} not found!`,
+        LogContext.CHALLENGES
+      );
+    }
+    return await this.templatesSetService.getTemplatesCount(templatesSetId);
   }
 }

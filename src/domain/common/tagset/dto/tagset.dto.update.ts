@@ -9,7 +9,6 @@ export class UpdateTagsetInput extends UpdateBaseAlkemioInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   name?: string;
 
-  @Field(() => [String], { nullable: true })
-  @IsOptional()
-  tags?: string[];
+  @Field(() => [String], { nullable: false })
+  tags!: string[];
 }

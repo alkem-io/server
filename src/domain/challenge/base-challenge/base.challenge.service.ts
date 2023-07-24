@@ -28,9 +28,9 @@ import { ICommunityPolicyDefinition } from '@domain/community/community-policy/c
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { IProfile } from '@domain/common/profile';
 import { VisualType } from '@common/enums/visual.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class BaseChallengeService {
@@ -76,7 +76,7 @@ export class BaseChallengeService {
       baseChallengeData.profileData
     );
     await this.profileService.addTagsetOnProfile(baseChallenge.profile, {
-      name: RestrictedTagsetNames.DEFAULT,
+      name: TagsetReservedName.DEFAULT,
       tags: baseChallengeData.tags,
     });
     // add the visuals
@@ -94,7 +94,7 @@ export class BaseChallengeService {
     );
 
     baseChallenge.collaboration =
-      await this.collaborationService.createCollaboration(communityType);
+      await this.collaborationService.createCollaboration();
 
     baseChallenge.agent = await this.agentService.createAgent({
       parentDisplayID: `${baseChallenge.nameID}`,
@@ -146,7 +146,6 @@ export class BaseChallengeService {
           'collaboration',
           'community',
           'context',
-          'lifecycle',
           'agent',
           'profile',
         ],
@@ -338,7 +337,7 @@ export class BaseChallengeService {
     return await this.collaborationService.getPostsCount(collaboration);
   }
 
-  public async getWhiteboardesCount(
+  public async getWhiteboardsCount(
     baseChallenge: IBaseChallenge,
     repository: Repository<BaseChallenge>
   ): Promise<number> {
@@ -346,7 +345,7 @@ export class BaseChallengeService {
       baseChallenge.id,
       repository
     );
-    return await this.collaborationService.getWhiteboardesCount(collaboration);
+    return await this.collaborationService.getWhiteboardsCount(collaboration);
   }
 
   public async getRelationsCount(

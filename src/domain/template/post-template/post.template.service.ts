@@ -93,4 +93,12 @@ export class PostTemplateService {
   async save(postTemplate: IPostTemplate): Promise<IPostTemplate> {
     return await this.postTemplateRepository.save(postTemplate);
   }
+
+  async getCountInTemplatesSet(templatesSetID: string): Promise<number> {
+    return await this.postTemplateRepository.countBy({
+      templatesSet: {
+        id: templatesSetID,
+      },
+    });
+  }
 }

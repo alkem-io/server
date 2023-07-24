@@ -160,6 +160,15 @@ export class LifecycleService {
     return state.value.toString();
   }
 
+  getStates(lifecycle: ILifecycle): string[] {
+    const machineDef = this.deserializeLifecycleDefinition(
+      lifecycle.machineDef
+    );
+    const machine = createMachine(machineDef);
+    const states = machine.states;
+    return Object.keys(states);
+  }
+
   isFinalState(lifecycle: ILifecycle): boolean {
     const restoredState = this.getRestoredState(lifecycle);
     const isFinal = restoredState.done;

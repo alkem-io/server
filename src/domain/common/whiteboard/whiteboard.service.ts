@@ -20,7 +20,7 @@ import { IProfile } from '../profile/profile.interface';
 import { ProfileService } from '../profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { IVisual } from '../visual';
-import { RestrictedTagsetNames } from '../tagset/tagset.entity';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class WhiteboardService {
@@ -48,7 +48,7 @@ export class WhiteboardService {
       VisualType.CARD
     );
     await this.profileService.addTagsetOnProfile(whiteboard.profile, {
-      name: RestrictedTagsetNames.DEFAULT,
+      name: TagsetReservedName.DEFAULT,
       tags: [],
     });
 
@@ -210,7 +210,7 @@ export class WhiteboardService {
     return whiteboardWithCheckout.checkout;
   }
 
-  async getWhiteboardesInCalloutCount(calloutId: string): Promise<number> {
+  async getWhiteboardsInCalloutCount(calloutId: string): Promise<number> {
     return await this.whiteboardRepository.countBy({
       callout: { id: calloutId },
     });

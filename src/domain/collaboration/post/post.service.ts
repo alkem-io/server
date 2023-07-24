@@ -17,10 +17,10 @@ import { UpdatePostInput } from './dto/post.dto.update';
 import { CreatePostInput } from './dto/post.dto.create';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { RestrictedTagsetNames } from '@domain/common/tagset/tagset.entity';
 import { VisualType } from '@common/enums/visual.type';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Injectable()
 export class PostService {
@@ -47,7 +47,7 @@ export class PostService {
     );
     await this.profileService.addVisualOnProfile(post.profile, VisualType.CARD);
     await this.profileService.addTagsetOnProfile(post.profile, {
-      name: RestrictedTagsetNames.DEFAULT,
+      name: TagsetReservedName.DEFAULT,
       tags: postInput.tags || [],
     });
     post.authorization = new AuthorizationPolicy();

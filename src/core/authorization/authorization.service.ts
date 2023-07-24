@@ -29,7 +29,7 @@ export class AuthorizationService {
     const auth = this.validateAuthorization(authorization);
     if (this.isAccessGranted(agentInfo, auth, privilegeRequired)) return true;
 
-    const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg}`;
+    const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg} user: ${agentInfo.userID}`;
     this.logCredentialCheckFailDetails(errorMsg, agentInfo, auth);
 
     // If get to here then no match was found
@@ -87,7 +87,12 @@ export class AuthorizationService {
     authorization: IAuthorizationPolicy | undefined,
     privilegeRequired: AuthorizationPrivilege
   ): boolean {
-    if (!authorization) throw new Error();
+    if (!authorization) {
+      throw new ForbiddenException(
+        'Authorization: no definition provided',
+        LogContext.AUTH_POLICY
+      );
+    }
     if (
       authorization.anonymousReadAccess &&
       privilegeRequired === AuthorizationPrivilege.READ

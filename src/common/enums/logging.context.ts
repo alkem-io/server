@@ -38,4 +38,5 @@ export enum LogContext {
   CALENDAR = 'calendar',
   INNOVATION_HUB = 'innovation-hub',
   CHAT_GUIDANCE = 'chat-guidance',
+  TAGSET = 'tagset',
 }
