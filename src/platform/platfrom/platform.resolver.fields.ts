@@ -9,13 +9,30 @@ import { IInnovationHub } from '@domain/innovation-hub/types';
 import { IPlatform } from './platform.interface';
 import { PlatformService } from './platform.service';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
+import { IConfig } from '@platform/configuration/config/config.interface';
+import { KonfigService } from '@platform/configuration/config/config.service';
+import { IMetadata } from '@platform/metadata/metadata.interface';
+import { MetadataService } from '@platform/metadata/metadata.service';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
   constructor(
     private platformService: PlatformService,
-    private innovationHubService: InnovationHubService
+    private configService: KonfigService,
+    private metadataService: MetadataService,
+    private innovationHubService: InnovationHubService,
+    private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
   ) {}
+
+  @ResolveField(() => IAuthorizationPolicy, {
+    nullable: false,
+    description: 'The authorization policy for the platform',
+  })
+  authorization(): IAuthorizationPolicy {
+    return this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+  }
 
   @ResolveField('library', () => ILibrary, {
     nullable: false,
@@ -71,5 +88,22 @@ export class PlatformResolverFields {
       subdomain: args.subdomain,
       idOrNameId: args.id,
     });
+  }
+
+  @ResolveField(() => IConfig, {
+    description:
+      'Alkemio configuration. Provides configuration to external services in the Alkemio ecosystem.',
+    nullable: false,
+  })
+  public async configuration(): Promise<IConfig> {
+    return await this.configService.getConfig();
+  }
+
+  @ResolveField(() => IMetadata, {
+    description: 'Alkemio Services Metadata.',
+    nullable: false,
+  })
+  public async metadata(): Promise<IMetadata> {
+    return await this.metadataService.getMetadata();
   }
 }
