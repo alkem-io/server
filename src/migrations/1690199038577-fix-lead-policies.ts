@@ -32,7 +32,11 @@ export class fixLeadPolicies1690199038577 implements MigrationInterface {
     }
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {}
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    console.warn(
+      "Migration 'fixLeadPolicies1690199038577' is not revertible. Please make sure you have a backup of your data before running this migration."
+    );
+  }
 }
 
 type communityRolePolicy = {
