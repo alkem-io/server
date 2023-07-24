@@ -24,7 +24,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     },
     state: CalloutState.OPEN,
     sortOrder: 1,
-    group: CalloutDisplayLocation.SPACE_COMMUNITY_LEFT,
+    group: CalloutDisplayLocation.COMMUNITY_LEFT,
   },
   {
     type: CalloutType.LINK_COLLECTION,
@@ -41,7 +41,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     nameID: 'recommendations',
     state: CalloutState.CLOSED,
     sortOrder: 3,
-    group: CalloutDisplayLocation.COMMON_HOME_TOP,
+    group: CalloutDisplayLocation.HOME_TOP,
   },
   {
     type: CalloutType.POST,
@@ -58,7 +58,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     nameID: 'suggestions',
     state: CalloutState.OPEN,
     sortOrder: 3,
-    group: CalloutDisplayLocation.COMMON_HOME_RIGHT,
+    group: CalloutDisplayLocation.HOME_RIGHT,
   },
   {
     type: CalloutType.POST_COLLECTION,
@@ -86,7 +86,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
           'To share contributions with detailed explanations how they help.',
       },
     },
-    group: CalloutDisplayLocation.COMMON_KNOWLEDGE_RIGHT,
+    group: CalloutDisplayLocation.KNOWLEDGE,
   },
   {
     type: CalloutType.LINK_COLLECTION,
@@ -127,6 +127,6 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         ],
       },
     },
-    group: CalloutDisplayLocation.COMMON_KNOWLEDGE_RIGHT,
+    group: CalloutDisplayLocation.KNOWLEDGE,
   },
 ];
