@@ -18,7 +18,7 @@ export class fixLeadPolicies1690199038577 implements MigrationInterface {
         ...oldLeadRolePolicy,
         credential: {
           type: AuthorizationCredential.SPACE_LEAD,
-          resourceID: '',
+          resourceID: oldLeadRolePolicy.credential.resourceID,
         },
       };
       const newLeadPolicyStr = JSON.stringify(newLeadRolePolicy);
