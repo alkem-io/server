@@ -4,6 +4,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { SpaceDisplayLocation } from '@common/enums/space.display.location';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
 
@@ -18,6 +19,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
           tags: [SpaceDisplayLocation.COMMUNITY_LEFT],
         },
       ],
@@ -34,6 +36,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
           tags: [CommonDisplayLocation.HOME_TOP],
         },
       ],
@@ -51,6 +54,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
           tags: [CommonDisplayLocation.HOME_RIGHT],
         },
       ],
@@ -69,7 +73,8 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          tags: [CommonDisplayLocation.KNOWLEDGE_RIGHT],
+          type: TagsetType.SELECT_ONE,
+          tags: [CommonDisplayLocation.KNOWLEDGE],
         },
       ],
     },
@@ -96,7 +101,8 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          tags: [CommonDisplayLocation.KNOWLEDGE_RIGHT],
+          type: TagsetType.SELECT_ONE,
+          tags: [CommonDisplayLocation.KNOWLEDGE],
         },
       ],
     },
@@ -110,6 +116,13 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       displayName: 'Collaborate visually',
       description:
         '🎨 Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [CommonDisplayLocation.KNOWLEDGE],
+        },
+      ],
     },
     nameID: `${CalloutType.WHITEBOARD_COLLECTION}`,
     state: CalloutState.OPEN,
@@ -119,12 +132,6 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       profile: {
         displayName: 'blank whiteboard',
         description: 'A blank whiteboard to be worked further.',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-            tags: [CommonDisplayLocation.KNOWLEDGE_RIGHT],
-          },
-        ],
       },
     },
     group: CalloutDisplayLocation.KNOWLEDGE,

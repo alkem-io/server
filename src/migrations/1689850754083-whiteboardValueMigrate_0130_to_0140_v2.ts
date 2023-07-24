@@ -1,12 +1,7 @@
+import { decompressText, compressText } from '@common/utils/compression.util';
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import { compressText, decompressText } from '@common/utils/compression.util';
 
-// https://github.com/excalidraw/excalidraw/releases/tag/v0.14.0
-// strokeSharpness renamed to roundness and value changed
-// strokeSharpness = 'sharp' changed to roundness = null
-// strokeSharpness = 'round' changed to roundness = { type: 3 }
-
-export class whiteboardValueMigrate_0130_to_0140_1688038845654
+export class whiteboardValueMigrate0130To0140V21689850754083
   implements MigrationInterface
 {
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -142,10 +137,6 @@ const migrateValueAndCompress = async (compressedValue: string) => {
   }
 
   for (const element of canvasValue.elements) {
-    if (element.type === 'text') {
-      continue;
-    }
-
     if (element.strokeSharpness) {
       if (element.roundness) {
         delete element.strokeSharpness;
@@ -154,6 +145,17 @@ const migrateValueAndCompress = async (compressedValue: string) => {
       element.roundness =
         element.strokeSharpness === 'sharp' ? null : { type: 3 };
       delete element.strokeSharpness;
+    }
+
+    if (element.type === 'text') {
+      element.frameId = element.frameId === undefined ? null : element.frameId;
+      element.boundElements =
+        element.boundElements === undefined ? null : element.boundElements;
+      element.link = element.link === undefined ? null : element.link;
+      element.isFrameName =
+        element.isFrameName === undefined ? false : element.isFrameName;
+      element.lineHeight =
+        element.lineHeight === undefined ? 1.25 : element.lineHeight;
     }
   }
 
@@ -184,13 +186,22 @@ const migrateDownValueAndCompress = async (compressedValue: string) => {
   }
 
   for (const element of canvasValue.elements) {
-    if (element.type === 'text') {
-      continue;
+    if (element.roundness) {
+      if (element.strokeSharpness) {
+        delete element.roundness;
+        continue;
+      }
+      element.strokeSharpness =
+        element.roundness?.type === 3 ? 'round' : 'sharp';
+      delete element.strokeSharpness;
     }
 
-    if (element.roundness) {
-      element.strokeShaprness =
-        element.roundess === null ? 'sharp' : { type: 3 };
+    if (element.type === 'text') {
+      delete element.frameId;
+      delete element.boundElements;
+      delete element.link;
+      delete element.lineHeight;
+      delete element.isFrameName;
     }
   }
 

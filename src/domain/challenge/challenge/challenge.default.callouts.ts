@@ -3,6 +3,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { ChallengeDisplayLocation } from '@common/enums/challenge.display.location';
 import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
 
@@ -16,6 +17,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
           tags: [CommonDisplayLocation.HOME_LEFT],
         },
       ],
@@ -32,6 +34,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
           tags: [CommonDisplayLocation.HOME_TOP],
         },
       ],
@@ -48,6 +51,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
           tags: [CommonDisplayLocation.HOME_RIGHT],
         },
       ],
@@ -65,6 +69,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
           tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
         },
       ],
@@ -92,6 +97,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
           tags: [ChallengeDisplayLocation.CONTRIBUTE],
         },
       ],

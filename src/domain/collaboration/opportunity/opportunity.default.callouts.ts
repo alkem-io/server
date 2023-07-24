@@ -3,6 +3,7 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
 
@@ -15,6 +16,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
           tags: [CommonDisplayLocation.HOME_TOP],
         },
       ],
@@ -28,6 +30,13 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     profile: {
       displayName: 'Suggestions, Questions, and Feedback',
       description: 'Please share it here :)',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [CommonDisplayLocation.HOME_RIGHT],
+        },
+      ],
     },
     nameID: 'suggestions',
     state: CalloutState.OPEN,
@@ -42,6 +51,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
           tags: [OpportunityDisplayLocation.CONTRIBUTE_RIGHT],
         },
       ],
@@ -57,12 +67,6 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         displayName: 'contribution',
         description:
           'To share contributions with detailed explanations how they help.',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-            tags: [OpportunityDisplayLocation.CONTRIBUTE_RIGHT],
-          },
-        ],
       },
     },
   },
@@ -72,6 +76,13 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       displayName: 'Collaborate visually',
       description:
         'Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [OpportunityDisplayLocation.CONTRIBUTE],
+        },
+      ],
     },
     nameID: `${CalloutType.WHITEBOARD_COLLECTION}`,
     state: CalloutState.OPEN,
@@ -81,12 +92,6 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       profile: {
         displayName: 'blank whiteboard',
         description: 'A blank whiteboard to be worked further.',
-        tagsets: [
-          {
-            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-            tags: [OpportunityDisplayLocation.CONTRIBUTE],
-          },
-        ],
       },
     },
   },

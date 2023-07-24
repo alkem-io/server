@@ -128,9 +128,14 @@ export class InnovationFlowService {
           );
         }
       }
+
+      const defaultSelectedValue = this.lifecycleService.getState(
+        innovationFlow.lifecycle
+      );
       const updateData: UpdateProfileSelectTagsetInput = {
         profileID: innovationFlow.profile.id,
         allowedValues: innovationFlowData.visibleStates,
+        defaultSelectedValue: defaultSelectedValue,
         tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
       };
       await this.profileService.updateSelectTagset(updateData);
@@ -262,7 +267,11 @@ export class InnovationFlowService {
     innovationFlow.lifecycle.machineDef = JSON.stringify(machineConfig);
     innovationFlow.lifecycle.machineState = '';
 
-    return await this.innovationFlowRepository.save(innovationFlow);
+    const updatedInnovationFlow = await this.innovationFlowRepository.save(
+      innovationFlow
+    );
+    await this.updateStatesTagsetTemplateToMatchLifecycle(innovationFlow.id);
+    return updatedInnovationFlow;
   }
 
   async updateFlowStateTagsetTemplateForLifecycle(
@@ -327,6 +336,7 @@ export class InnovationFlowService {
       profileID: innovationFlow.profile.id,
       allowedValues: states,
       tagsetName: TagsetReservedName.FLOW_STATE.valueOf(),
+      defaultSelectedValue: state,
       tags: [state],
     };
     return await this.profileService.updateSelectTagset(updateData);

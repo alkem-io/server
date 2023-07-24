@@ -134,7 +134,7 @@ export class SpaceService {
       name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
       type: TagsetType.SELECT_ONE,
       allowedValues: locations,
-      defaultSelectedValue: CommonDisplayLocation.KNOWLEDGE_RIGHT,
+      defaultSelectedValue: CommonDisplayLocation.KNOWLEDGE,
     };
     await this.collaborationService.addTagsetTemplate(
       space.collaboration,
