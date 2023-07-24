@@ -1,7 +1,5 @@
-import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import { escapeString } from './utils/escape-string';
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
 
 export class fixLeadPolicies1690199038577 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -17,7 +15,7 @@ export class fixLeadPolicies1690199038577 implements MigrationInterface {
       const newLeadRolePolicy: communityRolePolicy = {
         ...oldLeadRolePolicy,
         credential: {
-          type: AuthorizationCredential.SPACE_LEAD,
+          type: oldLeadRolePolicy.credential.type.replace('host', 'lead'),
           resourceID: oldLeadRolePolicy.credential.resourceID,
         },
       };
