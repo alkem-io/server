@@ -26,9 +26,9 @@ export class PlatformResolverFields {
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
   ) {}
 
-  @ResolveField(() => IAuthorizationPolicy, {
-    nullable: false,
+  @ResolveField('authorization', () => IAuthorizationPolicy, {
     description: 'The authorization policy for the platform',
+    nullable: false,
   })
   authorization(): IAuthorizationPolicy {
     return this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
@@ -51,7 +51,7 @@ export class PlatformResolverFields {
   }
 
   @ResolveField('storageBucket', () => IStorageBucket, {
-    nullable: true,
+    nullable: false,
     description:
       'The StorageBucket with documents in use by Users + Organizations on the Platform.',
   })
@@ -60,6 +60,7 @@ export class PlatformResolverFields {
   }
 
   @ResolveField(() => [IInnovationHub], {
+    nullable: false,
     description: 'List of Innovation Hubs on the platform',
   })
   public innovationHubs(): Promise<IInnovationHub[]> {
