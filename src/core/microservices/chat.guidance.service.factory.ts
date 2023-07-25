@@ -4,7 +4,7 @@ import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 
-export async function notificationsServiceFactory(
+export async function chatGuidanceServiceFactory(
   logger: LoggerService,
   configService: ConfigService
 ): Promise<any> {
