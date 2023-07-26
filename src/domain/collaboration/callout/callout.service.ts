@@ -125,8 +125,11 @@ export class CalloutService {
       calloutData.profile
     );
 
-    if (calloutData.group) {
-      this.updateCalloutDisplayLocationTagsetValue(callout, calloutData.group);
+    if (calloutData.displayLocation) {
+      this.updateCalloutDisplayLocationTagsetValue(
+        callout,
+        calloutData.displayLocation
+      );
     }
 
     if (calloutData.type == CalloutType.POST_COLLECTION && postTemplateData) {
@@ -288,10 +291,10 @@ export class CalloutService {
         );
     }
 
-    if (calloutUpdateData.group) {
+    if (calloutUpdateData.displayLocation) {
       this.updateCalloutDisplayLocationTagsetValue(
         callout,
-        calloutUpdateData.group
+        calloutUpdateData.displayLocation
       );
     }
 

@@ -35,5 +35,5 @@ export class UpdateCalloutInput extends UpdateNameableInput {
     nullable: true,
     description: 'Set display location for this Callout.',
   })
-  group?: CalloutDisplayLocation;
+  displayLocation?: CalloutDisplayLocation;
 }

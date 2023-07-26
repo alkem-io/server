@@ -38,7 +38,7 @@ export class CreateCalloutInput {
     nullable: true,
     description: 'Set callout display location for this Callout.',
   })
-  group?: CalloutDisplayLocation;
+  displayLocation?: CalloutDisplayLocation;
 
   @Field(() => Number, {
     nullable: true,

@@ -26,7 +26,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     },
     state: CalloutState.OPEN,
     sortOrder: 1,
-    group: CalloutDisplayLocation.COMMUNITY_LEFT,
+    displayLocation: CalloutDisplayLocation.COMMUNITY_LEFT,
   },
   {
     type: CalloutType.LINK_COLLECTION,
@@ -44,7 +44,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     nameID: 'recommendations',
     state: CalloutState.CLOSED,
     sortOrder: 3,
-    group: CalloutDisplayLocation.HOME_TOP,
+    displayLocation: CalloutDisplayLocation.HOME_TOP,
   },
   {
     type: CalloutType.POST,
@@ -62,7 +62,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     nameID: 'suggestions',
     state: CalloutState.OPEN,
     sortOrder: 3,
-    group: CalloutDisplayLocation.HOME_RIGHT,
+    displayLocation: CalloutDisplayLocation.HOME_RIGHT,
   },
   {
     type: CalloutType.POST_COLLECTION,
@@ -91,7 +91,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
           'To share contributions with detailed explanations how they help.',
       },
     },
-    group: CalloutDisplayLocation.KNOWLEDGE,
+    displayLocation: CalloutDisplayLocation.KNOWLEDGE,
   },
   {
     type: CalloutType.LINK_COLLECTION,
@@ -134,6 +134,6 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         description: 'A blank whiteboard to be worked further.',
       },
     },
-    group: CalloutDisplayLocation.KNOWLEDGE,
+    displayLocation: CalloutDisplayLocation.KNOWLEDGE,
   },
 ];
