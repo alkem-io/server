@@ -304,7 +304,7 @@ services:
     depends_on:
       - rabbitmq
     hostname: chatbot
-    image: pocgenaiapi:v0.1.1
+    image: pocgenaiapi:v0.1.2
     restart: always
     networks:
       - alkemio_dev_net
