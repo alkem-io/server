@@ -21,7 +21,7 @@ export class ChatGuidanceService {
     });
   }
 
-  public async resetUser(
+  public async resetUserHistory(
     agentInfo: AgentInfo
   ): Promise<IChatGuidanceResult | undefined> {
     return this.chatGuidanceAdapter.sendReset({

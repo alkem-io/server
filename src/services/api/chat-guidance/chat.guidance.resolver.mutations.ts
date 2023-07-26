@@ -23,7 +23,7 @@ export class ChatGuidanceResolverMutations {
   async resetChatGuidance(
     @CurrentUser() agentInfo: AgentInfo
   ): Promise<IChatGuidanceResult | undefined> {
-    return this.chatGuidanceService.resetUser(agentInfo);
+    return this.chatGuidanceService.resetUserHistory(agentInfo);
   }
 
   @UseGuards(GraphqlGuard)
