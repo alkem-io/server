@@ -36,6 +36,8 @@ import {
 } from '@domain/common/tagset-template';
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
 import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 
 @Injectable()
 export class CollaborationService {
@@ -310,9 +312,16 @@ export class CollaborationService {
 
     // Filter by Callout group
     let availableCallouts =
-      args.groups && args.groups.length
-        ? readableCallouts.filter(
-            callout => callout.group && args.groups?.includes(callout.group)
+      args.displayLocations && args.displayLocations.length
+        ? readableCallouts.filter(callout =>
+            callout.profile.tagsets?.some(
+              tagset =>
+                tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION &&
+                tagset.tags.length > 0 &&
+                args.displayLocations?.includes(
+                  tagset.tags[0] as CalloutDisplayLocation
+                )
+            )
           )
         : readableCallouts;
 
@@ -332,7 +341,7 @@ export class CollaborationService {
               )
             )
           )
-        : availableCallouts;
+        : readableCallouts;
 
     // parameter order: (a) by IDs (b) by activity (c) shuffle (d) sort order
     // (a) by IDs, results in order specified by IDs
