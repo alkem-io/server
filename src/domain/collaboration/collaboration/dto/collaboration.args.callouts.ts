@@ -38,7 +38,7 @@ export class CollaborationArgsCallouts {
 
   @Field(() => [CalloutDisplayLocation], {
     name: 'displayLocations',
-    description: 'Return only Callouts with this display location values.',
+    description: 'Return only Callouts with these display location values.',
     nullable: true,
   })
   displayLocations?: CalloutDisplayLocation[];
