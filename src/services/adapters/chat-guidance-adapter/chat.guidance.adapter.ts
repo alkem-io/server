@@ -1,11 +1,16 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ChatGuidanceQuestionResponse } from './dto/chat.guidance.adapter.dto.question.response';
+import { ChatGuidanceQuestionResponse as ChatGuidanceQueryResponse } from './dto/chat.guidance.adapter.dto.question.response';
 import { ChatGuidanceEventType } from './chat.guidance.event.type';
 import { ChatGuidanceInputQuery } from './dto/chat.guidance.dto.input.query';
 import { CHAT_GUIDANCE_SERVICE } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { IChatGuidanceResult } from '@services/api/chat-guidance/dto/chat.guidance.result.dto';
+import { LogContext } from '@common/enums';
+import { ChatGuidanceInputBase } from './dto/chat.guidance.dto.input.base';
+import { ChatGuidanceBaseResponse } from './dto/chat.guidance.adapter.dto.base.response';
+import { IChatGuidanceQueryResult } from '@services/api/chat-guidance/dto/chat.guidance.query.result.dto';
 
 @Injectable()
 export class ChatGuidanceAdapter {
@@ -15,63 +20,87 @@ export class ChatGuidanceAdapter {
     private readonly logger: LoggerService
   ) {}
 
-  async sendQuery(eventData: ChatGuidanceInputQuery): Promise<any> {
-    const message = {
-      operation: 'query',
-      param: eventData,
-    };
+  async sendQuery(
+    eventData: ChatGuidanceInputQuery
+  ): Promise<IChatGuidanceQueryResult | undefined> {
     const response = this.chatGuidanceClient.send(
       { cmd: ChatGuidanceEventType.QUERY },
-      message
+      eventData
     );
 
     try {
-      const responseData = await firstValueFrom<ChatGuidanceQuestionResponse>(
+      const responseData = await firstValueFrom<ChatGuidanceQueryResponse>(
         response
       );
       const message = responseData.result;
+      let cleanedString = message;
+      // Check if response is a string containing stringified JSON
+      if (typeof message === 'string' && message.startsWith('{')) {
+        cleanedString = message.replace(/\\\\n/g, ' ').replace(/\\\\/g, '\\');
+      }
 
-      return message;
-    } catch (err: any) {}
+      const jsonObject = JSON.parse(cleanedString);
+      const result: IChatGuidanceQueryResult = {
+        ...jsonObject,
+      };
+      return result;
+    } catch (err: any) {
+      this.logger.error(
+        `Could not send query to chat guidance adapter! ${err}`,
+        LogContext.CHAT_GUIDANCE
+      );
+    }
   }
 
-  async sendReset(user_id: string): Promise<any> {
-    const message = {
-      operation: 'reset',
-    };
-    return this.chatGuidanceClient.send({ cmd: user_id }, message).toPromise();
+  async sendReset(
+    eventData: ChatGuidanceInputBase
+  ): Promise<IChatGuidanceResult | undefined> {
+    const response = this.chatGuidanceClient.send(
+      { cmd: ChatGuidanceEventType.RESET },
+      eventData
+    );
+
+    try {
+      const responseData = await firstValueFrom<ChatGuidanceBaseResponse>(
+        response
+      );
+
+      const result: IChatGuidanceResult = {
+        answer: responseData.result,
+      };
+
+      return result;
+    } catch (err: any) {
+      this.logger.error(
+        `Could not send reset to chat guidance adapter! ${err}`,
+        LogContext.CHAT_GUIDANCE
+      );
+      return undefined;
+    }
   }
 
   async sendIngest(): Promise<any> {
-    const message = {
-      operation: 'ingest',
-    };
-    return this.chatGuidanceClient
-      .send({ cmd: 'any_user_id' }, message)
-      .toPromise();
+    const response = this.chatGuidanceClient.send(
+      { cmd: ChatGuidanceEventType.INGEST },
+      {}
+    );
+
+    try {
+      const responseData = await firstValueFrom<ChatGuidanceBaseResponse>(
+        response
+      );
+
+      const result: IChatGuidanceResult = {
+        answer: responseData.result,
+      };
+
+      return result;
+    } catch (err: any) {
+      this.logger.error(
+        `Could not send ingest to chat guidance adapter! ${err}`,
+        LogContext.CHAT_GUIDANCE
+      );
+      return undefined;
+    }
   }
-
-  // async askQuestion(
-  //   eventData: ChatGuidanceInputQuery
-  // ): Promise<ChatGuidanceQuestionResponse> {
-  //   const event = ChatGuidanceEventType.QUERY;
-  //   this.logEventTriggered(eventData, event);
-
-  //   const response = `${eventData.question}`;
-  //   return {
-  //     result: response,
-  //   };
-  // }
-
-  // private logEventTriggered(
-  //   eventData: ChatGuidanceInputBase,
-  //   eventType: ChatGuidanceEventType
-  // ) {
-  //   // Stringify without authorization information
-  //   const loggedData = stringifyWithoutAuthorization(eventData);
-  //   this.logger.verbose?.(
-  //     `[${eventType}] - received: ${loggedData}`,
-  //     LogContext.NOTIFICATIONS
-  //   );
-  // }
 }

@@ -19,7 +19,7 @@ export async function chatGuidanceServiceFactory(
       queue: MessagingQueue.CHAT_GUIDANCE,
       queueOptions: {
         // the queue will survive a broker restart
-        durable: true,
+        durable: false,
       },
       noAck: false,
     };

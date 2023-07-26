@@ -1,5 +1,5 @@
 export enum MessagingQueue {
-  CHAT_GUIDANCE = 'alkemio-chatbot-request',
+  CHAT_GUIDANCE = 'alkemio-chat-guidance',
   WALLET_MANAGER = 'alkemio-wallet-manager',
   NOTIFICATIONS = 'alkemio-notifications',
   MATRIX_ADAPTER = 'alkemio-matrix-adapter',

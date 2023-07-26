@@ -298,3 +298,20 @@ services:
       - alkemio_dev_net
     ports:
       - 6379
+
+  chatbot:
+    container_name: alkemio_dev_chatbot
+    hostname: chatbot
+    image: pocgenaiapi:v0.0.6
+    restart: always
+    networks:
+      - alkemio_dev_net
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - ENVIRONMENT=dev
+      - OPENAI_API_KEY
+      - OPENAI_API_TYPE
+      - OPENAI_API_VERSION
+      - OPENAI_API_BASE
