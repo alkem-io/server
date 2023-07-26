@@ -310,7 +310,7 @@ export class CollaborationService {
       this.hasAgentAccessToCallout(callout, agentInfo)
     );
 
-    // Filter by Callout group
+    // Filter by Callout display locations
     let availableCallouts =
       args.displayLocations && args.displayLocations.length
         ? readableCallouts.filter(callout =>
@@ -327,7 +327,7 @@ export class CollaborationService {
 
     availableCallouts =
       args.tagsets && args.tagsets.length
-        ? readableCallouts.filter(callout =>
+        ? availableCallouts.filter(callout =>
             // ANY of the callouts tagset
             callout.profile?.tagsets?.some(calloutTagset =>
               // to contain ANY of the tagsets defined in the filter
@@ -341,7 +341,7 @@ export class CollaborationService {
               )
             )
           )
-        : readableCallouts;
+        : availableCallouts;
 
     // parameter order: (a) by IDs (b) by activity (c) shuffle (d) sort order
     // (a) by IDs, results in order specified by IDs
