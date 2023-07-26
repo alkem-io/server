@@ -305,16 +305,16 @@ export class CollaborationService {
       );
     }
 
-    // First filter the callouts the current user has READ privilege to
-    const readableCallouts = allCallouts.filter(callout =>
-      this.hasAgentAccessToCallout(callout, agentInfo)
-    );
+    // Single pass filter operation
+    const availableCallouts = allCallouts.filter(callout => {
+      // Check for READ privilege
+      const hasAccess = this.hasAgentAccessToCallout(callout, agentInfo);
+      if (!hasAccess) return false;
 
-    // Filter by Callout display locations
-    let availableCallouts =
-      args.displayLocations && args.displayLocations.length
-        ? readableCallouts.filter(callout =>
-            callout.profile.tagsets?.some(
+      // Filter by Callout display locations
+      const locationCheck =
+        args.displayLocations && args.displayLocations.length
+          ? callout.profile.tagsets?.some(
               tagset =>
                 tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION &&
                 tagset.tags.length > 0 &&
@@ -322,26 +322,26 @@ export class CollaborationService {
                   tagset.tags[0] as CalloutDisplayLocation
                 )
             )
-          )
-        : readableCallouts;
+          : true;
 
-    availableCallouts =
-      args.tagsets && args.tagsets.length
-        ? availableCallouts.filter(callout =>
-            // ANY of the callouts tagset
-            callout.profile?.tagsets?.some(calloutTagset =>
-              // to contain ANY of the tagsets defined in the filter
-              args?.tagsets?.some(
+      if (!locationCheck) return false;
+
+      // Filter by tagsets
+      const tagsetCheck =
+        args.tagsets && args.tagsets.length
+          ? callout.profile?.tagsets?.some(calloutTagset =>
+              args.tagsets?.some(
                 argTagset =>
                   argTagset.name === calloutTagset.name &&
-                  // to contain ANY of the tags in the defined tagset in the filter
                   argTagset.tags.some(argTag =>
                     calloutTagset.tags.includes(argTag)
                   )
               )
             )
-          )
-        : availableCallouts;
+          : true;
+
+      return tagsetCheck;
+    });
 
     // parameter order: (a) by IDs (b) by activity (c) shuffle (d) sort order
     // (a) by IDs, results in order specified by IDs
