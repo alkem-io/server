@@ -37,11 +37,11 @@ export class CollaborationArgsCallouts {
   sortByActivity?: boolean;
 
   @Field(() => [CalloutDisplayLocation], {
-    name: 'groups',
-    description: 'Return only Callouts from this group.',
+    name: 'displayLocations',
+    description: 'Return only Callouts with this display location values.',
     nullable: true,
   })
-  groups?: CalloutDisplayLocation[];
+  displayLocations?: CalloutDisplayLocation[];
 
   @Field(() => [TagsetArgs], {
     name: 'tagsets',

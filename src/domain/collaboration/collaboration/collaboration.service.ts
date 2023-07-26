@@ -312,13 +312,15 @@ export class CollaborationService {
 
     // Filter by Callout group
     let availableCallouts =
-      args.groups && args.groups.length
+      args.displayLocations && args.displayLocations.length
         ? readableCallouts.filter(callout =>
             callout.profile.tagsets?.some(
               tagset =>
                 tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION &&
                 tagset.tags.length > 0 &&
-                args.groups?.includes(tagset.tags[0] as CalloutDisplayLocation)
+                args.displayLocations?.includes(
+                  tagset.tags[0] as CalloutDisplayLocation
+                )
             )
           )
         : readableCallouts;
