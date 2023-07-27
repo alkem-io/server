@@ -132,7 +132,7 @@ export class LookupResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField(() => IWhiteboardTemplate, {
     nullable: true,
-    description: 'Lookup the specified Whiteboard Tmplate',
+    description: 'Lookup the specified Whiteboard Template',
   })
   async whiteboardTemplate(
     @CurrentUser() agentInfo: AgentInfo,
