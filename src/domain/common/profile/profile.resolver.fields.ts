@@ -76,26 +76,44 @@ export class ProfileResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('tagset', () => ITagset, {
     nullable: true,
-    description: 'The default tagset.',
+    description: 'The default or named tagset.',
   })
   @Profiling.api
   async tagset(
     @Parent() profile: IProfile,
+    @Args('tagsetName', {
+      type: () => TagsetReservedName,
+      nullable: true,
+    })
+    tagsetName: TagsetReservedName,
     @Loader(ProfileTagsetsLoaderCreator)
     loader: ILoader<ITagset[]>
   ): Promise<ITagset> {
     const tagsets = await loader.load(profile.id);
-    const defaultTagset = tagsets.find(
-      t =>
-        t.type === TagsetType.FREEFORM && t.name === TagsetReservedName.DEFAULT
-    );
-    if (!defaultTagset) {
+    if (!tagsetName) {
+      const defaultTagset = tagsets.find(
+        t =>
+          t.type === TagsetType.FREEFORM &&
+          t.name === TagsetReservedName.DEFAULT
+      );
+      if (!defaultTagset) {
+        throw new EntityNotFoundException(
+          `Unable to locate DEFAULT tagset for profile: ${profile.id}`,
+          LogContext.PROFILE
+        );
+      }
+      return defaultTagset;
+    }
+
+    const namedTagset = tagsets.find(t => t.name === tagsetName);
+    if (!namedTagset) {
       throw new EntityNotFoundException(
-        `Unable to locate DEFAULT tagset for profile: ${profile.id}`,
-        LogContext.COMMUNITY
+        `Unable to locate ${tagsetName} tagset for profile: ${profile.id}`,
+        LogContext.PROFILE
       );
     }
-    return defaultTagset;
+
+    return namedTagset;
   }
 
   @UseGuards(GraphqlGuard)

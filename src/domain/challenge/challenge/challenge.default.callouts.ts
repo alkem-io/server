@@ -1,6 +1,7 @@
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
 import { ChallengeDisplayLocation } from '@common/enums/challenge.display.location';
+import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
@@ -15,9 +16,9 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         '👋 Please share a few words about yourself to help the community get to know each other. For example, why is this Challenge important to you, or relevant thoughts, experience or expertise.',
       tagsets: [
         {
-          name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.HOME_LEFT],
+          tags: [CommonDisplayLocation.HOME_LEFT],
         },
       ],
     },
@@ -32,9 +33,9 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       description: 'Some quick links to get started 💥',
       tagsets: [
         {
-          name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.HOME_TOP],
+          tags: [CommonDisplayLocation.HOME_TOP],
         },
       ],
     },
@@ -49,9 +50,9 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       description: '✍️ Please share it here :)',
       tagsets: [
         {
-          name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.HOME_RIGHT],
+          tags: [CommonDisplayLocation.HOME_RIGHT],
         },
       ],
     },
@@ -67,7 +68,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         '✍️ Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
       tagsets: [
         {
-          name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
           tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
         },
@@ -95,7 +96,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         '🎨 Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
       tagsets: [
         {
-          name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
           tags: [ChallengeDisplayLocation.CONTRIBUTE],
         },

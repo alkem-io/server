@@ -2,9 +2,7 @@ import { registerEnumType } from '@nestjs/graphql';
 
 export enum TagsetReservedName {
   DEFAULT = 'default',
-  DISPLAY_LOCATION_SPACE = 'display-location-space',
-  DISPLAY_LOCATION_CHALLENGE = 'display-location-challenge',
-  DISPLAY_LOCATION_OPPORTUNITY = 'display-location-opportunity',
+  CALLOUT_DISPLAY_LOCATION = 'callout-display-location',
   FLOW_STATE = 'flow-state',
   SKILLS = 'skills',
   CAPABILITIES = 'capabilities',
