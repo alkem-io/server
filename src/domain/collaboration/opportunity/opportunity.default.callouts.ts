@@ -1,5 +1,6 @@
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
+import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
@@ -14,9 +15,9 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       description: 'Please find below quick start links.',
       tagsets: [
         {
-          name: TagsetReservedName.DISPLAY_LOCATION_OPPORTUNITY,
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [OpportunityDisplayLocation.HOME_TOP],
+          tags: [CommonDisplayLocation.HOME_TOP],
         },
       ],
     },
@@ -31,9 +32,9 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       description: 'Please share it here :)',
       tagsets: [
         {
-          name: TagsetReservedName.DISPLAY_LOCATION_OPPORTUNITY,
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [OpportunityDisplayLocation.HOME_RIGHT],
+          tags: [CommonDisplayLocation.HOME_RIGHT],
         },
       ],
     },
@@ -49,7 +50,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
       tagsets: [
         {
-          name: TagsetReservedName.DISPLAY_LOCATION_OPPORTUNITY,
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
           tags: [OpportunityDisplayLocation.CONTRIBUTE_RIGHT],
         },
@@ -77,7 +78,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         'Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
       tagsets: [
         {
-          name: TagsetReservedName.DISPLAY_LOCATION_OPPORTUNITY,
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
           tags: [OpportunityDisplayLocation.CONTRIBUTE],
         },

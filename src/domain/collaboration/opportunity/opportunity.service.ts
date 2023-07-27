@@ -106,7 +106,7 @@ export class OpportunityService {
 
       const locations = Object.values(OpportunityDisplayLocation);
       const tagsetTemplateData: CreateTagsetTemplateInput = {
-        name: TagsetReservedName.DISPLAY_LOCATION_OPPORTUNITY,
+        name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
         type: TagsetType.SELECT_ONE,
         allowedValues: locations,
         defaultSelectedValue: OpportunityDisplayLocation.CONTRIBUTE_RIGHT,
