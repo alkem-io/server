@@ -12,6 +12,5 @@ export abstract class IPlatform extends IAuthorizable {
   library?: ILibrary;
   configuration?: IConfig;
   metadata?: IMetadata;
-
   storageBucket!: IStorageBucket;
 }
