@@ -189,7 +189,7 @@ export class classificationTagsets1688193761861 implements MigrationInterface {
   }
 }
 
-export enum SpaceDisplayLocation {
+enum SpaceDisplayLocation {
   HOME_TOP = 'HOME_0',
   HOME_LEFT = 'HOME_1',
   HOME_RIGHT = 'HOME_2',
@@ -200,7 +200,7 @@ export enum SpaceDisplayLocation {
   KNOWEDGE_RIGHT = 'KNOWLEDGE',
 }
 
-export enum ChallengeDisplayLocation {
+enum ChallengeDisplayLocation {
   HOME_TOP = 'HOME_0',
   HOME_LEFT = 'HOME_1',
   HOME_RIGHT = 'HOME_2',
@@ -213,14 +213,14 @@ export enum ChallengeDisplayLocation {
 
 // This is just a placeholder, the actual setting of these values + the chosen state will
 // need to be done in code
-export enum InnovationFlowStates {
+enum InnovationFlowStates {
   NEW = 'new',
   BEING_DEFINED = 'beingRefined',
   IN_PROGRESS = 'inProgress',
   DONE = 'done',
 }
 
-export enum TagsetReservedName {
+enum TagsetReservedName {
   DEFAULT = 'default',
   DISPLAY_LOCATION_SPACE = 'display-location-space',
   DISPLAY_LOCATION_CHALLENGE = 'display-location-challenge',

@@ -36,6 +36,8 @@ import {
 } from '@domain/common/tagset-template';
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
 import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 
 @Injectable()
 export class CollaborationService {
@@ -303,36 +305,43 @@ export class CollaborationService {
       );
     }
 
-    // First filter the callouts the current user has READ privilege to
-    const readableCallouts = allCallouts.filter(callout =>
-      this.hasAgentAccessToCallout(callout, agentInfo)
-    );
+    // Single pass filter operation
+    const availableCallouts = allCallouts.filter(callout => {
+      // Check for READ privilege
+      const hasAccess = this.hasAgentAccessToCallout(callout, agentInfo);
+      if (!hasAccess) return false;
 
-    // Filter by Callout group
-    let availableCallouts =
-      args.groups && args.groups.length
-        ? readableCallouts.filter(
-            callout => callout.group && args.groups?.includes(callout.group)
-          )
-        : readableCallouts;
+      // Filter by Callout display locations
+      const locationCheck =
+        args.displayLocations && args.displayLocations.length
+          ? callout.profile.tagsets?.some(
+              tagset =>
+                tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION &&
+                tagset.tags.length > 0 &&
+                args.displayLocations?.includes(
+                  tagset.tags[0] as CalloutDisplayLocation
+                )
+            )
+          : true;
 
-    availableCallouts =
-      args.tagsets && args.tagsets.length
-        ? readableCallouts.filter(callout =>
-            // ANY of the callouts tagset
-            callout.profile?.tagsets?.some(calloutTagset =>
-              // to contain ANY of the tagsets defined in the filter
-              args?.tagsets?.some(
+      if (!locationCheck) return false;
+
+      // Filter by tagsets
+      const tagsetCheck =
+        args.tagsets && args.tagsets.length
+          ? callout.profile?.tagsets?.some(calloutTagset =>
+              args.tagsets?.some(
                 argTagset =>
                   argTagset.name === calloutTagset.name &&
-                  // to contain ANY of the tags in the defined tagset in the filter
                   argTagset.tags.some(argTag =>
                     calloutTagset.tags.includes(argTag)
                   )
               )
             )
-          )
-        : availableCallouts;
+          : true;
+
+      return tagsetCheck;
+    });
 
     // parameter order: (a) by IDs (b) by activity (c) shuffle (d) sort order
     // (a) by IDs, results in order specified by IDs
