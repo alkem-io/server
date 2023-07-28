@@ -10,7 +10,6 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ContextAuthorizationService } from './context.service.authorization';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
-import { ContextResolverQueries } from './context.resolver.queries';
 
 @Module({
   imports: [
@@ -23,7 +22,6 @@ import { ContextResolverQueries } from './context.resolver.queries';
   ],
   providers: [
     ContextResolverMutations,
-    ContextResolverQueries,
     ContextResolverFields,
     ContextService,
     ContextAuthorizationService,
