@@ -19,15 +19,21 @@ export class updateTagsetTemplateIdInTagsets1690532530404
         await queryRunner.query(
           `SELECT id, tagsetTemplateSetId FROM collaboration WHERE id = '${callout.collaborationId}'`
         );
+      if (!collaboration) continue;
 
       const [tagsetTemplate]: { id: string }[] = await queryRunner.query(
         `SELECT id FROM tagset_template WHERE (tagsetTemplateSetId = '${collaboration.tagsetTemplateSetId}' AND name = '${CALLOUT_DISPLAY_LOCATION}')`
       );
 
+      if (!tagsetTemplate) continue;
       await queryRunner.query(
         `UPDATE tagset SET tagsetTemplateId = '${tagsetTemplate.id}' WHERE id = '${tagset.id}'`
       );
     }
+
+    await queryRunner.query(
+      `UPDATE tagset SET type = 'select-one' WHERE \`name\` in ('callout-display-location', 'flow-state')`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}
