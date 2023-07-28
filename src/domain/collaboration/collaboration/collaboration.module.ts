@@ -15,7 +15,6 @@ import { PostModule } from '../post/post.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
-import { CollaborationResolverQueries } from './collaboration.resolver.queries';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tagset.template.set.module';
@@ -41,7 +40,6 @@ import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tags
     CollaborationService,
     CollaborationAuthorizationService,
     CollaborationResolverMutations,
-    CollaborationResolverQueries,
     CollaborationResolverFields,
   ],
   exports: [CollaborationService, CollaborationAuthorizationService],

@@ -61,6 +61,7 @@ import {
   GraphqlExceptionFilter,
 } from '@core/error-handling';
 import { MeModule } from '@services/api/me';
+import { LookupModule } from '@services/api/lookup';
 
 @Module({
   imports: [
@@ -219,6 +220,7 @@ import { MeModule } from '@services/api/me';
     SsiCredentialFlowModule,
     StorageAccessModule,
     MeModule,
+    LookupModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [
