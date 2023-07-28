@@ -5,7 +5,7 @@ import {
   configQuery,
   spacesQuery,
   meQuery,
-  serverMetadataQuery,
+  platformMetadataQuery,
 } from '@config/graphql';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
@@ -147,7 +147,7 @@ import { LookupModule } from '@services/api/lookup';
               endpoint: `${
                 configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/public/graphql`,
-              query: print(serverMetadataQuery),
+              query: print(platformMetadataQuery),
             },
           ],
         },

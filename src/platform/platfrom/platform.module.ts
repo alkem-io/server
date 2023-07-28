@@ -13,6 +13,8 @@ import { PlatformResolverQueries } from './platform.resolver.queries';
 import { PlatformService } from './platform.service';
 import { PlatformAuthorizationService } from './platform.service.authorization';
 import { InnovationHubModule } from '@domain/innovation-hub';
+import { KonfigModule } from '@platform/configuration/config/config.module';
+import { MetadataModule } from '@platform/metadata/metadata.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { InnovationHubModule } from '@domain/innovation-hub';
     PlatformAuthorizationPolicyModule,
     LibraryModule,
     StorageBucketModule,
+    KonfigModule,
+    MetadataModule,
     InnovationHubModule,
     TypeOrmModule.forFeature([Platform]),
   ],
