@@ -851,7 +851,10 @@ export class CommunityService {
     invitationData: CreateInvitationExternalUserOnCommunityInput,
     agentInfo: AgentInfo
   ): Promise<IInvitationExternal> {
-    await this.validateInvitationToExternalUser(invitationData.email);
+    await this.validateInvitationToExternalUser(
+      invitationData.email,
+      invitationData.communityID
+    );
     const community = await this.getCommunityOrFail(
       invitationData.communityID,
       {
@@ -939,7 +942,10 @@ export class CommunityService {
       );
   }
 
-  private async validateInvitationToExternalUser(email: string) {
+  private async validateInvitationToExternalUser(
+    email: string,
+    communityID: string
+  ) {
     // Check if a user with the provided email address already exists or not
     const isExistingUser = await this.userService.isRegisteredUser(email);
     if (isExistingUser) {
@@ -949,15 +955,17 @@ export class CommunityService {
       );
     }
 
-    const existingExternalInvitation =
+    const existingExternalInvitations =
       await this.invitationExternalService.findInvitationExternalsForUser(
         email
       );
-    if (existingExternalInvitation.length > 0) {
-      throw new InvalidStateTransitionException(
-        `An invitation with the provided email address already exists: ${email}`,
-        LogContext.COMMUNITY
-      );
+    for (const existingExternalInvitation of existingExternalInvitations) {
+      if (existingExternalInvitation.community.id === communityID) {
+        throw new InvalidStateTransitionException(
+          `An invitation with the provided email address (${email}) already exists for the specified community: ${communityID}`,
+          LogContext.COMMUNITY
+        );
+      }
     }
   }
 
