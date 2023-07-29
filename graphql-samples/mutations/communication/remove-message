@@ -6,6 +6,6 @@ Variables:
 {
   "messageData": {
     "messageID": "example222",
-    "commentsID": "uuid"
+    "roomID": "uuid"
   }
 }
