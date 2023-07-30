@@ -120,7 +120,7 @@ export class RoomServiceEvents {
       post: post,
       message: message,
     };
-    this.activityAdapter.postComment(activityLogInput);
+    this.activityAdapter.calloutPostComment(activityLogInput);
 
     const community =
       await this.communityResolverService.getCommunityFromPostRoomOrFail(

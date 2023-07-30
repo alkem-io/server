@@ -9,13 +9,16 @@ import { CalendarService } from './calendar.service';
 import { ICalendarEvent } from '../event/event.interface';
 import { CalendarEventAuthorizationService } from '../event/event.service.authorization';
 import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
+import { ActivityInputCalendarEventCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.calendar.event.created';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 
 @Resolver()
 export class CalendarResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private calendarService: CalendarService,
-    private calendarEventAuthorizationService: CalendarEventAuthorizationService
+    private calendarEventAuthorizationService: CalendarEventAuthorizationService,
+    private activityAdapter: ActivityAdapter
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -48,6 +51,14 @@ export class CalendarResolverMutations {
         calendarEvent,
         calendar.authorization
       );
+
+    const activityLogInput: ActivityInputCalendarEventCreated = {
+      triggeredBy: agentInfo.userID,
+      calendar: calendar,
+      calendarEvent: calendarEvent,
+    };
+    this.activityAdapter.calendarEventCreated(activityLogInput);
+
     return calendarEventAuthorized;
   }
 }

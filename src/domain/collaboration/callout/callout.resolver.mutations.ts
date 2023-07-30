@@ -36,6 +36,11 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { ActivityInputCalloutPostCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.created';
 import { NotificationInputPostCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.post.created';
 import { NotificationInputWhiteboardCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.whiteboard.created';
+import { IReference } from '@domain/common/reference';
+import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
+import { ActivityInputCalloutLinkCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.link.created';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ReferenceService } from '@domain/common/reference/reference.service';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -45,10 +50,12 @@ export class CalloutResolverMutations {
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private calloutService: CalloutService,
     private namingService: NamingService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private postAuthorizationService: PostAuthorizationService,
+    private referenceService: ReferenceService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private postCreatedSubscription: PubSubEngine
   ) {}
@@ -228,7 +235,7 @@ export class CalloutResolverMutations {
         post: post,
         callout: callout,
       };
-      this.activityAdapter.postCreated(activityLogInput);
+      this.activityAdapter.calloutPostCreated(activityLogInput);
 
       const { spaceID } =
         await this.communityResolverService.getCommunityFromCalloutOrFail(
@@ -294,7 +301,7 @@ export class CalloutResolverMutations {
       };
       await this.notificationAdapter.whiteboardCreated(notificationInput);
 
-      this.activityAdapter.whiteboardCreated({
+      this.activityAdapter.calloutWhiteboardCreated({
         triggeredBy: agentInfo.userID,
         whiteboard: authorizedWhiteboard,
         callout: callout,
@@ -319,5 +326,70 @@ export class CalloutResolverMutations {
     }
 
     return authorizedWhiteboard;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IReference, {
+    description: 'Create a new Link on the Callout.',
+  })
+  @Profiling.api
+  async createLinkOnCallout(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('linkData') postData: CreateLinkOnCalloutInput
+  ): Promise<IReference> {
+    const callout = await this.calloutService.getCalloutOrFail(
+      postData.calloutID,
+      { relations: ['profile'] }
+    );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      callout.authorization,
+      AuthorizationPrivilege.CREATE_POST,
+      `create link on callout: ${callout.id}`
+    );
+
+    if (callout.state === CalloutState.CLOSED) {
+      throw new CalloutClosedException(
+        `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
+      );
+    }
+
+    const reference = await this.calloutService.createLinkOnCallout(postData);
+    reference.authorization =
+      await this.authorizationPolicyService.inheritParentAuthorization(
+        reference.authorization,
+        callout.profile.authorization
+      );
+    const referenceAuthorized = await this.referenceService.saveReference(
+      reference
+    );
+
+    if (callout.visibility === CalloutVisibility.PUBLISHED) {
+      const activityLogInput: ActivityInputCalloutLinkCreated = {
+        triggeredBy: agentInfo.userID,
+        reference: referenceAuthorized,
+        callout: callout,
+      };
+      this.activityAdapter.calloutLinkCreated(activityLogInput);
+
+      // const { spaceID } =
+      //   await this.communityResolverService.getCommunityFromCalloutOrFail(
+      //     postData.calloutID
+      //   );
+
+      // this.elasticService.calloutPostCreated(
+      //   {
+      //     id: post.id,
+      //     name: post.profile.displayName,
+      //     space: spaceID,
+      //   },
+      //   {
+      //     id: agentInfo.userID,
+      //     email: agentInfo.email,
+      //   }
+      // );
+    }
+
+    return referenceAuthorized;
   }
 }

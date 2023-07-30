@@ -131,7 +131,7 @@ export class ActivityAdapter {
     return true;
   }
 
-  public async postCreated(
+  public async calloutPostCreated(
     eventData: ActivityInputCalloutPostCreated
   ): Promise<boolean> {
     const eventType = ActivityEventType.CALLOUT_POST_CREATED;
@@ -206,7 +206,7 @@ export class ActivityAdapter {
     return true;
   }
 
-  public async postComment(
+  public async calloutPostComment(
     eventData: ActivityInputCalloutPostComment
   ): Promise<boolean> {
     const eventType = ActivityEventType.CALLOUT_POST_COMMENT;
@@ -230,7 +230,7 @@ export class ActivityAdapter {
     return true;
   }
 
-  public async whiteboardCreated(
+  public async calloutWhiteboardCreated(
     eventData: ActivityInputCalloutWhiteboardCreated
   ): Promise<boolean> {
     const eventType = ActivityEventType.CALLOUT_WHITEBOARD_CREATED;
