@@ -187,7 +187,7 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     const activityCalendarEvent: IActivityLogEntryCalendarEventCreated = {
       ...this.activityLogEntryBase,
       calendar: calendar,
-      event: calendarEvent,
+      calendarEvent: calendarEvent,
     };
     return activityCalendarEvent;
   }

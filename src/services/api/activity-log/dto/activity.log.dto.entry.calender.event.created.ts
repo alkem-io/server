@@ -21,5 +21,5 @@ export abstract class IActivityLogEntryCalendarEventCreated
     nullable: false,
     description: 'The CalendarEvent that was created.',
   })
-  event!: ICalendarEvent;
+  calendarEvent!: ICalendarEvent;
 }
