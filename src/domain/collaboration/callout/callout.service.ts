@@ -479,7 +479,7 @@ export class CalloutService {
   ): Promise<IReference> {
     const calloutID = linkData.calloutID;
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['profile'],
+      relations: ['profile', 'profile.references'],
     });
     if (!callout.profile || !callout.profile.references)
       throw new EntityNotInitializedException(

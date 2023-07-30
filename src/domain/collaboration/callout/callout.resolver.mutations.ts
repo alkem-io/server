@@ -284,26 +284,27 @@ export class CalloutResolverMutations {
   @Profiling.api
   async createLinkOnCallout(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args('linkData') postData: CreateLinkOnCalloutInput
+    @Args('linkData') linkData: CreateLinkOnCalloutInput
   ): Promise<IReference> {
     const callout = await this.calloutService.getCalloutOrFail(
-      postData.calloutID,
+      linkData.calloutID,
       { relations: ['profile'] }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       callout.authorization,
-      AuthorizationPrivilege.CREATE_POST,
+      AuthorizationPrivilege.CREATE,
       `create link on callout: ${callout.id}`
     );
 
-    if (callout.state === CalloutState.CLOSED) {
-      throw new CalloutClosedException(
-        `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
-      );
-    }
+    // todo: no check needed as for now a callout collection of links cannot be close; will be needed later.
+    // if (callout.state === CalloutState.CLOSED) {
+    //   throw new CalloutClosedException(
+    //     `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
+    //   );
+    // }
 
-    const reference = await this.calloutService.createLinkOnCallout(postData);
+    const reference = await this.calloutService.createLinkOnCallout(linkData);
     reference.authorization =
       await this.authorizationPolicyService.inheritParentAuthorization(
         reference.authorization,
