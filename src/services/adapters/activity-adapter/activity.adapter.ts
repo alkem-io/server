@@ -27,8 +27,7 @@ import { ActivityInputBase } from './dto/activity.dto.input.base';
 import { stringifyWithoutAuthorization } from '@common/utils/stringify.util';
 import { ActivityInputCalloutLinkCreated } from './dto/activity.dto.input.callout.link.created';
 import { ActivityInputCalendarEventCreated } from './dto/activity.dto.input.calendar.event.created';
-import { Timeline } from '@domain/timeline/timeline/timeline.entity';
-import { Space } from '@domain/challenge/space/space.entity';
+import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 
 @Injectable()
 export class ActivityAdapter {
@@ -43,6 +42,7 @@ export class ActivityAdapter {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly graphqlSubscriptionService: SubscriptionPublishService,
+    private readonly timelineResolverService: TimelineResolverService,
     @InjectEntityManager('default')
     private entityManager: EntityManager
   ) {}
@@ -189,9 +189,10 @@ export class ActivityAdapter {
     const description = `[${
       profile.displayName
     }] - ${profile.description.substring(1, 100)}`;
-    const collaborationID = await this.getCollaborationIdForCalendar(
-      eventData.calendar.id
-    );
+    const collaborationID =
+      await this.timelineResolverService.getCollaborationIdForCalendar(
+        eventData.calendar.id
+      );
     const activity = await this.activityService.createActivity({
       triggeredBy: eventData.triggeredBy,
       collaborationID,
@@ -487,53 +488,6 @@ export class ActivityAdapter {
       return '';
     }
     return result.collaborationId;
-  }
-
-  private async getCollaborationIdForCalendar(
-    calendarID: string
-  ): Promise<string> {
-    const timelineID = await this.getTimelineIdForCalendar(calendarID);
-    if (!timelineID) {
-      return '';
-    }
-    const result = await this.entityManager.findOne(Space, {
-      where: {
-        timeline: {
-          id: timelineID,
-        },
-      },
-    });
-    if (!result || !result.collaboration) {
-      this.logger.error(
-        `Unable to identify Collaboration for provided Timeline ID: ${timelineID}`,
-        LogContext.CALENDAR
-      );
-      return '';
-    }
-    return result.collaboration.id;
-  }
-
-  private async getTimelineIdForCalendar(
-    calendarID: string
-  ): Promise<string | undefined> {
-    const result = await this.entityManager.findOne(Timeline, {
-      where: {
-        calendar: {
-          id: calendarID,
-        },
-      },
-      relations: {
-        calendar: true,
-      },
-    });
-    if (!result) {
-      this.logger.error(
-        `Unable to identify Timeline for provided calender ID: ${calendarID}`,
-        LogContext.CALENDAR
-      );
-      return undefined;
-    }
-    return result.id;
   }
 
   private async getCommunityIdFromUpdates(updatesID: string) {

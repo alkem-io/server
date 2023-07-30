@@ -224,35 +224,7 @@ export class CalloutResolverMutations {
     );
 
     if (callout.visibility === CalloutVisibility.PUBLISHED) {
-      const notificationInput: NotificationInputPostCreated = {
-        post: post,
-        triggeredBy: agentInfo.userID,
-      };
-      await this.notificationAdapter.postCreated(notificationInput);
-
-      const activityLogInput: ActivityInputCalloutPostCreated = {
-        triggeredBy: agentInfo.userID,
-        post: post,
-        callout: callout,
-      };
-      this.activityAdapter.calloutPostCreated(activityLogInput);
-
-      const { spaceID } =
-        await this.communityResolverService.getCommunityFromCalloutOrFail(
-          postData.calloutID
-        );
-
-      this.elasticService.calloutPostCreated(
-        {
-          id: post.id,
-          name: post.profile.displayName,
-          space: spaceID,
-        },
-        {
-          id: agentInfo.userID,
-          email: agentInfo.email,
-        }
-      );
+      this.processActivityPostCreated(callout, post, agentInfo);
     }
 
     return post;
@@ -295,33 +267,10 @@ export class CalloutResolverMutations {
       );
 
     if (callout.visibility === CalloutVisibility.PUBLISHED) {
-      const notificationInput: NotificationInputWhiteboardCreated = {
-        whiteboard: whiteboard,
-        triggeredBy: agentInfo.userID,
-      };
-      await this.notificationAdapter.whiteboardCreated(notificationInput);
-
-      this.activityAdapter.calloutWhiteboardCreated({
-        triggeredBy: agentInfo.userID,
-        whiteboard: authorizedWhiteboard,
-        callout: callout,
-      });
-
-      const { spaceID } =
-        await this.communityResolverService.getCommunityFromCalloutOrFail(
-          whiteboardData.calloutID
-        );
-
-      this.elasticService.calloutWhiteboardCreated(
-        {
-          id: whiteboard.id,
-          name: whiteboard.nameID,
-          space: spaceID,
-        },
-        {
-          id: agentInfo.userID,
-          email: agentInfo.email,
-        }
+      this.processActivityWhiteboardCreated(
+        callout,
+        authorizedWhiteboard,
+        agentInfo
       );
     }
 
@@ -365,31 +314,114 @@ export class CalloutResolverMutations {
     );
 
     if (callout.visibility === CalloutVisibility.PUBLISHED) {
-      const activityLogInput: ActivityInputCalloutLinkCreated = {
-        triggeredBy: agentInfo.userID,
-        reference: referenceAuthorized,
-        callout: callout,
-      };
-      this.activityAdapter.calloutLinkCreated(activityLogInput);
-
-      // const { spaceID } =
-      //   await this.communityResolverService.getCommunityFromCalloutOrFail(
-      //     postData.calloutID
-      //   );
-
-      // this.elasticService.calloutPostCreated(
-      //   {
-      //     id: post.id,
-      //     name: post.profile.displayName,
-      //     space: spaceID,
-      //   },
-      //   {
-      //     id: agentInfo.userID,
-      //     email: agentInfo.email,
-      //   }
-      // );
+      await this.processActivityLinkCreated(
+        callout,
+        referenceAuthorized,
+        agentInfo
+      );
     }
 
     return referenceAuthorized;
+  }
+
+  private async processActivityLinkCreated(
+    callout: ICallout,
+    reference: IReference,
+    agentInfo: AgentInfo
+  ) {
+    const activityLogInput: ActivityInputCalloutLinkCreated = {
+      triggeredBy: agentInfo.userID,
+      reference: reference,
+      callout: callout,
+    };
+    this.activityAdapter.calloutLinkCreated(activityLogInput);
+
+    const { spaceID } =
+      await this.communityResolverService.getCommunityFromCalloutOrFail(
+        callout.id
+      );
+
+    this.elasticService.calloutLinkCreated(
+      {
+        id: reference.id,
+        name: reference.name,
+        space: spaceID,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
+  }
+
+  private async processActivityWhiteboardCreated(
+    callout: ICallout,
+    whiteboard: IWhiteboard,
+    agentInfo: AgentInfo
+  ) {
+    const notificationInput: NotificationInputWhiteboardCreated = {
+      whiteboard: whiteboard,
+      triggeredBy: agentInfo.userID,
+    };
+    await this.notificationAdapter.whiteboardCreated(notificationInput);
+
+    this.activityAdapter.calloutWhiteboardCreated({
+      triggeredBy: agentInfo.userID,
+      whiteboard: whiteboard,
+      callout: callout,
+    });
+
+    const { spaceID } =
+      await this.communityResolverService.getCommunityFromCalloutOrFail(
+        callout.id
+      );
+
+    this.elasticService.calloutWhiteboardCreated(
+      {
+        id: whiteboard.id,
+        name: whiteboard.nameID,
+        space: spaceID,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
+  }
+
+  private async processActivityPostCreated(
+    callout: ICallout,
+    post: IPost,
+    agentInfo: AgentInfo
+  ) {
+    const notificationInput: NotificationInputPostCreated = {
+      post: post,
+      triggeredBy: agentInfo.userID,
+    };
+    await this.notificationAdapter.postCreated(notificationInput);
+
+    const activityLogInput: ActivityInputCalloutPostCreated = {
+      triggeredBy: agentInfo.userID,
+      post: post,
+      callout: callout,
+    };
+    this.activityAdapter.calloutPostCreated(activityLogInput);
+
+    const { spaceID } =
+      await this.communityResolverService.getCommunityFromCalloutOrFail(
+        callout.id
+      );
+
+    this.elasticService.calloutPostCreated(
+      {
+        id: post.id,
+        name: post.profile.displayName,
+        space: spaceID,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
   }
 }
