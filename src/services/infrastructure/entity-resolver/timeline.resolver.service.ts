@@ -28,6 +28,9 @@ export class TimelineResolverService {
           id: timelineID,
         },
       },
+      relations: {
+        collaboration: true,
+      },
     });
     if (!result || !result.collaboration) {
       this.logger.error(
