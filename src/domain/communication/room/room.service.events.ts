@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AgentInfo } from '@core/authentication';
 import { IMessage } from '../message/message.interface';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { ActivityInputPostComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.post.comment';
+import { ActivityInputCalloutPostComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.comment';
 import { NotificationInputPostComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.post.comment';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { IPost } from '@domain/collaboration/post/post.interface';
@@ -115,7 +115,7 @@ export class RoomServiceEvents {
     message: IMessage,
     agentInfo: AgentInfo
   ) {
-    const activityLogInput: ActivityInputPostComment = {
+    const activityLogInput: ActivityInputCalloutPostComment = {
       triggeredBy: agentInfo.userID,
       post: post,
       message: message,

@@ -33,7 +33,7 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
 import { ElasticsearchService } from '@services/external/elasticsearch';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { ActivityInputPostCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.post.created';
+import { ActivityInputCalloutPostCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.created';
 import { NotificationInputPostCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.post.created';
 import { NotificationInputWhiteboardCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.whiteboard.created';
 
@@ -223,7 +223,7 @@ export class CalloutResolverMutations {
       };
       await this.notificationAdapter.postCreated(notificationInput);
 
-      const activityLogInput: ActivityInputPostCreated = {
+      const activityLogInput: ActivityInputCalloutPostCreated = {
         triggeredBy: agentInfo.userID,
         post: post,
         callout: callout,

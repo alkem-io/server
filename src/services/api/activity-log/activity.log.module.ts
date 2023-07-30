@@ -16,6 +16,9 @@ import { ActivityLogResolverQueries } from './activity.log.resolver.queries';
 import { ActivityLogResolverSubscriptions } from './activity.log.resolver.subscriptions';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { RoomModule } from '@domain/communication/room/room.module';
+import { ReferenceModule } from '@domain/common/reference/reference.module';
+import { CalendarModule } from '@domain/timeline/calendar/calendar.module';
+import { CalendarEventModule } from '@domain/timeline/event/event.module';
 
 @Module({
   imports: [
@@ -31,6 +34,9 @@ import { RoomModule } from '@domain/communication/room/room.module';
     RoomModule,
     ChallengeModule,
     OpportunityModule,
+    ReferenceModule,
+    CalendarModule,
+    CalendarEventModule,
     SubscriptionServiceModule,
     PlatformAuthorizationPolicyModule,
   ],

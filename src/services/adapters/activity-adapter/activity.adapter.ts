@@ -13,10 +13,10 @@ import {
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { SubscriptionPublishService } from '../../subscriptions/subscription-service';
 import { ActivityInputCalloutPublished } from './dto/activity.dto.input.callout.published';
-import { ActivityInputPostCreated } from './dto/activity.dto.input.post.created';
-import { ActivityInputWhiteboardCreated } from './dto/activity.dto.input.whiteboard.created';
+import { ActivityInputCalloutPostCreated } from './dto/activity.dto.input.callout.post.created';
+import { ActivityInputCalloutWhiteboardCreated } from './dto/activity.dto.input.callout.whiteboard.created';
 import { ActivityInputMemberJoined } from './dto/activity.dto.input.member.joined';
-import { ActivityInputPostComment } from './dto/activity.dto.input.post.comment';
+import { ActivityInputCalloutPostComment } from './dto/activity.dto.input.callout.post.comment';
 import { ActivityInputCalloutDiscussionComment } from './dto/activity.dto.input.callout.discussion.comment';
 import { ActivityInputChallengeCreated } from './dto/activity.dto.input.challenge.created';
 import { ActivityInputOpportunityCreated } from './dto/activity.dto.input.opportunity.created';
@@ -25,6 +25,10 @@ import { Community } from '@domain/community/community/community.entity';
 import { ActivityInputMessageRemoved } from './dto/activity.dto.input.message.removed';
 import { ActivityInputBase } from './dto/activity.dto.input.base';
 import { stringifyWithoutAuthorization } from '@common/utils/stringify.util';
+import { ActivityInputCalloutLinkCreated } from './dto/activity.dto.input.callout.link.created';
+import { ActivityInputCalendarEventCreated } from './dto/activity.dto.input.calendar.event.created';
+import { Timeline } from '@domain/timeline/timeline/timeline.entity';
+import { Space } from '@domain/challenge/space/space.entity';
 
 @Injectable()
 export class ActivityAdapter {
@@ -128,9 +132,9 @@ export class ActivityAdapter {
   }
 
   public async postCreated(
-    eventData: ActivityInputPostCreated
+    eventData: ActivityInputCalloutPostCreated
   ): Promise<boolean> {
-    const eventType = ActivityEventType.POST_CREATED;
+    const eventType = ActivityEventType.CALLOUT_POST_CREATED;
     this.logEventTriggered(eventData, eventType);
 
     const post = eventData.post;
@@ -150,10 +154,62 @@ export class ActivityAdapter {
     return true;
   }
 
-  public async postComment(
-    eventData: ActivityInputPostComment
+  public async calloutLinkCreated(
+    eventData: ActivityInputCalloutLinkCreated
   ): Promise<boolean> {
-    const eventType = ActivityEventType.POST_COMMENT;
+    const eventType = ActivityEventType.CALLOUT_LINK_CREATED;
+    this.logEventTriggered(eventData, eventType);
+
+    const reference = eventData.reference;
+    const description = `[${eventData.callout.profile.displayName}] - ${reference.name}`;
+    const collaborationID = await this.getCollaborationIdForCallout(
+      eventData.callout.id
+    );
+    const activity = await this.activityService.createActivity({
+      triggeredBy: eventData.triggeredBy,
+      collaborationID,
+      resourceID: reference.id,
+      parentID: eventData.callout.id,
+      description: description,
+      type: eventType,
+    });
+
+    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+
+    return true;
+  }
+
+  public async calendarEventCreated(
+    eventData: ActivityInputCalendarEventCreated
+  ): Promise<boolean> {
+    const eventType = ActivityEventType.CALENDAR_EVENT_CREATED;
+    this.logEventTriggered(eventData, eventType);
+
+    const profile = eventData.calendarEvent.profile;
+    const description = `[${
+      profile.displayName
+    }] - ${profile.description.substring(1, 100)}`;
+    const collaborationID = await this.getCollaborationIdForCalendar(
+      eventData.calendar.id
+    );
+    const activity = await this.activityService.createActivity({
+      triggeredBy: eventData.triggeredBy,
+      collaborationID,
+      resourceID: eventData.calendarEvent.id,
+      parentID: eventData.calendar.id,
+      description: description,
+      type: eventType,
+    });
+
+    this.graphqlSubscriptionService.publishActivity(collaborationID, activity);
+
+    return true;
+  }
+
+  public async postComment(
+    eventData: ActivityInputCalloutPostComment
+  ): Promise<boolean> {
+    const eventType = ActivityEventType.CALLOUT_POST_COMMENT;
     this.logEventTriggered(eventData, eventType);
 
     const postID = eventData.post.id;
@@ -175,9 +231,9 @@ export class ActivityAdapter {
   }
 
   public async whiteboardCreated(
-    eventData: ActivityInputWhiteboardCreated
+    eventData: ActivityInputCalloutWhiteboardCreated
   ): Promise<boolean> {
-    const eventType = ActivityEventType.WHITEBOARD_CREATED;
+    const eventType = ActivityEventType.CALLOUT_WHITEBOARD_CREATED;
     this.logEventTriggered(eventData, eventType);
 
     const whiteboard = eventData.whiteboard;
@@ -431,6 +487,53 @@ export class ActivityAdapter {
       return '';
     }
     return result.collaborationId;
+  }
+
+  private async getCollaborationIdForCalendar(
+    calendarID: string
+  ): Promise<string> {
+    const timelineID = await this.getTimelineIdForCalendar(calendarID);
+    if (!timelineID) {
+      return '';
+    }
+    const result = await this.entityManager.findOne(Space, {
+      where: {
+        timeline: {
+          id: timelineID,
+        },
+      },
+    });
+    if (!result || !result.collaboration) {
+      this.logger.error(
+        `Unable to identify Collaboration for provided Timeline ID: ${timelineID}`,
+        LogContext.CALENDAR
+      );
+      return '';
+    }
+    return result.collaboration.id;
+  }
+
+  private async getTimelineIdForCalendar(
+    calendarID: string
+  ): Promise<string | undefined> {
+    const result = await this.entityManager.findOne(Timeline, {
+      where: {
+        calendar: {
+          id: calendarID,
+        },
+      },
+      relations: {
+        calendar: true,
+      },
+    });
+    if (!result) {
+      this.logger.error(
+        `Unable to identify Timeline for provided calender ID: ${calendarID}`,
+        LogContext.CALENDAR
+      );
+      return undefined;
+    }
+    return result.id;
   }
 
   private async getCommunityIdFromUpdates(updatesID: string) {

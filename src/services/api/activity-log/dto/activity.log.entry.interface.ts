@@ -13,6 +13,8 @@ import { IActivityLogEntryCalloutDiscussionComment } from './activity.log.dto.en
 import { IActivityLogEntryChallengeCreated } from './activity.log.dto.entry.challenge.created';
 import { IActivityLogEntryOpportunityCreated } from './activity.log.dto.entry.opportunity.created';
 import { IActivityLogEntryUpdateSent } from './activity.log.dto.entry.update.sent';
+import { IActivityLogEntryCalendarEventCreated } from './activity.log.dto.entry.calender.event.created';
+import { IActivityLogEntryCalloutLinkCreated } from './activity.log.dto.entry.callout.link.created';
 
 @InterfaceType('ActivityLogEntry', {
   resolveType(activityLogEntry) {
@@ -20,22 +22,26 @@ import { IActivityLogEntryUpdateSent } from './activity.log.dto.entry.update.sen
     switch (type) {
       case ActivityEventType.CALLOUT_PUBLISHED:
         return IActivityLogEntryCalloutPublished;
-      case ActivityEventType.POST_CREATED:
+      case ActivityEventType.CALLOUT_POST_CREATED:
         return IActivityLogEntryCalloutPostCreated;
-      case ActivityEventType.WHITEBOARD_CREATED:
+      case ActivityEventType.CALLOUT_WHITEBOARD_CREATED:
         return IActivityLogEntryCalloutWhiteboardCreated;
+      case ActivityEventType.CALLOUT_POST_COMMENT:
+        return IActivityLogEntryCalloutPostComment;
+      case ActivityEventType.CALLOUT_LINK_CREATED:
+        return IActivityLogEntryCalloutLinkCreated;
       case ActivityEventType.CHALLENGE_CREATED:
         return IActivityLogEntryChallengeCreated;
       case ActivityEventType.OPPORTUNITY_CREATED:
         return IActivityLogEntryOpportunityCreated;
-      case ActivityEventType.POST_COMMENT:
-        return IActivityLogEntryCalloutPostComment;
       case ActivityEventType.DISCUSSION_COMMENT:
         return IActivityLogEntryCalloutDiscussionComment;
       case ActivityEventType.MEMBER_JOINED:
         return IActivityLogEntryMemberJoined;
       case ActivityEventType.UPDATE_SENT:
         return IActivityLogEntryUpdateSent;
+      case ActivityEventType.CALENDAR_EVENT_CREATED:
+        return IActivityLogEntryCalendarEventCreated;
     }
 
     throw new RelationshipNotFoundException(
