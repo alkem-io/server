@@ -51,7 +51,7 @@ export class PreferenceSetService {
 
     if (preferenceSet.preferences) {
       for (const preference of preferenceSet.preferences) {
-        await this.preferenceService.removePreference(preference);
+        await this.preferenceService.removePreference(preference.id);
       }
     }
 

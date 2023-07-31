@@ -227,6 +227,22 @@ export class ElasticsearchService {
       details
     );
   }
+
+  public calloutLinkCreated(
+    contribution: ContributionDetails,
+    details: AuthorDetails
+  ): void {
+    this.createDocument(
+      {
+        type: 'CALLOUT_LINK_CREATED',
+        id: contribution.id,
+        name: contribution.name,
+        author: details.id,
+        space: contribution.space,
+      },
+      details
+    );
+  }
   // todo: callout is not available; do we need it
   public calloutWhiteboardCreated(
     contribution: ContributionDetails,
@@ -265,6 +281,21 @@ export class ElasticsearchService {
     this.createDocument(
       {
         type: 'CALLOUT_WHITEBOARD_EDITED',
+        id: contribution.id,
+        name: contribution.name,
+        author: details.id,
+        space: contribution.space,
+      },
+      details
+    );
+  }
+  public calendarEventCreated(
+    contribution: ContributionDetails,
+    details: AuthorDetails
+  ): void {
+    this.createDocument(
+      {
+        type: 'CALENDAR_EVENT_CREATED',
         id: contribution.id,
         name: contribution.name,
         author: details.id,

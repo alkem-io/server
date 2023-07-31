@@ -9,6 +9,7 @@ import { StorageBucketResolverService } from './storage.bucket.resolver.service'
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
+import { TimelineResolverService } from './timeline.resolver.service';
 
 @Module({
   imports: [
@@ -23,11 +24,13 @@ import { Profile } from '@domain/common/profile/profile.entity';
     IdentityResolverService,
     CommunityResolverService,
     StorageBucketResolverService,
+    TimelineResolverService,
   ],
   exports: [
     IdentityResolverService,
     CommunityResolverService,
     StorageBucketResolverService,
+    TimelineResolverService,
   ],
 })
 export class EntityResolverModule {}
