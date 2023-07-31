@@ -18,22 +18,12 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 import { IActivityLogEntryUpdateSent } from './dto/activity.log.dto.entry.update.sent';
 import { RoomService } from '@domain/communication/room/room.service';
-
-interface ActivityLogBuilderFunction<TypedActivityLogEntry> {
-  (rawActivity: IActivity): Promise<TypedActivityLogEntry>;
-}
-
-export interface IActivityLogBuilder {
-  [ActivityEventType.MEMBER_JOINED]: ActivityLogBuilderFunction<IActivityLogEntryMemberJoined>;
-  [ActivityEventType.CALLOUT_PUBLISHED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPublished>;
-  [ActivityEventType.POST_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostCreated>;
-  [ActivityEventType.WHITEBOARD_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryCalloutWhiteboardCreated>;
-  [ActivityEventType.CHALLENGE_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryChallengeCreated>;
-  [ActivityEventType.OPPORTUNITY_CREATED]: ActivityLogBuilderFunction<IActivityLogEntryOpportunityCreated>;
-  [ActivityEventType.POST_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutPostComment>;
-  [ActivityEventType.DISCUSSION_COMMENT]: ActivityLogBuilderFunction<IActivityLogEntryCalloutDiscussionComment>;
-  [ActivityEventType.UPDATE_SENT]: ActivityLogBuilderFunction<IActivityLogEntryUpdateSent>;
-}
+import { IActivityLogBuilder } from './activity.log.builder.interface';
+import { IActivityLogEntryCalendarEventCreated } from './dto/activity.log.dto.entry.calendar.event.created';
+import { IActivityLogEntryCalloutLinkCreated } from './dto/activity.log.dto.entry.callout.link.created';
+import { ReferenceService } from '@domain/common/reference/reference.service';
+import { CalendarService } from '@domain/timeline/calendar/calendar.service';
+import { CalendarEventService } from '@domain/timeline/event/event.service';
 
 export default class ActivityLogBuilderService implements IActivityLogBuilder {
   constructor(
@@ -45,7 +35,10 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     private readonly challengeService: ChallengeService,
     private readonly opportunityService: OpportunityService,
     private readonly communityService: CommunityService,
-    private readonly roomService: RoomService
+    private readonly roomService: RoomService,
+    private readonly referenceService: ReferenceService,
+    private readonly calendarService: CalendarService,
+    private readonly calendarEventService: CalendarEventService
   ) {}
 
   async [ActivityEventType.MEMBER_JOINED](rawActivity: IActivity) {
@@ -75,7 +68,7 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     return activityCalloutPublished;
   }
 
-  async [ActivityEventType.POST_CREATED](rawActivity: IActivity) {
+  async [ActivityEventType.CALLOUT_POST_CREATED](rawActivity: IActivity) {
     const calloutPostCreated = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
     );
@@ -90,7 +83,22 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     return activityCalloutPostCreated;
   }
 
-  async [ActivityEventType.WHITEBOARD_CREATED](rawActivity: IActivity) {
+  async [ActivityEventType.CALLOUT_LINK_CREATED](rawActivity: IActivity) {
+    const calloutPostCreated = await this.calloutService.getCalloutOrFail(
+      rawActivity.parentID
+    );
+    const referenceCreated = await this.referenceService.getReferenceOrFail(
+      rawActivity.resourceID
+    );
+    const activityCalloutLinkreated: IActivityLogEntryCalloutLinkCreated = {
+      ...this.activityLogEntryBase,
+      callout: calloutPostCreated,
+      reference: referenceCreated,
+    };
+    return activityCalloutLinkreated;
+  }
+
+  async [ActivityEventType.CALLOUT_WHITEBOARD_CREATED](rawActivity: IActivity) {
     const calloutWhiteboardCreated = await this.calloutService.getCalloutOrFail(
       rawActivity.parentID
     );
@@ -104,6 +112,22 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
         whiteboard: whiteboardCreated,
       };
     return activityCalloutWhiteboardCreated;
+  }
+
+  async [ActivityEventType.CALLOUT_POST_COMMENT](rawActivity: IActivity) {
+    const calloutPostComment = await this.calloutService.getCalloutOrFail(
+      rawActivity.parentID
+    );
+    const postCommentedOn = await this.postService.getPostOrFail(
+      rawActivity.resourceID
+    );
+    const activityCalloutPostCommentedOn: IActivityLogEntryCalloutPostComment =
+      {
+        ...this.activityLogEntryBase,
+        callout: calloutPostComment,
+        post: postCommentedOn,
+      };
+    return activityCalloutPostCommentedOn;
   }
 
   async [ActivityEventType.CHALLENGE_CREATED](rawActivity: IActivity) {
@@ -128,22 +152,6 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     return activityOpportunityCreated;
   }
 
-  async [ActivityEventType.POST_COMMENT](rawActivity: IActivity) {
-    const calloutPostComment = await this.calloutService.getCalloutOrFail(
-      rawActivity.parentID
-    );
-    const postCommentedOn = await this.postService.getPostOrFail(
-      rawActivity.resourceID
-    );
-    const activityCalloutPostCommentedOn: IActivityLogEntryCalloutPostComment =
-      {
-        ...this.activityLogEntryBase,
-        callout: calloutPostComment,
-        post: postCommentedOn,
-      };
-    return activityCalloutPostCommentedOn;
-  }
-
   async [ActivityEventType.DISCUSSION_COMMENT](rawActivity: IActivity) {
     const calloutDiscussionComment = await this.calloutService.getCalloutOrFail(
       rawActivity.resourceID
@@ -166,5 +174,21 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
       message: rawActivity.description || '',
     };
     return activityUpdateSent;
+  }
+
+  async [ActivityEventType.CALENDAR_EVENT_CREATED](rawActivity: IActivity) {
+    const calendar = await this.calendarService.getCalendarOrFail(
+      rawActivity.parentID
+    );
+    const calendarEvent =
+      await this.calendarEventService.getCalendarEventOrFail(
+        rawActivity.resourceID
+      );
+    const activityCalendarEvent: IActivityLogEntryCalendarEventCreated = {
+      ...this.activityLogEntryBase,
+      calendar: calendar,
+      calendarEvent: calendarEvent,
+    };
+    return activityCalendarEvent;
   }
 }
