@@ -93,9 +93,7 @@ export class PreferenceService {
   }
 
   async removePreference(preferenceID: string): Promise<IPreference> {
-    const preference = await this.getPreferenceOrFail(preferenceID, {
-      relations: [],
-    });
+    const preference = await this.getPreferenceOrFail(preferenceID);
     if (preference.authorization)
       await this.authorizationPolicyService.delete(preference.authorization);
 
