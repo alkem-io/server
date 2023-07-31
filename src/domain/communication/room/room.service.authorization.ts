@@ -124,9 +124,14 @@ export class RoomAuthorizationService {
       newRules.push(messageSender);
     }
 
+    const clonedRoomAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        room.authorization
+      );
+
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        room.authorization,
+        clonedRoomAuthorization,
         newRules
       );
 
@@ -159,9 +164,14 @@ export class RoomAuthorizationService {
       newRules.push(reactionSenderRule);
     }
 
+    const clonedRoomAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        room.authorization
+      );
+
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        room.authorization,
+        clonedRoomAuthorization,
         newRules
       );
 
