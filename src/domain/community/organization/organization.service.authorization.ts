@@ -281,9 +281,14 @@ export class OrganizationAuthorizationService {
       );
     newRules.push(userSelfRemovalRule);
 
+    const clonedOrganizationAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        organization.authorization
+      );
+
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        organization.authorization,
+        clonedOrganizationAuthorization,
         newRules
       );
 
