@@ -109,7 +109,7 @@ export class StorageBucketService {
 
   public async getDocuments(
     storageInput: IStorageBucket
-  ): Promise<IDocument[]> {
+  ): Promise<IDocument[] | never> {
     const storage = await this.getStorageBucketOrFail(storageInput.id, {
       relations: ['documents'],
     });
@@ -147,7 +147,7 @@ export class StorageBucketService {
     mimeType: string,
     userID: string,
     anonymousReadAccess = false
-  ): Promise<IDocument> {
+  ): Promise<IDocument | never> {
     const storage = await this.getStorageBucketOrFail(storageBucket.id, {
       relations: ['documents'],
     });
@@ -192,7 +192,7 @@ export class StorageBucketService {
     fileName: string,
     mimetype: string,
     userID: string
-  ): Promise<IDocument> {
+  ): Promise<IDocument | never> {
     this.visualService.validateMimeType(visual, mimetype);
 
     if (!readStream)
@@ -242,7 +242,7 @@ export class StorageBucketService {
     storage: IStorageBucket,
     args: StorageBucketArgsDocuments,
     agentInfo: AgentInfo
-  ): Promise<IDocument[]> {
+  ): Promise<IDocument[] | never> {
     const storageLoaded = await this.getStorageBucketOrFail(storage.id, {
       relations: ['documents'],
     });
@@ -296,7 +296,7 @@ export class StorageBucketService {
   private validateMimeTypes(
     storageBucket: IStorageBucket,
     mimeType: string
-  ): void {
+  ): void | never {
     const result = Object.values(storageBucket.allowedMimeTypes).includes(
       mimeType as MimeFileType
     );
@@ -308,7 +308,10 @@ export class StorageBucketService {
     }
   }
 
-  private validateSize(storageBucket: IStorageBucket, size: number): void {
+  private validateSize(
+    storageBucket: IStorageBucket,
+    size: number
+  ): void | never {
     if (size > storageBucket.maxFileSize) {
       throw new ValidationException(
         `File size (${size}) exceeds maximum allowed file size for storage space: ${storageBucket.maxFileSize}`,
