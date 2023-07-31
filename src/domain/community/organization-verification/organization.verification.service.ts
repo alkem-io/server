@@ -49,12 +49,20 @@ export class OrganizationVerificationService {
     organizationVerificationID: string
   ): Promise<IOrganizationVerification> {
     const organizationVerification =
-      await this.getOrganizationVerificationOrFail(organizationVerificationID);
+      await this.getOrganizationVerificationOrFail(organizationVerificationID, {
+        relations: ['lifecycle'],
+      });
 
     if (organizationVerification.authorization)
       await this.authorizationPolicyService.delete(
         organizationVerification.authorization
       );
+
+    if (organizationVerification.lifecycle) {
+      await this.lifecycleService.deleteLifecycle(
+        organizationVerification.lifecycle.id
+      );
+    }
 
     const result = await this.organizationVerificationRepository.remove(
       organizationVerification as OrganizationVerification
