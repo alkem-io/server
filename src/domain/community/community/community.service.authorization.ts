@@ -219,9 +219,14 @@ export class CommunityAuthorizationService {
       );
     newRules.push(userSelfRemovalRule);
 
+    const clonedCommunityAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        community.authorization
+      );
+
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
-        community.authorization,
+        clonedCommunityAuthorization,
         newRules
       );
 
