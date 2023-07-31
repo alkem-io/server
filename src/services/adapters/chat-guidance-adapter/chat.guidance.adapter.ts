@@ -1,7 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ChatGuidanceQuestionResponse as ChatGuidanceQueryResponse } from './dto/chat.guidance.adapter.dto.question.response';
-import { ChatGuidanceEventType } from './chat.guidance.event.type';
+import { ChatGuidanceQueryResponse } from './dto/chat.guidance.adapter.dto.question.response';
 import { ChatGuidanceInputQuery } from './dto/chat.guidance.dto.input.query';
 import { CHAT_GUIDANCE_SERVICE } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
@@ -11,6 +10,12 @@ import { LogContext } from '@common/enums';
 import { ChatGuidanceInputBase } from './dto/chat.guidance.dto.input.base';
 import { ChatGuidanceBaseResponse } from './dto/chat.guidance.adapter.dto.base.response';
 import { IChatGuidanceQueryResult } from '@services/api/chat-guidance/dto/chat.guidance.query.result.dto';
+
+enum ChatGuidanceEventType {
+  QUERY = 'query',
+  INGEST = 'ingest',
+  RESET = 'reset',
+}
 
 @Injectable()
 export class ChatGuidanceAdapter {
