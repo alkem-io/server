@@ -50,7 +50,6 @@ export class ProfileResolverFields {
     nullable: false,
     description: 'A list of visuals for this Profile.',
   })
-  @Profiling.api
   async visuals(
     @Parent() profile: IProfile,
     @Loader(VisualLoaderCreator, { parentClassRef: Profile })
@@ -64,7 +63,6 @@ export class ProfileResolverFields {
     nullable: true,
     description: 'A list of URLs to relevant information.',
   })
-  @Profiling.api
   async references(
     @Parent() profile: IProfile,
     @Loader(ProfileReferencesLoaderCreator) loader: ILoader<IReference[]>
@@ -78,7 +76,6 @@ export class ProfileResolverFields {
     nullable: true,
     description: 'The default or named tagset.',
   })
-  @Profiling.api
   async tagset(
     @Parent() profile: IProfile,
     @Args('tagsetName', {
@@ -121,7 +118,6 @@ export class ProfileResolverFields {
     nullable: true,
     description: 'A list of named tagsets, each of which has a list of tags.',
   })
-  @Profiling.api
   async tagsets(
     @Parent() profile: IProfile,
     @Loader(ProfileTagsetsLoaderCreator) loader: ILoader<ITagset[]>
@@ -134,7 +130,6 @@ export class ProfileResolverFields {
     nullable: true,
     description: 'The location for this Profile.',
   })
-  @Profiling.api
   async location(
     @Parent() profile: IProfile,
     @Loader(ProfileLocationLoaderCreator) loader: ILoader<ILocation>
@@ -147,7 +142,6 @@ export class ProfileResolverFields {
     nullable: true,
     description: 'The storage bucket for this Profile.',
   })
-  @Profiling.api
   async storageBucket(@Parent() profile: IProfile): Promise<IStorageBucket> {
     return this.storageBucketResolverService.getStorageBucketForProfile(
       profile.id

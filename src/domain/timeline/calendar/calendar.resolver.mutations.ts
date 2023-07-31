@@ -9,13 +9,21 @@ import { CalendarService } from './calendar.service';
 import { ICalendarEvent } from '../event/event.interface';
 import { CalendarEventAuthorizationService } from '../event/event.service.authorization';
 import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
+import { ActivityInputCalendarEventCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.calendar.event.created';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { ICalendar } from './calendar.interface';
+import { ElasticsearchService } from '@services/external/elasticsearch';
+import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 
 @Resolver()
 export class CalendarResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private calendarService: CalendarService,
-    private calendarEventAuthorizationService: CalendarEventAuthorizationService
+    private calendarEventAuthorizationService: CalendarEventAuthorizationService,
+    private activityAdapter: ActivityAdapter,
+    private elasticSearchService: ElasticsearchService,
+    private timelineResolverService: TimelineResolverService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -48,6 +56,44 @@ export class CalendarResolverMutations {
         calendarEvent,
         calendar.authorization
       );
+
+    await this.processActivityCalendarEventCreated(
+      calendar,
+      calendarEventAuthorized,
+      agentInfo
+    );
+
     return calendarEventAuthorized;
+  }
+
+  private async processActivityCalendarEventCreated(
+    calendar: ICalendar,
+    calendarEvent: ICalendarEvent,
+    agentInfo: AgentInfo
+  ) {
+    const activityLogInput: ActivityInputCalendarEventCreated = {
+      triggeredBy: agentInfo.userID,
+      calendar: calendar,
+      calendarEvent: calendarEvent,
+    };
+    this.activityAdapter.calendarEventCreated(activityLogInput);
+
+    const spaceID = await this.timelineResolverService.getSpaceIdForCalendar(
+      calendar.id
+    );
+
+    if (spaceID) {
+      this.elasticSearchService.calendarEventCreated(
+        {
+          id: calendarEvent.id,
+          name: calendarEvent.profile.displayName,
+          space: spaceID,
+        },
+        {
+          id: agentInfo.userID,
+          email: agentInfo.email,
+        }
+      );
+    }
   }
 }

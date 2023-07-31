@@ -14,15 +14,17 @@ import { PostService } from '@domain/collaboration/post/post.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
-import ActivityLogBuilderService, {
-  IActivityLogBuilder,
-} from '@services/api/activity-log/activity.log.builder.service';
 import { IActivity } from '@platform/activity/activity.interface';
 import { getJourneyByCollaboration } from '@common/utils';
 import { Space } from '@domain/challenge/space/space.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity';
 import { RoomService } from '@domain/communication/room/room.service';
+import { IActivityLogBuilder } from './activity.log.builder.interface';
+import ActivityLogBuilderService from './activity.log.builder.service';
+import { ReferenceService } from '@domain/common/reference/reference.service';
+import { CalendarService } from '@domain/timeline/calendar/calendar.service';
+import { CalendarEventService } from '@domain/timeline/event/event.service';
 
 export class ActivityLogService {
   constructor(
@@ -34,6 +36,9 @@ export class ActivityLogService {
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
     private roomService: RoomService,
+    private referenceService: ReferenceService,
+    private calendarService: CalendarService,
+    private calendarEventService: CalendarEventService,
     private communityService: CommunityService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
@@ -121,7 +126,10 @@ export class ActivityLogService {
           this.challengeService,
           this.opportunityService,
           this.communityService,
-          this.roomService
+          this.roomService,
+          this.referenceService,
+          this.calendarService,
+          this.calendarEventService
         );
       const activityType = rawActivity.type as ActivityEventType;
       const result = await activityBuilder[activityType](rawActivity);
