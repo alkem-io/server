@@ -13,7 +13,7 @@ import { IActivityLogEntryCalloutDiscussionComment } from './activity.log.dto.en
 import { IActivityLogEntryChallengeCreated } from './activity.log.dto.entry.challenge.created';
 import { IActivityLogEntryOpportunityCreated } from './activity.log.dto.entry.opportunity.created';
 import { IActivityLogEntryUpdateSent } from './activity.log.dto.entry.update.sent';
-import { IActivityLogEntryCalendarEventCreated } from './activity.log.dto.entry.calender.event.created';
+import { IActivityLogEntryCalendarEventCreated } from './activity.log.dto.entry.calendar.event.created';
 import { IActivityLogEntryCalloutLinkCreated } from './activity.log.dto.entry.callout.link.created';
 
 @InterfaceType('ActivityLogEntry', {

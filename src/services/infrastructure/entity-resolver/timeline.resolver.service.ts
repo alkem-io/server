@@ -57,7 +57,7 @@ export class TimelineResolverService {
     });
     if (!result) {
       this.logger.error(
-        `Unable to identify Timeline for provided calender ID: ${calendarID}`,
+        `Unable to identify Timeline for provided calendar ID: ${calendarID}`,
         LogContext.CALENDAR
       );
       return undefined;
@@ -79,7 +79,7 @@ export class TimelineResolverService {
     });
     if (!result) {
       this.logger.error(
-        `Unable to identify Space for provided calender ID: ${calendarID}`,
+        `Unable to identify Space for provided calendar ID: ${calendarID}`,
         LogContext.CALENDAR
       );
       return undefined;

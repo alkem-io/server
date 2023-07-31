@@ -19,7 +19,7 @@ import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 import { IActivityLogEntryUpdateSent } from './dto/activity.log.dto.entry.update.sent';
 import { RoomService } from '@domain/communication/room/room.service';
 import { IActivityLogBuilder } from './activity.log.builder.interface';
-import { IActivityLogEntryCalendarEventCreated } from './dto/activity.log.dto.entry.calender.event.created';
+import { IActivityLogEntryCalendarEventCreated } from './dto/activity.log.dto.entry.calendar.event.created';
 import { IActivityLogEntryCalloutLinkCreated } from './dto/activity.log.dto.entry.callout.link.created';
 import { ReferenceService } from '@domain/common/reference/reference.service';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';

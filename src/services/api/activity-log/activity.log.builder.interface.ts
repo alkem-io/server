@@ -8,7 +8,7 @@ import { IActivityLogEntryOpportunityCreated } from '@services/api/activity-log/
 import { IActivityLogEntryCalloutPostComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.post.comment';
 import { IActivityLogEntryCalloutDiscussionComment } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.discussion.comment';
 import { IActivity } from '@platform/activity';
-import { IActivityLogEntryCalendarEventCreated } from './dto/activity.log.dto.entry.calender.event.created';
+import { IActivityLogEntryCalendarEventCreated } from './dto/activity.log.dto.entry.calendar.event.created';
 import { IActivityLogEntryUpdateSent } from './dto/activity.log.dto.entry.update.sent';
 import { IActivityLogEntryCalloutLinkCreated } from './dto/activity.log.dto.entry.callout.link.created';
 

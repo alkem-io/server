@@ -19,7 +19,7 @@ export abstract class IActivityLogEntryCalloutLinkCreated
 
   @Field(() => IReference, {
     nullable: false,
-    description: 'The Post that was created.',
+    description: 'The Reference that was created.',
   })
   reference!: IReference;
 }
