@@ -13,12 +13,12 @@ query variables:
 {
   "userData":
   {
-      "nameID": "Valentin",
-      "firstName": "Valentin",
-      "lastName": "Valentin",
+      "nameID": "test",
+      "firstName": "test",
+      "lastName": "user",
       "email": "test@test.com",
       "profileData": {
-        "displayName": "Valentin",
+        "displayName": "test",
         "description": "some description",
         "avatar": "http://someUri",
         "referencesData": {

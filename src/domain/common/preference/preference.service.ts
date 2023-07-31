@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import {
@@ -21,10 +21,12 @@ import { CreatePreferenceDefinitionInput } from './dto/preference-definition.dto
 import { PreferenceDefinitionSet } from '@common/enums/preference.definition.set';
 import { SpacePreferenceType } from '@common/enums/space.preference.type';
 import { PreferenceType } from '@common/enums/preference.type';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class PreferenceService {
   constructor(
+    private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(PreferenceDefinition)
     private definitionRepository: Repository<PreferenceDefinition>,
     @InjectRepository(Preference)
@@ -74,20 +76,34 @@ export class PreferenceService {
     return getDefaultPreferenceValue(valueType);
   }
 
-  async getPreferenceOrFail(peferenceID: string): Promise<IPreference> {
-    const reference = await this.preferenceRepository.findOneBy({
-      id: peferenceID,
+  async getPreferenceOrFail(
+    preferenceID: string,
+    options?: FindOneOptions<Preference>
+  ): Promise<IPreference> {
+    const reference = await this.preferenceRepository.findOne({
+      where: { id: preferenceID },
+      ...options,
     });
     if (!reference)
       throw new EntityNotFoundException(
-        `Not able to locate preference with the specified ID: ${peferenceID}`,
+        `Not able to locate preference with the specified ID: ${preferenceID}`,
         LogContext.CHALLENGES
       );
     return reference;
   }
 
-  async removePreference(preference: IPreference): Promise<IPreference> {
-    return await this.preferenceRepository.remove(preference as Preference);
+  async removePreference(preferenceID: string): Promise<IPreference> {
+    const preference = await this.getPreferenceOrFail(preferenceID);
+    if (preference.authorization)
+      await this.authorizationPolicyService.delete(preference.authorization);
+
+    const result = await this.preferenceRepository.remove(
+      preference as Preference
+    );
+    return {
+      ...result,
+      id: preferenceID,
+    };
   }
 
   async updatePreference(preference: IPreference, value: string) {
