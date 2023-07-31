@@ -44,7 +44,7 @@ export class PostMoveService {
 
     if (targetCallout.type !== CalloutType.POST_COLLECTION) {
       throw new NotSupportedException(
-        'A Post can be moved to a callout of type CARD only.',
+        'A Post can be moved to a callout of type POST_COLLECTION only.',
         LogContext.COLLABORATION
       );
     }

@@ -5,7 +5,7 @@ import {
   configQuery,
   spacesQuery,
   meQuery,
-  serverMetadataQuery,
+  platformMetadataQuery,
 } from '@config/graphql';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
@@ -61,6 +61,8 @@ import {
   GraphqlExceptionFilter,
 } from '@core/error-handling';
 import { MeModule } from '@services/api/me';
+import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
+import { LookupModule } from '@services/api/lookup';
 
 @Module({
   imports: [
@@ -146,7 +148,7 @@ import { MeModule } from '@services/api/me';
               endpoint: `${
                 configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/public/graphql`,
-              query: print(serverMetadataQuery),
+              query: print(platformMetadataQuery),
             },
           ],
         },
@@ -219,6 +221,8 @@ import { MeModule } from '@services/api/me';
     SsiCredentialFlowModule,
     StorageAccessModule,
     MeModule,
+    ChatGuidanceModule,
+    LookupModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

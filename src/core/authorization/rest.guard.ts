@@ -1,7 +1,12 @@
-import { Injectable, Inject, LoggerService, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  LoggerService,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AuthenticationException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
 import { AgentInfo } from '@core/authentication';
 

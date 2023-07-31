@@ -1,11 +1,13 @@
 import gql from 'graphql-tag';
 
-export const serverMetadataQuery = gql`
-  query serverMetadata {
-    metadata {
-      services {
-        name
-        version
+export const platformMetadataQuery = gql`
+  query platformMetadata {
+    platform {
+      metadata {
+        services {
+          name
+          version
+        }
       }
     }
   }

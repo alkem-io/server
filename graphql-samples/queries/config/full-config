@@ -1,39 +1,41 @@
 query
 {
-  configuration
-  {
-     template
-      {
-        name
-        description
-        users
-        {
-          name
-        }
-        opportunities
-        {
-          name
-          actorGroups
-          posts
-          relations
-        }
-      }
-
-    authentication
+  platform {
+    configuration
     {
-      providers
-      {
-        name
-        label
-        icon
-        enabled
-        config
+      template
         {
-          __typename
-          ... on OryConfig
+          name
+          description
+          users
           {
-            issuer
-            kratosPublicBaseURL
+            name
+          }
+          opportunities
+          {
+            name
+            actorGroups
+            posts
+            relations
+          }
+        }
+
+      authentication
+      {
+        providers
+        {
+          name
+          label
+          icon
+          enabled
+          config
+          {
+            __typename
+            ... on OryConfig
+            {
+              issuer
+              kratosPublicBaseURL
+            }
           }
         }
       }
