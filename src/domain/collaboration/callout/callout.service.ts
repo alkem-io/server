@@ -47,6 +47,9 @@ import { TagsetType } from '@common/enums/tagset.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CreateTagsetInput } from '@domain/common/tagset';
 import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
+import { IReference } from '@domain/common/reference';
+import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
+import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
 
 @Injectable()
 export class CalloutService {
@@ -469,6 +472,26 @@ export class CalloutService {
     callout.posts.push(post);
     await this.calloutRepository.save(callout);
     return post;
+  }
+
+  public async createLinkOnCallout(
+    linkData: CreateLinkOnCalloutInput
+  ): Promise<IReference> {
+    const calloutID = linkData.calloutID;
+    const callout = await this.getCalloutOrFail(calloutID, {
+      relations: ['profile', 'profile.references'],
+    });
+    if (!callout.profile || !callout.profile.references)
+      throw new EntityNotInitializedException(
+        `Callout (${calloutID}) not initialised`,
+        LogContext.COLLABORATION
+      );
+    const referenceInput: CreateReferenceOnProfileInput = {
+      profileID: callout.profile.id,
+      ...linkData,
+    };
+    const reference = await this.profileService.createReference(referenceInput);
+    return reference;
   }
 
   public async getComments(calloutID: string): Promise<IRoom | undefined> {

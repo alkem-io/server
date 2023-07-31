@@ -22,6 +22,7 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { PostTemplateModule } from '@domain/template/post-template/post.template.module';
 import { WhiteboardTemplateModule } from '@domain/template/whiteboard-template/whiteboard.template.module';
 import { RoomModule } from '@domain/communication/room/room.module';
+import { ReferenceModule } from '@domain/common/reference/reference.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { RoomModule } from '@domain/communication/room/room.module';
     PostTemplateModule,
     WhiteboardTemplateModule,
     MessagingModule,
+    ReferenceModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [
