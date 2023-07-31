@@ -33,7 +33,11 @@ export class ChatGuidanceResolverQueries {
       `Access interactive guidance: ${agentInfo.email}`
     );
     if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
-      return undefined;
+      return {
+        answer: 'guidance engine not enabled',
+        question: chatData.question,
+        sources: '',
+      };
     }
     return this.chatGuidanceService.askQuestion(chatData.question, agentInfo);
   }

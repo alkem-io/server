@@ -37,8 +37,8 @@ export class ChatGuidanceService {
   }
 
   public isGuidanceEngineEnabled(): boolean {
-    // todo: safe?
-    const result = this.configService.get(ConfigurationTypes.SSI).enabled;
+    const result = this.configService.get(ConfigurationTypes.PLATFORM)
+      .guidance_engine?.enabled;
     if (result) {
       return true;
     }

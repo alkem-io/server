@@ -35,7 +35,9 @@ export class ChatGuidanceResolverMutations {
       `Access interactive guidance: ${agentInfo.email}`
     );
     if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
-      return undefined;
+      return {
+        answer: 'guidance engine not enabled',
+      };
     }
     return this.chatGuidanceService.resetUserHistory(agentInfo);
   }
@@ -55,7 +57,9 @@ export class ChatGuidanceResolverMutations {
       `Access interactive guidance: ${agentInfo.email}`
     );
     if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
-      return undefined;
+      return {
+        answer: 'guidance engine not enabled',
+      };
     }
     return this.chatGuidanceService.ingest();
   }
