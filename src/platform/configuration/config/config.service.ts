@@ -91,6 +91,11 @@ export class KonfigService {
             enabled: this.configService.get(ConfigurationTypes.PLATFORM)
               ?.landing_page?.enabled,
           },
+          {
+            name: 'guidance-engine',
+            enabled: this.configService.get(ConfigurationTypes.PLATFORM)
+              ?.guidance_engine?.enabled,
+          },
         ],
       },
       sentry: {
