@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ElasticsearchService } from './elasticsearch.service';
+import { ContributionReporterService } from './contribution.reporter.service';
 import { MockConfigService, MockWinstonProvider } from '@test/mocks';
 
-describe('ElasticsearchService', () => {
-  let service: ElasticsearchService;
+describe('ContributionReporterService', () => {
+  let service: ContributionReporterService;
 
   MockConfigService.useValue = {
     ...MockConfigService.useValue,
@@ -14,10 +14,16 @@ describe('ElasticsearchService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ElasticsearchService, MockWinstonProvider, MockConfigService],
+      providers: [
+        ContributionReporterService,
+        MockWinstonProvider,
+        MockConfigService,
+      ],
     }).compile();
 
-    service = module.get<ElasticsearchService>(ElasticsearchService);
+    service = module.get<ContributionReporterService>(
+      ContributionReporterService
+    );
   });
 
   it('should be defined', () => {

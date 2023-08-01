@@ -6,7 +6,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
-import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { RoomResolverFields } from './room.resolver.fields';
 import { RoomResolverMutations } from './room.resolver.mutations';
@@ -21,7 +21,7 @@ import { SubscriptionServiceModule } from '@services/subscriptions/subscription-
 @Module({
   imports: [
     EntityResolverModule,
-    ElasticsearchModule,
+    ContributionReporterModule,
     ActivityAdapterModule,
     NotificationAdapterModule,
     AuthorizationModule,

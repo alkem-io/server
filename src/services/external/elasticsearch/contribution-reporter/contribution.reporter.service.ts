@@ -5,19 +5,19 @@ import { WriteResponseBase } from '@elastic/elasticsearch/lib/api/types';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConfigurationTypes } from '@common/enums';
-import { isElasticError, isElasticResponseError } from './utils';
+import { isElasticError, isElasticResponseError } from '../utils';
 import {
   AuthorDetails,
   ContributionDetails,
   ContributionDocument,
-} from './types';
-import { BaseContribution } from './events';
-import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
+} from '../types';
+import { BaseContribution } from '../events';
+import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
 
 @Injectable()
-export class ElasticsearchService {
+export class ContributionReporterService {
   private readonly environment: string;
   private readonly activityIndexName: string;
 

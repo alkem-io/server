@@ -31,12 +31,12 @@ import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_CHALLENGE_CREATED } from '@common/constants';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { ElasticsearchService } from '@services/external/elasticsearch';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 
 @Resolver()
 export class SpaceResolverMutations {
   constructor(
-    private elasticService: ElasticsearchService,
+    private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
     private spaceService: SpaceService,
@@ -93,7 +93,7 @@ export class SpaceResolverMutations {
 
     const updatedSpace = await this.spaceService.update(spaceData);
 
-    this.elasticService.spaceContentEdited(
+    this.contributionReporter.spaceContentEdited(
       {
         id: updatedSpace.id,
         name: updatedSpace.profile.displayName,
@@ -276,7 +276,7 @@ export class SpaceResolverMutations {
       challenge: challenge,
     });
 
-    this.elasticService.challengeCreated(
+    this.contributionReporter.challengeCreated(
       {
         id: challenge.id,
         name: challenge.profile.displayName,

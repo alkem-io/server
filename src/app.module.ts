@@ -47,7 +47,7 @@ import { LibraryModule } from '@library/library/library.module';
 import { PostMoveModule } from '@domain/collaboration/post/post.move.module';
 import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
-import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationHubInterceptor } from '@common/interceptors';
 import { InnovationHubModule } from '@domain/innovation-hub';
@@ -215,7 +215,7 @@ import { LookupModule } from '@services/api/lookup';
     PlatformModule,
     PostMoveModule,
     GeoLocationModule,
-    ElasticsearchModule,
+    ContributionReporterModule,
     InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,

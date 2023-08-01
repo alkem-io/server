@@ -12,7 +12,7 @@ import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.ev
 import { ActivityInputCalendarEventCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.calendar.event.created';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ICalendar } from './calendar.interface';
-import { ElasticsearchService } from '@services/external/elasticsearch';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 
 @Resolver()
@@ -22,7 +22,7 @@ export class CalendarResolverMutations {
     private calendarService: CalendarService,
     private calendarEventAuthorizationService: CalendarEventAuthorizationService,
     private activityAdapter: ActivityAdapter,
-    private elasticSearchService: ElasticsearchService,
+    private elasticSearchService: ContributionReporterService,
     private timelineResolverService: TimelineResolverService
   ) {}
 
