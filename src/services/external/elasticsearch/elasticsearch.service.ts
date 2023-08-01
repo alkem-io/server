@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { Client } from '@elastic/elasticsearch';
+import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { WriteResponseBase } from '@elastic/elasticsearch/lib/api/types';
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -12,20 +12,21 @@ import {
   ContributionDocument,
 } from './types';
 import { BaseContribution } from './events';
+import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
 
 @Injectable()
 export class ElasticsearchService {
-  private readonly client: Client | undefined;
-
   private readonly environment: string;
   private readonly activityIndexName: string;
 
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
+    private readonly client: ElasticClient | undefined
   ) {
     const elasticsearch = this.configService.get(
       ConfigurationTypes.INTEGRATIONS
@@ -35,28 +36,7 @@ export class ElasticsearchService {
       ConfigurationTypes.HOSTING
     )?.environment;
 
-    const { host, retries, timeout, api_key } = elasticsearch;
-
     this.activityIndexName = elasticsearch?.indices?.contribution;
-
-    if (!host) {
-      this.logger.warn('Elasticsearch host URL not provided!');
-      return;
-    }
-
-    if (!api_key) {
-      this.logger.error('Elasticsearch API key not provided!');
-      return;
-    }
-
-    this.client = new Client({
-      node: host,
-      maxRetries: retries,
-      requestTimeout: timeout,
-      resurrectStrategy: 'ping',
-      auth: { apiKey: api_key },
-      tls: { rejectUnauthorized: false },
-    });
   }
 
   public spaceJoined(
@@ -359,7 +339,6 @@ export class ElasticsearchService {
     return undefined;
   }
 
-  // todo: base method to require type, id, name, author, and additional data
   private async createDocument<TObject extends BaseContribution>(
     contribution: TObject,
     details: AuthorDetails
@@ -370,7 +349,7 @@ export class ElasticsearchService {
 
     const document: ContributionDocument = {
       ...contribution,
-      '@timestamp': new Date(), // todo: is this UTC?
+      '@timestamp': new Date(),
       alkemio: isFromAlkemioTeam(details.email),
       environment: this.environment,
     };
