@@ -22,7 +22,8 @@ export class RolesResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField(() => [InvitationForRoleResult], {
-    description: 'The invitations of the current authenticated user',
+    description:
+      'The invitations for the specified user; only accessible for platform admins',
   })
   public async invitations(
     @CurrentUser() agentInfo: AgentInfo,
@@ -37,7 +38,7 @@ export class RolesResolverFields {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.READ_USERS, //TODO: convert to PLATFORM_ADMIN
+      AuthorizationPrivilege.PLATFORM_ADMIN,
       `roles user query: ${agentInfo.email}`
     );
     return await this.rolesService.getUserInvitations(agentInfo.userID, states);
@@ -45,7 +46,8 @@ export class RolesResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField(() => [ApplicationForRoleResult], {
-    description: 'The applications for the specified user',
+    description:
+      'The applications for the specified user; only accessible for platform admins',
   })
   public async applications(
     @CurrentUser() agentInfo: AgentInfo,
@@ -60,7 +62,7 @@ export class RolesResolverFields {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.READ_USERS, //TODO: convert to PLATFORM_ADMIN
+      AuthorizationPrivilege.PLATFORM_ADMIN,
       `roles user query: ${agentInfo.email}`
     );
     return await this.rolesService.getUserApplications(
