@@ -1,41 +1,38 @@
 import { Injectable } from '@nestjs/common';
-import { UserService } from '@domain/community/user/user.service';
-import { ApplicationService } from '@domain/community/application/application.service';
-import { InvitationService } from '@domain/community/invitation/invitation.service';
-import { IInvitation } from '@domain/community/invitation';
-import { IApplication } from '@domain/community/application';
 import { ICredential } from '@src/domain';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
 import { SpaceService } from '@domain/challenge/space/space.service';
+import { RolesService } from '../roles/roles.service';
+import { ApplicationForRoleResult } from '../roles/dto/roles.dto.result.application';
+import { InvitationForRoleResult } from '../roles/dto/roles.dto.result.invitation';
+import { ISpace } from '@domain/challenge/space/space.interface';
 
 @Injectable()
 export class MeService {
   constructor(
-    private userService: UserService,
-    private applicationService: ApplicationService,
-    private invitationService: InvitationService,
-    private spaceService: SpaceService
+    private spaceService: SpaceService,
+    private rolesService: RolesService
   ) {}
 
-  public getUserInvitations(
+  public async getUserInvitations(
     userId: string,
     states?: string[]
-  ): Promise<IInvitation[]> {
-    return this.invitationService.findInvitationsForUser(userId, states);
+  ): Promise<InvitationForRoleResult[]> {
+    return await this.rolesService.getUserInvitations(userId, states);
   }
 
-  public getUserApplications(
+  public async getUserApplications(
     userId: string,
     states?: string[]
-  ): Promise<IApplication[]> {
-    return this.applicationService.findApplicationsForUser(userId, states);
+  ): Promise<ApplicationForRoleResult[]> {
+    return await this.rolesService.getUserApplications(userId, states);
   }
 
   public getSpaceMemberships(
     credentials: ICredential[],
     visibilities: SpaceVisibility[] = []
-  ) {
+  ): Promise<ISpace[]> {
     const credentialMap = groupCredentialsByEntity(credentials);
     const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
 

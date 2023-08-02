@@ -18,6 +18,7 @@ import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/p
 import { SpaceFilterModule } from '@services/infrastructure/space-filter/space.filter.module';
 import { InvitationModule } from '@domain/community/invitation/invitation.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { RolesResolverFields } from './roles.resolver.fields';
 
 @Module({
   imports: [
@@ -38,7 +39,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     TypeOrmModule.forFeature([Challenge]),
     TypeOrmModule.forFeature([Opportunity]),
   ],
-  providers: [RolesService, RolesResolverQueries],
+  providers: [RolesService, RolesResolverQueries, RolesResolverFields],
   exports: [RolesService],
 })
 export class RolesModule {}
