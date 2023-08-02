@@ -51,7 +51,7 @@ export class MeResolverFields {
     })
     states: string[]
   ): Promise<InvitationForRoleResult[]> {
-    return await this.meService.getUserInvitations(agentInfo.userID, states);
+    return this.meService.getUserInvitations(agentInfo.userID, states);
   }
 
   @UseGuards(GraphqlGuard)
@@ -69,7 +69,7 @@ export class MeResolverFields {
     })
     states: string[]
   ): Promise<ApplicationForRoleResult[]> {
-    return await this.meService.getUserApplications(agentInfo.userID, states);
+    return this.meService.getUserApplications(agentInfo.userID, states);
   }
 
   @UseGuards(GraphqlGuard)
