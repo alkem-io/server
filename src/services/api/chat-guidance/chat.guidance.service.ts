@@ -1,15 +1,14 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { IChatGuidanceResult } from './dto/chat.guidance.result.dto';
-import { ChatGuidanceAdapter } from '@services/adapters/chat-guidance-adapter/chat.guidance.adapter';
 import { IChatGuidanceQueryResult } from './dto/chat.guidance.query.result.dto';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { ConfigService } from '@nestjs/config';
+import { GuidanceEngineAdapter } from '@services/adapters/chat-guidance-adapter/guidance.engine.adapter';
 
 export class ChatGuidanceService {
   constructor(
-    private chatGuidanceAdapter: ChatGuidanceAdapter,
+    private guidanceEngineAdapter: GuidanceEngineAdapter,
     private configService: ConfigService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -17,23 +16,21 @@ export class ChatGuidanceService {
   public async askQuestion(
     question: string,
     agentInfo: AgentInfo
-  ): Promise<IChatGuidanceQueryResult | undefined> {
-    return this.chatGuidanceAdapter.sendQuery({
+  ): Promise<IChatGuidanceQueryResult> {
+    return this.guidanceEngineAdapter.sendQuery({
       userId: agentInfo.userID,
       question: question,
     });
   }
 
-  public async resetUserHistory(
-    agentInfo: AgentInfo
-  ): Promise<IChatGuidanceResult | undefined> {
-    return this.chatGuidanceAdapter.sendReset({
+  public async resetUserHistory(agentInfo: AgentInfo): Promise<boolean> {
+    return this.guidanceEngineAdapter.sendReset({
       userId: agentInfo.userID,
     });
   }
 
-  public async ingest(): Promise<IChatGuidanceResult | undefined> {
-    return this.chatGuidanceAdapter.sendIngest();
+  public async ingest(): Promise<boolean> {
+    return this.guidanceEngineAdapter.sendIngest();
   }
 
   public isGuidanceEngineEnabled(): boolean {

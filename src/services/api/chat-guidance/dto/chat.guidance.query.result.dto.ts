@@ -1,8 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IChatGuidanceResult } from './chat.guidance.result.dto';
 
-@ObjectType('ChatGuidanceQueryResult')
-export abstract class IChatGuidanceQueryResult extends IChatGuidanceResult {
+@ObjectType('ChatGuidanceResult')
+export abstract class IChatGuidanceQueryResult {
   @Field(() => String, {
     nullable: false,
     description: 'The original question',
@@ -14,4 +13,10 @@ export abstract class IChatGuidanceQueryResult extends IChatGuidanceResult {
     description: 'The sources used to answer the question',
   })
   sources!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'The answer to the question',
+  })
+  answer!: string;
 }
