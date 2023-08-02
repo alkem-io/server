@@ -1,16 +1,16 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ChatGuidanceQueryResponse } from './dto/chat.guidance.adapter.dto.question.response';
-import { ChatGuidanceInputQuery } from './dto/chat.guidance.dto.input.query';
+import { GuidanceEngineQueryResponse } from './dto/guidance.engine.adapter.dto.question.response';
+import { GuidanceEngineInputQuery } from './dto/guidance.engine.dto.input.query';
 import { CHAT_GUIDANCE_SERVICE } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { LogContext } from '@common/enums';
-import { ChatGuidanceInputBase } from './dto/chat.guidance.dto.input.base';
-import { ChatGuidanceBaseResponse } from './dto/chat.guidance.adapter.dto.base.response';
+import { GuidanceEngineInputBase } from './dto/guidance.engine.dto.input.base';
+import { GuidanceEngineBaseResponse } from './dto/guidance.engine.adapter.dto.base.response';
 import { IChatGuidanceQueryResult } from '@services/api/chat-guidance/dto/chat.guidance.query.result.dto';
 
-enum ChatGuidanceEventType {
+enum GuidanceEngineEventType {
   QUERY = 'query',
   INGEST = 'ingest',
   RESET = 'reset',
@@ -20,23 +20,23 @@ const successfulIngestionResponse = 'Ingest function executed';
 const successfulResetResponse = 'Reset function executed';
 
 @Injectable()
-export class ChatGuidanceAdapter {
+export class GuidanceEngineAdapter {
   constructor(
-    @Inject(CHAT_GUIDANCE_SERVICE) private chatGuidanceClient: ClientProxy,
+    @Inject(CHAT_GUIDANCE_SERVICE) private GuidanceEngineClient: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
 
   async sendQuery(
-    eventData: ChatGuidanceInputQuery
+    eventData: GuidanceEngineInputQuery
   ): Promise<IChatGuidanceQueryResult> {
-    const response = this.chatGuidanceClient.send(
-      { cmd: ChatGuidanceEventType.QUERY },
+    const response = this.GuidanceEngineClient.send(
+      { cmd: GuidanceEngineEventType.QUERY },
       eventData
     );
 
     try {
-      const responseData = await firstValueFrom<ChatGuidanceQueryResponse>(
+      const responseData = await firstValueFrom<GuidanceEngineQueryResponse>(
         response
       );
       const message = responseData.result;
@@ -65,14 +65,14 @@ export class ChatGuidanceAdapter {
     }
   }
 
-  async sendReset(eventData: ChatGuidanceInputBase): Promise<boolean> {
-    const response = this.chatGuidanceClient.send(
-      { cmd: ChatGuidanceEventType.RESET },
+  async sendReset(eventData: GuidanceEngineInputBase): Promise<boolean> {
+    const response = this.GuidanceEngineClient.send(
+      { cmd: GuidanceEngineEventType.RESET },
       eventData
     );
 
     try {
-      const responseData = await firstValueFrom<ChatGuidanceBaseResponse>(
+      const responseData = await firstValueFrom<GuidanceEngineBaseResponse>(
         response
       );
 
@@ -87,13 +87,13 @@ export class ChatGuidanceAdapter {
   }
 
   async sendIngest(): Promise<boolean> {
-    const response = this.chatGuidanceClient.send(
-      { cmd: ChatGuidanceEventType.INGEST },
+    const response = this.GuidanceEngineClient.send(
+      { cmd: GuidanceEngineEventType.INGEST },
       {}
     );
 
     try {
-      const responseData = await firstValueFrom<ChatGuidanceBaseResponse>(
+      const responseData = await firstValueFrom<GuidanceEngineBaseResponse>(
         response
       );
       return responseData.result === successfulIngestionResponse;

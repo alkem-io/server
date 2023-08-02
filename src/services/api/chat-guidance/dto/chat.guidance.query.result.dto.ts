@@ -1,6 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 
-@ObjectType('ChatGuidanceQueryResult')
+@ObjectType('ChatGuidanceResult')
 export abstract class IChatGuidanceQueryResult {
   @Field(() => String, {
     nullable: false,
