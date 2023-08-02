@@ -164,12 +164,7 @@ export class PlatformAuthorizationPolicyService {
     const interactiveGuidance =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
-          AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
-          AuthorizationCredential.BETA_TESTER,
-        ],
+        [AuthorizationCredential.BETA_TESTER],
         CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE
       );
     admin.cascade = false;
