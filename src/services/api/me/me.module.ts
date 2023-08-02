@@ -7,6 +7,7 @@ import { MeService } from './me.service';
 import { MeResolverQueries } from './me.resolver.queries';
 import { MeResolverFields } from './me.resolver.fields';
 import { SpaceModule } from '@domain/challenge/space/space.module';
+import { RolesModule } from '../roles/roles.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { SpaceModule } from '@domain/challenge/space/space.module';
     InvitationModule,
     UserModule,
     SpaceModule,
+    RolesModule,
   ],
   providers: [MeService, MeResolverQueries, MeResolverFields],
   exports: [MeService],
