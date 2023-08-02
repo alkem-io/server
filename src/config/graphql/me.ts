@@ -5,36 +5,19 @@ export const meQuery = gql`
     me {
       user {
         nameID
-        firstName
-        lastName
         email
         profile {
           displayName
         }
         agent {
-          id
           did
           credentials {
-            id
             resourceID
             type
           }
         }
       }
-      applications {
-        id
-        lifecycle {
-          state
-        }
-      }
-      invitations {
-        id
-        lifecycle {
-          state
-        }
-      }
       spaceMemberships {
-        id
         nameID
       }
     }
