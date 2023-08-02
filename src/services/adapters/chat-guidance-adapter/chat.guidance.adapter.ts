@@ -5,7 +5,6 @@ import { ChatGuidanceInputQuery } from './dto/chat.guidance.dto.input.query';
 import { CHAT_GUIDANCE_SERVICE } from '@common/constants';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { IChatGuidanceResult } from '@services/api/chat-guidance/dto/chat.guidance.result.dto';
 import { LogContext } from '@common/enums';
 import { ChatGuidanceInputBase } from './dto/chat.guidance.dto.input.base';
 import { ChatGuidanceBaseResponse } from './dto/chat.guidance.adapter.dto.base.response';
@@ -17,6 +16,9 @@ enum ChatGuidanceEventType {
   RESET = 'reset',
 }
 
+const successfulIngestionResponse = 'Ingest function executed';
+const successfulResetResponse = 'Reset function executed';
+
 @Injectable()
 export class ChatGuidanceAdapter {
   constructor(
@@ -27,7 +29,7 @@ export class ChatGuidanceAdapter {
 
   async sendQuery(
     eventData: ChatGuidanceInputQuery
-  ): Promise<IChatGuidanceQueryResult | undefined> {
+  ): Promise<IChatGuidanceQueryResult> {
     const response = this.chatGuidanceClient.send(
       { cmd: ChatGuidanceEventType.QUERY },
       eventData
@@ -41,7 +43,10 @@ export class ChatGuidanceAdapter {
       let cleanedString = message;
       // Check if response is a string containing stringified JSON
       if (typeof message === 'string' && message.startsWith('{')) {
-        cleanedString = message.replace(/\\\\n/g, ' ').replace(/\\\\/g, '\\');
+        cleanedString = message
+          .replace(/\\\\n/g, ' ')
+          .replace(/\\\\/g, '\\')
+          .replace(/<\|im_end\|>/g, '');
       }
 
       const jsonObject = JSON.parse(cleanedString);
@@ -50,16 +55,17 @@ export class ChatGuidanceAdapter {
       };
       return result;
     } catch (err: any) {
-      this.logger.error(
-        `Could not send query to chat guidance adapter! ${err}`,
-        LogContext.CHAT_GUIDANCE
-      );
+      const errorMessage = `Could not send query to chat guidance adapter! ${err}`;
+      this.logger.error(errorMessage, LogContext.CHAT_GUIDANCE);
+      return {
+        answer: errorMessage,
+        question: eventData.question,
+        sources: '',
+      };
     }
   }
 
-  async sendReset(
-    eventData: ChatGuidanceInputBase
-  ): Promise<IChatGuidanceResult | undefined> {
+  async sendReset(eventData: ChatGuidanceInputBase): Promise<boolean> {
     const response = this.chatGuidanceClient.send(
       { cmd: ChatGuidanceEventType.RESET },
       eventData
@@ -70,21 +76,17 @@ export class ChatGuidanceAdapter {
         response
       );
 
-      const result: IChatGuidanceResult = {
-        answer: responseData.result,
-      };
-
-      return result;
+      return responseData.result === successfulResetResponse;
     } catch (err: any) {
       this.logger.error(
         `Could not send reset to chat guidance adapter! ${err}`,
         LogContext.CHAT_GUIDANCE
       );
-      return undefined;
+      return false;
     }
   }
 
-  async sendIngest(): Promise<any> {
+  async sendIngest(): Promise<boolean> {
     const response = this.chatGuidanceClient.send(
       { cmd: ChatGuidanceEventType.INGEST },
       {}
@@ -94,18 +96,13 @@ export class ChatGuidanceAdapter {
       const responseData = await firstValueFrom<ChatGuidanceBaseResponse>(
         response
       );
-
-      const result: IChatGuidanceResult = {
-        answer: responseData.result,
-      };
-
-      return result;
+      return responseData.result === successfulIngestionResponse;
     } catch (err: any) {
       this.logger.error(
         `Could not send ingest to chat guidance adapter! ${err}`,
         LogContext.CHAT_GUIDANCE
       );
-      return undefined;
+      return false;
     }
   }
 }

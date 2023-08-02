@@ -25,7 +25,7 @@ export class ChatGuidanceResolverQueries {
   async askChatGuidanceQuestion(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('chatData') chatData: ChatGuidanceInput
-  ): Promise<IChatGuidanceQueryResult | undefined> {
+  ): Promise<IChatGuidanceQueryResult> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.platformAuthorizationService.getPlatformAuthorizationPolicy(),

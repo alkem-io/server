@@ -1,7 +1,6 @@
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AgentInfo } from '@core/authentication/agent-info';
-import { IChatGuidanceResult } from './dto/chat.guidance.result.dto';
 import { ChatGuidanceAdapter } from '@services/adapters/chat-guidance-adapter/chat.guidance.adapter';
 import { IChatGuidanceQueryResult } from './dto/chat.guidance.query.result.dto';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
@@ -17,22 +16,20 @@ export class ChatGuidanceService {
   public async askQuestion(
     question: string,
     agentInfo: AgentInfo
-  ): Promise<IChatGuidanceQueryResult | undefined> {
+  ): Promise<IChatGuidanceQueryResult> {
     return this.chatGuidanceAdapter.sendQuery({
       userId: agentInfo.userID,
       question: question,
     });
   }
 
-  public async resetUserHistory(
-    agentInfo: AgentInfo
-  ): Promise<IChatGuidanceResult | undefined> {
+  public async resetUserHistory(agentInfo: AgentInfo): Promise<boolean> {
     return this.chatGuidanceAdapter.sendReset({
       userId: agentInfo.userID,
     });
   }
 
-  public async ingest(): Promise<IChatGuidanceResult | undefined> {
+  public async ingest(): Promise<boolean> {
     return this.chatGuidanceAdapter.sendIngest();
   }
 

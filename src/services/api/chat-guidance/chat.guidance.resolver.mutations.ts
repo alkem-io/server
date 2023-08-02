@@ -5,7 +5,6 @@ import { GraphqlGuard } from '@core/authorization';
 import { AgentInfo } from '@core/authentication';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ChatGuidanceService } from './chat.guidance.service';
-import { IChatGuidanceResult } from './dto/chat.guidance.result.dto';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -21,13 +20,13 @@ export class ChatGuidanceResolverMutations {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IChatGuidanceResult, {
+  @Mutation(() => Boolean, {
     description: 'Resets the interaction with the chat engine.',
   })
   @Profiling.api
   async resetChatGuidance(
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IChatGuidanceResult | undefined> {
+  ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
@@ -35,21 +34,17 @@ export class ChatGuidanceResolverMutations {
       `Access interactive guidance: ${agentInfo.email}`
     );
     if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
-      return {
-        answer: 'guidance engine not enabled',
-      };
+      return false;
     }
     return this.chatGuidanceService.resetUserHistory(agentInfo);
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IChatGuidanceResult, {
+  @Mutation(() => Boolean, {
     description: 'Resets the interaction with the chat engine.',
   })
   @Profiling.api
-  async ingest(
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IChatGuidanceResult | undefined> {
+  async ingest(@CurrentUser() agentInfo: AgentInfo): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
@@ -57,9 +52,7 @@ export class ChatGuidanceResolverMutations {
       `Access interactive guidance: ${agentInfo.email}`
     );
     if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
-      return {
-        answer: 'guidance engine not enabled',
-      };
+      return false;
     }
     return this.chatGuidanceService.ingest();
   }
