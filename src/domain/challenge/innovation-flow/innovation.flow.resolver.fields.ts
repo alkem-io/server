@@ -1,8 +1,7 @@
-import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { Profiling } from '@src/common/decorators';
 import { IInnovationFlow } from './innovation.flow.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import {
@@ -30,7 +29,6 @@ export class InnovationFlowResolverFields {
     return loader.load(innovationFlow.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('lifecycle', () => ILifecycle, {
     nullable: true,
     description: 'The Lifecycle being used by this InnovationFlow',
