@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
-import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
+import { ElasticsearchClientProvider } from '../elasticsearch-client';
+import { NameReporterService } from './name.reporter.service';
 
 @Module({
-  providers: [NameReporterService],
+  providers: [NameReporterService, ElasticsearchClientProvider],
   exports: [NameReporterService],
 })
 export class NameReporterModule {}

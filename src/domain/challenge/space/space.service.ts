@@ -423,10 +423,10 @@ export class SpaceService {
     return spacesResult;
   }
 
-  public async getAllSpaces(): Promise<ISpace[]> {
-    return this.spaceRepository.find({
-      relations: ['preferenceSet', 'preferenceSet.preferences'],
-    });
+  public async getAllSpaces(
+    options?: FindManyOptions<ISpace>
+  ): Promise<ISpace[]> {
+    return this.spaceRepository.find(options);
   }
 
   private async getFilteredSpacesSortOrderDefault(

@@ -34,6 +34,7 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { SpaceStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.storage.space.loader.creator';
+import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { SpaceStorageBucketLoaderCreator } from '@core/dataloader/creators/loade
     SpaceFilterModule,
     ContributionReporterModule,
     LoaderCreatorModule,
+    NameReporterModule,
     TypeOrmModule.forFeature([Space]),
   ],
   providers: [
