@@ -26,10 +26,29 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     sortOrder: 3,
   },
   {
+    nameID: 'general-chat',
     type: CalloutType.POST,
     profile: {
-      displayName: 'Suggestions, Questions, and Feedback',
-      description: 'Please share it here :)',
+      displayName: 'General chat',
+      description: 'Things you would like to discuss with the community?',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [SpaceDisplayLocation.HOME_LEFT],
+        },
+      ],
+    },
+    state: CalloutState.OPEN,
+    sortOrder: 1,
+    displayLocation: CalloutDisplayLocation.HOME_LEFT,
+  },
+  {
+    type: CalloutType.POST_COLLECTION,
+    profile: {
+      displayName: 'Task list 🎯',
+      description:
+        'Time to get to action! Add a task to this list or find one to pick up!',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -38,16 +57,27 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: 'suggestions',
+    nameID: `${CalloutType.POST_COLLECTION}-default`,
     state: CalloutState.OPEN,
-    sortOrder: 3,
+    sortOrder: 1,
+    postTemplate: {
+      type: 'Task',
+      defaultDescription:
+        '✍️ Please describe what has to be done and potentially by whom. The more details the better!',
+      profile: {
+        displayName: 'task',
+        description:
+          'To share tasks with the community that can be picked up.',
+      },
+    },
+    displayLocation: CalloutDisplayLocation.HOME_RIGHT,
   },
   {
     type: CalloutType.POST_COLLECTION,
     profile: {
-      displayName: 'Contribute',
+      displayName: 'Relevant news, research or use cases 📰',
       description:
-        'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
+        'Please share any relevant insights to help us better understand the context. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -70,6 +100,23 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       },
     },
   },
+  {
+    type: CalloutType.LINK_COLLECTION,
+    profile: {
+      displayName: 'Reference / relevant documents',
+      description: 'Please add links to documents with reference material.💥',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [CommonDisplayLocation.CONTRIBUTE],
+        },
+      ],
+    },
+    nameID: 'documents',
+    state: CalloutState.OPEN,
+    sortOrder: 2,
+  },  
   {
     type: CalloutType.WHITEBOARD_COLLECTION,
     profile: {
@@ -95,4 +142,5 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       },
     },
   },
+
 ];

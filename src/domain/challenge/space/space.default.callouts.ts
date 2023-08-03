@@ -9,6 +9,60 @@ import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
 
 export const spaceDefaultCallouts: CreateCalloutInput[] = [
+    {
+    type: CalloutType.LINK_COLLECTION,
+    profile: {
+      displayName: 'Recommended by the Leads',
+      description: 'Some quick links to get started 💥',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [CommonDisplayLocation.HOME_TOP],
+        },
+      ],
+    },
+    nameID: 'recommendations',
+    state: CalloutState.CLOSED,
+    sortOrder: 3,
+    displayLocation: CalloutDisplayLocation.HOME_TOP,
+  },
+  {
+    nameID: 'general-chat',
+    type: CalloutType.POST,
+    profile: {
+      displayName: 'General chat',
+      description: 'Things you would like to discuss with the community?',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [SpaceDisplayLocation.HOME_LEFT],
+        },
+      ],
+    },
+    state: CalloutState.OPEN,
+    sortOrder: 1,
+    displayLocation: CalloutDisplayLocation.HOME_LEFT,
+  },
+  {
+    type: CalloutType.POST,
+    profile: {
+      displayName: 'Do you have any questions or feedback?',
+      description: 'Please share it here :)',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [CommonDisplayLocation.HOME_LEFT],
+        },
+      ],
+    },
+    nameID: 'questions',
+    state: CalloutState.OPEN,
+    sortOrder: 2,
+    displayLocation: CalloutDisplayLocation.HOME_LEFT,
+  },
   {
     nameID: 'space-welcome',
     type: CalloutType.POST,
@@ -29,47 +83,59 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     displayLocation: CalloutDisplayLocation.COMMUNITY_LEFT,
   },
   {
-    type: CalloutType.LINK_COLLECTION,
-    profile: {
-      displayName: 'Recommended by the Leads',
-      description: 'Some quick links to get started 💥',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_TOP],
-        },
-      ],
-    },
-    nameID: 'recommendations',
-    state: CalloutState.CLOSED,
-    sortOrder: 3,
-    displayLocation: CalloutDisplayLocation.HOME_TOP,
-  },
-  {
+    nameID: 'challenge-ideas',
     type: CalloutType.POST,
     profile: {
-      displayName: 'Suggestions, Questions, and Feedback',
-      description: 'Please share it here :)',
+      displayName: 'What Challenges do you care about?',
+      description:
+        '👋 Please share any relevant Challenges that you encounter?',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_RIGHT],
+          tags: [SpaceDisplayLocation.CHALLENGES_LEFT],
         },
       ],
     },
-    nameID: 'suggestions',
     state: CalloutState.OPEN,
-    sortOrder: 3,
-    displayLocation: CalloutDisplayLocation.HOME_RIGHT,
+    sortOrder: 1,
+    displayLocation: CalloutDisplayLocation.CHALLENGES_LEFT,
   },
   {
     type: CalloutType.POST_COLLECTION,
     profile: {
-      displayName: 'Contribute',
+      displayName: 'Challenge proposals 🎯',
       description:
-        '✍️ Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
+        'Do you have a specific Challenge you would like to pick up in this Space, please share your proposal here? You can also comment on proposals by others if you want to work on that Challenge as well!',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [CommonDisplayLocation.CHALLENGES_RIGHT],
+        },
+      ],
+    },
+    nameID: `${CalloutType.POST_COLLECTION}-default`,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
+    postTemplate: {
+      type: 'contribution',
+      defaultDescription:
+        '✍️ Please share your contribution. The more details the better!',
+      profile: {
+        displayName: 'contribution',
+        description:
+          'To share contributions with detailed explanations how they help.',
+      },
+    },
+    displayLocation: CalloutDisplayLocation.CHALLENGES_RIGHT,
+  },
+  {
+    type: CalloutType.POST_COLLECTION,
+    profile: {
+      displayName: 'Relevant news, research or use cases 📰',
+      description:
+        'Please share any relevant insights to help us better understand the context. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -80,7 +146,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     },
     nameID: `${CalloutType.POST_COLLECTION}-default`,
     state: CalloutState.OPEN,
-    sortOrder: 5,
+    sortOrder: 1,
     postTemplate: {
       type: 'contribution',
       defaultDescription:
@@ -108,14 +174,14 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     },
     nameID: 'documents',
     state: CalloutState.OPEN,
-    sortOrder: 3,
+    sortOrder: 2,
   },
   {
-    type: CalloutType.WHITEBOARD_COLLECTION,
+    type: CalloutType.POST_COLLECTION,
     profile: {
-      displayName: 'Collaborate visually',
+      displayName: 'FAQ',
       description:
-        '🎨 Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
+        'Do you have a question? Check out the most asked questions and answers here.',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -124,14 +190,17 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: `${CalloutType.WHITEBOARD_COLLECTION}`,
+    nameID: `${CalloutType.POST_COLLECTION}-default`,
     state: CalloutState.OPEN,
-    sortOrder: 10,
-    whiteboardTemplate: {
-      value: EMPTY_WHITEBOARD_VALUE,
+    sortOrder: 3,
+    postTemplate: {
+      type: '',
+      defaultDescription:
+        '✍️ Please share your contribution. The more details the better!',
       profile: {
-        displayName: 'blank whiteboard',
-        description: 'A blank whiteboard to be worked further.',
+        displayName: 'contribution',
+        description:
+          'To share contributions with detailed explanations how they help.',
       },
     },
     displayLocation: CalloutDisplayLocation.KNOWLEDGE,
