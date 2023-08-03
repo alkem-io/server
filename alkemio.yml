@@ -403,6 +403,10 @@ platform:
   # Client can optionally work with a landing page, to give additional information
   landing_page:
     enabled: ${LANDING_PAGE_ENABLED}:false
+
+  # Configure usage of the guidance engine
+  guidance_engine:
+    enabled: ${GUIDANCE_ENGINE_ENABLED}:true
 ssi:
   # Jolocom SDK is used for providing SSI capabilities on the platform.
   # Note: NOT FOR PRODUCTION USAGE, experimental functionality,

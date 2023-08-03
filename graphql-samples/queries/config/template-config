@@ -1,24 +1,24 @@
 query
 {
-  configuration
-  {
-     template
-      {
-        name
-        description
-        users
+  platform {
+    configuration
+    {
+      template
         {
           name
+          description
+          users
+          {
+            name
+          }
+          opportunities
+          {
+            name
+            actorGroups
+            posts
+            relations
+          }
         }
-        opportunities
-        {
-          name
-          actorGroups
-          posts
-          relations
-        }
-      }
-
-
-	}
+    }
+  }
 }

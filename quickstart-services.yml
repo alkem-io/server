@@ -298,3 +298,28 @@ services:
       - alkemio_dev_net
     ports:
       - 6379
+
+  chatbot:
+    container_name: alkemio_dev_chatbot
+    depends_on:
+      - rabbitmq
+    hostname: chatbot
+    image: alkemio/genai:v0.1.0
+    restart: always
+    networks:
+      - alkemio_dev_net
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - ENVIRONMENT=dev
+      - OPENAI_API_KEY
+      - OPENAI_API_TYPE
+      - OPENAI_API_VERSION
+      - OPENAI_API_BASE
+      - AI_MODEL_TEMPERATURE
+      - AI_MODEL_NAME
+      - AI_DEPLOYMENT_NAME
+      - AI_EMBEDDINGS_DEPLOYMENT_NAME
+    volumes:
+      - /dev/shm:/dev/shm

@@ -109,7 +109,7 @@ export class StorageBucketService {
 
   public async getDocuments(
     storageInput: IStorageBucket
-  ): Promise<IDocument[]> {
+  ): Promise<IDocument[] | never> {
     const storage = await this.getStorageBucketOrFail(storageInput.id, {
       relations: ['documents'],
     });
@@ -147,7 +147,7 @@ export class StorageBucketService {
     mimeType: string,
     userID: string,
     anonymousReadAccess = false
-  ): Promise<IDocument> {
+  ): Promise<IDocument | never> {
     const storage = await this.getStorageBucketOrFail(storageBucket.id, {
       relations: ['documents'],
     });
@@ -157,15 +157,11 @@ export class StorageBucketService {
         LogContext.STORAGE_BUCKET
       );
 
-    if (!(await this.validateMimeTypes(storage, mimeType))) {
-      throw new ValidationException(
-        `Invalid Mime Type specified for storage space '${mimeType}'- allowed types: ${storageBucket.allowedMimeTypes}.`,
-        LogContext.STORAGE_BUCKET
-      );
-    }
+    this.validateMimeTypes(storage, mimeType);
 
     // Upload the document
     const size = buffer.length;
+    this.validateSize(storage, size);
     const externalID = await this.documentService.uploadFile(buffer, filename);
 
     const createDocumentInput: CreateDocumentInput = {
@@ -196,7 +192,7 @@ export class StorageBucketService {
     fileName: string,
     mimetype: string,
     userID: string
-  ): Promise<IDocument> {
+  ): Promise<IDocument | never> {
     this.visualService.validateMimeType(visual, mimetype);
 
     if (!readStream)
@@ -246,7 +242,7 @@ export class StorageBucketService {
     storage: IStorageBucket,
     args: StorageBucketArgsDocuments,
     agentInfo: AgentInfo
-  ): Promise<IDocument[]> {
+  ): Promise<IDocument[] | never> {
     const storageLoaded = await this.getStorageBucketOrFail(storage.id, {
       relations: ['documents'],
     });
@@ -300,10 +296,27 @@ export class StorageBucketService {
   private validateMimeTypes(
     storageBucket: IStorageBucket,
     mimeType: string
-  ): boolean {
+  ): void | never {
     const result = Object.values(storageBucket.allowedMimeTypes).includes(
       mimeType as MimeFileType
     );
-    return result;
+    if (!result) {
+      throw new ValidationException(
+        `Invalid Mime Type specified for storage space '${mimeType}'- allowed types: ${storageBucket.allowedMimeTypes}.`,
+        LogContext.STORAGE_BUCKET
+      );
+    }
+  }
+
+  private validateSize(
+    storageBucket: IStorageBucket,
+    size: number
+  ): void | never {
+    if (size > storageBucket.maxFileSize) {
+      throw new ValidationException(
+        `File size (${size}) exceeds maximum allowed file size for storage space: ${storageBucket.maxFileSize}`,
+        LogContext.STORAGE_BUCKET
+      );
+    }
   }
 }

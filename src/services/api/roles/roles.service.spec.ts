@@ -94,15 +94,6 @@ describe('RolesService', () => {
         userID: testData.user.id,
       });
 
-      expect(res.applications).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            communityID: testData.rolesUser.applications[0].communityID,
-            spaceID: testData.rolesUser.applications[0].spaceID,
-          }),
-        ])
-      );
-
       expect(res.organizations).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -120,15 +111,26 @@ describe('RolesService', () => {
       );
     });
 
+    it('Should get user applications', async () => {
+      const res = await rolesService.getUserApplications(testData.user.id);
+
+      expect(res).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            communityID: testData.rolesUser.applications[0].communityID,
+            spaceID: testData.rolesUser.applications[0].spaceID,
+          }),
+        ])
+      );
+    });
+
     it('Should throw exception when community parent is not found', async () => {
       jest
         .spyOn(communityService, 'isSpaceCommunity')
         .mockResolvedValueOnce(false);
 
       await asyncToThrow(
-        rolesService.getUserRoles({
-          userID: testData.user.id,
-        }),
+        rolesService.getUserApplications(testData.user.id),
         RelationshipNotFoundException
       );
     });

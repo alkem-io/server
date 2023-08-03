@@ -14,7 +14,6 @@ import { UserModule } from '@domain/community/user/user.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ProfileModule } from '../profile/profile.module';
-import { WhiteboardResolverQueries } from './whiteboard.resolver.queries';
 
 @Module({
   imports: [
@@ -29,7 +28,6 @@ import { WhiteboardResolverQueries } from './whiteboard.resolver.queries';
     TypeOrmModule.forFeature([Whiteboard]),
   ],
   providers: [
-    WhiteboardResolverQueries,
     WhiteboardService,
     WhiteboardAuthorizationService,
     WhiteboardResolverMutations,

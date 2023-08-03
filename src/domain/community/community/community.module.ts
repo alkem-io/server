@@ -18,7 +18,6 @@ import { Community } from './community.entity';
 import { CommunityApplicationLifecycleOptionsProvider } from './community.lifecycle.application.options.provider';
 import { CommunityResolverFields } from './community.resolver.fields';
 import { CommunityResolverMutations } from './community.resolver.mutations';
-import { CommunityResolverQueries } from './community.resolver.queries';
 import { CommunityService } from './community.service';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { FormModule } from '@domain/common/form/form.module';
@@ -54,7 +53,6 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
     CommunityService,
     CommunityAuthorizationService,
     CommunityResolverMutations,
-    CommunityResolverQueries,
     CommunityResolverFields,
     CommunityApplicationLifecycleOptionsProvider,
     CommunityInvitationLifecycleOptionsProvider,
