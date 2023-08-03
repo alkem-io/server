@@ -36,6 +36,7 @@ export enum AuthorizationPrivilege {
   CREATE_RELATION = 'create-relation',
   CREATE_OPPORTUNITY = 'create-opportunity',
   MOVE_POST = 'move-post',
+  ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
 }
 
 registerEnumType(AuthorizationPrivilege, {
