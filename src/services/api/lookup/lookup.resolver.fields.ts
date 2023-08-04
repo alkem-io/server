@@ -30,6 +30,10 @@ import { IPost } from '@domain/collaboration/post/post.interface';
 import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.interface';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { CalendarEventService } from '@domain/timeline/event/event.service';
+import { ICalendarEvent } from '@domain/timeline/event';
+import { ICalendar } from '@domain/timeline/calendar/calendar.interface';
+import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -45,6 +49,8 @@ export class LookupResolverFields {
     private calloutService: CalloutService,
     private roomService: RoomService,
     private innovationFlowService: InnovationFlowService,
+    private calendarEventService: CalendarEventService,
+    private calendarService: CalendarService,
     private innovationFlowTemplateService: InnovationFlowTemplateService
   ) {}
 
@@ -87,6 +93,47 @@ export class LookupResolverFields {
     );
 
     return collaboration;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => ICalendarEvent, {
+    nullable: true,
+    description: 'Lookup the specified CalendarEvent',
+  })
+  async calendarEvent(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ICalendarEvent> {
+    const calendarEvent =
+      await this.calendarEventService.getCalendarEventOrFail(id);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      calendarEvent.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup calendar event: ${calendarEvent.id}`
+    );
+
+    return calendarEvent;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => ICalendar, {
+    nullable: true,
+    description: 'Lookup the specified Calendar',
+  })
+  async calendar(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<ICalendar> {
+    const calendar = await this.calendarService.getCalendarOrFail(id);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      calendar.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup calendar : ${calendar.id}`
+    );
+
+    return calendar;
   }
 
   @UseGuards(GraphqlGuard)
