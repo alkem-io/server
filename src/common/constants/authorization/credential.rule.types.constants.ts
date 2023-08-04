@@ -1,5 +1,3 @@
-export const CREDENTIAL_RULE_TYPES_INNOVATION_FLOW_UPDATE =
-  'credentialRuleTypes-innovationFlowUpdate';
 export const CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_RESET =
   'credentialRuleTypes-spaceAuthorizationReset';
 export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ =
