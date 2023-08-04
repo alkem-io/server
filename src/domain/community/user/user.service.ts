@@ -555,7 +555,7 @@ export class UserService {
       LogContext.COMMUNITY
     );
     const credentialsFilter = args.filter?.credentials;
-    let users = [];
+    let users: User[] = [];
     if (credentialsFilter) {
       users = await this.userRepository
         .createQueryBuilder('user')
@@ -566,13 +566,14 @@ export class UserService {
           credentialsFilter: credentialsFilter,
         })
         .getMany();
-    } else if (args.ids) {
-      users = await this.userRepository.find({
-        where: { id: In(args.ids) },
-      });
     } else {
       users = await this.userRepository.findBy({ serviceProfile: false });
     }
+
+    if (args.ids) {
+      users = users.filter(user => args.ids?.includes(user.id));
+    }
+
     return limitAndShuffle(users, limit, shuffle);
   }
 
