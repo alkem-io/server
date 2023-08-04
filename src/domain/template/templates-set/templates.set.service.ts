@@ -220,13 +220,26 @@ export class TemplatesSetService {
     templatesSet: ITemplatesSet,
     whiteboardTemplateInput: CreateWhiteboardTemplateInput
   ): Promise<IWhiteboardTemplate> {
+    templatesSet.whiteboardTemplates = await this.getWhiteboardTemplates(
+      templatesSet
+    );
+
+    const existingWithSameName = templatesSet.whiteboardTemplates.find(
+      template =>
+        template.profile.displayName ===
+        whiteboardTemplateInput.profile.displayName
+    );
+    if (existingWithSameName) {
+      throw new ValidationException(
+        `Whiteboard Template with the provided type already exists: ${existingWithSameName.profile.displayName}`,
+        LogContext.CONTEXT
+      );
+    }
     const whiteboardTemplate =
       await this.whiteboardTemplateService.createWhiteboardTemplate(
         whiteboardTemplateInput
       );
-    templatesSet.whiteboardTemplates = await this.getWhiteboardTemplates(
-      templatesSet
-    );
+
     templatesSet.whiteboardTemplates.push(whiteboardTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return whiteboardTemplate;
@@ -280,12 +293,24 @@ export class TemplatesSetService {
     templatesSet: ITemplatesSet,
     innovationFlowTemplateInput: CreateInnovationFlowTemplateInput
   ): Promise<IInnovationFlowTemplate> {
+    templatesSet.innovationFlowTemplates =
+      await this.getInnovationFlowTemplates(templatesSet);
+    const existingWithSameName = templatesSet.innovationFlowTemplates.find(
+      template =>
+        template.profile.displayName ===
+        innovationFlowTemplateInput.profile.displayName
+    );
+    if (existingWithSameName) {
+      throw new ValidationException(
+        `InnovationFlow Template with the provided type already exists: ${existingWithSameName.profile.displayName}`,
+        LogContext.CONTEXT
+      );
+    }
     const innovationFlowTemplate =
       await this.innovationFlowTemplateService.createInnovationFLowTemplate(
         innovationFlowTemplateInput
       );
-    templatesSet.innovationFlowTemplates =
-      await this.getInnovationFlowTemplates(templatesSet);
+
     templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return innovationFlowTemplate;
