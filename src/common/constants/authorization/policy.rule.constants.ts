@@ -20,3 +20,5 @@ export const POLICY_RULE_COMMUNITY_INVITE = 'policyRule-communityInvite';
 export const POLICY_RULE_COMMUNITY_ADD_MEMBER = 'policyRule-communityAddMember';
 export const POLICY_RULE_STORAGE_BUCKET_FILE_UPLOAD =
   'policyRule-storageBucketUpdaterFileUpload';
+export const PRIVILEGE_RULE_TYPES_INNOVATION_FLOW_UPDATE =
+  'privilegeRuleTypes-innovationFlowUpdate';
