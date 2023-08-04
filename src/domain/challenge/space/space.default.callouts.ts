@@ -17,7 +17,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
+          type: TagsetType.SELECT_ONE, 
           tags: [CommonDisplayLocation.HOME_TOP],
         },
       ],
@@ -31,7 +31,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     nameID: 'general-chat',
     type: CalloutType.POST,
     profile: {
-      displayName: 'General chat',
+      displayName: 'General chat 💬',
       description: 'Things you would like to discuss with the community?',
       tagsets: [
         {
@@ -64,6 +64,24 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     displayLocation: CalloutDisplayLocation.HOME_LEFT,
   },
   {
+    type: CalloutType.WHITEBOARD,
+    profile: {
+      displayName: 'What is this Space about?',
+      description: 'We can use this whiteboard to further define our mission and vision, who we want to involve, and what impact we want to make!',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [CommonDisplayLocation.HOME_RIGHT],
+        },
+      ],
+    },
+    nameID: 'vision',
+    state: CalloutState.OPEN,
+    sortOrder: 1,
+    displayLocation: CalloutDisplayLocation.HOME_RIGHT,
+  },
+  {
     nameID: 'space-welcome',
     type: CalloutType.POST,
     profile: {
@@ -81,6 +99,24 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     state: CalloutState.OPEN,
     sortOrder: 1,
     displayLocation: CalloutDisplayLocation.COMMUNITY_LEFT,
+  },
+  {
+    type: CalloutType.WHITEBOARD,
+    profile: {
+      displayName: 'Understanding the existing and potential community',
+      description: 'Choose one of the templates from the library to map our your ecosystem or stakeholders here!',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [CommonDisplayLocation.COMMUNITY_RIGHT],
+        },
+      ],
+    },
+    nameID: 'ecosystem',
+    state: CalloutState.OPEN,
+    sortOrder: 1,
+    displayLocation: CalloutDisplayLocation.COMMUNITY_RIGHT,
   },
   {
     nameID: 'challenge-ideas',
@@ -119,13 +155,13 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     state: CalloutState.OPEN,
     sortOrder: 1,
     postTemplate: {
-      type: 'contribution',
+      type: 'challenge',
       defaultDescription:
-        '✍️ Please share your contribution. The more details the better!',
+        'Describe your Challenge, what your vision is, and who you would like to involve.',
       profile: {
-        displayName: 'contribution',
+        displayName: 'Challenge',
         description:
-          'To share contributions with detailed explanations how they help.',
+          'To share proposals for challenges to be worked on.',
       },
     },
     displayLocation: CalloutDisplayLocation.CHALLENGES_RIGHT,
@@ -162,7 +198,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
     type: CalloutType.LINK_COLLECTION,
     profile: {
-      displayName: 'Reference / relevant documents',
+      displayName: 'Reference / important documents',
       description: 'Please add links to documents with reference material.💥',
       tagsets: [
         {
@@ -194,13 +230,13 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     state: CalloutState.OPEN,
     sortOrder: 3,
     postTemplate: {
-      type: '',
+      type: 'FAQ',
       defaultDescription:
-        '✍️ Please share your contribution. The more details the better!',
+        'Please share your question!',
       profile: {
-        displayName: 'contribution',
+        displayName: 'faq',
         description:
-          'To share contributions with detailed explanations how they help.',
+          'To gather questions from the community.',
       },
     },
     displayLocation: CalloutDisplayLocation.KNOWLEDGE,

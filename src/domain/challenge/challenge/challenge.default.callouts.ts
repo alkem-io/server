@@ -18,7 +18,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_LEFT],
+          tags: [CommonDisplayLocation.HOME_RIGHT],
         },
       ],
     },
@@ -58,26 +58,26 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
       ],
     },
     state: CalloutState.OPEN,
-    sortOrder: 1,
+    sortOrder: 2,
     displayLocation: CalloutDisplayLocation.HOME_LEFT,
   },
   {
     type: CalloutType.POST_COLLECTION,
     profile: {
-      displayName: 'Contribute',
+      displayName: 'Relevant news, research or use cases 📰',
       description:
-        '✍️ Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
+        'Please share any relevant insights to help us better understand the Challenge. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
+          tags: [CommonDisplayLocation.CONTRIBUTE],
         },
       ],
     },
     nameID: `${CalloutType.POST_COLLECTION}-default`,
     state: CalloutState.OPEN,
-    sortOrder: 5,
+    sortOrder: 1,
     postTemplate: {
       type: 'contribution',
       defaultDescription:
@@ -88,31 +88,42 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
           'To share contributions with detailed explanations how they help.',
       },
     },
+    displayLocation: CalloutDisplayLocation.CONTRIBUTE,
   },
   {
-    type: CalloutType.WHITEBOARD_COLLECTION,
+    type: CalloutType.WHITEBOARD,
     profile: {
-      displayName: 'Collaborate visually',
-      description:
-        '🎨 Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
+      displayName: 'Who are the stakeholders?',
+      description: 'Choose one of the templates from the library to map your stakeholders here!',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.CONTRIBUTE],
+          tags: [CommonDisplayLocation.CONTRIBUTE],
         },
       ],
     },
-    nameID: `${CalloutType.WHITEBOARD_COLLECTION}`,
+    nameID: 'stakeholder-map',
     state: CalloutState.OPEN,
-    sortOrder: 10,
-    whiteboardTemplate: {
-      value: EMPTY_WHITEBOARD_VALUE,
-      profile: {
-        displayName: 'blank whiteboard',
-        description: 'A blank whiteboard to be worked further.',
-      },
+    sortOrder: 2,
+    displayLocation: CalloutDisplayLocation.CONTRIBUTE,
+  },
+  {
+    type: CalloutType.LINK_COLLECTION,
+    profile: {
+      displayName: 'Reference / important documents',
+      description: 'Please add links to documents with reference material.💥',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [CommonDisplayLocation.CONTRIBUTE],
+        },
+      ],
     },
+    nameID: 'documents',
+    state: CalloutState.OPEN,
+    sortOrder: 3,
   },
   {
     nameID: 'opportunity-ideas',
@@ -151,13 +162,13 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     state: CalloutState.OPEN,
     sortOrder: 1,
     postTemplate: {
-      type: 'contribution',
+      type: 'opportunity',
       defaultDescription:
-        '✍️ Please share your contribution. The more details the better!',
+        '✍️ Describe your Opportunity, what the impact is, and who you would like to involve.',
       profile: {
-        displayName: 'contribution',
+        displayName: 'opportunity',
         description:
-          'To share contributions with detailed explanations how they help.',
+          'To share proposals for Opportunities to be worked on.',
       },
     },
     displayLocation: CalloutDisplayLocation.OPPORTUNITIES_RIGHT,
