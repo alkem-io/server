@@ -57,10 +57,10 @@ import { validateEmail } from '@common/utils';
 import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { userDefaults } from './user.defaults';
+import { UsersQueryArgs } from './dto/users.query.args';
 
 @Injectable()
 export class UserService {
@@ -546,15 +546,7 @@ export class UserService {
     return user;
   }
 
-  async getUsersByIDs(userIDs: string[]): Promise<IUser[]> {
-    const users = await this.userRepository.find({
-      where: { id: In(userIDs) },
-    });
-
-    return users;
-  }
-
-  async getUsers(args: ContributorQueryArgs): Promise<IUser[]> {
+  async getUsers(args: UsersQueryArgs): Promise<IUser[]> {
     const limit = args.limit;
     const shuffle = args.shuffle || false;
 
@@ -563,7 +555,7 @@ export class UserService {
       LogContext.COMMUNITY
     );
     const credentialsFilter = args.filter?.credentials;
-    let users = [];
+    let users: User[] = [];
     if (credentialsFilter) {
       users = await this.userRepository
         .createQueryBuilder('user')
@@ -577,6 +569,11 @@ export class UserService {
     } else {
       users = await this.userRepository.findBy({ serviceProfile: false });
     }
+
+    if (args.ids) {
+      users = users.filter(user => args.ids?.includes(user.id));
+    }
+
     return limitAndShuffle(users, limit, shuffle);
   }
 
