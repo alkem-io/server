@@ -5,11 +5,13 @@ import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
-import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
 
 export const challengeDefaultCallouts: CreateCalloutInput[] = [
   {
+    nameID: 'welcome',
     type: CalloutType.POST,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
       displayName: 'Why do you care about this Challenge?',
       description:
@@ -22,12 +24,12 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: 'challenge-welcome',
-    state: CalloutState.OPEN,
-    sortOrder: 1,
   },
   {
+    nameID: 'recommendations',
     type: CalloutType.LINK_COLLECTION,
+    state: CalloutState.CLOSED,
+    sortOrder: 3,
     profile: {
       displayName: 'Recommended by the Leads',
       description: 'Some quick links to get started 💥',
@@ -39,13 +41,12 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: 'recommendations',
-    state: CalloutState.CLOSED,
-    sortOrder: 3,
   },
   {
     nameID: 'general-chat',
     type: CalloutType.POST,
+    state: CalloutState.OPEN,
+    sortOrder: 2,
     profile: {
       displayName: 'General chat',
       description: 'Things you would like to discuss with the community?',
@@ -53,16 +54,16 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [SpaceDisplayLocation.HOME_LEFT],
+          tags: [CommonDisplayLocation.HOME_LEFT],
         },
       ],
     },
-    state: CalloutState.OPEN,
-    sortOrder: 2,
-    displayLocation: CalloutDisplayLocation.HOME_LEFT,
   },
   {
+    nameID: 'news',
     type: CalloutType.POST_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
       displayName: 'Relevant news, research or use cases 📰',
       description:
@@ -71,13 +72,10 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.CONTRIBUTE],
+          tags: [ChallengeDisplayLocation.CONTRIBUTE],
         },
       ],
     },
-    nameID: `${CalloutType.POST_COLLECTION}-default`,
-    state: CalloutState.OPEN,
-    sortOrder: 1,
     postTemplate: {
       type: 'contribution',
       defaultDescription:
@@ -88,28 +86,30 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
           'To share contributions with detailed explanations how they help.',
       },
     },
-    displayLocation: CalloutDisplayLocation.CONTRIBUTE,
   },
   {
+    nameID: 'stakeholder-map',
     type: CalloutType.WHITEBOARD,
+    state: CalloutState.OPEN,
+    sortOrder: 2,
     profile: {
       displayName: 'Who are the stakeholders?',
-      description: 'Choose one of the templates from the library to map your stakeholders here!',
+      description:
+        'Choose one of the templates from the library to map your stakeholders here!',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.CONTRIBUTE],
+          tags: [ChallengeDisplayLocation.CONTRIBUTE],
         },
       ],
     },
-    nameID: 'stakeholder-map',
-    state: CalloutState.OPEN,
-    sortOrder: 2,
-    displayLocation: CalloutDisplayLocation.CONTRIBUTE,
   },
   {
+    nameID: 'documents',
     type: CalloutType.LINK_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 3,
     profile: {
       displayName: 'Reference / important documents',
       description: 'Please add links to documents with reference material.💥',
@@ -117,17 +117,16 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.CONTRIBUTE],
+          tags: [ChallengeDisplayLocation.CONTRIBUTE],
         },
       ],
     },
-    nameID: 'documents',
-    state: CalloutState.OPEN,
-    sortOrder: 3,
   },
   {
     nameID: 'opportunity-ideas',
     type: CalloutType.POST,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
       displayName: 'What Opportunities do you see?',
       description:
@@ -136,16 +135,16 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [SpaceDisplayLocation.OPPORTUNITIES_LEFT],
+          tags: [ChallengeDisplayLocation.OPPORTUNITIES_LEFT],
         },
       ],
     },
-    state: CalloutState.OPEN,
-    sortOrder: 1,
-    displayLocation: CalloutDisplayLocation.OPPORTUNITIES_LEFT,
   },
   {
+    nameID: 'proposals',
     type: CalloutType.POST_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
       displayName: 'Opportunity proposals 🎯',
       description:
@@ -154,23 +153,18 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.OPPORTUNITIES_RIGHT],
+          tags: [ChallengeDisplayLocation.OPPORTUNITIES_RIGHT],
         },
       ],
     },
-    nameID: `${CalloutType.POST_COLLECTION}-default`,
-    state: CalloutState.OPEN,
-    sortOrder: 1,
     postTemplate: {
       type: 'opportunity',
       defaultDescription:
         '✍️ Describe your Opportunity, what the impact is, and who you would like to involve.',
       profile: {
         displayName: 'opportunity',
-        description:
-          'To share proposals for Opportunities to be worked on.',
+        description: 'To share proposals for Opportunities to be worked on.',
       },
     },
-    displayLocation: CalloutDisplayLocation.OPPORTUNITIES_RIGHT,
   },
 ];

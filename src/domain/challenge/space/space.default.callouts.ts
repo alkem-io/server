@@ -1,4 +1,3 @@
-import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutType } from '@common/enums/callout.type';
 import { CommonDisplayLocation } from '@common/enums/common.display.location';
@@ -6,30 +5,30 @@ import { SpaceDisplayLocation } from '@common/enums/space.display.location';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
-import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
 
 export const spaceDefaultCallouts: CreateCalloutInput[] = [
-    {
+  {
+    nameID: 'recommendations',
     type: CalloutType.LINK_COLLECTION,
+    state: CalloutState.CLOSED,
+    sortOrder: 3,
     profile: {
       displayName: 'Recommended by the Leads',
       description: 'Some quick links to get started 💥',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE, 
+          type: TagsetType.SELECT_ONE,
           tags: [CommonDisplayLocation.HOME_TOP],
         },
       ],
     },
-    nameID: 'recommendations',
-    state: CalloutState.CLOSED,
-    sortOrder: 3,
-    displayLocation: CalloutDisplayLocation.HOME_TOP,
   },
   {
     nameID: 'general-chat',
     type: CalloutType.POST,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
       displayName: 'General chat 💬',
       description: 'Things you would like to discuss with the community?',
@@ -37,16 +36,16 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [SpaceDisplayLocation.HOME_LEFT],
+          tags: [CommonDisplayLocation.HOME_LEFT],
         },
       ],
     },
-    state: CalloutState.OPEN,
-    sortOrder: 1,
-    displayLocation: CalloutDisplayLocation.HOME_LEFT,
   },
   {
+    nameID: 'questions',
     type: CalloutType.POST,
+    state: CalloutState.OPEN,
+    sortOrder: 2,
     profile: {
       displayName: 'Do you have any questions or feedback?',
       description: 'Please share it here :)',
@@ -58,16 +57,16 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: 'questions',
-    state: CalloutState.OPEN,
-    sortOrder: 2,
-    displayLocation: CalloutDisplayLocation.HOME_LEFT,
   },
   {
+    nameID: 'vision',
     type: CalloutType.WHITEBOARD,
+    state: CalloutState.OPEN,
+    sortOrder: 2,
     profile: {
       displayName: 'What is this Space about?',
-      description: 'We can use this whiteboard to further define our mission and vision, who we want to involve, and what impact we want to make!',
+      description:
+        'We can use this whiteboard to further define our mission and vision, who we want to involve, and what impact we want to make!',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -76,14 +75,12 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: 'vision',
-    state: CalloutState.OPEN,
-    sortOrder: 1,
-    displayLocation: CalloutDisplayLocation.HOME_RIGHT,
   },
   {
     nameID: 'space-welcome',
     type: CalloutType.POST,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
       displayName: 'Welcome to the community!',
       description:
@@ -96,31 +93,30 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    state: CalloutState.OPEN,
-    sortOrder: 1,
-    displayLocation: CalloutDisplayLocation.COMMUNITY_LEFT,
   },
   {
+    nameID: 'ecosystem',
     type: CalloutType.WHITEBOARD,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
       displayName: 'Understanding the existing and potential community',
-      description: 'Choose one of the templates from the library to map our your ecosystem or stakeholders here!',
+      description:
+        'Choose one of the templates from the library to map our your ecosystem or stakeholders here!',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.COMMUNITY_RIGHT],
+          tags: [SpaceDisplayLocation.COMMUNITY_RIGHT],
         },
       ],
     },
-    nameID: 'ecosystem',
-    state: CalloutState.OPEN,
-    sortOrder: 1,
-    displayLocation: CalloutDisplayLocation.COMMUNITY_RIGHT,
   },
   {
     nameID: 'challenge-ideas',
     type: CalloutType.POST,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
       displayName: 'What Challenges do you care about?',
       description:
@@ -133,12 +129,12 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    state: CalloutState.OPEN,
-    sortOrder: 1,
-    displayLocation: CalloutDisplayLocation.CHALLENGES_LEFT,
   },
   {
+    nameID: 'proposals',
     type: CalloutType.POST_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
       displayName: 'Challenge proposals 🎯',
       description:
@@ -147,27 +143,25 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.CHALLENGES_RIGHT],
+          tags: [SpaceDisplayLocation.CHALLENGES_RIGHT],
         },
       ],
     },
-    nameID: `${CalloutType.POST_COLLECTION}-default`,
-    state: CalloutState.OPEN,
-    sortOrder: 1,
     postTemplate: {
       type: 'challenge',
       defaultDescription:
         'Describe your Challenge, what your vision is, and who you would like to involve.',
       profile: {
         displayName: 'Challenge',
-        description:
-          'To share proposals for challenges to be worked on.',
+        description: 'To share proposals for challenges to be worked on.',
       },
     },
-    displayLocation: CalloutDisplayLocation.CHALLENGES_RIGHT,
   },
   {
+    nameID: 'news',
     type: CalloutType.POST_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
       displayName: 'Relevant news, research or use cases 📰',
       description:
@@ -180,9 +174,6 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: `${CalloutType.POST_COLLECTION}-default`,
-    state: CalloutState.OPEN,
-    sortOrder: 1,
     postTemplate: {
       type: 'contribution',
       defaultDescription:
@@ -193,10 +184,12 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
           'To share contributions with detailed explanations how they help.',
       },
     },
-    displayLocation: CalloutDisplayLocation.KNOWLEDGE,
   },
   {
+    nameID: 'documents',
     type: CalloutType.LINK_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 2,
     profile: {
       displayName: 'Reference / important documents',
       description: 'Please add links to documents with reference material.💥',
@@ -208,12 +201,12 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: 'documents',
-    state: CalloutState.OPEN,
-    sortOrder: 2,
   },
   {
+    nameID: 'faq',
     type: CalloutType.POST_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 3,
     profile: {
       displayName: 'FAQ',
       description:
@@ -226,19 +219,13 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: `${CalloutType.POST_COLLECTION}-default`,
-    state: CalloutState.OPEN,
-    sortOrder: 3,
     postTemplate: {
       type: 'FAQ',
-      defaultDescription:
-        'Please share your question!',
+      defaultDescription: 'Please share your question!',
       profile: {
         displayName: 'faq',
-        description:
-          'To gather questions from the community.',
+        description: 'To gather questions from the community.',
       },
     },
-    displayLocation: CalloutDisplayLocation.KNOWLEDGE,
   },
 ];

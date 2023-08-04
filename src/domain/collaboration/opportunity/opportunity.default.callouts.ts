@@ -5,11 +5,13 @@ import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.lo
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
-import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
 
 export const opportunityDefaultCallouts: CreateCalloutInput[] = [
   {
+    nameID: 'recommendations',
     type: CalloutType.LINK_COLLECTION,
+    state: CalloutState.CLOSED,
+    sortOrder: 3,
     profile: {
       displayName: 'Recommended by the Leads',
       description: 'Some quick links to get started 💥',
@@ -21,13 +23,12 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: 'recommendations',
-    state: CalloutState.CLOSED,
-    sortOrder: 3,
   },
   {
     nameID: 'general-chat',
     type: CalloutType.POST,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
       displayName: 'General chat',
       description: 'Things you would like to discuss with the community?',
@@ -35,16 +36,16 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [SpaceDisplayLocation.HOME_LEFT],
+          tags: [CommonDisplayLocation.HOME_LEFT],
         },
       ],
     },
-    state: CalloutState.OPEN,
-    sortOrder: 1,
-    displayLocation: CalloutDisplayLocation.HOME_LEFT,
   },
   {
+    nameID: 'tasks',
     type: CalloutType.POST_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
       displayName: 'Task list 🎯',
       description:
@@ -57,41 +58,39 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: `${CalloutType.POST_COLLECTION}-default`,
-    state: CalloutState.OPEN,
-    sortOrder: 1,
     postTemplate: {
       type: 'Task',
       defaultDescription:
         '✍️ Please describe what has to be done and potentially by whom. The more details the better!',
       profile: {
         displayName: 'task',
-        description:
-          'To share tasks with the community that can be picked up.',
+        description: 'To share tasks with the community that can be picked up.',
       },
     },
-    displayLocation: CalloutDisplayLocation.HOME_RIGHT,
   },
   {
-    nameID: 'role',
+    nameID: 'roles',
     type: CalloutType.POST,
+    state: CalloutState.OPEN,
+    sortOrder: 2,
     profile: {
       displayName: 'Welcome!',
-      description: 'What is your role in this community or how would you like to contrbute?',
+      description:
+        'What is your role in this community or how would you like to contrbute?',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [SpaceDisplayLocation.HOME_RIGHT],
+          tags: [CommonDisplayLocation.HOME_RIGHT],
         },
       ],
     },
-    state: CalloutState.OPEN,
-    sortOrder: 2,
-    displayLocation: CalloutDisplayLocation.HOME_RIGHT,
   },
   {
+    nameID: 'news',
     type: CalloutType.POST_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
       displayName: 'Relevant news, research or use cases 📰',
       description:
@@ -104,9 +103,6 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: `${CalloutType.POST_COLLECTION}-default`,
-    state: CalloutState.OPEN,
-    sortOrder: 1,
     postTemplate: {
       type: 'contribution',
       defaultDescription:
@@ -119,7 +115,10 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     },
   },
   {
+    nameID: 'documents',
     type: CalloutType.LINK_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 3,
     profile: {
       displayName: 'Reference / important documents',
       description: 'Please add links to documents with reference material.💥',
@@ -127,31 +126,27 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.CONTRIBUTE],
+          tags: [OpportunityDisplayLocation.CONTRIBUTE],
         },
       ],
     },
-    nameID: 'documents',
-    state: CalloutState.OPEN,
-    sortOrder: 3,
-  },  
+  },
   {
+    nameID: 'needs',
     type: CalloutType.WHITEBOARD,
+    state: CalloutState.OPEN,
+    sortOrder: 2,
     profile: {
       displayName: 'What do we need?',
-      description: 'We can use this whiteboard to further define what is needed to realize this Opportunity! Think about research, insights, stakeholders or other resources.',
+      description:
+        'We can use this whiteboard to further define what is needed to realize this Opportunity! Think about research, insights, stakeholders or other resources.',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.CONTRIBUTE],
+          tags: [OpportunityDisplayLocation.CONTRIBUTE],
         },
       ],
     },
-    nameID: 'needs',
-    state: CalloutState.OPEN,
-    sortOrder: 2,
-    displayLocation: CalloutDisplayLocation.CONTRIBUTE,
   },
- 
 ];
