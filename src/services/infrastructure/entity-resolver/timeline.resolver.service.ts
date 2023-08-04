@@ -5,6 +5,7 @@ import { LogContext } from '@common/enums';
 import { Space } from '@domain/challenge/space/space.entity';
 import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Collaboration } from '@domain/collaboration/collaboration';
 
 @Injectable()
 export class TimelineResolverService {
@@ -22,24 +23,21 @@ export class TimelineResolverService {
     if (!timelineID) {
       return '';
     }
-    const result = await this.entityManager.findOne(Space, {
+    const result = await this.entityManager.findOne(Collaboration, {
       where: {
         timeline: {
           id: timelineID,
         },
       },
-      relations: {
-        collaboration: true,
-      },
     });
-    if (!result || !result.collaboration) {
+    if (!result) {
       this.logger.error(
         `Unable to identify Collaboration for provided Timeline ID: ${timelineID}`,
         LogContext.CALENDAR
       );
       return '';
     }
-    return result.collaboration.id;
+    return result.id;
   }
 
   public async getTimelineIdForCalendar(
@@ -70,9 +68,11 @@ export class TimelineResolverService {
   ): Promise<string | undefined> {
     const result = await this.entityManager.findOne(Space, {
       where: {
-        timeline: {
-          calendar: {
-            id: calendarID,
+        collaboration: {
+          timeline: {
+            calendar: {
+              id: calendarID,
+            },
           },
         },
       },

@@ -5,7 +5,6 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
 @Entity()
 export class Space extends BaseChallenge implements ISpace {
@@ -37,15 +36,6 @@ export class Space extends BaseChallenge implements ISpace {
   })
   @JoinColumn()
   templatesSet?: TemplatesSet;
-
-  @OneToOne(() => Timeline, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  timeline?: Timeline;
-
   @OneToOne(() => StorageBucket, {
     eager: false,
     cascade: true,
