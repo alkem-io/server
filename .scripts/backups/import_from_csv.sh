@@ -1,9 +1,12 @@
 #!/bin/bash
 
+# Source environment variables from .env file
+source .env
+
 # Set database connection details
 user=root
 password=${MYSQL_ROOT_PASSWORD}
-database=alkemio
+database=${MYSQL_DATABASE}
 host=localhost # or your MySQL server IP
 
 # Folder containing the CSV files
