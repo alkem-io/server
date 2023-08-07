@@ -34,6 +34,14 @@ echo "Downloaded $latest_file from alkemio-backups/storage/$STORAGE/backups/$ENV
 local_file=${latest_file##*/}
 echo "Local filename: $local_file"
 
-# Restore snapshot using the mariadb docker container
-docker exec -i alkemio_dev_mariadb /usr/bin/mysql -u root -p${MYSQL_ROOT_PASSWORD} ${MYSQL_DATABASE} < $local_file
-echo "Backup restored successfully!"
+# Restore snapshot using the correct docker container and command based on storage
+if [[ "$STORAGE" == "mariadb" || "$STORAGE" == "mysql" ]]; then
+    docker exec -i alkemio_dev_mariadb /usr/bin/mysql -u root -p${MYSQL_ROOT_PASSWORD} ${MYSQL_DATABASE} < $local_file
+    echo "Backup restored successfully!"
+elif [[ "$STORAGE" == "postgres" ]]; then
+    docker exec -i alkemio_dev_postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} < $local_file
+    echo "Backup restored successfully!"
+else
+    echo "Storage type not supported for restore."
+    exit 1
+fi
