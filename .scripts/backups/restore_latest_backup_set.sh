@@ -52,13 +52,15 @@ esac
 if grep -q "SYNAPSE_HOMESERVER_NAME" $ENV_FILE_PATH; then
     sed -i "s/^SYNAPSE_HOMESERVER_NAME=.*/SYNAPSE_HOMESERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
 else
-    echo "SYNAPSE_HOMESERVER_NAME=$SERVER_NAME" >> $ENV_FILE_PATH
+    # Ensure that a newline is added before appending the variable
+    echo -e "\nSYNAPSE_HOMESERVER_NAME=$SERVER_NAME" >> $ENV_FILE_PATH
 fi
 
 if grep -q "SYNAPSE_SERVER_NAME" $ENV_FILE_PATH; then
     sed -i "s/^SYNAPSE_SERVER_NAME=.*/SYNAPSE_SERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
 else
-    echo "SYNAPSE_SERVER_NAME=$SERVER_NAME" >> $ENV_FILE_PATH
+    # Ensure that a newline is added before appending the variable
+    echo -e "\nSYNAPSE_SERVER_NAME=$SERVER_NAME" >> $ENV_FILE_PATH
 fi
 
 echo $HOMESERVER_FILE_PATH
