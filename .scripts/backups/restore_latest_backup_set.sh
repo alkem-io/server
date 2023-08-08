@@ -1,25 +1,35 @@
 #!/bin/bash
 
-# The environment is the first argument passed to the script.
-ENV=${1}
+# Check if yq is installed
+if ! command -v yq &> /dev/null; then
+    echo "yq is not installed. Installing now..."
 
-# Check if the environment parameter is provided
-if [ -z "$ENV" ]; then
-    echo "Environment parameter is required."
-    exit 1
+    # Determine the platform (macOS vs. Linux vs. others)
+    PLATFORM=$(uname | tr '[:upper:]' '[:lower:]')
+
+    # For macOS, use brew for installation
+    if [ "$PLATFORM" == "darwin" ]; then
+    # For macOS, download the macOS binary for yq
+      sudo wget https://github.com/mikefarah/yq/releases/download/v4.34.2/yq_darwin_amd64 -O /usr/local/bin/yq &&\
+      chmod +x /usr/local/bin/yq
+    # For Linux, use apt to install yq
+    elif [ "$PLATFORM" == "linux" ]; then
+      wget https://github.com/mikefarah/yq/releases/download/v4.34.2/yq_linux_amd64 -O /usr/bin/yq &&\
+      chmod +x /usr/bin/yq
+    else
+        echo "Unsupported platform. Please install yq manually."
+        exit 1
+    fi
 fi
+
+# The environment is the first argument passed to the script.
+ENV=${1:-prod}
 
 # The path to the .env.docker file is the second argument.
 ENV_FILE_PATH=../../.env.docker
 
 # The path to the homeserver.yaml file is the third argument.
 HOMESERVER_FILE_PATH=../../.build/synapse/homeserver.yaml
-
-# Check if the .env.docker file path is provided
-if [ -z "$ENV_FILE_PATH" ]; then
-    echo ".env.docker file path parameter is required."
-    exit 1
-fi
 
 # Define the server name based on the environment
 case $ENV in
@@ -51,6 +61,8 @@ else
     echo "SYNAPSE_SERVER_NAME=$SERVER_NAME" >> $ENV_FILE_PATH
 fi
 
+echo $HOMESERVER_FILE_PATH
+echo $SERVER_NAME
 # Update the server_name in the YAML file using yq
 yq e ".server_name = \"$SERVER_NAME\"" -i $HOMESERVER_FILE_PATH
 
@@ -62,3 +74,23 @@ bash $SCRIPT_PATH mariadb $ENV
 
 # Call the existing script for postgres
 bash $SCRIPT_PATH postgres $ENV
+
+# Start services
+npm run start:services &
+
+# Wait for alkemio_dev_mariadb container to be up
+while true; do
+    # Check the status of the container
+    CONTAINER_STATUS=$(docker inspect --format="{{.State.Status}}" alkemio_dev_mariadb)
+
+    # If the container is running, break out of the loop
+    if [ "$CONTAINER_STATUS" == "running" ]; then
+        break
+    else
+        echo "Waiting for alkemio_dev_mariadb to start..."
+        sleep 500
+    fi
+done
+
+# Once the container is running, start the application
+npm start
