@@ -18,7 +18,7 @@ for table in $tables; do
     filename="${table}.csv"
     echo "Exporting ${table} to ${filename}"
     docker exec -i $container mysql -u $user -p$password -e \
-    "SELECT * INTO OUTFILE '/tmp/${filename}' FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n' FROM ${table};" $database
+    "SELECT * INTO OUTFILE '/tmp/CSVs/${filename}' FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n' FROM ${table};" $database
 done
 
 echo "All tables exported successfully!"

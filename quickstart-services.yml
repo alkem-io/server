@@ -3,6 +3,7 @@ version: '3.7'
 volumes:
   alkemio_dev_mariadb:
   alkemio_dev_postgres:
+  tmpvolume:
   rabbitmq_data:
     driver: local
 
@@ -53,6 +54,8 @@ services:
     volumes:
       - alkemio_dev_mariadb:/var/lib/mysql
       - ./.scripts/schema.sql:/bootstrap_scripts/1.sql
+      - ./.scripts/backups/CSVs:/tmp/CSVs
+      - tmpvolume:/tmp
     command: --sql_mode="" --default-authentication-plugin=mysql_native_password --init-file /bootstrap_scripts/1.sql
 
   kratos-migrate:
