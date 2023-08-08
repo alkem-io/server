@@ -36,7 +36,8 @@
     "migration:generate": "npm run typeorm migration:generate",
     "migration:run": "npm run typeorm-no-entities migration:run",
     "migration:revert": "npm run typeorm-no-entities migration:revert",
-    "migration:show": "npm run typeorm migration:show"
+    "migration:show": "npm run typeorm migration:show",
+    "migration:validate": "./.scripts/migrations/run_validate_migration.sh"
   },
   "overrides": {
     "fs-capacitor": "6.2.0",
