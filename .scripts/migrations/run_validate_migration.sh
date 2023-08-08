@@ -6,8 +6,11 @@ BASE_DIR="$(dirname "$(realpath "$0")")"
 # Source environment variables from .env file relative to the script's location
 . "$BASE_DIR/.env"
 
-# Export the migrated CSVs to
+# Back database up
 bash "$BASE_DIR/create_snapshot.sh" "backup.sql"
+
+# Restore the reference schema
+bash "$BASE_DIR/restore_snapshot.sh" "db/reference_schema.sql"
 
 # Run the migration and wait for completion
 npm run migration:run
@@ -24,7 +27,7 @@ else
     echo "Migration failed."
 fi
 
-# Export the migrated CSVs to
+# Restore backup
 bash "$BASE_DIR/restore_snapshot.sh" "backup.sql"
 
 rm "$BASE_DIR/backup.sql"
