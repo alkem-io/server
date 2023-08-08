@@ -1,7 +1,10 @@
 #!/bin/bash
 
-# Source environment variables from .env file
-source .env
+# Base directory: the location of the script
+BASE_DIR="$(dirname "$(realpath "$0")")"
+
+# Source environment variables from .env file relative to the script's location
+. "$BASE_DIR/.env"
 
 # Set database connection details
 user=root
