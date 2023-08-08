@@ -632,7 +632,18 @@ export class UserService {
     }
 
     if (filter) {
-      applyFiltering(qb, filter);
+      const { displayName, ...rest } = filter;
+
+      if (displayName) {
+        const hasWhere =
+          qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
+        qb.leftJoinAndSelect('user.profile', 'profile');
+        qb[hasWhere ? 'andWhere' : 'where'](
+          'profile.displayName like :term'
+        ).setParameters({ term: `%${displayName}%` });
+      }
+
+      applyFiltering(qb, rest, 'or');
     }
 
     return getPaginationResults(qb, paginationArgs);
@@ -666,7 +677,18 @@ export class UserService {
     }
 
     if (filter) {
-      applyFiltering(qb, filter);
+      const { displayName, ...rest } = filter;
+
+      if (displayName) {
+        const hasWhere =
+          qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
+        qb.leftJoinAndSelect('user.profile', 'profile');
+        qb[hasWhere ? 'andWhere' : 'where'](
+          'profile.displayName like :term'
+        ).setParameters({ term: `%${displayName}%` });
+      }
+
+      applyFiltering(qb, rest, 'or');
     }
 
     return getPaginationResults(qb, paginationArgs);
