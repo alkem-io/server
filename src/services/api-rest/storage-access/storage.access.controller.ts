@@ -1,24 +1,30 @@
 import {
   Controller,
-  ForbiddenException,
   Get,
   Inject,
   LoggerService,
-  NotFoundException,
   Param,
   Res,
   StreamableFile,
   UseGuards,
 } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import type { Response } from 'express';
 import { GraphQLError } from 'graphql';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationPrivilege } from '@common/enums';
+import {
+  AlkemioErrorStatus,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { RestGuard } from '@core/authorization/rest.guard';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import {
+  ForbiddenHttpException,
+  NotFoundHttpException,
+} from '@common/exceptions/http';
+import type { Response } from 'express';
 
 @Controller('/rest/storage')
 export class StorageAccessController {
@@ -40,7 +46,11 @@ export class StorageAccessController {
     try {
       document = await this.documentService.getDocumentOrFail(id);
     } catch (e) {
-      throw new NotFoundException(`Document with id '${id}' not found`);
+      throw new NotFoundHttpException(
+        `Document with id '${id}' not found`,
+        LogContext.DOCUMENT,
+        AlkemioErrorStatus.NOT_FOUND
+      );
     }
 
     try {
@@ -52,7 +62,7 @@ export class StorageAccessController {
       );
     } catch (e: unknown) {
       const err = e as GraphQLError;
-      throw new ForbiddenException(err.message);
+      throw new ForbiddenHttpException(err.message, LogContext.DOCUMENT);
     }
 
     res.setHeader('Content-Type', `${document.mimeType}`);

@@ -3,11 +3,11 @@ import {
   ConfigurationTypes,
   LogContext,
 } from '@common/enums';
-import { AuthenticationException, TokenException } from '@common/exceptions';
+import { TokenException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy, ExtractJwt } from 'passport-jwt';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 import { AuthenticationService } from './authentication.service';
 import { passportJwtSecret } from 'jwks-rsa';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -50,6 +50,7 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
     if (checkIfTokenHasExpired(payload.exp)) {
       throw new TokenException(
         'Access token has expired!',
+        LogContext.AUTH,
         AlkemioErrorStatus.TOKEN_EXPIRED
       );
     }
@@ -57,6 +58,7 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
     const session = verifyIdentityIfOidcAuth(payload.session);
     const oryIdentity = session.identity as OryDefaultIdentitySchema;
 
+    //throw new TokenException('test error', LogContext.AUTH);
     return this.authService.createAgentInfo(oryIdentity);
   }
 }

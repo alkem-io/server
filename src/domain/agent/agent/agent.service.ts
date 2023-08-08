@@ -551,7 +551,8 @@ export class AgentService {
   ): Promise<AgentBeginVerifiedCredentialOfferOutput> {
     if (!issuerAgentID || issuerAgentID.length == 0) {
       throw new AuthenticationException(
-        'Unable to retrieve authenticated agent; no identifier'
+        'Unable to retrieve authenticated agent; no identifier',
+        LogContext.AUTH
       );
     }
     const issuerAgent = await this.getAgentOrFail(issuerAgentID);
