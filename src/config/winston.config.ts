@@ -19,7 +19,6 @@ const consoleLoggingStandardFormat: logform.Format[] = [
 const consoleLoggingProdFormat: logform.Format[] = [
   winston.format.timestamp(),
   winston.format.label({ label: LOG_LABEL }),
-  winston.format.errors({ label: LOG_LABEL }),
   winston.format.json({ deterministic: true }),
 ];
 

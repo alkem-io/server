@@ -26,8 +26,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
     /* add values in 'stack' that you want to include as additional data
      e.g. stack = { code: '123' };
     */
-    const stack = { code: exception.code };
-    const context = exception.context;
+    const stack = undefined;
+    const context = undefined;
 
     /* the logger will handle the passed exception by iteration over all it's fields
      * you can provide additional data in the stack and context

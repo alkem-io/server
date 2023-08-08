@@ -12,11 +12,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { GraphQLError } from 'graphql';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication';
-import {
-  AlkemioErrorStatus,
-  AuthorizationPrivilege,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { RestGuard } from '@core/authorization/rest.guard';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -48,8 +44,7 @@ export class StorageAccessController {
     } catch (e) {
       throw new NotFoundHttpException(
         `Document with id '${id}' not found`,
-        LogContext.DOCUMENT,
-        AlkemioErrorStatus.NOT_FOUND
+        LogContext.DOCUMENT
       );
     }
 

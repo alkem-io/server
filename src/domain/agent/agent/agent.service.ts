@@ -552,7 +552,7 @@ export class AgentService {
     if (!issuerAgentID || issuerAgentID.length == 0) {
       throw new AuthenticationException(
         'Unable to retrieve authenticated agent; no identifier',
-        LogContext.AUTH
+        LogContext.AGENT
       );
     }
     const issuerAgent = await this.getAgentOrFail(issuerAgentID);
