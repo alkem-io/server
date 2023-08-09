@@ -239,6 +239,11 @@ export class CollaborationService {
         `Collaboration (${collaborationID}) not initialised`,
         LogContext.CONTEXT
       );
+    if (!calloutData.sortOrder) {
+      calloutData.sortOrder =
+        1 +
+        Math.max(...collaboration.callouts.map(callout => callout.sortOrder));
+    }
 
     if (calloutData.nameID && calloutData.nameID.length > 0) {
       const nameAvailable =
@@ -559,31 +564,24 @@ export class CollaborationService {
 
     // Get the callouts specified
     const calloutsInOrder: ICallout[] = [];
-    let minCalloutSortOrder = 10000;
+    let index = 0;
     for (const calloutID of sortOrderData.calloutIDs) {
+      index++;
       let callout;
       if (calloutID.length === UUID_LENGTH)
         callout = allCallouts.find(callout => callout.id === calloutID);
       else callout = allCallouts.find(callout => callout.nameID === calloutID);
-
       if (!callout) {
         throw new EntityNotFoundException(
           `Callout with requested ID (${calloutID}) not located within current Collaboration: ${collaboration.id}`,
           LogContext.COLLABORATION
         );
       }
-      if (callout.sortOrder < minCalloutSortOrder) {
-        minCalloutSortOrder = callout.sortOrder;
-      }
       calloutsInOrder.push(callout);
-    }
-
-    // Now update all the callouts sort order
-    for (const callout of calloutsInOrder) {
-      callout.sortOrder = minCalloutSortOrder;
-      minCalloutSortOrder += 2;
+      callout.sortOrder = index;
       await this.calloutService.save(callout);
     }
+
     return calloutsInOrder;
   }
 }
