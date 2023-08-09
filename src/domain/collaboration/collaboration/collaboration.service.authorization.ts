@@ -24,6 +24,7 @@ import {
   POLICY_RULE_CALLOUT_CONTRIBUTE,
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
+import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
 
 @Injectable()
 export class CollaborationAuthorizationService {
@@ -31,6 +32,7 @@ export class CollaborationAuthorizationService {
     private collaborationService: CollaborationService,
     private communityPolicyService: CommunityPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private timelineAuthorizationService: TimelineAuthorizationService,
     private calloutAuthorizationService: CalloutAuthorizationService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>
@@ -70,6 +72,28 @@ export class CollaborationAuthorizationService {
         communityPolicy
       );
     }
+
+    collaboration.timeline = await this.collaborationService.getTimelineOrFail(
+      collaboration.id
+    );
+
+    // Extend with contributor rules + then send into apply
+    const clonedAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        collaboration.authorization
+      );
+
+    const extendedAuthorizationContributors =
+      this.appendCredentialRulesForContributors(
+        clonedAuthorization,
+        communityPolicy
+      );
+
+    collaboration.timeline =
+      await this.timelineAuthorizationService.applyAuthorizationPolicy(
+        collaboration.timeline,
+        extendedAuthorizationContributors
+      );
 
     collaboration.relations =
       await this.collaborationService.getRelationsOnCollaboration(
