@@ -1,11 +1,13 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { EntityManager, EntityNotFoundError } from 'typeorm';
 import { LogContext } from '@common/enums';
 import { Space } from '@domain/challenge/space/space.entity';
 import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Collaboration } from '@domain/collaboration/collaboration';
+import { Challenge } from '@domain/challenge/challenge/challenge.entity';
+import { Opportunity } from '@domain/collaboration/opportunity';
 
 @Injectable()
 export class TimelineResolverService {
@@ -65,25 +67,53 @@ export class TimelineResolverService {
 
   public async getSpaceIdForCalendar(
     calendarID: string
-  ): Promise<string | undefined> {
-    const result = await this.entityManager.findOne(Space, {
-      where: {
-        collaboration: {
-          timeline: {
-            calendar: {
-              id: calendarID,
+  ): Promise<string | never> {
+    const space = await this.entityManager.findOne(Space, {
+      where: [
+        {
+          collaboration: {
+            timeline: {
+              calendar: {
+                id: calendarID,
+              },
             },
           },
         },
-      },
+      ],
     });
-    if (!result) {
-      this.logger.error(
-        `Unable to identify Space for provided calendar ID: ${calendarID}`,
-        LogContext.CALENDAR
-      );
-      return undefined;
-    }
-    return result.id;
+
+    if (space && space.id) return space.id;
+    const challenge = await this.entityManager.findOne(Challenge, {
+      where: [
+        {
+          collaboration: {
+            timeline: {
+              calendar: {
+                id: calendarID,
+              },
+            },
+          },
+        },
+      ],
+    });
+    if (challenge && challenge.spaceID) return challenge.spaceID;
+    const opportuntiy = await this.entityManager.findOne(Opportunity, {
+      where: [
+        {
+          collaboration: {
+            timeline: {
+              calendar: {
+                id: calendarID,
+              },
+            },
+          },
+        },
+      ],
+    });
+    if (opportuntiy && opportuntiy.spaceID) return opportuntiy.spaceID;
+    throw new EntityNotFoundError(
+      `Unable to identify Space for provided calendar ID: ${calendarID}`,
+      LogContext.CALENDAR
+    );
   }
 }
