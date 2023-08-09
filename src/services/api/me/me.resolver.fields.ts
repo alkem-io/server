@@ -13,6 +13,7 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { MeService } from './me.service';
 import { ApplicationForRoleResult } from '../roles/dto/roles.dto.result.application';
 import { InvitationForRoleResult } from '../roles/dto/roles.dto.result.invitation';
+import { LogContext } from '@common/enums';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
@@ -29,7 +30,8 @@ export class MeResolverFields {
     const email = agentInfo.email;
     if (!email) {
       throw new AuthenticationException(
-        'Unable to retrieve authenticated user; no identifier'
+        'Unable to retrieve authenticated user; no identifier',
+        LogContext.RESOLVER_FIELD
       );
     }
 
