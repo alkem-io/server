@@ -3,6 +3,7 @@ import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
+import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 
 @ObjectType('Collaboration')
 export abstract class ICollaboration extends IAuthorizable {
@@ -19,4 +20,6 @@ export abstract class ICollaboration extends IAuthorizable {
   relations?: IRelation[];
 
   tagsetTemplateSet?: ITagsetTemplateSet;
+
+  timeline?: ITimeline;
 }

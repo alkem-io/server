@@ -14,6 +14,8 @@ import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { ContextModule } from '@domain/context/context/context.module';
+import { CalendarEventModule } from '@domain/timeline/event/event.module';
+import { CalendarModule } from '@domain/timeline/calendar/calendar.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { ContextModule } from '@domain/context/context/context.module';
     PostModule,
     ProfileModule,
     CalloutModule,
+    CalendarModule,
+    CalendarEventModule,
     RoomModule,
   ],
   providers: [LookupService, LookupResolverQueries, LookupResolverFields],

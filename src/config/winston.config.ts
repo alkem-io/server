@@ -10,7 +10,10 @@ const LOG_LABEL = 'alkemio-server';
 
 const consoleLoggingStandardFormat: logform.Format[] = [
   winston.format.timestamp(),
-  nestWinstonModuleUtilities.format.nestLike(),
+  nestWinstonModuleUtilities.format.nestLike(undefined, {
+    colors: true,
+    prettyPrint: false,
+  }),
 ];
 
 const consoleLoggingProdFormat: logform.Format[] = [
