@@ -18,10 +18,14 @@ tables=$(docker exec -i alkemio_dev_mariadb mysql -u $user -p$password -e "SHOW 
 
 # Export each table to a separate CSV file
 for table in $tables; do
-    # Skip the "query-result-cache" table
-    if [ "$table" == "query-result-cache" ]; then
+    # Skip the "query-result-cache" and "migrations_typeorm" tables
+    if [ "$table" == "query-result-cache" ] || [ "$table" == "migrations_typeorm" ]; then
         continue
     fi
+
+
+    # Get columns of the table, omitting createdData, updatedDate, and version
+    columns=$(docker exec -i alkemio_dev_mariadb mysql -u $user -p$password -e "SHOW COLUMNS FROM $table" $database | awk '{print $1}' | grep -v '^Field$' | grep -Ev '^(createdDate|updatedDate|version)$' | tr '\n' ',' | sed 's/,$//')
 
     filename="${table}.csv"
 
@@ -30,7 +34,7 @@ for table in $tables; do
 
     echo "Exporting ${table} to ${filename}"
     docker exec -i $container mysql -u $user -p$password -e \
-    "SELECT * INTO OUTFILE '/tmp/CSVs/${filename}' FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n' FROM ${table};" $database
+    "SELECT $columns INTO OUTFILE '/tmp/CSVs/${filename}' FIELDS TERMINATED BY ',' ENCLOSED BY '\"' LINES TERMINATED BY '\n' FROM ${table};" $database
 done
 
 echo "All tables exported successfully!"
