@@ -1,5 +1,5 @@
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -10,7 +10,7 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { AgentInfo } from '@src/core/authentication/agent-info';
-import { PaginationArgs, PaginatedUsers } from '@core/pagination';
+import { PaginatedUsers, PaginationArgs } from '@core/pagination';
 import { UserService } from './user.service';
 import { IUser } from './';
 import { UserFilterInput } from '@core/filtering';
@@ -97,7 +97,8 @@ export class UserResolverQueries {
     const userID = agentInfo.userID;
     if (!userID || userID.length == 0) {
       throw new AuthenticationException(
-        'Unable to retrieve authenticated user; no identifier'
+        'Unable to retrieve authenticated user; no identifier',
+        LogContext.RESOLVER_QUERY
       );
     }
 

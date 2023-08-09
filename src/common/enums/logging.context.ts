@@ -39,4 +39,8 @@ export enum LogContext {
   INNOVATION_HUB = 'innovation-hub',
   CHAT_GUIDANCE = 'chat-guidance',
   TAGSET = 'tagset',
+  RESOLVER_FIELD = 'resolver-field',
+  RESOLVER_QUERY = 'resolver-query',
+  MUTATION = 'mutation',
+  DOCUMENT = 'document',
 }
