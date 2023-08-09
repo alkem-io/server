@@ -1,7 +1,10 @@
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
+
 export interface RestErrorResponse {
   statusCode: number;
-  code?: string;
   timestamp: string;
   message: string;
+  code: AlkemioErrorStatus;
+  context?: LogContext;
   stack?: string;
 }

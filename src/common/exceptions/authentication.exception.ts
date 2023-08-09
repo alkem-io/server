@@ -1,15 +1,8 @@
-import { LogContext } from '@common/enums';
-import { AuthenticationError } from './authentication.error';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { BaseException } from './base.exception';
 
-export class AuthenticationException extends AuthenticationError {
-  private context: LogContext;
-
-  constructor(error: string) {
-    super(error);
-    this.context = LogContext.AUTH;
-  }
-
-  getContext(): LogContext {
-    return this.context;
+export class AuthenticationException extends BaseException {
+  constructor(message: string, context: LogContext, code?: AlkemioErrorStatus) {
+    super(message, context, code ?? AlkemioErrorStatus.UNAUTHENTICATED);
   }
 }

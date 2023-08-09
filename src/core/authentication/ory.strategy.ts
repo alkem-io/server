@@ -3,7 +3,7 @@ import {
   ConfigurationTypes,
   LogContext,
 } from '@common/enums';
-import { AuthenticationException, TokenException } from '@common/exceptions';
+import { TokenException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist';
 import { PassportStrategy } from '@nestjs/passport';
@@ -50,6 +50,7 @@ export class OryStrategy extends PassportStrategy(Strategy, 'oathkeeper-jwt') {
     if (checkIfTokenHasExpired(payload.exp)) {
       throw new TokenException(
         'Access token has expired!',
+        LogContext.AUTH,
         AlkemioErrorStatus.TOKEN_EXPIRED
       );
     }

@@ -1,13 +1,6 @@
-import {
-  ExceptionFilter,
-  Catch,
-  ArgumentsHost,
-  Inject,
-  LoggerService,
-} from '@nestjs/common';
+import { ExceptionFilter, Catch, Inject, LoggerService } from '@nestjs/common';
 import { GraphQLError } from 'graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
 
 @Catch(GraphQLError)
@@ -17,22 +10,18 @@ export class GraphqlExceptionFilter implements ExceptionFilter {
     private readonly logger: LoggerService
   ) {}
 
-  catch(exception: BaseException, _host: ArgumentsHost) {
-    // toDo vyanakiev - discuss the contextual information provided in the logged unhandled exceptions
-    // const gqlHost = GqlArgumentsHost.create(host);
-    // const req = gqlHost.getContext().req;
-    // const url = req.originalUrl;
+  catch(exception: BaseException) {
+    /* add values in 'stack' that you want to include as additional data
+      e.g. stack = { code: '123' };
+     */
+    const stack = undefined;
+    const context = undefined;
 
-    let context = LogContext.UNSPECIFIED;
-
-    if (exception.getContext) context = exception.getContext();
-
-    this.logger.error(
-      exception.message,
-      JSON.stringify(exception.stack),
-      context
-    );
-
+    /* the logger will handle the passed exception by iteration over all it's fields
+     * you can provide additional data in the stack and context
+     */
+    this.logger.error(exception, stack, context);
+    // something needs to be returned so the default ExceptionsHandler is not triggered
     return exception;
   }
 }

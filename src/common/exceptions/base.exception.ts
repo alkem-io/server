@@ -2,15 +2,13 @@ import { GraphQLError } from 'graphql';
 import { LogContext, AlkemioErrorStatus } from '@common/enums';
 
 export class BaseException extends GraphQLError {
-  private context: LogContext;
-  constructor(error: string, context: LogContext, code?: AlkemioErrorStatus) {
+  constructor(
+    public error: string,
+    public context: LogContext,
+    public code: AlkemioErrorStatus
+  ) {
     super(error, {
-      extensions: { code: code?.toLocaleString() },
+      extensions: { code: code.toLocaleString() },
     });
-    this.context = context;
-  }
-
-  getContext(): LogContext {
-    return this.context;
   }
 }
