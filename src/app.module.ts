@@ -222,7 +222,6 @@ import { LookupModule } from '@services/api/lookup';
     StorageAccessModule,
     MeModule,
     ChatGuidanceModule,
-
     LookupModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],

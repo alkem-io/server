@@ -61,6 +61,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { userDefaults } from './user.defaults';
 import { UsersQueryArgs } from './dto/users.query.args';
+import { InvitationUtilService } from '../invitation-util/invitation.util.service';
 
 @Injectable()
 export class UserService {
@@ -74,6 +75,7 @@ export class UserService {
     private namingService: NamingService,
     private agentService: AgentService,
     private preferenceSetService: PreferenceSetService,
+    private invitationUtilService: InvitationUtilService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -324,6 +326,10 @@ export class UserService {
     if (user.authorization) {
       await this.authorizationPolicyService.delete(user.authorization);
     }
+
+    const invitations = await this.invitationUtilService.findInvitationsForUser(
+      userID
+    );
 
     const result = await this.userRepository.remove(user as User);
 

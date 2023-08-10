@@ -25,6 +25,7 @@ import {
   AgentLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
+import { InvitationUtilModule } from '../invitation-util/invitation.util.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import {
     PreferenceSetModule,
     KonfigModule,
     MessagingModule,
+    InvitationUtilModule,
     TypeOrmModule.forFeature([User]),
   ],
   providers: [
