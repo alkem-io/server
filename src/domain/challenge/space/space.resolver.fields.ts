@@ -29,12 +29,10 @@ import { IPreference } from '@domain/common/preference/preference.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
-import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { IProfile } from '@domain/common/profile';
 import { Loader } from '@core/dataloader/decorators';
 import {
   SpaceTemplatesSetLoaderCreator,
-  SpaceTimelineLoaderCreator,
   JourneyCollaborationLoaderCreator,
   JourneyCommunityLoaderCreator,
   JourneyContextLoaderCreator,
@@ -129,20 +127,6 @@ export class SpaceResolverFields {
   ): Promise<ITemplatesSet> {
     return loader.load(space.id);
   }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('timeline', () => ITimeline, {
-    nullable: true,
-    description: 'The timeline with events in use by this Space',
-  })
-  @UseGuards(GraphqlGuard)
-  async timeline(
-    @Parent() space: Space,
-    @Loader(SpaceTimelineLoaderCreator) loader: ILoader<ITimeline>
-  ): Promise<ITimeline> {
-    return loader.load(space.id);
-  }
-
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('storageBucket', () => IStorageBucket, {
     nullable: true,

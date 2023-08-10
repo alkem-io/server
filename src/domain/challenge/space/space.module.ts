@@ -28,7 +28,6 @@ import { SpaceFilterModule } from '@services/infrastructure/space-filter/space.f
 import { SpaceResolverSubscriptions } from './space.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
-import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ElasticsearchModule } from '@services/external/elasticsearch';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
@@ -57,7 +56,6 @@ import { SpaceStorageBucketLoaderCreator } from '@core/dataloader/creators/loade
     NamingModule,
     PreferenceModule,
     PreferenceSetModule,
-    TimelineModule,
     TemplatesSetModule,
     CollaborationModule,
     SpaceFilterModule,
