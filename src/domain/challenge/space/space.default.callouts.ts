@@ -5,6 +5,7 @@ import { SpaceDisplayLocation } from '@common/enums/space.display.location';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
+import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
 
 export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
@@ -75,6 +76,13 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
+    whiteboard: {
+      value: EMPTY_WHITEBOARD_VALUE,
+      nameID: 'vision',
+      profileData: {
+        displayName: 'Vision',
+      },
+    },
   },
   {
     nameID: 'space-welcome',
@@ -110,6 +118,13 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
           tags: [SpaceDisplayLocation.COMMUNITY_RIGHT],
         },
       ],
+    },
+    whiteboard: {
+      value: EMPTY_WHITEBOARD_VALUE,
+      nameID: 'ecosystem',
+      profileData: {
+        displayName: 'Ecosystem Value Map',
+      },
     },
   },
   {

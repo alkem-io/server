@@ -5,6 +5,7 @@ import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.lo
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
+import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
 
 export const opportunityDefaultCallouts: CreateCalloutInput[] = [
   {
@@ -147,6 +148,13 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
           tags: [OpportunityDisplayLocation.CONTRIBUTE],
         },
       ],
+    },
+    whiteboard: {
+      value: EMPTY_WHITEBOARD_VALUE,
+      nameID: 'needs',
+      profileData: {
+        displayName: 'Identify needs',
+      },
     },
   },
 ];

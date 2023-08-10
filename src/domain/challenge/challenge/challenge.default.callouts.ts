@@ -5,6 +5,7 @@ import { CommonDisplayLocation } from '@common/enums/common.display.location';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
+import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
 
 export const challengeDefaultCallouts: CreateCalloutInput[] = [
   {
@@ -103,6 +104,13 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
           tags: [ChallengeDisplayLocation.CONTRIBUTE],
         },
       ],
+    },
+    whiteboard: {
+      value: EMPTY_WHITEBOARD_VALUE,
+      nameID: 'stakeholders',
+      profileData: {
+        displayName: 'stakeholder map',
+      },
     },
   },
   {
