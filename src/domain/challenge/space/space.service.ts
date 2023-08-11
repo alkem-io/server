@@ -872,16 +872,6 @@ export class SpaceService {
     );
   }
 
-  async getCommunityInNameableScope(
-    communityID: string,
-    space: ISpace
-  ): Promise<ICommunity> {
-    return await this.communityService.getCommunityInNameableScopeOrFail(
-      communityID,
-      space.id
-    );
-  }
-
   async getProjects(space: ISpace): Promise<IProject[]> {
     return await this.projectService.getProjects(space.id);
   }
