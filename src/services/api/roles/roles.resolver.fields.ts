@@ -1,4 +1,4 @@
-import { Resolver } from '@nestjs/graphql';
+import { Parent, Resolver } from '@nestjs/graphql';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
 import { CurrentUser } from '@src/common/decorators';
@@ -21,12 +21,13 @@ export class RolesResolverFields {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => [InvitationForRoleResult], {
+  @ResolveField('invitations', () => [InvitationForRoleResult], {
     description:
       'The invitations for the specified user; only accessible for platform admins',
   })
   public async invitations(
     @CurrentUser() agentInfo: AgentInfo,
+    @Parent() roles: ContributorRoles,
     @Args({
       name: 'states',
       nullable: true,
@@ -41,16 +42,17 @@ export class RolesResolverFields {
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `roles user query: ${agentInfo.email}`
     );
-    return await this.rolesService.getUserInvitations(agentInfo.userID, states);
+    return await this.rolesService.getUserInvitations(roles.id, states);
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => [ApplicationForRoleResult], {
+  @ResolveField('applications', () => [ApplicationForRoleResult], {
     description:
       'The applications for the specified user; only accessible for platform admins',
   })
   public async applications(
     @CurrentUser() agentInfo: AgentInfo,
+    @Parent() roles: ContributorRoles,
     @Args({
       name: 'states',
       nullable: true,
@@ -65,9 +67,6 @@ export class RolesResolverFields {
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `roles user query: ${agentInfo.email}`
     );
-    return await this.rolesService.getUserApplications(
-      agentInfo.userID,
-      states
-    );
+    return await this.rolesService.getUserApplications(roles.id, states);
   }
 }
