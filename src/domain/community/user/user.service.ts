@@ -23,6 +23,7 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import {
   CreateUserInput,
+  DeleteUserInput,
   IUser,
   UpdateUserInput,
   User,
@@ -59,7 +60,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { userDefaults } from './user.defaults';
 import { UsersQueryArgs } from './dto/users.query.args';
-
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
@@ -71,6 +72,7 @@ export class UserService {
     private namingService: NamingService,
     private agentService: AgentService,
     private preferenceSetService: PreferenceSetService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -89,7 +91,7 @@ export class UserService {
       this.cacheOptions
     );
   }
-  public async clearUserCache(user: IUser) {
+  private async clearUserCache(user: IUser) {
     await this.cacheManager.del(
       this.getUserCommunicationIdCacheKey(user.communicationID)
     );
@@ -324,6 +326,42 @@ export class UserService {
 
   async saveUser(user: IUser): Promise<IUser> {
     return await this.userRepository.save(user);
+  }
+
+  async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
+    const userID = deleteData.ID;
+    const user = await this.getUserOrFail(userID, {
+      relations: ['profile', 'agent', 'preferenceSet'],
+    });
+    const { id } = user;
+    await this.clearUserCache(user);
+
+    if (user.profile) {
+      await this.profileService.deleteProfile(user.profile.id);
+    }
+
+    if (user.preferenceSet) {
+      await this.preferenceSetService.deletePreferenceSet(
+        user.preferenceSet.id
+      );
+    }
+
+    if (user.agent) {
+      await this.agentService.deleteAgent(user.agent.id);
+    }
+
+    if (user.authorization) {
+      await this.authorizationPolicyService.delete(user.authorization);
+    }
+
+    const result = await this.userRepository.remove(user as User);
+
+    // Note: Should we unregister the user from communications?
+
+    return {
+      ...result,
+      id,
+    };
   }
 
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {

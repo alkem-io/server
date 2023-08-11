@@ -70,7 +70,10 @@ export class RegistrationResolverMutations {
       AuthorizationPrivilege.DELETE,
       `user delete: ${user.id}`
     );
-    const userDeleted = await this.registrationService.deleteUser(deleteData);
+    const userDeleted =
+      await this.registrationService.deleteUserWithPendingMemberships(
+        deleteData
+      );
     // Send the notification
     const notificationInput: NotificationInputUserRemoved = {
       triggeredBy: agentInfo.userID,
