@@ -135,7 +135,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     profile: {
       displayName: 'What Challenges do you care about?',
       description:
-        '👋 Please share any relevant Challenges that you encounter?',
+        '👋 Please share any relevant Challenges that you encounter.',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -153,7 +153,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     profile: {
       displayName: 'Challenge proposals 🎯',
       description:
-        'Do you have a specific Challenge you would like to pick up in this Space, please share your proposal here? You can also comment on proposals by others if you want to work on that Challenge as well!',
+        'Do you have a specific Challenge you would like to pick up in this Space? Please share your proposal here! You can also comment on proposals by others if you want to work on that Challenge as well!',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,

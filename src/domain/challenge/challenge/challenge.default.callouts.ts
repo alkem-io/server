@@ -49,8 +49,8 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     state: CalloutState.OPEN,
     sortOrder: 2,
     profile: {
-      displayName: 'General chat',
-      description: 'Things you would like to discuss with the community?',
+      displayName: 'General chat 💬',
+      description: 'Things you would like to discuss with the community.',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -138,7 +138,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     profile: {
       displayName: 'What Opportunities do you see?',
       description:
-        '👋 Please share any relevant direction for a solution that you can think of or have seen?',
+        '👋 Please share any relevant direction for a solution that you can think of or have seen.',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,

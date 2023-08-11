@@ -31,8 +31,8 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     state: CalloutState.OPEN,
     sortOrder: 1,
     profile: {
-      displayName: 'General chat',
-      description: 'Things you would like to discuss with the community?',
+      displayName: 'General chat 💬',
+      description: 'Things you would like to discuss with the community.',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
