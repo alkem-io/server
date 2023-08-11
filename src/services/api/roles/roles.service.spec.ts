@@ -140,11 +140,9 @@ describe('RolesService', () => {
         .spyOn(applicationService, 'isFinalizedApplication')
         .mockResolvedValueOnce(true);
 
-      const res = await rolesService.getUserRoles({
-        userID: testData.user.id,
-      });
+      const res = await rolesService.getUserApplications(testData.user.id);
 
-      expect(res.applications).toHaveLength(0);
+      expect(res).toHaveLength(0);
     });
   });
 
