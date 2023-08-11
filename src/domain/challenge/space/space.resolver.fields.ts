@@ -45,15 +45,21 @@ export class SpaceResolverFields {
 
   @ResolveField('community', () => ICommunity, {
     nullable: true,
-    description: 'Get the Community thos this Space. ',
+    description:
+      'Get a Community within the Space. Defaults to the Community for the Space itself.',
   })
   @Profiling.api
   async community(
     @Parent() space: Space,
+    @Args('ID', { type: () => UUID, nullable: true }) ID: string,
     @Loader(JourneyCommunityLoaderCreator, { parentClassRef: Space })
     loader: ILoader<ICommunity>
   ) {
-    return loader.load(space.id);
+    // Default to returning the community for the Space
+    if (!ID) {
+      return loader.load(space.id);
+    }
+    return await this.spaceService.getCommunityInNameableScope(ID, space);
   }
 
   @ResolveField('context', () => IContext, {

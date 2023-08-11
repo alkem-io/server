@@ -956,6 +956,16 @@ export class SpaceService {
     return await this.spaceRepository.countBy({ visibility: visibility });
   }
 
+  async getCommunityInNameableScope(
+    communityID: string,
+    space: ISpace
+  ): Promise<ICommunity> {
+    return await this.communityService.getCommunityInNameableScopeOrFail(
+      communityID,
+      space.id
+    );
+  }
+
   async getHost(spaceID: string): Promise<IOrganization | undefined> {
     const organizations =
       await this.organizationService.organizationsWithCredentials({
