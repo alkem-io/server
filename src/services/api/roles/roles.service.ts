@@ -80,19 +80,19 @@ export class RolesService {
     contributorID: string,
     spaceVisibilities: SpaceVisibility[]
   ): Promise<ContributorRoles> {
-    const membership = new ContributorRoles();
+    const contributorRoles = new ContributorRoles();
 
-    membership.id = contributorID;
+    contributorRoles.id = contributorID;
 
     const maps = await mapCredentialsToRoles(
       this.entityManager,
       credentials,
       spaceVisibilities
     );
-    membership.spaces = maps.spaces;
-    membership.organizations = maps.organizations;
+    contributorRoles.spaces = maps.spaces;
+    contributorRoles.organizations = maps.organizations;
 
-    return membership;
+    return contributorRoles;
   }
 
   public async getUserApplications(
