@@ -24,15 +24,7 @@ export class ContributorRoles {
   })
   organizations: RolesResultOrganization[] = [];
 
-  @Field(() => [ApplicationForRoleResult], {
-    nullable: true,
-    description: 'Open applications for this contributor.',
-  })
   applications: ApplicationForRoleResult[] = [];
 
-  @Field(() => [InvitationForRoleResult], {
-    nullable: true,
-    description: 'Open invitations for this contributor.',
-  })
   invitations: InvitationForRoleResult[] = [];
 }
