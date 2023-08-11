@@ -89,7 +89,8 @@ export class CollaborationService {
 
   public async addDefaultCallouts(
     collaboration: ICollaboration,
-    calloutsData: CreateCalloutInput[]
+    calloutsData: CreateCalloutInput[],
+    userID: string | undefined
   ): Promise<ICollaboration> {
     collaboration.callouts = await this.getCalloutsOnCollaboration(
       collaboration
@@ -101,7 +102,8 @@ export class CollaborationService {
     for (const calloutDefault of calloutsData) {
       const callout = await this.calloutService.createCallout(
         calloutDefault,
-        collaboration.tagsetTemplateSet.tagsetTemplates
+        collaboration.tagsetTemplateSet.tagsetTemplates,
+        userID
       );
       // default callouts are already published
       callout.visibility = CalloutVisibility.PUBLISHED;
