@@ -17,6 +17,9 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { InvitationAuthorizationService } from '@domain/community/invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CreateInvitationInput } from '@domain/community/invitation/dto/invitation.dto.create';
+import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
+import { InvitationService } from '@domain/community/invitation/invitation.service';
+import { ApplicationService } from '@domain/community/application/application.service';
 
 export class RegistrationService {
   constructor(
@@ -27,6 +30,8 @@ export class RegistrationService {
     private communityService: CommunityService,
     private invitationExternalService: InvitationExternalService,
     private invitationAuthorizationService: InvitationAuthorizationService,
+    private invitationService: InvitationService,
+    private applicationService: ApplicationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -137,5 +142,27 @@ export class RegistrationService {
       );
     }
     return invitations;
+  }
+
+  async deleteUserWithPendingMemberships(
+    deleteData: DeleteUserInput
+  ): Promise<IUser> {
+    const userID = deleteData.ID;
+
+    const invitations = await this.invitationService.findInvitationsForUser(
+      userID
+    );
+    for (const invitation of invitations) {
+      await this.invitationService.deleteInvitation({ ID: invitation.id });
+    }
+
+    const applications = await this.applicationService.findApplicationsForUser(
+      userID
+    );
+    for (const application of applications) {
+      await this.applicationService.deleteApplication({ ID: application.id });
+    }
+
+    return await this.userService.deleteUser(deleteData);
   }
 }
