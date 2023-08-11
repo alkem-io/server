@@ -18,13 +18,11 @@ import {
   ICredential,
 } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import {
   CreateUserInput,
-  DeleteUserInput,
   IUser,
   UpdateUserInput,
   User,
@@ -68,7 +66,6 @@ export class UserService {
 
   constructor(
     private profileService: ProfileService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
     private namingService: NamingService,
@@ -92,7 +89,7 @@ export class UserService {
       this.cacheOptions
     );
   }
-  private async clearUserCache(user: IUser) {
+  public async clearUserCache(user: IUser) {
     await this.cacheManager.del(
       this.getUserCommunicationIdCacheKey(user.communicationID)
     );
@@ -297,42 +294,6 @@ export class UserService {
         displayName: `${agentInfo.firstName} ${agentInfo.lastName}`,
       },
     });
-  }
-
-  async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
-    const userID = deleteData.ID;
-    const user = await this.getUserOrFail(userID, {
-      relations: ['profile', 'agent', 'preferenceSet'],
-    });
-    const { id } = user;
-    await this.clearUserCache(user);
-
-    if (user.profile) {
-      await this.profileService.deleteProfile(user.profile.id);
-    }
-
-    if (user.preferenceSet) {
-      await this.preferenceSetService.deletePreferenceSet(
-        user.preferenceSet.id
-      );
-    }
-
-    if (user.agent) {
-      await this.agentService.deleteAgent(user.agent.id);
-    }
-
-    if (user.authorization) {
-      await this.authorizationPolicyService.delete(user.authorization);
-    }
-
-    const result = await this.userRepository.remove(user as User);
-
-    // Note: Should we unregister the user from communications?
-
-    return {
-      ...result,
-      id,
-    };
   }
 
   private async validateUserProfileCreationRequest(

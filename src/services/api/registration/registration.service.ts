@@ -17,6 +17,15 @@ import { CommunityService } from '@domain/community/community/community.service'
 import { InvitationAuthorizationService } from '@domain/community/invitation/invitation.service.authorization';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { CreateInvitationInput } from '@domain/community/invitation/dto/invitation.dto.create';
+import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { AgentService } from '@domain/agent/agent/agent.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { User } from '@domain/community/user/user.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { InvitationService } from '@domain/community/invitation/invitation.service';
+import { ApplicationService } from '@domain/community/application/application.service';
 
 export class RegistrationService {
   constructor(
@@ -24,9 +33,16 @@ export class RegistrationService {
     private organizationService: OrganizationService,
     private preferenceSetService: PreferenceSetService,
     private userAuthorizationService: UserAuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private communityService: CommunityService,
     private invitationExternalService: InvitationExternalService,
     private invitationAuthorizationService: InvitationAuthorizationService,
+    private invitationService: InvitationService,
+    private applicationService: ApplicationService,
+    private profileService: ProfileService,
+    private agentService: AgentService,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -137,5 +153,55 @@ export class RegistrationService {
       );
     }
     return invitations;
+  }
+
+  async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
+    const userID = deleteData.ID;
+    const user = await this.userService.getUserOrFail(userID, {
+      relations: ['profile', 'agent', 'preferenceSet'],
+    });
+    const { id } = user;
+    await this.userService.clearUserCache(user);
+
+    if (user.profile) {
+      await this.profileService.deleteProfile(user.profile.id);
+    }
+
+    if (user.preferenceSet) {
+      await this.preferenceSetService.deletePreferenceSet(
+        user.preferenceSet.id
+      );
+    }
+
+    if (user.agent) {
+      await this.agentService.deleteAgent(user.agent.id);
+    }
+
+    if (user.authorization) {
+      await this.authorizationPolicyService.delete(user.authorization);
+    }
+
+    const invitations = await this.invitationService.findInvitationsForUser(
+      userID
+    );
+    for (const invitation of invitations) {
+      await this.invitationService.deleteInvitation({ ID: invitation.id });
+    }
+
+    const applications = await this.applicationService.findApplicationsForUser(
+      userID
+    );
+    for (const application of applications) {
+      await this.applicationService.deleteApplication({ ID: application.id });
+    }
+
+    const result = await this.userRepository.remove(user as User);
+
+    // Note: Should we unregister the user from communications?
+
+    return {
+      ...result,
+      id,
+    };
   }
 }

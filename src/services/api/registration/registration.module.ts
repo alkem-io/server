@@ -9,6 +9,12 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
 import { InvitationExternalModule } from '@domain/community/invitation.external/invitation.external.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { InvitationModule } from '@domain/community/invitation/invitation.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
+import { AgentModule } from '@domain/agent/agent/agent.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from '@domain/community/user/user.entity';
+import { ApplicationModule } from '@domain/community/application/application.module';
 
 @Module({
   imports: [
@@ -20,6 +26,11 @@ import { InvitationModule } from '@domain/community/invitation/invitation.module
     UserModule,
     OrganizationModule,
     PreferenceSetModule,
+    AuthorizationPolicyModule,
+    ProfileModule,
+    AgentModule,
+    ApplicationModule,
+    TypeOrmModule.forFeature([User]),
   ],
   providers: [RegistrationService, RegistrationResolverMutations],
   exports: [RegistrationService, RegistrationResolverMutations],
