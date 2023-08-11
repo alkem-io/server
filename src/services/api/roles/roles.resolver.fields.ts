@@ -21,7 +21,7 @@ export class RolesResolverFields {
   ) {}
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('invitations2', () => [InvitationForRoleResult], {
+  @ResolveField('invitations', () => [InvitationForRoleResult], {
     description:
       'The invitations for the specified user; only accessible for platform admins',
   })
@@ -45,7 +45,7 @@ export class RolesResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField('applications2', () => [ApplicationForRoleResult], {
+  @ResolveField('applications', () => [ApplicationForRoleResult], {
     description:
       'The applications for the specified user; only accessible for platform admins',
   })
