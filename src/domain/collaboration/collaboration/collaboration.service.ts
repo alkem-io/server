@@ -40,6 +40,7 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
+import { keyBy } from 'lodash';
 
 @Injectable()
 export class CollaborationService {
@@ -251,7 +252,10 @@ export class CollaborationService {
     if (!calloutData.sortOrder) {
       calloutData.sortOrder =
         1 +
-        Math.max(...collaboration.callouts.map(callout => callout.sortOrder));
+        Math.max(
+          ...collaboration.callouts.map(callout => callout.sortOrder),
+          0 // Needed in case there are no callouts. In that case the first callout will have sortOrder = 1
+        );
     }
 
     if (calloutData.nameID && calloutData.nameID.length > 0) {
@@ -587,15 +591,23 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
 
+    const calloutsByID = {
+      ...keyBy(allCallouts, 'nameID'),
+      ...keyBy(allCallouts, 'id'),
+    };
+
+    const minimumSortOrder = Math.min(
+      ...sortOrderData.calloutIDs
+        .map(calloutId => calloutsByID[calloutId]?.sortOrder)
+        .filter(sortOrder => sortOrder)
+    );
+    const modifiedCallouts: ICallout[] = [];
+
     // Get the callouts specified
     const calloutsInOrder: ICallout[] = [];
-    let index = 0;
+    let index = 1;
     for (const calloutID of sortOrderData.calloutIDs) {
-      index++;
-      let callout;
-      if (calloutID.length === UUID_LENGTH)
-        callout = allCallouts.find(callout => callout.id === calloutID);
-      else callout = allCallouts.find(callout => callout.nameID === calloutID);
+      const callout = calloutsByID[calloutID];
       if (!callout) {
         throw new EntityNotFoundException(
           `Callout with requested ID (${calloutID}) not located within current Collaboration: ${collaboration.id}`,
@@ -603,9 +615,19 @@ export class CollaborationService {
         );
       }
       calloutsInOrder.push(callout);
-      callout.sortOrder = index;
-      await this.calloutService.save(callout);
+      const newSortOrder = minimumSortOrder + index;
+      if (callout.sortOrder !== newSortOrder) {
+        callout.sortOrder = newSortOrder;
+        modifiedCallouts.push(callout);
+      }
+      index++;
     }
+
+    await Promise.all(
+      modifiedCallouts.map(
+        async callout => await this.calloutService.save(callout)
+      )
+    );
 
     return calloutsInOrder;
   }
