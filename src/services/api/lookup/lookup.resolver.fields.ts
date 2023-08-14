@@ -34,12 +34,24 @@ import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { ICalendarEvent } from '@domain/timeline/event';
 import { ICalendar } from '@domain/timeline/calendar/calendar.interface';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
+import { ApplicationService } from '@domain/community/application/application.service';
+import { InvitationService } from '@domain/community/invitation/invitation.service';
+import { ChallengeService } from '@domain/challenge/challenge/challenge.service';
+import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
+import { IApplication } from '@domain/community/application';
+import { IInvitation } from '@domain/community/invitation';
+import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
+import { IOpportunity } from '@domain/collaboration/opportunity';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
   constructor(
     private authorizationService: AuthorizationService,
     private communityService: CommunityService,
+    private applicationService: ApplicationService,
+    private invitationService: InvitationService,
+    private challengeService: ChallengeService,
+    private opportunityService: OpportunityService,
     private collaborationService: CollaborationService,
     private contextService: ContextService,
     private whiteboardService: WhiteboardService,
@@ -53,6 +65,46 @@ export class LookupResolverFields {
     private calendarService: CalendarService,
     private innovationFlowTemplateService: InnovationFlowTemplateService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IApplication, {
+    nullable: true,
+    description: 'Lookup the specified Application',
+  })
+  async application(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IApplication> {
+    const application = await this.applicationService.getApplicationOrFail(id);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      application.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup Application: ${application.id}`
+    );
+
+    return application;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IInvitation, {
+    nullable: true,
+    description: 'Lookup the specified Invitation',
+  })
+  async invitation(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IInvitation> {
+    const invitation = await this.invitationService.getInvitationOrFail(id);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      invitation.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup Invitation: ${invitation.id}`
+    );
+
+    return invitation;
+  }
 
   @UseGuards(GraphqlGuard)
   @ResolveField(() => ICommunity, {
@@ -319,5 +371,45 @@ export class LookupResolverFields {
     );
 
     return innovationFlowTemplate;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IChallenge, {
+    nullable: true,
+    description: 'Lookup the specified Challenge',
+  })
+  async challenge(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IChallenge> {
+    const challenge = await this.challengeService.getChallengeOrFail(id);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      challenge.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup Challenge: ${challenge.id}`
+    );
+
+    return challenge;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IOpportunity, {
+    nullable: true,
+    description: 'Lookup the specified Opportunity',
+  })
+  async opportunity(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IOpportunity> {
+    const opportunity = await this.opportunityService.getOpportunityOrFail(id);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      opportunity.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup Opportunity: ${opportunity.id}`
+    );
+
+    return opportunity;
   }
 }

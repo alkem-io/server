@@ -11,7 +11,6 @@ import { SpaceResolverFields } from '@domain/challenge/space/space.resolver.fiel
 import { CommunityModule } from '@domain/community/community/community.module';
 import { ProjectModule } from '@domain/collaboration/project/project.module';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
-import { ApplicationModule } from '@domain/community/application/application.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
@@ -51,7 +50,6 @@ import { SpaceStorageBucketLoaderCreator } from '@core/dataloader/creators/loade
     OrganizationModule,
     StorageBucketModule,
     UserGroupModule,
-    ApplicationModule,
     UserModule,
     NamingModule,
     PreferenceModule,
