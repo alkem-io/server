@@ -8,7 +8,7 @@ import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
 
 export const challengeDefaultCallouts: CreateCalloutInput[] = [
-    {
+  {
     nameID: 'getting-started',
     type: CalloutType.LINK_COLLECTION,
     state: CalloutState.CLOSED,
@@ -55,7 +55,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.HOME_RIGHT],
+          tags: [CommonDisplayLocation.HOME_RIGHT],
         },
       ],
     },
@@ -69,7 +69,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
           'To stimulate contributors to share more details about their profile.',
       },
     },
-  },  
+  },
   {
     nameID: 'news',
     type: CalloutType.POST_COLLECTION,
