@@ -14,6 +14,12 @@ import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { ContextModule } from '@domain/context/context/context.module';
+import { CalendarEventModule } from '@domain/timeline/event/event.module';
+import { CalendarModule } from '@domain/timeline/calendar/calendar.module';
+import { ApplicationModule } from '@domain/community/application/application.module';
+import { InvitationModule } from '@domain/community/invitation/invitation.module';
+import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
+import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 
 @Module({
   imports: [
@@ -28,7 +34,13 @@ import { ContextModule } from '@domain/context/context/context.module';
     PostModule,
     ProfileModule,
     CalloutModule,
+    CalendarModule,
+    CalendarEventModule,
     RoomModule,
+    ApplicationModule,
+    InvitationModule,
+    ChallengeModule,
+    OpportunityModule,
   ],
   providers: [LookupService, LookupResolverQueries, LookupResolverFields],
   exports: [LookupService],

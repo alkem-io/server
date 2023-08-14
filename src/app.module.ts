@@ -61,6 +61,7 @@ import {
   GraphqlExceptionFilter,
 } from '@core/error-handling';
 import { MeModule } from '@services/api/me';
+import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
 import { LookupModule } from '@services/api/lookup';
 
 @Module({
@@ -220,6 +221,8 @@ import { LookupModule } from '@services/api/lookup';
     SsiCredentialFlowModule,
     StorageAccessModule,
     MeModule,
+    ChatGuidanceModule,
+
     LookupModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],

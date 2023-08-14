@@ -25,7 +25,6 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import {
   CREDENTIAL_RULE_CHALLENGE_SPACE_ADMIN_DELETE,
@@ -51,7 +50,6 @@ export class SpaceAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
-    private timelineAuthorizationService: TimelineAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
@@ -282,23 +280,6 @@ export class SpaceAuthorizationService {
         space.authorization
       );
 
-    space.timeline = await this.spaceService.getTimelineOrFail(space.id);
-    // Extend with contributor rules + then send into apply
-    const clonedAuthorization =
-      this.authorizationPolicyService.cloneAuthorizationPolicy(
-        space.authorization
-      );
-
-    const extendedAuthorizationContributors =
-      this.collaborationAuthorizationService.appendCredentialRulesForContributors(
-        clonedAuthorization,
-        policy
-      );
-    space.timeline =
-      await this.timelineAuthorizationService.applyAuthorizationPolicy(
-        space.timeline,
-        extendedAuthorizationContributors
-      );
     return await this.spaceRepository.save(space);
   }
 

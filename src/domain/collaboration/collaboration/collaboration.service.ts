@@ -38,6 +38,8 @@ import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
 import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
+import { TimelineService } from '@domain/timeline/timeline/timeline.service';
+import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 
 @Injectable()
 export class CollaborationService {
@@ -51,7 +53,8 @@ export class CollaborationService {
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
     @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private entityManager: EntityManager,
+    private timelineService: TimelineService
   ) {}
 
   async createCollaboration(): Promise<ICollaboration> {
@@ -59,6 +62,8 @@ export class CollaborationService {
     collaboration.authorization = new AuthorizationPolicy();
     collaboration.relations = [];
     collaboration.callouts = [];
+    collaboration.timeline = await this.timelineService.createTimeline();
+
     collaboration.tagsetTemplateSet =
       await this.tagsetTemplateSetService.createTagsetTemplateSet();
 
@@ -84,7 +89,8 @@ export class CollaborationService {
 
   public async addDefaultCallouts(
     collaboration: ICollaboration,
-    calloutsData: CreateCalloutInput[]
+    calloutsData: CreateCalloutInput[],
+    userID: string | undefined
   ): Promise<ICollaboration> {
     collaboration.callouts = await this.getCalloutsOnCollaboration(
       collaboration
@@ -96,7 +102,8 @@ export class CollaborationService {
     for (const calloutDefault of calloutsData) {
       const callout = await this.calloutService.createCallout(
         calloutDefault,
-        collaboration.tagsetTemplateSet.tagsetTemplates
+        collaboration.tagsetTemplateSet.tagsetTemplates,
+        userID
       );
       // default callouts are already published
       callout.visibility = CalloutVisibility.PUBLISHED;
@@ -203,13 +210,17 @@ export class CollaborationService {
     collaborationID: string
   ): Promise<ICollaboration> {
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
-      relations: ['callouts'],
+      relations: ['callouts', 'timeline'],
     });
 
     if (collaboration.callouts) {
       for (const callout of collaboration.callouts) {
         await this.calloutService.deleteCallout(callout.id);
       }
+    }
+
+    if (collaboration.timeline) {
+      await this.timelineService.deleteTimeline(collaboration.timeline.id);
     }
 
     if (collaboration.relations) {
@@ -278,6 +289,22 @@ export class CollaborationService {
     await this.collaborationRepository.save(collaboration);
 
     return callout;
+  }
+
+  async getTimelineOrFail(collaborationID: string): Promise<ITimeline> {
+    const collaboration = await this.getCollaborationOrFail(collaborationID, {
+      relations: ['timeline'],
+    });
+    const timeline = collaboration.timeline;
+
+    if (!timeline) {
+      throw new EntityNotFoundException(
+        `Unable to find timeline for collaboration: ${collaboration.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    return timeline;
   }
 
   public async getCalloutsFromCollaboration(

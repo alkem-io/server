@@ -11,7 +11,6 @@ import { SpaceResolverFields } from '@domain/challenge/space/space.resolver.fiel
 import { CommunityModule } from '@domain/community/community/community.module';
 import { ProjectModule } from '@domain/collaboration/project/project.module';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
-import { ApplicationModule } from '@domain/community/application/application.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { BaseChallengeModule } from '@domain/challenge/base-challenge/base.challenge.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
@@ -28,7 +27,6 @@ import { SpaceFilterModule } from '@services/infrastructure/space-filter/space.f
 import { SpaceResolverSubscriptions } from './space.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
-import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
@@ -53,12 +51,10 @@ import { NameReporterModule } from '@services/external/elasticsearch/name-report
     OrganizationModule,
     StorageBucketModule,
     UserGroupModule,
-    ApplicationModule,
     UserModule,
     NamingModule,
     PreferenceModule,
     PreferenceSetModule,
-    TimelineModule,
     TemplatesSetModule,
     CollaborationModule,
     SpaceFilterModule,

@@ -4,7 +4,6 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import {
   CreateUserInput,
-  DeleteUserInput,
   IUser,
   UpdateUserInput,
 } from '@domain/community/user';
@@ -24,7 +23,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { NotificationInputUserRegistered } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.registered';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
-import { NotificationInputUserRemoved } from '@services/adapters/notification-adapter/dto/notification.dto.input.user.removed';
 
 @Resolver(() => IUser)
 export class UserResolverMutations {
@@ -121,34 +119,6 @@ export class UserResolverMutations {
       preference,
       preferenceData.value
     );
-  }
-
-  @UseGuards(GraphqlGuard)
-  @Mutation(() => IUser, {
-    description: 'Deletes the specified User.',
-  })
-  @Profiling.api
-  async deleteUser(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args('deleteData') deleteData: DeleteUserInput
-  ): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(deleteData.ID, {
-      relations: ['profile'],
-    });
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      user.authorization,
-      AuthorizationPrivilege.DELETE,
-      `user delete: ${user.id}`
-    );
-    const userDeleted = await this.userService.deleteUser(deleteData);
-    // Send the notification
-    const notificationInput: NotificationInputUserRemoved = {
-      triggeredBy: agentInfo.userID,
-      user,
-    };
-    await this.notificationAdapter.userRemoved(notificationInput);
-    return userDeleted;
   }
 
   @UseGuards(GraphqlGuard)
