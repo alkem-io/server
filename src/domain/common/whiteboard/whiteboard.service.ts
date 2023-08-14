@@ -141,7 +141,7 @@ export class WhiteboardService {
     return this.save(whiteboard);
   }
 
-  async save(whiteboard: IWhiteboard): Promise<IWhiteboard> {
+  save(whiteboard: IWhiteboard): Promise<IWhiteboard> {
     return this.whiteboardRepository.save(whiteboard);
   }
 
