@@ -126,24 +126,23 @@ export class WhiteboardService {
       updateWhiteboardData.value &&
       updateWhiteboardData.value !== whiteboard.value
     ) {
-      await this.whiteboardCheckoutService.isUpdateAllowedOrFail(
+      this.whiteboardCheckoutService.isUpdateAllowedOrFail(
         whiteboard.checkout,
         agentInfo
       );
-    }
-    if (updateWhiteboardData.value)
       whiteboard.value = updateWhiteboardData.value;
+    }
     if (updateWhiteboardData.profileData) {
       whiteboard.profile = await this.profileService.updateProfile(
         whiteboard.profile,
         updateWhiteboardData.profileData
       );
     }
-    return await this.save(whiteboard);
+    return this.save(whiteboard);
   }
 
   async save(whiteboard: IWhiteboard): Promise<IWhiteboard> {
-    return await this.whiteboardRepository.save(whiteboard);
+    return this.whiteboardRepository.save(whiteboard);
   }
 
   public async getProfile(
