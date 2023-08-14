@@ -18,7 +18,6 @@ import {
   ICredential,
 } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -61,19 +60,19 @@ import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { userDefaults } from './user.defaults';
 import { UsersQueryArgs } from './dto/users.query.args';
-
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
 
   constructor(
     private profileService: ProfileService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
     private namingService: NamingService,
     private agentService: AgentService,
     private preferenceSetService: PreferenceSetService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -299,6 +298,36 @@ export class UserService {
     });
   }
 
+  private async validateUserProfileCreationRequest(
+    userData: CreateUserInput
+  ): Promise<boolean> {
+    await this.isNameIdAvailableOrFail(userData.nameID);
+    const userCheck = await this.isRegisteredUser(userData.email);
+    if (userCheck)
+      throw new ValidationException(
+        `User profile with the specified email (${userData.email}) already exists`,
+        LogContext.COMMUNITY
+      );
+    // Trim values to remove space issues
+    userData.email = userData.email.trim();
+    return true;
+  }
+
+  private async isNameIdAvailableOrFail(nameID: string) {
+    const userCount = await this.userRepository.countBy({
+      nameID: nameID,
+    });
+    if (userCount != 0)
+      throw new ValidationException(
+        `The provided nameID is already taken: ${nameID}`,
+        LogContext.COMMUNITY
+      );
+  }
+
+  async saveUser(user: IUser): Promise<IUser> {
+    return await this.userRepository.save(user);
+  }
+
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
     const user = await this.getUserOrFail(userID, {
@@ -333,36 +362,6 @@ export class UserService {
       ...result,
       id,
     };
-  }
-
-  private async validateUserProfileCreationRequest(
-    userData: CreateUserInput
-  ): Promise<boolean> {
-    await this.isNameIdAvailableOrFail(userData.nameID);
-    const userCheck = await this.isRegisteredUser(userData.email);
-    if (userCheck)
-      throw new ValidationException(
-        `User profile with the specified email (${userData.email}) already exists`,
-        LogContext.COMMUNITY
-      );
-    // Trim values to remove space issues
-    userData.email = userData.email.trim();
-    return true;
-  }
-
-  private async isNameIdAvailableOrFail(nameID: string) {
-    const userCount = await this.userRepository.countBy({
-      nameID: nameID,
-    });
-    if (userCount != 0)
-      throw new ValidationException(
-        `The provided nameID is already taken: ${nameID}`,
-        LogContext.COMMUNITY
-      );
-  }
-
-  async saveUser(user: IUser): Promise<IUser> {
-    return await this.userRepository.save(user);
   }
 
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {
