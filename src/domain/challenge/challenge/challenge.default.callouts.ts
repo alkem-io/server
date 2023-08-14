@@ -8,32 +8,14 @@ import { CreateCalloutInput } from '@domain/collaboration/callout';
 import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
 
 export const challengeDefaultCallouts: CreateCalloutInput[] = [
-  {
-    nameID: 'welcome',
-    type: CalloutType.POST,
-    state: CalloutState.OPEN,
-    sortOrder: 1,
-    profile: {
-      displayName: 'Why do you care about this Challenge?',
-      description:
-        '👋 Please share a few words about yourself to help the community get to know each other. For example, why is this Challenge important to you, or relevant thoughts, experience or expertise.',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_RIGHT],
-        },
-      ],
-    },
-  },
-  {
-    nameID: 'recommendations',
+    {
+    nameID: 'getting-started',
     type: CalloutType.LINK_COLLECTION,
     state: CalloutState.CLOSED,
     sortOrder: 3,
     profile: {
-      displayName: 'Recommended by the Leads',
-      description: 'Some quick links to get started 💥',
+      displayName: 'Getting Started',
+      description: '⬇️ Here are some quick links to help you get started',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -61,6 +43,34 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     },
   },
   {
+    nameID: 'contributor-profiles',
+    type: CalloutType.POST_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
+    profile: {
+      displayName: '👥 This is us!',
+      description:
+        'Here you will find the profiles of all contributors to this Challenge. Are you joining us? 👋 Nice to meet you! Please also provide your details below.',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [ChallengeDisplayLocation.HOME_RIGHT],
+        },
+      ],
+    },
+    postTemplate: {
+      type: 'Profile',
+      defaultDescription:
+        'Hi! I am... <p> In daily life I... <p> And I also like to... <p> You can contact me for anything related to... <p> My wish for this Challenge is.. <p> <i>And of course feel invited to insert a nice picture!</i>',
+      profile: {
+        displayName: 'Profile',
+        description:
+          'To stimulate contributors to share more details about their profile.',
+      },
+    },
+  },  
+  {
     nameID: 'news',
     type: CalloutType.POST_COLLECTION,
     state: CalloutState.OPEN,
@@ -73,7 +83,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.CONTRIBUTE],
+          tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
         },
       ],
     },
@@ -101,7 +111,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.CONTRIBUTE],
+          tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
         },
       ],
     },
@@ -136,9 +146,9 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     state: CalloutState.OPEN,
     sortOrder: 1,
     profile: {
-      displayName: 'What Opportunities do you see?',
+      displayName: '💡 What Opportunities do you see?',
       description:
-        '👋 Please share any relevant direction for a solution that you can think of or have seen.',
+        'Please share any relevant direction for a solution that you can think of or have seen.',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -154,9 +164,9 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     state: CalloutState.OPEN,
     sortOrder: 1,
     profile: {
-      displayName: 'Opportunity proposals 🎯',
+      displayName: 'Opportunity proposals',
       description:
-        'Do you have a specific Opportunity you would like to pick up with other community members? Please share your proposal here! You can also comment on proposals by others if you want to work on that Opportunity as well!',
+        'What are the 💡 Opportunities that you think we should be working on? Please add them below and use the template provided.',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -168,7 +178,7 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     postTemplate: {
       type: 'opportunity',
       defaultDescription:
-        '✍️ Describe your Opportunity, what the impact is, and who you would like to involve.',
+        '💡 Title <p> 💬 Description <p> 🗣️ Who to involve <p> 🌟 Why this has great potential',
       profile: {
         displayName: 'opportunity',
         description: 'To share proposals for Opportunities to be worked on.',
