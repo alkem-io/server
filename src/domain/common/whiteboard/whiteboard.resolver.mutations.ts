@@ -87,10 +87,6 @@ export class WhiteboardResolverMutations {
       `update Whiteboard: ${whiteboard.nameID}`
     );
 
-    if (whiteboard.value === whiteboardData.value) {
-      return whiteboard;
-    }
-
     const updatedWhiteboard = await this.whiteboardService.updateWhiteboard(
       whiteboard,
       whiteboardData,
