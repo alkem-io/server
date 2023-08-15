@@ -9,13 +9,13 @@ import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.ent
 
 export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
-    nameID: 'recommendations',
+    nameID: 'getting-started',
     type: CalloutType.LINK_COLLECTION,
     state: CalloutState.CLOSED,
     sortOrder: 3,
     profile: {
-      displayName: 'Recommended by the Leads',
-      description: 'Some quick links to get started 💥',
+      displayName: 'Getting Started',
+      description: '⬇️ Here are some quick links to help you get started',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -48,7 +48,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     state: CalloutState.OPEN,
     sortOrder: 2,
     profile: {
-      displayName: 'Do you have any questions or feedback?',
+      displayName: 'Any questions or feedback?',
       description: 'Please share it here :)',
       tagsets: [
         {
@@ -92,7 +92,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     profile: {
       displayName: 'Welcome to the community!',
       description:
-        '👋 Please share a few words about yourself to help the community get to know each other. What brings you to this Space and motivates you to work on these Challenges?',
+        '👋 Do you have any suggestions or ideas to grow the community and our impact? Please share!',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -133,9 +133,8 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     state: CalloutState.OPEN,
     sortOrder: 1,
     profile: {
-      displayName: 'What Challenges do you care about?',
-      description:
-        '👋 Please share any relevant Challenges that you encounter.',
+      displayName: '🚩 What Challenges do you care about?',
+      description: 'Please share any relevant Challenges that you encounter.',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -151,9 +150,9 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     state: CalloutState.OPEN,
     sortOrder: 1,
     profile: {
-      displayName: 'Challenge proposals 🎯',
+      displayName: 'Challenge proposals',
       description:
-        'Do you have a specific Challenge you would like to pick up in this Space? Please share your proposal here! You can also comment on proposals by others if you want to work on that Challenge as well!',
+        'What are the 🚩Challenges that you think we should be working on? Please add them below and use the template provided.',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -165,7 +164,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     postTemplate: {
       type: 'challenge',
       defaultDescription:
-        'Describe your Challenge, what your vision is, and who you would like to involve.',
+        'Title: <p> Description: <p> Who to involve: <p> Why is this important:',
       profile: {
         displayName: 'Challenge',
         description: 'To share proposals for challenges to be worked on.',
@@ -223,9 +222,9 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     state: CalloutState.OPEN,
     sortOrder: 3,
     profile: {
-      displayName: 'FAQ',
+      displayName: '❓ FAQ',
       description:
-        'Do you have a question? Check out the most asked questions and answers here.',
+        'Below you will find various questions and answers on this topic. Please feel invited to join in and share your answers as well!',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
