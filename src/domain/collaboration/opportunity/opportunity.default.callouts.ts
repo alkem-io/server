@@ -9,13 +9,13 @@ import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.ent
 
 export const opportunityDefaultCallouts: CreateCalloutInput[] = [
   {
-    nameID: 'recommendations',
+    nameID: 'getting-started',
     type: CalloutType.LINK_COLLECTION,
     state: CalloutState.CLOSED,
     sortOrder: 3,
     profile: {
-      displayName: 'Recommended by the Leads',
-      description: 'Some quick links to get started 💥',
+      displayName: 'Getting Started',
+      description: '⬇️ Here are some quick links to help you get started',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -48,9 +48,9 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     state: CalloutState.OPEN,
     sortOrder: 1,
     profile: {
-      displayName: 'Task list 🎯',
+      displayName: '💪 Jobs to be done...',
       description:
-        'Time to get to action! Add a task to this list or find one to pick up!',
+        '',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -62,7 +62,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     postTemplate: {
       type: 'Task',
       defaultDescription:
-        '✍️ Please describe what has to be done and potentially by whom. The more details the better!',
+        'Task: <p>  Related to: <p> People involved: <p> Deadline:',
       profile: {
         displayName: 'task',
         description: 'To share tasks with the community that can be picked up.',
@@ -75,9 +75,9 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     state: CalloutState.OPEN,
     sortOrder: 2,
     profile: {
-      displayName: 'Welcome!',
+      displayName: '👋 Hi, this is us!',
       description:
-        'What is your role in this community or how would you like to contrbute?',
+        'Please introduce yourself to each other, sharing a bit about your background, goal, and (envisioned) role in this project',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -145,7 +145,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [OpportunityDisplayLocation.CONTRIBUTE],
+          tags: [OpportunityDisplayLocation.CONTRIBUTE_RIGHT],
         },
       ],
     },
