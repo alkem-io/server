@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ContributionReporterService } from './contribution.reporter.service';
-import { MockConfigService, MockWinstonProvider } from '@test/mocks';
+import {
+  MockConfigService,
+  MockElasticsearchClientProvider,
+  MockWinstonProvider,
+} from '@test/mocks';
 
 describe('ContributionReporterService', () => {
   let service: ContributionReporterService;
@@ -18,6 +22,7 @@ describe('ContributionReporterService', () => {
         ContributionReporterService,
         MockWinstonProvider,
         MockConfigService,
+        MockElasticsearchClientProvider,
       ],
     }).compile();
 
