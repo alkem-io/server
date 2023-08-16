@@ -58,7 +58,7 @@ export class CommunityPolicyService {
         return this.deserializeRolePolicy(policy.host);
       default:
         throw new EntityNotInitializedException(
-          `Unable to locate role for community policy: ${policy.id}`,
+          `Unable to locate role '${role}' for community policy: ${policy.id}`,
           LogContext.COMMUNITY
         );
     }

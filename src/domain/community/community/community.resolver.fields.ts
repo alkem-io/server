@@ -270,6 +270,20 @@ export class CommunityResolverFields {
     return this.communityService.getMembershipStatus(agentInfo, community);
   }
 
+  @UseGuards(GraphqlGuard)
+  @ResolveField('myRoles', () => [CommunityRole], {
+    nullable: true,
+    description:
+      'The roles on this community for the currently logged in user.',
+  })
+  @Profiling.api
+  async myRoles(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() community: ICommunity
+  ): Promise<CommunityRole[]> {
+    return this.communityService.getCommunityRoles(agentInfo, community);
+  }
+
   @ResolveField('displayName', () => String, {
     nullable: true,
     description: 'The displayName for this Community.',
