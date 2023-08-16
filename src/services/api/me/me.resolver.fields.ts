@@ -1,7 +1,7 @@
 import { Resolver } from '@nestjs/graphql';
 import { GraphqlGuard } from '@core/authorization';
 import { UseGuards } from '@nestjs/common';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentUser } from '@src/common/decorators';
 import { Args, ResolveField } from '@nestjs/graphql';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { MeQueryResults } from '@services/api/me/dto';
@@ -13,6 +13,7 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { MeService } from './me.service';
 import { ApplicationForRoleResult } from '../roles/dto/roles.dto.result.application';
 import { InvitationForRoleResult } from '../roles/dto/roles.dto.result.invitation';
+import { LogContext } from '@common/enums';
 
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
@@ -24,12 +25,12 @@ export class MeResolverFields {
     description:
       'The current authenticated User;  null if not yet registered on the platform',
   })
-  @Profiling.api
   async user(@CurrentUser() agentInfo: AgentInfo): Promise<IUser | null> {
     const email = agentInfo.email;
     if (!email) {
       throw new AuthenticationException(
-        'Unable to retrieve authenticated user; no identifier'
+        'Unable to retrieve authenticated user; no identifier',
+        LogContext.RESOLVER_FIELD
       );
     }
 
@@ -37,10 +38,9 @@ export class MeResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => [InvitationForRoleResult], {
+  @ResolveField('invitations', () => [InvitationForRoleResult], {
     description: 'The invitations of the current authenticated user',
   })
-  @Profiling.api
   public async invitations(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
@@ -55,10 +55,9 @@ export class MeResolverFields {
   }
 
   @UseGuards(GraphqlGuard)
-  @ResolveField(() => [ApplicationForRoleResult], {
+  @ResolveField('applications', () => [ApplicationForRoleResult], {
     description: 'The applications of the current authenticated user',
   })
-  @Profiling.api
   public async applications(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({
@@ -76,7 +75,6 @@ export class MeResolverFields {
   @ResolveField(() => [ISpace], {
     description: 'The applications of the current authenticated user',
   })
-  @Profiling.api
   public spaceMemberships(
     @CurrentUser() agentInfo: AgentInfo,
     @Args({

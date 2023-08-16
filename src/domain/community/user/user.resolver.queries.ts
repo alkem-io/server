@@ -1,21 +1,21 @@
 import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { CredentialMetadataOutput } from '@domain/agent/verified-credential/dto/verified.credential.dto.metadata';
-import { UUID, UUID_NAMEID_EMAIL } from '@domain/common/scalars';
+import { UUID_NAMEID_EMAIL } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@src/common/decorators';
 import { AgentInfo } from '@src/core/authentication/agent-info';
-import { PaginationArgs, PaginatedUsers } from '@core/pagination';
+import { PaginatedUsers, PaginationArgs } from '@core/pagination';
 import { UserService } from './user.service';
 import { IUser } from './';
 import { UserFilterInput } from '@core/filtering';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
+import { UsersQueryArgs } from './dto/users.query.args';
 
 @Resolver(() => IUser)
 export class UserResolverQueries {
@@ -34,7 +34,7 @@ export class UserResolverQueries {
   @Profiling.api
   async users(
     @CurrentUser() agentInfo: AgentInfo,
-    @Args({ nullable: true }) args: ContributorQueryArgs
+    @Args({ nullable: true }) args: UsersQueryArgs
   ): Promise<IUser[]> {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -86,25 +86,6 @@ export class UserResolverQueries {
   }
 
   @UseGuards(GraphqlGuard)
-  @Query(() => [IUser], {
-    nullable: false,
-    description: 'The users filtered by list of IDs.',
-  })
-  @Profiling.api
-  async usersById(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Args({ name: 'IDs', type: () => [UUID] }) ids: string[]
-  ): Promise<IUser[]> {
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.READ_USERS,
-      `users query: ${agentInfo.email}`
-    );
-    return await this.userService.getUsersByIDs(ids);
-  }
-
-  @UseGuards(GraphqlGuard)
   @Query(() => [CredentialMetadataOutput], {
     nullable: false,
     description: 'Get supported credential metadata',
@@ -116,7 +97,8 @@ export class UserResolverQueries {
     const userID = agentInfo.userID;
     if (!userID || userID.length == 0) {
       throw new AuthenticationException(
-        'Unable to retrieve authenticated user; no identifier'
+        'Unable to retrieve authenticated user; no identifier',
+        LogContext.RESOLVER_QUERY
       );
     }
 

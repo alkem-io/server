@@ -1,9 +1,9 @@
 import {
-  Injectable,
+  ContextType,
   ExecutionContext,
   Inject,
+  Injectable,
   LoggerService,
-  ContextType,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
@@ -63,8 +63,10 @@ export class GraphqlGuard extends AuthGuard([
     _status?: any
   ) {
     if (err) {
-      this.logger.error(`error: ${err}`, LogContext.AUTH);
-      throw new AuthenticationException(err);
+      throw new AuthenticationException(
+        err?.message ?? String(err),
+        LogContext.AUTH
+      );
     }
 
     const gqlContext = GqlExecutionContext.create(_context);

@@ -31,12 +31,13 @@ import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_CHALLENGE_CREATED } from '@common/constants';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { ElasticsearchService } from '@services/external/elasticsearch';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
+import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
 
 @Resolver()
 export class SpaceResolverMutations {
   constructor(
-    private elasticService: ElasticsearchService,
+    private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
     private authorizationService: AuthorizationService,
     private spaceService: SpaceService,
@@ -47,7 +48,8 @@ export class SpaceResolverMutations {
     private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @Inject(SUBSCRIPTION_CHALLENGE_CREATED)
-    private challengeCreatedSubscription: PubSubEngine
+    private challengeCreatedSubscription: PubSubEngine,
+    private namingReporter: NameReporterService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -68,6 +70,12 @@ export class SpaceResolverMutations {
       `create space: ${spaceData.nameID}`
     );
     const space = await this.spaceService.createSpace(spaceData, agentInfo);
+
+    this.namingReporter.createOrUpdateName(
+      space.id,
+      spaceData.profileData.displayName
+    );
+
     return await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
   }
 
@@ -80,7 +88,11 @@ export class SpaceResolverMutations {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('spaceData') spaceData: UpdateSpaceInput
   ): Promise<ISpace> {
-    const space = await this.spaceService.getSpaceOrFail(spaceData.ID);
+    const space = await this.spaceService.getSpaceOrFail(spaceData.ID, {
+      relations: {
+        profile: true,
+      },
+    });
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       space.authorization,
@@ -93,7 +105,7 @@ export class SpaceResolverMutations {
 
     const updatedSpace = await this.spaceService.update(spaceData);
 
-    this.elasticService.spaceContentEdited(
+    this.contributionReporter.spaceContentEdited(
       {
         id: updatedSpace.id,
         name: updatedSpace.profile.displayName,
@@ -104,6 +116,16 @@ export class SpaceResolverMutations {
         email: agentInfo.email,
       }
     );
+
+    if (
+      spaceData?.profileData?.displayName &&
+      spaceData?.profileData?.displayName !== space.profile.displayName
+    ) {
+      this.namingReporter.createOrUpdateName(
+        space.id,
+        spaceData?.profileData?.displayName
+      );
+    }
 
     return updatedSpace;
   }
@@ -276,7 +298,7 @@ export class SpaceResolverMutations {
       challenge: challenge,
     });
 
-    this.elasticService.challengeCreated(
+    this.contributionReporter.challengeCreated(
       {
         id: challenge.id,
         name: challenge.profile.displayName,

@@ -20,6 +20,10 @@ import { Calendar } from './calendar.entity';
 import { ICalendar } from './calendar.interface';
 import { CalendarArgsEvents } from './dto/calendar.args.events';
 import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
+import { ActivityInputCalendarEventCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.calendar.event.created';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 
 @Injectable()
 export class CalendarService {
@@ -28,6 +32,9 @@ export class CalendarService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private namingService: NamingService,
+    private activityAdapter: ActivityAdapter,
+    private contributionReporter: ContributionReporterService,
+    private timelineResolverService: TimelineResolverService,
     @InjectRepository(Calendar)
     private calendarRepository: Repository<Calendar>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -193,5 +200,36 @@ export class CalendarService {
       event.authorization,
       AuthorizationPrivilege.READ
     );
+  }
+
+  public async processActivityCalendarEventCreated(
+    calendar: ICalendar,
+    calendarEvent: ICalendarEvent,
+    agentInfo: AgentInfo
+  ) {
+    const activityLogInput: ActivityInputCalendarEventCreated = {
+      triggeredBy: agentInfo.userID,
+      calendar: calendar,
+      calendarEvent: calendarEvent,
+    };
+    this.activityAdapter.calendarEventCreated(activityLogInput);
+
+    const spaceID = await this.timelineResolverService.getSpaceIdForCalendar(
+      calendar.id
+    );
+
+    if (spaceID) {
+      this.contributionReporter.calendarEventCreated(
+        {
+          id: calendarEvent.id,
+          name: calendarEvent.profile.displayName,
+          space: spaceID,
+        },
+        {
+          id: agentInfo.userID,
+          email: agentInfo.email,
+        }
+      );
+    }
   }
 }

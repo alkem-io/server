@@ -9,10 +9,13 @@ import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.ent
 
 export const opportunityDefaultCallouts: CreateCalloutInput[] = [
   {
+    nameID: 'getting-started',
     type: CalloutType.LINK_COLLECTION,
+    state: CalloutState.CLOSED,
+    sortOrder: 3,
     profile: {
-      displayName: 'Recommended by the Host',
-      description: 'Please find below quick start links.',
+      displayName: 'Getting Started',
+      description: '⬇️ Here are some quick links to help you get started',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -21,15 +24,33 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: 'recommendations',
-    state: CalloutState.CLOSED,
-    sortOrder: 3,
   },
   {
+    nameID: 'general-chat',
     type: CalloutType.POST,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
-      displayName: 'Suggestions, Questions, and Feedback',
-      description: 'Please share it here :)',
+      displayName: 'General chat 💬',
+      description: 'Things you would like to discuss with the community.',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [CommonDisplayLocation.HOME_LEFT],
+        },
+      ],
+    },
+  },
+  {
+    nameID: 'tasks',
+    type: CalloutType.POST_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
+    profile: {
+      displayName: '💪 Jobs to be done...',
+      description:
+        '',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -38,16 +59,43 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: 'suggestions',
-    state: CalloutState.OPEN,
-    sortOrder: 3,
+    postTemplate: {
+      type: 'Task',
+      defaultDescription:
+        'Task: <p>  Related to: <p> People involved: <p> Deadline:',
+      profile: {
+        displayName: 'task',
+        description: 'To share tasks with the community that can be picked up.',
+      },
+    },
   },
   {
-    type: CalloutType.POST_COLLECTION,
+    nameID: 'roles',
+    type: CalloutType.POST,
+    state: CalloutState.OPEN,
+    sortOrder: 2,
     profile: {
-      displayName: 'Contribute',
+      displayName: '👋 Hi, this is us!',
       description:
-        'Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
+        'Please introduce yourself to each other, sharing a bit about your background, goal, and (envisioned) role in this project',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [CommonDisplayLocation.HOME_RIGHT],
+        },
+      ],
+    },
+  },
+  {
+    nameID: 'news',
+    type: CalloutType.POST_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
+    profile: {
+      displayName: 'Relevant news, research or use cases 📰',
+      description:
+        'Please share any relevant insights to help us better understand the context. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -56,9 +104,6 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: `${CalloutType.POST_COLLECTION}-default`,
-    state: CalloutState.OPEN,
-    sortOrder: 5,
     postTemplate: {
       type: 'contribution',
       defaultDescription:
@@ -71,11 +116,13 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     },
   },
   {
-    type: CalloutType.WHITEBOARD_COLLECTION,
+    nameID: 'documents',
+    type: CalloutType.LINK_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 3,
     profile: {
-      displayName: 'Collaborate visually',
-      description:
-        'Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
+      displayName: 'Reference / important documents',
+      description: 'Please add links to documents with reference material.💥',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -84,14 +131,29 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: `${CalloutType.WHITEBOARD_COLLECTION}`,
+  },
+  {
+    nameID: 'needs',
+    type: CalloutType.WHITEBOARD,
     state: CalloutState.OPEN,
-    sortOrder: 10,
-    whiteboardTemplate: {
+    sortOrder: 2,
+    profile: {
+      displayName: 'What do we need?',
+      description:
+        'We can use this whiteboard to further define what is needed to realize this Opportunity! Think about research, insights, stakeholders or other resources.',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [OpportunityDisplayLocation.CONTRIBUTE_RIGHT],
+        },
+      ],
+    },
+    whiteboard: {
       value: EMPTY_WHITEBOARD_VALUE,
-      profile: {
-        displayName: 'blank whiteboard',
-        description: 'A blank whiteboard to be worked further.',
+      nameID: 'needs',
+      profileData: {
+        displayName: 'Identify needs',
       },
     },
   },

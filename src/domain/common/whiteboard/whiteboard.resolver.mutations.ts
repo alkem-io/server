@@ -21,14 +21,14 @@ import { LogContext } from '@common/enums/logging.context';
 import { getRandomId } from '@src/common/utils';
 import { DeleteWhiteboardInput } from './dto/whiteboard.dto.delete';
 import { WhiteboardCheckoutService } from '../whiteboard-checkout/whiteboard.checkout.service';
-import { ElasticsearchService } from '@services/external/elasticsearch';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { EntityNotInitializedException } from '@common/exceptions';
 
 @Resolver(() => IWhiteboard)
 export class WhiteboardResolverMutations {
   constructor(
-    private elasticService: ElasticsearchService,
+    private contributionReporter: ContributionReporterService,
     private authorizationService: AuthorizationService,
     private whiteboardService: WhiteboardService,
     private whiteboardCheckoutService: WhiteboardCheckoutService,
@@ -87,10 +87,6 @@ export class WhiteboardResolverMutations {
       `update Whiteboard: ${whiteboard.nameID}`
     );
 
-    if (whiteboard.value === whiteboardData.value) {
-      return whiteboard;
-    }
-
     const updatedWhiteboard = await this.whiteboardService.updateWhiteboard(
       whiteboard,
       whiteboardData,
@@ -122,7 +118,7 @@ export class WhiteboardResolverMutations {
         whiteboard?.callout.id
       );
 
-    this.elasticService.calloutWhiteboardEdited(
+    this.contributionReporter.calloutWhiteboardEdited(
       {
         id: whiteboard.id,
         name: whiteboard.nameID,

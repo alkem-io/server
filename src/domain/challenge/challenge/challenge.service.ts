@@ -206,7 +206,8 @@ export class ChallengeService {
     challenge.collaboration =
       await this.collaborationService.addDefaultCallouts(
         challenge.collaboration,
-        challengeDefaultCallouts
+        challengeDefaultCallouts,
+        agentInfo?.userID
       );
 
     if (agentInfo && challenge.community) {
@@ -581,7 +582,6 @@ export class ChallengeService {
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
       spaceID,
-      challenge.storageBucket.id,
       agentInfo
     );
 

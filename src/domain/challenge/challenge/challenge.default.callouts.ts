@@ -9,28 +9,13 @@ import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.ent
 
 export const challengeDefaultCallouts: CreateCalloutInput[] = [
   {
-    type: CalloutType.POST,
-    profile: {
-      displayName: 'Why do you care about this Challenge?',
-      description:
-        '👋 Please share a few words about yourself to help the community get to know each other. For example, why is this Challenge important to you, or relevant thoughts, experience or expertise.',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_LEFT],
-        },
-      ],
-    },
-    nameID: 'challenge-welcome',
-    state: CalloutState.OPEN,
-    sortOrder: 1,
-  },
-  {
+    nameID: 'getting-started',
     type: CalloutType.LINK_COLLECTION,
+    state: CalloutState.CLOSED,
+    sortOrder: 3,
     profile: {
-      displayName: 'Recommended by the Leads',
-      description: 'Some quick links to get started 💥',
+      displayName: 'Getting Started',
+      description: '⬇️ Here are some quick links to help you get started',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -39,15 +24,33 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: 'recommendations',
-    state: CalloutState.CLOSED,
-    sortOrder: 3,
   },
   {
+    nameID: 'general-chat',
     type: CalloutType.POST,
+    state: CalloutState.OPEN,
+    sortOrder: 2,
     profile: {
-      displayName: 'Suggestions, Questions, and Feedback',
-      description: '✍️ Please share it here :)',
+      displayName: 'General chat 💬',
+      description: 'Things you would like to discuss with the community.',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [CommonDisplayLocation.HOME_LEFT],
+        },
+      ],
+    },
+  },
+  {
+    nameID: 'contributor-profiles',
+    type: CalloutType.POST_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
+    profile: {
+      displayName: '👥 This is us!',
+      description:
+        'Here you will find the profiles of all contributors to this Challenge. Are you joining us? 👋 Nice to meet you! Please also provide your details below.',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -56,16 +59,26 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: 'suggestions',
-    state: CalloutState.OPEN,
-    sortOrder: 3,
+    postTemplate: {
+      type: 'Profile',
+      defaultDescription:
+        'Hi! I am... <p> In daily life I... <p> And I also like to... <p> You can contact me for anything related to... <p> My wish for this Challenge is.. <p> <i>And of course feel invited to insert a nice picture!</i>',
+      profile: {
+        displayName: 'Profile',
+        description:
+          'To stimulate contributors to share more details about their profile.',
+      },
+    },
   },
   {
+    nameID: 'news',
     type: CalloutType.POST_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
     profile: {
-      displayName: 'Contribute',
+      displayName: 'Relevant news, research or use cases 📰',
       description:
-        '✍️ Contribute your insights to understanding the context. It is about surfacing up the wisdom of the community. Add your own post, or comment on posts added by others.',
+        'Please share any relevant insights to help us better understand the Challenge. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -74,9 +87,6 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: `${CalloutType.POST_COLLECTION}-default`,
-    state: CalloutState.OPEN,
-    sortOrder: 5,
     postTemplate: {
       type: 'contribution',
       defaultDescription:
@@ -89,11 +99,38 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     },
   },
   {
-    type: CalloutType.WHITEBOARD_COLLECTION,
+    nameID: 'stakeholder-map',
+    type: CalloutType.WHITEBOARD,
+    state: CalloutState.OPEN,
+    sortOrder: 2,
     profile: {
-      displayName: 'Collaborate visually',
+      displayName: 'Who are the stakeholders?',
       description:
-        '🎨 Collaborate visually using Whiteboards. Create a new Whiteboard from a template, or explore Whiteboards already created.',
+        'Choose one of the templates from the library to map your stakeholders here!',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
+        },
+      ],
+    },
+    whiteboard: {
+      value: EMPTY_WHITEBOARD_VALUE,
+      nameID: 'stakeholders',
+      profileData: {
+        displayName: 'stakeholder map',
+      },
+    },
+  },
+  {
+    nameID: 'documents',
+    type: CalloutType.LINK_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 3,
+    profile: {
+      displayName: 'Reference / important documents',
+      description: 'Please add links to documents with reference material.💥',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -102,14 +139,49 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         },
       ],
     },
-    nameID: `${CalloutType.WHITEBOARD_COLLECTION}`,
+  },
+  {
+    nameID: 'opportunity-ideas',
+    type: CalloutType.POST,
     state: CalloutState.OPEN,
-    sortOrder: 10,
-    whiteboardTemplate: {
-      value: EMPTY_WHITEBOARD_VALUE,
+    sortOrder: 1,
+    profile: {
+      displayName: '💡 What Opportunities do you see?',
+      description:
+        'Please share any relevant direction for a solution that you can think of or have seen.',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [ChallengeDisplayLocation.OPPORTUNITIES_LEFT],
+        },
+      ],
+    },
+  },
+  {
+    nameID: 'proposals',
+    type: CalloutType.POST_COLLECTION,
+    state: CalloutState.OPEN,
+    sortOrder: 1,
+    profile: {
+      displayName: 'Opportunity proposals',
+      description:
+        'What are the 💡 Opportunities that you think we should be working on? Please add them below and use the template provided.',
+      tagsets: [
+        {
+          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+          type: TagsetType.SELECT_ONE,
+          tags: [ChallengeDisplayLocation.OPPORTUNITIES_RIGHT],
+        },
+      ],
+    },
+    postTemplate: {
+      type: 'opportunity',
+      defaultDescription:
+        '💡 Title <p> 💬 Description <p> 🗣️ Who to involve <p> 🌟 Why this has great potential',
       profile: {
-        displayName: 'blank whiteboard',
-        description: 'A blank whiteboard to be worked further.',
+        displayName: 'opportunity',
+        description: 'To share proposals for Opportunities to be worked on.',
       },
     },
   },

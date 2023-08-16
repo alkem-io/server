@@ -38,6 +38,9 @@ import { ITagsetTemplateSet } from '@domain/common/tagset-template-set';
 import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
+import { TimelineService } from '@domain/timeline/timeline/timeline.service';
+import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
+import { keyBy } from 'lodash';
 
 @Injectable()
 export class CollaborationService {
@@ -51,7 +54,8 @@ export class CollaborationService {
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
     @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private entityManager: EntityManager,
+    private timelineService: TimelineService
   ) {}
 
   async createCollaboration(): Promise<ICollaboration> {
@@ -59,6 +63,8 @@ export class CollaborationService {
     collaboration.authorization = new AuthorizationPolicy();
     collaboration.relations = [];
     collaboration.callouts = [];
+    collaboration.timeline = await this.timelineService.createTimeline();
+
     collaboration.tagsetTemplateSet =
       await this.tagsetTemplateSetService.createTagsetTemplateSet();
 
@@ -84,7 +90,8 @@ export class CollaborationService {
 
   public async addDefaultCallouts(
     collaboration: ICollaboration,
-    calloutsData: CreateCalloutInput[]
+    calloutsData: CreateCalloutInput[],
+    userID: string | undefined
   ): Promise<ICollaboration> {
     collaboration.callouts = await this.getCalloutsOnCollaboration(
       collaboration
@@ -96,7 +103,8 @@ export class CollaborationService {
     for (const calloutDefault of calloutsData) {
       const callout = await this.calloutService.createCallout(
         calloutDefault,
-        collaboration.tagsetTemplateSet.tagsetTemplates
+        collaboration.tagsetTemplateSet.tagsetTemplates,
+        userID
       );
       // default callouts are already published
       callout.visibility = CalloutVisibility.PUBLISHED;
@@ -203,13 +211,17 @@ export class CollaborationService {
     collaborationID: string
   ): Promise<ICollaboration> {
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
-      relations: ['callouts'],
+      relations: ['callouts', 'timeline'],
     });
 
     if (collaboration.callouts) {
       for (const callout of collaboration.callouts) {
         await this.calloutService.deleteCallout(callout.id);
       }
+    }
+
+    if (collaboration.timeline) {
+      await this.timelineService.deleteTimeline(collaboration.timeline.id);
     }
 
     if (collaboration.relations) {
@@ -239,6 +251,14 @@ export class CollaborationService {
         `Collaboration (${collaborationID}) not initialised`,
         LogContext.CONTEXT
       );
+    if (!calloutData.sortOrder) {
+      calloutData.sortOrder =
+        1 +
+        Math.max(
+          ...collaboration.callouts.map(callout => callout.sortOrder),
+          0 // Needed in case there are no callouts. In that case the first callout will have sortOrder = 1
+        );
+    }
 
     if (calloutData.nameID && calloutData.nameID.length > 0) {
       const nameAvailable =
@@ -278,6 +298,22 @@ export class CollaborationService {
     await this.collaborationRepository.save(collaboration);
 
     return callout;
+  }
+
+  async getTimelineOrFail(collaborationID: string): Promise<ITimeline> {
+    const collaboration = await this.getCollaborationOrFail(collaborationID, {
+      relations: ['timeline'],
+    });
+    const timeline = collaboration.timeline;
+
+    if (!timeline) {
+      throw new EntityNotFoundException(
+        `Unable to find timeline for collaboration: ${collaboration.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    return timeline;
   }
 
   public async getCalloutsFromCollaboration(
@@ -557,33 +593,44 @@ export class CollaborationService {
         LogContext.COLLABORATION
       );
 
+    const calloutsByID = {
+      ...keyBy(allCallouts, 'nameID'),
+      ...keyBy(allCallouts, 'id'),
+    };
+
+    const minimumSortOrder = Math.min(
+      ...sortOrderData.calloutIDs
+        .map(calloutId => calloutsByID[calloutId]?.sortOrder)
+        .filter(sortOrder => sortOrder)
+    );
+    const modifiedCallouts: ICallout[] = [];
+
     // Get the callouts specified
     const calloutsInOrder: ICallout[] = [];
-    let minCalloutSortOrder = 10000;
+    let index = 1;
     for (const calloutID of sortOrderData.calloutIDs) {
-      let callout;
-      if (calloutID.length === UUID_LENGTH)
-        callout = allCallouts.find(callout => callout.id === calloutID);
-      else callout = allCallouts.find(callout => callout.nameID === calloutID);
-
+      const callout = calloutsByID[calloutID];
       if (!callout) {
         throw new EntityNotFoundException(
           `Callout with requested ID (${calloutID}) not located within current Collaboration: ${collaboration.id}`,
           LogContext.COLLABORATION
         );
       }
-      if (callout.sortOrder < minCalloutSortOrder) {
-        minCalloutSortOrder = callout.sortOrder;
-      }
       calloutsInOrder.push(callout);
+      const newSortOrder = minimumSortOrder + index;
+      if (callout.sortOrder !== newSortOrder) {
+        callout.sortOrder = newSortOrder;
+        modifiedCallouts.push(callout);
+      }
+      index++;
     }
 
-    // Now update all the callouts sort order
-    for (const callout of calloutsInOrder) {
-      callout.sortOrder = minCalloutSortOrder;
-      minCalloutSortOrder += 2;
-      await this.calloutService.save(callout);
-    }
+    await Promise.all(
+      modifiedCallouts.map(
+        async callout => await this.calloutService.save(callout)
+      )
+    );
+
     return calloutsInOrder;
   }
 }

@@ -56,8 +56,6 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunityPolicy } from '@domain/community/community-policy/community.policy.interface';
-import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
-import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
@@ -86,7 +84,6 @@ export class SpaceService {
     private challengeService: ChallengeService,
     private preferenceSetService: PreferenceSetService,
     private spacesFilterService: SpaceFilterService,
-    private timelineService: TimelineService,
     private templatesSetService: TemplatesSetService,
     private storageBucketService: StorageBucketService,
     private collaborationService: CollaborationService,
@@ -143,7 +140,8 @@ export class SpaceService {
 
     space.collaboration = await this.collaborationService.addDefaultCallouts(
       space.collaboration,
-      spaceDefaultCallouts
+      spaceDefaultCallouts,
+      agentInfo?.userID
     );
     await this.save(space);
 
@@ -183,8 +181,6 @@ export class SpaceService {
       },
       true
     );
-
-    space.timeline = await this.timelineService.createTimeline();
 
     // save before assigning host in case that fails
     const savedSpace = await this.spaceRepository.save(space);
@@ -281,7 +277,6 @@ export class SpaceService {
         'preferenceSet',
         'preferenceSet.preferences',
         'templatesSet',
-        'timeline',
         'profile',
         'storageBucket',
       ],
@@ -307,10 +302,6 @@ export class SpaceService {
 
     if (space.templatesSet) {
       await this.templatesSetService.deleteTemplatesSet(space.templatesSet.id);
-    }
-
-    if (space.timeline) {
-      await this.timelineService.deleteTimeline(space.timeline.id);
     }
 
     if (space.storageBucket) {
@@ -423,10 +414,10 @@ export class SpaceService {
     return spacesResult;
   }
 
-  public async getAllSpaces(): Promise<ISpace[]> {
-    return this.spaceRepository.find({
-      relations: ['preferenceSet', 'preferenceSet.preferences'],
-    });
+  public async getAllSpaces(
+    options?: FindManyOptions<ISpace>
+  ): Promise<ISpace[]> {
+    return this.spaceRepository.find(options);
   }
 
   private async getFilteredSpacesSortOrderDefault(
@@ -591,22 +582,6 @@ export class SpaceService {
     }
 
     return templatesSet;
-  }
-
-  async getTimelineOrFail(spaceId: string): Promise<ITimeline> {
-    const spaceWithTimeline = await this.getSpaceOrFail(spaceId, {
-      relations: ['timeline'],
-    });
-    const timeline = spaceWithTimeline.timeline;
-
-    if (!timeline) {
-      throw new EntityNotFoundException(
-        `Unable to find timeline for space with nameID: ${spaceWithTimeline.nameID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    return timeline;
   }
 
   async getStorageBucketOrFail(spaceId: string): Promise<IStorageBucket> {
@@ -897,16 +872,6 @@ export class SpaceService {
     );
   }
 
-  async getCommunityInNameableScope(
-    communityID: string,
-    space: ISpace
-  ): Promise<ICommunity> {
-    return await this.communityService.getCommunityInNameableScopeOrFail(
-      communityID,
-      space.id
-    );
-  }
-
   async getProjects(space: ISpace): Promise<IProject[]> {
     return await this.projectService.getProjects(space.id);
   }
@@ -989,6 +954,16 @@ export class SpaceService {
 
   async getSpaceCount(visibility = SpaceVisibility.ACTIVE): Promise<number> {
     return await this.spaceRepository.countBy({ visibility: visibility });
+  }
+
+  async getCommunityInNameableScope(
+    communityID: string,
+    space: ISpace
+  ): Promise<ICommunity> {
+    return await this.communityService.getCommunityInNameableScopeOrFail(
+      communityID,
+      space.id
+    );
   }
 
   async getHost(spaceID: string): Promise<IOrganization | undefined> {

@@ -29,6 +29,7 @@ import { CreateSpaceInput } from '@domain/challenge/space/dto/space.dto.create';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { PlatformAuthorizationService } from '@platform/platfrom/platform.service.authorization';
 import { InnovationHubService } from '@domain/innovation-hub';
+import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
 
 @Injectable()
 export class BootstrapService {
@@ -50,7 +51,8 @@ export class BootstrapService {
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private nameReporter: NameReporterService
   ) {}
 
   async bootstrap() {
@@ -70,6 +72,7 @@ export class BootstrapService {
       await this.platformService.ensureCommunicationCreated();
       // reset auth as last in the actions
       await this.ensureAuthorizationsPopulated();
+      this.ensureSpaceNamesInElastic();
     } catch (error: any) {
       throw new BootstrapException(error.message);
     }
@@ -200,6 +203,21 @@ export class BootstrapService {
         `Unable to create profiles ${error.message}`
       );
     }
+  }
+
+  private async ensureSpaceNamesInElastic() {
+    const spaces = await this.spaceService.getAllSpaces({
+      relations: {
+        profile: true,
+      },
+    });
+
+    const data = spaces.map(({ id, profile: { displayName: name } }) => ({
+      id,
+      name,
+    }));
+
+    this.nameReporter.bulkUpdateOrCreateNames(data);
   }
 
   async ensureSsiPopulated() {

@@ -64,7 +64,6 @@ export class OpportunityService {
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
     spaceID: string,
-    storageBucketID: string,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     if (!opportunityData.nameID) {
@@ -150,7 +149,8 @@ export class OpportunityService {
       opportunity.collaboration =
         await this.collaborationService.addDefaultCallouts(
           opportunity.collaboration,
-          opportunityDefaultCallouts
+          opportunityDefaultCallouts,
+          agentInfo?.userID
         );
     }
 

@@ -1,14 +1,9 @@
-import {
-  Injectable,
-  Inject,
-  LoggerService,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
 import { AgentInfo } from '@core/authentication';
+import { ForbiddenHttpException } from '@common/exceptions/http';
 
 @Injectable()
 export class RestGuard extends AuthGuard([
@@ -35,8 +30,10 @@ export class RestGuard extends AuthGuard([
     _status?: any
   ): T {
     if (err) {
-      this.logger.error(`error: ${err}`, LogContext.AUTH);
-      throw new HttpException('Forbidden', HttpStatus.FORBIDDEN);
+      throw new ForbiddenHttpException(
+        err?.message ?? String(err),
+        LogContext.AUTH
+      );
     }
 
     // authorize the access to the requested resource...

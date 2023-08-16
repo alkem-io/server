@@ -21,7 +21,7 @@ import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapt
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputCollaborationInterest } from '@services/adapters/notification-adapter/dto/notification.dto.input.collaboration.interest';
 import { NotificationInputCalloutPublished } from '@services/adapters/notification-adapter/dto/notification.dto.input.callout.published';
-import { ElasticsearchService } from '@services/external/elasticsearch';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
 
@@ -29,7 +29,7 @@ import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.d
 export class CollaborationResolverMutations {
   constructor(
     private communityResolverService: CommunityResolverService,
-    private elasticService: ElasticsearchService,
+    private contributionReporter: ContributionReporterService,
     private relationAuthorizationService: RelationAuthorizationService,
     private calloutAuthorizationService: CalloutAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -173,7 +173,7 @@ export class CollaborationResolverMutations {
         callout.id
       );
 
-    this.elasticService.calloutCreated(
+    this.contributionReporter.calloutCreated(
       {
         id: callout.id,
         name: callout.nameID,

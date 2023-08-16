@@ -15,9 +15,13 @@ import { ICallout } from '../callout/callout.interface';
 import { CollaborationArgsCallouts } from './dto/collaboration.args.callouts';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { Loader } from '@core/dataloader/decorators';
-import { CollaborationRelationsLoaderCreator } from '@core/dataloader/creators';
+import {
+  CollaborationRelationsLoaderCreator,
+  CollaborationTimelineLoaderCreator,
+} from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
+import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 
 @Resolver(() => ICollaboration)
 export class CollaborationResolverFields {
@@ -54,6 +58,19 @@ export class CollaborationResolverFields {
       args,
       agentInfo
     );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @ResolveField('timeline', () => ITimeline, {
+    nullable: true,
+    description: 'The timeline with events in use by this Space',
+  })
+  @UseGuards(GraphqlGuard)
+  async timeline(
+    @Parent() collaboration: ICollaboration,
+    @Loader(CollaborationTimelineLoaderCreator) loader: ILoader<ITimeline>
+  ): Promise<ITimeline> {
+    return loader.load(collaboration.id);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

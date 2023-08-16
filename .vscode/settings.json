@@ -3,5 +3,11 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": true
   },
-  "files.eol": "\n"
+  "files.eol": "\n",
+  "[yaml]": {
+    "editor.formatOnSave": false
+  },
+  "[yml]": {
+    "editor.formatOnSave": false
+  }
 }
