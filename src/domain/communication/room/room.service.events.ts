@@ -17,7 +17,7 @@ import { NotificationInputUpdateSent } from '@services/adapters/notification-ada
 import { ActivityInputUpdateSent } from '@services/adapters/activity-adapter/dto/activity.dto.input.update.sent';
 import { ActivityInputMessageRemoved } from '@services/adapters/activity-adapter/dto/activity.dto.input.message.removed';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { ElasticsearchService } from '@services/external/elasticsearch/elasticsearch.service';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { NotificationInputDiscussionComment } from '@services/adapters/notification-adapter/dto/notification.dto.input.discussion.comment';
 import { ICallout } from '@domain/collaboration/callout';
 import { ActivityInputCalloutDiscussionComment } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.discussion.comment';
@@ -27,7 +27,7 @@ import { NotificationInputCommentReply } from '@services/adapters/notification-a
 export class RoomServiceEvents {
   constructor(
     private activityAdapter: ActivityAdapter,
-    private elasticService: ElasticsearchService,
+    private contributionReporter: ContributionReporterService,
     private notificationAdapter: NotificationAdapter,
     private communityResolverService: CommunityResolverService
   ) {}
@@ -126,7 +126,7 @@ export class RoomServiceEvents {
       await this.communityResolverService.getCommunityFromPostRoomOrFail(
         room.id
       );
-    this.elasticService.calloutPostCommentCreated(
+    this.contributionReporter.calloutPostCommentCreated(
       {
         id: post.id,
         name: post.profile.displayName,
@@ -167,7 +167,7 @@ export class RoomServiceEvents {
         room.id
       );
 
-    this.elasticService.updateCreated(
+    this.contributionReporter.updateCreated(
       {
         id: room.id,
         name: '',
@@ -208,7 +208,7 @@ export class RoomServiceEvents {
         callout.id
       );
 
-    this.elasticService.calloutCommentCreated(
+    this.contributionReporter.calloutCommentCreated(
       {
         id: callout.id,
         name: callout.nameID,

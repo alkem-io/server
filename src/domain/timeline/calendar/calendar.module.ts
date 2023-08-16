@@ -11,11 +11,11 @@ import { CalendarService } from './calendar.service';
 import { CalendarAuthorizationService } from './calendar.service.authorization';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
-import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 
 @Module({
   imports: [
-    ElasticsearchModule,
+    ContributionReporterModule,
     CalendarEventModule,
     NamingModule,
     AuthorizationModule,

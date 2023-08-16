@@ -15,7 +15,7 @@ import { UserModule } from '@domain/community/user/user.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
-import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { InnovationFlowModule } from '@domain/challenge/innovation-flow/innovation.flow.module';
 import { CollaborationModule } from '../collaboration/collaboration.module';
 
@@ -33,7 +33,7 @@ import { CollaborationModule } from '../collaboration/collaboration.module';
     CollaborationModule,
     InnovationFlowModule,
     NamingModule,
-    ElasticsearchModule,
+    ContributionReporterModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],
   providers: [
