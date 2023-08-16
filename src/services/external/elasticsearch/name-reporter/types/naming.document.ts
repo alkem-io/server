@@ -1,5 +1,5 @@
 export type NamingDocument = {
-  id: string;
+  space: string;
   displayName: string;
   environment: string;
 };

@@ -40,7 +40,7 @@ export class NameReporterService {
         index: this.indexName,
         query: {
           // match all records that match the field 'id' being equal to id
-          match: { id },
+          match: { space: id },
         },
         // in painless script update the 'name' field with the new value
         script: {
@@ -70,7 +70,7 @@ export class NameReporterService {
     }
 
     const document: NamingDocument = {
-      id,
+      space: id,
       displayName: name,
       environment: this.environment,
     };
