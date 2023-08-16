@@ -28,10 +28,11 @@ import { SpaceResolverSubscriptions } from './space.resolver.subscriptions';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
-import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { SpaceStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.storage.space.loader.creator';
+import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 
 @Module({
   imports: [
@@ -57,8 +58,9 @@ import { SpaceStorageBucketLoaderCreator } from '@core/dataloader/creators/loade
     TemplatesSetModule,
     CollaborationModule,
     SpaceFilterModule,
-    ElasticsearchModule,
+    ContributionReporterModule,
     LoaderCreatorModule,
+    NameReporterModule,
     TypeOrmModule.forFeature([Space]),
   ],
   providers: [

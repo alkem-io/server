@@ -35,7 +35,7 @@ import { NotificationInputCommunityNewMember } from '@services/adapters/notifica
 import { NotificationInputCommunityContextReview } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.context.review';
 import { CommunityAuthorizationService } from './community.service.authorization';
 import { CommunityType } from '@common/enums/community.type';
-import { ElasticsearchService } from '@services/external/elasticsearch';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { UpdateCommunityApplicationFormInput } from './dto/community.dto.update.application.form';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { InvitationService } from '../invitation/invitation.service';
@@ -55,7 +55,7 @@ import { NotificationInputCommunityInvitationExternal } from '@services/adapters
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
-    private elasticService: ElasticsearchService,
+    private contributionReporter: ContributionReporterService,
     private authorizationService: AuthorizationService,
     private notificationAdapter: NotificationAdapter,
     private userService: UserService,
@@ -440,7 +440,7 @@ export class CommunityResolverMutations {
 
     switch (community.type) {
       case CommunityType.SPACE:
-        this.elasticService.spaceJoined(
+        this.contributionReporter.spaceJoined(
           {
             id: community.parentID,
             name: displayName,
@@ -453,7 +453,7 @@ export class CommunityResolverMutations {
         );
         break;
       case CommunityType.CHALLENGE:
-        this.elasticService.challengeJoined(
+        this.contributionReporter.challengeJoined(
           {
             id: community.parentID,
             name: displayName,
@@ -466,7 +466,7 @@ export class CommunityResolverMutations {
         );
         break;
       case CommunityType.OPPORTUNITY:
-        this.elasticService.opportunityJoined(
+        this.contributionReporter.opportunityJoined(
           {
             id: community.parentID,
             name: displayName,

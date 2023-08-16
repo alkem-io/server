@@ -31,7 +31,7 @@ import { CalloutState } from '@common/enums/callout.state';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
-import { ElasticsearchService } from '@services/external/elasticsearch';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { ActivityInputCalloutPostCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.created';
 import { NotificationInputPostCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.post.created';
@@ -46,7 +46,7 @@ import { ReferenceService } from '@domain/common/reference/reference.service';
 export class CalloutResolverMutations {
   constructor(
     private communityResolverService: CommunityResolverService,
-    private elasticService: ElasticsearchService,
+    private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
@@ -342,7 +342,7 @@ export class CalloutResolverMutations {
         callout.id
       );
 
-    this.elasticService.calloutLinkCreated(
+    this.contributionReporter.calloutLinkCreated(
       {
         id: reference.id,
         name: reference.name,
@@ -377,7 +377,7 @@ export class CalloutResolverMutations {
         callout.id
       );
 
-    this.elasticService.calloutWhiteboardCreated(
+    this.contributionReporter.calloutWhiteboardCreated(
       {
         id: whiteboard.id,
         name: whiteboard.nameID,
@@ -413,7 +413,7 @@ export class CalloutResolverMutations {
         callout.id
       );
 
-    this.elasticService.calloutPostCreated(
+    this.contributionReporter.calloutPostCreated(
       {
         id: post.id,
         name: post.profile.displayName,

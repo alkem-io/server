@@ -22,7 +22,7 @@ import { ChallengeResolverSubscriptions } from './challenge.resolver.subscriptio
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
-import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
@@ -50,7 +50,7 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
     UserModule,
     PreferenceModule,
     PreferenceSetModule,
-    ElasticsearchModule,
+    ContributionReporterModule,
     TypeOrmModule.forFeature([Challenge]),
     LoaderCreatorModule,
     StorageBucketModule,
