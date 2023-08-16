@@ -24,12 +24,12 @@ import { CreateChallengeOnChallengeInput } from './dto/challenge.dto.create.in.c
 import { OpportunityCreatedPayload } from './dto/challenge.opportunity.created.payload';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { SUBSCRIPTION_OPPORTUNITY_CREATED } from '@common/constants';
-import { ElasticsearchService } from '@services/external/elasticsearch';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 
 @Resolver()
 export class ChallengeResolverMutations {
   constructor(
-    private elasticService: ElasticsearchService,
+    private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
     private opportunityAuthorizationService: OpportunityAuthorizationService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
@@ -101,7 +101,7 @@ export class ChallengeResolverMutations {
       challengeCommunityPolicy
     );
 
-    this.elasticService.opportunityCreated(
+    this.contributionReporter.opportunityCreated(
       {
         id: opportunity.id,
         name: opportunity.profile.displayName,
@@ -155,7 +155,7 @@ export class ChallengeResolverMutations {
       challengeData
     );
 
-    this.elasticService.challengeContentEdited(
+    this.contributionReporter.challengeContentEdited(
       {
         id: challenge.id,
         name: challenge.profile.displayName,

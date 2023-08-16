@@ -22,8 +22,8 @@ import { CalendarArgsEvents } from './dto/calendar.args.events';
 import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
 import { ActivityInputCalendarEventCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.calendar.event.created';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { ElasticsearchService } from '@services/external/elasticsearch';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 
 @Injectable()
 export class CalendarService {
@@ -33,7 +33,7 @@ export class CalendarService {
     private authorizationService: AuthorizationService,
     private namingService: NamingService,
     private activityAdapter: ActivityAdapter,
-    private elasticSearchService: ElasticsearchService,
+    private contributionReporter: ContributionReporterService,
     private timelineResolverService: TimelineResolverService,
     @InjectRepository(Calendar)
     private calendarRepository: Repository<Calendar>,
@@ -219,7 +219,7 @@ export class CalendarService {
     );
 
     if (spaceID) {
-      this.elasticSearchService.calendarEventCreated(
+      this.contributionReporter.calendarEventCreated(
         {
           id: calendarEvent.id,
           name: calendarEvent.profile.displayName,

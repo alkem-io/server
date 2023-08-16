@@ -12,13 +12,13 @@ import { ProjectService } from '@domain/collaboration/project/project.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IOpportunity } from './opportunity.interface';
 import { DeleteOpportunityInput, UpdateOpportunityInput } from './dto';
-import { ElasticsearchService } from '@services/external/elasticsearch';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CreateProjectInput } from '../project/dto';
 
 @Resolver()
 export class OpportunityResolverMutations {
   constructor(
-    private elasticService: ElasticsearchService,
+    private contributionReporter: ContributionReporterService,
     private projectService: ProjectService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
@@ -48,7 +48,7 @@ export class OpportunityResolverMutations {
       opportunityData
     );
 
-    this.elasticService.opportunityContentEdited(
+    this.contributionReporter.opportunityContentEdited(
       {
         id: updatedOpportunity.id,
         name: updatedOpportunity.profile.displayName,
