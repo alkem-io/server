@@ -7,6 +7,8 @@ import { ConfigurationTypes } from '@common/enums';
 import { NamingDocument } from './types';
 import { handleElasticError } from '@services/external/elasticsearch/utils/handle.elastic.error';
 
+const name_lookup_policy = 'name_lookup_policy';
+
 @Injectable()
 export class NameReporterService {
   private readonly environment: string;
@@ -31,6 +33,15 @@ export class NameReporterService {
   }
 
   public async createOrUpdateName(id: string, name: string): Promise<void> {
+    if (!this.client) {
+      return;
+    }
+
+    await this.createOrUpdateRequest(id, name);
+    this.executeNameLookupPolicy();
+  }
+
+  private async createOrUpdateRequest(id: string, name: string): Promise<void> {
     if (!this.client) {
       return;
     }
@@ -101,6 +112,48 @@ export class NameReporterService {
       return;
     }
 
-    data.forEach(({ id, name }) => this.createOrUpdateName(id, name));
+    await this.buldUpdateOrCreateNamesRequest(data);
+
+    await this.executeNameLookupPolicy();
+  }
+
+  private async buldUpdateOrCreateNamesRequest(
+    data: { id: string; name: string }[]
+  ) {
+    if (!this.client) {
+      return;
+    }
+
+    const promises = data.map(({ id, name }) =>
+      this.createOrUpdateName(id, name)
+    );
+
+    return Promise.allSettled(promises);
+  }
+
+  private async executeNameLookupPolicy(): Promise<boolean> {
+    if (!this.client) {
+      return false;
+    }
+
+    this.logger.verbose?.(`Executing '${name_lookup_policy} enrich policy'`);
+
+    try {
+      const result = await this.client.enrich.executePolicy({
+        name: name_lookup_policy, // todo: config
+        wait_for_completion: true,
+      });
+
+      return result.status.phase === 'COMPLETE';
+    } catch (e) {
+      const error = handleElasticError(e);
+      this.logger.error(error.message, {
+        uuid: error.uuid,
+        name: error.name,
+        status: error.status,
+      });
+    }
+
+    return false;
   }
 }
