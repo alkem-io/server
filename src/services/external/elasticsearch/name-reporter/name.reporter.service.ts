@@ -11,6 +11,7 @@ import { handleElasticError } from '@services/external/elasticsearch/utils/handl
 export class NameReporterService {
   private readonly environment: string;
   private readonly indexName: string;
+  private readonly space_name_enrich_policy: string;
 
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -27,11 +28,21 @@ export class NameReporterService {
       ConfigurationTypes.HOSTING
     )?.environment;
 
-    this.indexName = elasticsearch?.indices?.namings;
+    const { indices, policies } = elasticsearch;
+    this.indexName = indices?.namings;
+    this.space_name_enrich_policy = policies?.space_name_enrich_policy;
   }
 
   public async createOrUpdateName(id: string, name: string): Promise<void> {
+    await this.createOrUpdateRequest(id, name);
+    await this.executeNameLookupPolicy();
+  }
+
+  private async createOrUpdateRequest(id: string, name: string): Promise<void> {
     if (!this.client) {
+      this.logger.error(
+        'Could not create or update name - Elastic client not defined'
+      );
       return;
     }
 
@@ -45,7 +56,7 @@ export class NameReporterService {
         // in painless script update the 'name' field with the new value
         script: {
           lang: 'painless',
-          source: `ctx._source.name = '${name}'`,
+          source: `ctx._source.displayName = '${name}'`,
         },
       });
 
@@ -82,7 +93,7 @@ export class NameReporterService {
       });
 
       this.logger.verbose?.(
-        `New name '${name}' with id '${id}' created to successfully`
+        `New name '${name}' with id '${id}' created successfully`
       );
     } catch (e) {
       const error = handleElasticError(e);
@@ -97,10 +108,61 @@ export class NameReporterService {
   public async bulkUpdateOrCreateNames(
     data: { id: string; name: string }[]
   ): Promise<void> {
+    await this.bulkUpdateOrCreateNamesRequest(data);
+    await this.executeNameLookupPolicy();
+  }
+
+  private async bulkUpdateOrCreateNamesRequest(
+    data: { id: string; name: string }[]
+  ) {
     if (!this.client) {
+      this.logger.error(
+        'Could not execute bulk name operation - Elastic client not defined!'
+      );
       return;
     }
 
-    data.forEach(({ id, name }) => this.createOrUpdateName(id, name));
+    const promises = data.map(({ id, name }) =>
+      this.createOrUpdateRequest(id, name)
+    );
+
+    return Promise.allSettled(promises);
+  }
+
+  private async executeNameLookupPolicy(): Promise<boolean> {
+    if (!this.client) {
+      this.logger.error(
+        'Could not execute policy - Elastic client not defined!'
+      );
+      return false;
+    }
+
+    if (!this.space_name_enrich_policy) {
+      this.logger.error(
+        'Could not execute space name policy - policy name not defined!'
+      );
+      return false;
+    }
+
+    this.logger.verbose?.(
+      `Executing '${this.space_name_enrich_policy} enrich policy'`
+    );
+
+    try {
+      const result = await this.client.enrich.executePolicy({
+        name: this.space_name_enrich_policy,
+      });
+
+      return result.status.phase === 'COMPLETE';
+    } catch (e) {
+      const error = handleElasticError(e);
+      this.logger.error(error.message, {
+        uuid: error.uuid,
+        name: error.name,
+        status: error.status,
+      });
+    }
+
+    return false;
   }
 }
