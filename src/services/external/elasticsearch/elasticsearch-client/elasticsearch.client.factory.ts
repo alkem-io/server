@@ -11,7 +11,8 @@ export const elasticSearchClientFactory = (
     ConfigurationTypes.INTEGRATIONS
   )?.elasticsearch;
 
-  const { host, retries, timeout, api_key } = elasticsearch;
+  const { host, retries, timeout, api_key, tls } = elasticsearch;
+  const rejectUnauthorized = tls.rejectUnauthorized ?? false;
 
   if (!host) {
     logger.warn('Elasticsearch host URL not provided!');
@@ -29,6 +30,6 @@ export const elasticSearchClientFactory = (
     requestTimeout: timeout,
     resurrectStrategy: 'ping',
     auth: { apiKey: api_key },
-    tls: { rejectUnauthorized: false },
+    tls: { rejectUnauthorized },
   });
 };

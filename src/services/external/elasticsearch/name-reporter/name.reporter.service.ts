@@ -7,12 +7,11 @@ import { ConfigurationTypes } from '@common/enums';
 import { NamingDocument } from './types';
 import { handleElasticError } from '@services/external/elasticsearch/utils/handle.elastic.error';
 
-const name_lookup_policy = 'name_lookup_policy';
-
 @Injectable()
 export class NameReporterService {
   private readonly environment: string;
   private readonly indexName: string;
+  private readonly space_name_enrich_policy: string;
 
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -29,7 +28,9 @@ export class NameReporterService {
       ConfigurationTypes.HOSTING
     )?.environment;
 
-    this.indexName = elasticsearch?.indices?.namings;
+    const { indices, policies } = elasticsearch;
+    this.indexName = indices?.namings;
+    this.space_name_enrich_policy = policies?.space_name_enrich_policy;
   }
 
   public async createOrUpdateName(id: string, name: string): Promise<void> {
@@ -38,7 +39,7 @@ export class NameReporterService {
     }
 
     await this.createOrUpdateRequest(id, name);
-    this.executeNameLookupPolicy();
+    await this.executeNameLookupPolicy();
   }
 
   private async createOrUpdateRequest(id: string, name: string): Promise<void> {
@@ -56,7 +57,7 @@ export class NameReporterService {
         // in painless script update the 'name' field with the new value
         script: {
           lang: 'painless',
-          source: `ctx._source.name = '${name}'`,
+          source: `ctx._source.displayName = '${name}'`,
         },
       });
 
@@ -93,7 +94,7 @@ export class NameReporterService {
       });
 
       this.logger.verbose?.(
-        `New name '${name}' with id '${id}' created to successfully`
+        `New name '${name}' with id '${id}' created successfully`
       );
     } catch (e) {
       const error = handleElasticError(e);
@@ -112,20 +113,22 @@ export class NameReporterService {
       return;
     }
 
-    await this.buldUpdateOrCreateNamesRequest(data);
-
+    await this.buildUpdateOrCreateNamesRequest(data);
     await this.executeNameLookupPolicy();
   }
 
-  private async buldUpdateOrCreateNamesRequest(
+  private async buildUpdateOrCreateNamesRequest(
     data: { id: string; name: string }[]
   ) {
     if (!this.client) {
+      this.logger.error(
+        'Could not execute policy - Elastic client not defined!'
+      );
       return;
     }
 
     const promises = data.map(({ id, name }) =>
-      this.createOrUpdateName(id, name)
+      this.createOrUpdateRequest(id, name)
     );
 
     return Promise.allSettled(promises);
@@ -133,15 +136,26 @@ export class NameReporterService {
 
   private async executeNameLookupPolicy(): Promise<boolean> {
     if (!this.client) {
+      this.logger.error(
+        'Could not execute policy - Elastic client not defined!'
+      );
       return false;
     }
 
-    this.logger.verbose?.(`Executing '${name_lookup_policy} enrich policy'`);
+    if (!this.space_name_enrich_policy) {
+      this.logger.error(
+        'Could not execute space name policy - policy name not defined!'
+      );
+      return false;
+    }
+
+    this.logger.verbose?.(
+      `Executing '${this.space_name_enrich_policy} enrich policy'`
+    );
 
     try {
       const result = await this.client.enrich.executePolicy({
-        name: name_lookup_policy, // todo: config
-        wait_for_completion: true,
+        name: this.space_name_enrich_policy,
       });
 
       return result.status.phase === 'COMPLETE';
