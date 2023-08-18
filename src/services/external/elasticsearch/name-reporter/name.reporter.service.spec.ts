@@ -9,6 +9,13 @@ import {
 describe('NameReporterService', () => {
   let service: NameReporterService;
 
+  MockConfigService.useValue = {
+    ...MockConfigService.useValue,
+    get: () => ({
+      elasticsearch: {},
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [

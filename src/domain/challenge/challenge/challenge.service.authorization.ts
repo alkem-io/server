@@ -109,6 +109,11 @@ export class ChallengeAuthorizationService {
 
     challenge.storageBucket =
       await this.challengeService.getStorageBucketOrFail(challenge.id);
+    challenge.storageBucket =
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+        challenge.storageBucket,
+        challenge.authorization
+      );
     challenge.storageBucket.authorization =
       this.extendStorageAuthorizationPolicy(
         challenge.storageBucket.authorization,
@@ -150,14 +155,6 @@ export class ChallengeAuthorizationService {
           challenge.authorization
         );
     }
-
-    challenge.storageBucket =
-      await this.challengeService.getStorageBucketOrFail(challenge.id);
-    challenge.storageBucket =
-      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
-        challenge.storageBucket,
-        challenge.authorization
-      );
 
     challenge.innovationFlow = await this.challengeService.getInnovationFlow(
       challenge.id
