@@ -12,6 +12,7 @@ import { PlatformModule } from '@platform/platfrom/platform.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { InnovationHubModule } from '@domain/innovation-hub';
+import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { InnovationHubModule } from '@domain/innovation-hub';
     OrganizationModule,
     TypeOrmModule.forFeature([Space]),
     InnovationHubModule,
+    NameReporterModule,
   ],
   providers: [BootstrapService],
   exports: [BootstrapService],

@@ -17,7 +17,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
-import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { PostTemplateModule } from '@domain/template/post-template/post.template.module';
 import { WhiteboardTemplateModule } from '@domain/template/whiteboard-template/whiteboard.template.module';
@@ -27,7 +27,7 @@ import { ReferenceModule } from '@domain/common/reference/reference.module';
 @Module({
   imports: [
     EntityResolverModule,
-    ElasticsearchModule,
+    ContributionReporterModule,
     ActivityAdapterModule,
     NotificationAdapterModule,
     AuthorizationPolicyModule,

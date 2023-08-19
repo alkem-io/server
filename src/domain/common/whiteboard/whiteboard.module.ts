@@ -11,14 +11,14 @@ import { WhiteboardAuthorizationService } from './whiteboard.service.authorizati
 import { WhiteboardResolverSubscriptions } from '@domain/common/whiteboard/whiteboard.resolver.subscriptions';
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { UserModule } from '@domain/community/user/user.module';
-import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ProfileModule } from '../profile/profile.module';
 
 @Module({
   imports: [
     EntityResolverModule,
-    ElasticsearchModule,
+    ContributionReporterModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     WhiteboardCheckoutModule,

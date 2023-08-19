@@ -7,6 +7,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { LogContext } from '@common/enums';
 import { Communication } from '@domain/communication/communication/communication.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
+import { CommunityType } from '@common/enums/community.type';
 
 @Injectable()
 export class CommunityResolverService {
@@ -170,7 +171,7 @@ export class CommunityResolverService {
 
   public async getDisplayNameForCommunityOrFail(
     communityId: string,
-    communityType: string
+    communityType: CommunityType
   ): Promise<string> {
     const [result]: {
       profileId: string;

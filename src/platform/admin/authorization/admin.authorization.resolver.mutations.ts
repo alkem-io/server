@@ -235,7 +235,13 @@ export class AdminAuthorizationResolverMutations {
     );
 
     const [spaces, organizations, users] = await Promise.all([
-      this.spaceService.getAllSpaces(),
+      this.spaceService.getAllSpaces({
+        relations: {
+          preferenceSet: {
+            preferences: true,
+          },
+        },
+      }),
       this.organizationService.getOrganizations({}),
       this.userService.getUsers({}),
     ]);
