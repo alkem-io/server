@@ -1,15 +1,8 @@
-import { LogContext } from '@common/enums';
-import { ForbiddenError } from './forbidden.error';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { BaseException } from './base.exception';
 
-export class ForbiddenException extends ForbiddenError {
-  private context: LogContext;
-
-  constructor(error: string, context: LogContext) {
-    super(error);
-    this.context = context;
-  }
-
-  getContext(): LogContext {
-    return this.context;
+export class ForbiddenException extends BaseException {
+  constructor(error: string, context: LogContext, code?: AlkemioErrorStatus) {
+    super(error, context, code ?? AlkemioErrorStatus.FORBIDDEN);
   }
 }

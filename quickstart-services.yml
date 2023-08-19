@@ -3,6 +3,7 @@ version: '3.7'
 volumes:
   alkemio_dev_mariadb:
   alkemio_dev_postgres:
+  tmpvolume:
   rabbitmq_data:
     driver: local
 
@@ -53,6 +54,8 @@ services:
     volumes:
       - alkemio_dev_mariadb:/var/lib/mysql
       - ./.scripts/schema.sql:/bootstrap_scripts/1.sql
+      - ./.scripts/migrations/CSVs:/tmp/CSVs
+      - tmpvolume:/tmp
     command: --sql_mode="" --default-authentication-plugin=mysql_native_password --init-file /bootstrap_scripts/1.sql
 
   kratos-migrate:
@@ -249,7 +252,7 @@ services:
       - SYNAPSE_HOMESERVER_NAME
       - SYNAPSE_SERVER_URL
       - SYNAPSE_SERVER_SHARED_SECRET
-      - SYNAPSE_SERVER_NAME=alkemio.matrix.host
+      - SYNAPSE_SERVER_NAME
       - LOGGING_CONSOLE_ENABLED
       - LOGGING_LEVEL_CONSOLE
       - ENVIRONMENT=dev
@@ -298,3 +301,28 @@ services:
       - alkemio_dev_net
     ports:
       - 6379
+
+  guidance_engine:
+    container_name: alkemio_dev_guidance_engine
+    depends_on:
+      - rabbitmq
+    hostname: guidance-engine
+    image: alkemio/guidance-engine:v0.1.2
+    restart: always
+    networks:
+      - alkemio_dev_net
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - ENVIRONMENT=dev
+      - OPENAI_API_KEY
+      - OPENAI_API_TYPE
+      - OPENAI_API_VERSION
+      - OPENAI_API_BASE
+      - AI_MODEL_TEMPERATURE
+      - AI_MODEL_NAME
+      - AI_DEPLOYMENT_NAME
+      - AI_EMBEDDINGS_DEPLOYMENT_NAME
+    volumes:
+      - /dev/shm:/dev/shm

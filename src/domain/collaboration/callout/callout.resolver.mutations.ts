@@ -31,24 +31,31 @@ import { CalloutState } from '@common/enums/callout.state';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UpdateCalloutPublishInfoInput } from './dto/callout.dto.update.publish.info';
-import { ElasticsearchService } from '@services/external/elasticsearch';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { ActivityInputPostCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.post.created';
+import { ActivityInputCalloutPostCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.post.created';
 import { NotificationInputPostCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.post.created';
 import { NotificationInputWhiteboardCreated } from '@services/adapters/notification-adapter/dto/notification.dto.input.whiteboard.created';
+import { IReference } from '@domain/common/reference';
+import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
+import { ActivityInputCalloutLinkCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.link.created';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ReferenceService } from '@domain/common/reference/reference.service';
 
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
     private communityResolverService: CommunityResolverService,
-    private elasticService: ElasticsearchService,
+    private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
     private notificationAdapter: NotificationAdapter,
     private authorizationService: AuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private calloutService: CalloutService,
     private namingService: NamingService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private postAuthorizationService: PostAuthorizationService,
+    private referenceService: ReferenceService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private postCreatedSubscription: PubSubEngine
   ) {}
@@ -217,35 +224,7 @@ export class CalloutResolverMutations {
     );
 
     if (callout.visibility === CalloutVisibility.PUBLISHED) {
-      const notificationInput: NotificationInputPostCreated = {
-        post: post,
-        triggeredBy: agentInfo.userID,
-      };
-      await this.notificationAdapter.postCreated(notificationInput);
-
-      const activityLogInput: ActivityInputPostCreated = {
-        triggeredBy: agentInfo.userID,
-        post: post,
-        callout: callout,
-      };
-      this.activityAdapter.postCreated(activityLogInput);
-
-      const { spaceID } =
-        await this.communityResolverService.getCommunityFromCalloutOrFail(
-          postData.calloutID
-        );
-
-      this.elasticService.calloutPostCreated(
-        {
-          id: post.id,
-          name: post.profile.displayName,
-          space: spaceID,
-        },
-        {
-          id: agentInfo.userID,
-          email: agentInfo.email,
-        }
-      );
+      this.processActivityPostCreated(callout, post, agentInfo);
     }
 
     return post;
@@ -288,36 +267,162 @@ export class CalloutResolverMutations {
       );
 
     if (callout.visibility === CalloutVisibility.PUBLISHED) {
-      const notificationInput: NotificationInputWhiteboardCreated = {
-        whiteboard: whiteboard,
-        triggeredBy: agentInfo.userID,
-      };
-      await this.notificationAdapter.whiteboardCreated(notificationInput);
-
-      this.activityAdapter.whiteboardCreated({
-        triggeredBy: agentInfo.userID,
-        whiteboard: authorizedWhiteboard,
-        callout: callout,
-      });
-
-      const { spaceID } =
-        await this.communityResolverService.getCommunityFromCalloutOrFail(
-          whiteboardData.calloutID
-        );
-
-      this.elasticService.calloutWhiteboardCreated(
-        {
-          id: whiteboard.id,
-          name: whiteboard.nameID,
-          space: spaceID,
-        },
-        {
-          id: agentInfo.userID,
-          email: agentInfo.email,
-        }
+      this.processActivityWhiteboardCreated(
+        callout,
+        authorizedWhiteboard,
+        agentInfo
       );
     }
 
     return authorizedWhiteboard;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IReference, {
+    description: 'Create a new Link on the Callout.',
+  })
+  @Profiling.api
+  async createLinkOnCallout(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('linkData') linkData: CreateLinkOnCalloutInput
+  ): Promise<IReference> {
+    const callout = await this.calloutService.getCalloutOrFail(
+      linkData.calloutID,
+      { relations: ['profile'] }
+    );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      callout.authorization,
+      AuthorizationPrivilege.CREATE,
+      `create link on callout: ${callout.id}`
+    );
+
+    // todo: no check needed as for now a callout collection of links cannot be close; will be needed later.
+    // if (callout.state === CalloutState.CLOSED) {
+    //   throw new CalloutClosedException(
+    //     `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
+    //   );
+    // }
+
+    const reference = await this.calloutService.createLinkOnCallout(linkData);
+    reference.authorization =
+      await this.authorizationPolicyService.inheritParentAuthorization(
+        reference.authorization,
+        callout.profile.authorization
+      );
+    const referenceAuthorized = await this.referenceService.saveReference(
+      reference
+    );
+
+    if (callout.visibility === CalloutVisibility.PUBLISHED) {
+      await this.processActivityLinkCreated(
+        callout,
+        referenceAuthorized,
+        agentInfo
+      );
+    }
+
+    return referenceAuthorized;
+  }
+
+  private async processActivityLinkCreated(
+    callout: ICallout,
+    reference: IReference,
+    agentInfo: AgentInfo
+  ) {
+    const activityLogInput: ActivityInputCalloutLinkCreated = {
+      triggeredBy: agentInfo.userID,
+      reference: reference,
+      callout: callout,
+    };
+    this.activityAdapter.calloutLinkCreated(activityLogInput);
+
+    const { spaceID } =
+      await this.communityResolverService.getCommunityFromCalloutOrFail(
+        callout.id
+      );
+
+    this.contributionReporter.calloutLinkCreated(
+      {
+        id: reference.id,
+        name: reference.name,
+        space: spaceID,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
+  }
+
+  private async processActivityWhiteboardCreated(
+    callout: ICallout,
+    whiteboard: IWhiteboard,
+    agentInfo: AgentInfo
+  ) {
+    const notificationInput: NotificationInputWhiteboardCreated = {
+      whiteboard: whiteboard,
+      triggeredBy: agentInfo.userID,
+    };
+    await this.notificationAdapter.whiteboardCreated(notificationInput);
+
+    this.activityAdapter.calloutWhiteboardCreated({
+      triggeredBy: agentInfo.userID,
+      whiteboard: whiteboard,
+      callout: callout,
+    });
+
+    const { spaceID } =
+      await this.communityResolverService.getCommunityFromCalloutOrFail(
+        callout.id
+      );
+
+    this.contributionReporter.calloutWhiteboardCreated(
+      {
+        id: whiteboard.id,
+        name: whiteboard.nameID,
+        space: spaceID,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
+  }
+
+  private async processActivityPostCreated(
+    callout: ICallout,
+    post: IPost,
+    agentInfo: AgentInfo
+  ) {
+    const notificationInput: NotificationInputPostCreated = {
+      post: post,
+      triggeredBy: agentInfo.userID,
+    };
+    await this.notificationAdapter.postCreated(notificationInput);
+
+    const activityLogInput: ActivityInputCalloutPostCreated = {
+      triggeredBy: agentInfo.userID,
+      post: post,
+      callout: callout,
+    };
+    this.activityAdapter.calloutPostCreated(activityLogInput);
+
+    const { spaceID } =
+      await this.communityResolverService.getCommunityFromCalloutOrFail(
+        callout.id
+      );
+
+    this.contributionReporter.calloutPostCreated(
+      {
+        id: post.id,
+        name: post.profile.displayName,
+        space: spaceID,
+      },
+      {
+        id: agentInfo.userID,
+        email: agentInfo.email,
+      }
+    );
   }
 }

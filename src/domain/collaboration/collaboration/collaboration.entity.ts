@@ -4,6 +4,7 @@ import { Relation } from '@domain/collaboration/relation/relation.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { TagsetTemplateSet } from '@domain/common/tagset-template-set';
+import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 
 @Entity()
 export class Collaboration
@@ -28,4 +29,12 @@ export class Collaboration
   })
   @JoinColumn()
   tagsetTemplateSet?: TagsetTemplateSet;
+
+  @OneToOne(() => Timeline, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  timeline?: Timeline;
 }

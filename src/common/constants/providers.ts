@@ -12,9 +12,11 @@ export const SUBSCRIPTION_CHALLENGE_CREATED =
   'alkemio-subscriptions-challenge-created';
 export const SUBSCRIPTION_ACTIVITY_CREATED =
   'alkemio-subscriptions-activity-created';
+export const CHAT_GUIDANCE_SERVICE = 'alkemio-chat-guidance';
 export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const WALLET_MANAGEMENT_SERVICE = 'alkemio-wallet-manager';
 export const REDIS_LOCK_SERVICE = 'redis-lock-service';
 export const MATRIX_ADAPTER_SERVICE = 'alkemio-matrix-adapter';
 export const SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event';
 export const EXCALIDRAW_SERVER = 'excalidraw-backend';
+export const ELASTICSEARCH_CLIENT_PROVIDER = 'elasticsearch-client-provider';

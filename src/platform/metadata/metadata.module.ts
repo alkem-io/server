@@ -4,7 +4,6 @@ import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { Module } from '@nestjs/common';
-import { MetadataResolverQueries } from './metadata.resolver.queries';
 import { MetadataService } from './metadata.service';
 
 @Module({
@@ -15,7 +14,7 @@ import { MetadataService } from './metadata.service';
     OpportunityModule,
     OrganizationModule,
   ],
-  providers: [MetadataResolverQueries, MetadataService],
+  providers: [MetadataService],
   exports: [MetadataService],
 })
 export class MetadataModule {}

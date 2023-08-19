@@ -3,11 +3,14 @@ import { ICommunication } from '@domain/communication/communication/communicatio
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { ILibrary } from '@library/library/library.interface';
 import { ObjectType } from '@nestjs/graphql';
+import { IConfig } from '@platform/configuration/config/config.interface';
+import { IMetadata } from '@platform/metadata/metadata.interface';
 
 @ObjectType('Platform')
 export abstract class IPlatform extends IAuthorizable {
   communication?: ICommunication;
   library?: ILibrary;
-
+  configuration?: IConfig;
+  metadata?: IMetadata;
   storageBucket!: IStorageBucket;
 }

@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.52.1",
+  "version": "0.55.1",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -36,7 +36,8 @@
     "migration:generate": "npm run typeorm migration:generate",
     "migration:run": "npm run typeorm-no-entities migration:run",
     "migration:revert": "npm run typeorm-no-entities migration:revert",
-    "migration:show": "npm run typeorm migration:show"
+    "migration:show": "npm run typeorm migration:show",
+    "migration:validate": "./.scripts/migrations/run_validate_migration.sh"
   },
   "overrides": {
     "fs-capacitor": "6.2.0",
@@ -62,6 +63,7 @@
     "@nestjs/platform-express": "^8.0.5",
     "@nestjs/typeorm": "9.0.1",
     "@ory/kratos-client": "^0.11.1",
+    "@types/lodash": "^4.14.197",
     "ajv": "^8.11.0",
     "amqp-connection-manager": "^3.7.0",
     "amqplib": "^0.8.0",
@@ -85,6 +87,7 @@
     "ipfs-http-client": "^51.0.1",
     "jwks-rsa": "^2.0.4",
     "jwt-decode": "^3.1.2",
+    "lodash": "^4.17.21",
     "logform": "^2.3.2",
     "module-alias": "^2.2.2",
     "moment": "^2.29.4",

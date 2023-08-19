@@ -339,6 +339,11 @@ integrations:
     timeout: ${ELASTICSEARCH_TIMEOUT}:30000
     indices:
       contribution: ${ELASTIC_INDEX_ACTIVITY_NAME}:contribution-events
+      namings: ${ELASTIC_INDEX_NAMINGS_NAME}:namings
+    tls:
+      rejectUnauthorized: ${ELASTIC_TLS_REJECT_UNAUTHORIZED}:false
+    policies:
+      space_name_enrich_policy: ${ELASTIC_POLICY_SPACE_NAME_ENRICH}:space_name_enrich_policy
 
 notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true
@@ -403,6 +408,10 @@ platform:
   # Client can optionally work with a landing page, to give additional information
   landing_page:
     enabled: ${LANDING_PAGE_ENABLED}:false
+
+  # Configure usage of the guidance engine
+  guidance_engine:
+    enabled: ${GUIDANCE_ENGINE_ENABLED}:true
 ssi:
   # Jolocom SDK is used for providing SSI capabilities on the platform.
   # Note: NOT FOR PRODUCTION USAGE, experimental functionality,

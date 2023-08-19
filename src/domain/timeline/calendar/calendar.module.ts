@@ -10,14 +10,18 @@ import { CalendarResolverMutations } from './calendar.resolver.mutations';
 import { CalendarService } from './calendar.service';
 import { CalendarAuthorizationService } from './calendar.service.authorization';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 
 @Module({
   imports: [
+    ContributionReporterModule,
     CalendarEventModule,
     NamingModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     EntityResolverModule,
+    ActivityAdapterModule,
     TypeOrmModule.forFeature([Calendar]),
   ],
   providers: [

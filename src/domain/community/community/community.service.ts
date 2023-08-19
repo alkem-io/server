@@ -11,7 +11,6 @@ import {
   CommunityPolicyRoleLimitsException,
   EntityNotFoundException,
   EntityNotInitializedException,
-  InvalidStateTransitionException,
   ValidationException,
 } from '@common/exceptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -59,6 +58,7 @@ import { InvitationExternalService } from '../invitation.external/invitation.ext
 import { CreateInvitationExternalInput } from '../invitation.external/dto/invitation.external.dto.create';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
+import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
 
 @Injectable()
 export class CommunityService {
@@ -851,7 +851,10 @@ export class CommunityService {
     invitationData: CreateInvitationExternalUserOnCommunityInput,
     agentInfo: AgentInfo
   ): Promise<IInvitationExternal> {
-    await this.validateInvitationToExternalUser(invitationData.email);
+    await this.validateInvitationToExternalUser(
+      invitationData.email,
+      invitationData.communityID
+    );
     const community = await this.getCommunityOrFail(
       invitationData.communityID,
       {
@@ -883,7 +886,7 @@ export class CommunityService {
       community.id
     );
     if (openApplication) {
-      throw new InvalidStateTransitionException(
+      throw new CommunityMembershipException(
         `An open application (ID: ${openApplication.id}) already exists for user ${openApplication.user?.id} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
@@ -891,7 +894,7 @@ export class CommunityService {
 
     const openInvitation = await this.findOpenInvitation(user.id, community.id);
     if (openInvitation) {
-      throw new InvalidStateTransitionException(
+      throw new CommunityMembershipException(
         `An open invitation (ID: ${openInvitation.id}) already exists for user ${openInvitation.invitedUser} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
@@ -900,7 +903,7 @@ export class CommunityService {
     // Check if the user is already a member; if so do not allow an application
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
-      throw new InvalidStateTransitionException(
+      throw new CommunityMembershipException(
         `User ${user.nameID} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
@@ -913,7 +916,7 @@ export class CommunityService {
   ) {
     const openInvitation = await this.findOpenInvitation(user.id, community.id);
     if (openInvitation) {
-      throw new InvalidStateTransitionException(
+      throw new CommunityMembershipException(
         `An open invitation (ID: ${openInvitation.id}) already exists for user ${openInvitation.invitedUser} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
@@ -924,7 +927,7 @@ export class CommunityService {
       community.id
     );
     if (openApplication) {
-      throw new InvalidStateTransitionException(
+      throw new CommunityMembershipException(
         `An open application (ID: ${openApplication.id}) already exists for user ${openApplication.user?.id} on Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
@@ -933,31 +936,36 @@ export class CommunityService {
     // Check if the user is already a member; if so do not allow an application
     const isExistingMember = await this.isMember(agent, community);
     if (isExistingMember)
-      throw new InvalidStateTransitionException(
+      throw new CommunityMembershipException(
         `User ${user.nameID} is already a member of the Community: ${community.id}.`,
         LogContext.COMMUNITY
       );
   }
 
-  private async validateInvitationToExternalUser(email: string) {
+  private async validateInvitationToExternalUser(
+    email: string,
+    communityID: string
+  ) {
     // Check if a user with the provided email address already exists or not
     const isExistingUser = await this.userService.isRegisteredUser(email);
     if (isExistingUser) {
-      throw new InvalidStateTransitionException(
+      throw new CommunityMembershipException(
         `User with the provided email address already exists: ${email}`,
         LogContext.COMMUNITY
       );
     }
 
-    const existingExternalInvitation =
+    const existingExternalInvitations =
       await this.invitationExternalService.findInvitationExternalsForUser(
         email
       );
-    if (existingExternalInvitation.length > 0) {
-      throw new InvalidStateTransitionException(
-        `An invitation with the provided email address already exists: ${email}`,
-        LogContext.COMMUNITY
-      );
+    for (const existingExternalInvitation of existingExternalInvitations) {
+      if (existingExternalInvitation.community.id === communityID) {
+        throw new CommunityMembershipException(
+          `An invitation with the provided email address (${email}) already exists for the specified community: ${communityID}`,
+          LogContext.COMMUNITY
+        );
+      }
     }
   }
 

@@ -5,7 +5,7 @@ import {
   configQuery,
   spacesQuery,
   meQuery,
-  serverMetadataQuery,
+  platformMetadataQuery,
 } from '@config/graphql';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
@@ -47,7 +47,7 @@ import { LibraryModule } from '@library/library/library.module';
 import { PostMoveModule } from '@domain/collaboration/post/post.move.module';
 import { GeoLocationModule } from '@services/external/geo-location';
 import { PlatformModule } from '@platform/platfrom/platform.module';
-import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import { InnovationHubInterceptor } from '@common/interceptors';
 import { InnovationHubModule } from '@domain/innovation-hub';
@@ -62,6 +62,8 @@ import {
 } from '@core/error-handling';
 import { MeModule } from '@services/api/me';
 import { ExcalidrawServerModule } from '@services/external/excalidraw-backend';
+import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
+import { LookupModule } from '@services/api/lookup';
 
 @Module({
   imports: [
@@ -147,7 +149,7 @@ import { ExcalidrawServerModule } from '@services/external/excalidraw-backend';
               endpoint: `${
                 configService.get(ConfigurationTypes.HOSTING)?.endpoint_cluster
               }/api/public/graphql`,
-              query: print(serverMetadataQuery),
+              query: print(platformMetadataQuery),
             },
           ],
         },
@@ -215,12 +217,15 @@ import { ExcalidrawServerModule } from '@services/external/excalidraw-backend';
     PlatformModule,
     PostMoveModule,
     GeoLocationModule,
-    ElasticsearchModule,
+    ContributionReporterModule,
     InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
     MeModule,
     ExcalidrawServerModule,
+    ChatGuidanceModule,
+
+    LookupModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

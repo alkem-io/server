@@ -58,9 +58,10 @@ import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/tagset.template.dto.create';
-import { ChallengeDisplayLocation } from '@src/migrations/1688193761861-classificationTagsets';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { challengeDefaultCallouts } from './challenge.default.callouts';
+import { ChallengeDisplayLocation } from '@common/enums/challenge.display.location';
+import { CommonDisplayLocation } from '@common/enums/common.display.location';
 @Injectable()
 export class ChallengeService {
   constructor(
@@ -152,9 +153,12 @@ export class ChallengeService {
         tagsetTemplateDataStates
       );
 
-    const locations = Object.values(ChallengeDisplayLocation);
+    const locations = Object.values({
+      ...CommonDisplayLocation,
+      ...ChallengeDisplayLocation,
+    });
     const tagsetTemplateData: CreateTagsetTemplateInput = {
-      name: TagsetReservedName.DISPLAY_LOCATION_CHALLENGE,
+      name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
       type: TagsetType.SELECT_ONE,
       allowedValues: locations,
       defaultSelectedValue: ChallengeDisplayLocation.CONTRIBUTE_RIGHT,
@@ -202,7 +206,8 @@ export class ChallengeService {
     challenge.collaboration =
       await this.collaborationService.addDefaultCallouts(
         challenge.collaboration,
-        challengeDefaultCallouts
+        challengeDefaultCallouts,
+        agentInfo?.userID
       );
 
     if (agentInfo && challenge.community) {
@@ -577,7 +582,6 @@ export class ChallengeService {
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
       spaceID,
-      challenge.storageBucket.id,
       agentInfo
     );
 

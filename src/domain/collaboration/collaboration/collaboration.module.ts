@@ -15,14 +15,14 @@ import { PostModule } from '../post/post.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
-import { CollaborationResolverQueries } from './collaboration.resolver.queries';
-import { ElasticsearchModule } from '@services/external/elasticsearch';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tagset.template.set.module';
+import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 
 @Module({
   imports: [
-    ElasticsearchModule,
+    ContributionReporterModule,
     ActivityAdapterModule,
     NotificationAdapterModule,
     AuthorizationPolicyModule,
@@ -34,6 +34,7 @@ import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tags
     RelationModule,
     WhiteboardModule,
     PostModule,
+    TimelineModule,
     TagsetTemplateSetModule,
     TypeOrmModule.forFeature([Collaboration]),
   ],
@@ -41,7 +42,6 @@ import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tags
     CollaborationService,
     CollaborationAuthorizationService,
     CollaborationResolverMutations,
-    CollaborationResolverQueries,
     CollaborationResolverFields,
   ],
   exports: [CollaborationService, CollaborationAuthorizationService],

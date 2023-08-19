@@ -18,7 +18,6 @@ import {
   ICredential,
 } from '@domain/agent/credential';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { RoomService } from '@domain/communication/room/room.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -57,23 +56,23 @@ import { validateEmail } from '@common/utils';
 import { AgentInfoMetadata } from '@core/authentication/agent-info-metadata';
 import { CommunityCredentials } from './dto/user.dto.community.credentials';
 import { CommunityMemberCredentials } from './dto/user.dto.community.member.credentials';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { userDefaults } from './user.defaults';
-
+import { UsersQueryArgs } from './dto/users.query.args';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
 
   constructor(
     private profileService: ProfileService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private communicationAdapter: CommunicationAdapter,
     private roomService: RoomService,
     private namingService: NamingService,
     private agentService: AgentService,
     private preferenceSetService: PreferenceSetService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -299,6 +298,36 @@ export class UserService {
     });
   }
 
+  private async validateUserProfileCreationRequest(
+    userData: CreateUserInput
+  ): Promise<boolean> {
+    await this.isNameIdAvailableOrFail(userData.nameID);
+    const userCheck = await this.isRegisteredUser(userData.email);
+    if (userCheck)
+      throw new ValidationException(
+        `User profile with the specified email (${userData.email}) already exists`,
+        LogContext.COMMUNITY
+      );
+    // Trim values to remove space issues
+    userData.email = userData.email.trim();
+    return true;
+  }
+
+  private async isNameIdAvailableOrFail(nameID: string) {
+    const userCount = await this.userRepository.countBy({
+      nameID: nameID,
+    });
+    if (userCount != 0)
+      throw new ValidationException(
+        `The provided nameID is already taken: ${nameID}`,
+        LogContext.COMMUNITY
+      );
+  }
+
+  async saveUser(user: IUser): Promise<IUser> {
+    return await this.userRepository.save(user);
+  }
+
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
     const user = await this.getUserOrFail(userID, {
@@ -333,36 +362,6 @@ export class UserService {
       ...result,
       id,
     };
-  }
-
-  private async validateUserProfileCreationRequest(
-    userData: CreateUserInput
-  ): Promise<boolean> {
-    await this.isNameIdAvailableOrFail(userData.nameID);
-    const userCheck = await this.isRegisteredUser(userData.email);
-    if (userCheck)
-      throw new ValidationException(
-        `User profile with the specified email (${userData.email}) already exists`,
-        LogContext.COMMUNITY
-      );
-    // Trim values to remove space issues
-    userData.email = userData.email.trim();
-    return true;
-  }
-
-  private async isNameIdAvailableOrFail(nameID: string) {
-    const userCount = await this.userRepository.countBy({
-      nameID: nameID,
-    });
-    if (userCount != 0)
-      throw new ValidationException(
-        `The provided nameID is already taken: ${nameID}`,
-        LogContext.COMMUNITY
-      );
-  }
-
-  async saveUser(user: IUser): Promise<IUser> {
-    return await this.userRepository.save(user);
   }
 
   async getPreferenceSetOrFail(userID: string): Promise<IPreferenceSet> {
@@ -546,15 +545,7 @@ export class UserService {
     return user;
   }
 
-  async getUsersByIDs(userIDs: string[]): Promise<IUser[]> {
-    const users = await this.userRepository.find({
-      where: { id: In(userIDs) },
-    });
-
-    return users;
-  }
-
-  async getUsers(args: ContributorQueryArgs): Promise<IUser[]> {
+  async getUsers(args: UsersQueryArgs): Promise<IUser[]> {
     const limit = args.limit;
     const shuffle = args.shuffle || false;
 
@@ -563,7 +554,7 @@ export class UserService {
       LogContext.COMMUNITY
     );
     const credentialsFilter = args.filter?.credentials;
-    let users = [];
+    let users: User[] = [];
     if (credentialsFilter) {
       users = await this.userRepository
         .createQueryBuilder('user')
@@ -577,6 +568,11 @@ export class UserService {
     } else {
       users = await this.userRepository.findBy({ serviceProfile: false });
     }
+
+    if (args.ids) {
+      users = users.filter(user => args.ids?.includes(user.id));
+    }
+
     return limitAndShuffle(users, limit, shuffle);
   }
 
@@ -635,7 +631,18 @@ export class UserService {
     }
 
     if (filter) {
-      applyFiltering(qb, filter);
+      const { displayName, ...rest } = filter;
+
+      if (displayName) {
+        const hasWhere =
+          qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
+        qb.leftJoinAndSelect('user.profile', 'profile');
+        qb[hasWhere ? 'andWhere' : 'where'](
+          'profile.displayName like :term'
+        ).setParameters({ term: `%${displayName}%` });
+      }
+
+      applyFiltering(qb, rest, 'or');
     }
 
     return getPaginationResults(qb, paginationArgs);
@@ -669,7 +676,18 @@ export class UserService {
     }
 
     if (filter) {
-      applyFiltering(qb, filter);
+      const { displayName, ...rest } = filter;
+
+      if (displayName) {
+        const hasWhere =
+          qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
+        qb.leftJoinAndSelect('user.profile', 'profile');
+        qb[hasWhere ? 'andWhere' : 'where'](
+          'profile.displayName like :term'
+        ).setParameters({ term: `%${displayName}%` });
+      }
+
+      applyFiltering(qb, rest, 'or');
     }
 
     return getPaginationResults(qb, paginationArgs);

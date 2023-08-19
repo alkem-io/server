@@ -3,6 +3,7 @@ import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/n
 import { Field, InputType } from '@nestjs/graphql';
 import { UpdateCalloutWhiteboardTemplateInput } from './callout.dto.update.whiteboardTemplate';
 import { UpdateCalloutPostTemplateInput } from './callout.dto.update.postTemplate';
+import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 
 @InputType()
 export class UpdateCalloutInput extends UpdateNameableInput {
@@ -30,9 +31,9 @@ export class UpdateCalloutInput extends UpdateNameableInput {
   })
   whiteboardTemplate?: UpdateCalloutWhiteboardTemplateInput;
 
-  @Field(() => String, {
+  @Field(() => CalloutDisplayLocation, {
     nullable: true,
-    description: 'Set callout group for this Callout.',
+    description: 'Set display location for this Callout.',
   })
-  group?: string;
+  displayLocation?: CalloutDisplayLocation;
 }

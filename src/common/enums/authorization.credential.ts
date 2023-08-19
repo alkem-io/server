@@ -32,6 +32,8 @@ export enum AuthorizationCredential {
 
   // Library related credentials
   INNOVATION_PACK_PROVIDER = 'innovation-pack-provider',
+
+  BETA_TESTER = 'beta-tester',
 }
 
 registerEnumType(AuthorizationCredential, {

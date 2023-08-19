@@ -9,7 +9,6 @@ import { LogContext } from '@common/enums';
 import { ICommunity } from '@domain/community/community';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { ApplicationService } from '@domain/community/application/application.service';
-import { IUser } from '@domain/community/user/user.interface';
 import { CommunityService } from '@domain/community/community/community.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { ICredential } from '@domain/agent/credential/credential.interface';
@@ -56,9 +55,6 @@ export class RolesService {
       allowedVisibilities
     );
 
-    contributorRoles.applications = await this.getUserApplications(user);
-    contributorRoles.invitations = await this.getUserInvitations(user);
-
     return contributorRoles;
   }
 
@@ -84,27 +80,29 @@ export class RolesService {
     contributorID: string,
     spaceVisibilities: SpaceVisibility[]
   ): Promise<ContributorRoles> {
-    const membership = new ContributorRoles();
+    const contributorRoles = new ContributorRoles();
 
-    membership.id = contributorID;
+    contributorRoles.id = contributorID;
 
     const maps = await mapCredentialsToRoles(
       this.entityManager,
       credentials,
       spaceVisibilities
     );
-    membership.spaces = maps.spaces;
-    membership.organizations = maps.organizations;
+    contributorRoles.spaces = maps.spaces;
+    contributorRoles.organizations = maps.organizations;
 
-    return membership;
+    return contributorRoles;
   }
 
-  private async getUserApplications(
-    user: IUser
+  public async getUserApplications(
+    userID: string,
+    states?: string[]
   ): Promise<ApplicationForRoleResult[]> {
     const applicationResults: ApplicationForRoleResult[] = [];
     const applications = await this.applicationService.findApplicationsForUser(
-      user.id
+      userID,
+      states
     );
     for (const application of applications) {
       // skip any finalized applications; only want to return pending applications
@@ -182,12 +180,14 @@ export class RolesService {
     return applicationResult;
   }
 
-  private async getUserInvitations(
-    user: IUser
+  public async getUserInvitations(
+    userID: string,
+    states?: string[]
   ): Promise<InvitationForRoleResult[]> {
     const invitationResults: InvitationForRoleResult[] = [];
     const invitations = await this.invitationService.findInvitationsForUser(
-      user.id
+      userID,
+      states
     );
 
     if (!invitations) return [];

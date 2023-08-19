@@ -46,6 +46,10 @@ import { ITagsetTemplate } from '@domain/common/tagset-template';
 import { TagsetType } from '@common/enums/tagset.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CreateTagsetInput } from '@domain/common/tagset';
+import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
+import { IReference } from '@domain/common/reference';
+import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
+import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
 
 @Injectable()
 export class CalloutService {
@@ -123,6 +127,13 @@ export class CalloutService {
     callout.profile = await this.profileService.createProfile(
       calloutData.profile
     );
+
+    if (calloutData.displayLocation) {
+      this.updateCalloutDisplayLocationTagsetValue(
+        callout,
+        calloutData.displayLocation
+      );
+    }
 
     if (calloutData.type == CalloutType.POST_COLLECTION && postTemplateData) {
       callout.postTemplate = await this.postTemplateService.createPostTemplate(
@@ -283,9 +294,30 @@ export class CalloutService {
         );
     }
 
-    if (calloutUpdateData.group) callout.group = calloutUpdateData.group;
+    if (calloutUpdateData.displayLocation) {
+      this.updateCalloutDisplayLocationTagsetValue(
+        callout,
+        calloutUpdateData.displayLocation
+      );
+    }
 
     return await this.calloutRepository.save(callout);
+  }
+
+  updateCalloutDisplayLocationTagsetValue(
+    callout: ICallout,
+    group: CalloutDisplayLocation
+  ) {
+    const displayLocationTagset = callout.profile.tagsets?.find(
+      tagset => tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION
+    );
+    if (!displayLocationTagset) {
+      throw new EntityNotFoundException(
+        `Callout display location tagset not found for profile: ${callout.profile.id}`,
+        LogContext.TAGSET
+      );
+    }
+    displayLocationTagset.tags = [group];
   }
 
   async save(callout: ICallout): Promise<ICallout> {
@@ -440,6 +472,26 @@ export class CalloutService {
     callout.posts.push(post);
     await this.calloutRepository.save(callout);
     return post;
+  }
+
+  public async createLinkOnCallout(
+    linkData: CreateLinkOnCalloutInput
+  ): Promise<IReference> {
+    const calloutID = linkData.calloutID;
+    const callout = await this.getCalloutOrFail(calloutID, {
+      relations: ['profile', 'profile.references'],
+    });
+    if (!callout.profile || !callout.profile.references)
+      throw new EntityNotInitializedException(
+        `Callout (${calloutID}) not initialised`,
+        LogContext.COLLABORATION
+      );
+    const referenceInput: CreateReferenceOnProfileInput = {
+      profileID: callout.profile.id,
+      ...linkData,
+    };
+    const reference = await this.profileService.createReference(referenceInput);
+    return reference;
   }
 
   public async getComments(calloutID: string): Promise<IRoom | undefined> {

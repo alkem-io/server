@@ -8,6 +8,7 @@ import { CreatePostTemplateInput } from '@domain/template/post-template/dto/post
 import { CreateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
+import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 
 @InputType()
 export class CreateCalloutInput {
@@ -33,11 +34,11 @@ export class CreateCalloutInput {
   })
   state!: CalloutState;
 
-  @Field(() => String, {
+  @Field(() => CalloutDisplayLocation, {
     nullable: true,
-    description: 'Set callout group for this Callout.',
+    description: 'Set callout display location for this Callout.',
   })
-  group?: string;
+  displayLocation?: CalloutDisplayLocation;
 
   @Field(() => Number, {
     nullable: true,

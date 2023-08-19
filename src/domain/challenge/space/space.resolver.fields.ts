@@ -5,36 +5,26 @@ import { IProject } from '@domain/collaboration/project';
 import { INVP } from '@domain/common/nvp';
 import { UUID, UUID_NAMEID } from '@domain/common/scalars';
 import { IOrganization } from '@domain/community/organization';
-import { IApplication } from '@domain/community/application';
-import { ApplicationService } from '@domain/community/application/application.service';
 import { ICommunity } from '@domain/community/community';
 import { IUserGroup } from '@domain/community/user-group';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
-  Profiling,
-} from '@src/common/decorators';
+import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { ISpace } from '@domain/challenge/space/space.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity';
 import { IAgent } from '@domain/agent/agent';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication';
 import { IPreference } from '@domain/common/preference/preference.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
-import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { IProfile } from '@domain/common/profile';
 import { Loader } from '@core/dataloader/decorators';
 import {
   SpaceTemplatesSetLoaderCreator,
-  SpaceTimelineLoaderCreator,
   JourneyCollaborationLoaderCreator,
   JourneyCommunityLoaderCreator,
   JourneyContextLoaderCreator,
@@ -49,9 +39,7 @@ import { SpaceStorageBucketLoaderCreator } from '@core/dataloader/creators/loade
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
   constructor(
-    private authorizationService: AuthorizationService,
     private groupService: UserGroupService,
-    private applicationService: ApplicationService,
     private spaceService: SpaceService
   ) {}
 
@@ -131,19 +119,6 @@ export class SpaceResolverFields {
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @ResolveField('timeline', () => ITimeline, {
-    nullable: true,
-    description: 'The timeline with events in use by this Space',
-  })
-  @UseGuards(GraphqlGuard)
-  async timeline(
-    @Parent() space: Space,
-    @Loader(SpaceTimelineLoaderCreator) loader: ILoader<ITimeline>
-  ): Promise<ITimeline> {
-    return loader.load(space.id);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @ResolveField('storageBucket', () => IStorageBucket, {
     nullable: true,
     description: 'The StorageBucket with documents in use by this Space',
@@ -189,7 +164,7 @@ export class SpaceResolverFields {
 
   @ResolveField('profile', () => IProfile, {
     nullable: false,
-    description: 'The Profile for the  space.',
+    description: 'The Profile for the Space.',
   })
   @Profiling.api
   async profile(
@@ -298,32 +273,6 @@ export class SpaceResolverFields {
     return await this.groupService.getUserGroupOrFail(groupID, {
       where: { spaceID: space.id },
     });
-  }
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('application', () => IApplication, {
-    nullable: false,
-    description: 'A particular User Application within this Space.',
-  })
-  async application(
-    @CurrentUser() agentInfo: AgentInfo,
-    @Parent() space: Space,
-    @Args('ID', { type: () => UUID }) applicationID: string
-  ): Promise<IApplication> {
-    const application = await this.applicationService.getApplicationOrFail(
-      applicationID,
-      {
-        where: { spaceID: space.id },
-      }
-    );
-    // Check the user can access this particular application
-    await this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      application.authorization,
-      AuthorizationPrivilege.READ,
-      `read application: ${application.id} on space ${space.nameID}`
-    );
-    return application;
   }
 
   @ResolveField('metrics', () => [INVP], {

@@ -48,6 +48,13 @@ export class CalendarResolverMutations {
         calendarEvent,
         calendar.authorization
       );
+
+    await this.calendarService.processActivityCalendarEventCreated(
+      calendar,
+      calendarEventAuthorized,
+      agentInfo
+    );
+
     return calendarEventAuthorized;
   }
 }

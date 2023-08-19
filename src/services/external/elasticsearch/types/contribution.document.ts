@@ -1,4 +1,4 @@
-import { ContributionType } from '@services/external/elasticsearch/types/contribution.type';
+import { ContributionType } from './contribution.type';
 
 export type ContributionDocument = {
   id: string;

@@ -90,10 +90,10 @@ export class WhiteboardCheckoutService {
     return whiteboardCheckout;
   }
 
-  async isUpdateAllowedOrFail(
+  isUpdateAllowedOrFail(
     checkout: IWhiteboardCheckout,
     agentInfo: AgentInfo
-  ): Promise<void> {
+  ): void {
     const status = this.getWhiteboardStatus(checkout);
     if (status !== WhiteboardCheckoutStateEnum.CHECKED_OUT) {
       throw new EntityCheckoutStatusException(

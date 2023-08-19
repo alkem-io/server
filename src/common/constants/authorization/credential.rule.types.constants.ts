@@ -1,5 +1,3 @@
-export const CREDENTIAL_RULE_TYPES_INNOVATION_FLOW_UPDATE =
-  'credentialRuleTypes-innovationFlowUpdate';
 export const CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_RESET =
   'credentialRuleTypes-spaceAuthorizationReset';
 export const CREDENTIAL_RULE_TYPES_SPACE_GLOBAL_ADMIN_COMMUNITY_READ =
@@ -44,6 +42,8 @@ export const CREDENTIAL_RULE_TYPES_PLATFORM_CREATE_ORG_FILE_UPLOAD =
   'credentialRuleTypes-platformCreateOrgFileUpload';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ANY_ADMIN =
   'credentialRuleTypes-platformAnyAdmin';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE =
+  'credentialRuleTypes-platformAccessGuidance';
 export const CREDENTIAL_RULE_TYPES_LIBRARY_FILE_UPLOAD_ANY_USER =
   'credentialRuleTypes-libraryFileUploadAnyUser';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER =
