@@ -11,6 +11,7 @@ import { graphqlUploadExpress } from 'graphql-upload';
 import { ConfigurationTypes } from '@common/enums';
 import { json } from 'body-parser';
 import cookieParser from 'cookie-parser';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
@@ -58,6 +59,26 @@ const bootstrap = async () => {
   await app.listen(
     configService.get(ConfigurationTypes.HOSTING)?.port as number
   );
+
+  const connectionOptions = configService.get(
+    ConfigurationTypes.MICROSERVICES
+  )?.rabbitmq?.connection;
+
+  const amqpEndpoint = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=30`;
+
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [amqpEndpoint],
+      queue: 'auth-reset',
+      queueOptions: {
+        durable: true,
+      },
+      //be careful with this flag, if set to true, message acknowledgment will be automatic. Double acknowledgment throws an error and disconnects the queue.
+      noAck: false,
+    },
+  });
+  await app.startAllMicroservices();
 };
 
 bootstrap();

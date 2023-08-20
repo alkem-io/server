@@ -33,6 +33,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { NameReporterService } from '@services/external/elasticsearch/name-reporter/name.reporter.service';
+import { AuthResetService } from '@services/auth-reset/auth-reset.service';
 
 @Resolver()
 export class SpaceResolverMutations {
@@ -49,7 +50,8 @@ export class SpaceResolverMutations {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     @Inject(SUBSCRIPTION_CHALLENGE_CREATED)
     private challengeCreatedSubscription: PubSubEngine,
-    private namingReporter: NameReporterService
+    private namingReporter: NameReporterService,
+    private authResetService: AuthResetService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -344,5 +346,13 @@ export class SpaceResolverMutations {
       `reset authorization definition: ${agentInfo.email}`
     );
     return await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
+  }
+
+  @Mutation(() => Boolean, {
+    description: 'Reset the Authorization Policy on the specified Space.',
+  })
+  async authResetSpaces(): Promise<boolean> {
+    await this.authResetService.publishAllSpaceReset();
+    return true;
   }
 }
