@@ -283,5 +283,4 @@ export class CommunityResolverFields {
   ): Promise<CommunityRole[]> {
     return this.communityService.getCommunityRoles(agentInfo, community);
   }
-
 }
