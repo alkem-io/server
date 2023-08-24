@@ -32,6 +32,7 @@ import {
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { OrganizationStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/organization/organization.storage.space.loader.creator';
+import { OrganizationRole } from '@common/enums/organization.role';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
@@ -274,5 +275,19 @@ export class OrganizationResolverFields {
       organization.id
     );
     return this.preferenceSetService.getPreferencesOrFail(preferenceSet);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('myRoles', () => [OrganizationRole], {
+    nullable: true,
+    description:
+      'The roles on this Organization for the currently logged in user.',
+  })
+  @Profiling.api
+  async myRoles(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() organization: IOrganization
+  ): Promise<OrganizationRole[]> {
+    return this.organizationService.getMyRoles(agentInfo, organization);
   }
 }
