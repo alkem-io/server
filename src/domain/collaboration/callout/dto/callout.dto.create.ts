@@ -9,6 +9,7 @@ import { CreateWhiteboardTemplateInput } from '@domain/template/whiteboard-templ
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 @InputType()
 export class CreateCalloutInput {
@@ -45,6 +46,19 @@ export class CreateCalloutInput {
     description: 'The sort order to assign to this Callout.',
   })
   sortOrder!: number;
+
+  @Field(() => CalloutVisibility, {
+    nullable: true,
+    description: 'Visibility of the Callout. Defaults to DRAFT.',
+  })
+  visibility?: CalloutVisibility;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Send notification if this flag is true and visibility is PUBLISHED. Defaults to false.',
+  })
+  sendNotification?: boolean;
 
   @Field(() => CreatePostTemplateInput, {
     nullable: true,
