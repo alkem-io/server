@@ -54,6 +54,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { OrganizationRole } from '@common/enums/organization.role';
 
 @Injectable()
 export class OrganizationService {
@@ -476,6 +477,34 @@ export class OrganizationService {
       type: AuthorizationCredential.ORGANIZATION_OWNER,
       resourceID: organization.id,
     });
+  }
+
+  async getMyRoles(
+    agentInfo: AgentInfo,
+    organization: IOrganization
+  ): Promise<OrganizationRole[]> {
+    // Note: this code can clearly be optimized so that we hit the db once, but
+    // for a first pass this should be ok
+    const result: OrganizationRole[] = [];
+    const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
+
+    const isAdmin = await this.agentService.hasValidCredential(agent.id, {
+      type: AuthorizationCredential.ORGANIZATION_ADMIN,
+      resourceID: organization.id,
+    });
+    const isAssociate = await this.agentService.hasValidCredential(agent.id, {
+      type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+      resourceID: organization.id,
+    });
+    const isOwner = await this.agentService.hasValidCredential(agent.id, {
+      type: AuthorizationCredential.ORGANIZATION_OWNER,
+      resourceID: organization.id,
+    });
+    if (isOwner) result.push(OrganizationRole.OWNER);
+    if (isAdmin) result.push(OrganizationRole.ADMIN);
+    if (isAssociate) result.push(OrganizationRole.ASSOCIATE);
+
+    return result;
   }
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {

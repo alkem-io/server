@@ -330,6 +330,24 @@ export class CommunityService {
     return CommunityMembershipStatus.NOT_MEMBER;
   }
 
+  async getCommunityRoles(
+    agentInfo: AgentInfo,
+    community: ICommunity
+  ): Promise<CommunityRole[]> {
+    const result: CommunityRole[] = [];
+    const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
+    const roles: CommunityRole[] = Object.values(
+      CommunityRole
+    ) as CommunityRole[];
+    for (const role of roles) {
+      const hasAgentRole = await this.isInRole(agent, community, role);
+      if (hasAgentRole) {
+        result.push(role);
+      }
+    }
+    return result;
+  }
+
   private async findOpenApplication(
     userID: string,
     communityID: string
@@ -776,6 +794,26 @@ export class CommunityService {
     const membershipCredential = this.getCredentialDefinitionForRole(
       community,
       CommunityRole.MEMBER
+    );
+
+    const validCredential = await this.agentService.hasValidCredential(
+      agent.id,
+      {
+        type: membershipCredential.type,
+        resourceID: membershipCredential.resourceID,
+      }
+    );
+    return validCredential;
+  }
+
+  async isInRole(
+    agent: IAgent,
+    community: ICommunity,
+    role: CommunityRole
+  ): Promise<boolean> {
+    const membershipCredential = this.getCredentialDefinitionForRole(
+      community,
+      role
     );
 
     const validCredential = await this.agentService.hasValidCredential(

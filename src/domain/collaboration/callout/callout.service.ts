@@ -152,9 +152,9 @@ export class CalloutService {
 
     callout.authorization = new AuthorizationPolicy();
     callout.createdBy = userID ?? undefined;
+    callout.visibility = calloutData.visibility ?? CalloutVisibility.DRAFT;
 
     const savedCallout: ICallout = await this.calloutRepository.save(callout);
-    savedCallout.visibility = CalloutVisibility.DRAFT;
 
     if (calloutData.type === CalloutType.POST) {
       savedCallout.comments = await this.roomService.createRoom(

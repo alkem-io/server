@@ -136,8 +136,7 @@ export class InnovationFlowTemplateService {
       SELECT innovation_flow_template.id AS innovationFlowTemplateId FROM space
       LEFT JOIN innovation_flow_template ON space.templatesSetId = innovation_flow_template.templatesSetId
       WHERE innovation_flow_template.type = '${templateType}'
-      AND space.id = '${spaceID}'
-      LIMIT 1
+      AND space.id = '${spaceID}' ORDER BY innovation_flow_template.createdDate ASC LIMIT 1
       `
     );
 

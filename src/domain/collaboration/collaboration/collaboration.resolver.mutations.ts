@@ -154,7 +154,10 @@ export class CollaborationResolverMutations {
         communityPolicy
       );
 
-    if (calloutAuthorized.visibility === CalloutVisibility.PUBLISHED) {
+    if (
+      calloutData.sendNotification &&
+      calloutAuthorized.visibility === CalloutVisibility.PUBLISHED
+    ) {
       const notificationInput: NotificationInputCalloutPublished = {
         triggeredBy: agentInfo.userID,
         callout: callout,

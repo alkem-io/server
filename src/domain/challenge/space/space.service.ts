@@ -217,26 +217,6 @@ export class SpaceService {
       this.spaceRepository
     );
 
-    // TODO: remove this once the usage of updateSpacePlatformSettings is finished
-    if (spaceData.nameID) {
-      if (spaceData.nameID !== space.nameID) {
-        // updating the nameID, check new value is allowed
-        const updateAllowed = await this.isNameIdAvailable(spaceData.nameID);
-        if (!updateAllowed) {
-          throw new ValidationException(
-            `Unable to update Space nameID: the provided nameID is already taken: ${spaceData.nameID}`,
-            LogContext.CHALLENGES
-          );
-        }
-        space.nameID = spaceData.nameID;
-      }
-    }
-
-    // TODO: remove this once the usage of updateSpacePlatformSettings is finished
-    if (spaceData.hostID) {
-      await this.setSpaceHost(space.id, spaceData.hostID);
-    }
-
     return await this.spaceRepository.save(space);
   }
 
