@@ -7,6 +7,7 @@ import { RolesService } from '../roles/roles.service';
 import { ApplicationForRoleResult } from '../roles/dto/roles.dto.result.application';
 import { InvitationForRoleResult } from '../roles/dto/roles.dto.result.invitation';
 import { ISpace } from '@domain/challenge/space/space.interface';
+import { SpacesQueryArgs } from '@domain/challenge/space/dto/space.args.query.spaces';
 
 @Injectable()
 export class MeService {
@@ -35,7 +36,13 @@ export class MeService {
   ): Promise<ISpace[]> {
     const credentialMap = groupCredentialsByEntity(credentials);
     const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
+    const args: SpacesQueryArgs = {
+      IDs: spaceIds,
+      filter: {
+        visibilities,
+      },
+    };
 
-    return this.spaceService.getSpacesByVisibilities(spaceIds, visibilities);
+    return this.spaceService.getSpaces(args);
   }
 }
