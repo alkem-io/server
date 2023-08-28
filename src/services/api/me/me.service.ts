@@ -32,7 +32,10 @@ export class MeService {
 
   public getSpaceMemberships(
     credentials: ICredential[],
-    visibilities: SpaceVisibility[] = []
+    visibilities: SpaceVisibility[] = [
+      SpaceVisibility.ACTIVE,
+      SpaceVisibility.DEMO,
+    ]
   ): Promise<ISpace[]> {
     const credentialMap = groupCredentialsByEntity(credentials);
     const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
