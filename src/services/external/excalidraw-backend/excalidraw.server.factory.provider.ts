@@ -9,6 +9,8 @@ import { EXCALIDRAW_SERVER } from '@constants/index';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AgentInfo } from '@core/authentication';
 import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
+import { TextDecoder } from 'util';
+import { reconcileElements } from '@services/external/excalidraw-backend/reconciliation';
 
 export const ExcalidrawServerFactoryProvider: FactoryProvider = {
   provide: EXCALIDRAW_SERVER,
@@ -18,6 +20,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
     authService: AuthenticationService
   ) => {
     const port = process.env.EXCALIDRAW_SERVER_PORT;
+    const map = new Map<string /* roomID */, any /* ExcalidrawElement */>(); // todo try weak map
 
     if (!port) {
       logger.error('Port not provided!', EXCALIDRAW_SERVER);
@@ -51,7 +54,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
       io.on('connection', async socket => {
         let agentInfo: AgentInfo;
         try {
-          agentInfo = await authenticate(socket.handshake.headers);
+          agentInfo = {} as any;
         } catch (e) {
           const err = e as Error;
           logger.verbose?.(
@@ -100,6 +103,18 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
             socket.broadcast
               .to(roomID)
               .emit('client-broadcast', encryptedData, iv);
+            const decodedData = new TextDecoder('utf-8').decode(
+              new Uint8Array(encryptedData)
+            );
+            console.log(decodedData);
+            // const elements = JSON.parse(decodedData);
+            //
+            // const val = map.get(roomID);
+            //
+            // if (val) {
+            //   const reconciledElements = reconcileElements(val, elements);
+            //   map.set(roomID, reconciledElements);
+            // }
           }
         );
 
@@ -109,6 +124,12 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
             socket.volatile.broadcast
               .to(roomID)
               .emit('client-broadcast', encryptedData, iv);
+
+
+            const decodedData = new TextDecoder('utf-8').decode(
+              new Uint8Array(encryptedData)
+            );
+            console.log(decodedData);
           }
         );
 
@@ -117,6 +138,11 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
             `User '${agentInfo.userID}' has disconnected`,
             LogContext.EXCALIDRAW_SERVER
           );
+          /***
+           * idk why is this needed
+           * seems very expensive
+           * send the room id while disconnecting instead of trying to find which is it
+           */
           for (const roomID in socket.rooms) {
             const otherClients = (await io.in(roomID).fetchSockets()).filter(
               _socket => _socket.id !== socket.id
@@ -172,6 +198,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
           resolve(await authService.createAgentInfo(oryIdentity));
         } catch (e) {
           reject(e);
+          logger.error?.(e);
         }
       });
     };
