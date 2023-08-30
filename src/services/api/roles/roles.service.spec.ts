@@ -17,7 +17,7 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { asyncToThrow, testData } from '@test/utils';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import * as getUserRolesEntityData from './util/get.user.roles.entity.data';
+import * as getUserRolesEntityData from './util/get.journey.roles.for.contributor.entity.data';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
 
@@ -90,7 +90,7 @@ describe('RolesService', () => {
     });
 
     it('Should get user roles', async () => {
-      const res = await rolesService.getUserRoles({
+      const res = await rolesService.getJourneyRolesForUser({
         userID: testData.user.id,
       });
 
@@ -155,7 +155,7 @@ describe('RolesService', () => {
           agent: testData.agent,
         });
 
-      const res = await rolesService.getOrganizationRoles({
+      const res = await rolesService.getJourneyRolesForOrganization({
         organizationID: testData.organization.id,
       });
 

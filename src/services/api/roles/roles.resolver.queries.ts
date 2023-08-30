@@ -34,7 +34,7 @@ export class RolesResolverQueries {
       AuthorizationPrivilege.READ_USERS,
       `roles user query: ${agentInfo.email}`
     );
-    return await this.rolesServices.getUserRoles(rolesData);
+    return await this.rolesServices.getRolesForUser(rolesData);
   }
 
   @UseGuards(GraphqlGuard)
@@ -44,6 +44,6 @@ export class RolesResolverQueries {
   async rolesOrganization(
     @Args('rolesData') rolesData: RolesOrganizationInput
   ): Promise<ContributorRoles> {
-    return await this.rolesServices.getOrganizationRoles(rolesData);
+    return await this.rolesServices.getRolesForOrganization(rolesData);
   }
 }

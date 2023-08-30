@@ -1,18 +1,15 @@
 import { Space } from '@domain/challenge/space/space.entity';
 import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { Opportunity } from '@domain/collaboration/opportunity';
-import { Organization } from '@src/domain/community/organization';
 import { RolesResultSpace } from '../dto/roles.dto.result.space';
 import { RolesResultCommunity } from '../dto/roles.dto.result.community';
-import { RolesResultOrganization } from '../dto/roles.dto.result.organization';
 import { CredentialMap } from './group.credentials.by.entity';
 
-export const getUserRolesQueryResult = (
+export const getJourneyRolesForContributorQueryResult = (
   map: CredentialMap,
   spaces: Space[],
   challenges: Challenge[],
-  opportunities: Opportunity[],
-  organizations: Organization[]
+  opportunities: Opportunity[]
 ) => {
   return {
     spaces: spaces.map(space => {
@@ -47,15 +44,6 @@ export const getUserRolesQueryResult = (
           return oppResult;
         });
       return spaceResult;
-    }),
-    organizations: organizations.map(org => {
-      const orgResult = new RolesResultOrganization(
-        org,
-        org.profile.displayName
-      );
-      orgResult.userGroups = [];
-      orgResult.roles = map.get('organizations')?.get(org.id) ?? [];
-      return orgResult;
     }),
   };
 };
