@@ -28,6 +28,7 @@ import { SpaceAuthorizationService } from '@domain/challenge/space/space.service
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AuthResetService } from '@services/auth-reset/publisher/auth-reset.service';
 
 @Resolver()
 export class AdminAuthorizationResolverMutations {
@@ -45,7 +46,8 @@ export class AdminAuthorizationResolverMutations {
     private organizationService: OrganizationService,
     private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private authResetService: AuthResetService
   ) {
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
@@ -234,68 +236,15 @@ export class AdminAuthorizationResolverMutations {
       `reset authorization on platform: ${agentInfo.email}`
     );
 
-    const [spaces, organizations, users] = await Promise.all([
-      this.spaceService.getAllSpaces({
-        relations: {
-          preferenceSet: {
-            preferences: true,
-          },
-        },
-      }),
-      this.organizationService.getOrganizations({}),
-      this.userService.getUsers({}),
-    ]);
+    try {
+      await this.authResetService.publishAllSpaceReset();
+      await this.authResetService.publishAllOrganizationsReset();
+      await this.authResetService.publishAllUsersReset();
+      await this.authResetService.publishPlatformReset();
+    } catch (error) {
+      return false;
+    }
 
-    const resetSpaceAuthPromises = spaces.map(async space => {
-      this.authorizationService.grantAccessOrFail(
-        agentInfo,
-        space.authorization,
-        AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
-        `reset authorization definition: ${agentInfo.email}`
-      );
-      await this.spaceAuthorizationService.applyAuthorizationPolicy(space);
-    });
-
-    const resetOrgAuthPromises = organizations.map(async organization => {
-      this.authorizationService.grantAccessOrFail(
-        agentInfo,
-        organization.authorization,
-        AuthorizationPrivilege.UPDATE, //// todo: replace with AUTHORIZATION_RESET once that has been granted
-        `reset authorization definition on organization: ${organization.id}`
-      );
-      await this.organizationAuthorizationService.applyAuthorizationPolicy(
-        organization
-      );
-    });
-
-    const resetUserAuthPromises = users.map(async user => {
-      this.authorizationService.grantAccessOrFail(
-        agentInfo,
-        user.authorization,
-        AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
-        `reset authorization definition on user: ${user.id}`
-      );
-      await this.userAuthorizationService.applyAuthorizationPolicy(user);
-    });
-
-    const allPromises = [
-      ...resetSpaceAuthPromises,
-      ...resetOrgAuthPromises,
-      ...resetUserAuthPromises,
-    ];
-
-    const results = await Promise.allSettled(allPromises);
-
-    let res = true;
-    results.forEach((result, index) => {
-      if (result.status === 'rejected') {
-        res = false;
-        this.logger.error(
-          `Error with promise at index ${index}: ${result.reason}`
-        );
-      }
-    });
-
-    return res;
+    return true;
   }
 }

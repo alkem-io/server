@@ -1,10 +1,10 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { AuthResetService } from './auth-reset.service';
 import { authResetQueueFactoryProvider } from './AuthResetQueueFactoryProvider';
-import { SpaceModule } from '@domain/challenge/space/space.module';
 
+@Global()
 @Module({
-  // imports: [SpaceModule],
+  imports: [],
   providers: [AuthResetService, authResetQueueFactoryProvider],
   exports: [AuthResetService],
 })

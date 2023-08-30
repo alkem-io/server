@@ -63,7 +63,7 @@ import {
 import { MeModule } from '@services/api/me';
 import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
 import { LookupModule } from '@services/api/lookup';
-import { AuthResetController } from '@services/auth-reset/auth-reset.controller';
+import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 
 @Module({
   imports: [
@@ -223,14 +223,10 @@ import { AuthResetController } from '@services/auth-reset/auth-reset.controller'
     StorageAccessModule,
     MeModule,
     ChatGuidanceModule,
-
     LookupModule,
+    AuthResetSubscriberModule,
   ],
-  controllers: [
-    AppController,
-    SsiCredentialFlowController,
-    AuthResetController,
-  ],
+  controllers: [AppController, SsiCredentialFlowController],
   providers: [
     {
       provide: APP_INTERCEPTOR,

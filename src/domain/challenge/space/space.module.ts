@@ -33,7 +33,6 @@ import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { SpaceStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.storage.space.loader.creator';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
-import { AuthResetModule } from '@services/auth-reset/auth-reset.module';
 
 @Module({
   imports: [
@@ -62,8 +61,6 @@ import { AuthResetModule } from '@services/auth-reset/auth-reset.module';
     ContributionReporterModule,
     LoaderCreatorModule,
     NameReporterModule,
-    AuthResetModule,
-
     TypeOrmModule.forFeature([Space]),
   ],
   providers: [

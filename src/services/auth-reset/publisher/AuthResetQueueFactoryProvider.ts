@@ -17,7 +17,7 @@ export const authResetQueueFactoryProvider: FactoryProvider = {
     try {
       const options = {
         urls: [connectionString],
-        queue: 'auth-reset',
+        queue: MessagingQueue.AUTH_RESET,
         queueOptions: {
           // the queue will survive a broker restart
           durable: true,
