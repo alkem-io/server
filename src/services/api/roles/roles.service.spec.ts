@@ -17,7 +17,8 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { asyncToThrow, testData } from '@test/utils';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import * as getUserRolesEntityData from './util/get.journey.roles.for.contributor.entity.data';
+import * as getJourneyRolesForContributorEntityData from './util/get.journey.roles.for.contributor.entity.data';
+import * as getOrganizationRolesForUserEntityData from './util/get.organization.roles.for.user.entity.data';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
 
@@ -66,11 +67,22 @@ describe('RolesService', () => {
         .mockReturnValue([SpaceVisibility.ACTIVE]);
 
       jest
-        .spyOn(getUserRolesEntityData, 'getUserRolesEntityData')
+        .spyOn(
+          getJourneyRolesForContributorEntityData,
+          'getJourneyRolesForContributorEntityData'
+        )
         .mockResolvedValue({
           spaces: [testData.space as any],
           challenges: [testData.challenge as any],
           opportunities: [testData.opportunity as any],
+        });
+
+      jest
+        .spyOn(
+          getOrganizationRolesForUserEntityData,
+          'getOrganizationRolesForUserEntityData'
+        )
+        .mockResolvedValue({
           organizations: [testData.organization as any],
         });
 
@@ -90,11 +102,18 @@ describe('RolesService', () => {
     });
 
     it('Should get user roles', async () => {
-      const res = await rolesService.getJourneyRolesForUser({
+      const roles = await rolesService.getRolesForUser({
         userID: testData.user.id,
       });
 
-      expect(res.organizations).toEqual(
+      const organizationRoles = await rolesService.getOrganizationRolesForUser(
+        roles
+      );
+      const journeyRoles = await rolesService.getJourneyRolesForContributor(
+        roles
+      );
+
+      expect(organizationRoles).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             organizationID: testData.organization.id,
@@ -102,7 +121,7 @@ describe('RolesService', () => {
         ])
       );
 
-      expect(res.spaces).toEqual(
+      expect(journeyRoles).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             spaceID: testData.space.id,
@@ -155,11 +174,13 @@ describe('RolesService', () => {
           agent: testData.agent,
         });
 
-      const res = await rolesService.getJourneyRolesForOrganization({
+      const roles = await rolesService.getRolesForOrganization({
         organizationID: testData.organization.id,
       });
 
-      expect(res.spaces).toEqual(
+      const spaces = await rolesService.getJourneyRolesForContributor(roles);
+
+      expect(spaces).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             spaceID: testData.space.id,

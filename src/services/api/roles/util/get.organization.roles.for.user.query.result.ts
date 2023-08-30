@@ -5,16 +5,11 @@ import { CredentialMap } from './group.credentials.by.entity';
 export const getOrganizationRolesForUserQueryResult = (
   map: CredentialMap,
   organizations: Organization[]
-) => {
-  return {
-    organizations: organizations.map(org => {
-      const orgResult = new RolesResultOrganization(
-        org,
-        org.profile.displayName
-      );
-      orgResult.userGroups = [];
-      orgResult.roles = map.get('organizations')?.get(org.id) ?? [];
-      return orgResult;
-    }),
-  };
+): RolesResultOrganization[] => {
+  return organizations.map(org => {
+    const orgResult = new RolesResultOrganization(org, org.profile.displayName);
+    orgResult.userGroups = [];
+    orgResult.roles = map.get('organizations')?.get(org.id) ?? [];
+    return orgResult;
+  });
 };

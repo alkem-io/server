@@ -71,15 +71,12 @@ export class RolesService {
   }
 
   async getOrganizationRolesForUser(
-    contributorID: string
+    roles: ContributorRoles
   ): Promise<RolesResultOrganization[]> {
-    const user = await this.userService.getUserWithAgent(contributorID);
-
-    const maps = await mapOrganizationCredentialsToRoles(
+    return await mapOrganizationCredentialsToRoles(
       this.entityManager,
-      user.agent?.credentials || []
+      roles.credentials
     );
-    return maps.organizations;
   }
 
   public async getJourneyRolesForContributor(
@@ -89,12 +86,11 @@ export class RolesService {
       roles.filter
     );
 
-    const maps = await mapJourneyCredentialsToRoles(
+    return await mapJourneyCredentialsToRoles(
       this.entityManager,
       roles.credentials,
       allowedVisibilities
     );
-    return maps.spaces;
   }
 
   public async getUserApplications(
