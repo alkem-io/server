@@ -25,3 +25,4 @@ export * from './user.service.mock';
 export * from './winston.provider.mock';
 export * from './entity.manager.provider.mock';
 export * from './elasticsearch.client.provider.mock';
+export * from './auth.reset.service.mock';
