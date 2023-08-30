@@ -9,8 +9,6 @@ import { EXCALIDRAW_SERVER } from '@constants/index';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AgentInfo } from '@core/authentication';
 import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
-import { TextDecoder } from 'util';
-import { reconcileElements } from '@services/external/excalidraw-backend/reconciliation';
 
 export const ExcalidrawServerFactoryProvider: FactoryProvider = {
   provide: EXCALIDRAW_SERVER,
@@ -20,7 +18,6 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
     authService: AuthenticationService
   ) => {
     const port = process.env.EXCALIDRAW_SERVER_PORT;
-    const map = new Map<string /* roomID */, any /* ExcalidrawElement */>(); // todo try weak map
 
     if (!port) {
       logger.error('Port not provided!', EXCALIDRAW_SERVER);
@@ -103,18 +100,6 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
             socket.broadcast
               .to(roomID)
               .emit('client-broadcast', encryptedData, iv);
-            const decodedData = new TextDecoder('utf-8').decode(
-              new Uint8Array(encryptedData)
-            );
-            console.log(decodedData);
-            // const elements = JSON.parse(decodedData);
-            //
-            // const val = map.get(roomID);
-            //
-            // if (val) {
-            //   const reconciledElements = reconcileElements(val, elements);
-            //   map.set(roomID, reconciledElements);
-            // }
           }
         );
 
@@ -124,12 +109,6 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
             socket.volatile.broadcast
               .to(roomID)
               .emit('client-broadcast', encryptedData, iv);
-
-
-            const decodedData = new TextDecoder('utf-8').decode(
-              new Uint8Array(encryptedData)
-            );
-            console.log(decodedData);
           }
         );
 
