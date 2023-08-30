@@ -42,6 +42,8 @@ import { IApplication } from '@domain/community/application';
 import { IInvitation } from '@domain/community/invitation';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IOpportunity } from '@domain/collaboration/opportunity';
+import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
+import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -55,6 +57,7 @@ export class LookupResolverFields {
     private collaborationService: CollaborationService,
     private contextService: ContextService,
     private whiteboardService: WhiteboardService,
+    private whiteboardRtService: WhiteboardRtService,
     private whiteboardTemplateService: WhiteboardTemplateService,
     private profileService: ProfileService,
     private postService: PostService,
@@ -226,6 +229,26 @@ export class LookupResolverFields {
     );
 
     return whiteboard;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IWhiteboardRt, {
+    nullable: true,
+    description: 'Lookup the specified WhiteboardRt',
+  })
+  async whiteboardRt(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IWhiteboardRt> {
+    const whiteboardRt = await this.whiteboardRtService.getWhiteboardOrFail(id);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      whiteboardRt.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup Whiteboard: ${whiteboardRt.nameID}`
+    );
+
+    return whiteboardRt;
   }
 
   @UseGuards(GraphqlGuard)
