@@ -50,9 +50,9 @@ import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { IReference } from '@domain/common/reference';
 import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
-import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard';
-import { CreateWhiteboardRtInput } from '@domain/common/whiteboard-rt/dto/whiteboard.rt.dto.create';
+import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
+import { CreateWhiteboardRtInput } from '@domain/common/whiteboard-rt/types';
 
 @Injectable()
 export class CalloutService {
@@ -381,14 +381,15 @@ export class CalloutService {
 
   public async deleteCallout(calloutID: string): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: [
-        'posts',
-        'whiteboards',
-        'comments',
-        'postTemplate',
-        'whiteboardTemplate',
-        'profile',
-      ],
+      relations: {
+        posts: true,
+        whiteboards: true,
+        whiteboardRt: true,
+        comments: true,
+        postTemplate: true,
+        whiteboardTemplate: true,
+        profile: true,
+      },
     });
 
     if (callout.profile) {
@@ -399,6 +400,10 @@ export class CalloutService {
       for (const whiteboard of callout.whiteboards) {
         await this.whiteboardService.deleteWhiteboard(whiteboard.id);
       }
+    }
+
+    if (callout.whiteboardRt) {
+      await this.whiteboardRtService.deleteWhiteboard(callout.whiteboardRt.id);
     }
 
     if (callout.posts) {

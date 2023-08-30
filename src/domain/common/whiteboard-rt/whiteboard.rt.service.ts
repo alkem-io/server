@@ -68,6 +68,7 @@ export class WhiteboardRtService {
   async deleteWhiteboard(whiteboardID: string): Promise<IWhiteboardRt> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardID, {
       relations: {
+        authorization: true,
         profile: true,
       },
     });
@@ -97,7 +98,6 @@ export class WhiteboardRtService {
       },
     });
 
-    // Before updating the whiteboard contents check the user doing it has it checked out
     if (
       updateWhiteboardData.value &&
       updateWhiteboardData.value !== whiteboard.value

@@ -1,6 +1,6 @@
-import { ICallout } from '@domain/collaboration/callout';
 import { Field, ObjectType } from '@nestjs/graphql';
 import JSON from 'graphql-type-json';
+import { ICallout } from '@domain/collaboration/callout';
 import { INameable } from '../entity/nameable-entity/nameable.interface';
 
 @ObjectType('WhiteboardRt')

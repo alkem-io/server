@@ -45,7 +45,7 @@ export class WhiteboardRtAuthorizationService {
         whiteboard.authorization
       );
 
-    return await this.whiteboardRtService.save(whiteboard);
+    return this.whiteboardRtService.save(whiteboard);
   }
 
   private appendCredentialRules(
