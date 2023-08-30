@@ -8,6 +8,7 @@ import { INameable } from '@domain/common/entity/nameable-entity/nameable.interf
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
 
 @ObjectType('Callout')
 export abstract class ICallout extends INameable {
@@ -38,11 +39,11 @@ export abstract class ICallout extends INameable {
   })
   postTemplate?: IPostTemplate;
 
-  @Field(() => [IWhiteboard], {
-    nullable: true,
-    description: 'The Whiteboards associated with this Callout.',
-  })
+  // exposed via field resolver
   whiteboards?: IWhiteboard[];
+
+  // exposed via field resolver
+  whiteboardRt?: IWhiteboardRt;
 
   @Field(() => IWhiteboardTemplate, {
     nullable: true,

@@ -25,6 +25,7 @@ import { Loader } from '@core/dataloader/decorators';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -130,6 +131,19 @@ export class CalloutResolverFields {
       limit,
       shuffle
     );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('whiteboardRt', () => IWhiteboardRt, {
+    nullable: true,
+    description: 'The real time Whiteboard associated with this Callout.',
+  })
+  @Profiling.api
+  public whiteboardRt(
+    @Parent() callout: Callout
+  ): Promise<IWhiteboardRt | undefined> {
+    return this.calloutService.getWhiteboardRt(callout);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

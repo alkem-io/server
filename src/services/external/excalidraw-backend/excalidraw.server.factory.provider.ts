@@ -10,7 +10,7 @@ import { AuthenticationService } from '@core/authentication/authentication.servi
 import { AgentInfo } from '@core/authentication';
 import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
 import { TextDecoder } from 'util';
-import { reconcileElements } from '@services/external/excalidraw-backend/reconciliation';
+// import { reconcileElements } from '@services/external/excalidraw-backend/reconciliation';
 
 export const ExcalidrawServerFactoryProvider: FactoryProvider = {
   provide: EXCALIDRAW_SERVER,
@@ -20,7 +20,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
     authService: AuthenticationService
   ) => {
     const port = process.env.EXCALIDRAW_SERVER_PORT;
-    const map = new Map<string /* roomID */, any /* ExcalidrawElement */>(); // todo try weak map
+    // const map = new Map<string /* roomID */, any /* ExcalidrawElement */>(); // todo try weak map
 
     if (!port) {
       logger.error('Port not provided!', EXCALIDRAW_SERVER);
@@ -54,7 +54,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
       io.on('connection', async socket => {
         let agentInfo: AgentInfo;
         try {
-          agentInfo = {} as any;
+          agentInfo = await authenticate(socket.handshake.headers);
         } catch (e) {
           const err = e as Error;
           logger.verbose?.(
@@ -124,7 +124,6 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
             socket.volatile.broadcast
               .to(roomID)
               .emit('client-broadcast', encryptedData, iv);
-
 
             const decodedData = new TextDecoder('utf-8').decode(
               new Uint8Array(encryptedData)
