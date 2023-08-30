@@ -2,18 +2,20 @@
 
 ## Prerequisites
 
-- Create `.env` file in the `backups` folder. Copy the .env.sample and fill in the missing values
+- Create `.env` file in the `migrations` folder. Copy the .env.sample and fill in the missing values
 - The `mariadb` container needs to be running from `quickstart-servies`, or started with `npm run start:services`
 
 ## The following scripts are added
 
-### Creating a snapshot of the current local database
+### Creating a snapshot of the current local databases (`alkemio` / `synapse`)
 
-Just run `./create_snapshot.sh`. It will create a backup with the name `alkemio.dump.sql` in the `backups` folder
+- Run `./create_snapshot.sh`. It will create a backup with the name `alkemio_dump.sql` in the `migrations` folder
+- Run `./create_synapse_snapshot`. It will create a backup with the name `synapse_dump.psql` in the `migrations` folder
 
-### Restoring a snapshot to the current `alkemio` database
+### Restoring a snapshot to the current databases (`alkemio` / `synapse`)
 
-- Just run `./restore_snapshot.sh`. It will restore a backup with the name `alkemio.dump.sql` from the `backups` folder
+- Run `./restore_snapshot.sh`. It will restore a backup with the name `alkemio_dump.sql` from the `migrations` folder
+- Run `./restore_synapse_snapshot.sh`. It will restore a backup with the name `synapse_dump.psql` from the `migrations` folder
 
 ### Export to CSV
 
