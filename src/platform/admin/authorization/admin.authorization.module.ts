@@ -11,6 +11,7 @@ import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/p
 import { SpaceModule } from '@domain/challenge/space/space.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { PlatformModule } from '@platform/platfrom/platform.module';
+import { AuthResetModule } from '@services/auth-reset/publisher/auth-reset.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { PlatformModule } from '@platform/platfrom/platform.module';
     PlatformModule,
     CredentialModule,
     PlatformAuthorizationPolicyModule,
+    AuthResetModule,
   ],
   providers: [
     AdminAuthorizationService,

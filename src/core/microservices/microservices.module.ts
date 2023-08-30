@@ -104,6 +104,7 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     WALLET_MANAGEMENT_SERVICE,
     MATRIX_ADAPTER_SERVICE,
     CHAT_GUIDANCE_SERVICE,
+    AUTH_RESET_SERVICE,
   ],
 })
 export class MicroservicesModule {}
