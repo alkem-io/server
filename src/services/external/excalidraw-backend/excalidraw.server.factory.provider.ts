@@ -51,7 +51,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
       io.on('connection', async socket => {
         let agentInfo: AgentInfo;
         try {
-          agentInfo = {} as any;
+          agentInfo = await authenticate(socket.handshake.headers);
         } catch (e) {
           const err = e as Error;
           logger.verbose?.(
