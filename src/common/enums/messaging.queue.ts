@@ -3,6 +3,7 @@ export enum MessagingQueue {
   WALLET_MANAGER = 'alkemio-wallet-manager',
   NOTIFICATIONS = 'alkemio-notifications',
   MATRIX_ADAPTER = 'alkemio-matrix-adapter',
+  AUTH_RESET = 'alkemio-auth-reset',
   SUBSCRIPTION_ROOM_MESSAGE = 'alkemio-subscriptions-room-message',
   SUBSCRIPTION_WHITEBOARD_CONTENT = 'alkemio-subscriptions-whiteboard-content',
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL = 'alkemio-subscriptions-profile-verified-credential',
