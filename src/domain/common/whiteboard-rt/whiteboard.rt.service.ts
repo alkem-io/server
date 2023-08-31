@@ -23,117 +23,123 @@ export class WhiteboardRtService {
     private profileService: ProfileService
   ) {}
 
-  async createWhiteboard(
-    whiteboardData: CreateWhiteboardRtInput,
+  async createWhiteboardRt(
+    whiteboardRtData: CreateWhiteboardRtInput,
     userID?: string
   ): Promise<IWhiteboardRt> {
-    const whiteboard: IWhiteboardRt = WhiteboardRt.create({
-      ...whiteboardData,
+    const whiteboardRt: IWhiteboardRt = WhiteboardRt.create({
+      ...whiteboardRtData,
     });
-    whiteboard.authorization = new AuthorizationPolicy();
-    whiteboard.createdBy = userID;
+    whiteboardRt.authorization = new AuthorizationPolicy();
+    whiteboardRt.createdBy = userID;
 
-    whiteboard.profile = await this.profileService.createProfile(
-      whiteboardData.profileData
+    whiteboardRt.profile = await this.profileService.createProfile(
+      whiteboardRtData.profileData
     );
     await this.profileService.addVisualOnProfile(
-      whiteboard.profile,
+      whiteboardRt.profile,
       VisualType.CARD
     );
-    await this.profileService.addTagsetOnProfile(whiteboard.profile, {
+    await this.profileService.addTagsetOnProfile(whiteboardRt.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: [],
     });
 
-    return this.save(whiteboard);
+    return this.save(whiteboardRt);
   }
 
-  async getWhiteboardOrFail(
-    whiteboardID: string,
+  async getWhiteboardRtOrFail(
+    whiteboardRtID: string,
     options?: FindOneOptions<WhiteboardRt>
   ): Promise<IWhiteboardRt | never> {
-    const whiteboard = await this.whiteboardRtRepository.findOne({
-      where: { id: whiteboardID },
+    const whiteboardRt = await this.whiteboardRtRepository.findOne({
+      where: { id: whiteboardRtID },
       ...options,
     });
 
-    if (!whiteboard)
+    if (!whiteboardRt)
       throw new EntityNotFoundException(
-        `Not able to locate Whiteboard with the specified ID: ${whiteboardID}`,
+        `Not able to locate WhiteboardRt with the specified ID: ${whiteboardRtID}`,
         LogContext.CHALLENGES
       );
-    return whiteboard;
+    return whiteboardRt;
   }
 
-  async deleteWhiteboard(whiteboardID: string): Promise<IWhiteboardRt> {
-    const whiteboard = await this.getWhiteboardOrFail(whiteboardID, {
+  async deleteWhiteboardRt(whiteboardRtID: string): Promise<IWhiteboardRt> {
+    const whiteboardRt = await this.getWhiteboardRtOrFail(whiteboardRtID, {
       relations: {
         authorization: true,
         profile: true,
       },
     });
 
-    if (whiteboard.profile) {
-      await this.profileService.deleteProfile(whiteboard.profile.id);
+    if (whiteboardRt.profile) {
+      await this.profileService.deleteProfile(whiteboardRt.profile.id);
     }
 
-    if (whiteboard.authorization) {
-      await this.authorizationPolicyService.delete(whiteboard.authorization);
+    if (whiteboardRt.authorization) {
+      await this.authorizationPolicyService.delete(whiteboardRt.authorization);
     }
 
-    const deletedWhiteboard = await this.whiteboardRtRepository.remove(
-      whiteboard as WhiteboardRt
+    const deletedWhiteboardRt = await this.whiteboardRtRepository.remove(
+      whiteboardRt as WhiteboardRt
     );
-    deletedWhiteboard.id = whiteboardID;
-    return deletedWhiteboard;
+    deletedWhiteboardRt.id = whiteboardRtID;
+    return deletedWhiteboardRt;
   }
 
-  async updateWhiteboard(
-    whiteboardInput: IWhiteboardRt,
-    updateWhiteboardData: UpdateWhiteboardRtInput
+  async updateWhiteboardRt(
+    whiteboardRtInput: IWhiteboardRt,
+    updateWhiteboardRtData: UpdateWhiteboardRtInput
   ): Promise<IWhiteboardRt> {
-    const whiteboard = await this.getWhiteboardOrFail(whiteboardInput.id, {
-      relations: {
-        profile: true,
-      },
-    });
+    const whiteboardRt = await this.getWhiteboardRtOrFail(
+      whiteboardRtInput.id,
+      {
+        relations: {
+          profile: true,
+        },
+      }
+    );
 
     if (
-      updateWhiteboardData.value &&
-      updateWhiteboardData.value !== whiteboard.value
+      updateWhiteboardRtData.content &&
+      updateWhiteboardRtData.content !== whiteboardRt.content
     ) {
-      whiteboard.value = updateWhiteboardData.value;
+      whiteboardRt.content = updateWhiteboardRtData.content;
     }
-    if (updateWhiteboardData.profileData) {
-      whiteboard.profile = await this.profileService.updateProfile(
-        whiteboard.profile,
-        updateWhiteboardData.profileData
+    if (updateWhiteboardRtData.profileData) {
+      whiteboardRt.profile = await this.profileService.updateProfile(
+        whiteboardRt.profile,
+        updateWhiteboardRtData.profileData
       );
     }
-    return this.save(whiteboard);
+    return this.save(whiteboardRt);
   }
 
   public async getProfile(
-    whiteboard: IWhiteboardRt,
+    whiteboardRt: IWhiteboardRt,
     relations?: FindOptionsRelations<IWhiteboardRt>
   ): Promise<IProfile> {
-    const whiteboardLoaded = await this.getWhiteboardOrFail(whiteboard.id, {
-      relations: {
-        profile: true,
-        ...relations,
-      },
-    });
+    const whiteboardRtLoaded = await this.getWhiteboardRtOrFail(
+      whiteboardRt.id,
+      {
+        relations: {
+          profile: true,
+          ...relations,
+        },
+      }
+    );
 
-    if (!whiteboardLoaded.profile)
+    if (!whiteboardRtLoaded.profile)
       throw new EntityNotFoundException(
-        `WhiteboardRt profile not initialised: ${whiteboard.id}`,
+        `WhiteboardRt profile not initialised: ${whiteboardRt.id}`,
         LogContext.COLLABORATION
       );
 
-    return whiteboardLoaded.profile;
+    return whiteboardRtLoaded.profile;
   }
 
-  public save(whiteboard: IWhiteboardRt): Promise<IWhiteboardRt> {
-    return this.whiteboardRtRepository.save(whiteboard);
+  public save(whiteboardRt: IWhiteboardRt): Promise<IWhiteboardRt> {
+    return this.whiteboardRtRepository.save(whiteboardRt);
   }
 }

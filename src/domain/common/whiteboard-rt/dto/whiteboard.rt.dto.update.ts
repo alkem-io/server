@@ -8,5 +8,5 @@ export class UpdateWhiteboardRtInput extends UpdateNameableInput {
   @Field({ nullable: true })
   @IsOptional()
   @MaxLength(CANVAS_VALUE_LENGTH)
-  value?: string;
+  content?: string;
 }

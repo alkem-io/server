@@ -23,24 +23,24 @@ export class WhiteboardRtResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => IWhiteboardRt, {
     description:
-      'Updates the specified Whiteboard. Will be removed in the next iteration; manual save will not be allowed',
+      'Updates the specified WhiteboardRt. Will be removed in the next iteration; manual save will not be allowed',
   })
   async updateWhiteboardRt(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('whiteboardData') whiteboardData: UpdateWhiteboardRtDirectInput
   ): Promise<IWhiteboardRt> {
-    const whiteboard = await this.whiteboardRtService.getWhiteboardOrFail(
+    const whiteboardRt = await this.whiteboardRtService.getWhiteboardRtOrFail(
       whiteboardData.ID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
-      whiteboard.authorization,
+      whiteboardRt.authorization,
       AuthorizationPrivilege.UPDATE_WHITEBOARD,
-      `update Whiteboard: ${whiteboard.nameID}`
+      `update WhiteboardRt: ${whiteboardRt.nameID}`
     );
 
-    return this.whiteboardRtService.updateWhiteboard(
-      whiteboard,
+    return this.whiteboardRtService.updateWhiteboardRt(
+      whiteboardRt,
       whiteboardData
     );
   }

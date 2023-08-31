@@ -6,11 +6,11 @@ import { INameable } from '../entity/nameable-entity/nameable.interface';
 @ObjectType('WhiteboardRt')
 export abstract class IWhiteboardRt extends INameable {
   @Field(() => JSON, {
-    description: 'The JSON representation of the Whiteboard.',
+    description: 'The JSON representation of the WhiteboardRt.',
   })
-  value?: string;
+  content?: string;
 
-  // Expose the date at which the Whiteboard was created from parent entity
+  // Expose the date at which the WhiteboardRt was created from parent entity
   @Field(() => Date)
   createdDate!: Date;
 

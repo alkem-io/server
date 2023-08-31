@@ -13,29 +13,29 @@ import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 
 @Entity()
 export class WhiteboardRt extends NameableEntity implements IWhiteboardRt {
-  constructor(value?: string) {
+  constructor(content?: string) {
     super();
-    this.value = value || '';
+    this.content = content || '';
   }
 
   @BeforeInsert()
   @BeforeUpdate()
   async compressValue() {
-    if (this.value !== '') {
-      this.value = await compressText(this.value);
+    if (this.content !== '') {
+      this.content = await compressText(this.content);
     }
   }
   @AfterInsert()
   @AfterUpdate()
   @AfterLoad()
   async decompressValue() {
-    if (this.value !== '') {
-      this.value = await decompressText(this.value);
+    if (this.content !== '') {
+      this.content = await decompressText(this.content);
     }
   }
 
   @Column('longtext', { nullable: false })
-  value!: string;
+  content!: string;
 
   @Column('char', { length: 36, nullable: true })
   createdBy!: string;

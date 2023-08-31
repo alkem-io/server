@@ -29,16 +29,16 @@ export class WhiteboardRtResolverFields {
 
   @ResolveField('createdBy', () => IUser, {
     nullable: true,
-    description: 'The user that created this Whiteboard',
+    description: 'The user that created this WhiteboardRt',
   })
   async createdBy(
-    @Parent() whiteboard: IWhiteboardRt,
+    @Parent() whiteboardRt: IWhiteboardRt,
     @Loader(UserLoaderCreator, { resolveToNull: true }) loader: ILoader<IUser>
   ): Promise<IUser | null> {
-    const createdBy = whiteboard.createdBy;
+    const createdBy = whiteboardRt.createdBy;
     if (!createdBy) {
       throw new EntityNotInitializedException(
-        `CreatedBy not set on Whiteboard with id ${whiteboard.id}`,
+        `CreatedBy not set on WhiteboardRt with id ${whiteboardRt.id}`,
         LogContext.COLLABORATION
       );
     }
@@ -54,7 +54,7 @@ export class WhiteboardRtResolverFields {
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(
-          `createdBy '${createdBy}' unable to be resolved when resolving whiteboard '${whiteboard.id}'`,
+          `createdBy '${createdBy}' unable to be resolved when resolving whiteboardRt '${whiteboardRt.id}'`,
           LogContext.COLLABORATION
         );
         return null;
@@ -67,14 +67,14 @@ export class WhiteboardRtResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
-    description: 'The Profile for this Whiteboard.',
+    description: 'The Profile for this WhiteboardRt.',
   })
   @Profiling.api
   async profile(
-    @Parent() whiteboard: IWhiteboardRt,
+    @Parent() whiteboardRt: IWhiteboardRt,
     @Loader(ProfileLoaderCreator, { parentClassRef: WhiteboardRt })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
-    return loader.load(whiteboard.id);
+    return loader.load(whiteboardRt.id);
   }
 }

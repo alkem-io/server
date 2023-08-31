@@ -240,12 +240,14 @@ export class LookupResolverFields {
     @CurrentUser() agentInfo: AgentInfo,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<IWhiteboardRt> {
-    const whiteboardRt = await this.whiteboardRtService.getWhiteboardOrFail(id);
+    const whiteboardRt = await this.whiteboardRtService.getWhiteboardRtOrFail(
+      id
+    );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       whiteboardRt.authorization,
       AuthorizationPrivilege.READ,
-      `lookup Whiteboard: ${whiteboardRt.nameID}`
+      `lookup WhiteboardRt: ${whiteboardRt.nameID}`
     );
 
     return whiteboardRt;

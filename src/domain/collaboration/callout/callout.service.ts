@@ -52,7 +52,10 @@ import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
-import { CreateWhiteboardRtInput } from '@domain/common/whiteboard-rt/types';
+import {
+  CreateWhiteboardRtInput,
+  IWhiteboardRt,
+} from '@domain/common/whiteboard-rt/types';
 
 @Injectable()
 export class CalloutService {
@@ -227,10 +230,10 @@ export class CalloutService {
       `${data.profileData.displayName}`
     );
 
-    const whiteboardRt = await this.whiteboardRtService.createWhiteboard(
+    const whiteboardRt = await this.whiteboardRtService.createWhiteboardRt(
       {
         nameID: whiteboardRtNameID,
-        value: data.value,
+        content: data.content,
         profileData: data.profileData,
       },
       authorID
@@ -403,7 +406,9 @@ export class CalloutService {
     }
 
     if (callout.whiteboardRt) {
-      await this.whiteboardRtService.deleteWhiteboard(callout.whiteboardRt.id);
+      await this.whiteboardRtService.deleteWhiteboardRt(
+        callout.whiteboardRt.id
+      );
     }
 
     if (callout.posts) {
@@ -654,7 +659,9 @@ export class CalloutService {
     return results;
   }
 
-  public async getWhiteboardRt(callout: ICallout) {
+  public async getWhiteboardRt(
+    callout: ICallout
+  ): Promise<IWhiteboardRt | undefined> {
     const res: ICallout = await this.calloutRepository.findOneOrFail({
       where: { id: callout.id },
       relations: { whiteboardRt: true },
