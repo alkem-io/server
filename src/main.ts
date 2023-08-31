@@ -8,7 +8,7 @@ import { BootstrapService } from './core/bootstrap/bootstrap.service';
 import { faviconMiddleware } from './core/middleware/favicon.middleware';
 import { useContainer } from 'class-validator';
 import { graphqlUploadExpress } from 'graphql-upload';
-import { ConfigurationTypes } from '@common/enums';
+import { ConfigurationTypes, MessagingQueue } from '@common/enums';
 import { json } from 'body-parser';
 import cookieParser from 'cookie-parser';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
@@ -60,9 +60,8 @@ const bootstrap = async () => {
     configService.get(ConfigurationTypes.HOSTING)?.port as number
   );
 
-  const connectionOptions = configService.get(
-    ConfigurationTypes.MICROSERVICES
-  )?.rabbitmq?.connection;
+  const connectionOptions = configService.get(ConfigurationTypes.MICROSERVICES)
+    ?.rabbitmq?.connection;
 
   const amqpEndpoint = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=30`;
 
@@ -70,7 +69,7 @@ const bootstrap = async () => {
     transport: Transport.RMQ,
     options: {
       urls: [amqpEndpoint],
-      queue: 'auth-reset',
+      queue: MessagingQueue.AUTH_RESET,
       queueOptions: {
         durable: true,
       },
