@@ -6,7 +6,11 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { IUser } from '@domain/community/user';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AgentInfo } from '@core/authentication';
-import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
+import {
+  AuthorizationPrivilege,
+  AuthorizationRoleGlobal,
+  LogContext,
+} from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AssignGlobalAdminInput } from './dto/authorization.dto.assign.global.admin';
@@ -21,12 +25,6 @@ import { AssignGlobalSpacesAdminInput } from './dto/authorization.dto.assign.glo
 import { RemoveGlobalSpacesAdminInput } from './dto/authorization.dto.remove.global.spaces.admin';
 import { GLOBAL_POLICY_AUTHORIZATION_GRANT_GLOBAL_ADMIN } from '@common/constants/authorization/global.policy.constants';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { SpaceService } from '@domain/challenge/space/space.service';
-import { OrganizationService } from '@domain/community/organization/organization.service';
-import { UserService } from '@domain/community/user/user.service';
-import { SpaceAuthorizationService } from '@domain/challenge/space/space.service.authorization';
-import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
-import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthResetService } from '@services/auth-reset/publisher/auth-reset.service';
 
@@ -37,14 +35,8 @@ export class AdminAuthorizationResolverMutations {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
-    private spaceAuthorizationService: SpaceAuthorizationService,
-    private organizationAuthorizationService: OrganizationAuthorizationService,
-    private userAuthorizationService: UserAuthorizationService,
     private authorizationService: AuthorizationService,
     private adminAuthorizationService: AdminAuthorizationService,
-    private spaceService: SpaceService,
-    private organizationService: OrganizationService,
-    private userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private authResetService: AuthResetService
@@ -232,7 +224,7 @@ export class AdminAuthorizationResolverMutations {
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       platformPolicy,
-      AuthorizationPrivilege.UPDATE, // todo: replace with AUTHORIZATION_RESET once that has been granted
+      AuthorizationPrivilege.PLATFORM_ADMIN, // todo: replace with AUTHORIZATION_RESET once that has been granted
       `reset authorization on platform: ${agentInfo.email}`
     );
 
@@ -242,6 +234,10 @@ export class AdminAuthorizationResolverMutations {
       await this.authResetService.publishAllUsersReset();
       await this.authResetService.publishPlatformReset();
     } catch (error) {
+      this.logger.error(
+        `Error while resetting authorization: ${error}`,
+        LogContext.AUTH
+      );
       return false;
     }
 

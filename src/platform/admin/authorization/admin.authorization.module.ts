@@ -8,9 +8,6 @@ import { AdminAuthorizationResolverMutations } from './admin.authorization.resol
 import { AdminAuthorizationResolverQueries } from './admin.authorization.resolver.queries';
 import { AdminAuthorizationService } from './admin.authorization.service';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
-import { SpaceModule } from '@domain/challenge/space/space.module';
-import { OrganizationModule } from '@domain/community/organization/organization.module';
-import { PlatformModule } from '@platform/platfrom/platform.module';
 import { AuthResetModule } from '@services/auth-reset/publisher/auth-reset.module';
 
 @Module({
@@ -19,9 +16,6 @@ import { AuthResetModule } from '@services/auth-reset/publisher/auth-reset.modul
     AuthorizationPolicyModule,
     AgentModule,
     UserModule,
-    SpaceModule,
-    OrganizationModule,
-    PlatformModule,
     CredentialModule,
     PlatformAuthorizationPolicyModule,
     AuthResetModule,
