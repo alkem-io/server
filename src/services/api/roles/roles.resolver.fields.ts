@@ -29,7 +29,7 @@ export class RolesResolverFields {
   public async organizations(
     @Parent() roles: ContributorRoles
   ): Promise<RolesResultOrganization[]> {
-    return await this.rolesService.getOrganizationRolesForUser(roles.id);
+    return await this.rolesService.getOrganizationRolesForUser(roles);
   }
 
   @UseGuards(GraphqlGuard)

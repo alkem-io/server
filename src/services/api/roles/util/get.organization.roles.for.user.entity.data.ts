@@ -21,9 +21,5 @@ export const getOrganizationRolesForUserEntityData = async (
       },
     } as FindManyOptions);
   };
-  const [organizations] = await Promise.all([
-    fetchData(Organization, organizationIds),
-  ]);
-
-  return { organizations };
+  return await Promise.all([fetchData(Organization, organizationIds)]);
 };
