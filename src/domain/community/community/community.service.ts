@@ -311,6 +311,9 @@ export class CommunityService {
     agentInfo: AgentInfo,
     community: ICommunity
   ): Promise<CommunityMembershipStatus> {
+    if (!agentInfo.agentID) {
+      return CommunityMembershipStatus.NOT_MEMBER;
+    }
     const agent = await this.agentService.getAgentOrFail(agentInfo.agentID);
     const isMember = await this.isMember(agent, community);
     if (isMember) return CommunityMembershipStatus.MEMBER;
