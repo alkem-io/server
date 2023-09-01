@@ -12,7 +12,7 @@ export const mapOrganizationCredentialsToRoles = async (
 
   const orgIds = Array.from(credentialMap.get('organizations')?.keys() ?? []);
 
-  const { organizations } = await getOrganizationRolesForUserEntityData(
+  const organizations = await getOrganizationRolesForUserEntityData(
     entityManager,
     orgIds
   );

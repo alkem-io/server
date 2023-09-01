@@ -82,9 +82,7 @@ describe('RolesService', () => {
           getOrganizationRolesForUserEntityData,
           'getOrganizationRolesForUserEntityData'
         )
-        .mockResolvedValue({
-          organizations: [testData.organization as any],
-        });
+        .mockResolvedValue([testData.organization as any]);
 
       jest
         .spyOn(applicationService, 'findApplicationsForUser')
