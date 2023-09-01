@@ -14,6 +14,7 @@ import {
   SUBSCRIPTION_DISCUSSION_UPDATED,
   SUBSCRIPTION_ROOM_EVENT,
   CHAT_GUIDANCE_SERVICE,
+  AUTH_RESET_SERVICE,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common/constants';
@@ -22,6 +23,7 @@ import { notificationsServiceFactory } from './notifications.service.factory';
 import { walletManagerServiceFactory } from './wallet-manager.service.factory';
 import { matrixAdapterServiceFactory } from './matrix.adapter.service.factory';
 import { chatGuidanceServiceFactory } from './chat.guidance.service.factory';
+import { authResetServiceFactory } from './auth.reset.service.factory';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -90,6 +92,11 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
       useFactory: chatGuidanceServiceFactory,
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
+    {
+      provide: AUTH_RESET_SERVICE,
+      useFactory: authResetServiceFactory,
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
   ],
   exports: [
     ...subscriptionConfig.map(x => x.provide),
@@ -97,6 +104,7 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     WALLET_MANAGEMENT_SERVICE,
     MATRIX_ADAPTER_SERVICE,
     CHAT_GUIDANCE_SERVICE,
+    AUTH_RESET_SERVICE,
   ],
 })
 export class MicroservicesModule {}
