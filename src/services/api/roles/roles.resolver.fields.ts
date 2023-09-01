@@ -11,6 +11,8 @@ import { ApplicationForRoleResult } from './dto/roles.dto.result.application';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { AuthorizationPrivilege } from '@common/enums';
+import { RolesResultOrganization } from './dto/roles.dto.result.organization';
+import { RolesResultSpace } from './dto/roles.dto.result.space';
 
 @Resolver(() => ContributorRoles)
 export class RolesResolverFields {
@@ -19,6 +21,27 @@ export class RolesResolverFields {
     private authorizationService: AuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('organizations', () => [RolesResultOrganization], {
+    description: 'Details of the roles the contributor has in Organizations',
+  })
+  public async organizations(
+    @Parent() roles: ContributorRoles
+  ): Promise<RolesResultOrganization[]> {
+    return await this.rolesService.getOrganizationRolesForUser(roles);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('spaces', () => [RolesResultSpace], {
+    description:
+      'Details of Spaces the User or Organization is a member of, with child memberships',
+  })
+  public async spaces(
+    @Parent() roles: ContributorRoles
+  ): Promise<RolesResultSpace[]> {
+    return await this.rolesService.getJourneyRolesForContributor(roles);
+  }
 
   @UseGuards(GraphqlGuard)
   @ResolveField('invitations', () => [InvitationForRoleResult], {
