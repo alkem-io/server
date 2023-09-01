@@ -28,12 +28,15 @@ import { ProfileAuthorizationService } from '@domain/common/profile/profile.serv
 import { PostTemplateAuthorizationService } from '@domain/template/post-template/post.template.service.authorization';
 import { WhiteboardTemplateAuthorizationService } from '@domain/template/whiteboard-template/whiteboard.template.service.authorization';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
+import { WhiteboardRtAuthorizationService } from '@domain/common/whiteboard-rt';
+
 @Injectable()
 export class CalloutAuthorizationService {
   constructor(
     private calloutService: CalloutService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
+    private whiteboardRtAuthorizationService: WhiteboardRtAuthorizationService,
     private postAuthorizationService: PostAuthorizationService,
     private postTemplateAuthorizationService: PostTemplateAuthorizationService,
     private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
@@ -86,6 +89,13 @@ export class CalloutAuthorizationService {
     for (const whiteboard of callout.whiteboards) {
       await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
         whiteboard,
+        callout.authorization
+      );
+    }
+    callout.whiteboardRt = await this.calloutService.getWhiteboardRt(callout);
+    if (callout.whiteboardRt) {
+      await this.whiteboardRtAuthorizationService.applyAuthorizationPolicy(
+        callout.whiteboardRt,
         callout.authorization
       );
     }
