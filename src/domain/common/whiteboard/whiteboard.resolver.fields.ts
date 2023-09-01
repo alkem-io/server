@@ -7,7 +7,6 @@ import { IWhiteboard } from './whiteboard.interface';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@src/core/authorization/graphql.guard';
 import { IUser } from '@domain/community/user/user.interface';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IProfile } from '../profile/profile.interface';
@@ -19,12 +18,10 @@ import {
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { WhiteboardService } from './whiteboard.service';
 
 @Resolver(() => IWhiteboard)
 export class WhiteboardResolverFields {
   constructor(
-    private whiteboardService: WhiteboardService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -39,10 +36,11 @@ export class WhiteboardResolverFields {
   ): Promise<IUser | null> {
     const createdBy = whiteboard.createdBy;
     if (!createdBy) {
-      throw new EntityNotInitializedException(
+      this.logger?.warn(
         `CreatedBy not set on Whiteboard with id ${whiteboard.id}`,
         LogContext.COLLABORATION
       );
+      return null;
     }
 
     try {
