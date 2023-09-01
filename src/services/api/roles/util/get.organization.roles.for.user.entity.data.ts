@@ -1,25 +1,19 @@
-import { EntityManager, EntityTarget, FindManyOptions, In } from 'typeorm';
+import { EntityManager, FindManyOptions, In } from 'typeorm';
 import { Organization } from '@src/domain/community/organization';
 
-export const getOrganizationRolesForUserEntityData = async (
+export const getOrganizationRolesForUserEntityData = (
   entityManager: EntityManager,
   organizationIds: string[]
-) => {
-  const fetchData = <T extends Organization>(
-    ref: EntityTarget<T>,
-    ids: string[]
-  ): Promise<T[]> => {
-    return entityManager.find(ref, {
-      where: {
-        id: In(ids),
+): Promise<Organization[]> => {
+  return entityManager.find(Organization, {
+    where: {
+      id: In(organizationIds),
+    },
+    relations: { profile: true },
+    select: {
+      profile: {
+        displayName: true,
       },
-      relations: { profile: true },
-      select: {
-        profile: {
-          displayName: true,
-        },
-      },
-    } as FindManyOptions);
-  };
-  return await Promise.all([fetchData(Organization, organizationIds)]);
+    },
+  } as FindManyOptions);
 };
