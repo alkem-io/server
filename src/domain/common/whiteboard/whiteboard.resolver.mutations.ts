@@ -97,7 +97,7 @@ export class WhiteboardResolverMutations {
     const subscriptionPayload: WhiteboardContentUpdated = {
       eventID: eventID,
       whiteboardID: updatedWhiteboard.id,
-      value: updatedWhiteboard.value ?? '', //todo how to handle this?
+      content: updatedWhiteboard.content ?? '', //todo how to handle this?
     };
     this.logger.verbose?.(
       `[Whiteboard updated] - event published: '${eventID}'`,
