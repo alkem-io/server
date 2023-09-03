@@ -20,6 +20,7 @@ import { ApplicationModule } from '@domain/community/application/application.mod
 import { InvitationModule } from '@domain/community/invitation/invitation.module';
 import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
+import { CalloutTemplateModule } from '@domain/template/callout-template/callout.template.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity
     CommunityModule,
     CollaborationModule,
     ContextModule,
+    CalloutTemplateModule,
     WhiteboardModule,
     WhiteboardTemplateModule,
     InnovationFlowModule,
