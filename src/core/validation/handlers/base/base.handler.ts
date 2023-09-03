@@ -53,6 +53,7 @@ import { CreateCalloutOnCollaborationInput } from '@domain/collaboration/collabo
 import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dto/calendar.dto.create.event';
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
 import { UpdateCommunityApplicationFormInput } from '@domain/community/community/dto/community.dto.update.application.form';
+import { CreateCalloutTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/callout.template.dto.create.on.templates.set';
 import { CreatePostTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/post.template.dto.create.on.templates.set';
 import { CreateWhiteboardTemplateOnTemplatesSetInput } from '@domain/template/templates-set/dto/whiteboard.template.dto.create.on.templates.set';
 import { UpdatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.update';
@@ -70,6 +71,20 @@ import {
   UpdateInnovationFlowInput,
   UpdateInnovationFlowLifecycleTemplateInput,
 } from '@domain/challenge/innovation-flow';
+import {
+  CreateCalloutFramingInput,
+  UpdateCalloutFramingInput,
+} from '@domain/collaboration/callout-framing/dto';
+import {
+  CreateCalloutResponsePolicyInput,
+  UpdateCalloutResponsePolicyInput,
+} from '@domain/collaboration/callout-response-policy/dto';
+import {
+  CreateCalloutResponseDefaultsInput,
+  UpdateCalloutResponseDefaultsInput,
+} from '@domain/collaboration/callout-response-defaults/dto';
+import { UpdateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.update';
+import { CreateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.create';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -85,10 +100,15 @@ export class BaseHandler extends AbstractHandler {
       RoomSendMessageInput,
       OrganizationVerificationEventInput,
       ProjectEventInput,
+      CreateCalloutFramingInput,
+      CreateCalloutResponsePolicyInput,
+      CreateCalloutResponseDefaultsInput,
       CreateActorGroupInput,
       CreateActorInput,
       CreatePostOnCalloutInput,
       CreateDocumentInput,
+      CreateCalloutTemplateInput,
+      CreateCalloutTemplateOnTemplatesSetInput,
       CreatePostTemplateOnTemplatesSetInput,
       CreateWhiteboardOnCalloutInput,
       CreateWhiteboardTemplateOnTemplatesSetInput,
@@ -108,6 +128,10 @@ export class BaseHandler extends AbstractHandler {
       UpdateActorInput,
       UpdatePostInput,
       UpdateDocumentInput,
+      UpdateCalloutFramingInput,
+      UpdateCalloutResponseDefaultsInput,
+      UpdateCalloutResponsePolicyInput,
+      UpdateCalloutTemplateInput,
       UpdatePostTemplateInput,
       UpdateCommunityApplicationFormInput,
       UpdateSpaceInput,
