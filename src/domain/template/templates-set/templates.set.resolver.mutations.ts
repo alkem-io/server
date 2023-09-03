@@ -20,6 +20,9 @@ import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.
 import { DeleteInnovationFlowTemplateInput } from './dto/innovation.flow.template.dto.delete.on.templates.set';
 import { CreateInnovationFlowTemplateOnTemplatesSetInput } from './dto/innovation.flow.template.dto.create.on.templates.set';
 import { CreatePostTemplateOnTemplatesSetInput } from './dto/post.template.dto.create.on.templates.set';
+import { ICalloutTemplate } from '../callout-template/callout.template.interface';
+import { CreateCalloutTemplateOnTemplatesSetInput } from './dto/callout.template.dto.create.on.templates.set';
+import { CalloutTemplateAuthorizationService } from '../callout-template/callout.template.service.authorization';
 
 @Resolver()
 export class TemplatesSetResolverMutations {
@@ -27,11 +30,45 @@ export class TemplatesSetResolverMutations {
     private authorizationService: AuthorizationService,
     private templatesSetService: TemplatesSetService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
+    private calloutTemplateAuthorizationService: CalloutTemplateAuthorizationService,
     private postTemplateAuthorizationService: PostTemplateAuthorizationService,
     private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
     private innovationFlowTemplateAuthorizationService: InnovationFlowTemplateAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICalloutTemplate, {
+    description: 'Creates a new CalloutTemplate on the specified TemplatesSet.',
+  })
+  async createCalloutTemplate(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('calloutTemplateInput')
+    calloutTemplateInput: CreateCalloutTemplateOnTemplatesSetInput
+  ): Promise<ICalloutTemplate> {
+    const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
+      calloutTemplateInput.templatesSetID,
+      {
+        relations: ['calloutTemplates'],
+      }
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      templatesSet.authorization,
+      AuthorizationPrivilege.CREATE,
+      `templates set create callout template: ${templatesSet.id}`
+    );
+    const calloutTemplate =
+      await this.templatesSetService.createCalloutTemplate(
+        templatesSet,
+        calloutTemplateInput
+      );
+    await this.calloutTemplateAuthorizationService.applyAuthorizationPolicy(
+      calloutTemplate,
+      templatesSet.authorization
+    );
+    return calloutTemplate;
+  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IPostTemplate, {

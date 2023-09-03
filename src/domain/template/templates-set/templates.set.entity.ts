@@ -4,14 +4,25 @@ import { ITemplatesSet } from './templates.set.interface';
 import { PostTemplate } from '../post-template/post.template.entity';
 import { WhiteboardTemplate } from '../whiteboard-template/whiteboard.template.entity';
 import { InnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.entity';
+import { CalloutTemplate } from '../callout-template/callout.template.entity';
 
 @Entity()
 export class TemplatesSet extends AuthorizableEntity implements ITemplatesSet {
+  @OneToMany(
+    () => CalloutTemplate,
+    calloutTemplate => calloutTemplate.templatesSet,
+    {
+      eager: false,
+      cascade: true,
+    }
+  )
+  calloutTemplates!: CalloutTemplate[];
+
   @OneToMany(() => PostTemplate, postTemplate => postTemplate.templatesSet, {
     eager: false,
     cascade: true,
   })
-  postTemplates?: PostTemplate[];
+  postTemplates!: PostTemplate[];
 
   @OneToMany(
     () => WhiteboardTemplate,
@@ -21,7 +32,7 @@ export class TemplatesSet extends AuthorizableEntity implements ITemplatesSet {
       cascade: true,
     }
   )
-  whiteboardTemplates?: WhiteboardTemplate[];
+  whiteboardTemplates!: WhiteboardTemplate[];
 
   @OneToMany(
     () => InnovationFlowTemplate,
@@ -31,7 +42,7 @@ export class TemplatesSet extends AuthorizableEntity implements ITemplatesSet {
       cascade: true,
     }
   )
-  innovationFlowTemplates?: InnovationFlowTemplate[];
+  innovationFlowTemplates!: InnovationFlowTemplate[];
 
   @Column('text')
   policy!: string;

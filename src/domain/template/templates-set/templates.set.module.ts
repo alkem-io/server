@@ -11,11 +11,13 @@ import { TemplatesSetResolverFields } from './templates.set.resolver.fields';
 import { TemplatesSetResolverMutations } from './templates.set.resolver.mutations';
 import { TemplatesSetService } from './templates.set.service';
 import { TemplatesSetAuthorizationService } from './templates.set.service.authorization';
+import { CalloutTemplateModule } from '../callout-template/callout.template.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
+    CalloutTemplateModule,
     PostTemplateModule,
     WhiteboardTemplateModule,
     InnovationFlowTemplateModule,

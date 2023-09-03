@@ -10,10 +10,23 @@ import { ITemplatesSetPolicy } from '../templates-set-policy/templates.set.polic
 import { TemplatesSet } from './templates.set.entity';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
+import { ICalloutTemplate } from '../callout-template/callout.template.interface';
 
 @Resolver(() => ITemplatesSet)
 export class TemplatesSetResolverFields {
   constructor(private templatesSetService: TemplatesSetService) {}
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('calloutTemplates', () => [ICalloutTemplate], {
+    nullable: false,
+    description: 'The CalloutTemplates in this TemplatesSet.',
+  })
+  @Profiling.api
+  async calloutTemplates(
+    @Parent() templatesSet: ITemplatesSet
+  ): Promise<ICalloutTemplate[]> {
+    return await this.templatesSetService.getCalloutTemplates(templatesSet);
+  }
 
   @UseGuards(GraphqlGuard)
   @ResolveField('postTemplates', () => [IPostTemplate], {
