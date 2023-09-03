@@ -1,7 +1,7 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ITemplateBase } from '../template-base/template.base.interface';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
-import { ICalloutResponseDefaults } from '@domain/collaboration/callout-response-defaults/callout.respnse.defaults.interface';
+import { ICalloutResponseDefaults } from '@domain/collaboration/callout-response-defaults/callout.response.defaults.interface';
 import { ICalloutResponsePolicy } from '@domain/collaboration/callout-response-policy/callout.response.policy.interface';
 
 @ObjectType('CalloutTemplate')

@@ -1,7 +1,8 @@
-import { Column } from 'typeorm';
+import { Column, Entity } from 'typeorm';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { ICalloutResponsePolicy } from './callout.response.policy.interface';
 
+@Entity()
 export class CalloutResponsePolicy
   extends BaseAlkemioEntity
   implements ICalloutResponsePolicy

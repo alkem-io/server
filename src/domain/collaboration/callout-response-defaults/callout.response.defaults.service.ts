@@ -2,7 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CreateCalloutResponseDefaultsInput } from './dto/callout.response.defaults.dto.create';
 import { UpdateCalloutResponseDefaultsInput } from './dto/callout.response.defaults.dto.update';
-import { ICalloutResponseDefaults } from './callout.respnse.defaults.interface';
+import { ICalloutResponseDefaults } from './callout.response.defaults.interface';
 import { CalloutResponseDefaults } from './callout.response.defaults.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';

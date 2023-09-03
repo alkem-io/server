@@ -1,8 +1,9 @@
-import { JoinColumn, OneToOne } from 'typeorm';
+import { Entity, JoinColumn, OneToOne } from 'typeorm';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
 
+@Entity()
 export class CalloutFraming
   extends AuthorizableEntity
   implements ICalloutFraming
