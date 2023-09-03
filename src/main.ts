@@ -12,6 +12,7 @@ import { ConfigurationTypes, MessagingQueue } from '@common/enums';
 import { json } from 'body-parser';
 import cookieParser from 'cookie-parser';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import apm from 'elastic-apm-node/start'; // Ensure import is kept for its side-effect.
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule);
