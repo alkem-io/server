@@ -64,6 +64,7 @@ import { MeModule } from '@services/api/me';
 import { ExcalidrawServerModule } from '@services/external/excalidraw-backend';
 import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
 import { LookupModule } from '@services/api/lookup';
+import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 
 @Module({
   imports: [
@@ -224,8 +225,8 @@ import { LookupModule } from '@services/api/lookup';
     MeModule,
     ExcalidrawServerModule,
     ChatGuidanceModule,
-
     LookupModule,
+    AuthResetSubscriberModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

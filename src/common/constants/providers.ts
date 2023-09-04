@@ -12,6 +12,7 @@ export const SUBSCRIPTION_CHALLENGE_CREATED =
   'alkemio-subscriptions-challenge-created';
 export const SUBSCRIPTION_ACTIVITY_CREATED =
   'alkemio-subscriptions-activity-created';
+export const AUTH_RESET_SERVICE = 'alkemio-auth-reset';
 export const CHAT_GUIDANCE_SERVICE = 'alkemio-chat-guidance';
 export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const WALLET_MANAGEMENT_SERVICE = 'alkemio-wallet-manager';

@@ -7,7 +7,6 @@ mutation UpdateSpace($spaceData: UpdateSpaceInput!) {
   "spaceData":
 		{
       "ID": "uuid",
-      "hostID": "uuid",
       "profileData": {
         "displayName": "New Space 3"
       }

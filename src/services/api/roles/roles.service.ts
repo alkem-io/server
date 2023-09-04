@@ -11,19 +11,20 @@ import { OpportunityService } from '@domain/collaboration/opportunity/opportunit
 import { ApplicationService } from '@domain/community/application/application.service';
 import { CommunityService } from '@domain/community/community/community.service';
 import { RelationshipNotFoundException } from '@common/exceptions';
-import { ICredential } from '@domain/agent/credential/credential.interface';
 import { IApplication } from '@domain/community/application';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
 import { RolesUserInput } from './dto/roles.dto.input.user';
 import { ContributorRoles } from './dto/roles.dto.result.contributor';
 import { ApplicationForRoleResult } from './dto/roles.dto.result.application';
 import { RolesOrganizationInput } from './dto/roles.dto.input.organization';
-import { mapCredentialsToRoles } from './util/map.credentials.to.roles';
+import { mapJourneyCredentialsToRoles } from './util/map.journey.credentials.to.roles';
 import { InvitationForRoleResult } from './dto/roles.dto.result.invitation';
 import { InvitationService } from '@domain/community/invitation/invitation.service';
 import { IInvitation } from '@domain/community/invitation';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { RolesResultOrganization } from './dto/roles.dto.result.organization';
+import { mapOrganizationCredentialsToRoles } from './util/map.organization.credentials.to.roles';
+import { RolesResultSpace } from './dto/roles.dto.result.space';
 
 export class RolesService {
   constructor(
@@ -40,59 +41,56 @@ export class RolesService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async getUserRoles(
+  async getRolesForUser(
     membershipData: RolesUserInput
   ): Promise<ContributorRoles> {
+    const contributorRoles = new ContributorRoles();
     const user = await this.userService.getUserWithAgent(membershipData.userID);
 
-    const allowedVisibilities = this.spaceFilterService.getAllowedVisibilities(
-      membershipData.filter
-    );
-
-    const contributorRoles = await this.getContributorRoles(
-      user.agent?.credentials || [],
-      user.id,
-      allowedVisibilities
-    );
+    contributorRoles.id = membershipData.userID;
+    contributorRoles.filter = membershipData.filter;
+    contributorRoles.credentials = user.agent?.credentials || [];
 
     return contributorRoles;
   }
 
-  async getOrganizationRoles(
+  async getRolesForOrganization(
     membershipData: RolesOrganizationInput
-  ): Promise<ContributorRoles> {
-    const { organization, agent } =
-      await this.organizationService.getOrganizationAndAgent(
-        membershipData.organizationID
-      );
-    const allowedVisibilities = this.spaceFilterService.getAllowedVisibilities(
-      membershipData.filter
-    );
-    return this.getContributorRoles(
-      agent?.credentials || [],
-      organization.id,
-      allowedVisibilities
-    );
-  }
-
-  private async getContributorRoles(
-    credentials: ICredential[],
-    contributorID: string,
-    spaceVisibilities: SpaceVisibility[]
   ): Promise<ContributorRoles> {
     const contributorRoles = new ContributorRoles();
 
-    contributorRoles.id = contributorID;
-
-    const maps = await mapCredentialsToRoles(
-      this.entityManager,
-      credentials,
-      spaceVisibilities
+    const { agent } = await this.organizationService.getOrganizationAndAgent(
+      membershipData.organizationID
     );
-    contributorRoles.spaces = maps.spaces;
-    contributorRoles.organizations = maps.organizations;
+
+    contributorRoles.id = membershipData.organizationID;
+    contributorRoles.filter = membershipData.filter;
+    contributorRoles.credentials = agent?.credentials || [];
 
     return contributorRoles;
+  }
+
+  async getOrganizationRolesForUser(
+    roles: ContributorRoles
+  ): Promise<RolesResultOrganization[]> {
+    return await mapOrganizationCredentialsToRoles(
+      this.entityManager,
+      roles.credentials
+    );
+  }
+
+  public async getJourneyRolesForContributor(
+    roles: ContributorRoles
+  ): Promise<RolesResultSpace[]> {
+    const allowedVisibilities = this.spaceFilterService.getAllowedVisibilities(
+      roles.filter
+    );
+
+    return await mapJourneyCredentialsToRoles(
+      this.entityManager,
+      roles.credentials,
+      allowedVisibilities
+    );
   }
 
   public async getUserApplications(
