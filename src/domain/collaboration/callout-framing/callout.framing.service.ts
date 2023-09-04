@@ -52,8 +52,14 @@ export class CalloutFramingService {
     return calloutFraming;
   }
 
-  async delete(calloutFraming: ICalloutFraming): Promise<ICalloutFraming> {
-    const calloutFramingID = calloutFraming.id;
+  async delete(calloutFramingInput: ICalloutFraming): Promise<ICalloutFraming> {
+    const calloutFramingID = calloutFramingInput.id;
+    const calloutFraming = await this.getCalloutFramingOrFail(
+      calloutFramingID,
+      {
+        relations: ['profile'],
+      }
+    );
     if (calloutFraming.profile) {
       await this.profileService.deleteProfile(calloutFraming.profile.id);
     }
