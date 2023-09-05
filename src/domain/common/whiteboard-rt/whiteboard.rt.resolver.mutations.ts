@@ -35,7 +35,7 @@ export class WhiteboardRtResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       whiteboardRt.authorization,
-      AuthorizationPrivilege.UPDATE_WHITEBOARD,
+      AuthorizationPrivilege.ACCESS_WHITEBOARD_RT, // UPDATE_WHITEBOARD
       `update WhiteboardRt: ${whiteboardRt.nameID}`
     );
 

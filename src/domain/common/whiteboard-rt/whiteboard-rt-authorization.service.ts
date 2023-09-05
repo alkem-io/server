@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { AuthorizationCredential, LogContext } from '@common/enums';
-import { AuthorizationPrivilege } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
@@ -8,8 +11,9 @@ import { EntityNotInitializedException } from '@common/exceptions/entity.not.ini
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
   CREDENTIAL_RULE_WHITEBOARD_CREATED_BY,
-  POLICY_RULE_WHITEBOARD_UPDATE,
+  CREDENTIAL_RULE_WHITEBOARD_RT_ACCESS,
   POLICY_RULE_WHITEBOARD_CONTRIBUTE,
+  POLICY_RULE_WHITEBOARD_UPDATE,
 } from '@common/constants';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
 import { WhiteboardRtService } from './whiteboard.rt.service';
@@ -80,6 +84,14 @@ export class WhiteboardRtAuthorizationService {
           CREDENTIAL_RULE_WHITEBOARD_CREATED_BY
         );
       newRules.push(manageWhiteboardCreatedByPolicy);
+
+      const manageWhiteboardRtPolicy =
+        this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+          [AuthorizationPrivilege.ACCESS_WHITEBOARD_RT],
+          [AuthorizationCredential.BETA_TESTER],
+          CREDENTIAL_RULE_WHITEBOARD_RT_ACCESS
+        );
+      newRules.push(manageWhiteboardRtPolicy);
     }
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(

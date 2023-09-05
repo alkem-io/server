@@ -24,6 +24,7 @@ import { NotificationInputCalloutPublished } from '@services/adapters/notificati
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UpdateCollaborationCalloutsSortOrderInput } from './dto/collaboration.dto.update.callouts.sort.order';
+import { CalloutType } from '@common/enums/callout.type';
 
 @Resolver()
 export class CollaborationResolverMutations {
@@ -130,12 +131,21 @@ export class CollaborationResolverMutations {
         calloutData.collaborationID
       );
 
-    this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      collaboration.authorization,
-      AuthorizationPrivilege.CREATE_CALLOUT,
-      `create callout on collaboration: ${collaboration.id}`
-    );
+    if (calloutData.type === CalloutType.WHITEBOARD_RT) {
+      this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        collaboration.authorization,
+        AuthorizationPrivilege.ACCESS_WHITEBOARD_RT,
+        `create '${CalloutType.WHITEBOARD_RT}' callout on collaboration: ${collaboration.id}`
+      );
+    } else {
+      this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        collaboration.authorization,
+        AuthorizationPrivilege.CREATE_CALLOUT,
+        `create callout on collaboration: ${collaboration.id}`
+      );
+    }
 
     const callout =
       await this.collaborationService.createCalloutOnCollaboration(

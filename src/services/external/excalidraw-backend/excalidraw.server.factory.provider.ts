@@ -4,18 +4,33 @@ import { Configuration, FrontendApi } from '@ory/kratos-client';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Server as SocketIO, Socket } from 'socket.io';
 import http from 'http';
-import { ConfigurationTypes, LogContext } from '@common/enums';
+import {
+  AuthorizationPrivilege,
+  ConfigurationTypes,
+  LogContext,
+} from '@common/enums';
 import { EXCALIDRAW_SERVER } from '@constants/index';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AgentInfo } from '@core/authentication';
 import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
+import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 
 export const ExcalidrawServerFactoryProvider: FactoryProvider = {
   provide: EXCALIDRAW_SERVER,
+  inject: [
+    WINSTON_MODULE_NEST_PROVIDER,
+    ConfigService,
+    AuthenticationService,
+    AuthorizationService,
+    WhiteboardRtService,
+  ],
   useFactory: (
     logger: LoggerService,
     configService: ConfigService,
-    authService: AuthenticationService
+    authService: AuthenticationService,
+    authorizationService: AuthorizationService,
+    whiteboardRtService: WhiteboardRtService
   ) => {
     const port = process.env.EXCALIDRAW_SERVER_PORT;
 
@@ -54,7 +69,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
           agentInfo = await authenticate(socket.handshake.headers);
         } catch (e) {
           const err = e as Error;
-          logger.verbose?.(
+          logger.error(
             `Error when trying to authenticate with excalidraw server: ${err.message}`,
             LogContext.EXCALIDRAW_SERVER
           );
@@ -66,17 +81,34 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
           `User '${agentInfo.userID}' established connection`,
           LogContext.EXCALIDRAW_SERVER
         );
-        console.log(`${agentInfo.userID} established connection`);
-
-        // authorize the whiteboard
 
         io.to(`${socket.id}`).emit('init-room');
-        socket.on('join-room', async roomID => {
+        socket.on('join-room', async (roomID: string) => {
+          try {
+            const whiteboardRt =
+              await whiteboardRtService.getWhiteboardRtOrFail(roomID);
+            await authorizationService.grantAccessOrFail(
+              agentInfo,
+              whiteboardRt.authorization,
+              AuthorizationPrivilege.ACCESS_WHITEBOARD_RT,
+              `access whiteboardRt: ${whiteboardRt.id}`
+            );
+          } catch (e) {
+            const err = e as Error;
+            logger.error(
+              `Error when trying to authorize the user with the whiteboard: ${err.message}`,
+              LogContext.EXCALIDRAW_SERVER
+            );
+            closeConnection(socket, err.message);
+            return;
+          }
+
+          await socket.join(roomID);
           logger?.verbose?.(
             `${agentInfo.userID} has joined ${roomID}`,
             LogContext.EXCALIDRAW_SERVER
           );
-          await socket.join(roomID);
+
           const sockets = await io.in(roomID).fetchSockets();
           if (sockets.length <= 1) {
             io.to(`${socket.id}`).emit('first-in-room');
@@ -147,7 +179,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
 
     const closeConnection = (socket: Socket, message: string) => {
       socket.removeAllListeners();
-      socket.send(message);
+      socket.emit('connection-closed', message);
       socket.disconnect();
     };
 
@@ -182,5 +214,4 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
       });
     };
   },
-  inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService, AuthenticationService],
 };
