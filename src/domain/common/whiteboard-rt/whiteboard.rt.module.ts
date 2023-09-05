@@ -10,7 +10,7 @@ import { WhiteboardRt } from './whiteboard.rt.entity';
 import { WhiteboardRtResolverFields } from './whiteboard.rt.resolver.fields';
 import { WhiteboardRtResolverMutations } from './whiteboard.rt.resolver.mutations';
 import { WhiteboardRtService } from './whiteboard.rt.service';
-import { WhiteboardRtAuthorizationService } from './whiteboard-rt-authorization.service';
+import { WhiteboardRtAuthorizationService } from './whiteboard.rt.authorization.service';
 
 @Module({
   imports: [

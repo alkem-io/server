@@ -94,10 +94,11 @@ export class CalloutAuthorizationService {
     }
     callout.whiteboardRt = await this.calloutService.getWhiteboardRt(callout);
     if (callout.whiteboardRt) {
-      await this.whiteboardRtAuthorizationService.applyAuthorizationPolicy(
-        callout.whiteboardRt,
-        callout.authorization
-      );
+      callout.whiteboardRt =
+        await this.whiteboardRtAuthorizationService.applyAuthorizationPolicy(
+          callout.whiteboardRt,
+          callout.authorization
+        );
     }
 
     callout.comments = await this.calloutService.getComments(callout.id);

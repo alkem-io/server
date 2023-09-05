@@ -136,16 +136,16 @@ export class CollaborationResolverMutations {
         agentInfo,
         collaboration.authorization,
         AuthorizationPrivilege.ACCESS_WHITEBOARD_RT,
-        `create '${CalloutType.WHITEBOARD_RT}' callout on collaboration: ${collaboration.id}`
-      );
-    } else {
-      this.authorizationService.grantAccessOrFail(
-        agentInfo,
-        collaboration.authorization,
-        AuthorizationPrivilege.CREATE_CALLOUT,
-        `create callout on collaboration: ${collaboration.id}`
+        `access to '${CalloutType.WHITEBOARD_RT}' callout on collaboration: ${collaboration.id}`
       );
     }
+
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      collaboration.authorization,
+      AuthorizationPrivilege.CREATE_CALLOUT,
+      `create callout on collaboration: ${collaboration.id}`
+    );
 
     const callout =
       await this.collaborationService.createCalloutOnCollaboration(
