@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ExcalidrawEventSubscriberService } from './excalidraw.event.subscriber.service';
 
 @Module({
-  imports: [ExcalidrawEventSubscriberService],
+  providers: [ExcalidrawEventSubscriberService],
   exports: [ExcalidrawEventSubscriberService],
 })
 export class ExcalidrawEventSubscriberModule {}

@@ -1,20 +1,22 @@
-import { Inject, Injectable } from '@nestjs/common';
 import { PubSubEngine } from 'graphql-subscriptions';
+import { Inject, Injectable } from '@nestjs/common';
 import { EXCALIDRAW_PUBSUB_PROVIDER } from '@common/constants';
-
-type BasePayload = { roomID: string };
-type RoomInitPayload = Record<string, unknown>; // todo
-type RoomJoinPayload = BasePayload;
-type NewUserPayload = BasePayload & {
-  socketID: string; // socket of the new user
-};
-type RoomUserChangePayload = BasePayload & {
-  socketIDs: Array<string>; // all sockets in the room
-};
-type ServerBroadcastPayload = BasePayload & {
-  roomID: string;
-  data: ArrayBuffer;
-};
+import {
+  DISCONNECT,
+  DISCONNECTING,
+  NEW_USER,
+  ROOM_USER_CHANGE,
+  SERVER_BROADCAST,
+  SERVER_VOLATILE_BROADCAST,
+} from '@services/external/excalidraw-backend/event.names';
+import {
+  DisconnectedPayload,
+  DisconnectingPayload,
+  NewUserPayload,
+  RoomUserChangePayload,
+  ServerBroadcastPayload,
+  ServerVolatileBroadcastPayload,
+} from '../types';
 
 @Injectable()
 export class ExcalidrawEventPublisherService {
@@ -22,23 +24,47 @@ export class ExcalidrawEventPublisherService {
     @Inject(EXCALIDRAW_PUBSUB_PROVIDER) private excalidrawPubSub: PubSubEngine
   ) {}
 
-  public publishRoomInit(payload: RoomInitPayload) {
-    this.excalidrawPubSub.publish('init-room', payload);
-  }
-
-  public publishJoinRoom(payload: RoomJoinPayload) {
-    this.excalidrawPubSub.publish('join-room', payload);
-  }
-
   public publishNewUser(payload: NewUserPayload) {
-    this.excalidrawPubSub.publish('new-user', payload);
+    this.excalidrawPubSub.publish(NEW_USER, {
+      ...payload,
+      name: NEW_USER,
+    });
   }
 
   public publishRoomUserChange(payload: RoomUserChangePayload) {
-    this.excalidrawPubSub.publish('room-user-change', payload);
+    this.excalidrawPubSub.publish(ROOM_USER_CHANGE, {
+      ...payload,
+      name: ROOM_USER_CHANGE,
+    });
   }
 
   public publishServerBroadcast(payload: ServerBroadcastPayload) {
-    this.excalidrawPubSub.publish('server-broadcast', payload);
+    this.excalidrawPubSub.publish(SERVER_BROADCAST, {
+      ...payload,
+      name: SERVER_BROADCAST,
+    });
+  }
+
+  public publishServerVolatileBroadcast(
+    payload: ServerVolatileBroadcastPayload
+  ) {
+    this.excalidrawPubSub.publish(SERVER_VOLATILE_BROADCAST, {
+      ...payload,
+      name: SERVER_VOLATILE_BROADCAST,
+    });
+  }
+
+  public publishDisconnecting(payload: DisconnectingPayload) {
+    this.excalidrawPubSub.publish(DISCONNECTING, {
+      ...payload,
+      name: DISCONNECTING,
+    });
+  }
+
+  public publishDisconnected(payload: DisconnectedPayload) {
+    this.excalidrawPubSub.publish(DISCONNECT, {
+      ...payload,
+      name: DISCONNECT,
+    });
   }
 }
