@@ -10,6 +10,7 @@ import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { CreateWhiteboardRtInput } from '@domain/common/whiteboard-rt/dto/whiteboard.rt.dto.create';
 
 @InputType()
 export class CreateCalloutInput {
@@ -77,6 +78,12 @@ export class CreateCalloutInput {
     description: 'Whiteboard data for whiteboard Callouts.',
   })
   whiteboard?: CreateWhiteboardInput;
+
+  @Field(() => CreateWhiteboardRtInput, {
+    nullable: true,
+    description: 'Whiteboard data for real time whiteboard Callouts.',
+  })
+  whiteboardRt?: CreateWhiteboardRtInput;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()

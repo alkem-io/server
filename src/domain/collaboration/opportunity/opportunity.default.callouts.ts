@@ -49,8 +49,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     sortOrder: 1,
     profile: {
       displayName: '💪 Jobs to be done...',
-      description:
-        '',
+      description: '',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
