@@ -9,12 +9,16 @@ import {
   ConfigurationTypes,
   LogContext,
 } from '@common/enums';
-import { EXCALIDRAW_SERVER } from '@constants/index';
+import {
+  EXCALIDRAW_PUBSUB_PROVIDER,
+  EXCALIDRAW_SERVER,
+} from '@constants/index';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AgentInfo } from '@core/authentication';
 import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ExcalidrawEventPublisherService } from '@services/excalidraw-pubsub/publisher';
 
 export const ExcalidrawServerFactoryProvider: FactoryProvider = {
   provide: EXCALIDRAW_SERVER,
@@ -24,13 +28,15 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
     AuthenticationService,
     AuthorizationService,
     WhiteboardRtService,
+    EXCALIDRAW_PUBSUB_PROVIDER,
   ],
   useFactory: (
     logger: LoggerService,
     configService: ConfigService,
     authService: AuthenticationService,
     authorizationService: AuthorizationService,
-    whiteboardRtService: WhiteboardRtService
+    whiteboardRtService: WhiteboardRtService,
+    excalidrawEventPublisher: ExcalidrawEventPublisherService
   ) => {
     const port = process.env.EXCALIDRAW_SERVER_PORT;
 
@@ -104,6 +110,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
           }
 
           await socket.join(roomID);
+          excalidrawEventPublisher.publishJoinRoom({ roomID });
           logger?.verbose?.(
             `${agentInfo.userID} has joined ${roomID}`,
             LogContext.EXCALIDRAW_SERVER
@@ -118,29 +125,32 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
               LogContext.EXCALIDRAW_SERVER
             );
             socket.broadcast.to(roomID).emit('new-user', socket.id);
+            excalidrawEventPublisher.publishNewUser({
+              roomID,
+              socketID: socket.id,
+            });
           }
 
-          io.in(roomID).emit(
-            'room-user-change',
-            sockets.map(socket => socket.id)
-          );
+          const socketIDs = sockets.map(socket => socket.id);
+          io.in(roomID).emit('room-user-change', socketIDs);
+          excalidrawEventPublisher.publishRoomUserChange({
+            roomID,
+            socketIDs,
+          });
+        });
+
+        socket.on('server-broadcast', (roomID: string, data: ArrayBuffer) => {
+          socket.broadcast.to(roomID).emit('client-broadcast', data);
+          excalidrawEventPublisher.publishServerBroadcast({
+            roomID,
+            data,
+          });
         });
 
         socket.on(
-          'server-broadcast',
-          (roomID: string, encryptedData: ArrayBuffer, iv: Uint8Array) => {
-            socket.broadcast
-              .to(roomID)
-              .emit('client-broadcast', encryptedData, iv);
-          }
-        );
-
-        socket.on(
           'server-volatile-broadcast',
-          (roomID: string, encryptedData: ArrayBuffer, iv: Uint8Array) => {
-            socket.volatile.broadcast
-              .to(roomID)
-              .emit('client-broadcast', encryptedData, iv);
+          (roomID: string, data: ArrayBuffer) => {
+            socket.volatile.broadcast.to(roomID).emit('client-broadcast', data);
           }
         );
 
