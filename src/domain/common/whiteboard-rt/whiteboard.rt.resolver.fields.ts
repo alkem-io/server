@@ -5,7 +5,6 @@ import { Profiling } from '@src/common/decorators';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
 import { GraphqlGuard } from '@src/core/authorization/graphql.guard';
 import { IUser } from '@domain/community/user/user.interface';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Loader } from '@core/dataloader/decorators';
@@ -37,10 +36,11 @@ export class WhiteboardRtResolverFields {
   ): Promise<IUser | null> {
     const createdBy = whiteboardRt.createdBy;
     if (!createdBy) {
-      throw new EntityNotInitializedException(
+      this.logger?.warn(
         `CreatedBy not set on WhiteboardRt with id ${whiteboardRt.id}`,
         LogContext.COLLABORATION
       );
+      return null;
     }
 
     try {
