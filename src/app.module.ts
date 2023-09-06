@@ -61,6 +61,7 @@ import {
   GraphqlExceptionFilter,
 } from '@core/error-handling';
 import { MeModule } from '@services/api/me';
+import { ExcalidrawServerModule } from '@services/external/excalidraw-backend';
 import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
 import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
@@ -222,6 +223,7 @@ import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-
     SsiCredentialFlowModule,
     StorageAccessModule,
     MeModule,
+    ExcalidrawServerModule,
     ChatGuidanceModule,
     LookupModule,
     AuthResetSubscriberModule,

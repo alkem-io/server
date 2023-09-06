@@ -39,6 +39,8 @@ export const CREDENTIAL_RULE_WHITEBOARD_CHECKOUT_LOCKED_BY =
   'credentialRule-whiteboardCheckoutLockedBy';
 export const CREDENTIAL_RULE_WHITEBOARD_CREATED_BY =
   'credentialRule-whiteboardCreatedBy';
+export const CREDENTIAL_RULE_WHITEBOARD_RT_ACCESS =
+  'credentialRule-whiteboardRtAccess';
 export const CREDENTIAL_RULE_WHITEBOARD_LOCKED_BY =
   'credentialRule-whiteboardLockedBy';
 export const CREDENTIAL_RULE_ROOM_MESSAGE_SENDER =
