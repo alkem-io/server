@@ -20,23 +20,23 @@ export class WhiteboardTemplate
 {
   constructor() {
     super();
-    this.value = '';
+    this.content = '';
   }
 
   @BeforeInsert()
   @BeforeUpdate()
-  async compressValue() {
-    if (this.value !== '') {
-      this.value = await compressText(this.value);
+  async compressContent() {
+    if (this.content !== '') {
+      this.content = await compressText(this.content);
     }
   }
 
   @AfterInsert()
   @AfterUpdate()
   @AfterLoad()
-  async decompressValue() {
-    if (this.value !== '') {
-      this.value = await decompressText(this.value);
+  async decompressContent() {
+    if (this.content !== '') {
+      this.content = await decompressText(this.content);
     }
   }
 
@@ -52,5 +52,5 @@ export class WhiteboardTemplate
   templatesSet?: TemplatesSet;
 
   @Column('longtext', { nullable: false })
-  value!: string;
+  content!: string;
 }
