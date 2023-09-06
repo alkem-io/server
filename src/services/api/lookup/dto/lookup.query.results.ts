@@ -10,6 +10,7 @@ import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.fl
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IInnovationFlowTemplate } from '@domain/template/innovation-flow-template/innovation.flow.template.interface';
+import { IWhiteboardRt } from '@domain/common/whiteboard-rt/types';
 
 @ObjectType()
 export class LookupQueryResults {
@@ -24,5 +25,6 @@ export class LookupQueryResults {
   innovationFlow!: IInnovationFlow;
   InnovationFlowTemplate!: IInnovationFlowTemplate;
   whiteboard!: IWhiteboard;
+  whiteboardRt!: IWhiteboardRt;
   whiteboardTemplate!: IWhiteboardTemplate;
 }
