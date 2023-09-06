@@ -38,6 +38,10 @@ hosting:
   subscriptions:
     enabled: ${SUBSCRIPTIONS_ENABLED}:false
 
+  # Support for subscriptions enabled or not. These require a WebSocket connection
+  whiteboard_rt:
+    port: ${WHITEBOARD_RT_PORT}:4001
+
   max_json_payload_size: ${HOSTING_MAX_JSON_PAYLOAD_SIZE}:64mb
 ## bootstrap ##
 # Used to determine the the information that is used to to initialize a functional Alkemio instance.
