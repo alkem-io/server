@@ -78,6 +78,12 @@ http:
           - /api/private
         forceSlash: false
 
+    strip-api-private-prefix-socket-io:
+      stripPrefix:
+        prefixes:
+          - /api/private/ws
+        forceSlash: false
+
     strip-api-public-prefix:
       stripPrefix:
         prefixes:
@@ -109,22 +115,6 @@ http:
       entryPoints:
         - 'web'
 
-    api-private-non-interactive-graphql:
-      rule: 'PathPrefix(`/api/private/non-interactive/graphql`)'
-      service: 'alkemio-server'
-      middlewares:
-        - strip-api-private-non-interactive-prefix
-      entryPoints:
-        - 'web'
-
-    api-private-graphql:
-      rule: 'PathPrefix(`/api/private/graphql`)'
-      service: 'oathkeeper-proxy'
-      middlewares:
-        - strip-api-private-prefix
-      entryPoints:
-        - 'web'
-
     api-public-graphql:
       rule: 'PathPrefix(`/api/public/graphql`)'
       service: 'alkemio-server'
@@ -141,6 +131,22 @@ http:
       entryPoints:
         - 'web'
 
+    api-private-graphql:
+      rule: 'PathPrefix(`/api/private/graphql`)'
+      service: 'oathkeeper-proxy'
+      middlewares:
+        - strip-api-private-prefix
+      entryPoints:
+        - 'web'
+
+    api-private-non-interactive-graphql:
+      rule: 'PathPrefix(`/api/private/non-interactive/graphql`)'
+      service: 'alkemio-server'
+      middlewares:
+        - strip-api-private-non-interactive-prefix
+      entryPoints:
+        - 'web'
+
     api-private-rest:
       rule: 'PathPrefix(`/api/private/rest`)'
       service: 'oathkeeper-proxy'
@@ -154,6 +160,14 @@ http:
       service: 'alkemio-server'
       middlewares:
         - strip-api-private-non-interactive-prefix
+      entryPoints:
+        - 'web'
+
+    api-private-ws-socket.io:
+      rule: 'PathPrefix(`/api/private/ws`)'
+      service: 'oathkeeper-proxy'
+      middlewares:
+        - strip-api-private-prefix-socket-io
       entryPoints:
         - 'web'
 
