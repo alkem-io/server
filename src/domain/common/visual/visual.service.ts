@@ -128,15 +128,29 @@ export class VisualService {
     );
   }
 
-  async createVisualBannerNarrow(uri?: string): Promise<IVisual> {
+  async createVisualCard(uri?: string): Promise<IVisual> {
     return await this.createVisual(
       {
-        name: 'bannerNarrow',
+        name: 'card',
         minWidth: 307,
         maxWidth: 410,
         minHeight: 192,
         maxHeight: 256,
         aspectRatio: 1.6,
+      },
+      uri
+    );
+  }
+
+  async createVisualBannerWide(uri?: string): Promise<IVisual> {
+    return await this.createVisual(
+      {
+        name: 'bannerWide',
+        minWidth: 640,
+        maxWidth: 2560,
+        minHeight: 64,
+        maxHeight: 256,
+        aspectRatio: 10,
       },
       uri
     );
