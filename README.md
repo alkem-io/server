@@ -32,4 +32,4 @@ The key takeaway is that the Alkemio server is designed to be integrated, so tha
 - [Quality Assurance - Details of the test harness around the server and how to execute the test suites](docs/QA.md).
 - [Pushing - How new docker images are published to Dockerhub](docs/Publishing.md)
 
-For other questions / comments please feel free to reach out via the channels listed in the [Alkemio Repo](http://github.com/alkem-io/alkemio).
+For other questions / comments please feel free to reach out via the channels listed in the [Alkemio Repo](http://github.com/alkem-io/alkemio) or via [Alkemio organization](https://alkemio.org).
