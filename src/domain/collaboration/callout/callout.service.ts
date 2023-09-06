@@ -207,7 +207,7 @@ export class CalloutService {
     const whiteboard = await this.whiteboardService.createWhiteboard(
       {
         nameID: whiteboardNameID,
-        value: data.value,
+        content: data.content,
         profileData: data.profileData,
       },
       authorID
@@ -611,7 +611,7 @@ export class CalloutService {
     const whiteboard = await this.whiteboardService.createWhiteboard(
       {
         nameID: whiteboardData.nameID,
-        value: whiteboardData.value,
+        content: whiteboardData.content,
         profileData: whiteboardData.profileData,
       },
       userID
