@@ -14,6 +14,10 @@ export abstract class IWhiteboardRt extends INameable {
   @Field(() => Date)
   createdDate!: Date;
 
+  // Expose the date at which the WhiteboardRt was last updated from parent entity
+  @Field(() => Date)
+  updatedDate!: Date;
+
   createdBy?: string;
 
   callout?: ICallout;
