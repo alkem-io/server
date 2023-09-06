@@ -21,17 +21,23 @@ export class InnovationHubFieldResolver {
     nullable: true,
   })
   public async spaceListFilter(
-    @Parent() space: IInnovationHub
+    @Parent() innovationHub: IInnovationHub
   ): Promise<ISpace[] | undefined> {
     const filter = await this.innovationHubService.getSpaceListFilterOrFail(
-      space.id
+      innovationHub.id
     );
 
     if (!filter) {
       return undefined;
     }
 
-    return this.spaceService.getSpacesById(filter);
+    const spaces = await this.spaceService.getSpacesById(filter);
+    const result: ISpace[] = [];
+    for (const spaceId of filter) {
+      const space = spaces.find(s => s.id === spaceId);
+      if (space) result.push(space);
+    }
+    return result;
   }
 
   @ResolveField('profile', () => IProfile, {
