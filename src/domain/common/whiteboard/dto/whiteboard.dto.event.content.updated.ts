@@ -15,5 +15,5 @@ export class WhiteboardContentUpdated {
     nullable: false,
     description: 'The updated content.',
   })
-  value!: string;
+  content!: string;
 }

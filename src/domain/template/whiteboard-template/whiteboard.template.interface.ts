@@ -5,7 +5,7 @@ import JSON from 'graphql-type-json';
 @ObjectType('WhiteboardTemplate')
 export abstract class IWhiteboardTemplate extends ITemplateBase {
   @Field(() => JSON, {
-    description: 'The JSON representation of the Whiteboard.',
+    description: 'The visual content of the Whiteboard.',
   })
-  value?: string;
+  content?: string;
 }

@@ -9,7 +9,7 @@ export class CreateWhiteboardInput extends CreateNameableInput {
   @Field(() => String, { nullable: true })
   @IsOptional()
   @MaxLength(CANVAS_VALUE_LENGTH)
-  value?: string;
+  content?: string;
 
   // Override
   @Field(() => NameID, {
