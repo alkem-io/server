@@ -123,14 +123,14 @@ export class WhiteboardService {
 
     // Before updating the whiteboard contents check the user doing it has it checked out
     if (
-      updateWhiteboardData.value &&
-      updateWhiteboardData.value !== whiteboard.value
+      updateWhiteboardData.content &&
+      updateWhiteboardData.content !== whiteboard.content
     ) {
       this.whiteboardCheckoutService.isUpdateAllowedOrFail(
         whiteboard.checkout,
         agentInfo
       );
-      whiteboard.value = updateWhiteboardData.value;
+      whiteboard.content = updateWhiteboardData.content;
     }
     if (updateWhiteboardData.profileData) {
       whiteboard.profile = await this.profileService.updateProfile(

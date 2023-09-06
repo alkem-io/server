@@ -14,7 +14,7 @@ export class CreateWhiteboardTemplateInput extends CreateTemplateBaseInput {
   @Field(() => JSON, { nullable: true })
   @IsOptional()
   @MaxLength(CANVAS_VALUE_LENGTH)
-  value?: string;
+  content?: string;
 
   @Field(() => UUID, {
     nullable: true,

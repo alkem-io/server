@@ -16,34 +16,34 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 
-export const EMPTY_WHITEBOARD_VALUE =
+export const EMPTY_WHITEBOARD_CONTENT =
   '{\n  "type": "excalidraw",\n  "version": 2,\n  "source": "",\n  "elements": [],\n  "appState": {\n    "gridSize": 20,\n    "viewBackgroundColor": "#ffffff"\n  },\n  "files": {}\n}';
 
 @Entity()
 export class Whiteboard extends NameableEntity implements IWhiteboard {
-  constructor(value?: string) {
+  constructor(content?: string) {
     super();
-    this.value = value || '';
+    this.content = content || '';
   }
 
   @BeforeInsert()
   @BeforeUpdate()
-  async compressValue() {
-    if (this.value !== '') {
-      this.value = await compressText(this.value);
+  async compressContent() {
+    if (this.content !== '') {
+      this.content = await compressText(this.content);
     }
   }
   @AfterInsert()
   @AfterUpdate()
   @AfterLoad()
-  async decompressValue() {
-    if (this.value !== '') {
-      this.value = await decompressText(this.value);
+  async decompressContent() {
+    if (this.content !== '') {
+      this.content = await decompressText(this.content);
     }
   }
 
   @Column('longtext', { nullable: false })
-  value!: string;
+  content!: string;
 
   @Column('char', { length: 36, nullable: true })
   createdBy!: string;

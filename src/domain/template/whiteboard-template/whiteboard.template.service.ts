@@ -35,11 +35,14 @@ export class WhiteboardTemplateService {
       );
 
     // Allow specifying a Whiteboard to use as a base if no value is set
-    if (!whiteboardTemplateData.value && whiteboardTemplateData.whiteboardID) {
+    if (
+      !whiteboardTemplateData.content &&
+      whiteboardTemplateData.whiteboardID
+    ) {
       const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
         whiteboardTemplateData.whiteboardID
       );
-      result.value = whiteboard.value;
+      result.content = whiteboard.content;
     }
 
     return await this.whiteboardTemplateRepository.save(result);
@@ -75,8 +78,8 @@ export class WhiteboardTemplateService {
       whiteboardTemplate,
       whiteboardTemplateData
     );
-    if (whiteboardTemplateData.value) {
-      whiteboardTemplate.value = whiteboardTemplateData.value;
+    if (whiteboardTemplateData.content) {
+      whiteboardTemplate.content = whiteboardTemplateData.content;
     }
 
     return await this.whiteboardTemplateRepository.save(whiteboardTemplate);
