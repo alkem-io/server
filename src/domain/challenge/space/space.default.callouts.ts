@@ -5,7 +5,7 @@ import { SpaceDisplayLocation } from '@common/enums/space.display.location';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
-import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
+import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/whiteboard.entity';
 
 export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
@@ -77,7 +77,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       ],
     },
     whiteboard: {
-      value: EMPTY_WHITEBOARD_VALUE,
+      content: EMPTY_WHITEBOARD_CONTENT,
       nameID: 'vision',
       profileData: {
         displayName: 'Vision',
@@ -120,7 +120,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
       ],
     },
     whiteboard: {
-      value: EMPTY_WHITEBOARD_VALUE,
+      content: EMPTY_WHITEBOARD_CONTENT,
       nameID: 'ecosystem',
       profileData: {
         displayName: 'Ecosystem Value Map',
