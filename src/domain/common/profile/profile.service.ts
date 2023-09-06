@@ -195,7 +195,7 @@ export class ProfileService {
         visual = await this.visualService.createVisualBanner();
         break;
       case VisualType.CARD:
-        visual = await this.visualService.createVisualBannerNarrow();
+        visual = await this.visualService.createVisualCard();
         break;
 
       default:
