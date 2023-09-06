@@ -1,14 +1,11 @@
-import { CANVAS_VALUE_LENGTH } from '@common/constants/entity.field.length.constants';
+import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { UpdateTemplateBaseInput } from '@domain/template/template-base/dto/template.base.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
-import { IsOptional, MaxLength } from 'class-validator';
-import JSON from 'graphql-type-json';
+import { IsOptional } from 'class-validator';
 
 @InputType()
 export class UpdateWhiteboardTemplateInput extends UpdateTemplateBaseInput {
-  // Todo: validate that it is actually JSON?
-  @Field(() => JSON, { nullable: true })
+  @Field(() => WhiteboardContent, { nullable: true })
   @IsOptional()
-  @MaxLength(CANVAS_VALUE_LENGTH)
   content?: string;
 }

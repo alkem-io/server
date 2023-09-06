@@ -9,6 +9,7 @@ import { MessageID } from './scalar.messageid';
 import { LifecycleDefinitionScalar } from './scalar.lifecycle.definition';
 import { CID } from './scalar.cid';
 import { Emoji } from './scalar.emoji';
+import { WhiteboardContent } from './scalar.whiteboard.content';
 
 @Module({
   imports: [],
@@ -23,6 +24,7 @@ import { Emoji } from './scalar.emoji';
     Markdown,
     MessageID,
     LifecycleDefinitionScalar,
+    WhiteboardContent,
   ],
   exports: [],
 })
