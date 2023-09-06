@@ -168,11 +168,9 @@ export class CalloutService {
     callout.createdBy = userID ?? undefined;
     callout.visibility = calloutData.visibility ?? CalloutVisibility.DRAFT;
 
-    const savedCallout: ICallout = await this.calloutRepository.save(callout);
-
     if (calloutData.type === CalloutType.POST) {
-      savedCallout.comments = await this.roomService.createRoom(
-        `callout-comments-${savedCallout.nameID}`,
+      callout.comments = await this.roomService.createRoom(
+        `callout-comments-${callout.nameID}`,
         RoomType.CALLOUT
       );
     }
@@ -182,20 +180,20 @@ export class CalloutService {
         calloutData.whiteboard,
         userID
       );
-      savedCallout.whiteboards = [whiteboard];
+      callout.whiteboards = [whiteboard];
     }
 
     if (
       calloutData.type == CalloutType.WHITEBOARD_RT &&
       calloutData.whiteboardRt
     ) {
-      savedCallout.whiteboardRt = await this.createWhiteboardRtForCallout(
+      callout.whiteboardRt = await this.createWhiteboardRtForCallout(
         calloutData.whiteboardRt,
         userID
       );
     }
 
-    return this.calloutRepository.save(savedCallout);
+    return this.calloutRepository.save(callout);
   }
 
   private async createWhiteboardForCallout(
