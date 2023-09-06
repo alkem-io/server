@@ -1,0 +1,31 @@
+mutation createCallout($calloutData: CreateCalloutOnCollaborationInput!) {
+  createCalloutOnCollaboration(calloutData: $calloutData) {
+    id
+    __typename
+  }
+}
+
+Variables:
+{
+  "calloutData": {
+    "collaborationID": "ec32e1ab-90ca-48ff-ab70-424fedabaf21",
+    "whiteboardRt": {
+      "profileData": {
+        "displayName": "Whiteboard:"
+      },
+      "content": "{\"type\":\"excalidraw\",\"version\":2,\"source\":\"https://excalidraw.com\",\"elements\":[],\"appState\":{\"gridSize\":null,\"viewBackgroundColor\":\"#ffffff\"}}"
+    },
+    "profile": {
+      "displayName": "test22253352223",
+      "description": "asdf\n",
+      "referencesData": [],
+      "tagsets": []
+    },
+    "tags": [],
+    "type": "WHITEBOARD_RT",
+    "state": "OPEN",
+    "displayLocation": "HOME_RIGHT",
+    "visibility": "PUBLISHED",
+    "sendNotification": false
+  }
+}

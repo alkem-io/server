@@ -23,6 +23,7 @@ import { PostTemplateModule } from '@domain/template/post-template/post.template
 import { WhiteboardTemplateModule } from '@domain/template/whiteboard-template/whiteboard.template.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
+import { WhiteboardRtModule } from '@domain/common/whiteboard-rt';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ReferenceModule } from '@domain/common/reference/reference.module';
     AuthorizationModule,
     PostModule,
     WhiteboardModule,
+    WhiteboardRtModule,
     RoomModule,
     CommunityPolicyModule,
     EntityResolverModule,
