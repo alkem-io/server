@@ -84,29 +84,24 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
       );
     });
 
-    //let subIds: number[] = [];
+    let subIds: number[] = [];
     try {
       const wsServer = new SocketIO(httpServer, {
         transports: ['websocket', 'polling'],
         allowEIO3: true,
       });
 
-      /*subIds = await */ excalidrawEventSubscriber.subscribeToAll(
-        async payload => {
-          // Some messages can be coming from this instance of the service
-          // so filter them out
-          if (payload.publisherId === appId) {
-            return;
-          }
-
+      subIds = await excalidrawEventSubscriber.subscribeToAll(async payload => {
+        // Some messages can be coming from this instance of the service
+        // so filter them out
+        if (payload.publisherId !== appId) {
           const { roomID, name } = payload;
           // todo: try redesigning the handling using the visitor pattern
           switch (name) {
             case SERVER_VOLATILE_BROADCAST: {
               const volatilePayload = payload as ServerVolatileBroadcastPayload;
-              wsServer.volatile
-                .in(roomID)
-                .emit(CLIENT_BROADCAST, volatilePayload.data);
+              const buffer = new Uint8Array(volatilePayload.data).buffer;
+              wsServer.volatile.in(roomID).emit(CLIENT_BROADCAST, buffer);
               break;
             }
             case SERVER_BROADCAST: {
@@ -139,7 +134,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
             }
           }
         }
-      );
+      });
 
       wsServer.on(CONNECTION, async socket => {
         let agentInfo: AgentInfo;
@@ -275,7 +270,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
       });
     } catch (error) {
       logger.error(error, LogContext.EXCALIDRAW_SERVER);
-      // excalidrawEventSubscriber.unsubscribe(subIds);
+      excalidrawEventSubscriber.unsubscribe(subIds);
     }
 
     const closeConnection = (socket: Socket, message: string) => {
