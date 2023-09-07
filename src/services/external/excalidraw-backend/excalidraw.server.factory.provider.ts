@@ -107,7 +107,8 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
             case SERVER_BROADCAST: {
               const broadcastPayload =
                 payload as ServerVolatileBroadcastPayload;
-              wsServer.in(roomID).emit(CLIENT_BROADCAST, broadcastPayload.data);
+              const buffer = new Uint8Array(broadcastPayload.data).buffer;
+              wsServer.in(roomID).emit(CLIENT_BROADCAST, buffer);
               break;
             }
             case DISCONNECTING: {
@@ -218,7 +219,6 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
           SERVER_VOLATILE_BROADCAST,
           (roomID: string, data: ArrayBuffer) => {
             socket.volatile.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
-            // wsServer.volatile.to(roomID).emit(CLIENT_BROADCAST, data);
             excalidrawEventPublisher.publishServerVolatileBroadcast({
               roomID,
               data,

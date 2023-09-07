@@ -1,4 +1,4 @@
-import { PubSubEngine } from 'graphql-subscriptions';
+import { AMQPPubSub } from 'graphql-amqp-subscriptions';
 import { Inject, Injectable } from '@nestjs/common';
 import { APP_ID, EXCALIDRAW_PUBSUB_PROVIDER } from '@common/constants';
 import {
@@ -22,7 +22,7 @@ import {
 @Injectable()
 export class ExcalidrawEventPublisherService {
   constructor(
-    @Inject(EXCALIDRAW_PUBSUB_PROVIDER) private excalidrawPubSub: PubSubEngine,
+    @Inject(EXCALIDRAW_PUBSUB_PROVIDER) private excalidrawPubSub: AMQPPubSub,
     @Inject(APP_ID) private appId: string
   ) {}
 

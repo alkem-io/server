@@ -1,6 +1,6 @@
 import { AMQPPubSub } from 'graphql-amqp-subscriptions';
 import { Inject, Injectable } from '@nestjs/common';
-import { EXCALIDRAW_PUBSUB_PROVIDER } from '@common/constants';
+import { APP_ID, EXCALIDRAW_PUBSUB_PROVIDER } from '@common/constants';
 import {
   DISCONNECT,
   DISCONNECTING,
@@ -34,7 +34,8 @@ const subscribableEvents = [
 @Injectable()
 export class ExcalidrawEventSubscriberService {
   constructor(
-    @Inject(EXCALIDRAW_PUBSUB_PROVIDER) private excalidrawPubSub: AMQPPubSub
+    @Inject(EXCALIDRAW_PUBSUB_PROVIDER) private excalidrawPubSub: AMQPPubSub,
+    @Inject(APP_ID) private appId: string
   ) {}
 
   /***
@@ -47,12 +48,16 @@ export class ExcalidrawEventSubscriberService {
     next: (payload: BasePayload, message?: amqp.ConsumeMessage | null) => void
   ): Promise<Array<number>> {
     const promises = subscribableEvents.map(event =>
-      this.excalidrawPubSub.subscribe(event, (content, message) => {
-        // if the data is binary it's returned as
-        // { type: 'Buffer', data: [...]
-        content.data = content?.data.data ?? undefined;
-        next(content, message);
-      })
+      this.excalidrawPubSub.subscribe(
+        event,
+        (content, message) => {
+          // if the data is binary it's returned as
+          // { type: 'Buffer', data: [...]
+          content.data = content?.data.data ?? undefined;
+          next(content, message);
+        },
+        { noAck: true, consumerTag: this.appId }
+      )
     );
 
     return Promise.all(promises);
