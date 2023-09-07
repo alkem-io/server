@@ -7,8 +7,12 @@ import {
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
 } from '@services/external/excalidraw-backend/event.names';
-
-export type BasePayload = { roomID: string; name?: string };
+// todo: clear payloads
+export type BasePayload = {
+  roomID: string;
+  publisherId?: string;
+  name?: string;
+};
 export type RoomJoinPayload = BasePayload & {
   name?: typeof JOIN_ROOM;
 };
