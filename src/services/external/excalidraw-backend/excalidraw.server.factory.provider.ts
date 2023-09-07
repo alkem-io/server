@@ -105,12 +105,12 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
             const volatilePayload = payload as ServerVolatileBroadcastPayload;
             wsServer.volatile
               .in(roomID)
-              .emit(SERVER_VOLATILE_BROADCAST, volatilePayload.data);
+              .emit(CLIENT_BROADCAST, volatilePayload.data);
             break;
           }
           case SERVER_BROADCAST: {
             const broadcastPayload = payload as ServerVolatileBroadcastPayload;
-            wsServer.in(roomID).emit(SERVER_BROADCAST, broadcastPayload.data);
+            wsServer.in(roomID).emit(CLIENT_BROADCAST, broadcastPayload.data);
             break;
           }
           case DISCONNECTING: {
