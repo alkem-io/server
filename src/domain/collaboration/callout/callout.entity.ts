@@ -17,6 +17,7 @@ import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.e
 import { PostTemplate } from '@domain/template/post-template/post.template.entity';
 import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
 import { Room } from '@domain/communication/room/room.entity';
+import { WhiteboardRt } from '@domain/common/whiteboard-rt/types';
 
 @Entity()
 export class Callout extends NameableEntity implements ICallout {
@@ -37,6 +38,14 @@ export class Callout extends NameableEntity implements ICallout {
     cascade: true,
   })
   whiteboards?: Whiteboard[];
+
+  @OneToOne(() => WhiteboardRt, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  whiteboardRt?: WhiteboardRt;
 
   @OneToMany(() => Post, post => post.callout, {
     eager: false,

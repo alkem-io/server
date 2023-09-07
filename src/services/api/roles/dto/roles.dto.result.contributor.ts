@@ -1,7 +1,7 @@
+import { ICredential } from '@domain/agent/credential/credential.interface';
 import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { RolesResultOrganization } from './roles.dto.result.organization';
-import { RolesResultSpace } from './roles.dto.result.space';
+import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 
 @ObjectType()
 export class ContributorRoles {
@@ -10,15 +10,7 @@ export class ContributorRoles {
   })
   id!: string;
 
-  @Field(() => [RolesResultSpace], {
-    description:
-      'Details of Spaces the User or Organization is a member of, with child memberships',
-  })
-  spaces: RolesResultSpace[] = [];
+  filter?: SpaceFilterInput;
 
-  @Field(() => [RolesResultOrganization], {
-    description:
-      'Details of the Organizations the User is a member of, with child memberships.',
-  })
-  organizations: RolesResultOrganization[] = [];
+  credentials!: ICredential[];
 }

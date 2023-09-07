@@ -13,5 +13,5 @@ export class CreateWhiteboardOnCalloutInput extends CreateWhiteboardInput {
   @Field(() => String, { nullable: true })
   @IsOptional()
   @MaxLength(CANVAS_VALUE_LENGTH)
-  value?: string;
+  content?: string;
 }

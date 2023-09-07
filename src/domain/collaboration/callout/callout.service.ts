@@ -16,8 +16,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import {
-  CreatePostOnCalloutInput,
   CreateCalloutInput,
+  CreatePostOnCalloutInput,
   CreateWhiteboardOnCalloutInput,
   UpdateCalloutInput,
 } from '@domain/collaboration/callout/dto/index';
@@ -50,6 +50,12 @@ import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { IReference } from '@domain/common/reference';
 import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
+import { CreateWhiteboardInput } from '@domain/common/whiteboard';
+import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
+import {
+  CreateWhiteboardRtInput,
+  IWhiteboardRt,
+} from '@domain/common/whiteboard-rt/types';
 
 @Injectable()
 export class CalloutService {
@@ -59,6 +65,7 @@ export class CalloutService {
     private postTemplateService: PostTemplateService,
     private whiteboardTemplateService: WhiteboardTemplateService,
     private whiteboardService: WhiteboardService,
+    private whiteboardRtService: WhiteboardRtService,
     private namingService: NamingService,
     private roomService: RoomService,
     private userService: UserService,
@@ -88,6 +95,13 @@ export class CalloutService {
 
     if (calloutData.type == CalloutType.WHITEBOARD && !calloutData.whiteboard) {
       throw new Error('Please provide a whiteboard');
+    }
+
+    if (
+      calloutData.type == CalloutType.WHITEBOARD_RT &&
+      !calloutData.whiteboardRt
+    ) {
+      throw new Error('Please provide a whiteboard for real time');
     }
 
     if (!calloutData.sortOrder) {
@@ -154,38 +168,80 @@ export class CalloutService {
     callout.createdBy = userID ?? undefined;
     callout.visibility = calloutData.visibility ?? CalloutVisibility.DRAFT;
 
-    const savedCallout: ICallout = await this.calloutRepository.save(callout);
-
     if (calloutData.type === CalloutType.POST) {
-      savedCallout.comments = await this.roomService.createRoom(
-        `callout-comments-${savedCallout.nameID}`,
+      callout.comments = await this.roomService.createRoom(
+        `callout-comments-${callout.nameID}`,
         RoomType.CALLOUT
       );
-      return await this.calloutRepository.save(savedCallout);
     }
 
     if (calloutData.type == CalloutType.WHITEBOARD && calloutData.whiteboard) {
-      const calloutNameID = this.namingService.createNameID(
-        `${calloutData.whiteboard.profileData.displayName}`
-      );
-
-      const whiteboard = await this.whiteboardService.createWhiteboard(
-        {
-          nameID: calloutNameID,
-          value: calloutData.whiteboard.value,
-          profileData: calloutData.whiteboard.profileData,
-        },
+      const whiteboard = await this.createWhiteboardForCallout(
+        calloutData.whiteboard,
         userID
       );
-      await this.profileService.addVisualOnProfile(
-        whiteboard.profile,
-        VisualType.BANNER
-      );
-      savedCallout.whiteboards = [whiteboard];
-      await this.calloutRepository.save(savedCallout);
+      callout.whiteboards = [whiteboard];
     }
 
-    return savedCallout;
+    if (
+      calloutData.type == CalloutType.WHITEBOARD_RT &&
+      calloutData.whiteboardRt
+    ) {
+      callout.whiteboardRt = await this.createWhiteboardRtForCallout(
+        calloutData.whiteboardRt,
+        userID
+      );
+    }
+
+    return this.calloutRepository.save(callout);
+  }
+
+  private async createWhiteboardForCallout(
+    data: CreateWhiteboardInput,
+    authorID?: string
+  ) {
+    const whiteboardNameID = this.namingService.createNameID(
+      `${data.profileData.displayName}`
+    );
+
+    const whiteboard = await this.whiteboardService.createWhiteboard(
+      {
+        nameID: whiteboardNameID,
+        content: data.content,
+        profileData: data.profileData,
+      },
+      authorID
+    );
+    await this.profileService.addVisualOnProfile(
+      whiteboard.profile,
+      VisualType.BANNER
+    );
+
+    return whiteboard;
+  }
+
+  private async createWhiteboardRtForCallout(
+    data: CreateWhiteboardRtInput,
+    authorID?: string
+  ) {
+    const whiteboardRtNameID = this.namingService.createNameID(
+      `${data.profileData.displayName}`
+    );
+
+    const whiteboardRt = await this.whiteboardRtService.createWhiteboardRt(
+      {
+        nameID: whiteboardRtNameID,
+        content: data.content,
+        profileData: data.profileData,
+      },
+      authorID
+    );
+    await this.profileService.addVisualOnProfile(
+      whiteboardRt.profile,
+      VisualType.BANNER
+    );
+
+    return whiteboardRt;
   }
 
   public async getCalloutOrFail(
@@ -326,14 +382,15 @@ export class CalloutService {
 
   public async deleteCallout(calloutID: string): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutID, {
-      relations: [
-        'posts',
-        'whiteboards',
-        'comments',
-        'postTemplate',
-        'whiteboardTemplate',
-        'profile',
-      ],
+      relations: {
+        posts: true,
+        whiteboards: true,
+        whiteboardRt: true,
+        comments: true,
+        postTemplate: true,
+        whiteboardTemplate: true,
+        profile: true,
+      },
     });
 
     if (callout.profile) {
@@ -344,6 +401,12 @@ export class CalloutService {
       for (const whiteboard of callout.whiteboards) {
         await this.whiteboardService.deleteWhiteboard(whiteboard.id);
       }
+    }
+
+    if (callout.whiteboardRt) {
+      await this.whiteboardRtService.deleteWhiteboardRt(
+        callout.whiteboardRt.id
+      );
     }
 
     if (callout.posts) {
@@ -548,7 +611,7 @@ export class CalloutService {
     const whiteboard = await this.whiteboardService.createWhiteboard(
       {
         nameID: whiteboardData.nameID,
-        value: whiteboardData.value,
+        content: whiteboardData.content,
         profileData: whiteboardData.profileData,
       },
       userID
@@ -592,6 +655,17 @@ export class CalloutService {
       results.push(whiteboard);
     }
     return results;
+  }
+
+  public async getWhiteboardRt(
+    callout: ICallout
+  ): Promise<IWhiteboardRt | undefined> {
+    const res: ICallout = await this.calloutRepository.findOneOrFail({
+      where: { id: callout.id },
+      relations: { whiteboardRt: true },
+    });
+
+    return res.whiteboardRt;
   }
 
   public async getPostsFromCallout(

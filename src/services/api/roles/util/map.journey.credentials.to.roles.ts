@@ -2,10 +2,10 @@ import { EntityManager } from 'typeorm';
 import { ICredential } from '@src/domain';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { groupCredentialsByEntity } from './group.credentials.by.entity';
-import { getUserRolesEntityData } from './get.user.roles.entity.data';
-import { getUserRolesQueryResult } from './get.user.roles.query.result';
+import { getJourneyRolesForContributorEntityData } from './get.journey.roles.for.contributor.entity.data';
+import { getJourneyRolesForContributorQueryResult } from './get.journey.roles.for.contributor.query.result';
 
-export const mapCredentialsToRoles = async (
+export const mapJourneyCredentialsToRoles = async (
   entityManager: EntityManager,
   credentials: ICredential[],
   allowedVisibilities: SpaceVisibility[]
@@ -17,23 +17,20 @@ export const mapCredentialsToRoles = async (
     credentialMap.get('challenges')?.keys() ?? []
   );
   const oppIds = Array.from(credentialMap.get('opportunities')?.keys() ?? []);
-  const orgIds = Array.from(credentialMap.get('organizations')?.keys() ?? []);
 
-  const { spaces, challenges, opportunities, organizations } =
-    await getUserRolesEntityData(
+  const { spaces, challenges, opportunities } =
+    await getJourneyRolesForContributorEntityData(
       entityManager,
       spaceIds,
       allowedVisibilities,
       challengeIds,
-      oppIds,
-      orgIds
+      oppIds
     );
 
-  return getUserRolesQueryResult(
+  return getJourneyRolesForContributorQueryResult(
     credentialMap,
     spaces,
     challenges,
-    opportunities,
-    organizations
+    opportunities
   );
 };

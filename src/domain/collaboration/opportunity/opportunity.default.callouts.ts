@@ -5,7 +5,7 @@ import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.lo
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CreateCalloutInput } from '@domain/collaboration/callout';
-import { EMPTY_WHITEBOARD_VALUE } from '@domain/common/whiteboard/whiteboard.entity';
+import { EMPTY_WHITEBOARD_CONTENT } from '@domain/common/whiteboard/whiteboard.entity';
 
 export const opportunityDefaultCallouts: CreateCalloutInput[] = [
   {
@@ -49,8 +49,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     sortOrder: 1,
     profile: {
       displayName: '💪 Jobs to be done...',
-      description:
-        '',
+      description: '',
       tagsets: [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
@@ -150,7 +149,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
       ],
     },
     whiteboard: {
-      value: EMPTY_WHITEBOARD_VALUE,
+      content: EMPTY_WHITEBOARD_CONTENT,
       nameID: 'needs',
       profileData: {
         displayName: 'Identify needs',

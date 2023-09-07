@@ -22,6 +22,7 @@ import {
   CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS,
   POLICY_RULE_COLLABORATION_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
+  CREDENTIAL_RULE_WHITEBOARD_RT_ACCESS,
 } from '@common/constants';
 import { CommunityRole } from '@common/enums/community.role';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
@@ -170,6 +171,14 @@ export class CollaborationAuthorizationService {
       );
     communityMemberNotInherited.cascade = false;
     newRules.push(communityMemberNotInherited);
+
+    const manageWhiteboardRtPolicy =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.ACCESS_WHITEBOARD_RT],
+        [AuthorizationCredential.BETA_TESTER],
+        CREDENTIAL_RULE_WHITEBOARD_RT_ACCESS
+      );
+    newRules.push(manageWhiteboardRtPolicy);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
