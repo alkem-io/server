@@ -49,7 +49,8 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
     excalidrawEventPublisher: ExcalidrawEventPublisherService,
     excalidrawEventSubscriber: ExcalidrawEventSubscriberService
   ) => {
-    const port = process.env.EXCALIDRAW_SERVER_PORT;
+    const port = configService.get(ConfigurationTypes.HOSTING).whiteboard_rt
+      .port;
 
     if (!port) {
       logger.error('Port not provided!', EXCALIDRAW_SERVER);
