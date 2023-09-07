@@ -84,59 +84,62 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
       );
     });
 
-    let subIds: number[] = [];
+    //let subIds: number[] = [];
     try {
       const wsServer = new SocketIO(httpServer, {
         transports: ['websocket', 'polling'],
         allowEIO3: true,
       });
 
-      subIds = await excalidrawEventSubscriber.subscribeToAll(async payload => {
-        // Some messages can be coming from this instance of the service
-        // so filter them out
-        if (payload.publisherId === appId) {
-          return;
-        }
+      /*subIds = await */ excalidrawEventSubscriber.subscribeToAll(
+        async payload => {
+          // Some messages can be coming from this instance of the service
+          // so filter them out
+          if (payload.publisherId === appId) {
+            return;
+          }
 
-        const { roomID, name } = payload;
-        // todo: try redesigning the handling using the visitor pattern
-        switch (name) {
-          case SERVER_VOLATILE_BROADCAST: {
-            const volatilePayload = payload as ServerVolatileBroadcastPayload;
-            wsServer.volatile
-              .in(roomID)
-              .emit(CLIENT_BROADCAST, volatilePayload.data);
-            break;
-          }
-          case SERVER_BROADCAST: {
-            const broadcastPayload = payload as ServerVolatileBroadcastPayload;
-            wsServer.in(roomID).emit(CLIENT_BROADCAST, broadcastPayload.data);
-            break;
-          }
-          case DISCONNECTING: {
-            // todo: rework using roomID
-            // idk: todo
-            break;
-          }
-          case DISCONNECT: {
-            // no handling required imo
-            break;
-          }
-          case ROOM_USER_CHANGE: {
-            const userChangePayload = payload as RoomUserChangePayload;
-            const ownSocketIds = (await wsServer.in(roomID).fetchSockets()).map(
-              socket => socket.id
-            );
-            wsServer
-              .in(roomID)
-              .emit(ROOM_USER_CHANGE, [
-                ...ownSocketIds,
-                ...userChangePayload.socketIDs,
-              ]);
-            break;
+          const { roomID, name } = payload;
+          // todo: try redesigning the handling using the visitor pattern
+          switch (name) {
+            case SERVER_VOLATILE_BROADCAST: {
+              const volatilePayload = payload as ServerVolatileBroadcastPayload;
+              wsServer.volatile
+                .in(roomID)
+                .emit(CLIENT_BROADCAST, volatilePayload.data);
+              break;
+            }
+            case SERVER_BROADCAST: {
+              const broadcastPayload =
+                payload as ServerVolatileBroadcastPayload;
+              wsServer.in(roomID).emit(CLIENT_BROADCAST, broadcastPayload.data);
+              break;
+            }
+            case DISCONNECTING: {
+              // todo: rework using roomID
+              // idk: todo
+              break;
+            }
+            case DISCONNECT: {
+              // no handling required imo
+              break;
+            }
+            case ROOM_USER_CHANGE: {
+              const userChangePayload = payload as RoomUserChangePayload;
+              const ownSocketIds = (
+                await wsServer.in(roomID).fetchSockets()
+              ).map(socket => socket.id);
+              wsServer
+                .in(roomID)
+                .emit(ROOM_USER_CHANGE, [
+                  ...ownSocketIds,
+                  ...userChangePayload.socketIDs,
+                ]);
+              break;
+            }
           }
         }
-      });
+      );
 
       wsServer.on(CONNECTION, async socket => {
         let agentInfo: AgentInfo;
@@ -271,8 +274,8 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
         });
       });
     } catch (error) {
-      logger.error(error);
-      excalidrawEventSubscriber.unsubscribe(subIds);
+      logger.error(error, LogContext.EXCALIDRAW_SERVER);
+      // excalidrawEventSubscriber.unsubscribe(subIds);
     }
 
     const closeConnection = (socket: Socket, message: string) => {
@@ -307,7 +310,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
           resolve(await authService.createAgentInfo(oryIdentity));
         } catch (e) {
           reject(e);
-          logger.error?.(e);
+          logger.error?.(e, LogContext.EXCALIDRAW_SERVER);
         }
       });
     };
