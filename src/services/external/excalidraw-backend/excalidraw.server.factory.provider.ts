@@ -102,10 +102,10 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
         // todo: try redesigning the handling using the visitor pattern
         switch (name) {
           case SERVER_VOLATILE_BROADCAST: {
-            const volatilePayload = payload as ServerVolatileBroadcastPayload;
-            wsServer.volatile
-              .in(roomID)
-              .emit(CLIENT_BROADCAST, volatilePayload.data);
+            // const volatilePayload = payload as ServerVolatileBroadcastPayload;
+            // wsServer.volatile
+            //   .in(roomID)
+            //   .emit(CLIENT_BROADCAST, volatilePayload.data);
             break;
           }
           case SERVER_BROADCAST: {
@@ -220,6 +220,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
           SERVER_VOLATILE_BROADCAST,
           (roomID: string, data: ArrayBuffer) => {
             socket.volatile.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
+            // wsServer.volatile.to(roomID).emit(CLIENT_BROADCAST, data);
             excalidrawEventPublisher.publishServerVolatileBroadcast({
               roomID,
               data,

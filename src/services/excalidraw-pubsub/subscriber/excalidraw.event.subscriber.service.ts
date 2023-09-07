@@ -47,7 +47,12 @@ export class ExcalidrawEventSubscriberService {
     next: (payload: BasePayload, message?: amqp.ConsumeMessage | null) => void
   ): Promise<Array<number>> {
     const promises = subscribableEvents.map(event =>
-      this.excalidrawPubSub.subscribe(event, next)
+      this.excalidrawPubSub.subscribe(event, (content, message) => {
+        // if the data is binary it's returned as
+        // { type: 'Buffer', data: [...]
+        content.data = content?.data.data ?? undefined;
+        next(content, message);
+      })
     );
 
     return Promise.all(promises);
