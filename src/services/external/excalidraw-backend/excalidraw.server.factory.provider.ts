@@ -98,16 +98,13 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
           // todo: try redesigning the handling using the visitor pattern
           switch (name) {
             case SERVER_VOLATILE_BROADCAST: {
-              const volatilePayload = payload as ServerVolatileBroadcastPayload;
-              const buffer = new Uint8Array(volatilePayload.data).buffer;
-              wsServer.volatile.in(roomID).emit(CLIENT_BROADCAST, buffer);
+              const { data } = payload as ServerVolatileBroadcastPayload;
+              wsServer.volatile.in(roomID).emit(CLIENT_BROADCAST, data);
               break;
             }
             case SERVER_BROADCAST: {
-              const broadcastPayload =
-                payload as ServerVolatileBroadcastPayload;
-              const buffer = new Uint8Array(broadcastPayload.data).buffer;
-              wsServer.in(roomID).emit(CLIENT_BROADCAST, buffer);
+              const { data } = payload as ServerVolatileBroadcastPayload;
+              wsServer.in(roomID).emit(CLIENT_BROADCAST, data);
               break;
             }
             case DISCONNECTING: {

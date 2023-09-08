@@ -2,9 +2,9 @@ import { AMQPPubSub } from 'graphql-amqp-subscriptions';
 import { Inject, Injectable } from '@nestjs/common';
 import { APP_ID, EXCALIDRAW_PUBSUB_PROVIDER } from '@common/constants';
 import {
-  // DISCONNECT,
-  // DISCONNECTING,
-  // NEW_USER,
+  DISCONNECT,
+  DISCONNECTING,
+  NEW_USER,
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
@@ -23,12 +23,12 @@ type SubjectType<TPayload> = {
 };
 
 const subscribableEvents = [
-  // NEW_USER,
-  // ROOM_USER_CHANGE,
+  NEW_USER,
+  ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
-  // DISCONNECTING,
-  // DISCONNECT,
+  DISCONNECTING,
+  DISCONNECT,
 ];
 
 @Injectable()
