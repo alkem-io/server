@@ -2,9 +2,9 @@ import { AMQPPubSub } from 'graphql-amqp-subscriptions';
 import { Inject, Injectable } from '@nestjs/common';
 import { APP_ID, EXCALIDRAW_PUBSUB_PROVIDER } from '@common/constants';
 import {
-  DISCONNECT,
-  DISCONNECTING,
-  NEW_USER,
+  // DISCONNECT,
+  // DISCONNECTING,
+  // NEW_USER,
   ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
@@ -23,12 +23,12 @@ type SubjectType<TPayload> = {
 };
 
 const subscribableEvents = [
-  NEW_USER,
-  ROOM_USER_CHANGE,
+  // NEW_USER,
+  // ROOM_USER_CHANGE,
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
-  DISCONNECTING,
-  DISCONNECT,
+  // DISCONNECTING,
+  // DISCONNECT,
 ];
 
 @Injectable()
@@ -44,23 +44,44 @@ export class ExcalidrawEventSubscriberService {
    * @param next
    * @returns Promise<Array<number>>
    */
-  public subscribeToAll(
-    next: (payload: BasePayload, message?: amqp.ConsumeMessage | null) => void
-  ): Promise<Array<number>> {
-    const promises = subscribableEvents.map(event =>
-      this.excalidrawPubSub.subscribe(
-        event,
-        (content, message) => {
-          // if the data is binary it's returned as
-          // { type: 'Buffer', data: [...]
-          content.data = content?.data.data ?? undefined;
-          next(content, message);
-        },
-        { noAck: true, consumerTag: this.appId }
-      )
-    );
-
-    return Promise.all(promises);
+  public async subscribeToAll(
+    next: (
+      payload: BasePayload /*, message?: amqp.ConsumeMessage | null*/
+    ) => void
+  ) {
+    // todo; simplify; breakdown
+    try {
+      const asyncIterator =
+        this.excalidrawPubSub.asyncIterator<any /*BasePayload*/>(
+          subscribableEvents
+        );
+      while (true) {
+        try {
+          const { done, value } = await asyncIterator.next();
+          if (done) {
+            return;
+          }
+          value.data = value?.data && new Uint8Array(value.data.data).buffer;
+          next(value);
+        } catch (e) {
+          throw new Error(`inner ${(e as Error).message}`);
+        }
+      }
+    } catch (e) {
+      throw new Error(`outer ${(e as Error).message}`);
+    }
+    // const promises = subscribableEvents.map(event => {
+    // this.excalidrawPubSub.subscribe(
+    //   event,
+    //   (content, message) => {
+    //     // if the data is binary it's returned as
+    //     // { type: 'Buffer', data: [...]
+    //     content.data = content?.data.data ?? undefined;
+    //     next(content, message);
+    //   },
+    //   { noAck: true, consumerTag: this.appId }
+    // )
+    // return Promise.all(promises);
   }
 
   public unsubscribe(subIds: Array<number>) {

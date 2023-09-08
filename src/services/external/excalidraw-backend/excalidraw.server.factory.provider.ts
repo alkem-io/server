@@ -84,14 +84,13 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
       );
     });
 
-    let subIds: number[] = [];
     try {
       const wsServer = new SocketIO(httpServer, {
         transports: ['websocket', 'polling'],
         allowEIO3: true,
       });
 
-      subIds = await excalidrawEventSubscriber.subscribeToAll(async payload => {
+      excalidrawEventSubscriber.subscribeToAll(async payload => {
         // Some messages can be coming from this instance of the service
         // so filter them out
         if (payload.publisherId !== appId) {
@@ -270,7 +269,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
       });
     } catch (error) {
       logger.error(error, LogContext.EXCALIDRAW_SERVER);
-      excalidrawEventSubscriber.unsubscribe(subIds);
+      //excalidrawEventSubscriber.unsubscribe(subIds);
     }
 
     const closeConnection = (socket: Socket, message: string) => {
