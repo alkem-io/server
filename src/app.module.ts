@@ -65,6 +65,7 @@ import { ExcalidrawServerModule } from '@services/external/excalidraw-backend';
 import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.module';
 import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
+import { APP_ID_PROVIDER } from '@common/app.id.provider';
 
 @Module({
   imports: [
@@ -250,6 +251,7 @@ import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
+    APP_ID_PROVIDER,
   ],
 })
 export class AppModule {
