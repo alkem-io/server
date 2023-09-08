@@ -8,5 +8,8 @@ spec:
     - protocol: TCP
       name: graphql
       port: 4000
+    - protocol: TCP
+      name: socket-io
+      port: 4001
   selector:
     app: alkemio-server

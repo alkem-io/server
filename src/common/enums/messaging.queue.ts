@@ -4,7 +4,7 @@ export enum MessagingQueue {
   NOTIFICATIONS = 'alkemio-notifications',
   MATRIX_ADAPTER = 'alkemio-matrix-adapter',
   AUTH_RESET = 'alkemio-auth-reset',
-  SUBSCRIPTION_ROOM_MESSAGE = 'alkemio-subscriptions-room-message',
+  EXCALIDRAW_EVENTS = 'alkemio-excalidraw-events',
   SUBSCRIPTION_WHITEBOARD_CONTENT = 'alkemio-subscriptions-whiteboard-content',
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL = 'alkemio-subscriptions-profile-verified-credential',
   SUBSCRIPTION_CALLOUT_POST_CREATED = 'alkemio-subscriptions-callout-post-created',
