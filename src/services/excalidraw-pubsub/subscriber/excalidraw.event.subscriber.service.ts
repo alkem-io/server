@@ -9,18 +9,7 @@ import {
   SERVER_BROADCAST,
   SERVER_VOLATILE_BROADCAST,
 } from '@services/external/excalidraw-backend/event.names';
-import {
-  BasePayload,
-  RoomUserChangePayload,
-  ServerVolatileBroadcastPayload,
-} from '../payloads';
-import { Subject } from 'rxjs';
-import amqp from 'amqplib';
-
-type SubjectType<TPayload> = {
-  payload: TPayload;
-  message?: amqp.ConsumeMessage | null;
-};
+import { BasePayload } from '../payloads';
 
 const subscribableEvents = [
   NEW_USER,
@@ -44,89 +33,25 @@ export class ExcalidrawEventSubscriberService {
    * @param next
    * @returns Promise<Array<number>>
    */
-  public async subscribeToAll(
-    next: (
-      payload: BasePayload /*, message?: amqp.ConsumeMessage | null*/
-    ) => void
-  ) {
+  public async subscribeToAll(next: (payload: BasePayload) => void) {
     // todo; simplify; breakdown
     try {
       const asyncIterator =
-        this.excalidrawPubSub.asyncIterator<any /*BasePayload*/>(
+        this.excalidrawPubSub.asyncIterator<any /*BasePayload*/>( // todo
           subscribableEvents
         );
       while (true) {
-        try {
-          const { done, value } = await asyncIterator.next();
-          if (done) {
-            return;
-          }
-          value.data = value?.data && new Uint8Array(value.data.data).buffer;
-          next(value);
-        } catch (e) {
-          throw new Error(`inner ${(e as Error).message}`);
+        const { done, value } = await asyncIterator.next();
+        if (done) {
+          return;
         }
+        value.data = value?.data && new Uint8Array(value.data.data).buffer;
+        next(value);
       }
     } catch (e) {
-      throw new Error(`outer ${(e as Error).message}`);
+      throw new Error(
+        `Exception while waiting for result: ${(e as Error).message}`
+      );
     }
-    // const promises = subscribableEvents.map(event => {
-    // this.excalidrawPubSub.subscribe(
-    //   event,
-    //   (content, message) => {
-    //     // if the data is binary it's returned as
-    //     // { type: 'Buffer', data: [...]
-    //     content.data = content?.data.data ?? undefined;
-    //     next(content, message);
-    //   },
-    //   { noAck: true, consumerTag: this.appId }
-    // )
-    // return Promise.all(promises);
-  }
-
-  public unsubscribe(subIds: Array<number>) {
-    subIds.forEach(subId => this.excalidrawPubSub.unsubscribe(subId));
-  }
-
-  public subscribeServerVolatileBroadcast(
-    next: (
-      payload: ServerVolatileBroadcastPayload,
-      message?: amqp.ConsumeMessage | null
-    ) => void
-  ) {
-    const subject = new Subject<SubjectType<ServerVolatileBroadcastPayload>>();
-    this.excalidrawPubSub.subscribe(
-      SERVER_VOLATILE_BROADCAST,
-      (payload, message) => {
-        subject.next({
-          payload,
-          message,
-        });
-        next(payload, message);
-      },
-      {}
-    );
-    return subject.subscribe();
-  }
-
-  public subscribeRoomUserChange(
-    next: (
-      payload: ServerVolatileBroadcastPayload,
-      message?: amqp.ConsumeMessage | null
-    ) => void
-  ) {
-    const subject = new Subject<SubjectType<RoomUserChangePayload>>();
-    this.excalidrawPubSub.subscribe(
-      ROOM_USER_CHANGE,
-      (payload, message) => {
-        subject.next({
-          payload,
-          message,
-        });
-        next(payload, message);
-      },
-      {}
-    );
-    return subject.subscribe();
   }
 }

@@ -93,6 +93,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
       excalidrawEventSubscriber.subscribeToAll(async payload => {
         // Some messages can be coming from this instance of the service
         // so filter them out
+        // todo: filter in the subscriber
         if (payload.publisherId !== appId) {
           const { roomID, name } = payload;
           // todo: try redesigning the handling using the visitor pattern
@@ -266,7 +267,6 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
       });
     } catch (error) {
       logger.error(error, LogContext.EXCALIDRAW_SERVER);
-      //excalidrawEventSubscriber.unsubscribe(subIds);
     }
 
     const closeConnection = (socket: Socket, message: string) => {
