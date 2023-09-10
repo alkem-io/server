@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class calloutTemplate1693764873894 implements MigrationInterface {
-  name = 'calloutTemplate1693764873894';
+export class calloutTemplate1693849043894 implements MigrationInterface {
+  name = 'calloutTemplate1693849043894';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
