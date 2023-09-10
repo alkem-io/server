@@ -9,28 +9,54 @@ import {
   ConfigurationTypes,
   LogContext,
 } from '@common/enums';
-import { EXCALIDRAW_SERVER } from '@constants/index';
+import { APP_ID, EXCALIDRAW_SERVER } from '@constants/index';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AgentInfo } from '@core/authentication';
 import { OryDefaultIdentitySchema } from '@core/authentication/ory.default.identity.schema';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ExcalidrawEventPublisherService } from '@services/excalidraw-pubsub/publisher';
+import { ExcalidrawEventSubscriberService } from '@services/excalidraw-pubsub/subscriber';
+import {
+  CLIENT_BROADCAST,
+  CONNECTION,
+  CONNECTION_CLOSED,
+  DISCONNECT,
+  DISCONNECTING,
+  FIRST_IN_ROOM,
+  INIT_ROOM,
+  JOIN_ROOM,
+  NEW_USER,
+  ROOM_USER_CHANGE,
+  SERVER_BROADCAST,
+  SERVER_VOLATILE_BROADCAST,
+} from '@services/external/excalidraw-backend/event.names';
+import {
+  RoomUserChangePayload,
+  ServerVolatileBroadcastPayload,
+} from '@services/excalidraw-pubsub/payloads';
 
 export const ExcalidrawServerFactoryProvider: FactoryProvider = {
   provide: EXCALIDRAW_SERVER,
   inject: [
+    APP_ID,
     WINSTON_MODULE_NEST_PROVIDER,
     ConfigService,
     AuthenticationService,
     AuthorizationService,
     WhiteboardRtService,
+    ExcalidrawEventPublisherService,
+    ExcalidrawEventSubscriberService,
   ],
-  useFactory: (
+  useFactory: async (
+    appId: string,
     logger: LoggerService,
     configService: ConfigService,
     authService: AuthenticationService,
     authorizationService: AuthorizationService,
-    whiteboardRtService: WhiteboardRtService
+    whiteboardRtService: WhiteboardRtService,
+    excalidrawEventPublisher: ExcalidrawEventPublisherService,
+    excalidrawEventSubscriber: ExcalidrawEventSubscriberService
   ) => {
     const port = configService.get(ConfigurationTypes.HOSTING).whiteboard_rt
       .port;
@@ -49,9 +75,9 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
       })
     );
 
-    const server = http.createServer();
+    const httpServer = http.createServer();
 
-    server.listen(port, () => {
+    httpServer.listen(port, () => {
       logger?.verbose?.(
         `listening on port: ${port}`,
         LogContext.EXCALIDRAW_SERVER
@@ -59,12 +85,56 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
     });
 
     try {
-      const io = new SocketIO(server, {
+      const wsServer = new SocketIO(httpServer, {
         transports: ['websocket', 'polling'],
         allowEIO3: true,
       });
 
-      io.on('connection', async socket => {
+      excalidrawEventSubscriber.subscribeToAll(async payload => {
+        // Some messages can be coming from this instance of the service
+        // so filter them out
+        // todo: filter in the subscriber
+        if (payload.publisherId !== appId) {
+          const { roomID, name } = payload;
+          // todo: try redesigning the handling using the visitor pattern
+          switch (name) {
+            case SERVER_VOLATILE_BROADCAST: {
+              const { data } = payload as ServerVolatileBroadcastPayload;
+              wsServer.volatile.in(roomID).emit(CLIENT_BROADCAST, data);
+              break;
+            }
+            case SERVER_BROADCAST: {
+              const { data } = payload as ServerVolatileBroadcastPayload;
+              wsServer.in(roomID).emit(CLIENT_BROADCAST, data);
+              break;
+            }
+            case DISCONNECTING: {
+              // todo: rework using roomID
+              // idk: todo
+              break;
+            }
+            case DISCONNECT: {
+              // no handling required imo
+              break;
+            }
+            case ROOM_USER_CHANGE: {
+              const userChangePayload = payload as RoomUserChangePayload;
+              const ownSocketIds = (
+                await wsServer.in(roomID).fetchSockets()
+              ).map(socket => socket.id);
+              wsServer
+                .in(roomID)
+                .emit(ROOM_USER_CHANGE, [
+                  ...ownSocketIds,
+                  ...userChangePayload.socketIDs,
+                ]);
+              break;
+            }
+          }
+        }
+      });
+
+      wsServer.on(CONNECTION, async socket => {
         let agentInfo: AgentInfo;
         try {
           agentInfo = await authenticate(socket.handshake.headers);
@@ -83,8 +153,8 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
           LogContext.EXCALIDRAW_SERVER
         );
 
-        io.to(`${socket.id}`).emit('init-room');
-        socket.on('join-room', async (roomID: string) => {
+        wsServer.to(socket.id).emit(INIT_ROOM);
+        socket.on(JOIN_ROOM, async (roomID: string) => {
           try {
             const whiteboardRt =
               await whiteboardRtService.getWhiteboardRtOrFail(roomID);
@@ -110,77 +180,98 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
             LogContext.EXCALIDRAW_SERVER
           );
 
-          const sockets = await io.in(roomID).fetchSockets();
+          const sockets = await wsServer.in(roomID).fetchSockets();
           if (sockets.length <= 1) {
-            io.to(`${socket.id}`).emit('first-in-room');
+            wsServer.to(`${socket.id}`).emit(FIRST_IN_ROOM);
           } else {
             logger?.verbose?.(
               `User ${agentInfo.userID} emitted to room ${roomID}`,
               LogContext.EXCALIDRAW_SERVER
             );
-            socket.broadcast.to(roomID).emit('new-user', socket.id);
+            socket.broadcast.to(roomID).emit(NEW_USER, socket.id);
+            // excalidrawEventPublisher.publishNewUser({
+            //   roomID,
+            //   socketID: socket.id,
+            // });
+            // todo; testing if not need
           }
 
-          io.in(roomID).emit(
-            'room-user-change',
-            sockets.map(socket => socket.id)
-          );
+          const socketIDs = sockets.map(socket => socket.id);
+          wsServer.in(roomID).emit(ROOM_USER_CHANGE, socketIDs);
+          excalidrawEventPublisher.publishRoomUserChange({
+            roomID,
+            socketIDs,
+          });
+        });
+
+        socket.on(SERVER_BROADCAST, (roomID: string, data: ArrayBuffer) => {
+          socket.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
+          excalidrawEventPublisher.publishServerBroadcast({
+            roomID,
+            data,
+          });
         });
 
         socket.on(
-          'server-broadcast',
-          (roomID: string, encryptedData: ArrayBuffer, iv: Uint8Array) => {
-            socket.broadcast
-              .to(roomID)
-              .emit('client-broadcast', encryptedData, iv);
+          SERVER_VOLATILE_BROADCAST,
+          (roomID: string, data: ArrayBuffer) => {
+            socket.volatile.broadcast.to(roomID).emit(CLIENT_BROADCAST, data);
+            excalidrawEventPublisher.publishServerVolatileBroadcast({
+              roomID,
+              data,
+            });
           }
         );
 
-        socket.on(
-          'server-volatile-broadcast',
-          (roomID: string, encryptedData: ArrayBuffer, iv: Uint8Array) => {
-            socket.volatile.broadcast
-              .to(roomID)
-              .emit('client-broadcast', encryptedData, iv);
-          }
-        );
-
-        socket.on('disconnecting', async () => {
+        socket.on(DISCONNECTING, async () => {
           logger?.verbose?.(
             `User '${agentInfo.userID}' has disconnected`,
             LogContext.EXCALIDRAW_SERVER
           );
+          excalidrawEventPublisher.publishDisconnecting({
+            roomID: 'NA',
+          });
           /***
            * idk why is this needed
            * seems very expensive
            * send the room id while disconnecting instead of trying to find which is it
            */
+          // todo: send roomID
+          /***
+           * For all the rooms this socket is
+           * send a room change event
+           */
           for (const roomID in socket.rooms) {
-            const otherClients = (await io.in(roomID).fetchSockets()).filter(
-              _socket => _socket.id !== socket.id
-            );
+            const otherClients = (
+              await wsServer.in(roomID).fetchSockets()
+            ).filter(_socket => _socket.id !== socket.id);
 
             if (otherClients.length > 0) {
-              socket.broadcast.to(roomID).emit(
-                'room-user-change',
-                otherClients.map(socket => socket.id)
-              );
+              const socketIDs = otherClients.map(socket => socket.id);
+              socket.broadcast.to(roomID).emit(ROOM_USER_CHANGE, socketIDs);
+              excalidrawEventPublisher.publishRoomUserChange({
+                roomID,
+                socketIDs,
+              });
             }
           }
         });
 
-        socket.on('disconnect', () => {
+        socket.on(DISCONNECT, () => {
           socket.removeAllListeners();
           socket.disconnect();
+          excalidrawEventPublisher.publishDisconnected({
+            roomID: 'NA',
+          });
         });
       });
     } catch (error) {
-      console.error(error);
+      logger.error(error, LogContext.EXCALIDRAW_SERVER);
     }
 
     const closeConnection = (socket: Socket, message: string) => {
       socket.removeAllListeners();
-      socket.emit('connection-closed', message);
+      socket.emit(CONNECTION_CLOSED, message);
       socket.disconnect();
     };
 
@@ -210,7 +301,7 @@ export const ExcalidrawServerFactoryProvider: FactoryProvider = {
           resolve(await authService.createAgentInfo(oryIdentity));
         } catch (e) {
           reject(e);
-          logger.error?.(e);
+          logger.error?.(e, LogContext.EXCALIDRAW_SERVER);
         }
       });
     };
