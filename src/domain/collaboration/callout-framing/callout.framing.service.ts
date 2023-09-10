@@ -49,6 +49,10 @@ export class CalloutFramingService {
       );
     }
 
+    if (calloutFramingData.content) {
+      calloutFraming.content = calloutFramingData.content;
+    }
+
     return calloutFraming;
   }
 

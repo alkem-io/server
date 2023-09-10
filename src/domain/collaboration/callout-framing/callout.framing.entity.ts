@@ -1,7 +1,18 @@
-import { Entity, JoinColumn, OneToOne } from 'typeorm';
+import {
+  AfterInsert,
+  AfterLoad,
+  AfterUpdate,
+  BeforeInsert,
+  BeforeUpdate,
+  Column,
+  Entity,
+  JoinColumn,
+  OneToOne,
+} from 'typeorm';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
+import { compressText, decompressText } from '@common/utils/compression.util';
 
 @Entity()
 export class CalloutFraming
@@ -15,4 +26,23 @@ export class CalloutFraming
   })
   @JoinColumn()
   profile!: Profile;
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  async compressContent() {
+    if (this.content && this.content !== '') {
+      this.content = await compressText(this.content);
+    }
+  }
+  @AfterInsert()
+  @AfterUpdate()
+  @AfterLoad()
+  async decompressContent() {
+    if (this.content && this.content !== '') {
+      this.content = await decompressText(this.content);
+    }
+  }
+
+  @Column('longtext', { nullable: false })
+  content?: string;
 }

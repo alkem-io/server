@@ -12,6 +12,7 @@ export class calloutTemplate1693849043894 implements MigrationInterface {
                   \`version\` int NOT NULL,
                   \`authorizationId\` char(36) NULL,
                   \`profileId\` char(36) NULL,
+                  \`content\` longtext NOT NULL,
                   UNIQUE INDEX \`REL_c9d7c2c4eb8a1d012ddc6605da\` (\`authorizationId\`), UNIQUE INDEX \`REL_f53e2d266432e58e538a366705\` (\`profileId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
@@ -20,7 +21,8 @@ export class calloutTemplate1693849043894 implements MigrationInterface {
                   \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                   \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                   \`version\` int NOT NULL,
-                  \`description\` text NULL,
+                  \`postDescription\` text NULL,
+                  \`whiteboardContent\` longtext NOT NULL,
                   PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(

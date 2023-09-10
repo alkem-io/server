@@ -20,9 +20,14 @@ export class CalloutResponseDefaultsService {
     calloutResponseDefaultsData: CreateCalloutResponseDefaultsInput
   ): Promise<ICalloutResponseDefaults> {
     const calloutResponseDefaults = new CalloutResponseDefaults();
-    if (calloutResponseDefaultsData.description) {
-      calloutResponseDefaults.description =
-        calloutResponseDefaultsData.description;
+    if (calloutResponseDefaultsData.postDescription) {
+      calloutResponseDefaults.postDescription =
+        calloutResponseDefaultsData.postDescription;
+    }
+
+    if (calloutResponseDefaultsData.whiteboardContent) {
+      calloutResponseDefaults.whiteboardContent =
+        calloutResponseDefaultsData.whiteboardContent;
     }
 
     return calloutResponseDefaults;
@@ -32,9 +37,9 @@ export class CalloutResponseDefaultsService {
     calloutResponseDefaults: ICalloutResponseDefaults,
     calloutResponseDefaultsData: UpdateCalloutResponseDefaultsInput
   ): Promise<ICalloutResponseDefaults> {
-    if (calloutResponseDefaultsData.description) {
-      calloutResponseDefaults.description =
-        calloutResponseDefaultsData.description;
+    if (calloutResponseDefaultsData.postDescription) {
+      calloutResponseDefaults.postDescription =
+        calloutResponseDefaultsData.postDescription;
     }
 
     return calloutResponseDefaults;
