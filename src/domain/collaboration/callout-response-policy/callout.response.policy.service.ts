@@ -25,9 +25,8 @@ export class CalloutResponsePolicyService {
         calloutResponsePolicyData.allowedResponseTypes;
     }
 
-    if (calloutResponsePolicyData.allowNewResponses) {
-      calloutResponsePolicy.allowNewResponses =
-        calloutResponsePolicyData.allowNewResponses;
+    if (calloutResponsePolicyData.state) {
+      calloutResponsePolicy.state = calloutResponsePolicyData.state;
     }
 
     return calloutResponsePolicy;
@@ -42,9 +41,8 @@ export class CalloutResponsePolicyService {
         calloutResponsePolicyData.allowedResponseTypes;
     }
 
-    if (calloutResponsePolicyData.allowNewResponses) {
-      calloutResponsePolicy.allowNewResponses =
-        calloutResponsePolicyData.allowNewResponses;
+    if (calloutResponsePolicyData.state) {
+      calloutResponsePolicy.state = calloutResponsePolicyData.state;
     }
 
     return calloutResponsePolicy;

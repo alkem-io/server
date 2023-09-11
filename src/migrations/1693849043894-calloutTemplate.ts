@@ -32,7 +32,7 @@ export class calloutTemplate1693849043894 implements MigrationInterface {
                   \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                   \`version\` int NOT NULL,
                   \`allowedResponseTypes\` text NOT NULL,
-                  \`allowNewResponses\` tinyint NOT NULL DEFAULT 1,
+                  \`state\` varchar(255) NOT NULL,
                   PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(

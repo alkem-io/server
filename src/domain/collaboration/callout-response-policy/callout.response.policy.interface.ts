@@ -1,4 +1,5 @@
 import { CalloutResponseType } from '@common/enums/callout.response.type';
+import { CalloutState } from '@common/enums/callout.state';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 
@@ -10,9 +11,8 @@ export abstract class ICalloutResponsePolicy extends IBaseAlkemio {
   })
   allowedResponseTypes!: string[];
 
-  @Field(() => Boolean, {
-    nullable: false,
-    description: 'Are new responses allowed?',
+  @Field(() => CalloutState, {
+    description: 'State of the Callout.',
   })
-  allowNewResponses!: boolean;
+  state!: CalloutState;
 }

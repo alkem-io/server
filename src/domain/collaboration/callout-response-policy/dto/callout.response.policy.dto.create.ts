@@ -1,5 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { CalloutResponseType } from '@common/enums/callout.response.type';
+import { CalloutState } from '@common/enums/callout.state';
 @InputType()
 export class CreateCalloutResponsePolicyInput {
   @Field(() => [CalloutResponseType], {
@@ -8,9 +9,9 @@ export class CreateCalloutResponsePolicyInput {
   })
   allowedResponseTypes?: string[];
 
-  @Field(() => Boolean, {
+  @Field(() => CalloutState, {
     nullable: true,
-    description: 'Are new responses allowed?',
+    description: 'State of the callout.',
   })
-  allowNewResponses?: boolean;
+  state!: CalloutState;
 }

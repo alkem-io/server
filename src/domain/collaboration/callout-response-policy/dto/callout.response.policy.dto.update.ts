@@ -1,4 +1,5 @@
 import { CalloutResponseType } from '@common/enums/callout.response.type';
+import { CalloutState } from '@common/enums/callout.state';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/base.alkemio.dto.update';
 import { InputType, Field } from '@nestjs/graphql';
 
@@ -10,9 +11,9 @@ export class UpdateCalloutResponsePolicyInput extends UpdateBaseAlkemioInput {
   })
   allowedResponseTypes?: string[];
 
-  @Field(() => Boolean, {
+  @Field(() => CalloutState, {
     nullable: true,
-    description: 'Are new responses allowed?',
+    description: 'State of the callout.',
   })
-  allowNewResponses?: boolean;
+  state!: CalloutState;
 }
