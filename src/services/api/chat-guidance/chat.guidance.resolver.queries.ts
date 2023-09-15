@@ -39,6 +39,6 @@ export class ChatGuidanceResolverQueries {
         sources: '',
       };
     }
-    return this.chatGuidanceService.askQuestion(chatData.question, agentInfo);
+    return this.chatGuidanceService.askQuestion(chatData, agentInfo);
   }
 }

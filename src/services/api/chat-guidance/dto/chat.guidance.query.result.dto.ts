@@ -19,4 +19,10 @@ export abstract class IChatGuidanceQueryResult {
     description: 'The answer to the question',
   })
   answer!: string;
+
+  @Field(() => Number, {
+    nullable: true,
+    description: 'Cost of the query, in USD',
+  })
+  cost?: number;
 }

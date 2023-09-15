@@ -9,6 +9,7 @@ import { GuidanceEngineInputBase } from './dto/guidance.engine.dto.base';
 import { GuidanceEngineBaseResponse } from './dto/guidance.engine.dto.base.response';
 import { IChatGuidanceQueryResult } from '@services/api/chat-guidance/dto/chat.guidance.query.result.dto';
 import { GuidanceEngineQueryInput } from './dto/guidance.engine.dto.query';
+import { ChatGuidanceLogService } from '@services/api/chat-guidance/chat.guidance.log.service';
 
 enum GuidanceEngineEventType {
   QUERY = 'query',
@@ -24,7 +25,8 @@ export class GuidanceEngineAdapter {
   constructor(
     @Inject(CHAT_GUIDANCE_SERVICE) private GuidanceEngineClient: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private chatGuidanceLogService: ChatGuidanceLogService
   ) {}
 
   async sendQuery(
@@ -40,19 +42,26 @@ export class GuidanceEngineAdapter {
         response
       );
       const message = responseData.result;
-      let cleanedString = message;
+      let formattedString = message;
       // Check if response is a string containing stringified JSON
       if (typeof message === 'string' && message.startsWith('{')) {
-        cleanedString = message
+        formattedString = message
           .replace(/\\\\n/g, ' ')
           .replace(/\\\\/g, '\\')
           .replace(/<\|im_end\|>/g, '');
       }
 
-      const jsonObject = JSON.parse(cleanedString);
+      const jsonObject = JSON.parse(formattedString);
       const result: IChatGuidanceQueryResult = {
         ...jsonObject,
+        cost: jsonObject.total_cost,
       };
+
+      await this.chatGuidanceLogService.logAnswer(
+        eventData.question,
+        jsonObject as GuidanceEngineQueryResponse,
+        eventData.userId
+      );
       return result;
     } catch (err: any) {
       const errorMessage = `Could not send query to chat guidance adapter! ${err}`;
