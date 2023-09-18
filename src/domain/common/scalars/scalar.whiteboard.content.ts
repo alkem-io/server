@@ -12,7 +12,7 @@ export class WhiteboardContent implements CustomScalar<string, string> {
   description = 'Content of a Whiteboard, as JSON.';
 
   parseValue(value: unknown): string {
-    return this.validate(value);
+    return WhiteboardContent.validate(value);
   }
 
   serialize(value: any): string {
@@ -21,15 +21,15 @@ export class WhiteboardContent implements CustomScalar<string, string> {
 
   parseLiteral(ast: ValueNode): string {
     if (ast.kind === Kind.STRING) {
-      return this.validate(ast.value);
+      return WhiteboardContent.validate(ast.value);
     }
     return '';
   }
 
-  validate = (value: any) => {
+  static validate(value: any) {
     if (typeof value !== 'string') {
       throw new ValidationException(
-        `Whiteboard content is not string: ${value}`,
+        'Whiteboard content is not string',
         LogContext.API
       );
     }
@@ -61,7 +61,7 @@ export class WhiteboardContent implements CustomScalar<string, string> {
     }
 
     return value;
-  };
+  }
 }
 
 const formatErrors = (errors: ErrorObject[]) => {
