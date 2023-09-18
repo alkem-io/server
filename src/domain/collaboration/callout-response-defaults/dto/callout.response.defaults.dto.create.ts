@@ -1,8 +1,7 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
-import { CANVAS_VALUE_LENGTH } from '@common/constants';
-import { IsOptional, MaxLength } from 'class-validator';
-import JSON from 'graphql-type-json';
+import { IsOptional } from 'class-validator';
+import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 @InputType()
 export class CreateCalloutResponseDefaultsInput {
   @Field(() => Markdown, {
@@ -11,8 +10,7 @@ export class CreateCalloutResponseDefaultsInput {
   })
   postDescription?: string;
 
-  @Field(() => JSON, { nullable: true })
+  @Field(() => WhiteboardContent, { nullable: true })
   @IsOptional()
-  @MaxLength(CANVAS_VALUE_LENGTH)
   whiteboardContent?: string;
 }

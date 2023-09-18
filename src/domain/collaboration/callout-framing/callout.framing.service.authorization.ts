@@ -37,6 +37,6 @@ export class CalloutFramingAuthorizationService {
         calloutFraming.authorization
       );
 
-    return await this.calloutFramingRepository.save(calloutFraming);
+    return this.calloutFramingRepository.save(calloutFraming);
   }
 }

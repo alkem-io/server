@@ -1,9 +1,8 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
+import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
-import { CANVAS_VALUE_LENGTH } from '@common/constants';
-import JSON from 'graphql-type-json';
+import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 @InputType()
 export class CreateCalloutFramingInput {
   @Field(() => CreateProfileInput, { nullable: false })
@@ -11,8 +10,7 @@ export class CreateCalloutFramingInput {
   @Type(() => CreateProfileInput)
   profile!: CreateProfileInput;
 
-  @Field(() => JSON, { nullable: true })
+  @Field(() => WhiteboardContent, { nullable: true })
   @IsOptional()
-  @MaxLength(CANVAS_VALUE_LENGTH)
   content?: string;
 }

@@ -27,10 +27,13 @@ export class CalloutFraming
   @JoinColumn()
   profile!: Profile;
 
+  @Column('longtext', { nullable: false })
+  content!: string;
+
   @BeforeInsert()
   @BeforeUpdate()
   async compressContent() {
-    if (this.content && this.content !== '') {
+    if (this.content) {
       this.content = await compressText(this.content);
     }
   }
@@ -38,11 +41,8 @@ export class CalloutFraming
   @AfterUpdate()
   @AfterLoad()
   async decompressContent() {
-    if (this.content && this.content !== '') {
+    if (this.content) {
       this.content = await decompressText(this.content);
     }
   }
-
-  @Column('longtext', { nullable: false })
-  content?: string;
 }

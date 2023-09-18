@@ -1,9 +1,8 @@
-import { CANVAS_VALUE_LENGTH } from '@common/constants';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/base.alkemio.dto.update';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { InputType, Field } from '@nestjs/graphql';
-import { IsOptional, MaxLength } from 'class-validator';
-import JSON from 'graphql-type-json';
+import { IsOptional } from 'class-validator';
+import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 
 @InputType()
 export class UpdateCalloutResponseDefaultsInput extends UpdateBaseAlkemioInput {
@@ -13,12 +12,11 @@ export class UpdateCalloutResponseDefaultsInput extends UpdateBaseAlkemioInput {
   })
   postDescription?: string;
 
-  @Field(() => JSON, {
+  @Field(() => WhiteboardContent, {
     nullable: true,
     description:
       'The default description to use for new Whiteboard contributions.',
   })
   @IsOptional()
-  @MaxLength(CANVAS_VALUE_LENGTH)
   whiteboardContent?: string;
 }
