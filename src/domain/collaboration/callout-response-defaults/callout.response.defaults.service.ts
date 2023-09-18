@@ -16,9 +16,9 @@ export class CalloutResponseDefaultsService {
     private calloutResponseDefaultsRepository: Repository<CalloutResponseDefaults>
   ) {}
 
-  async createCalloutResponseDefaults(
+  public createCalloutResponseDefaults(
     calloutResponseDefaultsData: CreateCalloutResponseDefaultsInput
-  ): Promise<ICalloutResponseDefaults> {
+  ): ICalloutResponseDefaults {
     const calloutResponseDefaults = new CalloutResponseDefaults();
     if (calloutResponseDefaultsData.postDescription) {
       calloutResponseDefaults.postDescription =
@@ -33,10 +33,10 @@ export class CalloutResponseDefaultsService {
     return calloutResponseDefaults;
   }
 
-  async updateCalloutResponseDefaults(
+  public updateCalloutResponseDefaults(
     calloutResponseDefaults: ICalloutResponseDefaults,
     calloutResponseDefaultsData: UpdateCalloutResponseDefaultsInput
-  ): Promise<ICalloutResponseDefaults> {
+  ): ICalloutResponseDefaults {
     if (calloutResponseDefaultsData.postDescription) {
       calloutResponseDefaults.postDescription =
         calloutResponseDefaultsData.postDescription;
@@ -45,7 +45,7 @@ export class CalloutResponseDefaultsService {
     return calloutResponseDefaults;
   }
 
-  async delete(
+  public async delete(
     calloutResponseDefaults: ICalloutResponseDefaults
   ): Promise<ICalloutResponseDefaults> {
     const calloutResponseDefaultsID = calloutResponseDefaults.id;
@@ -54,13 +54,5 @@ export class CalloutResponseDefaultsService {
     );
     result.id = calloutResponseDefaultsID;
     return result;
-  }
-
-  async save(
-    calloutResponseDefaults: ICalloutResponseDefaults
-  ): Promise<ICalloutResponseDefaults> {
-    return await this.calloutResponseDefaultsRepository.save(
-      calloutResponseDefaults
-    );
   }
 }

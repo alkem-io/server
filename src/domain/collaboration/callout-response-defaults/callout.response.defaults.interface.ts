@@ -1,7 +1,7 @@
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { Field, ObjectType } from '@nestjs/graphql';
-import JSON from 'graphql-type-json';
+import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 
 @ObjectType('CalloutResponseDefaults')
 export abstract class ICalloutResponseDefaults extends IBaseAlkemio {
@@ -11,7 +11,7 @@ export abstract class ICalloutResponseDefaults extends IBaseAlkemio {
   })
   postDescription?: string;
 
-  @Field(() => JSON, {
+  @Field(() => WhiteboardContent, {
     nullable: true,
     description: 'The default whiteboard content for whiteboard responses.',
   })

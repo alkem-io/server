@@ -148,7 +148,11 @@ export class TemplatesSetService {
     const templatesSetPopulated = await this.getTemplatesSetOrFail(
       templatesSet.id,
       {
-        relations: ['calloutTemplates', 'calloutTemplates.profile'],
+        relations: {
+          calloutTemplates: {
+            profile: true,
+          },
+        },
       }
     );
     if (!templatesSetPopulated.calloutTemplates) {

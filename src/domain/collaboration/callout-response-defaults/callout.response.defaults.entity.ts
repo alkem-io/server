@@ -22,7 +22,7 @@ export class CalloutResponseDefaults
   @BeforeInsert()
   @BeforeUpdate()
   async compressContent() {
-    if (this.whiteboardContent && this.whiteboardContent !== '') {
+    if (this.whiteboardContent) {
       this.whiteboardContent = await compressText(this.whiteboardContent);
     }
   }
@@ -30,7 +30,7 @@ export class CalloutResponseDefaults
   @AfterUpdate()
   @AfterLoad()
   async decompressContent() {
-    if (this.whiteboardContent && this.whiteboardContent !== '') {
+    if (this.whiteboardContent) {
       this.whiteboardContent = await decompressText(this.whiteboardContent);
     }
   }

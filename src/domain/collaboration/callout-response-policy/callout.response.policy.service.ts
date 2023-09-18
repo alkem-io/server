@@ -16,9 +16,9 @@ export class CalloutResponsePolicyService {
     private calloutResponsePolicyRepository: Repository<CalloutResponsePolicy>
   ) {}
 
-  async createCalloutResponsePolicy(
+  public createCalloutResponsePolicy(
     calloutResponsePolicyData: CreateCalloutResponsePolicyInput
-  ): Promise<ICalloutResponsePolicy> {
+  ): ICalloutResponsePolicy {
     const calloutResponsePolicy = new CalloutResponsePolicy();
     if (calloutResponsePolicyData.allowedResponseTypes) {
       calloutResponsePolicy.allowedResponseTypes =
@@ -32,10 +32,10 @@ export class CalloutResponsePolicyService {
     return calloutResponsePolicy;
   }
 
-  async updateCalloutResponsePolicy(
+  public updateCalloutResponsePolicy(
     calloutResponsePolicy: ICalloutResponsePolicy,
     calloutResponsePolicyData: UpdateCalloutResponsePolicyInput
-  ): Promise<ICalloutResponsePolicy> {
+  ): ICalloutResponsePolicy {
     if (calloutResponsePolicyData.allowedResponseTypes) {
       calloutResponsePolicy.allowedResponseTypes =
         calloutResponsePolicyData.allowedResponseTypes;
@@ -48,7 +48,7 @@ export class CalloutResponsePolicyService {
     return calloutResponsePolicy;
   }
 
-  async delete(
+  public async delete(
     calloutResponsePolicy: ICalloutResponsePolicy
   ): Promise<ICalloutResponsePolicy> {
     const calloutResponsePolicyID = calloutResponsePolicy.id;
@@ -57,13 +57,5 @@ export class CalloutResponsePolicyService {
     );
     result.id = calloutResponsePolicyID;
     return result;
-  }
-
-  async save(
-    calloutResponsePolicy: ICalloutResponsePolicy
-  ): Promise<ICalloutResponsePolicy> {
-    return await this.calloutResponsePolicyRepository.save(
-      calloutResponsePolicy
-    );
   }
 }

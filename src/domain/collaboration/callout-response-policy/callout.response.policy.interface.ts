@@ -9,7 +9,7 @@ export abstract class ICalloutResponsePolicy extends IBaseAlkemio {
     nullable: false,
     description: 'The allowed response types for this callout.',
   })
-  allowedResponseTypes!: string[];
+  allowedResponseTypes!: CalloutResponseType[];
 
   @Field(() => CalloutState, {
     description: 'State of the Callout.',

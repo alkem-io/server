@@ -49,7 +49,9 @@ export class TemplatesSetResolverMutations {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       calloutTemplateInput.templatesSetID,
       {
-        relations: ['calloutTemplates'],
+        relations: {
+          calloutTemplates: true,
+        },
       }
     );
     await this.authorizationService.grantAccessOrFail(

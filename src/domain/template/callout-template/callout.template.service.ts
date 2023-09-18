@@ -26,7 +26,7 @@ export class CalloutTemplateService {
     private calloutResponsePolicyService: CalloutResponsePolicyService
   ) {}
 
-  async createCalloutTemplate(
+  public async createCalloutTemplate(
     calloutTemplateData: CreateCalloutTemplateInput
   ): Promise<ICalloutTemplate> {
     const calloutTemplate: ICalloutTemplate = new CalloutTemplate();
@@ -34,23 +34,22 @@ export class CalloutTemplateService {
       calloutTemplate,
       calloutTemplateData
     );
-    calloutTemplate.framing =
-      await this.calloutFramingService.createCalloutFraming(
-        calloutTemplateData.framing
-      );
+    calloutTemplate.framing = this.calloutFramingService.createCalloutFraming(
+      calloutTemplateData.framing
+    );
     calloutTemplate.responseDefaults =
-      await this.calloutResponseDefaultsService.createCalloutResponseDefaults(
+      this.calloutResponseDefaultsService.createCalloutResponseDefaults(
         calloutTemplateData.responseDefaults
       );
     calloutTemplate.responsePolicy =
-      await this.calloutResponsePolicyService.createCalloutResponsePolicy(
+      this.calloutResponsePolicyService.createCalloutResponsePolicy(
         calloutTemplateData.responsePolicy
       );
 
-    return await this.calloutTemplateRepository.save(calloutTemplate);
+    return this.calloutTemplateRepository.save(calloutTemplate);
   }
 
-  async getCalloutTemplateOrFail(
+  public async getCalloutTemplateOrFail(
     calloutTemplateID: string,
     options?: FindOneOptions<CalloutTemplate>
   ): Promise<ICalloutTemplate | never> {
@@ -76,7 +75,12 @@ export class CalloutTemplateService {
     const calloutTemplate = await this.getCalloutTemplateOrFail(
       calloutTemplateInput.id,
       {
-        relations: ['profile', 'framing', 'responsePolicy', 'responseDefaults'],
+        relations: {
+          profile: true,
+          framing: true,
+          responsePolicy: true,
+          responseDefaults: true,
+        },
       }
     );
     await this.templateBaseService.updateTemplateBase(
@@ -92,29 +96,34 @@ export class CalloutTemplateService {
     }
     if (calloutTemplateData.responseDefaults) {
       calloutTemplate.responseDefaults =
-        await this.calloutResponseDefaultsService.updateCalloutResponseDefaults(
+        this.calloutResponseDefaultsService.updateCalloutResponseDefaults(
           calloutTemplate.responseDefaults,
           calloutTemplateData.responseDefaults
         );
     }
     if (calloutTemplateData.responsePolicy) {
       calloutTemplate.responsePolicy =
-        await this.calloutResponsePolicyService.updateCalloutResponsePolicy(
+        this.calloutResponsePolicyService.updateCalloutResponsePolicy(
           calloutTemplate.responsePolicy,
           calloutTemplateData.responsePolicy
         );
     }
 
-    return await this.calloutTemplateRepository.save(calloutTemplate);
+    return this.calloutTemplateRepository.save(calloutTemplate);
   }
 
-  async deleteCalloutTemplate(
+  public async deleteCalloutTemplate(
     calloutTemplateInput: ICalloutTemplate
   ): Promise<ICalloutTemplate> {
     const calloutTemplate = await this.getCalloutTemplateOrFail(
       calloutTemplateInput.id,
       {
-        relations: ['profile', 'framing', 'responsePolicy', 'responseDefaults'],
+        relations: {
+          profile: true,
+          framing: true,
+          responseDefaults: true,
+          responsePolicy: true,
+        },
       }
     );
     const templateId: string = calloutTemplate.id;
@@ -131,17 +140,5 @@ export class CalloutTemplateService {
     );
     result.id = templateId;
     return result;
-  }
-
-  async save(calloutTemplate: ICalloutTemplate): Promise<ICalloutTemplate> {
-    return await this.calloutTemplateRepository.save(calloutTemplate);
-  }
-
-  async getCountInTemplatesSet(templatesSetID: string): Promise<number> {
-    return await this.calloutTemplateRepository.countBy({
-      templatesSet: {
-        id: templatesSetID,
-      },
-    });
   }
 }

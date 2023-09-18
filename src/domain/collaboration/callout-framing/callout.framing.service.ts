@@ -27,9 +27,9 @@ export class CalloutFramingService {
     private calloutFramingRepository: Repository<CalloutFraming>
   ) {}
 
-  async createCalloutFraming(
+  public createCalloutFraming(
     calloutFramingData: CreateCalloutFramingInput
-  ): Promise<ICalloutFraming> {
+  ): ICalloutFraming {
     const calloutFraming: ICalloutFraming =
       CalloutFraming.create(calloutFramingData);
 
@@ -38,7 +38,7 @@ export class CalloutFramingService {
     return calloutFraming;
   }
 
-  async updateCalloutFraming(
+  public async updateCalloutFraming(
     calloutFraming: ICalloutFraming,
     calloutFramingData: UpdateCalloutFramingInput
   ): Promise<ICalloutFraming> {
@@ -61,7 +61,9 @@ export class CalloutFramingService {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingID,
       {
-        relations: ['profile'],
+        relations: {
+          profile: true,
+        },
       }
     );
     if (calloutFraming.profile) {

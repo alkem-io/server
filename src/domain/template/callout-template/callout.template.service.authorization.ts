@@ -28,12 +28,12 @@ export class CalloutTemplateAuthorizationService {
       await this.calloutTemplateService.getCalloutTemplateOrFail(
         calloutTemplateInput.id,
         {
-          relations: [
-            'profile',
-            'framing',
-            'responsePolicy',
-            'responseDefaults',
-          ],
+          relations: {
+            profile: true,
+            framing: true,
+            responsePolicy: true,
+            responseDefaults: true,
+          },
         }
       );
     // Inherit from the parent
@@ -56,6 +56,6 @@ export class CalloutTemplateAuthorizationService {
         parentAuthorization
       );
 
-    return await this.calloutTemplateRepository.save(calloutTemplate);
+    return this.calloutTemplateRepository.save(calloutTemplate);
   }
 }

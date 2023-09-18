@@ -32,7 +32,9 @@ export class CalloutTemplateResolverMutations {
       await this.calloutTemplateService.getCalloutTemplateOrFail(
         calloutTemplateInput.ID,
         {
-          relations: ['profile'],
+          relations: {
+            profile: true,
+          },
         }
       );
     await this.authorizationService.grantAccessOrFail(
@@ -41,7 +43,7 @@ export class CalloutTemplateResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update callout template: ${calloutTemplate.id}`
     );
-    return await this.calloutTemplateService.updateCalloutTemplate(
+    return this.calloutTemplateService.updateCalloutTemplate(
       calloutTemplate,
       calloutTemplateInput
     );
@@ -59,7 +61,9 @@ export class CalloutTemplateResolverMutations {
       await this.calloutTemplateService.getCalloutTemplateOrFail(
         deleteData.ID,
         {
-          relations: ['profile'],
+          relations: {
+            profile: true,
+          },
         }
       );
     await this.authorizationService.grantAccessOrFail(
@@ -68,8 +72,6 @@ export class CalloutTemplateResolverMutations {
       AuthorizationPrivilege.DELETE,
       `callout template delete: ${calloutTemplate.id}`
     );
-    return await this.calloutTemplateService.deleteCalloutTemplate(
-      calloutTemplate
-    );
+    return this.calloutTemplateService.deleteCalloutTemplate(calloutTemplate);
   }
 }

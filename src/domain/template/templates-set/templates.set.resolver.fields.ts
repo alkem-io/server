@@ -25,7 +25,7 @@ export class TemplatesSetResolverFields {
   async calloutTemplates(
     @Parent() templatesSet: ITemplatesSet
   ): Promise<ICalloutTemplate[]> {
-    return await this.templatesSetService.getCalloutTemplates(templatesSet);
+    return this.templatesSetService.getCalloutTemplates(templatesSet);
   }
 
   @UseGuards(GraphqlGuard)
@@ -37,7 +37,7 @@ export class TemplatesSetResolverFields {
   async postTemplates(
     @Parent() templatesSet: ITemplatesSet
   ): Promise<IPostTemplate[]> {
-    return await this.templatesSetService.getPostTemplates(templatesSet);
+    return this.templatesSetService.getPostTemplates(templatesSet);
   }
 
   @UseGuards(GraphqlGuard)
@@ -68,7 +68,7 @@ export class TemplatesSetResolverFields {
   async whiteboardTemplates(
     @Parent() templatesSet: ITemplatesSet
   ): Promise<IWhiteboardTemplate[]> {
-    return await this.templatesSetService.getWhiteboardTemplates(templatesSet);
+    return this.templatesSetService.getWhiteboardTemplates(templatesSet);
   }
 
   @UseGuards(GraphqlGuard)
@@ -99,9 +99,7 @@ export class TemplatesSetResolverFields {
   async innovationFlowTemplates(
     @Parent() templatesSet: ITemplatesSet
   ): Promise<IInnovationFlowTemplate[]> {
-    return await this.templatesSetService.getInnovationFlowTemplates(
-      templatesSet
-    );
+    return this.templatesSetService.getInnovationFlowTemplates(templatesSet);
   }
 
   @UseGuards(GraphqlGuard)

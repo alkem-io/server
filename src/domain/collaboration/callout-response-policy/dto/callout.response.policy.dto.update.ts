@@ -9,7 +9,7 @@ export class UpdateCalloutResponsePolicyInput extends UpdateBaseAlkemioInput {
     nullable: true,
     description: 'The allowed response types for this callout.',
   })
-  allowedResponseTypes?: string[];
+  allowedResponseTypes?: CalloutResponseType[];
 
   @Field(() => CalloutState, {
     nullable: true,
