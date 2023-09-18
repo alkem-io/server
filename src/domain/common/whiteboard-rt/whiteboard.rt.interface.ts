@@ -1,11 +1,11 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import JSON from 'graphql-type-json';
 import { ICallout } from '@domain/collaboration/callout';
 import { INameable } from '../entity/nameable-entity/nameable.interface';
+import { WhiteboardContent } from '../scalars/scalar.whiteboard.content';
 
 @ObjectType('WhiteboardRt')
 export abstract class IWhiteboardRt extends INameable {
-  @Field(() => JSON, {
+  @Field(() => WhiteboardContent, {
     description: 'The JSON representation of the WhiteboardRt.',
   })
   content?: string;
