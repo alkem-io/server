@@ -298,6 +298,12 @@ export class RoomResolverMutations {
           agentInfo,
           messageOwnerId
         );
+        this.roomServiceEvents.processActivityPostComment(
+          post,
+          room,
+          reply,
+          agentInfo
+        );
 
         break;
       case RoomType.CALENDAR_EVENT:

@@ -15,6 +15,7 @@ import { CommunityPolicyService } from '@domain/community/community-policy/commu
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import {
+  CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
   CREDENTIAL_RULE_OPPORTUNITY_ADMIN,
   CREDENTIAL_RULE_OPPORTUNITY_MEMBER,
 } from '@common/constants';
@@ -80,6 +81,15 @@ export class OpportunityAuthorizationService {
         opportunity.authorization
       );
 
+    opportunity.community = await this.opportunityService.getCommunity(
+      opportunity.id
+    );
+    opportunity.community.authorization =
+      this.extendCommunityAuthorizationPolicy(
+        opportunity.community.authorization,
+        communityPolicy
+      );
+
     return await this.opportunityRepository.save(opportunity);
   }
 
@@ -124,6 +134,39 @@ export class OpportunityAuthorizationService {
       authorization,
       this.createCredentialRules(policy)
     );
+  }
+
+  private extendCommunityAuthorizationPolicy(
+    authorization: IAuthorizationPolicy | undefined,
+    policy: ICommunityPolicy
+  ): IAuthorizationPolicy {
+    if (!authorization)
+      throw new EntityNotInitializedException(
+        'Authorization definition not found',
+        LogContext.CHALLENGES
+      );
+
+    const newRules: IAuthorizationPolicyRuleCredential[] = [];
+    const adminCredentials =
+      this.communityPolicyService.getAllCredentialsForRole(
+        policy,
+        CommunityRole.ADMIN
+      );
+
+    const addMembers = this.authorizationPolicyService.createCredentialRule(
+      [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER],
+      adminCredentials,
+      CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER
+    );
+    addMembers.cascade = false;
+    newRules.push(addMembers);
+
+    this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      authorization,
+      newRules
+    );
+
+    return authorization;
   }
 
   private createCredentialRules(
