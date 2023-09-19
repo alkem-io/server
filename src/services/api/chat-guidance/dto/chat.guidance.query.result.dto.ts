@@ -8,21 +8,30 @@ export abstract class IChatGuidanceQueryResult {
   })
   question!: string;
 
-  @Field(() => String, {
+  @Field(() => [ISource], {
     nullable: false,
     description: 'The sources used to answer the question',
   })
-  sources!: string;
+  sources!: ISource[];
 
   @Field(() => String, {
     nullable: false,
     description: 'The answer to the question',
   })
   answer!: string;
+}
 
-  @Field(() => Number, {
-    nullable: true,
-    description: 'Cost of the query, in USD',
+@ObjectType('Source')
+export abstract class ISource {
+  @Field(() => String, {
+    nullable: false,
+    description: 'The URI of the source',
   })
-  cost?: number;
+  uri!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: 'The title of the source',
+  })
+  title!: string;
 }

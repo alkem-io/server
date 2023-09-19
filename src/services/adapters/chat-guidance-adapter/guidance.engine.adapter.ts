@@ -29,7 +29,7 @@ export class GuidanceEngineAdapter {
     private chatGuidanceLogService: ChatGuidanceLogService
   ) {}
 
-  async sendQuery(
+  public async sendQuery(
     eventData: GuidanceEngineQueryInput
   ): Promise<IChatGuidanceQueryResult> {
     const response = this.GuidanceEngineClient.send(
@@ -54,7 +54,7 @@ export class GuidanceEngineAdapter {
       const jsonObject = JSON.parse(formattedString);
       const result: IChatGuidanceQueryResult = {
         ...jsonObject,
-        cost: jsonObject.total_cost,
+        sources: this.extractMetadata(jsonObject.sources),
       };
 
       await this.chatGuidanceLogService.logAnswer(
@@ -69,12 +69,12 @@ export class GuidanceEngineAdapter {
       return {
         answer: errorMessage,
         question: eventData.question,
-        sources: '',
+        sources: [],
       };
     }
   }
 
-  async sendReset(eventData: GuidanceEngineInputBase): Promise<boolean> {
+  public async sendReset(eventData: GuidanceEngineInputBase): Promise<boolean> {
     const response = this.GuidanceEngineClient.send(
       { cmd: GuidanceEngineEventType.RESET },
       eventData
@@ -95,7 +95,7 @@ export class GuidanceEngineAdapter {
     }
   }
 
-  async sendIngest(): Promise<boolean> {
+  public async sendIngest(): Promise<boolean> {
     const response = this.GuidanceEngineClient.send(
       { cmd: GuidanceEngineEventType.INGEST },
       {}
@@ -113,5 +113,32 @@ export class GuidanceEngineAdapter {
       );
       return false;
     }
+  }
+
+  private extractMetadata(metadata: string): { uri: string; title: string }[] {
+    // const text =
+    // "[Document(page_content='What does it take to build a community? | Alkemio Foundation Search Home Manifesto Partners News About Our team Structure Contact Support Vision FAQ Visit the platform What does it take to build a community?  Mayte Ragni,   Birgit Ros 22 February 2023 3 min read   Explore Building a community and keeping it active is a challenging task. ...metadata={'source': 'https://www.alkemio.org/post/2023-02-community-workshop/index.html', 'title': 'What does it take to build a community? | Alkemio Foundation'}), Document(page_content='Also, you can add additional tags to summarize the content and make the Space easier to find. ...metadata={'source': 'https://www.alkemio.org/help/community-management/index.html', 'title': 'Alkemio Foundation'}), Document(page_content='Besides some descriptive information, it is key to engage and guide your community when they land on the platform. ...metadata={'source': 'https://www.alkemio.org/help/community-management/index.html', 'title': 'Alkemio Foundation'}), Document(page_content='workshop | Alkemio Foundation Search Home Manifesto Partners News About Our team Structure Contact Support Vision FAQ Visit the platform workshop What does it take to build a community?  Identifying drivers and blockers Mayte Ragni,   Birgit Ros 22 February 2023 3 min read Blogs  Newsletter  Releases © 2023 Stichting Alkemio  Privacy   Security   Support', metadata={'source': 'https://www.alkemio.org/tag/workshop/index.html', 'title': 'workshop | Alkemio Foundation'})]";
+
+    // Use regular expressions to extract metadata sections
+    const metadataMatches = metadata.match(/metadata=\{.*?\}/g);
+
+    // Initialize an empty array to store extracted objects
+    const metadataObjects: { uri: string; title: string }[] = [];
+
+    // Loop through metadata matches and extract source and title
+    if (metadataMatches) {
+      metadataMatches.forEach(metadataMatch => {
+        const sourceMatch = metadataMatch.match(/'source': '([^']*)'/);
+        const titleMatch = metadataMatch.match(/'title': '([^']*)'/);
+
+        if (sourceMatch && titleMatch) {
+          const uri = sourceMatch[1];
+          const title = titleMatch[1];
+          metadataObjects.push({ uri, title });
+        }
+      });
+    }
+
+    return metadataObjects;
   }
 }
