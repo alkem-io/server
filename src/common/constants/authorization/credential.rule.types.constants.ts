@@ -14,8 +14,8 @@ export const CREDENTIAL_RULE_TYPES_COLLABORATION_CREATE_RELATION_REGISTERED =
   'credentialRuleTypes-collaborationCreateRelationRegistered';
 export const CREDENTIAL_RULE_TYPES_RELATION_CREATED_GLOBAL_REGISTERED =
   'credentialRuleTypes-relationCreateGlobalRegistered';
-export const CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL =
-  'credentialRuleTypes-communityGlobalAdminCommunityAll';
+export const CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMINS =
+  'credentialRuleTypes-communityGlobalAdmins';
 export const CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED =
   'credentialRuleTypes-communityReadGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET =

@@ -1,7 +1,4 @@
-import {
-  LIFECYCLE_DEFINITION_LENGTH,
-  SMALL_TEXT_LENGTH,
-} from '@common/constants/entity.field.length.constants';
+import { SMALL_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { LifecycleDefinitionScalar } from '@domain/common/scalars/scalar.lifecycle.definition';
 import { CreateTemplateBaseInput } from '@domain/template/template-base/dto';
@@ -21,6 +18,5 @@ export class CreateInnovationFlowTemplateInput extends CreateTemplateBaseInput {
     nullable: false,
     description: 'The XState definition for this InnovationFlowTemplate.',
   })
-  @MaxLength(LIFECYCLE_DEFINITION_LENGTH)
   definition!: string;
 }

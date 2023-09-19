@@ -1,12 +1,11 @@
 import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
+import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { InputType, Field } from '@nestjs/graphql';
-import { CANVAS_VALUE_LENGTH } from '@src/common/constants';
-import { IsOptional, MaxLength } from 'class-validator';
+import { IsOptional } from 'class-validator';
 
 @InputType()
 export class UpdateWhiteboardInput extends UpdateNameableInput {
-  @Field({ nullable: true })
+  @Field(() => WhiteboardContent, { nullable: true })
   @IsOptional()
-  @MaxLength(CANVAS_VALUE_LENGTH)
   content?: string;
 }

@@ -1,0 +1,31 @@
+mutation createCalloutTemplate($calloutTemplateInput: CreateCalloutTemplateOnTemplatesSetInput!) {
+  createCalloutTemplate(calloutTemplateInput: $calloutTemplateInput) {
+    profile {
+      displayName
+    }
+  }
+}
+
+Variables:
+{
+  "calloutTemplateInput": {
+    "templatesSetID": "uuid",
+    "profile": {
+        "displayName": "template displayname",
+        "description": template description"
+    },
+    "responseDefaults": {
+      "description": "this is what users will see"
+    },
+    "responsePolicy": {
+      "allowedResponseTypes": ["COMMENTS"],
+      "allowNewResponses": true
+    },
+    "framing": {
+      "profile": {
+        "displayName": "callout framing displayname",
+        "description": "dallout framing description"
+      }
+    }
+  }
+}

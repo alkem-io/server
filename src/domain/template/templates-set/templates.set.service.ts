@@ -23,6 +23,9 @@ import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.
 import { CreatePostTemplateInput } from '../post-template/dto/post.template.dto.create';
 import { CreateWhiteboardTemplateInput } from '../whiteboard-template/dto/whiteboard.template.dto.create';
 import { CreateInnovationFlowTemplateInput } from '../innovation-flow-template/dto/innovation.flow.template.dto.create';
+import { ICalloutTemplate } from '../callout-template/callout.template.interface';
+import { CreateCalloutTemplateInput } from '../callout-template/dto/callout.template.dto.create';
+import { CalloutTemplateService } from '../callout-template/callout.template.service';
 
 @Injectable()
 export class TemplatesSetService {
@@ -30,6 +33,7 @@ export class TemplatesSetService {
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(TemplatesSet)
     private templatesSetRepository: Repository<TemplatesSet>,
+    private calloutTemplateService: CalloutTemplateService,
     private postTemplateService: PostTemplateService,
     private whiteboardTemplateService: WhiteboardTemplateService,
     private innovationFlowTemplateService: InnovationFlowTemplateService,
@@ -138,6 +142,28 @@ export class TemplatesSetService {
     return templatesSetPopulated.postTemplates;
   }
 
+  async getCalloutTemplates(
+    templatesSet: ITemplatesSet
+  ): Promise<ICalloutTemplate[]> {
+    const templatesSetPopulated = await this.getTemplatesSetOrFail(
+      templatesSet.id,
+      {
+        relations: {
+          calloutTemplates: {
+            profile: true,
+          },
+        },
+      }
+    );
+    if (!templatesSetPopulated.calloutTemplates) {
+      throw new EntityNotInitializedException(
+        `TemplatesSet not initialized as no calloutTemplates: ${templatesSetPopulated.id}`,
+        LogContext.TEMPLATES
+      );
+    }
+    return templatesSetPopulated.calloutTemplates;
+  }
+
   public getPostTemplate(
     templateId: string,
     templatesSetId: string
@@ -196,6 +222,23 @@ export class TemplatesSetService {
     templatesSet.postTemplates.push(postTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return postTemplate;
+  }
+
+  async createCalloutTemplate(
+    templatesSet: ITemplatesSet,
+    calloutTemplateInput: CreateCalloutTemplateInput
+  ): Promise<ICalloutTemplate> {
+    templatesSet.calloutTemplates = await this.getCalloutTemplates(
+      templatesSet
+    );
+
+    const calloutTemplate =
+      await this.calloutTemplateService.createCalloutTemplate(
+        calloutTemplateInput
+      );
+    templatesSet.calloutTemplates.push(calloutTemplate);
+    await this.templatesSetRepository.save(templatesSet);
+    return calloutTemplate;
   }
 
   async getWhiteboardTemplates(

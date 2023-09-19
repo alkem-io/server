@@ -5,6 +5,8 @@ import { Kind, ValueNode } from 'graphql';
 import { validateMachineDefinition } from '@core/validation/xstate/validateMachineDefinition';
 import { ErrorObject } from 'ajv';
 
+export const LIFECYCLE_DEFINITION_LENGTH = 8388608;
+
 @Scalar('LifecycleDefinition')
 export class LifecycleDefinitionScalar implements CustomScalar<string, string> {
   description =
@@ -29,6 +31,13 @@ export class LifecycleDefinitionScalar implements CustomScalar<string, string> {
     if (typeof value !== 'string') {
       throw new ValidationException(
         `Value is not string: ${value}`,
+        LogContext.API
+      );
+    }
+
+    if (value.length >= LIFECYCLE_DEFINITION_LENGTH) {
+      throw new ValidationException(
+        `Lifecycle definition content is too long: ${value.length}, allowed length: ${LIFECYCLE_DEFINITION_LENGTH}`,
         LogContext.API
       );
     }

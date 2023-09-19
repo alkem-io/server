@@ -200,6 +200,11 @@ services:
       - RABBITMQ_SECURE_PASSWORD=yes
       - RABBITMQ_DEFAULT_USER=alkemio-admin
       - RABBITMQ_DEFAULT_PASS=alkemio!
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 30s
+      timeout: 30s
+      retries: 10
     volumes:
       - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/mnesia
       - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
@@ -304,13 +309,17 @@ services:
 
   guidance_engine:
     container_name: alkemio_dev_guidance_engine
-    depends_on:
-      - rabbitmq
     hostname: guidance-engine
-    image: alkemio/guidance-engine:v0.1.2
+    image: alkemio/guidance-engine:v0.2.0
     restart: always
+    volumes:
+       - /dev/shm:/dev/shm
+       - ~/alkemio/data:${AI_LOCAL_PATH:-/home/alkemio/data}
     networks:
       - alkemio_dev_net
+    depends_on:
+      rabbitmq:
+        condition: "service_healthy"
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER
@@ -324,5 +333,7 @@ services:
       - AI_MODEL_NAME
       - AI_DEPLOYMENT_NAME
       - AI_EMBEDDINGS_DEPLOYMENT_NAME
-    volumes:
-      - /dev/shm:/dev/shm
+      - AI_SOURCE_WEBSITE
+      - AI_WEBSITE_REPO
+      - AI_LOCAL_PATH
+
