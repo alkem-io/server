@@ -1,3 +1,4 @@
+import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('WhiteboardContentUpdated')
@@ -11,7 +12,7 @@ export class WhiteboardContentUpdated {
   })
   whiteboardID!: string;
 
-  @Field(() => String, {
+  @Field(() => WhiteboardContent, {
     nullable: false,
     description: 'The updated content.',
   })
