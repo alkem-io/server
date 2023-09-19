@@ -12,5 +12,5 @@ export class CreateCalloutFramingInput {
 
   @Field(() => WhiteboardContent, { nullable: true })
   @IsOptional()
-  content?: string;
+  whiteboardContent?: string;
 }

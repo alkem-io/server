@@ -1,8 +1,8 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ITemplateBase } from '../template-base/template.base.interface';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
-import { ICalloutResponseDefaults } from '@domain/collaboration/callout-response-defaults/callout.response.defaults.interface';
-import { ICalloutResponsePolicy } from '@domain/collaboration/callout-response-policy/callout.response.policy.interface';
+import { ICalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.interface';
+import { ICalloutContributionPolicy } from '@domain/collaboration/callout-contribution-policy/callout.contribution.policy.interface';
+import { ITemplateBase } from '../template-base/template.base.interface';
 
 @ObjectType('CalloutTemplate')
 export abstract class ICalloutTemplate extends ITemplateBase {
@@ -12,17 +12,17 @@ export abstract class ICalloutTemplate extends ITemplateBase {
   })
   framing!: ICalloutFraming;
 
-  @Field(() => ICalloutResponseDefaults, {
+  @Field(() => ICalloutContributionDefaults, {
     nullable: false,
     description:
       'The defaults to use for Callouts created from this template.  ',
   })
-  responseDefaults!: ICalloutResponseDefaults;
+  responseDefaults!: ICalloutContributionDefaults;
 
-  @Field(() => ICalloutResponsePolicy, {
+  @Field(() => ICalloutContributionPolicy, {
     nullable: false,
     description:
       'The response policy to use for Callouts created from this template.  ',
   })
-  responsePolicy!: ICalloutResponsePolicy;
+  responsePolicy!: ICalloutContributionPolicy;
 }

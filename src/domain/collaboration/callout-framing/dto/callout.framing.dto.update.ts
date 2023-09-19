@@ -1,12 +1,11 @@
-import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/base.alkemio.dto.update';
-import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { InputType, Field } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';
+import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 
 @InputType()
-export class UpdateCalloutFramingInput extends UpdateBaseAlkemioInput {
+export class UpdateCalloutFramingInput {
   @Field(() => UpdateProfileInput, {
     nullable: true,
     description: 'The Profile of the Template.',
@@ -18,5 +17,5 @@ export class UpdateCalloutFramingInput extends UpdateBaseAlkemioInput {
 
   @Field(() => WhiteboardContent, { nullable: true })
   @IsOptional()
-  content?: string;
+  whiteboardContent?: string;
 }

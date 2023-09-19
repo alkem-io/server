@@ -27,13 +27,19 @@ export class CalloutFramingService {
     private calloutFramingRepository: Repository<CalloutFraming>
   ) {}
 
-  public createCalloutFraming(
+  public async createCalloutFraming(
     calloutFramingData: CreateCalloutFramingInput
-  ): ICalloutFraming {
+  ): Promise<ICalloutFraming> {
     const calloutFraming: ICalloutFraming =
       CalloutFraming.create(calloutFramingData);
 
     calloutFraming.authorization = new AuthorizationPolicy();
+
+    const { profile, whiteboardContent } = calloutFramingData;
+
+    calloutFraming.profile = await this.profileService.createProfile(profile);
+
+    calloutFraming.whiteboardContent = whiteboardContent;
 
     return calloutFraming;
   }
@@ -49,8 +55,8 @@ export class CalloutFramingService {
       );
     }
 
-    if (calloutFramingData.content) {
-      calloutFraming.content = calloutFramingData.content;
+    if (calloutFramingData.whiteboardContent) {
+      calloutFraming.whiteboardContent = calloutFramingData.whiteboardContent;
     }
 
     return calloutFraming;

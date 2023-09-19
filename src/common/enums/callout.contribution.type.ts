@@ -1,6 +1,6 @@
 import { registerEnumType } from '@nestjs/graphql';
 
-export enum CalloutResponseType {
+export enum CalloutContributionType {
   POST = 'post',
   WHITEBOARD = 'whiteboard',
   WHITEBOARD_RT = 'whiteboard-rt',
@@ -8,6 +8,6 @@ export enum CalloutResponseType {
   COMMENTS = 'comments',
 }
 
-registerEnumType(CalloutResponseType, {
-  name: 'CalloutResponseType',
+registerEnumType(CalloutContributionType, {
+  name: 'CalloutContributionType',
 });

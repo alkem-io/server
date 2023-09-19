@@ -76,13 +76,13 @@ import {
   UpdateCalloutFramingInput,
 } from '@domain/collaboration/callout-framing/dto';
 import {
-  CreateCalloutResponsePolicyInput,
-  UpdateCalloutResponsePolicyInput,
-} from '@domain/collaboration/callout-response-policy/dto';
+  CreateCalloutContributionPolicyInput,
+  UpdateCalloutContributionPolicyInput,
+} from '@domain/collaboration/callout-contribution-policy/dto';
 import {
-  CreateCalloutResponseDefaultsInput,
-  UpdateCalloutResponseDefaultsInput,
-} from '@domain/collaboration/callout-response-defaults/dto';
+  CreateCalloutContributionDefaultsInput,
+  UpdateCalloutContributionDefaultsInput,
+} from '@domain/collaboration/callout-contribution-defaults/dto';
 import { UpdateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.update';
 import { CreateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.create';
 
@@ -101,8 +101,8 @@ export class BaseHandler extends AbstractHandler {
       OrganizationVerificationEventInput,
       ProjectEventInput,
       CreateCalloutFramingInput,
-      CreateCalloutResponsePolicyInput,
-      CreateCalloutResponseDefaultsInput,
+      CreateCalloutContributionPolicyInput,
+      CreateCalloutContributionDefaultsInput,
       CreateActorGroupInput,
       CreateActorInput,
       CreatePostOnCalloutInput,
@@ -129,8 +129,8 @@ export class BaseHandler extends AbstractHandler {
       UpdatePostInput,
       UpdateDocumentInput,
       UpdateCalloutFramingInput,
-      UpdateCalloutResponseDefaultsInput,
-      UpdateCalloutResponsePolicyInput,
+      UpdateCalloutContributionDefaultsInput,
+      UpdateCalloutContributionPolicyInput,
       UpdateCalloutTemplateInput,
       UpdatePostTemplateInput,
       UpdateCommunityApplicationFormInput,

@@ -16,7 +16,7 @@ export class calloutTemplate1693849043894 implements MigrationInterface {
                   UNIQUE INDEX \`REL_c9d7c2c4eb8a1d012ddc6605da\` (\`authorizationId\`), UNIQUE INDEX \`REL_f53e2d266432e58e538a366705\` (\`profileId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
-      `CREATE TABLE \`callout_response_defaults\` (
+      `CREATE TABLE \`callout_contribution_defaults\` (
                   \`id\` char(36) NOT NULL,
                   \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                   \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
@@ -26,12 +26,12 @@ export class calloutTemplate1693849043894 implements MigrationInterface {
                   PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
-      `CREATE TABLE \`callout_response_policy\` (
+      `CREATE TABLE \`callout_contribution_policy\` (
                   \`id\` char(36) NOT NULL,
                   \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                   \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
                   \`version\` int NOT NULL,
-                  \`allowedResponseTypes\` text NOT NULL,
+                  \`allowedContributionTypes\` text NOT NULL,
                   \`state\` varchar(255) NOT NULL,
                   PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
@@ -45,9 +45,9 @@ export class calloutTemplate1693849043894 implements MigrationInterface {
                   \`profileId\` char(36) NULL,
                   \`templatesSetId\` char(36) NULL,
                   \`framingId\` char(36) NULL,
-                  \`responseDefaultsId\` char(36) NULL,
-                  \`responsePolicyId\` char(36) NULL,
-                  UNIQUE INDEX \`REL_6c90723f8f1424e2dd08dddb39\` (\`authorizationId\`), UNIQUE INDEX \`REL_75d5ced6c2e92cbbb5d8d0a913\` (\`profileId\`), UNIQUE INDEX \`REL_b94beb9cefe0a8814dceddd10f\` (\`framingId\`), UNIQUE INDEX \`REL_83bbc10ba2ddee4502bf327f1f\` (\`responseDefaultsId\`), UNIQUE INDEX \`REL_bffd07760b73be1aad13b6d00c\` (\`responsePolicyId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
+                  \`contributionDefaultsId\` char(36) NULL,
+                  \`contributionPolicyId\` char(36) NULL,
+                  UNIQUE INDEX \`REL_6c90723f8f1424e2dd08dddb39\` (\`authorizationId\`), UNIQUE INDEX \`REL_75d5ced6c2e92cbbb5d8d0a913\` (\`profileId\`), UNIQUE INDEX \`REL_b94beb9cefe0a8814dceddd10f\` (\`framingId\`), UNIQUE INDEX \`REL_83bbc10ba2ddee4502bf327f1f\` (\`contributionDefaultsId\`), UNIQUE INDEX \`REL_bffd07760b73be1aad13b6d00c\` (\`contributionPolicyId\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`
     );
     await queryRunner.query(
       `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_c9d7c2c4eb8a1d012ddc6605da9\` FOREIGN KEY (\`authorizationId\`) REFERENCES \`authorization_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
@@ -68,10 +68,10 @@ export class calloutTemplate1693849043894 implements MigrationInterface {
       `ALTER TABLE \`callout_template\` ADD CONSTRAINT \`FK_b94beb9cefe0a8814dceddd10f6\` FOREIGN KEY (\`framingId\`) REFERENCES \`callout_framing\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`callout_template\` ADD CONSTRAINT \`FK_83bbc10ba2ddee4502bf327f1f5\` FOREIGN KEY (\`responseDefaultsId\`) REFERENCES \`callout_response_defaults\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`callout_template\` ADD CONSTRAINT \`FK_83bbc10ba2ddee4502bf327f1f5\` FOREIGN KEY (\`contributionDefaultsId\`) REFERENCES \`callout_contribution_defaults\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
-      `ALTER TABLE \`callout_template\` ADD CONSTRAINT \`FK_bffd07760b73be1aad13b6d00c3\` FOREIGN KEY (\`responsePolicyId\`) REFERENCES \`callout_response_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE \`callout_template\` ADD CONSTRAINT \`FK_bffd07760b73be1aad13b6d00c3\` FOREIGN KEY (\`contributionPolicyId\`) REFERENCES \`callout_contribution_policy\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
   }
 
@@ -117,8 +117,8 @@ export class calloutTemplate1693849043894 implements MigrationInterface {
       `DROP INDEX \`REL_6c90723f8f1424e2dd08dddb39\` ON \`callout_template\``
     );
     await queryRunner.query(`DROP TABLE \`callout_template\``);
-    await queryRunner.query(`DROP TABLE \`callout_response_policy\``);
-    await queryRunner.query(`DROP TABLE \`callout_response_defaults\``);
+    await queryRunner.query(`DROP TABLE \`callout_contribution_policy\``);
+    await queryRunner.query(`DROP TABLE \`callout_contribution_defaults\``);
     await queryRunner.query(
       `DROP INDEX \`REL_f53e2d266432e58e538a366705\` ON \`callout_framing\``
     );

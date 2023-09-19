@@ -8,16 +8,19 @@ import {
   Entity,
 } from 'typeorm';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import { ICalloutResponseDefaults } from './callout.response.defaults.interface';
 import { compressText, decompressText } from '@common/utils/compression.util';
+import { ICalloutContributionDefaults } from './callout.contribution.defaults.interface';
 
 @Entity()
-export class CalloutResponseDefaults
+export class CalloutContributionDefaults
   extends BaseAlkemioEntity
-  implements ICalloutResponseDefaults
+  implements ICalloutContributionDefaults
 {
   @Column('text', { nullable: true })
   postDescription? = '';
+
+  @Column('longtext', { nullable: true })
+  whiteboardContent?: string;
 
   @BeforeInsert()
   @BeforeUpdate()
@@ -34,7 +37,4 @@ export class CalloutResponseDefaults
       this.whiteboardContent = await decompressText(this.whiteboardContent);
     }
   }
-
-  @Column('longtext', { nullable: false })
-  whiteboardContent?: string;
 }

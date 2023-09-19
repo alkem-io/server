@@ -1,10 +1,10 @@
-import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.create';
-import { CreateCalloutResponseDefaultsInput } from '@domain/collaboration/callout-response-defaults/dto';
-import { CreateCalloutResponsePolicyInput } from '@domain/collaboration/callout-response-policy/dto/callout.response.policy.dto.create';
-import { CreateTemplateBaseInput } from '@domain/template/template-base/dto';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
+import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.create';
+import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';
+import { CreateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto';
+import { CreateTemplateBaseInput } from '@domain/template/template-base/dto';
 
 @InputType()
 export class CreateCalloutTemplateInput extends CreateTemplateBaseInput {
@@ -13,13 +13,13 @@ export class CreateCalloutTemplateInput extends CreateTemplateBaseInput {
   @Type(() => CreateCalloutFramingInput)
   framing!: CreateCalloutFramingInput;
 
-  @Field(() => CreateCalloutResponseDefaultsInput, { nullable: false })
+  @Field(() => CreateCalloutContributionDefaultsInput, { nullable: false })
   @ValidateNested({ each: true })
-  @Type(() => CreateCalloutResponseDefaultsInput)
-  responseDefaults!: CreateCalloutResponseDefaultsInput;
+  @Type(() => CreateCalloutContributionDefaultsInput)
+  responseDefaults!: CreateCalloutContributionDefaultsInput;
 
-  @Field(() => CreateCalloutResponsePolicyInput, { nullable: false })
+  @Field(() => CreateCalloutContributionPolicyInput, { nullable: false })
   @ValidateNested({ each: true })
-  @Type(() => CreateCalloutResponsePolicyInput)
-  responsePolicy!: CreateCalloutResponsePolicyInput;
+  @Type(() => CreateCalloutContributionPolicyInput)
+  responsePolicy!: CreateCalloutContributionPolicyInput;
 }

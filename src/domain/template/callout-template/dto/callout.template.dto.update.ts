@@ -1,10 +1,10 @@
-import { UpdateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.update';
-import { UpdateCalloutResponseDefaultsInput } from '@domain/collaboration/callout-response-defaults/dto/callout.response.defaults.dto.update';
-import { UpdateCalloutResponsePolicyInput } from '@domain/collaboration/callout-response-policy/dto/callout.response.policy.dto.update';
-import { UpdateTemplateBaseInput } from '@domain/template/template-base/dto/template.base.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { ValidateNested } from 'class-validator';
+import { UpdateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto';
+import { UpdateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto';
+import { UpdateCalloutContributionPolicyInput } from '@domain/collaboration/callout-contribution-policy/dto';
+import { UpdateTemplateBaseInput } from '@domain/template/template-base/dto';
 
 @InputType()
 export class UpdateCalloutTemplateInput extends UpdateTemplateBaseInput {
@@ -13,13 +13,13 @@ export class UpdateCalloutTemplateInput extends UpdateTemplateBaseInput {
   @Type(() => UpdateCalloutFramingInput)
   framing?: UpdateCalloutFramingInput;
 
-  @Field(() => UpdateCalloutResponseDefaultsInput, { nullable: true })
+  @Field(() => UpdateCalloutContributionDefaultsInput, { nullable: true })
   @ValidateNested({ each: true })
-  @Type(() => UpdateCalloutResponseDefaultsInput)
-  responseDefaults?: UpdateCalloutResponseDefaultsInput;
+  @Type(() => UpdateCalloutContributionDefaultsInput)
+  responseDefaults?: UpdateCalloutContributionDefaultsInput;
 
-  @Field(() => UpdateCalloutResponsePolicyInput, { nullable: true })
+  @Field(() => UpdateCalloutContributionPolicyInput, { nullable: true })
   @ValidateNested({ each: true })
-  @Type(() => UpdateCalloutResponsePolicyInput)
-  responsePolicy?: UpdateCalloutResponsePolicyInput;
+  @Type(() => UpdateCalloutContributionPolicyInput)
+  responsePolicy?: UpdateCalloutContributionPolicyInput;
 }

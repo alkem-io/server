@@ -1,16 +1,16 @@
 import { Column, Entity } from 'typeorm';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import { ICalloutResponsePolicy } from './callout.response.policy.interface';
 import { CalloutState } from '@common/enums/callout.state';
-import { CalloutResponseType } from '@common/enums/callout.response.type';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { ICalloutContributionPolicy } from './callout.contribution.policy.interface';
 
 @Entity()
-export class CalloutResponsePolicy
+export class CalloutContributionPolicy
   extends BaseAlkemioEntity
-  implements ICalloutResponsePolicy
+  implements ICalloutContributionPolicy
 {
   @Column('simple-array')
-  allowedResponseTypes!: CalloutResponseType[];
+  allowedContributionTypes!: CalloutContributionType[];
 
   @Column('varchar', {
     length: 255,

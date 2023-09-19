@@ -10,8 +10,8 @@ import { TemplateBaseService } from '../template-base/template.base.service';
 import { CreateCalloutTemplateInput } from './dto/callout.template.dto.create';
 import { UpdateCalloutTemplateInput } from './dto/callout.template.dto.update';
 import { CalloutFramingService } from '@domain/collaboration/callout-framing/callout.framing.service';
-import { CalloutResponseDefaultsService } from '@domain/collaboration/callout-response-defaults/callout.response.defaults.service';
-import { CalloutResponsePolicyService } from '@domain/collaboration/callout-response-policy/callout.response.policy.service';
+import { CalloutContributionDefaultsService } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.service';
+import { CalloutContributionPolicyService } from '@domain/collaboration/callout-contribution-policy/callout.contribution.policy.service';
 
 @Injectable()
 export class CalloutTemplateService {
@@ -22,8 +22,8 @@ export class CalloutTemplateService {
     private readonly logger: LoggerService,
     private templateBaseService: TemplateBaseService,
     private calloutFramingService: CalloutFramingService,
-    private calloutResponseDefaultsService: CalloutResponseDefaultsService,
-    private calloutResponsePolicyService: CalloutResponsePolicyService
+    private calloutResponseDefaultsService: CalloutContributionDefaultsService,
+    private calloutResponsePolicyService: CalloutContributionPolicyService
   ) {}
 
   public async createCalloutTemplate(
@@ -34,15 +34,16 @@ export class CalloutTemplateService {
       calloutTemplate,
       calloutTemplateData
     );
-    calloutTemplate.framing = this.calloutFramingService.createCalloutFraming(
-      calloutTemplateData.framing
-    );
+    calloutTemplate.framing =
+      await this.calloutFramingService.createCalloutFraming(
+        calloutTemplateData.framing
+      );
     calloutTemplate.responseDefaults =
-      this.calloutResponseDefaultsService.createCalloutResponseDefaults(
+      this.calloutResponseDefaultsService.createCalloutContributionDefaults(
         calloutTemplateData.responseDefaults
       );
     calloutTemplate.responsePolicy =
-      this.calloutResponsePolicyService.createCalloutResponsePolicy(
+      this.calloutResponsePolicyService.createCalloutContributionPolicy(
         calloutTemplateData.responsePolicy
       );
 
@@ -96,14 +97,14 @@ export class CalloutTemplateService {
     }
     if (calloutTemplateData.responseDefaults) {
       calloutTemplate.responseDefaults =
-        this.calloutResponseDefaultsService.updateCalloutResponseDefaults(
+        this.calloutResponseDefaultsService.updateCalloutContributionDefaults(
           calloutTemplate.responseDefaults,
           calloutTemplateData.responseDefaults
         );
     }
     if (calloutTemplateData.responsePolicy) {
       calloutTemplate.responsePolicy =
-        this.calloutResponsePolicyService.updateCalloutResponsePolicy(
+        this.calloutResponsePolicyService.updateCalloutContributionPolicy(
           calloutTemplate.responsePolicy,
           calloutTemplateData.responsePolicy
         );
