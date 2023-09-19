@@ -105,46 +105,50 @@ export class StorageBucketResolverService {
   public async getStorageBucketIdForProfileResult(profile: ProfileResult) {
     switch (profile.type) {
       case ProfileType.USER:
-        return await this.getPlatformStorageBucketId();
+        return this.getPlatformStorageBucketId();
       case ProfileType.OPPORTUNITY:
-        return await this.getStorageBucketIdForOpportunity(profile.entityID);
+        return this.getStorageBucketIdForOpportunity(profile.entityID);
       case ProfileType.CALLOUT:
-        return await this.getStorageBucketIdForCallout(profile.entityID);
+        return this.getStorageBucketIdForCallout(profile.entityID);
+      case ProfileType.CALLOUT_FRAMING:
+        return this.getStorageBucketIdForCalloutFraming(profile.entityID);
       case ProfileType.POST:
-        return await this.getStorageBucketIdForCalloutType(
-          profile.entityID,
-          'post'
-        );
+        return this.getStorageBucketIdForCalloutType(profile.entityID, 'post');
       case ProfileType.WHITEBOARD:
-        return await this.getStorageBucketIdForCalloutType(
+        return this.getStorageBucketIdForCalloutType(
           profile.entityID,
           'whiteboard'
         );
       case ProfileType.WHITEBOARD_RT:
-        return await this.getPlatformStorageBucketId(); // todo: get the proper one
+        return this.getPlatformStorageBucketId(); // todo: get the proper one
       case ProfileType.INNOVATION_FLOW:
-        return await this.getStorageBucketIdForInnovationFlow(profile.entityID);
+        return this.getStorageBucketIdForInnovationFlow(profile.entityID);
       case ProfileType.INNOVATION_PACK:
-        return await this.getPlatformStorageBucketId();
+        return this.getPlatformStorageBucketId();
       case ProfileType.WHITEBOARD_TEMPLATE:
-        return await this.getStorageBucketIdForTemplate(
+        return this.getStorageBucketIdForTemplate(
           profile.entityID,
           'whiteboard_template'
         );
+      case ProfileType.CALLOUT_TEMPLATE:
+        return this.getStorageBucketIdForTemplate(
+          profile.entityID,
+          'callout_template'
+        );
       case ProfileType.POST_TEMPLATE:
-        return await this.getStorageBucketIdForTemplate(
+        return this.getStorageBucketIdForTemplate(
           profile.entityID,
           'post_template'
         );
       case ProfileType.INNOVATION_FLOW_TEMPLATE:
-        return await this.getStorageBucketIdForTemplate(
+        return this.getStorageBucketIdForTemplate(
           profile.entityID,
           'innovation_flow_template'
         );
       case ProfileType.INNOVATION_HUB:
-        return await this.getPlatformStorageBucketId();
+        return this.getPlatformStorageBucketId();
       case ProfileType.DISCUSSION:
-        return await this.getStorageBucketIdForDiscussion(profile.entityID);
+        return this.getStorageBucketIdForDiscussion(profile.entityID);
       default:
         throw new StorageBucketNotFoundException(
           `Unrecognized profile type: ${profile.type}`,
@@ -233,6 +237,18 @@ export class StorageBucketResolverService {
     [result] = await this.entityManager.connection.query(query);
 
     return result.storageBucketId;
+  }
+
+  private async getStorageBucketIdForCalloutFraming(
+    calloutFramingId: string
+  ): Promise<string> {
+    // todo: expand to also support checking if the framing is directly on the Callout vs in the template
+    // For now it is always the platform bucket as only on callout template
+    this.logger.verbose?.(
+      `CalloutFraming '${calloutFramingId}' - defaulting to platform until Callout uses CalloutFraming`,
+      LogContext.STORAGE_BUCKET
+    );
+    return this.getPlatformStorageBucketId();
   }
 
   private async getStorageBucketIdForInnovationFlow(
@@ -344,6 +360,7 @@ type ProfileResult = {
 };
 
 type TemplateType =
+  | 'callout_template'
   | 'whiteboard_template'
   | 'post_template'
   | 'innovation_flow_template';
@@ -358,8 +375,10 @@ enum ProfileType {
   WHITEBOARD = 'whiteboard',
   WHITEBOARD_RT = 'whiteboard_rt',
   POST_TEMPLATE = 'post_template',
+  CALLOUT_TEMPLATE = 'callout_template',
   WHITEBOARD_TEMPLATE = 'whiteboard_template',
   CALLOUT = 'callout',
+  CALLOUT_FRAMING = 'callout_framing',
   INNOVATION_FLOW = 'innovation_flow',
   INNOVATION_PACK = 'innovation_pack',
   DISCUSSION = 'discussion',

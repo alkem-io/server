@@ -3,14 +3,17 @@ import { ObjectType } from '@nestjs/graphql';
 import { IPostTemplate } from '../post-template/post.template.interface';
 import { IWhiteboardTemplate } from '../whiteboard-template/whiteboard.template.interface';
 import { IInnovationFlowTemplate } from '../innovation-flow-template/innovation.flow.template.interface';
+import { ICalloutTemplate } from '../callout-template/callout.template.interface';
 
 @ObjectType('TemplatesSet')
 export abstract class ITemplatesSet extends IAuthorizable {
-  postTemplates?: IPostTemplate[];
+  calloutTemplates!: ICalloutTemplate[];
 
-  whiteboardTemplates?: IWhiteboardTemplate[];
+  postTemplates!: IPostTemplate[];
 
-  innovationFlowTemplates?: IInnovationFlowTemplate[];
+  whiteboardTemplates!: IWhiteboardTemplate[];
+
+  innovationFlowTemplates!: IInnovationFlowTemplate[];
 
   policy!: string;
 }
