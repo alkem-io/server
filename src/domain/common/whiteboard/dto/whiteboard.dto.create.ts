@@ -1,14 +1,13 @@
-import { CANVAS_VALUE_LENGTH } from '@common/constants';
 import { CreateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
+import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 import { Field, InputType } from '@nestjs/graphql';
-import { IsOptional, MaxLength } from 'class-validator';
+import { IsOptional } from 'class-validator';
 
 @InputType()
 export class CreateWhiteboardInput extends CreateNameableInput {
-  @Field(() => String, { nullable: true })
+  @Field(() => WhiteboardContent, { nullable: true })
   @IsOptional()
-  @MaxLength(CANVAS_VALUE_LENGTH)
   content?: string;
 
   // Override

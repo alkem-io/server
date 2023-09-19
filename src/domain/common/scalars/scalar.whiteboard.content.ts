@@ -1,19 +1,18 @@
 import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
+import { validateExcalidrawContent } from '@core/validation/excalidraw/validateExcalidrawContent';
 import { Scalar, CustomScalar } from '@nestjs/graphql';
 import { Kind, ValueNode } from 'graphql';
-import { validateMachineDefinition } from '@core/validation/xstate/validateMachineDefinition';
 import { ErrorObject } from 'ajv';
 
-export const LIFECYCLE_DEFINITION_LENGTH = 8388608;
+const WHITEBOARD_CONTENT_LENGTH = 8388608;
 
-@Scalar('LifecycleDefinition')
-export class LifecycleDefinitionScalar implements CustomScalar<string, string> {
-  description =
-    'A representation of a Lifecycle Definition, based on XState. It is serialized JSON.';
+@Scalar('WhiteboardContent')
+export class WhiteboardContent implements CustomScalar<string, string> {
+  description = 'Content of a Whiteboard, as JSON.';
 
   parseValue(value: unknown): string {
-    return this.validate(value);
+    return WhiteboardContent.validate(value);
   }
 
   serialize(value: any): string {
@@ -22,27 +21,28 @@ export class LifecycleDefinitionScalar implements CustomScalar<string, string> {
 
   parseLiteral(ast: ValueNode): string {
     if (ast.kind === Kind.STRING) {
-      return this.validate(ast.value);
+      return WhiteboardContent.validate(ast.value);
     }
     return '';
   }
 
-  validate(value: any): string {
+  static validate(value: any) {
     if (typeof value !== 'string') {
       throw new ValidationException(
-        `Value is not string: ${value}`,
+        'Whiteboard content is not string',
         LogContext.API
       );
     }
 
-    if (value.length >= LIFECYCLE_DEFINITION_LENGTH) {
+    if (value.length >= WHITEBOARD_CONTENT_LENGTH) {
       throw new ValidationException(
-        `Lifecycle definition content is too long: ${value.length}, allowed length: ${LIFECYCLE_DEFINITION_LENGTH}`,
+        `Whiteboard content is too long: ${value.length}, allowed length: ${WHITEBOARD_CONTENT_LENGTH}`,
         LogContext.API
       );
     }
 
-    const errors = validateMachineDefinition(value);
+    // todo: json validation can be expanded
+    const errors = validateExcalidrawContent(value);
 
     if (errors) {
       let message: string;
@@ -55,7 +55,7 @@ export class LifecycleDefinitionScalar implements CustomScalar<string, string> {
         message = errors.message;
       }
       throw new ValidationException(
-        `Value is not valid xstate definition: ${message}`,
+        `Value is not valid excalidraw content definition: ${message}`,
         LogContext.API
       );
     }
