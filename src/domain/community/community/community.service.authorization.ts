@@ -13,11 +13,10 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { AuthorizationPolicyRuleVerifiedCredential } from '@core/authorization/authorization.policy.rule.verified.credential';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import {
-  CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL,
+  CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMINS,
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_COMMUNITY_SELF_REMOVAL,
   POLICY_RULE_COMMUNITY_INVITE,
-  POLICY_RULE_COMMUNITY_ADD_MEMBER,
 } from '@common/constants';
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
@@ -136,9 +135,14 @@ export class CommunityAuthorizationService {
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
+          AuthorizationPrivilege.COMMUNITY_ADD_MEMBER,
         ],
-        [AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY],
-        CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMIN_COMMUNITY_ALL
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_ADMIN_SPACES,
+          AuthorizationCredential.GLOBAL_ADMIN_COMMUNITY,
+        ],
+        CREDENTIAL_RULE_TYPES_COMMUNITY_GLOBAL_ADMINS
       );
     newRules.push(globalCommunityAdmin);
 
@@ -173,14 +177,6 @@ export class CommunityAuthorizationService {
       POLICY_RULE_COMMUNITY_INVITE
     );
     privilegeRules.push(communityInvitePrivilege);
-
-    // Note: this privilege should be later only assigned to global admins
-    const communityAddMemberPrivilege = new AuthorizationPolicyRulePrivilege(
-      [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER],
-      AuthorizationPrivilege.GRANT,
-      POLICY_RULE_COMMUNITY_ADD_MEMBER
-    );
-    privilegeRules.push(communityAddMemberPrivilege);
 
     return this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
       authorization,

@@ -33,6 +33,7 @@ import {
   CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_APPLY,
   CREDENTIAL_RULE_CHALLENGE_SPACE_MEMBER_JOIN,
   CREDENTIAL_RULE_CHALLENGE_FILE_UPLOAD,
+  CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
 } from '@common/constants';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
@@ -496,6 +497,20 @@ export class ChallengeAuthorizationService {
       spaceMemberCanJoin.cascade = false;
       newRules.push(spaceMemberCanJoin);
     }
+
+    const adminCredentials =
+      this.communityPolicyService.getAllCredentialsForRole(
+        policy,
+        CommunityRole.ADMIN
+      );
+
+    const addMembers = this.authorizationPolicyService.createCredentialRule(
+      [AuthorizationPrivilege.COMMUNITY_ADD_MEMBER],
+      adminCredentials,
+      CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER
+    );
+    addMembers.cascade = false;
+    newRules.push(addMembers);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
