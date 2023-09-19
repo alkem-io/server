@@ -36,9 +36,9 @@ export class ChatGuidanceResolverQueries {
       return {
         answer: 'guidance engine not enabled',
         question: chatData.question,
-        sources: '',
+        sources: [],
       };
     }
-    return this.chatGuidanceService.askQuestion(chatData.question, agentInfo);
+    return this.chatGuidanceService.askQuestion(chatData, agentInfo);
   }
 }
