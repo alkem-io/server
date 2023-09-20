@@ -353,12 +353,24 @@ export class RoomResolverMutations {
         );
 
         if (callout.visibility === CalloutVisibility.PUBLISHED) {
+          this.roomServiceEvents.processActivityCalloutCommentCreated(
+            callout,
+            reply,
+            agentInfo
+          );
+
           this.roomServiceEvents.processNotificationCommentReply(
             callout,
             room,
             reply,
             agentInfo,
             messageOwnerId
+          );
+          this.roomServiceEvents.processNotificationMentions(
+            callout,
+            room,
+            reply,
+            agentInfo
           );
         }
         break;
