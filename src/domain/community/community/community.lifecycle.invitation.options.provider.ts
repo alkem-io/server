@@ -77,7 +77,9 @@ export class CommunityInvitationLifecycleOptionsProvider {
           await this.communityService.assignUserToRole(
             community,
             userID,
-            CommunityRole.MEMBER
+            CommunityRole.MEMBER,
+            event.agentInfo,
+            true
           );
           await this.invitationService.removeInvitationCredential(
             userID,

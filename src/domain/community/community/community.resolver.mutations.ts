@@ -31,11 +31,8 @@ import { CommunityRole } from '@common/enums/community.role';
 import { AssignCommunityRoleToUserInput } from './dto/community.dto.role.assign.user';
 import { NotificationAdapter } from '@services/adapters/notification-adapter/notification.adapter';
 import { NotificationInputCommunityApplication } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.application';
-import { NotificationInputCommunityNewMember } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.new.member';
 import { NotificationInputCommunityContextReview } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.context.review';
 import { CommunityAuthorizationService } from './community.service.authorization';
-import { CommunityType } from '@common/enums/community.type';
-import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { UpdateCommunityApplicationFormInput } from './dto/community.dto.update.application.form';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
 import { InvitationService } from '../invitation/invitation.service';
@@ -51,11 +48,11 @@ import { CreateInvitationExternalUserOnCommunityInput } from './dto/community.dt
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { IInvitationExternal } from '../invitation.external';
 import { NotificationInputCommunityInvitationExternal } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation.external';
+import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 
 @Resolver()
 export class CommunityResolverMutations {
   constructor(
-    private contributionReporter: ContributionReporterService,
     private authorizationService: AuthorizationService,
     private notificationAdapter: NotificationAdapter,
     private userService: UserService,
@@ -414,6 +411,17 @@ export class CommunityResolverMutations {
       joiningData.communityID
     );
 
+    const membershipStatus = await this.communityService.getMembershipStatus(
+      agentInfo,
+      community
+    );
+    if (membershipStatus === CommunityMembershipStatus.INVITATION_PENDING) {
+      throw new ValidationException(
+        `Unable to join Community (${community.id}): invitation to join is pending.`,
+        LogContext.COMMUNITY
+      );
+    }
+
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
       community.authorization,
@@ -421,64 +429,13 @@ export class CommunityResolverMutations {
       `join community: ${community.id}`
     );
 
-    // Send the notification
-    const notificationInput: NotificationInputCommunityNewMember = {
-      userID: agentInfo.userID,
-      triggeredBy: agentInfo.userID,
-      community: community,
-    };
-    await this.notificationAdapter.communityNewMember(notificationInput);
-
     await this.communityService.assignUserToRole(
       community,
       agentInfo.userID,
       CommunityRole.MEMBER,
-      agentInfo
+      agentInfo,
+      true
     );
-
-    const displayName = await this.communityService.getDisplayName(community);
-
-    switch (community.type) {
-      case CommunityType.SPACE:
-        this.contributionReporter.spaceJoined(
-          {
-            id: community.parentID,
-            name: displayName,
-            space: community.spaceID,
-          },
-          {
-            id: agentInfo.userID,
-            email: agentInfo.email,
-          }
-        );
-        break;
-      case CommunityType.CHALLENGE:
-        this.contributionReporter.challengeJoined(
-          {
-            id: community.parentID,
-            name: displayName,
-            space: community.spaceID,
-          },
-          {
-            id: agentInfo.userID,
-            email: agentInfo.email,
-          }
-        );
-        break;
-      case CommunityType.OPPORTUNITY:
-        this.contributionReporter.opportunityJoined(
-          {
-            id: community.parentID,
-            name: displayName,
-            space: community.spaceID,
-          },
-          {
-            id: agentInfo.userID,
-            email: agentInfo.email,
-          }
-        );
-        break;
-    }
 
     return community;
   }
@@ -508,14 +465,14 @@ export class CommunityResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => IApplication, {
+  @Mutation(() => IInvitation, {
     description: 'Trigger an event on the Invitation.',
   })
   async eventOnCommunityInvitation(
     @Args('invitationEventData')
     invitationEventData: InvitationEventInput,
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IApplication> {
+  ): Promise<IInvitation> {
     const invitation = await this.invitationService.getInvitationOrFail(
       invitationEventData.invitationID
     );
