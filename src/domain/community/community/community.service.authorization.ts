@@ -20,6 +20,7 @@ import {
 } from '@common/constants';
 import { InvitationExternalAuthorizationService } from '../invitation.external/invitation.external.service.authorization';
 import { InvitationAuthorizationService } from '../invitation/invitation.service.authorization';
+import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Injectable()
 export class CommunityAuthorizationService {
@@ -123,7 +124,8 @@ export class CommunityAuthorizationService {
 
   private extendAuthorizationPolicy(
     authorization: IAuthorizationPolicy | undefined,
-    allowGlobalRegisteredReadAccess: boolean | undefined
+    allowGlobalRegisteredReadAccess: boolean | undefined,
+    communityID: string
   ): IAuthorizationPolicy {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
@@ -155,6 +157,19 @@ export class CommunityAuthorizationService {
         );
       newRules.push(globalRegistered);
     }
+
+    const inviteeCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.COMMUNITY_INVITEE,
+      resourceID: communityID,
+    };
+    const communityInvitee =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.COMMUNITY_JOIN],
+        [inviteeCredential],
+        CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED
+      );
+    communityInvitee.cascade = false;
+    newRules.push(communityInvitee);
 
     //
     const updatedAuthorization =

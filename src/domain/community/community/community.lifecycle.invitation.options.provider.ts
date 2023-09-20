@@ -60,17 +60,17 @@ export class CommunityInvitationLifecycleOptionsProvider {
     {
       actions: {
         communityAddMember: async (_, event: any) => {
-          const application = await this.invitationService.getInvitationOrFail(
+          const invitation = await this.invitationService.getInvitationOrFail(
             event.parentID,
             {
               relations: ['community'],
             }
           );
-          const userID = application.invitedUser;
-          const community = application.community;
+          const userID = invitation.invitedUser;
+          const community = invitation.community;
           if (!userID || !community)
             throw new EntityNotInitializedException(
-              `Lifecycle not initialized on Application: ${application.id}`,
+              `Lifecycle not initialized on Application: ${invitation.id}`,
               LogContext.COMMUNITY
             );
 
@@ -78,6 +78,10 @@ export class CommunityInvitationLifecycleOptionsProvider {
             community,
             userID,
             CommunityRole.MEMBER
+          );
+          await this.invitationService.removeInvitationCredential(
+            userID,
+            community.id
           );
         },
       },
