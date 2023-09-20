@@ -28,8 +28,6 @@ export enum AuthorizationCredential {
   ORGANIZATION_ADMIN = 'organization-admin', // Able to administer an organization
   ORGANIZATION_ASSOCIATE = 'organization-associate', // Able to be a part of an organization
 
-  COMMUNITY_INVITEE = 'community-invitee', // For users that are invited to a community
-
   USER_GROUP_MEMBER = 'user-group-member', // Able to be a part of an user group
 
   // Library related credentials

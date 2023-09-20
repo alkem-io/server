@@ -81,10 +81,6 @@ export class CommunityInvitationLifecycleOptionsProvider {
             event.agentInfo,
             true
           );
-          await this.invitationService.removeInvitationCredential(
-            userID,
-            community.id
-          );
         },
       },
       guards: {

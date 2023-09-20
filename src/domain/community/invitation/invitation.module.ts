@@ -9,7 +9,6 @@ import { InvitationResolverFields } from './invitation.resolver.fields';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { InvitationAuthorizationService } from './invitation.service.authorization';
 import { InvitationResolverMutations } from './invitation.resolver.mutations';
-import { AgentModule } from '@domain/agent/agent/agent.module';
 
 @Module({
   imports: [
@@ -17,7 +16,6 @@ import { AgentModule } from '@domain/agent/agent/agent.module';
     AuthorizationModule,
     LifecycleModule,
     UserModule,
-    AgentModule,
     TypeOrmModule.forFeature([Invitation]),
   ],
   providers: [

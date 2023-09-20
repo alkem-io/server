@@ -11,7 +11,6 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { AuthorizationCredential, LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
@@ -21,7 +20,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { asyncFilter } from '@common/utils';
 import { IUser } from '../user';
 import { UserService } from '../user/user.service';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { LogContext } from '@common/enums/logging.context';
 
 @Injectable()
 export class InvitationService {
@@ -30,7 +29,6 @@ export class InvitationService {
     @InjectRepository(Invitation)
     private invitationRepository: Repository<Invitation>,
     private userService: UserService,
-    private agentService: AgentService,
     private lifecycleService: LifecycleService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -41,15 +39,6 @@ export class InvitationService {
     const invitation: IInvitation = Invitation.create(invitationData);
 
     invitation.authorization = new AuthorizationPolicy();
-    const { agent } = await this.userService.getUserAndAgent(
-      invitationData.invitedUser
-    );
-
-    await this.agentService.grantCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.COMMUNITY_INVITEE,
-      resourceID: invitationData.communityID,
-    });
 
     // save the user to get the id assigned
     await this.invitationRepository.save(invitation);
@@ -68,11 +57,6 @@ export class InvitationService {
     const invitationID = deleteData.ID;
     const invitation = await this.getInvitationOrFail(invitationID);
 
-    await this.removeInvitationCredential(
-      invitation.invitedUser,
-      invitation.community?.id || ''
-    );
-
     if (invitation.authorization)
       await this.authorizationPolicyService.delete(invitation.authorization);
 
@@ -81,19 +65,6 @@ export class InvitationService {
     );
     result.id = invitationID;
     return result;
-  }
-
-  async removeInvitationCredential(
-    invitedUserID: string,
-    communityID: string
-  ): Promise<void> {
-    const { agent } = await this.userService.getUserAndAgent(invitedUserID);
-
-    await this.agentService.revokeCredential({
-      agentID: agent.id,
-      type: AuthorizationCredential.COMMUNITY_INVITEE,
-      resourceID: communityID,
-    });
   }
 
   async getInvitationOrFail(
