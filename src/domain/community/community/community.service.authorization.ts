@@ -48,7 +48,8 @@ export class CommunityAuthorizationService {
 
     community.authorization = this.extendAuthorizationPolicy(
       community.authorization,
-      parentAuthorization?.anonymousReadAccess
+      parentAuthorization?.anonymousReadAccess,
+      community.id
     );
     community.authorization = this.appendVerifiedCredentialRules(
       community.authorization
