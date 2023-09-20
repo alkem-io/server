@@ -59,6 +59,9 @@ import { CreateInvitationExternalInput } from '../invitation.external/dto/invita
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { CREDENTIAL_RULE_COMMUNITY_INVITEE_JOIN } from '@common/constants/authorization/credential.rule.constants';
 
 @Injectable()
 export class CommunityService {
@@ -883,6 +886,24 @@ export class CommunityService {
       invitationData
     );
     community.invitations?.push(invitation);
+    const userInvitedToJoinCommunityRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.COMMUNITY_JOIN],
+        [
+          {
+            type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+            resourceID: user.id,
+          },
+        ],
+        CREDENTIAL_RULE_COMMUNITY_INVITEE_JOIN
+      );
+
+    const updatedAuthorization =
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
+        community.authorization,
+        [userInvitedToJoinCommunityRule]
+      );
+    community.authorization = updatedAuthorization;
     await this.communityRepository.save(community);
 
     return invitation;

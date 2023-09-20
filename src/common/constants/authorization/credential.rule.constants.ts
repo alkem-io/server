@@ -21,6 +21,8 @@ export const CREDENTIAL_RULE_SPACE_MEMBERS_READ =
   'credentialRule-spaceMembersRead';
 export const CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN =
   'credentialRule-spaceHostAssociatesJoin';
+export const CREDENTIAL_RULE_COMMUNITY_INVITEE_JOIN =
+  'credentialRule-communityInviteeJoin';
 export const CREDENTIAL_RULE_SPACE_FILE_UPLOAD =
   'credentialRule-spaceMemberFileUpload';
 export const CREDENTIAL_RULE_POST_CREATED_BY = 'credentialRule-postCreatedBy';
