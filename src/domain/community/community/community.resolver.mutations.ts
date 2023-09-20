@@ -41,7 +41,6 @@ import { InvitationEventInput } from '../invitation/dto/invitation.dto.event';
 import { CommunityInvitationLifecycleOptionsProvider } from './community.lifecycle.invitation.options.provider';
 import { CreateInvitationInput, IInvitation } from '../invitation';
 import { CreateInvitationExistingUserOnCommunityInput } from './dto/community.dto.invite.existing.user';
-import { ValidationException } from '@common/exceptions/validation.exception';
 import { IOrganization } from '../organization';
 import { IUser } from '../user/user.interface';
 import { CreateInvitationExternalUserOnCommunityInput } from './dto/community.dto.invite.external.user';
@@ -49,6 +48,7 @@ import { InvitationExternalAuthorizationService } from '../invitation.external/i
 import { IInvitationExternal } from '../invitation.external';
 import { NotificationInputCommunityInvitationExternal } from '@services/adapters/notification-adapter/dto/notification.dto.input.community.invitation.external';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
+import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
 
 @Resolver()
 export class CommunityResolverMutations {
@@ -416,7 +416,7 @@ export class CommunityResolverMutations {
       community
     );
     if (membershipStatus === CommunityMembershipStatus.INVITATION_PENDING) {
-      throw new ValidationException(
+      throw new CommunityMembershipException(
         `Unable to join Community (${community.id}): invitation to join is pending.`,
         LogContext.COMMUNITY
       );
@@ -562,7 +562,7 @@ export class CommunityResolverMutations {
   // For now Host role is only allowed to be assigned via platform level settings
   private validateNotHostRole(role: CommunityRole) {
     if (role === CommunityRole.HOST) {
-      throw new ValidationException(
+      throw new CommunityMembershipException(
         `Unable to assign Role (${role}) in community: setting of Host role requires platform settings`,
         LogContext.COMMUNITY
       );
