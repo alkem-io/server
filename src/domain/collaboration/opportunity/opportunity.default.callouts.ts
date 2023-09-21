@@ -20,7 +20,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_TOP],
+          tags: [CommonDisplayLocation.HOME_RIGHT],
         },
       ],
     },
