@@ -324,13 +324,13 @@ export class CommunityService {
       agentInfo.userID,
       community.id
     );
-    if (openApplication) CommunityMembershipStatus.APPLICATION_PENDING;
+    if (openApplication) return CommunityMembershipStatus.APPLICATION_PENDING;
 
     const openInvitation = await this.findOpenInvitation(
       agentInfo.userID,
       community.id
     );
-    if (openInvitation) CommunityMembershipStatus.INVITATION_PENDING;
+    if (openInvitation) return CommunityMembershipStatus.INVITATION_PENDING;
 
     return CommunityMembershipStatus.NOT_MEMBER;
   }
