@@ -66,6 +66,7 @@ import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.mo
 import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
+import { TaskGraphqlModule } from '@domain/task/task.module';
 
 @Module({
   imports: [
@@ -228,6 +229,7 @@ import { APP_ID_PROVIDER } from '@common/app.id.provider';
     ChatGuidanceModule,
     LookupModule,
     AuthResetSubscriberModule,
+    TaskGraphqlModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

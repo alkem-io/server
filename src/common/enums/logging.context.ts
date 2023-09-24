@@ -44,4 +44,5 @@ export enum LogContext {
   RESOLVER_QUERY = 'resolver-query',
   MUTATION = 'mutation',
   DOCUMENT = 'document',
+  TASKS = 'tasks',
 }

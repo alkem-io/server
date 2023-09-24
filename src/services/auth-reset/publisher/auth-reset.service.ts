@@ -6,13 +6,17 @@ import { ClientProxy } from '@nestjs/microservices';
 import { User } from '@domain/community/user';
 import { Organization } from '@domain/community/organization';
 import { AUTH_RESET_SERVICE } from '@common/constants';
+import { TaskService } from '@services/task/task.service';
+import { AUTH_RESET_EVENT_TYPE } from '../event.type';
+import { AuthResetEventPayload } from '../auth-reset.payload.interface';
 
 @Injectable()
 export class AuthResetService {
   constructor(
     @Inject(AUTH_RESET_SERVICE)
     private authResetQueue: ClientProxy,
-    @InjectEntityManager() private manager: EntityManager
+    @InjectEntityManager() private manager: EntityManager,
+    private taskService: TaskService
   ) {}
 
   public async publishAllSpaceReset() {
@@ -20,7 +24,14 @@ export class AuthResetService {
       select: { id: true },
     });
 
-    spaces.forEach(({ id }) => this.authResetQueue.emit('space-reset', { id }));
+    const task = await this.taskService.create(spaces.length);
+
+    spaces.forEach(({ id }) =>
+      this.authResetQueue.emit<any, AuthResetEventPayload>(
+        AUTH_RESET_EVENT_TYPE.SPACE,
+        { id, type: AUTH_RESET_EVENT_TYPE.SPACE, task: task.id }
+      )
+    );
   }
 
   public async publishAllUsersReset() {
@@ -28,7 +39,18 @@ export class AuthResetService {
       select: { id: true },
     });
 
-    users.forEach(({ id }) => this.authResetQueue.emit('user-reset', { id }));
+    const task = await this.taskService.create(users.length);
+
+    users.forEach(({ id }) =>
+      this.authResetQueue.emit<any, AuthResetEventPayload>(
+        AUTH_RESET_EVENT_TYPE.USER,
+        {
+          id,
+          type: AUTH_RESET_EVENT_TYPE.USER,
+          task: task.id,
+        }
+      )
+    );
   }
 
   public async publishAllOrganizationsReset() {
@@ -36,12 +58,18 @@ export class AuthResetService {
       select: { id: true },
     });
 
+    const task = await this.taskService.create(organizations.length);
+
     organizations.forEach(({ id }) =>
-      this.authResetQueue.emit('organization-reset', { id })
+      this.authResetQueue.emit<any, AuthResetEventPayload>(
+        AUTH_RESET_EVENT_TYPE.ORGANIZATION,
+        { id, type: AUTH_RESET_EVENT_TYPE.ORGANIZATION, task: task.id }
+      )
     );
   }
 
   public async publishPlatformReset() {
-    this.authResetQueue.emit('platform-reset', {});
+    // does not need a task
+    this.authResetQueue.emit<any, any>(AUTH_RESET_EVENT_TYPE.PLATFORM, {});
   }
 }
