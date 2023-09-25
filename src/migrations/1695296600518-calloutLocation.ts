@@ -43,6 +43,18 @@ export class calloutLocation1695296600518 implements MigrationInterface {
         );
       }
     }
+    await queryRunner.query(
+      `UPDATE callout SET sortOrder = 1 WHERE type = 'link-collection' AND nameID like '%getting-started%'`
+    );
+    await queryRunner.query(
+      `UPDATE callout SET sortOrder = 2 WHERE type = 'post-collection' AND nameID like '%contributor-profiles%'`
+    );
+    await queryRunner.query(
+      `UPDATE callout SET sortOrder = 2 WHERE type = 'post-collection' AND nameID like '%tasks%'`
+    );
+    await queryRunner.query(
+      `UPDATE callout SET sortOrder = 3 WHERE type = 'post' AND nameID like '%roles%'`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {}

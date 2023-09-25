@@ -12,7 +12,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     nameID: 'getting-started',
     type: CalloutType.LINK_COLLECTION,
     state: CalloutState.CLOSED,
-    sortOrder: 3,
+    sortOrder: 1,
     profile: {
       displayName: 'Getting Started',
       description: '⬇️ Here are some quick links to help you get started',
@@ -46,7 +46,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     nameID: 'tasks',
     type: CalloutType.POST_COLLECTION,
     state: CalloutState.OPEN,
-    sortOrder: 1,
+    sortOrder: 2,
     profile: {
       displayName: '💪 Jobs to be done...',
       description: '',
@@ -72,7 +72,7 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
     nameID: 'roles',
     type: CalloutType.POST,
     state: CalloutState.OPEN,
-    sortOrder: 2,
+    sortOrder: 3,
     profile: {
       displayName: '👋 Hi, this is us!',
       description:
