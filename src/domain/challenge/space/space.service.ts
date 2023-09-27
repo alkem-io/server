@@ -70,6 +70,10 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CommunityRole } from '@common/enums/community.role';
 import { spaceDefaultCallouts } from './space.default.callouts';
 import { CommonDisplayLocation } from '@common/enums/common.display.location';
+import { IPaginatedType } from '@core/pagination/paginated.type';
+import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
+import { PaginationArgs } from '@core/pagination';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
 
 @Injectable()
 export class SpaceService {
@@ -392,6 +396,23 @@ export class SpaceService {
       }
     }
     return spacesResult;
+  }
+
+  getPaginatedSpaces(
+    paginationArgs: PaginationArgs,
+    filter?: SpaceFilterInput
+  ): Promise<IPaginatedType<ISpace>> {
+    const visibilities =
+      this.spacesFilterService.getAllowedVisibilities(filter);
+
+    const qb = this.spaceRepository.createQueryBuilder('space');
+    if (visibilities) {
+      qb.where({
+        visibility: In(visibilities),
+      });
+    }
+
+    return getPaginationResults(qb, paginationArgs);
   }
 
   public async getAllSpaces(

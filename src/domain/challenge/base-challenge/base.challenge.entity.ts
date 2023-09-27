@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import { JoinColumn, OneToOne } from 'typeorm';
+import { Column, Generated, JoinColumn, OneToOne } from 'typeorm';
 import { Community } from '@domain/community/community/community.entity';
 import { Context } from '@domain/context/context/context.entity';
 import { IBaseChallenge } from './base.challenge.interface';
@@ -11,6 +11,12 @@ export abstract class BaseChallenge
   extends NameableEntity
   implements IBaseChallenge
 {
+  @Column({
+    unique: true,
+  })
+  @Generated('increment')
+  rowId!: number;
+
   @OneToOne(() => Collaboration, {
     eager: false,
     cascade: true,
