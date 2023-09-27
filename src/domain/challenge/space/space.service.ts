@@ -407,8 +407,8 @@ export class SpaceService {
 
     const qb = this.spaceRepository.createQueryBuilder('space');
     if (visibilities) {
-      qb.where('visibility IN (:visibilitiesList)').setParameters({
-        visibilitiesList: visibilities,
+      qb.where({
+        visibility: In(visibilities),
       });
     }
 
