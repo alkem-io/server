@@ -40,7 +40,6 @@ export class SpaceResolverQueries {
   })
   @Profiling.api
   async spacesPaginated(
-    @InnovationHubDecorator() innovationHub: InnovationHub | undefined,
     @Args({ nullable: true }) pagination: PaginationArgs,
     @Args('filter', { nullable: true }) filter?: SpaceFilterInput
   ): Promise<PaginatedSpaces> {

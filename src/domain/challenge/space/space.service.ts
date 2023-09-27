@@ -398,7 +398,7 @@ export class SpaceService {
     return spacesResult;
   }
 
-  async getPaginatedSpaces(
+  getPaginatedSpaces(
     paginationArgs: PaginationArgs,
     filter?: SpaceFilterInput
   ): Promise<IPaginatedType<ISpace>> {
@@ -407,10 +407,9 @@ export class SpaceService {
 
     const qb = this.spaceRepository.createQueryBuilder('space');
     if (visibilities) {
-      const visibilitiesList = visibilities
-        .map(visibility => `'${visibility}'`)
-        .join(',');
-      qb.where(`visibility in (${visibilitiesList})`);
+      qb.where('visibility IN (:visibilitiesList)').setParameters({
+        visibilitiesList: visibilities,
+      });
     }
 
     return getPaginationResults(qb, paginationArgs);
