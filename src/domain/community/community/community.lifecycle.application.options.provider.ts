@@ -80,7 +80,9 @@ export class CommunityApplicationLifecycleOptionsProvider {
         await this.communityService.assignUserToRole(
           community,
           userID,
-          CommunityRole.MEMBER
+          CommunityRole.MEMBER,
+          event.agentInfo,
+          true
         );
       },
     },

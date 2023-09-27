@@ -1,7 +1,6 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 export enum CalloutDisplayLocation {
-  HOME_TOP = 'HOME_0',
   HOME_LEFT = 'HOME_1',
   HOME_RIGHT = 'HOME_2',
   CONTRIBUTE_LEFT = 'CONTRIBUTE_1',

@@ -12,7 +12,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
     nameID: 'getting-started',
     type: CalloutType.LINK_COLLECTION,
     state: CalloutState.CLOSED,
-    sortOrder: 3,
+    sortOrder: 1,
     profile: {
       displayName: 'Getting Started',
       description: '⬇️ Here are some quick links to help you get started',
@@ -20,7 +20,7 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         {
           name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
           type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_TOP],
+          tags: [CommonDisplayLocation.HOME_RIGHT],
         },
       ],
     },
