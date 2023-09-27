@@ -59,6 +59,7 @@ import { CreateInvitationExternalInput } from '../invitation.external/dto/invita
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
+import { CommunityEventsService } from './community.service.events';
 
 @Injectable()
 export class CommunityService {
@@ -74,6 +75,7 @@ export class CommunityService {
     private invitationExternalService: InvitationExternalService,
     private communicationService: CommunicationService,
     private communityResolverService: CommunityResolverService,
+    private communityEventsService: CommunityEventsService,
     private formService: FormService,
     private communityPolicyService: CommunityPolicyService,
     @InjectRepository(Community)
@@ -322,13 +324,13 @@ export class CommunityService {
       agentInfo.userID,
       community.id
     );
-    if (openApplication) CommunityMembershipStatus.APPLICATION_PENDING;
+    if (openApplication) return CommunityMembershipStatus.APPLICATION_PENDING;
 
     const openInvitation = await this.findOpenInvitation(
       agentInfo.userID,
       community.id
     );
-    if (openInvitation) CommunityMembershipStatus.INVITATION_PENDING;
+    if (openInvitation) return CommunityMembershipStatus.INVITATION_PENDING;
 
     return CommunityMembershipStatus.NOT_MEMBER;
   }
@@ -467,7 +469,8 @@ export class CommunityService {
     community: ICommunity,
     userID: string,
     role: CommunityRole,
-    agentInfo?: AgentInfo
+    agentInfo?: AgentInfo,
+    triggerNewMemberEvents = false
   ): Promise<IUser> {
     const { user, agent } = await this.userService.getUserAndAgent(userID);
     const hasMemberRoleInParent = await this.isMemberInParentCommunity(
@@ -500,8 +503,13 @@ export class CommunityService {
         user: user,
       };
       await this.activityAdapter.memberJoined(activityLogInput);
-      if (community.type === CommunityType.SPACE) {
-        // todo: community joined
+      if (triggerNewMemberEvents && agentInfo) {
+        const displayName = await this.getDisplayName(community);
+        await this.communityEventsService.processCommunityNewMemberEvents(
+          community,
+          displayName,
+          agentInfo
+        );
       }
     }
 

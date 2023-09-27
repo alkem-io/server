@@ -11,7 +11,6 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
@@ -21,6 +20,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { asyncFilter } from '@common/utils';
 import { IUser } from '../user';
 import { UserService } from '../user/user.service';
+import { LogContext } from '@common/enums/logging.context';
 
 @Injectable()
 export class InvitationService {
@@ -39,6 +39,7 @@ export class InvitationService {
     const invitation: IInvitation = Invitation.create(invitationData);
 
     invitation.authorization = new AuthorizationPolicy();
+
     // save the user to get the id assigned
     await this.invitationRepository.save(invitation);
 
