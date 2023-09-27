@@ -6,7 +6,8 @@ import { SpaceVisibility } from '@common/enums/space.visibility';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @ObjectType('Space')
-export abstract class ISpace extends IBaseChallenge {
+export class ISpace extends IBaseChallenge {
+  rowId!: number;
   @Field(() => SpaceVisibility, {
     description: 'Visibility of the Space.',
     nullable: false,
