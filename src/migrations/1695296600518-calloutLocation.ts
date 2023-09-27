@@ -3,10 +3,10 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class calloutLocation1695296600518 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `UPDATE tagset SET tags = 'HOME_1' WHERE tags = 'HOME_0'`
+      `UPDATE tagset SET tags = 'HOME_2' WHERE tags = 'HOME_0'`
     );
     await queryRunner.query(
-      `UPDATE tagset_template SET defaultSelectedValue = 'HOME_1' WHERE defaultSelectedValue = 'HOME_0'`
+      `UPDATE tagset_template SET defaultSelectedValue = 'HOME_2' WHERE defaultSelectedValue = 'HOME_0'`
     );
     const tagsetTemplates = await queryRunner.query(
       `SELECT * FROM tagset_template`
@@ -15,10 +15,10 @@ export class calloutLocation1695296600518 implements MigrationInterface {
     for (const tagsetTemplate of tagsetTemplates) {
       const tagsetTemplateArray = tagsetTemplate.allowedValues.split(',');
 
-      // Check if "HOME_1" is not in the array, replace "HOME_0" with "HOME_1"
-      if (!tagsetTemplateArray.includes('HOME_1')) {
+      // Check if "HOME_2" is not in the array, replace "HOME_0" with "HOME_2"
+      if (!tagsetTemplateArray.includes('HOME_2')) {
         const updatedArray = tagsetTemplateArray.map((value: string) =>
-          value === 'HOME_0' ? 'HOME_1' : value
+          value === 'HOME_0' ? 'HOME_2' : value
         );
 
         const tagsetTemplateString = updatedArray.join(',');
