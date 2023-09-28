@@ -309,21 +309,40 @@ export class SpaceService {
     return space.visibility;
   }
 
-  public getSpacesForInnovationHub({
+  public async getSpacesForInnovationHub({
+    id,
     type,
     spaceListFilter,
     spaceVisibilityFilter,
   }: InnovationHub): Promise<Space[]> | never {
     if (type === InnovationHubType.VISIBILITY) {
+      if (!spaceVisibilityFilter) {
+        throw new EntityNotInitializedException(
+          `'spaceVisibilityFilter' of Innovation Hub '${id}' not defined`,
+          LogContext.INNOVATION_HUB
+        );
+      }
+
       return this.spaceRepository.findBy({
-        visibility: spaceVisibilityFilter as SpaceVisibility,
+        visibility: spaceVisibilityFilter,
       });
     }
 
     if (type === InnovationHubType.LIST) {
-      return this.spaceRepository.findBy([
-        { id: In(spaceListFilter as Array<string>) },
+      if (!spaceListFilter) {
+        throw new EntityNotInitializedException(
+          `'spaceListFilter' of Innovation Hub '${id}' not defined`,
+          LogContext.INNOVATION_HUB
+        );
+      }
+
+      const unsortedSpaces = await this.spaceRepository.findBy([
+        { id: In(spaceListFilter) },
       ]);
+      // sort according to the order of the space list filter
+      return unsortedSpaces.sort(
+        (a, b) => spaceListFilter.indexOf(a.id) - spaceListFilter.indexOf(b.id)
+      );
     }
 
     throw new NotSupportedException(
