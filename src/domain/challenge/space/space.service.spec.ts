@@ -88,6 +88,7 @@ const getChallengesMock = (
   for (let i = 0; i < count; i++) {
     result.push({
       id: `${spaceId}.${i}`,
+      rowId: i,
       nameID: `challenge-${spaceId}.${i}`,
       innovationFlow: {
         id: '',
@@ -132,6 +133,7 @@ const getOpportunitiesMock = (
   for (let i = 0; i < count; i++) {
     result.push({
       id: `${challengeId}.${i}`,
+      rowId: i,
       nameID: `opportunity-${challengeId}.${i}`,
       innovationFlow: {
         id: '',
@@ -179,6 +181,7 @@ const getSpaceMock = ({
 }): Space => {
   return {
     id,
+    rowId: parseInt(id),
     nameID: `space-${id}`,
     profile: {
       id: `profile-${id}`,

@@ -70,6 +70,10 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { CommunityRole } from '@common/enums/community.role';
 import { spaceDefaultCallouts } from './space.default.callouts';
 import { CommonDisplayLocation } from '@common/enums/common.display.location';
+import { IPaginatedType } from '@core/pagination/paginated.type';
+import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
+import { PaginationArgs } from '@core/pagination';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
 
 @Injectable()
 export class SpaceService {
@@ -305,21 +309,40 @@ export class SpaceService {
     return space.visibility;
   }
 
-  public getSpacesForInnovationHub({
+  public async getSpacesForInnovationHub({
+    id,
     type,
     spaceListFilter,
     spaceVisibilityFilter,
   }: InnovationHub): Promise<Space[]> | never {
     if (type === InnovationHubType.VISIBILITY) {
+      if (!spaceVisibilityFilter) {
+        throw new EntityNotInitializedException(
+          `'spaceVisibilityFilter' of Innovation Hub '${id}' not defined`,
+          LogContext.INNOVATION_HUB
+        );
+      }
+
       return this.spaceRepository.findBy({
-        visibility: spaceVisibilityFilter as SpaceVisibility,
+        visibility: spaceVisibilityFilter,
       });
     }
 
     if (type === InnovationHubType.LIST) {
-      return this.spaceRepository.findBy([
-        { id: In(spaceListFilter as Array<string>) },
+      if (!spaceListFilter) {
+        throw new EntityNotInitializedException(
+          `'spaceListFilter' of Innovation Hub '${id}' not defined`,
+          LogContext.INNOVATION_HUB
+        );
+      }
+
+      const unsortedSpaces = await this.spaceRepository.findBy([
+        { id: In(spaceListFilter) },
       ]);
+      // sort according to the order of the space list filter
+      return unsortedSpaces.sort(
+        (a, b) => spaceListFilter.indexOf(a.id) - spaceListFilter.indexOf(b.id)
+      );
     }
 
     throw new NotSupportedException(
@@ -392,6 +415,23 @@ export class SpaceService {
       }
     }
     return spacesResult;
+  }
+
+  getPaginatedSpaces(
+    paginationArgs: PaginationArgs,
+    filter?: SpaceFilterInput
+  ): Promise<IPaginatedType<ISpace>> {
+    const visibilities =
+      this.spacesFilterService.getAllowedVisibilities(filter);
+
+    const qb = this.spaceRepository.createQueryBuilder('space');
+    if (visibilities) {
+      qb.where({
+        visibility: In(visibilities),
+      });
+    }
+
+    return getPaginationResults(qb, paginationArgs);
   }
 
   public async getAllSpaces(

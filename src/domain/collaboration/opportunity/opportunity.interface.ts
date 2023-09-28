@@ -5,6 +5,7 @@ import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.interface';
 @ObjectType('Opportunity')
 export abstract class IOpportunity extends IBaseChallenge {
+  rowId!: number;
   @Field(() => [IProject], {
     nullable: true,
     description: 'The set of projects within the context of this Opportunity',
