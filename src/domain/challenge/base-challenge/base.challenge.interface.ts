@@ -8,6 +8,7 @@ import { INameable } from '@domain/common/entity/nameable-entity/nameable.interf
 
 @ObjectType('IBaseChallenge')
 export abstract class IBaseChallenge extends INameable {
+  rowId!: number;
   agent?: IAgent;
   @Field(() => ICollaboration, {
     nullable: true,

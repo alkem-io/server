@@ -5,6 +5,7 @@ import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.in
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 @ObjectType('Challenge')
 export abstract class IChallenge extends IBaseChallenge {
+  rowId!: number;
   childChallenges?: IChallenge[];
   opportunities?: IOpportunity[];
 
