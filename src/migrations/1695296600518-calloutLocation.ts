@@ -50,6 +50,9 @@ export class calloutLocation1695296600518 implements MigrationInterface {
       `UPDATE callout SET sortOrder = 1 WHERE type = 'link-collection' AND nameID = 'recommendations' AND sortOrder = 3`
     );
     await queryRunner.query(
+      `UPDATE callout as c JOIN profile as p ON c.profileId = p.id SET c.sortOrder = 1 WHERE c.type = 'link-collection' AND c.nameID = 'link-collection' AND c.sortOrder = 10 AND p.displayName = 'Recommended by the Host'`
+    );
+    await queryRunner.query(
       `UPDATE callout SET sortOrder = 2 WHERE type = 'post-collection' AND nameID = 'contributor-profiles' AND sortOrder = 1`
     );
     await queryRunner.query(
