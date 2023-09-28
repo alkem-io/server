@@ -19,7 +19,6 @@
       "items": {
         "type": "object"
       }
-    },
-    "required": []
+    }
   }
 }
