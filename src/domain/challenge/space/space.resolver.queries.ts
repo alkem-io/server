@@ -19,15 +19,16 @@ export class SpaceResolverQueries {
 
   @Query(() => [ISpace], {
     nullable: false,
-    description: 'The Spaces on this platform',
+    description:
+      'The Spaces on this platform; If accessed through an Innovation Hub will return ONLY the Spaces defined in it.',
   })
   @Profiling.api
-  async spaces(
+  spaces(
     @InnovationHubDecorator() innovationHub: InnovationHub | undefined,
     @Args({ nullable: true }) args: SpacesQueryArgs
   ): Promise<ISpace[]> {
     if (!innovationHub) {
-      return await this.spaceService.getSpaces(args);
+      return this.spaceService.getSpaces(args);
     }
 
     return this.spaceService.getSpacesForInnovationHub(innovationHub);
