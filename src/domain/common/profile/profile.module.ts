@@ -11,7 +11,6 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { ProfileResolverFields } from './profile.resolver.fields';
 import { LocationModule } from '@domain/common/location';
-import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { TagsetTemplateModule } from '../tagset-template/tagset.template.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 
@@ -26,7 +25,6 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
     VisualModule,
     LocationModule,
     StorageBucketModule,
-    EntityResolverModule, // still needed?
   ],
   providers: [
     ProfileResolverMutations,
