@@ -7,9 +7,9 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IUser } from '@domain/community/user';
-import { UserService } from '@domain/community/user/user.service';
 import { ICalendarEvent } from './event.interface';
 import { CalendarEventService } from './event.service';
+import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
 
 @Resolver(() => ICalendarEvent)
 export class CalendarEventResolverFields {
@@ -17,7 +17,7 @@ export class CalendarEventResolverFields {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private calendarEventService: CalendarEventService,
-    private userService: UserService
+    private userLookupService: UserLookupService
   ) {}
 
   @ResolveField('createdBy', () => IUser, {
@@ -33,7 +33,7 @@ export class CalendarEventResolverFields {
     }
 
     try {
-      return await this.userService.getUserOrFail(createdBy);
+      return await this.userLookupService.getUserByUUID(createdBy);
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(

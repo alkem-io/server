@@ -1,18 +1,18 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IMessage } from './message.interface';
 import { LogContext } from '@common/enums/logging.context';
-import { UserService } from '@domain/community/user/user.service';
 import { IUser } from '@domain/community/user';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Inject, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
 
 @Resolver(() => IMessage)
 export class MessageResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private userService: UserService
+    private userLookupService: UserLookupService
   ) {}
 
   @ResolveField('sender', () => IUser, {
@@ -26,7 +26,7 @@ export class MessageResolverFields {
     }
 
     try {
-      return await this.userService.getUserOrFail(sender);
+      return await this.userLookupService.getUserByUUID(sender);
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(

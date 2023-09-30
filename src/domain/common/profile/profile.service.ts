@@ -27,11 +27,13 @@ import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 import { TagsetTemplateService } from '../tagset-template/tagset.template.service';
 import { UpdateProfileSelectTagsetInput } from './dto/profile.dto.update.select.tagset';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 
 @Injectable()
 export class ProfileService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private storageBucketService: StorageBucketService,
     private tagsetService: TagsetService,
     private tagsetTemplateService: TagsetTemplateService,
     private referenceService: ReferenceService,
@@ -51,6 +53,8 @@ export class ProfileService {
       displayName: profileData?.displayName,
     });
     profile.authorization = new AuthorizationPolicy();
+    profile.storageBucket =
+      await this.storageBucketService.createStorageBucket();
     profile.visuals = [];
     profile.location = await this.locationService.createLocation(
       profileData?.location
@@ -144,6 +148,7 @@ export class ProfileService {
         'tagsets',
         'authorization',
         'visuals',
+        'storageBucket',
       ],
     });
 
@@ -159,6 +164,12 @@ export class ProfileService {
           ID: reference.id,
         });
       }
+    }
+
+    if (profile.storageBucket) {
+      await this.storageBucketService.deleteStorageBucket(
+        profile.storageBucket.id
+      );
     }
 
     if (profile.visuals) {

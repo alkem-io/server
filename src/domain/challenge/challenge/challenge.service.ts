@@ -269,6 +269,7 @@ export class ChallengeService {
         'innovationFlow',
         'preferenceSet',
         'preferenceSet.preferences',
+        'storageBucket',
       ],
     });
 
@@ -302,6 +303,12 @@ export class ChallengeService {
     if (challenge.preferenceSet) {
       await this.preferenceSetService.deletePreferenceSet(
         challenge.preferenceSet.id
+      );
+    }
+
+    if (challenge.storageBucket) {
+      await this.storageBucketService.deleteStorageBucket(
+        challenge.storageBucket.id
       );
     }
 

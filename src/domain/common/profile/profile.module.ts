@@ -13,6 +13,7 @@ import { ProfileResolverFields } from './profile.resolver.fields';
 import { LocationModule } from '@domain/common/location';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { TagsetTemplateModule } from '../tagset-template/tagset.template.module';
+import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 
 @Module({
   imports: [
@@ -24,7 +25,8 @@ import { TagsetTemplateModule } from '../tagset-template/tagset.template.module'
     TypeOrmModule.forFeature([Profile]),
     VisualModule,
     LocationModule,
-    EntityResolverModule,
+    StorageBucketModule,
+    EntityResolverModule, // still needed?
   ],
   providers: [
     ProfileResolverMutations,

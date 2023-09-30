@@ -31,7 +31,6 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CalloutType } from '@common/enums/callout.type';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { UserService } from '@domain/community/user/user.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { PostTemplateService } from '@domain/template/post-template/post.template.service';
@@ -56,6 +55,7 @@ import {
   CreateWhiteboardRtInput,
   IWhiteboardRt,
 } from '@domain/common/whiteboard-rt/types';
+import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
 
 @Injectable()
 export class CalloutService {
@@ -68,7 +68,7 @@ export class CalloutService {
     private whiteboardRtService: WhiteboardRtService,
     private namingService: NamingService,
     private roomService: RoomService,
-    private userService: UserService,
+    private userLookupService: UserLookupService,
     private profileService: ProfileService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
@@ -287,8 +287,8 @@ export class CalloutService {
     publishedTimestamp?: number
   ): Promise<ICallout> {
     if (publisherID) {
-      const publisher = await this.userService.getUserOrFail(publisherID);
-      callout.publishedBy = publisher.id;
+      const publisher = await this.userLookupService.getUserByUUID(publisherID);
+      callout.publishedBy = publisher?.id || '';
     }
 
     if (publishedTimestamp) {

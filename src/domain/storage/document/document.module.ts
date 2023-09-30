@@ -8,15 +8,15 @@ import { DocumentService } from './document.service';
 import { DocumentResolverFields } from './document.resolver.fields';
 import { DocumentAuthorizationService } from './document.service.authorization';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
-import { UserModule } from '@domain/community/user/user.module';
 import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
+import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
     TagsetModule,
-    UserModule,
+    UserLookupModule,
     IpfsModule,
     TypeOrmModule.forFeature([Document]),
   ],

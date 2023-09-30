@@ -15,7 +15,6 @@ import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activ
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
-import { UserModule } from '@domain/community/user/user.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { ProfileModule } from '@domain/common/profile/profile.module';
@@ -24,6 +23,7 @@ import { WhiteboardTemplateModule } from '@domain/template/whiteboard-template/w
 import { RoomModule } from '@domain/communication/room/room.module';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { WhiteboardRtModule } from '@domain/common/whiteboard-rt';
+import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
@@ -39,7 +39,7 @@ import { WhiteboardRtModule } from '@domain/common/whiteboard-rt';
     RoomModule,
     CommunityPolicyModule,
     EntityResolverModule,
-    UserModule,
+    UserLookupModule,
     NamingModule,
     ProfileModule,
     PostTemplateModule,

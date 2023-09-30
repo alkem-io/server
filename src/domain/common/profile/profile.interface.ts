@@ -4,6 +4,7 @@ import { IReference } from '@domain/common/reference/reference.interface';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { IVisual } from '@domain/common/visual/visual.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 @ObjectType('Profile')
 export abstract class IProfile extends IAuthorizable {
@@ -24,6 +25,8 @@ export abstract class IProfile extends IAuthorizable {
     description: 'A description of the entity associated with this profile.',
   })
   description!: string;
+
+  storageBucket!: IStorageBucket;
 
   references?: IReference[];
 
