@@ -118,7 +118,7 @@ export class ChallengeService {
       CommunityType.CHALLENGE,
       challengeCommunityPolicy,
       challengeCommunityApplicationForm,
-      challengeData.storageBucketParent
+      challenge.storageBucket
     );
 
     await this.challengeRepository.save(challenge);
