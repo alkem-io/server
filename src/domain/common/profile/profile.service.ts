@@ -28,6 +28,7 @@ import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 import { TagsetTemplateService } from '../tagset-template/tagset.template.service';
 import { UpdateProfileSelectTagsetInput } from './dto/profile.dto.update.select.tagset';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class ProfileService {
@@ -46,7 +47,10 @@ export class ProfileService {
 
   // Create an empty profile, that the creating entity then has to
   // add tagets / visuals to.
-  async createProfile(profileData: CreateProfileInput): Promise<IProfile> {
+  async createProfile(
+    profileData: CreateProfileInput,
+    parentStorageBucket?: IStorageBucket
+  ): Promise<IProfile> {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
       tagline: profileData?.tagline,
@@ -54,7 +58,8 @@ export class ProfileService {
     });
     profile.authorization = new AuthorizationPolicy();
     profile.storageBucket = await this.storageBucketService.createStorageBucket(
-      {}
+      {},
+      parentStorageBucket
     );
 
     profile.visuals = [];

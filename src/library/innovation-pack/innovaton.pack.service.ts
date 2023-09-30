@@ -29,6 +29,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class InnovationPackService {
@@ -43,14 +44,16 @@ export class InnovationPackService {
   ) {}
 
   async createInnovationPack(
-    innovationPackData: CreateInnovationPackInput
+    innovationPackData: CreateInnovationPackInput,
+    parentStorageBucket: IStorageBucket
   ): Promise<IInnovationPack> {
     const innovationPack: IInnovationPack =
       InnovationPack.create(innovationPackData);
     innovationPack.authorization = new AuthorizationPolicy();
 
     innovationPack.profile = await this.profileService.createProfile(
-      innovationPackData.profileData
+      innovationPackData.profileData,
+      parentStorageBucket
     );
     await this.profileService.addVisualOnProfile(
       innovationPack.profile,

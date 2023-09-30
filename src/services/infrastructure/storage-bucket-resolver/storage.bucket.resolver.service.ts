@@ -1,7 +1,7 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
-import { EntityManager } from 'typeorm';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { StorageBucketNotFoundException } from '@common/exceptions/storage.bucket.not.found.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
@@ -13,6 +13,8 @@ export class StorageBucketResolverService {
   constructor(
     @InjectEntityManager('default')
     private entityManager: EntityManager,
+    @InjectRepository(StorageBucket)
+    private storageBucketRepository: Repository<StorageBucket>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -165,6 +167,37 @@ export class StorageBucketResolverService {
     return result.storageBucketId;
   }
 
+  public async getPlatformStorageBucket(): Promise<IStorageBucket> {
+    const query = `SELECT \`storageBucketId\`
+    FROM \`platform\` LIMIT 1`;
+    const [result]: {
+      storageBucketId: string;
+    }[] = await this.entityManager.connection.query(query);
+    return this.getStorageBucketOrFail(result.storageBucketId);
+  }
+
+  async getStorageBucketOrFail(
+    storageBucketID: string,
+    options?: FindOneOptions<StorageBucket>
+  ): Promise<IStorageBucket | never> {
+    if (!storageBucketID) {
+      throw new EntityNotFoundException(
+        `StorageBucket not found: ${storageBucketID}`,
+        LogContext.STORAGE_BUCKET
+      );
+    }
+    const storageBucket = await this.storageBucketRepository.findOneOrFail({
+      where: { id: storageBucketID },
+      ...options,
+    });
+    if (!storageBucket)
+      throw new EntityNotFoundException(
+        `StorageBucket not found: ${storageBucketID}`,
+        LogContext.STORAGE_BUCKET
+      );
+    return storageBucket;
+  }
+
   private async getStorageBucketIdForTemplate(
     templateId: string,
     templateType: TemplateType
@@ -251,7 +284,7 @@ export class StorageBucketResolverService {
     return this.getPlatformStorageBucketId();
   }
 
-  private async getStorageBucketIdForInnovationFlow(
+  public async getStorageBucketIdForInnovationFlow(
     innovationFlowID: string
   ): Promise<string> {
     let query = `SELECT \`storageBucketId\` FROM \`challenge\`

@@ -73,13 +73,10 @@ export class BaseChallengeService {
         baseChallengeData.context
       );
     }
-    this.logger.verbose?.(
-      `storageBucket: ${parentStorageBucket.id}`,
-      LogContext.CHALLENGES
-    );
 
     baseChallenge.profile = await this.profileService.createProfile(
-      baseChallengeData.profileData
+      baseChallengeData.profileData,
+      parentStorageBucket
     );
     await this.profileService.addTagsetOnProfile(baseChallenge.profile, {
       name: TagsetReservedName.DEFAULT,

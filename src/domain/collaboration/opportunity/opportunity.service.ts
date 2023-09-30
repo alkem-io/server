@@ -128,7 +128,8 @@ export class OpportunityService {
               displayName: '',
             },
           },
-          [stateTagsetTemplate]
+          [stateTagsetTemplate],
+          parentStorageBucket
         );
 
       await this.innovationFlowService.updateFlowStateTagsetTemplateForLifecycle(

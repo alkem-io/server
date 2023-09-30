@@ -16,7 +16,7 @@ import { fromBuffer } from 'file-type';
 import {
   DirectStorageBucketEntityType,
   StorageBucketResolverService,
-} from '@services/infrastructure/entity-resolver/storage.bucket.resolver.service';
+} from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
 import { IpfsFileNotFoundException } from '@common/exceptions/ipfs.file.not.found.exception';
 import { EntityNotFoundException } from '@common/exceptions';
 

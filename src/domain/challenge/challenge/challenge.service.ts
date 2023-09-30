@@ -184,7 +184,8 @@ export class ChallengeService {
             displayName: '',
           },
         },
-        [statesTagssetTemplate]
+        [statesTagssetTemplate],
+        challenge.storageBucket
       );
 
     const savedChallenge = await this.challengeRepository.save(challenge);

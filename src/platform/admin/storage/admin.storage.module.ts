@@ -3,15 +3,15 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { Module } from '@nestjs/common';
 import { AdminStorageService } from './admin.storage.service';
 import { AdminStorageResolverMutations } from './admin.storage.resolver.mutations';
-import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { IpfsModule } from '@services/adapters/ipfs/ipfs.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
 
 @Module({
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    EntityResolverModule,
+    StorageBucketResolverModule,
     IpfsModule,
     StorageBucketModule,
   ],
