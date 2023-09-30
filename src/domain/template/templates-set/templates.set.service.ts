@@ -26,6 +26,8 @@ import { CreateInnovationFlowTemplateInput } from '../innovation-flow-template/d
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
 import { CreateCalloutTemplateInput } from '../callout-template/dto/callout.template.dto.create';
 import { CalloutTemplateService } from '../callout-template/callout.template.service';
+import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class TemplatesSetService {
@@ -33,6 +35,7 @@ export class TemplatesSetService {
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(TemplatesSet)
     private templatesSetRepository: Repository<TemplatesSet>,
+    private storageBucketResolverService: StorageBucketResolverService,
     private calloutTemplateService: CalloutTemplateService,
     private postTemplateService: PostTemplateService,
     private whiteboardTemplateService: WhiteboardTemplateService,
@@ -52,9 +55,11 @@ export class TemplatesSetService {
     templatesSet.innovationFlowTemplates = [];
 
     if (addDefaults) {
+      const storageBucket = await this.getStorageBucket(templatesSet);
       for (const postTemplateDefault of templatesSetDefaults.posts) {
         const postTemplate = await this.postTemplateService.createPostTemplate(
-          postTemplateDefault
+          postTemplateDefault,
+          storageBucket
         );
         templatesSet.postTemplates.push(postTemplate);
       }
@@ -62,7 +67,8 @@ export class TemplatesSetService {
       for (const innovationFlowTemplateDefault of templatesSetDefaults.innovationFlows) {
         const innovationFlowTemplate =
           await this.innovationFlowTemplateService.createInnovationFLowTemplate(
-            innovationFlowTemplateDefault
+            innovationFlowTemplateDefault,
+            storageBucket
           );
         templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);
       }
@@ -216,12 +222,22 @@ export class TemplatesSetService {
         LogContext.CONTEXT
       );
     }
+    const storageBucket = await this.getStorageBucket(templatesSet);
     const postTemplate = await this.postTemplateService.createPostTemplate(
-      postTemplateInput
+      postTemplateInput,
+      storageBucket
     );
     templatesSet.postTemplates.push(postTemplate);
     await this.templatesSetRepository.save(templatesSet);
     return postTemplate;
+  }
+
+  private async getStorageBucket(
+    templatesSet: ITemplatesSet
+  ): Promise<IStorageBucket> {
+    return await this.storageBucketResolverService.getStorageBucketForTemplatesSet(
+      templatesSet.id
+    );
   }
 
   async createCalloutTemplate(
@@ -231,10 +247,11 @@ export class TemplatesSetService {
     templatesSet.calloutTemplates = await this.getCalloutTemplates(
       templatesSet
     );
-
+    const storageBucket = await this.getStorageBucket(templatesSet);
     const calloutTemplate =
       await this.calloutTemplateService.createCalloutTemplate(
-        calloutTemplateInput
+        calloutTemplateInput,
+        storageBucket
       );
     templatesSet.calloutTemplates.push(calloutTemplate);
     await this.templatesSetRepository.save(templatesSet);
@@ -278,9 +295,11 @@ export class TemplatesSetService {
         LogContext.CONTEXT
       );
     }
+    const storageBucket = await this.getStorageBucket(templatesSet);
     const whiteboardTemplate =
       await this.whiteboardTemplateService.createWhiteboardTemplate(
-        whiteboardTemplateInput
+        whiteboardTemplateInput,
+        storageBucket
       );
 
     templatesSet.whiteboardTemplates.push(whiteboardTemplate);
@@ -349,9 +368,11 @@ export class TemplatesSetService {
         LogContext.CONTEXT
       );
     }
+    const storageBucket = await this.getStorageBucket(templatesSet);
     const innovationFlowTemplate =
       await this.innovationFlowTemplateService.createInnovationFLowTemplate(
-        innovationFlowTemplateInput
+        innovationFlowTemplateInput,
+        storageBucket
       );
 
     templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);

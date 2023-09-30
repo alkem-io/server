@@ -7,24 +7,26 @@ import { CreateTemplateBaseInput } from './dto/template.base.dto.create';
 import { UpdateTemplateBaseInput } from './dto/template.base.dto.update';
 import { ITemplateBase } from './template.base.interface';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class TemplateBaseService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-
     private profileService: ProfileService
   ) {}
 
   async initialise(
     baseTemplate: ITemplateBase,
-    baseTemplateData: CreateTemplateBaseInput
+    baseTemplateData: CreateTemplateBaseInput,
+    parentStorageBucket: IStorageBucket
   ): Promise<ITemplateBase> {
     baseTemplate.authorization = new AuthorizationPolicy();
 
     baseTemplate.profile = await this.profileService.createProfile(
-      baseTemplateData.profile
+      baseTemplateData.profile,
+      parentStorageBucket
     );
     await this.profileService.addTagsetOnProfile(baseTemplate.profile, {
       name: TagsetReservedName.DEFAULT,

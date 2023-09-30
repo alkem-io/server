@@ -89,7 +89,8 @@ export class OrganizationService {
     organization.storageBucket =
       await this.storageBucketService.createStorageBucket();
     organization.profile = await this.profileService.createProfile(
-      organizationData.profileData
+      organizationData.profileData,
+      organization.storageBucket
     );
     await this.profileService.addTagsetOnProfile(organization.profile, {
       name: TagsetReservedName.KEYWORDS,
@@ -516,12 +517,19 @@ export class OrganizationService {
     );
     // Try to find the organization
     const organization = await this.getOrganizationOrFail(orgID, {
-      relations: ['groups', 'groups.profile'],
+      relations: ['groups', 'groups.profile', 'storageBucket'],
     });
 
+    if (!organization.storageBucket) {
+      throw new EntityNotInitializedException(
+        `Organization StorageBucket not initialized: ${organization.id}`,
+        LogContext.AUTH
+      );
+    }
     const group = await this.userGroupService.addGroupWithName(
       organization,
-      groupName
+      groupName,
+      organization.storageBucket
     );
     await this.organizationRepository.save(organization);
 

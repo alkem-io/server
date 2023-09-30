@@ -212,6 +212,7 @@ export class ChallengeService {
       await this.collaborationService.addDefaultCallouts(
         challenge.collaboration,
         challengeDefaultCallouts,
+        challenge.storageBucket,
         agentInfo?.userID
       );
 

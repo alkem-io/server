@@ -16,6 +16,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class CalendarEventService {
@@ -30,12 +31,14 @@ export class CalendarEventService {
 
   public async createCalendarEvent(
     calendarEventInput: CreateCalendarEventInput,
+    parentStorageBucket: IStorageBucket,
     userID: string
   ): Promise<CalendarEvent> {
     const calendarEvent: ICalendarEvent =
       CalendarEvent.create(calendarEventInput);
     calendarEvent.profile = await this.profileService.createProfile(
-      calendarEventInput.profileData
+      calendarEventInput.profileData,
+      parentStorageBucket
     );
     await this.profileService.addTagsetOnProfile(calendarEvent.profile, {
       name: TagsetReservedName.DEFAULT,

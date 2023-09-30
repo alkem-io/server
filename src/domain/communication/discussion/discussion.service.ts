@@ -22,6 +22,7 @@ import { IRoom } from '../room/room.interface';
 import { RoomType } from '@common/enums/room.type';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class DiscussionService {
@@ -38,7 +39,8 @@ export class DiscussionService {
     discussionData: CommunicationCreateDiscussionInput,
     userID: string,
     communicationDisplayName: string,
-    roomType: RoomType
+    roomType: RoomType,
+    parentStorageBucket: IStorageBucket
   ): Promise<IDiscussion> {
     const discussionNameID = this.namingService.createNameID(
       `${discussionData.profile.displayName}`
@@ -49,7 +51,8 @@ export class DiscussionService {
     };
     const discussion: IDiscussion = Discussion.create(discussionCreationData);
     discussion.profile = await this.profileService.createProfile(
-      discussionData.profile
+      discussionData.profile,
+      parentStorageBucket
     );
 
     await this.profileService.addTagsetOnProfile(discussion.profile, {

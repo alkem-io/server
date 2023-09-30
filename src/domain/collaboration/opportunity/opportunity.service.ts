@@ -154,6 +154,7 @@ export class OpportunityService {
         await this.collaborationService.addDefaultCallouts(
           opportunity.collaboration,
           opportunityDefaultCallouts,
+          parentStorageBucket,
           agentInfo?.userID
         );
     }

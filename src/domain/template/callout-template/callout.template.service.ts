@@ -12,6 +12,7 @@ import { UpdateCalloutTemplateInput } from './dto/callout.template.dto.update';
 import { CalloutFramingService } from '@domain/collaboration/callout-framing/callout.framing.service';
 import { CalloutContributionDefaultsService } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.service';
 import { CalloutContributionPolicyService } from '@domain/collaboration/callout-contribution-policy/callout.contribution.policy.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class CalloutTemplateService {
@@ -27,16 +28,19 @@ export class CalloutTemplateService {
   ) {}
 
   public async createCalloutTemplate(
-    calloutTemplateData: CreateCalloutTemplateInput
+    calloutTemplateData: CreateCalloutTemplateInput,
+    parentStorageBucket: IStorageBucket
   ): Promise<ICalloutTemplate> {
     const calloutTemplate: ICalloutTemplate = new CalloutTemplate();
     await this.templateBaseService.initialise(
       calloutTemplate,
-      calloutTemplateData
+      calloutTemplateData,
+      parentStorageBucket
     );
     calloutTemplate.framing =
       await this.calloutFramingService.createCalloutFraming(
-        calloutTemplateData.framing
+        calloutTemplateData.framing,
+        parentStorageBucket
       );
     calloutTemplate.responseDefaults =
       this.calloutResponseDefaultsService.createCalloutContributionDefaults(

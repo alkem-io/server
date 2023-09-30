@@ -15,6 +15,7 @@ import { NotificationAdapterModule } from '@services/adapters/notification-adapt
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
     CommunicationAdapterModule,
     EntityResolverModule,
     PlatformAuthorizationPolicyModule,
+    StorageBucketResolverModule,
     NamingModule,
     TypeOrmModule.forFeature([Communication]),
   ],

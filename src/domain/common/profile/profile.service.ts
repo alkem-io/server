@@ -49,7 +49,7 @@ export class ProfileService {
   // add tagets / visuals to.
   async createProfile(
     profileData: CreateProfileInput,
-    parentStorageBucket?: IStorageBucket
+    parentStorageBucket: IStorageBucket
   ): Promise<IProfile> {
     const profile: IProfile = Profile.create({
       description: profileData?.description,

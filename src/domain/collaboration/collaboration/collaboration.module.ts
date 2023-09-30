@@ -19,6 +19,7 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tagset.template.set.module';
 import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
+import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
     CommunityPolicyModule,
     NamingModule,
     EntityResolverModule,
+    StorageBucketResolverModule,
     RelationModule,
     WhiteboardModule,
     PostModule,

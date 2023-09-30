@@ -13,6 +13,7 @@ import { IProfile } from '../profile/profile.interface';
 import { ProfileService } from '../profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class WhiteboardRtService {
@@ -25,6 +26,7 @@ export class WhiteboardRtService {
 
   async createWhiteboardRt(
     whiteboardRtData: CreateWhiteboardRtInput,
+    parentStorageBucket: IStorageBucket,
     userID?: string
   ): Promise<IWhiteboardRt> {
     const whiteboardRt: IWhiteboardRt = WhiteboardRt.create({
@@ -34,7 +36,8 @@ export class WhiteboardRtService {
     whiteboardRt.createdBy = userID;
 
     whiteboardRt.profile = await this.profileService.createProfile(
-      whiteboardRtData.profileData
+      whiteboardRtData.profileData,
+      parentStorageBucket
     );
     await this.profileService.addVisualOnProfile(
       whiteboardRt.profile,

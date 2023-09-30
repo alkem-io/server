@@ -51,7 +51,11 @@ export class StorageBucketResolverMutations {
     const visual = await this.visualService.getVisualOrFail(
       uploadData.visualID,
       {
-        relations: ['profile'],
+        relations: [
+          'profile',
+          'profile.storageBucket',
+          'profile.storageBucket.authorization',
+        ],
       }
     );
     this.authorizationService.grantAccessOrFail(
@@ -61,17 +65,13 @@ export class StorageBucketResolverMutations {
       `visual image upload: ${visual.id}`
     );
     const profile = (visual as Visual).profile;
-    if (!profile)
+    if (!profile || !profile.storageBucket)
       throw new EntityNotInitializedException(
-        `Unable to find profile for Visual: ${visual.id}`,
+        `Unable to find profile or storageBucket for Visual: ${visual.id}`,
         LogContext.STORAGE_BUCKET
       );
-    const storageBucketId =
-      await this.storageBucketResolverService.getStorageBucketIdForProfile(
-        profile.id
-      );
-    const storageBucket =
-      await this.storageBucketService.getStorageBucketOrFail(storageBucketId);
+
+    const storageBucket = profile.storageBucket;
     // Also check that the acting agent is allowed to upload
     this.authorizationService.grantAccessOrFail(
       agentInfo,
@@ -118,7 +118,11 @@ export class StorageBucketResolverMutations {
     const reference = await this.referenceService.getReferenceOrFail(
       uploadData.referenceID,
       {
-        relations: ['profile'],
+        relations: [
+          'profile',
+          'profile.storageBucket',
+          'profile.storageBucket.authorization',
+        ],
       }
     );
     this.authorizationService.grantAccessOrFail(
@@ -129,19 +133,13 @@ export class StorageBucketResolverMutations {
     );
 
     const profile = (reference as Reference).profile;
-    if (!profile)
+    if (!profile || !profile.storageBucket)
       throw new EntityNotInitializedException(
         `Unable to find profile for Reference: ${reference.id}`,
         LogContext.STORAGE_BUCKET
       );
 
-    const storageBucketId =
-      await this.storageBucketResolverService.getStorageBucketIdForProfile(
-        profile.id
-      );
-    const storageBucket =
-      await this.storageBucketService.getStorageBucketOrFail(storageBucketId);
-
+    const storageBucket = profile.storageBucket;
     this.authorizationService.grantAccessOrFail(
       agentInfo,
       storageBucket.authorization,

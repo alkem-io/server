@@ -10,6 +10,7 @@ import { IInnovationFlowTemplate } from './innovation.flow.template.interface';
 import { UpdateInnovationFlowTemplateInput } from './dto/innovation.flow.template.dto.update';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class InnovationFlowTemplateService {
@@ -22,13 +23,15 @@ export class InnovationFlowTemplateService {
   ) {}
 
   async createInnovationFLowTemplate(
-    innovationFlowTemplateData: CreateInnovationFlowTemplateInput
+    innovationFlowTemplateData: CreateInnovationFlowTemplateInput,
+    parentStorageBucket: IStorageBucket
   ): Promise<IInnovationFlowTemplate> {
     const innovationFlowTemplate: IInnovationFlowTemplate =
       InnovationFlowTemplate.create(innovationFlowTemplateData);
     await this.templateBaseService.initialise(
       innovationFlowTemplate,
-      innovationFlowTemplateData
+      innovationFlowTemplateData,
+      parentStorageBucket
     );
 
     return await this.innovationFlowTemplateRepository.save(

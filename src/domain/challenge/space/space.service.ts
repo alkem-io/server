@@ -146,6 +146,7 @@ export class SpaceService {
     space.collaboration = await this.collaborationService.addDefaultCallouts(
       space.collaboration,
       spaceDefaultCallouts,
+      space.storageBucket,
       agentInfo?.userID
     );
     await this.save(space);
