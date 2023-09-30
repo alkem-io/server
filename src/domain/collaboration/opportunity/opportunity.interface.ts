@@ -12,7 +12,7 @@ export abstract class IOpportunity extends IBaseChallenge {
   })
   projects?: IProject[];
 
-  spaceID?: string; //toDo make mandatory https://app.zenspace.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2196
+  spaceID!: string;
 
   challenge?: IChallenge;
 

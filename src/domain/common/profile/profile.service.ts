@@ -53,8 +53,10 @@ export class ProfileService {
       displayName: profileData?.displayName,
     });
     profile.authorization = new AuthorizationPolicy();
-    profile.storageBucket =
-      await this.storageBucketService.createStorageBucket();
+    profile.storageBucket = await this.storageBucketService.createStorageBucket(
+      {}
+    );
+
     profile.visuals = [];
     profile.location = await this.locationService.createLocation(
       profileData?.location
