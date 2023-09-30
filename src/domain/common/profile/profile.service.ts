@@ -46,7 +46,7 @@ export class ProfileService {
 
   // Create an empty profile, that the creating entity then has to
   // add tagets / visuals to.
-  async createProfile(profileData?: CreateProfileInput): Promise<IProfile> {
+  async createProfile(profileData: CreateProfileInput): Promise<IProfile> {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
       tagline: profileData?.tagline,

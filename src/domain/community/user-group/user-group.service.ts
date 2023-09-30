@@ -46,7 +46,7 @@ export class UserGroupService {
     group.authorization = new AuthorizationPolicy();
 
     (group as IUserGroup).profile = await this.profileService.createProfile(
-      userGroupData.profileData
+      userGroupData.profile
     );
     const savedUserGroup = await this.userGroupRepository.save(group);
     this.logger.verbose?.(
@@ -221,6 +221,9 @@ export class UserGroupService {
       {
         name: name,
         parentID: groupable.id,
+        profile: {
+          displayName: name,
+        },
       },
       spaceID
     );
