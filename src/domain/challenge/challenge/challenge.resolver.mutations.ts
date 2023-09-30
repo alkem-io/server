@@ -105,7 +105,7 @@ export class ChallengeResolverMutations {
       {
         id: opportunity.id,
         name: opportunity.profile.displayName,
-        space: opportunity.spaceID ?? '',
+        space: opportunity.spaceID,
       },
       {
         id: agentInfo.userID,

@@ -117,7 +117,8 @@ export class SpaceService {
       space.id,
       CommunityType.SPACE,
       spaceCommunityPolicy,
-      spaceCommunityApplicationForm
+      spaceCommunityApplicationForm,
+      space.storageBucket
     );
 
     if (!space.collaboration) {

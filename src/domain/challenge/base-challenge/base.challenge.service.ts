@@ -31,6 +31,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { IProfile } from '@domain/common/profile';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class BaseChallengeService {
@@ -51,7 +52,8 @@ export class BaseChallengeService {
     spaceID: string,
     communityType: CommunityType,
     communityPolicy: ICommunityPolicyDefinition,
-    applicationFormData: CreateFormInput
+    applicationFormData: CreateFormInput,
+    parentStorageBucket: IStorageBucket
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
     await this.isNameAvailableOrFail(baseChallengeData.nameID, spaceID);
@@ -71,6 +73,10 @@ export class BaseChallengeService {
         baseChallengeData.context
       );
     }
+    this.logger.verbose?.(
+      `storageBucket: ${parentStorageBucket.id}`,
+      LogContext.CHALLENGES
+    );
 
     baseChallenge.profile = await this.profileService.createProfile(
       baseChallengeData.profileData

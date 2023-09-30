@@ -44,6 +44,7 @@ import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/ta
 import { opportunityDefaultCallouts } from './opportunity.default.callouts';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -64,6 +65,7 @@ export class OpportunityService {
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
     spaceID: string,
+    parentStorageBucket: IStorageBucket,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     if (!opportunityData.nameID) {
@@ -86,7 +88,8 @@ export class OpportunityService {
       spaceID,
       CommunityType.OPPORTUNITY,
       opportunityCommunityPolicy,
-      opportunityCommunityApplicationForm
+      opportunityCommunityApplicationForm,
+      parentStorageBucket
     );
 
     await this.opportunityRepository.save(opportunity);

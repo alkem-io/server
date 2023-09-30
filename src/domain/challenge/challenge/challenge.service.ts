@@ -106,7 +106,10 @@ export class ChallengeService {
     challenge.opportunities = [];
 
     challenge.storageBucket =
-      await this.storageBucketService.createStorageBucket();
+      await this.storageBucketService.createStorageBucket(
+        {},
+        challengeData.storageBucketParent
+      );
 
     await this.baseChallengeService.initialise(
       challenge,
@@ -114,7 +117,8 @@ export class ChallengeService {
       spaceID,
       CommunityType.CHALLENGE,
       challengeCommunityPolicy,
-      challengeCommunityApplicationForm
+      challengeCommunityApplicationForm,
+      challengeData.storageBucketParent
     );
 
     await this.challengeRepository.save(challenge);
@@ -589,6 +593,7 @@ export class ChallengeService {
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
       spaceID,
+      challenge.storageBucket,
       agentInfo
     );
 
