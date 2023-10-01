@@ -70,7 +70,8 @@ export class InnovationPackService {
         {
           minInnovationFlow: 0,
         },
-        false
+        false,
+        parentStorageBucket
       );
 
     // save before assigning host in case that fails

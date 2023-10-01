@@ -45,7 +45,8 @@ export class TemplatesSetService {
 
   async createTemplatesSet(
     policy: ITemplatesSetPolicy,
-    addDefaults: boolean
+    addDefaults: boolean,
+    parentStorageBucket: IStorageBucket
   ): Promise<ITemplatesSet> {
     const templatesSet: ITemplatesSet = TemplatesSet.create();
     templatesSet.authorization = new AuthorizationPolicy();
@@ -55,11 +56,10 @@ export class TemplatesSetService {
     templatesSet.innovationFlowTemplates = [];
 
     if (addDefaults) {
-      const storageBucket = await this.getStorageBucket(templatesSet);
       for (const postTemplateDefault of templatesSetDefaults.posts) {
         const postTemplate = await this.postTemplateService.createPostTemplate(
           postTemplateDefault,
-          storageBucket
+          parentStorageBucket
         );
         templatesSet.postTemplates.push(postTemplate);
       }
@@ -68,7 +68,7 @@ export class TemplatesSetService {
         const innovationFlowTemplate =
           await this.innovationFlowTemplateService.createInnovationFLowTemplate(
             innovationFlowTemplateDefault,
-            storageBucket
+            parentStorageBucket
           );
         templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);
       }

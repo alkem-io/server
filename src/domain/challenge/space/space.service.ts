@@ -185,7 +185,8 @@ export class SpaceService {
       {
         minInnovationFlow: 1,
       },
-      true
+      true,
+      space.storageBucket
     );
 
     // save before assigning host in case that fails
