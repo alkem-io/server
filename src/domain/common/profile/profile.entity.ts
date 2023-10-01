@@ -50,7 +50,7 @@ export class Profile extends AuthorizableEntity implements IProfile {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  storageBucket!: StorageBucket;
+  storageBucket?: StorageBucket;
 
   // Constructor
   constructor() {

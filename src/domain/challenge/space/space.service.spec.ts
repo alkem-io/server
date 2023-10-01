@@ -90,6 +90,7 @@ const getChallengesMock = (
       id: `${spaceId}.${i}`,
       rowId: i,
       nameID: `challenge-${spaceId}.${i}`,
+      spaceID: `${spaceId}`,
       innovationFlow: {
         id: '',
         spaceID: '',
@@ -135,6 +136,7 @@ const getOpportunitiesMock = (
       id: `${challengeId}.${i}`,
       rowId: i,
       nameID: `opportunity-${challengeId}.${i}`,
+      spaceID: `${challengeId}`,
       innovationFlow: {
         id: '',
         spaceID: '',

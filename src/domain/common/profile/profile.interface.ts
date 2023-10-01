@@ -26,7 +26,7 @@ export abstract class IProfile extends IAuthorizable {
   })
   description!: string;
 
-  storageBucket!: IStorageBucket;
+  storageBucket?: IStorageBucket;
 
   references?: IReference[];
 

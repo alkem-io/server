@@ -60,6 +60,15 @@ export class StorageBucketResolverService {
     return this.getStorageBucketOrFail(result.storageBucketId);
   }
 
+  public async getLibraryStorageBucket(): Promise<IStorageBucket> {
+    const query = `SELECT \`storageBucketId\`
+    FROM \`library\` LIMIT 1`;
+    const [result]: {
+      storageBucketId: string;
+    }[] = await this.entityManager.connection.query(query);
+    return this.getStorageBucketOrFail(result.storageBucketId);
+  }
+
   async getStorageBucketOrFail(
     storageBucketID: string,
     options?: FindOneOptions<StorageBucket>
@@ -81,16 +90,6 @@ export class StorageBucketResolverService {
       );
     return storageBucket;
   }
-
-  public async getStorageBucketForTemplatesSet(
-    templatesSetId: string
-  ): Promise<IStorageBucket> {
-    const storageBucketId = await this.getStorageBucketIdForTemplatesSet(
-      templatesSetId
-    );
-    return await this.getStorageBucketOrFail(storageBucketId);
-  }
-
   public async getStorageBucketForCommunication(
     communicationID: string
   ): Promise<IStorageBucket> {
@@ -134,22 +133,23 @@ export class StorageBucketResolverService {
     return await this.getStorageBucketOrFail(storageBucketId);
   }
 
-  private async getStorageBucketIdForTemplatesSet(
+  public async getStorageBucketForTemplatesSet(
     templatesSetId: string
-  ): Promise<string> {
+  ): Promise<IStorageBucket> {
     let query = `SELECT \`storageBucketId\` FROM \`space\`
       WHERE \`space\`.\`templatesSetId\`='${templatesSetId}'`;
     let [result] = await this.entityManager.connection.query(query);
 
     if (result) {
-      return result.storageBucketId;
+      return await this.getStorageBucketOrFail(result.storageBucketId);
     }
 
-    query = `SELECT \`storageBucketId\` FROM \`innovation_pack\`
+    query = `SELECT \`id\` FROM \`innovation_pack\`
       WHERE \`innovation_pack\`.\`templatesSetId\`='${templatesSetId}'`;
     [result] = await this.entityManager.connection.query(query);
     if (result) {
-      return result.storageBucketId;
+      // use the library sorage bucket
+      return await this.getLibraryStorageBucket();
     }
 
     throw new StorageBucketNotFoundException(
