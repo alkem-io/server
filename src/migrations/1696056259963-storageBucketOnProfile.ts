@@ -125,7 +125,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
           communityId: string;
           innovationFlowId: string;
         }[] = await queryRunner.query(
-          `SELECT id, storageBucketId, profileId, collaborationId, communityId, innovationFlowId FROM opportunity WHERE opportunity.challengeId = '${challenge.id}`
+          `SELECT id, storageBucketId, profileId, collaborationId, communityId, innovationFlowId FROM opportunity WHERE opportunity.challengeId = '${challenge.id}'`
         );
         for (const opportunity of opportunities) {
           // Use the challenge storage bucket
@@ -244,7 +244,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
       id: string;
       profileId: string;
     }[] = await queryRunner.query(
-      `SELECT id, profileId FROM discussion WHERE discussion.communicationId = '${communicationID}`
+      `SELECT id, profileId FROM discussion WHERE discussion.communicationId = '${communicationID}'`
     );
     for (const discussion of discussions) {
       await this.createStorageBucketOnProfile(
@@ -306,7 +306,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
       id: string;
       profileId: string;
     }[] = await queryRunner.query(
-      `SELECT id, profileId FROM innovation_flow WHERE innovation_flow.id = '${innovationFlowID}`
+      `SELECT id, profileId FROM innovation_flow WHERE innovation_flow.id = '${innovationFlowID}'`
     );
     for (const innovationFlow of innovationFlows) {
       await this.createStorageBucketOnProfile(
@@ -341,7 +341,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
       storageBucketId: string;
       communicationId: string;
     }[] = await queryRunner.query(
-      `SELECT id, storageBucketId, communicationId FROM library`
+      `SELECT id, storageBucketId, communicationId FROM platform`
     );
     if (platforms.length !== 1) {
       console.log(`Not a singleton is found: ${platforms}`);
@@ -391,7 +391,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
       id: string;
       communicationID: string;
     }[] = await queryRunner.query(
-      `SELECT id, communicationId FROM community WHERE community.id = '${communityID}`
+      `SELECT id, communicationId FROM community WHERE community.id = '${communityID}'`
     );
     if (communities.length !== 1) {
       console.log(
@@ -424,7 +424,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
       id: string;
       profileId: string;
     }[] = await queryRunner.query(
-      `SELECT id, profileId FROM user_group WHERE user_group.${parentyEntityField} = '${parentyEntityValue}`
+      `SELECT id, profileId FROM user_group WHERE user_group.${parentyEntityField} = '${parentyEntityValue}'`
     );
     for (const userGroup of userGroups) {
       await this.createStorageBucketOnProfile(
@@ -447,7 +447,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
       postTemplateId: string;
       whiteboardRtId: string;
     }[] = await queryRunner.query(
-      `SELECT id, profileId, whiteboardTemplateId, postTemplateId, whiteboardRtId FROM callout WHERE callout.collaborationId = '${collaborationID}`
+      `SELECT id, profileId, whiteboardTemplateId, postTemplateId, whiteboardRtId FROM callout WHERE callout.collaborationId = '${collaborationID}'`
     );
     for (const callout of callouts) {
       await this.createStorageBucketOnProfile(
@@ -460,7 +460,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
         id: string;
         profileId: string;
       }[] = await queryRunner.query(
-        `SELECT id, profileId FROM whiteboard WHERE whiteboard.calloutId = '${callout.id}`
+        `SELECT id, profileId FROM whiteboard WHERE whiteboard.calloutId = '${callout.id}'`
       );
       for (const whiteboard of whiteboards) {
         await this.createStorageBucketOnProfile(
@@ -474,7 +474,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
         id: string;
         profileId: string;
       }[] = await queryRunner.query(
-        `SELECT id, profileId FROM post WHERE post.calloutId = '${callout.id}`
+        `SELECT id, profileId FROM post WHERE post.calloutId = '${callout.id}'`
       );
       for (const post of posts) {
         await this.createStorageBucketOnProfile(
@@ -515,7 +515,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
       id: string;
       timelineId: string;
     }[] = await queryRunner.query(
-      `SELECT id, timelineId FROM collaboration WHERE collaboration.id = '${collaborationID}`
+      `SELECT id, timelineId FROM collaboration WHERE collaboration.id = '${collaborationID}'`
     );
     if (collaborations.length !== 1) {
       console.log(`Found collaboration without a timeline: ${collaborationID}`);
@@ -525,7 +525,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
         id: string;
         calendarId: string;
       }[] = await queryRunner.query(
-        `SELECT id, calendarId FROM timeline WHERE timeline.id = '${collaboration.timelineId}`
+        `SELECT id, calendarId FROM timeline WHERE timeline.id = '${collaboration.timelineId}'`
       );
       if (timelines.length !== 1) {
         console.log(
@@ -537,7 +537,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
           id: string;
           profileId: string;
         }[] = await queryRunner.query(
-          `SELECT id, profileId FROM calendar_event WHERE calendar_event.calendarId = '${timeline.calendarId}`
+          `SELECT id, profileId FROM calendar_event WHERE calendar_event.calendarId = '${timeline.calendarId}'`
         );
         for (const calendarEvent of calendarEvents) {
           await this.createStorageBucketOnProfile(
@@ -560,7 +560,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
       id: string;
       profileId: string;
     }[] = await queryRunner.query(
-      `SELECT id, profileId FROM ${entityType} WHERE ${entityType}.id = '${entityID}`
+      `SELECT id, profileId FROM ${entityType} WHERE ${entityType}.id = '${entityID}'`
     );
     if (entities.length !== 1) {
       console.log(
@@ -612,14 +612,14 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
       profileId: string;
       framingId: string;
     }[] = await queryRunner.query(
-      `SELECT id, profileId, framingId FROM callout_template WHERE callout_template.templatesSetId = '${templatesSetID}`
+      `SELECT id, profileId, framingId FROM callout_template WHERE callout_template.templatesSetId = '${templatesSetID}'`
     );
     for (const calloutTemplate of calloutTemplates) {
       const calloutFramings: {
         id: string;
         profileId: string;
       }[] = await queryRunner.query(
-        `SELECT id, profileId FROM callout_framing WHERE callout_framing.id = '${calloutTemplate.framingId}`
+        `SELECT id, profileId FROM callout_framing WHERE callout_framing.id = '${calloutTemplate.framingId}'`
       );
       if (calloutFramings.length !== 1) {
         console.log(
@@ -646,7 +646,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
       id: string;
       profileId: string;
     }[] = await queryRunner.query(
-      `SELECT id, profileId FROM ${entityType} WHERE ${entityType}.templatesSetId = '${templatesSetID}`
+      `SELECT id, profileId FROM ${entityType} WHERE ${entityType}.templatesSetId = '${templatesSetID}'`
     );
     for (const template of templates) {
       await this.createStorageBucketOnProfile(
