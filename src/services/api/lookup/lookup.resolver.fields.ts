@@ -46,6 +46,7 @@ import { CalloutTemplateService } from '@domain/template/callout-template/callou
 import { ICalloutTemplate } from '@domain/template/callout-template/callout.template.interface';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
 import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
+import { UrlGeneratorService } from '../url-generator';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -69,7 +70,8 @@ export class LookupResolverFields {
     private innovationFlowService: InnovationFlowService,
     private calendarEventService: CalendarEventService,
     private calendarService: CalendarService,
-    private innovationFlowTemplateService: InnovationFlowTemplateService
+    private innovationFlowTemplateService: InnovationFlowTemplateService,
+    private urlGeneratorService: UrlGeneratorService
   ) {}
 
   @UseGuards(GraphqlGuard)
@@ -90,6 +92,26 @@ export class LookupResolverFields {
     );
 
     return application;
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => String, {
+    nullable: false,
+    description: 'Generate the URL for the specified profileID',
+  })
+  async generateUrl(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('profileID', { type: () => UUID }) id: string
+  ): Promise<string> {
+    const profile = await this.profileService.getProfileOrFail(id);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.READ,
+      `generate URL for Profile: ${profile.id}`
+    );
+
+    return await this.urlGeneratorService.generateUrlForProfile(profile.id);
   }
 
   @UseGuards(GraphqlGuard)
