@@ -8,7 +8,6 @@ import {
   removeStorageBucketRelation,
 } from './utils/storage/storage-bucket-utils';
 import { randomUUID } from 'crypto';
-import { template } from 'lodash';
 
 export class storageBucketOnProfile1696056259963 implements MigrationInterface {
   name = 'storageBucketOnProfile1696056259963';
@@ -125,7 +124,7 @@ export class storageBucketOnProfile1696056259963 implements MigrationInterface {
           communityId: string;
           innovationFlowId: string;
         }[] = await queryRunner.query(
-          `SELECT id, storageBucketId, profileId, collaborationId, communityId, innovationFlowId FROM opportunity WHERE opportunity.challengeId = '${challenge.id}'`
+          `SELECT id, profileId, collaborationId, communityId, innovationFlowId FROM opportunity WHERE opportunity.challengeId = '${challenge.id}'`
         );
         for (const opportunity of opportunities) {
           // Use the challenge storage bucket
