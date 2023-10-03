@@ -115,23 +115,21 @@ export class GuidanceEngineAdapter {
     }
   }
 
-  private extractMetadata(metadata: string): { uri: string; title: string }[] {
+  private extractMetadata(metadata: string): { uri: string }[] {
     // Use regular expressions to extract metadata sections
     const metadataMatches = metadata.match(/metadata=\{.*?\}/g);
 
     // Initialize an empty array to store extracted objects
-    const metadataObjects: { uri: string; title: string }[] = [];
+    const metadataObjects: { uri: string }[] = [];
 
     // Loop through metadata matches and extract source and title
     if (metadataMatches) {
       metadataMatches.forEach(metadataMatch => {
         const sourceMatch = metadataMatch.match(/'source': '([^']*)'/);
-        const titleMatch = metadataMatch.match(/'title': '([^']*)'/);
 
-        if (sourceMatch && titleMatch) {
+        if (sourceMatch) {
           const uri = sourceMatch[1];
-          const title = titleMatch[1];
-          metadataObjects.push({ uri, title });
+          metadataObjects.push({ uri });
         }
       });
     }
