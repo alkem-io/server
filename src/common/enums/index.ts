@@ -11,3 +11,4 @@ export * from './preference.value.type';
 export * from './user.preference.type';
 export * from './messaging.queue';
 export * from './credential.role';
+export * from './profile.type';

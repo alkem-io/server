@@ -1,5 +1,9 @@
 import { UUID_LENGTH } from '@common/constants';
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  LogContext,
+  ProfileType,
+} from '@common/enums';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
@@ -53,6 +57,7 @@ export class InnovationPackService {
 
     innovationPack.profile = await this.profileService.createProfile(
       innovationPackData.profileData,
+      ProfileType.INNOVATION_PACK,
       parentStorageBucket
     );
     await this.profileService.addVisualOnProfile(

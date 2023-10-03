@@ -2,7 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { WhiteboardTemplate } from './whiteboard.template.entity';
 import { IWhiteboardTemplate } from './whiteboard.template.interface';
@@ -34,6 +34,7 @@ export class WhiteboardTemplateService {
       await this.templateBaseService.initialise(
         whiteboardTemplate,
         whiteboardTemplateData,
+        ProfileType.WHITEBOARD_TEMPLATE,
         parentStorageBucket
       );
 

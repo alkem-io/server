@@ -2,7 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PostTemplate } from './post.template.entity';
 import { IPostTemplate } from './post.template.interface';
@@ -29,6 +29,7 @@ export class PostTemplateService {
     await this.templateBaseService.initialise(
       postTemplate,
       postTemplateData,
+      ProfileType.POST_TEMPLATE,
       parentStorageBucket
     );
 

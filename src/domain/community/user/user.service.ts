@@ -1,5 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import { LogContext, UserPreferenceType } from '@common/enums';
+import { LogContext, ProfileType, UserPreferenceType } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -111,6 +111,7 @@ export class UserService {
     user.storageBucket = await this.storageBucketService.createStorageBucket();
     user.profile = await this.profileService.createProfile(
       profileData,
+      ProfileType.USER,
       user.storageBucket
     );
 

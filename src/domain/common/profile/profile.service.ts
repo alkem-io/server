@@ -7,7 +7,7 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ReferenceService } from '@domain/common/reference/reference.service';
@@ -49,12 +49,14 @@ export class ProfileService {
   // add tagets / visuals to.
   async createProfile(
     profileData: CreateProfileInput,
+    profileType: ProfileType,
     parentStorageBucket: IStorageBucket
   ): Promise<IProfile> {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
       tagline: profileData?.tagline,
       displayName: profileData?.displayName,
+      type: profileType,
     });
     profile.authorization = new AuthorizationPolicy();
     profile.storageBucket = await this.storageBucketService.createStorageBucket(

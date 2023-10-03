@@ -7,7 +7,7 @@ import {
   Repository,
 } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -42,6 +42,7 @@ export class PostService {
     const post: IPost = Post.create(postInput);
     post.profile = await this.profileService.createProfile(
       postInput.profileData,
+      ProfileType.POST,
       parentStorageBucket
     );
     await this.profileService.addVisualOnProfile(

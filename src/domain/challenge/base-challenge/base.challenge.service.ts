@@ -1,4 +1,4 @@
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -53,6 +53,7 @@ export class BaseChallengeService {
     communityType: CommunityType,
     communityPolicy: ICommunityPolicyDefinition,
     applicationFormData: CreateFormInput,
+    profileType: ProfileType,
     parentStorageBucket: IStorageBucket
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
@@ -76,6 +77,7 @@ export class BaseChallengeService {
 
     baseChallenge.profile = await this.profileService.createProfile(
       baseChallengeData.profileData,
+      profileType,
       parentStorageBucket
     );
     await this.profileService.addTagsetOnProfile(baseChallenge.profile, {

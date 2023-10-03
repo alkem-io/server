@@ -5,7 +5,7 @@ import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -78,6 +78,7 @@ export class InnovationHubService {
 
     hub.profile = await this.profileService.createProfile(
       createData.profileData,
+      ProfileType.INNOVATION_HUB,
       storageBucket
     );
 

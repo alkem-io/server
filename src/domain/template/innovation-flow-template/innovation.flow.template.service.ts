@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOneOptions, EntityManager } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { TemplateBaseService } from '@domain/template/template-base/template.base.service';
 import { CreateInnovationFlowTemplateInput } from './dto/innovation.flow.template.dto.create';
 import { InnovationFlowTemplate } from './innovation.flow.template.entity';
@@ -31,6 +31,7 @@ export class InnovationFlowTemplateService {
     await this.templateBaseService.initialise(
       innovationFlowTemplate,
       innovationFlowTemplateData,
+      ProfileType.INNOVATION_FLOW_TEMPLATE,
       parentStorageBucket
     );
 

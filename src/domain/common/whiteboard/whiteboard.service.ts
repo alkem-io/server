@@ -6,7 +6,7 @@ import {
   Repository,
 } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { Whiteboard } from './whiteboard.entity';
 import { IWhiteboard } from './whiteboard.interface';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
@@ -44,6 +44,7 @@ export class WhiteboardService {
 
     whiteboard.profile = await this.profileService.createProfile(
       whiteboardData.profileData,
+      ProfileType.WHITEBOARD,
       parentStorageBucket
     );
     await this.profileService.addVisualOnProfile(

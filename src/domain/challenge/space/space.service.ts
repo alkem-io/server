@@ -1,5 +1,9 @@
 import { UUID_LENGTH } from '@common/constants';
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  LogContext,
+  ProfileType,
+} from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -118,6 +122,7 @@ export class SpaceService {
       CommunityType.SPACE,
       spaceCommunityPolicy,
       spaceCommunityApplicationForm,
+      ProfileType.SPACE,
       space.storageBucket
     );
 

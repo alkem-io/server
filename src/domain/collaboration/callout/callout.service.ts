@@ -10,7 +10,7 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
@@ -145,6 +145,7 @@ export class CalloutService {
 
     callout.profile = await this.profileService.createProfile(
       calloutData.profile,
+      ProfileType.CALLOUT,
       parentStorageBucket
     );
 

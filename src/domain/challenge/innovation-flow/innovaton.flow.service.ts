@@ -1,5 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -82,6 +82,7 @@ export class InnovationFlowService {
       );
     innovationFlow.profile = await this.profileService.createProfile(
       innovationFlowData.profile,
+      ProfileType.INNOVATION_FLOW,
       parentStorageBucket
     );
 

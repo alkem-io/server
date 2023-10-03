@@ -16,7 +16,11 @@ import {
   IOpportunity,
 } from '@domain/collaboration/opportunity';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  LogContext,
+  ProfileType,
+} from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
@@ -118,6 +122,7 @@ export class ChallengeService {
       CommunityType.CHALLENGE,
       challengeCommunityPolicy,
       challengeCommunityApplicationForm,
+      ProfileType.CHALLENGE,
       challenge.storageBucket
     );
 

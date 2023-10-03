@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { WhiteboardRt } from './whiteboard.rt.entity';
 import { IWhiteboardRt } from './whiteboard.rt.interface';
 import { CreateWhiteboardRtInput } from './dto/whiteboard.rt.dto.create';
@@ -37,6 +37,7 @@ export class WhiteboardRtService {
 
     whiteboardRt.profile = await this.profileService.createProfile(
       whiteboardRtData.profileData,
+      ProfileType.WHITEBOARD_RT,
       parentStorageBucket
     );
     await this.profileService.addVisualOnProfile(

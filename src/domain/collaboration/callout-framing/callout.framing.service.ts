@@ -17,6 +17,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { ProfileType } from '@common/enums';
 
 @Injectable()
 export class CalloutFramingService {
@@ -41,6 +42,7 @@ export class CalloutFramingService {
 
     calloutFraming.profile = await this.profileService.createProfile(
       profile,
+      ProfileType.CALLOUT_FRAMING,
       parentStorageBucket
     );
 

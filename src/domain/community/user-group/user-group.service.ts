@@ -6,7 +6,11 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { IUser } from '@domain/community/user';
 import { UserService } from '@domain/community/user/user.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  LogContext,
+  ProfileType,
+} from '@common/enums';
 import {
   EntityNotFoundException,
   NotSupportedException,
@@ -49,6 +53,7 @@ export class UserGroupService {
 
     (group as IUserGroup).profile = await this.profileService.createProfile(
       userGroupData.profile,
+      ProfileType.USER_GROUP,
       parentStorageBucket
     );
     const savedUserGroup = await this.userGroupRepository.save(group);

@@ -6,7 +6,7 @@ import {
   Repository,
 } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { Discussion } from './discussion.entity';
 import { IDiscussion } from './discussion.interface';
 import { UpdateDiscussionInput } from './dto/discussion.dto.update';
@@ -52,6 +52,7 @@ export class DiscussionService {
     const discussion: IDiscussion = Discussion.create(discussionCreationData);
     discussion.profile = await this.profileService.createProfile(
       discussionData.profile,
+      ProfileType.DISCUSSION,
       parentStorageBucket
     );
 

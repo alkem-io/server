@@ -14,7 +14,7 @@ import {
   opportunityCommunityPolicy,
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { IProject } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -89,6 +89,7 @@ export class OpportunityService {
       CommunityType.OPPORTUNITY,
       opportunityCommunityPolicy,
       opportunityCommunityApplicationForm,
+      ProfileType.OPPORTUNITY,
       parentStorageBucket
     );
 

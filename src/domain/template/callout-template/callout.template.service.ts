@@ -2,7 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CalloutTemplate } from './callout.template.entity';
 import { ICalloutTemplate } from './callout.template.interface';
@@ -35,6 +35,7 @@ export class CalloutTemplateService {
     await this.templateBaseService.initialise(
       calloutTemplate,
       calloutTemplateData,
+      ProfileType.CALLOUT_TEMPLATE,
       parentStorageBucket
     );
     calloutTemplate.framing =

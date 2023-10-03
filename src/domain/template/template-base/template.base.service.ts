@@ -8,6 +8,7 @@ import { UpdateTemplateBaseInput } from './dto/template.base.dto.update';
 import { ITemplateBase } from './template.base.interface';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { ProfileType } from '@common/enums';
 
 @Injectable()
 export class TemplateBaseService {
@@ -20,12 +21,14 @@ export class TemplateBaseService {
   async initialise(
     baseTemplate: ITemplateBase,
     baseTemplateData: CreateTemplateBaseInput,
+    profileType: ProfileType,
     parentStorageBucket: IStorageBucket
   ): Promise<ITemplateBase> {
     baseTemplate.authorization = new AuthorizationPolicy();
 
     baseTemplate.profile = await this.profileService.createProfile(
       baseTemplateData.profile,
+      profileType,
       parentStorageBucket
     );
     await this.profileService.addTagsetOnProfile(baseTemplate.profile, {
