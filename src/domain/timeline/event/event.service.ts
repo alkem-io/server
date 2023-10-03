@@ -38,7 +38,7 @@ export class CalendarEventService {
       CalendarEvent.create(calendarEventInput);
     calendarEvent.profile = await this.profileService.createProfile(
       calendarEventInput.profileData,
-      ProfileType.EVENT,
+      ProfileType.CALENDAR_EVENT,
       parentStorageBucket
     );
     await this.profileService.addTagsetOnProfile(calendarEvent.profile, {

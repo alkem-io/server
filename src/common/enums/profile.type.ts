@@ -1,5 +1,5 @@
 export enum ProfileType {
-  SPACE = 'SPACE',
+  SPACE = 'space',
   CHALLENGE = 'challenge',
   OPPORTUNITY = 'opportunity',
   INNOVATION_FLOW = 'innovation-flow',
@@ -13,7 +13,7 @@ export enum ProfileType {
   USER_GROUP = 'user-group',
   USER = 'user',
   INNOVATION_HUB = 'innovation-hub',
-  EVENT = 'event',
+  CALENDAR_EVENT = 'calendar-event',
   INNOVATION_PACK = 'innovation-pack',
   CALLOUT_TEMPLATE = 'callout-framing',
   INNOVATION_FLOW_TEMPLATE = 'innovation-flow',
