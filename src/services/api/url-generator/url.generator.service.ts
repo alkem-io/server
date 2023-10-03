@@ -1,4 +1,4 @@
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -38,14 +38,14 @@ export class UrlGeneratorService {
     let profileType = 'organization'; // to pick up the right profile type later
     profileType = 'user';
 
-    switch (profileType) {
-      case 'user':
+    switch (profile.type) {
+      case ProfileType.USER:
         const userNameID = await this.getNameableEntityNameIDFromProfileOrFail(
           'user',
           profile.id
         );
         return `${endpoint_cluster}/${this.PATH_USER}/${userNameID}`;
-      case 'organization':
+      case ProfileType.ORGANIZATION:
         const organizationNameID =
           await this.getNameableEntityNameIDFromProfileOrFail(
             'organization',
