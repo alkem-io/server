@@ -35,9 +35,6 @@ export class UrlGeneratorService {
       ConfigurationTypes.HOSTING
     )?.endpoint_cluster;
 
-    let profileType = 'organization'; // to pick up the right profile type later
-    profileType = 'user';
-
     switch (profile.type) {
       case ProfileType.USER:
         const userNameID = await this.getNameableEntityNameIDFromProfileOrFail(
@@ -55,7 +52,7 @@ export class UrlGeneratorService {
     }
 
     throw new Error(
-      `Unable to generate URL for profile (${profileID}) of type: ${profileType}`
+      `Unable to generate URL for profile (${profileID}) of type: ${profile.type}`
     );
   }
 
