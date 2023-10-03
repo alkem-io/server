@@ -10,9 +10,9 @@ import { StorageBucketResolverMutations } from './storage.bucket.resolver.mutati
 import { StorageBucketService } from './storage.bucket.service';
 import { StorageBucketAuthorizationService } from './storage.bucket.service.authorization';
 import { VisualModule } from '@domain/common/visual/visual.module';
-import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { Document } from '../document/document.entity';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
+import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
 
 @Module({
   imports: [
@@ -21,7 +21,7 @@ import { ReferenceModule } from '@domain/common/reference/reference.module';
     AuthorizationPolicyModule,
     IpfsModule,
     VisualModule,
-    EntityResolverModule,
+    StorageBucketResolverModule,
     ReferenceModule,
     TypeOrmModule.forFeature([StorageBucket]),
     TypeOrmModule.forFeature([Document]),

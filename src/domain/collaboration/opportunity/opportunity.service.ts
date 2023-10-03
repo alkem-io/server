@@ -14,7 +14,7 @@ import {
   opportunityCommunityPolicy,
   UpdateOpportunityInput,
 } from '@domain/collaboration/opportunity';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { ProjectService } from '@domain/collaboration/project/project.service';
 import { IProject } from '@domain/collaboration/project';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -44,6 +44,7 @@ import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/ta
 import { opportunityDefaultCallouts } from './opportunity.default.callouts';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -64,6 +65,7 @@ export class OpportunityService {
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
     spaceID: string,
+    parentStorageBucket: IStorageBucket,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     if (!opportunityData.nameID) {
@@ -86,7 +88,9 @@ export class OpportunityService {
       spaceID,
       CommunityType.OPPORTUNITY,
       opportunityCommunityPolicy,
-      opportunityCommunityApplicationForm
+      opportunityCommunityApplicationForm,
+      ProfileType.OPPORTUNITY,
+      parentStorageBucket
     );
 
     await this.opportunityRepository.save(opportunity);
@@ -125,7 +129,8 @@ export class OpportunityService {
               displayName: '',
             },
           },
-          [stateTagsetTemplate]
+          [stateTagsetTemplate],
+          parentStorageBucket
         );
 
       await this.innovationFlowService.updateFlowStateTagsetTemplateForLifecycle(
@@ -150,6 +155,7 @@ export class OpportunityService {
         await this.collaborationService.addDefaultCallouts(
           opportunity.collaboration,
           opportunityDefaultCallouts,
+          parentStorageBucket,
           agentInfo?.userID
         );
     }

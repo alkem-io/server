@@ -44,7 +44,7 @@ export class Challenge extends BaseChallenge implements IChallenge {
   parentSpace?: Space;
 
   @Column()
-  spaceID?: string; //toDo make mandatory https://app.zenspace.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2196
+  spaceID!: string;
 
   @OneToOne(() => PreferenceSet, {
     eager: false,

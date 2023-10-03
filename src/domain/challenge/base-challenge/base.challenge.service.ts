@@ -1,4 +1,4 @@
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -31,6 +31,7 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { IProfile } from '@domain/common/profile';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class BaseChallengeService {
@@ -51,7 +52,9 @@ export class BaseChallengeService {
     spaceID: string,
     communityType: CommunityType,
     communityPolicy: ICommunityPolicyDefinition,
-    applicationFormData: CreateFormInput
+    applicationFormData: CreateFormInput,
+    profileType: ProfileType,
+    parentStorageBucket: IStorageBucket
   ) {
     baseChallenge.authorization = new AuthorizationPolicy();
     await this.isNameAvailableOrFail(baseChallengeData.nameID, spaceID);
@@ -73,7 +76,9 @@ export class BaseChallengeService {
     }
 
     baseChallenge.profile = await this.profileService.createProfile(
-      baseChallengeData.profileData
+      baseChallengeData.profileData,
+      profileType,
+      parentStorageBucket
     );
     await this.profileService.addTagsetOnProfile(baseChallenge.profile, {
       name: TagsetReservedName.DEFAULT,

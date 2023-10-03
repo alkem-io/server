@@ -21,16 +21,13 @@ import {
   VisualLoaderCreator,
 } from '@core/dataloader/creators';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { StorageBucketResolverService } from '@services/infrastructure/entity-resolver/storage.bucket.resolver.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
+import { ProfileStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/profile/profile.storage.bucket.loader.creator';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
-  constructor(
-    private profileService: ProfileService,
-    private storageBucketResolverService: StorageBucketResolverService
-  ) {}
+  constructor(private profileService: ProfileService) {}
 
   @UseGuards(GraphqlGuard)
   @ResolveField('visual', () => IVisual, {
@@ -139,12 +136,13 @@ export class ProfileResolverFields {
 
   @UseGuards(GraphqlGuard)
   @ResolveField('storageBucket', () => IStorageBucket, {
-    nullable: true,
+    nullable: false,
     description: 'The storage bucket for this Profile.',
   })
-  async storageBucket(@Parent() profile: IProfile): Promise<IStorageBucket> {
-    return this.storageBucketResolverService.getStorageBucketForProfile(
-      profile.id
-    );
+  async storageBucket(
+    @Parent() profile: IProfile,
+    @Loader(ProfileStorageBucketLoaderCreator) loader: ILoader<IStorageBucket>
+  ): Promise<IStorageBucket> {
+    return loader.load(profile.id);
   }
 }

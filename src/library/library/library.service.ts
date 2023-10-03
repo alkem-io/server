@@ -90,7 +90,10 @@ export class LibraryService {
     }
 
     const innovationPack =
-      await this.innovationPackService.createInnovationPack(innovationPackData);
+      await this.innovationPackService.createInnovationPack(
+        innovationPackData,
+        library.storageBucket
+      );
     library.innovationPacks.push(innovationPack);
     await this.libraryRepository.save(library);
 

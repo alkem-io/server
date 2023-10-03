@@ -2,7 +2,7 @@ import { AgentInfo } from '@core/authentication';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { IpfsService } from '@services/adapters/ipfs/ipfs.service';
-import { StorageBucketResolverService } from '@services/infrastructure/entity-resolver/storage.bucket.resolver.service';
+import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
 import { EntityManager, ObjectType } from 'typeorm';
 
 type ReplacementCallback<T extends BaseAlkemioEntity> = (
