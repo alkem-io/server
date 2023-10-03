@@ -38,6 +38,7 @@ export enum LogContext {
   CALENDAR = 'calendar',
   INNOVATION_HUB = 'innovation-hub',
   CHAT_GUIDANCE = 'chat-guidance',
+  CHAT_GUIDANCE_REPORTER = 'chat-guidance-reporter',
   TAGSET = 'tagset',
   EXCALIDRAW_SERVER = 'excalidraw-server',
   RESOLVER_FIELD = 'resolver-field',
