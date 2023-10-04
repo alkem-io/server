@@ -1,8 +1,7 @@
 export type GuidanceUsageDocument = {
-  // todo jsdoc
   question: string;
   answer: string;
-  sources: string[]; // todo
+  sources: string;
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;

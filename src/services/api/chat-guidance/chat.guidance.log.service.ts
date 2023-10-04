@@ -39,9 +39,7 @@ export class ChatGuidanceLogService {
         completionTokens: guidanceEngineResponse.completion_tokens,
         promptTokens: guidanceEngineResponse.prompt_tokens,
         question,
-        sources: Array.isArray(guidanceEngineResponse.sources) // todo remove when 'sources' is resolved
-          ? guidanceEngineResponse.sources
-          : [guidanceEngineResponse.sources],
+        sources: guidanceEngineResponse.sources,
         totalCost: guidanceEngineResponse.total_cost,
         totalTokens: guidanceEngineResponse.total_tokens,
       },

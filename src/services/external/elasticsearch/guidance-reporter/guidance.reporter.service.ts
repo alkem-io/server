@@ -41,15 +41,15 @@ export class GuidanceReporterService {
     this.indexName = elasticsearch?.indices?.guidance_usage;
   }
 
-  public reportUsage(data: GuidanceUsage) {
+  public async reportUsage(data: GuidanceUsage) {
     if (!this.client) {
-      return undefined;
+      return;
     }
 
     const { usage, author } = data;
 
     const document: GuidanceUsageDocument = {
-      ...usage, // todo: take care of 'sources'
+      ...usage,
       author: author.id,
       '@timestamp': new Date(),
       alkemio: isFromAlkemioTeam(author.email),
@@ -57,14 +57,14 @@ export class GuidanceReporterService {
     };
 
     const client = this.client;
-    this.wrapAction(async () => {
-      const res = await client.index({
+    await this.wrapAction(() =>
+      client.index({
         index: this.indexName,
         document,
-      });
+      })
+    );
 
-      return res;
-    });
+    return;
   }
 
   private async wrapAction(actionOrFail: () => Promise<WriteResponseBase>) {

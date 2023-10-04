@@ -1,5 +1,4 @@
 export type GuidanceUsage = {
-  // todo jsdoc
   usage: {
     /**
      * The input
@@ -10,9 +9,10 @@ export type GuidanceUsage = {
      */
     answer: string;
     /**
-     * Sources on which the answer is based on
+     * Sources (in raw format) on which the answer is based on;
+     * Unstructured text with title, link and content;
      */
-    sources: string[]; // todo
+    sources: string;
     /**
      * Amount of tokens which you used for the prompt; int
      */
