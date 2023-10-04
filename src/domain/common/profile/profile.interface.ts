@@ -37,5 +37,9 @@ export abstract class IProfile extends IAuthorizable {
 
   location?: ILocation;
 
+  @Field(() => ProfileType, {
+    nullable: true,
+    description: 'A type of entity that this Profile is being used with.',
+  })
   type!: ProfileType;
 }

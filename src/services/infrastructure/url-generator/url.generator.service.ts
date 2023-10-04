@@ -90,6 +90,15 @@ export class UrlGeneratorService {
         return await this.getPostUrlPath(profile.id);
       case ProfileType.WHITEBOARD:
         return await this.getWhiteboardUrlPath(profile.id);
+      case ProfileType.INNOVATION_FLOW:
+        // Todo: fix
+        return '';
+      case ProfileType.WHITEBOARD_TEMPLATE:
+        // Todo: fix
+        return '';
+      case ProfileType.POST_TEMPLATE:
+        // Todo: fix
+        return '';
     }
 
     throw new NotSupportedException(
