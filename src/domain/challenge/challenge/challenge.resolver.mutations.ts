@@ -76,7 +76,7 @@ export class ChallengeResolverMutations {
   async createOpportunity(
     @CurrentUser() agentInfo: AgentInfo,
     @Args('opportunityData') opportunityData: CreateOpportunityInput
-  ): Promise<IChallenge> {
+  ): Promise<IOpportunity> {
     const challenge = await this.challengeService.getChallengeOrFail(
       opportunityData.challengeID
     );
@@ -105,7 +105,7 @@ export class ChallengeResolverMutations {
       {
         id: opportunity.id,
         name: opportunity.profile.displayName,
-        space: opportunity.spaceID ?? '',
+        space: opportunity.spaceID,
       },
       {
         id: agentInfo.userID,

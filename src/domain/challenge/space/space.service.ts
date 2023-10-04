@@ -1,5 +1,9 @@
 import { UUID_LENGTH } from '@common/constants';
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  LogContext,
+  ProfileType,
+} from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -117,7 +121,9 @@ export class SpaceService {
       space.id,
       CommunityType.SPACE,
       spaceCommunityPolicy,
-      spaceCommunityApplicationForm
+      spaceCommunityApplicationForm,
+      ProfileType.SPACE,
+      space.storageBucket
     );
 
     if (!space.collaboration) {
@@ -145,6 +151,7 @@ export class SpaceService {
     space.collaboration = await this.collaborationService.addDefaultCallouts(
       space.collaboration,
       spaceDefaultCallouts,
+      space.storageBucket,
       agentInfo?.userID
     );
     await this.save(space);
@@ -183,7 +190,8 @@ export class SpaceService {
       {
         minInnovationFlow: 1,
       },
-      true
+      true,
+      space.storageBucket
     );
 
     // save before assigning host in case that fails

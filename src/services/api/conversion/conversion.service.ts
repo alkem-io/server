@@ -21,6 +21,7 @@ import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { OpportunityService } from '@domain/collaboration/opportunity/opportunity.service';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { DiscussionCategoryCommunity } from '@common/enums/communication.discussion.category.community';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 export class ConversionService {
   constructor(
@@ -112,6 +113,9 @@ export class ConversionService {
     // Swap the communications
     await this.swapCommunication(spaceCommunity, challengeCommunity);
     const spaceCommunityUpdated = await this.spaceService.getCommunity(space);
+    const spaceStorageBucket = await this.spaceService.getStorageBucketOrFail(
+      space.id
+    );
 
     // Swap the contexts
     const challengeContext = challenge.context;
@@ -139,7 +143,8 @@ export class ConversionService {
       await this.convertOpportunityToChallenge(
         opportunity.id,
         space.id,
-        agentInfo
+        agentInfo,
+        spaceStorageBucket
       );
     }
     // Finally delete the Challenge
@@ -153,6 +158,7 @@ export class ConversionService {
     opportunityID: string,
     spaceID: string,
     agentInfo: AgentInfo,
+    spaceStorageBucket: IStorageBucket,
     innovationFlowTemplateID?: string
   ): Promise<IChallenge> {
     const opportunity = await this.opportunityService.getOpportunityOrFail(
@@ -177,6 +183,7 @@ export class ConversionService {
           profileData: {
             displayName: opportunity.profile.displayName,
           },
+          storageBucketParent: spaceStorageBucket,
         },
         spaceID,
         agentInfo
@@ -194,6 +201,7 @@ export class ConversionService {
           profileData: {
             displayName: opportunity.profile.displayName,
           },
+          storageBucketParent: spaceStorageBucket,
         },
         spaceID,
         agentInfo

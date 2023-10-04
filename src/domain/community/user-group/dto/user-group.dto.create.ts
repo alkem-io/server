@@ -1,10 +1,5 @@
 import { Field, InputType } from '@nestjs/graphql';
-import {
-  IsOptional,
-  MaxLength,
-  MinLength,
-  ValidateNested,
-} from 'class-validator';
+import { MaxLength, MinLength, ValidateNested } from 'class-validator';
 import { SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { CreateProfileInput } from '@domain/common/profile/dto';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
@@ -23,9 +18,8 @@ export class CreateUserGroupInput {
   @MaxLength(SMALL_TEXT_LENGTH)
   name!: string;
 
-  @Field(() => CreateProfileInput, { nullable: true })
-  @IsOptional()
+  @Field(() => CreateProfileInput, { nullable: false })
   @ValidateNested({ each: true })
   @Type(() => CreateProfileInput)
-  profileData?: CreateProfileInput;
+  profile!: CreateProfileInput;
 }

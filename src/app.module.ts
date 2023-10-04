@@ -54,7 +54,6 @@ import { InnovationHubModule } from '@domain/innovation-hub';
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
-import { AdminStorageModule } from '@platform/admin/storage/admin.storage.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 import {
   HttpExceptionFilter,
@@ -208,7 +207,6 @@ import { APP_ID_PROVIDER } from '@common/app.id.provider';
     KonfigModule,
     IpfsModule,
     AdminCommunicationModule,
-    AdminStorageModule,
     AgentModule,
     MessageModule,
     MessageReactionModule,

@@ -52,7 +52,7 @@ export class OpportunityResolverMutations {
       {
         id: updatedOpportunity.id,
         name: updatedOpportunity.profile.displayName,
-        space: updatedOpportunity.spaceID ?? '',
+        space: updatedOpportunity.spaceID,
       },
       {
         id: agentInfo.userID,

@@ -25,6 +25,7 @@ import { IVisual } from '@domain/common/visual/visual.interface';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { streamToBuffer } from '@common/utils';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
+import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 5242880;
@@ -54,14 +55,18 @@ export class StorageBucketService {
   ) {}
 
   public async createStorageBucket(
-    allowedMimeTypes = this.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
-    maxAllowedFileSize = this.DEFAULT_MAX_ALLOWED_FILE_SIZE
+    storageBucketData?: CreateStorageBucketInput,
+    parentStorageBucket?: IStorageBucket
   ): Promise<IStorageBucket> {
     const storage: IStorageBucket = new StorageBucket();
     storage.authorization = new AuthorizationPolicy();
     storage.documents = [];
-    storage.allowedMimeTypes = allowedMimeTypes;
-    storage.maxFileSize = maxAllowedFileSize;
+    storage.allowedMimeTypes =
+      storageBucketData?.allowedMimeTypes ||
+      this.DEFAULT_VISUAL_ALLOWED_MIME_TYPES;
+    storage.maxFileSize =
+      storageBucketData?.maxFileSize || this.DEFAULT_MAX_ALLOWED_FILE_SIZE;
+    storage.parentStorageBucket = parentStorageBucket;
 
     return await this.storageBucketRepository.save(storage);
   }

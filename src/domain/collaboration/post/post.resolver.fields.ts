@@ -7,19 +7,19 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IUser } from '@domain/community/user';
-import { UserService } from '@domain/community/user/user.service';
 import { IPost } from './post.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Post } from '@domain/collaboration/post/post.entity';
+import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
 
 @Resolver(() => IPost)
 export class PostResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private userService: UserService
+    private userLookupService: UserLookupService
   ) {}
 
   @ResolveField('createdBy', () => IUser, {
@@ -33,7 +33,7 @@ export class PostResolverFields {
     }
 
     try {
-      return await this.userService.getUserOrFail(createdBy);
+      return await this.userLookupService.getUserByUUID(createdBy);
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(

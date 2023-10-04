@@ -92,11 +92,15 @@ export class ConversionResolverMutations {
       AuthorizationPrivilege.CREATE,
       `convert opportunity to challenge: ${agentInfo.email}`
     );
+    const spaceStorageBucket = await this.spaceService.getStorageBucketOrFail(
+      opportunity.spaceID
+    );
     const newChallenge =
       await this.conversionService.convertOpportunityToChallenge(
         convertOpportunityToChallengeData.opportunityID,
         this.opportunityService.getSpaceID(opportunity),
-        agentInfo
+        agentInfo,
+        spaceStorageBucket
       );
     const parentSpace = await this.spaceService.getSpaceOrFail(
       this.challengeService.getSpaceID(newChallenge)

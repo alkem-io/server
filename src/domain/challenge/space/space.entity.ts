@@ -36,6 +36,7 @@ export class Space extends BaseChallenge implements ISpace {
   })
   @JoinColumn()
   templatesSet?: TemplatesSet;
+
   @OneToOne(() => StorageBucket, {
     eager: false,
     cascade: true,

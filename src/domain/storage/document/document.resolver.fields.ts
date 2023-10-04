@@ -4,16 +4,16 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IUser } from '@domain/community/user/user.interface';
-import { UserService } from '@domain/community/user/user.service';
 import { IDocument } from './document.interface';
 import { DocumentService } from './document.service';
+import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
 
 @Resolver(() => IDocument)
 export class DocumentResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private userService: UserService,
+    private userLookupService: UserLookupService,
     private documentService: DocumentService
   ) {}
 
@@ -28,7 +28,7 @@ export class DocumentResolverFields {
     }
 
     try {
-      return await this.userService.getUserOrFail(createdBy);
+      return await this.userLookupService.getUserByUUID(createdBy);
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(
