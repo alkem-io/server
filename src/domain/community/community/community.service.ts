@@ -121,7 +121,7 @@ export class CommunityService {
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
     const communityID = groupData.parentID;
-    const groupName = groupData.name;
+    const groupName = groupData.profileData.displayName;
 
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to Community (${communityID})`,
