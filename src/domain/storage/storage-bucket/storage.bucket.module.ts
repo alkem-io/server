@@ -13,6 +13,7 @@ import { VisualModule } from '@domain/common/visual/visual.module';
 import { Document } from '../document/document.entity';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
+import { Profile } from '@domain/common/profile/profile.entity';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { StorageBucketResolverModule } from '@services/infrastructure/storage-bu
     ReferenceModule,
     TypeOrmModule.forFeature([StorageBucket]),
     TypeOrmModule.forFeature([Document]),
+    TypeOrmModule.forFeature([Profile]),
   ],
   providers: [
     StorageBucketResolverFields,

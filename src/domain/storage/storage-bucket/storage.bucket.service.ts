@@ -26,6 +26,8 @@ import { VisualService } from '@domain/common/visual/visual.service';
 import { streamToBuffer } from '@common/utils';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
 import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
+import { Profile } from '@domain/common/profile/profile.entity';
+import { IProfile } from '@domain/common/profile/profile.interface';
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 5242880;
@@ -51,7 +53,10 @@ export class StorageBucketService {
     private storageBucketRepository: Repository<StorageBucket>,
     @InjectRepository(Document)
     private documentRepository: Repository<Document>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @InjectRepository(Profile)
+    private profileRepository: Repository<Profile>
   ) {}
 
   public async createStorageBucket(
@@ -254,7 +259,7 @@ export class StorageBucketService {
     const allDocuments = storageLoaded.documents;
     if (!allDocuments)
       throw new EntityNotFoundException(
-        `Space not initialised, no documents: ${storage.id}`,
+        `Storage not initialised, no documents: ${storage.id}`,
         LogContext.STORAGE_BUCKET
       );
 
@@ -323,5 +328,32 @@ export class StorageBucketService {
         LogContext.STORAGE_BUCKET
       );
     }
+  }
+
+  public async getChildStorageBuckets(
+    storageBucket: IStorageBucket
+  ): Promise<IStorageBucket[]> {
+    const result = await this.storageBucketRepository.find({
+      where: {
+        parentStorageBucket: {
+          id: storageBucket.id,
+        },
+      },
+    });
+    if (!result) return [];
+    return result;
+  }
+
+  public async getContainingEntityProfile(
+    storageBucket: IStorageBucket
+  ): Promise<IProfile | null> {
+    const result = await this.profileRepository.findOne({
+      where: {
+        storageBucket: {
+          id: storageBucket.id,
+        },
+      },
+    });
+    return result;
   }
 }

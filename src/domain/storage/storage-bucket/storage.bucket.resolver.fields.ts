@@ -13,6 +13,7 @@ import { IDocument } from '../document/document.interface';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { StorageBucketArgsDocuments } from './dto/storage.bucket.args.documents';
+import { IProfile } from '@domain/common/profile';
 
 @Resolver(() => IStorageBucket)
 export class StorageBucketResolverFields {
@@ -69,5 +70,33 @@ export class StorageBucketResolverFields {
   })
   async size(@Parent() storageBucket: IStorageBucket) {
     return await this.storageBucketService.size(storageBucket);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('childStorage', () => [IStorageBucket], {
+    nullable: false,
+    description: 'The list of child entries for this StorageBucket.',
+  })
+  async children(
+    @Parent() storageBucket: IStorageBucket
+  ): Promise<IStorageBucket[]> {
+    return await this.storageBucketService.getChildStorageBuckets(
+      storageBucket
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('profile', () => IProfile, {
+    nullable: true,
+    description: 'The profile of the entity using this StorageBucket., if any.',
+  })
+  async profile(
+    @Parent() storageBucket: IStorageBucket
+  ): Promise<IProfile | null> {
+    return await this.storageBucketService.getContainingEntityProfile(
+      storageBucket
+    );
   }
 }
