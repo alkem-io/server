@@ -6,7 +6,6 @@ import { Project } from '@domain/collaboration/project';
 import { NameID, UUID } from '@domain/common/scalars';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { Space } from '@domain/challenge/space/space.entity';
 import { LogContext } from '@common/enums';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Community } from '@domain/community/community';
@@ -32,8 +31,6 @@ export class NamingService {
   constructor(
     @InjectRepository(Challenge)
     private challengeRepository: Repository<Challenge>,
-    @InjectRepository(Space)
-    private spaceRepository: Repository<Space>,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
     @InjectRepository(Whiteboard)

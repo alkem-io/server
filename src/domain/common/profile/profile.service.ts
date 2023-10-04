@@ -7,7 +7,7 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { Reference } from '@domain/common/reference/reference.entity';
 import { IReference } from '@domain/common/reference/reference.interface';
 import { ReferenceService } from '@domain/common/reference/reference.service';
@@ -27,11 +27,14 @@ import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 import { TagsetTemplateService } from '../tagset-template/tagset.template.service';
 import { UpdateProfileSelectTagsetInput } from './dto/profile.dto.update.select.tagset';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class ProfileService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private storageBucketService: StorageBucketService,
     private tagsetService: TagsetService,
     private tagsetTemplateService: TagsetTemplateService,
     private referenceService: ReferenceService,
@@ -44,13 +47,23 @@ export class ProfileService {
 
   // Create an empty profile, that the creating entity then has to
   // add tagets / visuals to.
-  async createProfile(profileData?: CreateProfileInput): Promise<IProfile> {
+  async createProfile(
+    profileData: CreateProfileInput,
+    profileType: ProfileType,
+    parentStorageBucket: IStorageBucket
+  ): Promise<IProfile> {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
       tagline: profileData?.tagline,
       displayName: profileData?.displayName,
+      type: profileType,
     });
     profile.authorization = new AuthorizationPolicy();
+    profile.storageBucket = await this.storageBucketService.createStorageBucket(
+      {},
+      parentStorageBucket
+    );
+
     profile.visuals = [];
     profile.location = await this.locationService.createLocation(
       profileData?.location
@@ -144,6 +157,7 @@ export class ProfileService {
         'tagsets',
         'authorization',
         'visuals',
+        'storageBucket',
       ],
     });
 
@@ -159,6 +173,12 @@ export class ProfileService {
           ID: reference.id,
         });
       }
+    }
+
+    if (profile.storageBucket) {
+      await this.storageBucketService.deleteStorageBucket(
+        profile.storageBucket.id
+      );
     }
 
     if (profile.visuals) {

@@ -2,13 +2,14 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { PostTemplate } from './post.template.entity';
 import { IPostTemplate } from './post.template.interface';
 import { TemplateBaseService } from '../template-base/template.base.service';
 import { CreatePostTemplateInput } from './dto/post.template.dto.create';
 import { UpdatePostTemplateInput } from './dto/post.template.dto.update';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class PostTemplateService {
@@ -21,10 +22,16 @@ export class PostTemplateService {
   ) {}
 
   async createPostTemplate(
-    postTemplateData: CreatePostTemplateInput
+    postTemplateData: CreatePostTemplateInput,
+    parentStorageBucket: IStorageBucket
   ): Promise<IPostTemplate> {
     const postTemplate: IPostTemplate = PostTemplate.create(postTemplateData);
-    await this.templateBaseService.initialise(postTemplate, postTemplateData);
+    await this.templateBaseService.initialise(
+      postTemplate,
+      postTemplateData,
+      ProfileType.POST_TEMPLATE,
+      parentStorageBucket
+    );
 
     return await this.postTemplateRepository.save(postTemplate);
   }

@@ -8,10 +8,10 @@ import { CalendarEventResolverMutations } from './event.resolver.mutations';
 import { CalendarEventService } from './event.service';
 import { CalendarEventResolverFields } from './event.resolver.fields';
 import { CalendarEventAuthorizationService } from './event.service.authorization';
-import { UserModule } from '@domain/community/user/user.module';
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { RoomModule } from '@domain/communication/room/room.module';
+import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
 
 @Module({
   imports: [
@@ -19,7 +19,7 @@ import { RoomModule } from '@domain/communication/room/room.module';
     AuthorizationModule,
     RoomModule,
     VisualModule,
-    UserModule,
+    UserLookupModule,
     ProfileModule,
     CommunityPolicyModule,
     TypeOrmModule.forFeature([CalendarEvent]),

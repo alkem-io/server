@@ -220,7 +220,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.7.0
+    image: alkemio/notifications:v0.14.3
     environment:
       - RABBITMQ_HOST
       - RABBITMQ_USER

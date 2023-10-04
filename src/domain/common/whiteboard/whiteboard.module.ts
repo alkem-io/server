@@ -10,7 +10,6 @@ import { WhiteboardService } from './whiteboard.service';
 import { WhiteboardAuthorizationService } from './whiteboard.service.authorization';
 import { WhiteboardResolverSubscriptions } from '@domain/common/whiteboard/whiteboard.resolver.subscriptions';
 import { VisualModule } from '@domain/common/visual/visual.module';
-import { UserModule } from '@domain/community/user/user.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { ProfileModule } from '../profile/profile.module';
@@ -24,7 +23,6 @@ import { ProfileModule } from '../profile/profile.module';
     WhiteboardCheckoutModule,
     VisualModule,
     ProfileModule,
-    UserModule,
     TypeOrmModule.forFeature([Whiteboard]),
   ],
   providers: [
