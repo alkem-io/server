@@ -22,7 +22,6 @@ import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { CalloutTemplateModule } from '@domain/template/callout-template/callout.template.module';
 import { WhiteboardRtModule } from '@domain/common/whiteboard-rt';
-import { UrlGeneratorModule } from '../url-generator';
 
 @Module({
   imports: [
@@ -46,7 +45,6 @@ import { UrlGeneratorModule } from '../url-generator';
     InvitationModule,
     ChallengeModule,
     OpportunityModule,
-    UrlGeneratorModule,
   ],
   providers: [LookupService, LookupResolverQueries, LookupResolverFields],
   exports: [LookupService],

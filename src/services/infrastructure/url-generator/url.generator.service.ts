@@ -1,7 +1,7 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
 import { EntityNotFoundException } from '@common/exceptions';
-import { ProfileService } from '@domain/common/profile/profile.service';
+import { IProfile } from '@domain/common/profile/profile.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
@@ -22,15 +22,13 @@ export class UrlGeneratorService {
   PATH_DISCUSSION = 'discussion';
 
   constructor(
-    private profileService: ProfileService,
     private configService: ConfigService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async generateUrlForProfile(profileID: string): Promise<string> {
-    const profile = await this.profileService.getProfileOrFail(profileID);
+  async generateUrlForProfile(profile: IProfile): Promise<string> {
     const endpoint_cluster = this.configService.get(
       ConfigurationTypes.HOSTING
     )?.endpoint_cluster;
@@ -52,7 +50,7 @@ export class UrlGeneratorService {
     }
 
     throw new Error(
-      `Unable to generate URL for profile (${profileID}) of type: ${profile.type}`
+      `Unable to generate URL for profile (${profile.id}) of type: ${profile.type}`
     );
   }
 

@@ -1,4 +1,4 @@
-import { Profiling } from '@common/decorators';
+import { CurrentUser, Profiling } from '@common/decorators';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { UseGuards } from '@nestjs/common/decorators/core/use-guards.decorator';
@@ -8,7 +8,7 @@ import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { ILocation } from '@domain/common/location/location.interface';
 import { VisualType } from '@common/enums/visual.type';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { IProfile } from './profile.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -24,10 +24,17 @@ import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.in
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { ProfileStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/profile/profile.storage.bucket.loader.creator';
+import { AgentInfo } from '@core/authentication/agent-info';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator';
 
 @Resolver(() => IProfile)
 export class ProfileResolverFields {
-  constructor(private profileService: ProfileService) {}
+  constructor(
+    private profileService: ProfileService,
+    private authorizationService: AuthorizationService,
+    private urlGeneratorService: UrlGeneratorService
+  ) {}
 
   @UseGuards(GraphqlGuard)
   @ResolveField('visual', () => IVisual, {
@@ -144,5 +151,24 @@ export class ProfileResolverFields {
     @Loader(ProfileStorageBucketLoaderCreator) loader: ILoader<IStorageBucket>
   ): Promise<IStorageBucket> {
     return loader.load(profile.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => String, {
+    nullable: false,
+    description: 'Generate the URL for the specified profileID',
+  })
+  async generateUrl(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Parent() profile: IProfile
+  ): Promise<string> {
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.READ,
+      `generate URL for Profile: ${profile.id}`
+    );
+
+    return await this.urlGeneratorService.generateUrlForProfile(profile);
   }
 }
