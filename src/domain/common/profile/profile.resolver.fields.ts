@@ -156,9 +156,9 @@ export class ProfileResolverFields {
   @UseGuards(GraphqlGuard)
   @ResolveField(() => String, {
     nullable: false,
-    description: 'Generate the URL for the specified profileID',
+    description: 'The URL at which this profile can be viewed.',
   })
-  async generateUrl(
+  async url(
     @CurrentUser() agentInfo: AgentInfo,
     @Parent() profile: IProfile
   ): Promise<string> {
