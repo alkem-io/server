@@ -20,6 +20,14 @@ export class MeResolverFields {
   constructor(private meService: MeService, private userService: UserService) {}
 
   @UseGuards(GraphqlGuard)
+  @ResolveField('id', () => String, {
+    description: 'The query id',
+  })
+  public id(@CurrentUser() agentInfo: AgentInfo): string {
+    return `me-${agentInfo.userID}`;
+  }
+
+  @UseGuards(GraphqlGuard)
   @ResolveField(() => IUser, {
     nullable: true,
     description:

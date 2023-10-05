@@ -31,6 +31,10 @@ export class NameReporterService {
     const { indices, policies } = elasticsearch;
     this.indexName = indices?.namings;
     this.space_name_enrich_policy = policies?.space_name_enrich_policy;
+
+    if (!this.client) {
+      this.logger.warn('Elastic client not initialized');
+    }
   }
 
   public async createOrUpdateName(id: string, name: string): Promise<void> {
@@ -40,9 +44,6 @@ export class NameReporterService {
 
   private async createOrUpdateRequest(id: string, name: string): Promise<void> {
     if (!this.client) {
-      this.logger.error(
-        'Could not create or update name - Elastic client not defined'
-      );
       return;
     }
 
@@ -116,9 +117,6 @@ export class NameReporterService {
     data: { id: string; name: string }[]
   ) {
     if (!this.client) {
-      this.logger.error(
-        'Could not execute bulk name operation - Elastic client not defined!'
-      );
       return;
     }
 
@@ -131,9 +129,6 @@ export class NameReporterService {
 
   private async executeNameLookupPolicy(): Promise<boolean> {
     if (!this.client) {
-      this.logger.error(
-        'Could not execute policy - Elastic client not defined!'
-      );
       return false;
     }
 

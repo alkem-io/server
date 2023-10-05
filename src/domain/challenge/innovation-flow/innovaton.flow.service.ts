@@ -1,5 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -32,6 +32,7 @@ import { ITagset } from '@domain/common/tagset';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class InnovationFlowService {
@@ -48,7 +49,8 @@ export class InnovationFlowService {
 
   async createInnovationFlow(
     innovationFlowData: CreateInnovationFlowInput,
-    tagsetTemplates: ITagsetTemplate[]
+    tagsetTemplates: ITagsetTemplate[],
+    parentStorageBucket: IStorageBucket
   ): Promise<IInnovationFlow> {
     if (innovationFlowData.innovationFlowTemplateID) {
       await this.innovationFlowTemplateService.validateInnovationFlowDefinitionOrFail(
@@ -79,7 +81,9 @@ export class InnovationFlowService {
         tagsetInputs
       );
     innovationFlow.profile = await this.profileService.createProfile(
-      innovationFlowData.profile
+      innovationFlowData.profile,
+      ProfileType.INNOVATION_FLOW,
+      parentStorageBucket
     );
 
     await this.profileService.addVisualOnProfile(

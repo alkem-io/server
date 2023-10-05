@@ -53,9 +53,25 @@ export class StorageAccessController {
         agentInfo,
         document.authorization,
         AuthorizationPrivilege.READ,
-        `Read document: ${document.displayName}`
+        `Read document: ${document.displayName} - '${document.id}`
       );
     } catch (e: unknown) {
+      try {
+        document = await this.documentService.getDocumentOrFail(id, {
+          relations: {
+            storageBucket: true,
+          },
+        });
+        this.logger.error(
+          `User '${agentInfo}' - unable to access document '${document.id} in storage bucked '${document.storageBucket.id}`,
+          LogContext.DOCUMENT
+        );
+      } catch (e) {
+        throw new NotFoundHttpException(
+          `Document with id '${id}' not found`,
+          LogContext.DOCUMENT
+        );
+      }
       const err = e as GraphQLError;
       throw new ForbiddenHttpException(err.message, LogContext.DOCUMENT);
     }

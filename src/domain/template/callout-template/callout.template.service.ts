@@ -2,7 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CalloutTemplate } from './callout.template.entity';
 import { ICalloutTemplate } from './callout.template.interface';
@@ -12,6 +12,7 @@ import { UpdateCalloutTemplateInput } from './dto/callout.template.dto.update';
 import { CalloutFramingService } from '@domain/collaboration/callout-framing/callout.framing.service';
 import { CalloutContributionDefaultsService } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.service';
 import { CalloutContributionPolicyService } from '@domain/collaboration/callout-contribution-policy/callout.contribution.policy.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class CalloutTemplateService {
@@ -27,16 +28,20 @@ export class CalloutTemplateService {
   ) {}
 
   public async createCalloutTemplate(
-    calloutTemplateData: CreateCalloutTemplateInput
+    calloutTemplateData: CreateCalloutTemplateInput,
+    parentStorageBucket: IStorageBucket
   ): Promise<ICalloutTemplate> {
     const calloutTemplate: ICalloutTemplate = new CalloutTemplate();
     await this.templateBaseService.initialise(
       calloutTemplate,
-      calloutTemplateData
+      calloutTemplateData,
+      ProfileType.CALLOUT_TEMPLATE,
+      parentStorageBucket
     );
     calloutTemplate.framing =
       await this.calloutFramingService.createCalloutFraming(
-        calloutTemplateData.framing
+        calloutTemplateData.framing,
+        parentStorageBucket
       );
     calloutTemplate.responseDefaults =
       this.calloutResponseDefaultsService.createCalloutContributionDefaults(

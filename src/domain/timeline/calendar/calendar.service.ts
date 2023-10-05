@@ -24,6 +24,7 @@ import { ActivityInputCalendarEventCreated } from '@services/adapters/activity-a
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
+import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
 
 @Injectable()
 export class CalendarService {
@@ -34,6 +35,7 @@ export class CalendarService {
     private namingService: NamingService,
     private activityAdapter: ActivityAdapter,
     private contributionReporter: ContributionReporterService,
+    private storageBucketResolverService: StorageBucketResolverService,
     private timelineResolverService: TimelineResolverService,
     @InjectRepository(Calendar)
     private calendarRepository: Repository<Calendar>,
@@ -127,8 +129,13 @@ export class CalendarService {
       );
     }
 
+    const storageBucket =
+      await this.storageBucketResolverService.getStorageBucketForCalendar(
+        calendar.id
+      );
     const calendarEvent = await this.calendarEventService.createCalendarEvent(
       calendarEventData,
+      storageBucket,
       userID
     );
     calendar.events.push(calendarEvent);

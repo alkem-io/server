@@ -10,7 +10,7 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
@@ -31,7 +31,6 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CalloutType } from '@common/enums/callout.type';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { UserService } from '@domain/community/user/user.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { PostTemplateService } from '@domain/template/post-template/post.template.service';
@@ -56,6 +55,9 @@ import {
   CreateWhiteboardRtInput,
   IWhiteboardRt,
 } from '@domain/common/whiteboard-rt/types';
+import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
+import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class CalloutService {
@@ -68,7 +70,8 @@ export class CalloutService {
     private whiteboardRtService: WhiteboardRtService,
     private namingService: NamingService,
     private roomService: RoomService,
-    private userService: UserService,
+    private userLookupService: UserLookupService,
+    private storageBucketResolverService: StorageBucketResolverService,
     private profileService: ProfileService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
@@ -77,6 +80,7 @@ export class CalloutService {
   public async createCallout(
     calloutData: CreateCalloutInput,
     tagsetTemplates: ITagsetTemplate[],
+    parentStorageBucket: IStorageBucket,
     userID?: string
   ): Promise<ICallout> {
     if (
@@ -138,8 +142,11 @@ export class CalloutService {
       calloutData.profile.tagsets,
       tagsetInputs
     );
+
     callout.profile = await this.profileService.createProfile(
-      calloutData.profile
+      calloutData.profile,
+      ProfileType.CALLOUT,
+      parentStorageBucket
     );
 
     if (calloutData.displayLocation) {
@@ -151,7 +158,8 @@ export class CalloutService {
 
     if (calloutData.type == CalloutType.POST_COLLECTION && postTemplateData) {
       callout.postTemplate = await this.postTemplateService.createPostTemplate(
-        postTemplateData
+        postTemplateData,
+        parentStorageBucket
       );
     }
     if (
@@ -160,7 +168,8 @@ export class CalloutService {
     ) {
       callout.whiteboardTemplate =
         await this.whiteboardTemplateService.createWhiteboardTemplate(
-          whiteboardTemplateData
+          whiteboardTemplateData,
+          parentStorageBucket
         );
     }
 
@@ -178,6 +187,7 @@ export class CalloutService {
     if (calloutData.type == CalloutType.WHITEBOARD && calloutData.whiteboard) {
       const whiteboard = await this.createWhiteboardForCallout(
         calloutData.whiteboard,
+        parentStorageBucket,
         userID
       );
       callout.whiteboards = [whiteboard];
@@ -189,6 +199,7 @@ export class CalloutService {
     ) {
       callout.whiteboardRt = await this.createWhiteboardRtForCallout(
         calloutData.whiteboardRt,
+        parentStorageBucket,
         userID
       );
     }
@@ -196,8 +207,15 @@ export class CalloutService {
     return this.calloutRepository.save(callout);
   }
 
+  private async getStorageBucket(callout: ICallout): Promise<IStorageBucket> {
+    return await this.storageBucketResolverService.getStorageBucketForCallout(
+      callout.id
+    );
+  }
+
   private async createWhiteboardForCallout(
     data: CreateWhiteboardInput,
+    parentStorageBucket: IStorageBucket,
     authorID?: string
   ) {
     const whiteboardNameID = this.namingService.createNameID(
@@ -210,6 +228,7 @@ export class CalloutService {
         content: data.content,
         profileData: data.profileData,
       },
+      parentStorageBucket,
       authorID
     );
     await this.profileService.addVisualOnProfile(
@@ -222,6 +241,7 @@ export class CalloutService {
 
   private async createWhiteboardRtForCallout(
     data: CreateWhiteboardRtInput,
+    parentStorageBucket: IStorageBucket,
     authorID?: string
   ) {
     const whiteboardRtNameID = this.namingService.createNameID(
@@ -234,6 +254,7 @@ export class CalloutService {
         content: data.content,
         profileData: data.profileData,
       },
+      parentStorageBucket,
       authorID
     );
     await this.profileService.addVisualOnProfile(
@@ -287,8 +308,8 @@ export class CalloutService {
     publishedTimestamp?: number
   ): Promise<ICallout> {
     if (publisherID) {
-      const publisher = await this.userService.getUserOrFail(publisherID);
-      callout.publishedBy = publisher.id;
+      const publisher = await this.userLookupService.getUserByUUID(publisherID);
+      callout.publishedBy = publisher?.id || '';
     }
 
     if (publishedTimestamp) {
@@ -531,7 +552,12 @@ export class CalloutService {
 
     await this.setNameIdOnPostData(postData, callout);
 
-    const post = await this.postService.createPost(postData, userID);
+    const storageBucket = await this.getStorageBucket(callout);
+    const post = await this.postService.createPost(
+      postData,
+      storageBucket,
+      userID
+    );
     callout.posts.push(post);
     await this.calloutRepository.save(callout);
     return post;
@@ -608,12 +634,14 @@ export class CalloutService {
 
     this.setNameIdOnWhiteboardData(whiteboardData, callout);
 
+    const storageBucket = await this.getStorageBucket(callout);
     const whiteboard = await this.whiteboardService.createWhiteboard(
       {
         nameID: whiteboardData.nameID,
         content: whiteboardData.content,
         profileData: whiteboardData.profileData,
       },
+      storageBucket,
       userID
     );
     callout.whiteboards.push(whiteboard);

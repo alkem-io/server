@@ -5,6 +5,8 @@ import { IProfile } from './profile.interface';
 import { Visual } from '@domain/common/visual/visual.entity';
 import { Location } from '@domain/common/location/location.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
+import { ProfileType } from '@common/enums';
 
 @Entity()
 export class Profile extends AuthorizableEntity implements IProfile {
@@ -35,6 +37,9 @@ export class Profile extends AuthorizableEntity implements IProfile {
   @Column('text', { nullable: true })
   description = '';
 
+  @Column('text', { nullable: false })
+  type!: ProfileType;
+
   @OneToOne(() => Location, {
     eager: false,
     cascade: true,
@@ -42,6 +47,14 @@ export class Profile extends AuthorizableEntity implements IProfile {
   })
   @JoinColumn()
   location?: Location;
+
+  @OneToOne(() => StorageBucket, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  storageBucket?: StorageBucket;
 
   // Constructor
   constructor() {

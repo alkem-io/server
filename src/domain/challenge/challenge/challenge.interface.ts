@@ -5,6 +5,7 @@ import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.in
 import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
 @ObjectType('Challenge')
 export abstract class IChallenge extends IBaseChallenge {
+  rowId!: number;
   childChallenges?: IChallenge[];
   opportunities?: IOpportunity[];
 
@@ -15,5 +16,5 @@ export abstract class IChallenge extends IBaseChallenge {
     description: 'The ID of the containing Space.',
     nullable: false,
   })
-  spaceID?: string; //toDo make mandatory https://app.zenspace.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2196
+  spaceID!: string;
 }

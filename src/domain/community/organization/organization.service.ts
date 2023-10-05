@@ -9,7 +9,11 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  LogContext,
+  ProfileType,
+} from '@common/enums';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import {
@@ -89,7 +93,9 @@ export class OrganizationService {
     organization.storageBucket =
       await this.storageBucketService.createStorageBucket();
     organization.profile = await this.profileService.createProfile(
-      organizationData.profileData
+      organizationData.profileData,
+      ProfileType.ORGANIZATION,
+      organization.storageBucket
     );
     await this.profileService.addTagsetOnProfile(organization.profile, {
       name: TagsetReservedName.KEYWORDS,
@@ -509,19 +515,26 @@ export class OrganizationService {
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
     const orgID = groupData.parentID;
-    const groupName = groupData.name;
+    const groupName = groupData.profileData.displayName;
     // First find the Challenge
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to organization (${orgID})`
     );
     // Try to find the organization
     const organization = await this.getOrganizationOrFail(orgID, {
-      relations: ['groups', 'groups.profile'],
+      relations: ['groups', 'groups.profile', 'storageBucket'],
     });
 
+    if (!organization.storageBucket) {
+      throw new EntityNotInitializedException(
+        `Organization StorageBucket not initialized: ${organization.id}`,
+        LogContext.AUTH
+      );
+    }
     const group = await this.userGroupService.addGroupWithName(
       organization,
-      groupName
+      groupName,
+      organization.storageBucket
     );
     await this.organizationRepository.save(organization);
 

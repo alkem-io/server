@@ -2,7 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { WhiteboardTemplate } from './whiteboard.template.entity';
 import { IWhiteboardTemplate } from './whiteboard.template.interface';
@@ -10,6 +10,7 @@ import { TemplateBaseService } from '../template-base/template.base.service';
 import { CreateWhiteboardTemplateInput } from './dto/whiteboard.template.dto.create';
 import { UpdateWhiteboardTemplateInput } from './dto/whiteboard.template.dto.update';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class WhiteboardTemplateService {
@@ -23,7 +24,8 @@ export class WhiteboardTemplateService {
   ) {}
 
   async createWhiteboardTemplate(
-    whiteboardTemplateData: CreateWhiteboardTemplateInput
+    whiteboardTemplateData: CreateWhiteboardTemplateInput,
+    parentStorageBucket: IStorageBucket
   ): Promise<IWhiteboardTemplate> {
     const whiteboardTemplate: IWhiteboardTemplate = WhiteboardTemplate.create(
       whiteboardTemplateData
@@ -31,7 +33,9 @@ export class WhiteboardTemplateService {
     const result: IWhiteboardTemplate =
       await this.templateBaseService.initialise(
         whiteboardTemplate,
-        whiteboardTemplateData
+        whiteboardTemplateData,
+        ProfileType.WHITEBOARD_TEMPLATE,
+        parentStorageBucket
       );
 
     // Allow specifying a Whiteboard to use as a base if no value is set

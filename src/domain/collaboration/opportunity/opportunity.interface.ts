@@ -5,13 +5,14 @@ import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { IInnovationFlow } from '@domain/challenge/innovation-flow/innovation.flow.interface';
 @ObjectType('Opportunity')
 export abstract class IOpportunity extends IBaseChallenge {
+  rowId!: number;
   @Field(() => [IProject], {
     nullable: true,
     description: 'The set of projects within the context of this Opportunity',
   })
   projects?: IProject[];
 
-  spaceID?: string; //toDo make mandatory https://app.zenspace.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/alkem-io/server/2196
+  spaceID!: string;
 
   challenge?: IChallenge;
 
