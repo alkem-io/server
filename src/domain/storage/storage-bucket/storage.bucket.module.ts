@@ -14,6 +14,7 @@ import { Document } from '../document/document.entity';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
 import { Profile } from '@domain/common/profile/profile.entity';
+import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { Profile } from '@domain/common/profile/profile.entity';
     VisualModule,
     StorageBucketResolverModule,
     ReferenceModule,
+    UrlGeneratorModule,
     TypeOrmModule.forFeature([StorageBucket]),
     TypeOrmModule.forFeature([Document]),
     TypeOrmModule.forFeature([Profile]),

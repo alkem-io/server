@@ -27,7 +27,8 @@ import { streamToBuffer } from '@common/utils';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
 import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
 import { Profile } from '@domain/common/profile/profile.entity';
-import { IProfile } from '@domain/common/profile/profile.interface';
+import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 5242880;
@@ -49,6 +50,7 @@ export class StorageBucketService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private visualService: VisualService,
+    private urlGeneratorService: UrlGeneratorService,
     @InjectRepository(StorageBucket)
     private storageBucketRepository: Repository<StorageBucket>,
     @InjectRepository(Document)
@@ -187,7 +189,7 @@ export class StorageBucketService {
     );
     storage.documents.push(document);
     this.logger.verbose?.(
-      `Uploaded document '${document.externalID}' on storage space: ${storageBucket.id}`,
+      `Uploaded document '${document.externalID}' on storage bucket: ${storageBucket.id}`,
       LogContext.STORAGE_BUCKET
     );
     await this.storageBucketRepository.save(storage);
@@ -312,7 +314,7 @@ export class StorageBucketService {
     );
     if (!result) {
       throw new ValidationException(
-        `Invalid Mime Type specified for storage space '${mimeType}'- allowed types: ${storageBucket.allowedMimeTypes}.`,
+        `Invalid Mime Type specified for storage bucket '${mimeType}'- allowed types: ${storageBucket.allowedMimeTypes}.`,
         LogContext.STORAGE_BUCKET
       );
     }
@@ -324,7 +326,7 @@ export class StorageBucketService {
   ): void | never {
     if (size > storageBucket.maxFileSize) {
       throw new ValidationException(
-        `File size (${size}) exceeds maximum allowed file size for storage space: ${storageBucket.maxFileSize}`,
+        `File size (${size}) exceeds maximum allowed file size for storage bucket: ${storageBucket.maxFileSize}`,
         LogContext.STORAGE_BUCKET
       );
     }
@@ -346,14 +348,22 @@ export class StorageBucketService {
 
   public async getContainingEntityProfile(
     storageBucket: IStorageBucket
-  ): Promise<IProfile | null> {
-    const result = await this.profileRepository.findOne({
+  ): Promise<IStorageBucketParent | null> {
+    const profile = await this.profileRepository.findOne({
       where: {
         storageBucket: {
           id: storageBucket.id,
         },
       },
     });
-    return result;
+    if (!profile || profile.type) {
+      return null;
+    }
+    const parentEntity: IStorageBucketParent = {
+      type: profile?.type,
+      displayName: profile.displayName,
+      url: await this.urlGeneratorService.generateUrlForProfile(profile),
+    };
+    return parentEntity;
   }
 }

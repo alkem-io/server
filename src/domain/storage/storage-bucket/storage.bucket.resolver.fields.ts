@@ -13,7 +13,7 @@ import { IDocument } from '../document/document.interface';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { UUID_NAMEID } from '@domain/common/scalars';
 import { StorageBucketArgsDocuments } from './dto/storage.bucket.args.documents';
-import { IProfile } from '@domain/common/profile';
+import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 
 @Resolver(() => IStorageBucket)
 export class StorageBucketResolverFields {
@@ -88,13 +88,14 @@ export class StorageBucketResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('profile', () => IProfile, {
+  @ResolveField('parentEntity', () => IStorageBucketParent, {
     nullable: true,
-    description: 'The profile of the entity using this StorageBucket., if any.',
+    description:
+      'The key information about the entity using this StorageBucket, if any.',
   })
-  async profile(
+  async parentEntity(
     @Parent() storageBucket: IStorageBucket
-  ): Promise<IProfile | null> {
+  ): Promise<IStorageBucketParent | null> {
     return await this.storageBucketService.getContainingEntityProfile(
       storageBucket
     );
