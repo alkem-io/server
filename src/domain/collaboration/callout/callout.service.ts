@@ -10,7 +10,7 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
@@ -49,16 +49,13 @@ import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { IReference } from '@domain/common/reference';
 import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
-import { CreateWhiteboardInput } from '@domain/common/whiteboard';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
-import {
-  CreateWhiteboardRtInput,
-  IWhiteboardRt,
-} from '@domain/common/whiteboard-rt/types';
+import { IWhiteboardRt } from '@domain/common/whiteboard-rt/types';
 import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
 import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { CalloutFramingService } from '../callout-framing/callout.framing.service';
+import { CreateCalloutFramingInput } from '../callout-framing/dto/callout.framing.dto.create';
 
 @Injectable()
 export class CalloutService {
@@ -99,13 +96,16 @@ export class CalloutService {
       throw new Error('Please provide a whiteboard template');
     }
 
-    if (calloutData.type == CalloutType.WHITEBOARD && !calloutData.whiteboard) {
+    if (
+      calloutData.type == CalloutType.WHITEBOARD &&
+      !calloutData.framing.whiteboard
+    ) {
       throw new Error('Please provide a whiteboard');
     }
 
     if (
       calloutData.type == CalloutType.WHITEBOARD_RT &&
-      !calloutData.whiteboardRt
+      !calloutData.framing.whiteboardRt
     ) {
       throw new Error('Please provide a whiteboard for real time');
     }
@@ -120,7 +120,7 @@ export class CalloutService {
     const postTemplateData = calloutData.postTemplate;
     const whiteboardTemplateData = calloutData.whiteboardTemplate;
     const calloutNameID = this.namingService.createNameID(
-      `${calloutData.profile.displayName}`
+      `${calloutData.framing.profile.displayName}`
     );
     const calloutCreationData = {
       ...calloutData,
@@ -140,15 +140,17 @@ export class CalloutService {
       );
     const tagsetInputs = [defaultTagset, ...tagsetInputsFromTemplates];
 
-    calloutData.profile.tagsets = this.profileService.updateProfileTagsetInputs(
-      calloutData.profile.tagsets,
-      tagsetInputs
-    );
+    calloutData.framing.profile.tagsets =
+      this.profileService.updateProfileTagsetInputs(
+        calloutData.framing.profile.tagsets,
+        tagsetInputs
+      );
 
-    callout.framing.profile = await this.profileService.createProfile(
-      calloutData.profile,
-      ProfileType.CALLOUT,
-      parentStorageBucket
+    callout.framing = await this.createFramingForCallout(
+      calloutData.type,
+      calloutData.framing,
+      parentStorageBucket,
+      userID
     );
 
     if (calloutData.displayLocation) {
@@ -186,26 +188,6 @@ export class CalloutService {
       );
     }
 
-    if (calloutData.type == CalloutType.WHITEBOARD && calloutData.whiteboard) {
-      const whiteboard = await this.createWhiteboardForCallout(
-        calloutData.whiteboard,
-        parentStorageBucket,
-        userID
-      );
-      callout.whiteboards = [whiteboard];
-    }
-
-    if (
-      calloutData.type == CalloutType.WHITEBOARD_RT &&
-      calloutData.whiteboardRt
-    ) {
-      callout.whiteboardRt = await this.createWhiteboardRtForCallout(
-        calloutData.whiteboardRt,
-        parentStorageBucket,
-        userID
-      );
-    }
-
     return this.calloutRepository.save(callout);
   }
 
@@ -215,56 +197,51 @@ export class CalloutService {
     );
   }
 
-  private async createWhiteboardForCallout(
-    data: CreateWhiteboardInput,
+  private async createFramingForCallout(
+    calloutDataType: CalloutType,
+    calloutFramingData: CreateCalloutFramingInput,
     parentStorageBucket: IStorageBucket,
-    authorID?: string
+    userID?: string
   ) {
-    const whiteboardNameID = this.namingService.createNameID(
-      `${data.profileData.displayName}`
-    );
+    if (
+      calloutDataType == CalloutType.WHITEBOARD &&
+      calloutFramingData.whiteboard
+    ) {
+      calloutFramingData.whiteboard.nameID = this.namingService.createNameID(
+        `${calloutFramingData.whiteboard.profileData.displayName}`
+      );
+    }
 
-    const whiteboard = await this.whiteboardService.createWhiteboard(
-      {
-        nameID: whiteboardNameID,
-        content: data.content,
-        profileData: data.profileData,
-      },
-      parentStorageBucket,
-      authorID
-    );
-    await this.profileService.addVisualOnProfile(
-      whiteboard.profile,
-      VisualType.BANNER
-    );
+    if (
+      calloutDataType == CalloutType.WHITEBOARD_RT &&
+      calloutFramingData.whiteboardRt
+    ) {
+      calloutFramingData.whiteboardRt.nameID = this.namingService.createNameID(
+        `${calloutFramingData.whiteboardRt.profileData.displayName}`
+      );
+    }
+    const calloutFraming =
+      await this.calloutFramingService.createCalloutFraming(
+        calloutFramingData,
+        parentStorageBucket,
+        userID
+      );
 
-    return whiteboard;
-  }
+    if (calloutFraming.whiteboard) {
+      await this.profileService.addVisualOnProfile(
+        calloutFraming.whiteboard.profile,
+        VisualType.BANNER
+      );
+    }
 
-  private async createWhiteboardRtForCallout(
-    data: CreateWhiteboardRtInput,
-    parentStorageBucket: IStorageBucket,
-    authorID?: string
-  ) {
-    const whiteboardRtNameID = this.namingService.createNameID(
-      `${data.profileData.displayName}`
-    );
+    if (calloutFraming.whiteboardRt) {
+      await this.profileService.addVisualOnProfile(
+        calloutFraming.whiteboardRt.profile,
+        VisualType.BANNER
+      );
+    }
 
-    const whiteboardRt = await this.whiteboardRtService.createWhiteboardRt(
-      {
-        nameID: whiteboardRtNameID,
-        content: data.content,
-        profileData: data.profileData,
-      },
-      parentStorageBucket,
-      authorID
-    );
-    await this.profileService.addVisualOnProfile(
-      whiteboardRt.profile,
-      VisualType.BANNER
-    );
-
-    return whiteboardRt;
+    return calloutFraming;
   }
 
   public async getCalloutOrFail(

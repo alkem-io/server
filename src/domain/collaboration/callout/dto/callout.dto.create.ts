@@ -1,23 +1,21 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
-import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreatePostTemplateInput } from '@domain/template/post-template/dto/post.template.dto.create';
 import { CreateWhiteboardTemplateInput } from '@domain/template/whiteboard-template/dto/whiteboard.template.dto.create';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
-import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { CreateWhiteboardRtInput } from '@domain/common/whiteboard-rt/dto/whiteboard.rt.dto.create';
+import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto';
 
 @InputType()
 export class CreateCalloutInput {
-  @Field(() => CreateProfileInput, { nullable: false })
+  @Field(() => CreateCalloutFramingInput, { nullable: false })
   @ValidateNested({ each: true })
-  @Type(() => CreateProfileInput)
-  profile!: CreateProfileInput;
+  @Type(() => CreateCalloutFramingInput)
+  framing!: CreateCalloutFramingInput;
 
   @Field(() => NameID, {
     nullable: true,
@@ -72,18 +70,6 @@ export class CreateCalloutInput {
     description: 'WhiteboardTemplate data for whiteboard Callouts.',
   })
   whiteboardTemplate?: CreateWhiteboardTemplateInput;
-
-  @Field(() => CreateWhiteboardInput, {
-    nullable: true,
-    description: 'Whiteboard data for whiteboard Callouts.',
-  })
-  whiteboard?: CreateWhiteboardInput;
-
-  @Field(() => CreateWhiteboardRtInput, {
-    nullable: true,
-    description: 'Whiteboard data for real time whiteboard Callouts.',
-  })
-  whiteboardRt?: CreateWhiteboardRtInput;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()

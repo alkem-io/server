@@ -37,7 +37,7 @@ export class CalloutFramingService {
   public async createCalloutFraming(
     calloutFramingData: CreateCalloutFramingInput,
     parentStorageBucket: IStorageBucket,
-    agentInfo: AgentInfo
+    userID?: string
   ): Promise<ICalloutFraming> {
     const calloutFraming: ICalloutFraming =
       CalloutFraming.create(calloutFramingData);
@@ -56,7 +56,7 @@ export class CalloutFramingService {
       calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
         whiteboard,
         parentStorageBucket,
-        agentInfo.userID
+        userID
       );
     }
 
@@ -65,7 +65,7 @@ export class CalloutFramingService {
         await this.whiteboardRtService.createWhiteboardRt(
           whiteboardRt,
           parentStorageBucket,
-          agentInfo.userID
+          userID
         );
     }
 
@@ -90,6 +90,14 @@ export class CalloutFramingService {
         calloutFramingData.whiteboard,
         agentInfo
       );
+    }
+
+    if (calloutFraming.whiteboardRt && calloutFramingData.whiteboardRt) {
+      calloutFraming.whiteboardRt =
+        await this.whiteboardRtService.updateWhiteboardRt(
+          calloutFraming.whiteboardRt,
+          calloutFramingData.whiteboardRt
+        );
     }
 
     return calloutFraming;

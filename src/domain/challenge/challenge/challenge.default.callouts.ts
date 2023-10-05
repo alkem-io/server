@@ -13,16 +13,18 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     type: CalloutType.LINK_COLLECTION,
     state: CalloutState.CLOSED,
     sortOrder: 1,
-    profile: {
-      displayName: 'Getting Started',
-      description: '⬇️ Here are some quick links to help you get started',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_RIGHT],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: 'Getting Started',
+        description: '⬇️ Here are some quick links to help you get started',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [CommonDisplayLocation.HOME_RIGHT],
+          },
+        ],
+      },
     },
   },
   {
@@ -30,16 +32,18 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     type: CalloutType.POST,
     state: CalloutState.OPEN,
     sortOrder: 2,
-    profile: {
-      displayName: 'General chat 💬',
-      description: 'Things you would like to discuss with the community.',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_LEFT],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: 'General chat 💬',
+        description: 'Things you would like to discuss with the community.',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [CommonDisplayLocation.HOME_LEFT],
+          },
+        ],
+      },
     },
   },
   {
@@ -47,17 +51,19 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     type: CalloutType.POST_COLLECTION,
     state: CalloutState.OPEN,
     sortOrder: 2,
-    profile: {
-      displayName: '👥 This is us!',
-      description:
-        'Here you will find the profiles of all contributors to this Challenge. Are you joining us? 👋 Nice to meet you! Please also provide your details below.',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [CommonDisplayLocation.HOME_RIGHT],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: '👥 This is us!',
+        description:
+          'Here you will find the profiles of all contributors to this Challenge. Are you joining us? 👋 Nice to meet you! Please also provide your details below.',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [CommonDisplayLocation.HOME_RIGHT],
+          },
+        ],
+      },
     },
     postTemplate: {
       type: 'Profile',
@@ -75,17 +81,19 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     type: CalloutType.POST_COLLECTION,
     state: CalloutState.OPEN,
     sortOrder: 1,
-    profile: {
-      displayName: 'Relevant news, research or use cases 📰',
-      description:
-        'Please share any relevant insights to help us better understand the Challenge. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: 'Relevant news, research or use cases 📰',
+        description:
+          'Please share any relevant insights to help us better understand the Challenge. You can describe why it is relevant and add a link or upload a document with the article. You can also comment on the insights already submitted by other community members!',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
+          },
+        ],
+      },
     },
     postTemplate: {
       type: 'contribution',
@@ -103,23 +111,25 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     type: CalloutType.WHITEBOARD,
     state: CalloutState.OPEN,
     sortOrder: 2,
-    profile: {
-      displayName: 'Who are the stakeholders?',
-      description:
-        'Choose one of the templates from the library to map your stakeholders here!',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
+    framing: {
+      profile: {
+        displayName: 'Who are the stakeholders?',
+        description:
+          'Choose one of the templates from the library to map your stakeholders here!',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [ChallengeDisplayLocation.CONTRIBUTE_RIGHT],
+          },
+        ],
+      },
+      whiteboard: {
+        content: EMPTY_WHITEBOARD_CONTENT,
+        nameID: 'stakeholders',
+        profileData: {
+          displayName: 'stakeholder map',
         },
-      ],
-    },
-    whiteboard: {
-      content: EMPTY_WHITEBOARD_CONTENT,
-      nameID: 'stakeholders',
-      profileData: {
-        displayName: 'stakeholder map',
       },
     },
   },
@@ -128,16 +138,18 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     type: CalloutType.LINK_COLLECTION,
     state: CalloutState.OPEN,
     sortOrder: 3,
-    profile: {
-      displayName: 'Reference / important documents',
-      description: 'Please add links to documents with reference material.💥',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.CONTRIBUTE],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: 'Reference / important documents',
+        description: 'Please add links to documents with reference material.💥',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [ChallengeDisplayLocation.CONTRIBUTE],
+          },
+        ],
+      },
     },
   },
   {
@@ -145,17 +157,19 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     type: CalloutType.POST,
     state: CalloutState.OPEN,
     sortOrder: 1,
-    profile: {
-      displayName: '💡 What Opportunities do you see?',
-      description:
-        'Please share any relevant direction for a solution that you can think of or have seen.',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.OPPORTUNITIES_LEFT],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: '💡 What Opportunities do you see?',
+        description:
+          'Please share any relevant direction for a solution that you can think of or have seen.',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [ChallengeDisplayLocation.OPPORTUNITIES_LEFT],
+          },
+        ],
+      },
     },
   },
   {
@@ -163,17 +177,19 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
     type: CalloutType.POST_COLLECTION,
     state: CalloutState.OPEN,
     sortOrder: 1,
-    profile: {
-      displayName: 'Opportunity proposals',
-      description:
-        'What are the 💡 Opportunities that you think we should be working on? Please add them below and use the template provided.',
-      tagsets: [
-        {
-          name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
-          type: TagsetType.SELECT_ONE,
-          tags: [ChallengeDisplayLocation.OPPORTUNITIES_RIGHT],
-        },
-      ],
+    framing: {
+      profile: {
+        displayName: 'Opportunity proposals',
+        description:
+          'What are the 💡 Opportunities that you think we should be working on? Please add them below and use the template provided.',
+        tagsets: [
+          {
+            name: TagsetReservedName.CALLOUT_DISPLAY_LOCATION,
+            type: TagsetType.SELECT_ONE,
+            tags: [ChallengeDisplayLocation.OPPORTUNITIES_RIGHT],
+          },
+        ],
+      },
     },
     postTemplate: {
       type: 'opportunity',
