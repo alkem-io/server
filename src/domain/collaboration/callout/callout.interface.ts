@@ -4,14 +4,23 @@ import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { INameable } from '@domain/common/entity/nameable-entity/nameable.interface';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IWhiteboardRt } from '@domain/common/whiteboard-rt/types';
+import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
+import { NameID } from '@domain/common/scalars/scalar.nameid';
+import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 
 @ObjectType('Callout')
-export abstract class ICallout extends INameable {
+export abstract class ICallout extends IAuthorizable {
+  @Field(() => NameID, {
+    nullable: false,
+    description:
+      'A name identifier of the entity, unique within a given scope.',
+  })
+  nameID!: string;
+
   @Field(() => CalloutType, {
     description: 'The Callout type, e.g. Post, Whiteboard, Discussion',
   })
@@ -26,6 +35,12 @@ export abstract class ICallout extends INameable {
     description: 'Visibility of the Callout.',
   })
   visibility!: CalloutVisibility;
+
+  @Field(() => ICalloutFraming, {
+    nullable: true,
+    description: 'The Callout Framing associated with this Callout.',
+  })
+  framing!: ICalloutFraming;
 
   @Field(() => [IPost], {
     nullable: true,

@@ -137,7 +137,12 @@ export class NotificationPayloadBuilder {
   ): Promise<CollaborationPostCreatedEventPayload> {
     const post = await this.postRepository.findOne({
       where: { id: postId },
-      relations: ['callout', 'callout.profile', 'profile'],
+      relations: [
+        'callout',
+        'callout.framing',
+        'callout.framing.profile',
+        'profile',
+      ],
     });
     if (!post) {
       throw new NotificationEventException(
@@ -163,7 +168,7 @@ export class NotificationPayloadBuilder {
     const payload: CollaborationPostCreatedEventPayload = {
       triggeredBy: post.createdBy,
       callout: {
-        displayName: callout.profile.displayName,
+        displayName: callout.framing.profile.displayName,
         nameID: callout.nameID,
       },
       post: {
@@ -184,7 +189,12 @@ export class NotificationPayloadBuilder {
   ): Promise<CollaborationWhiteboardCreatedEventPayload> {
     const whiteboard = await this.whiteboardRepository.findOne({
       where: { id: whiteboardId },
-      relations: ['callout', 'callout.profile', 'profile'],
+      relations: [
+        'callout',
+        'callout.framing',
+        'callout.framing.profile',
+        'profile',
+      ],
     });
     if (!whiteboard) {
       throw new NotificationEventException(
@@ -210,7 +220,7 @@ export class NotificationPayloadBuilder {
     const payload: CollaborationWhiteboardCreatedEventPayload = {
       triggeredBy: whiteboard.createdBy,
       callout: {
-        displayName: callout.profile.displayName,
+        displayName: callout.framing.profile.displayName,
         nameID: callout.nameID,
       },
       whiteboard: {
@@ -239,8 +249,8 @@ export class NotificationPayloadBuilder {
       triggeredBy: userId,
       callout: {
         id: callout.id,
-        displayName: callout.profile.displayName,
-        description: callout.profile.description,
+        displayName: callout.framing.profile.displayName,
+        description: callout.framing.profile.description,
         nameID: callout.nameID,
         type: callout.type,
       },
@@ -257,7 +267,12 @@ export class NotificationPayloadBuilder {
   ): Promise<CollaborationPostCommentEventPayload> {
     const post = await this.postRepository.findOne({
       where: { id: postInput.id },
-      relations: ['callout', 'callout.profile', 'profile'],
+      relations: [
+        'callout',
+        'callout.framing',
+        'callout.framing.profile',
+        'profile',
+      ],
     });
 
     if (!post) {
@@ -290,7 +305,7 @@ export class NotificationPayloadBuilder {
     const payload: CollaborationPostCommentEventPayload = {
       triggeredBy: post.createdBy,
       callout: {
-        displayName: callout.profile.displayName,
+        displayName: callout.framing.profile.displayName,
         nameID: callout.nameID,
       },
       post: {
@@ -329,7 +344,7 @@ export class NotificationPayloadBuilder {
     const payload: CollaborationDiscussionCommentEventPayload = {
       triggeredBy: messageResult.sender,
       callout: {
-        displayName: callout.profile.displayName,
+        displayName: callout.framing.profile.displayName,
         nameID: callout.nameID,
       },
 

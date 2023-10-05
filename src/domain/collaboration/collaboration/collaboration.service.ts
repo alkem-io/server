@@ -336,8 +336,10 @@ export class CollaborationService {
       {
         relations: {
           callouts: {
-            profile: {
-              tagsets: true,
+            framing: {
+              profile: {
+                tagsets: true,
+              },
             },
           },
         },
@@ -360,7 +362,7 @@ export class CollaborationService {
       // Filter by Callout display locations
       const locationCheck =
         args.displayLocations && args.displayLocations.length
-          ? callout.profile.tagsets?.some(
+          ? callout.framing.profile.tagsets?.some(
               tagset =>
                 tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION &&
                 tagset.tags.length > 0 &&
@@ -375,7 +377,7 @@ export class CollaborationService {
       // Filter by tagsets
       const tagsetCheck =
         args.tagsets && args.tagsets.length
-          ? callout.profile?.tagsets?.some(calloutTagset =>
+          ? callout.framing.profile?.tagsets?.some(calloutTagset =>
               args.tagsets?.some(
                 argTagset =>
                   argTagset.name === calloutTagset.name &&

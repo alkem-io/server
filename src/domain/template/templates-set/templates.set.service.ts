@@ -28,6 +28,7 @@ import { CreateCalloutTemplateInput } from '../callout-template/dto/callout.temp
 import { CalloutTemplateService } from '../callout-template/callout.template.service';
 import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { AgentInfo } from '@core/authentication/agent-info';
 
 @Injectable()
 export class TemplatesSetService {
@@ -242,7 +243,8 @@ export class TemplatesSetService {
 
   async createCalloutTemplate(
     templatesSet: ITemplatesSet,
-    calloutTemplateInput: CreateCalloutTemplateInput
+    calloutTemplateInput: CreateCalloutTemplateInput,
+    agentInfo: AgentInfo
   ): Promise<ICalloutTemplate> {
     templatesSet.calloutTemplates = await this.getCalloutTemplates(
       templatesSet
@@ -251,7 +253,8 @@ export class TemplatesSetService {
     const calloutTemplate =
       await this.calloutTemplateService.createCalloutTemplate(
         calloutTemplateInput,
-        storageBucket
+        storageBucket,
+        agentInfo
       );
     templatesSet.calloutTemplates.push(calloutTemplate);
     await this.templatesSetRepository.save(templatesSet);

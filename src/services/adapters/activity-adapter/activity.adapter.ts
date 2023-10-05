@@ -116,7 +116,7 @@ export class ActivityAdapter {
 
     const callout = eventData.callout;
     const collaborationID = await this.getCollaborationIdForCallout(callout.id);
-    const description = `[${callout.profile.displayName}] - ${callout.profile.description}`;
+    const description = `[${callout.framing.profile.displayName}] - ${callout.framing.profile.description}`;
     const activity = await this.activityService.createActivity({
       collaborationID,
       triggeredBy: eventData.triggeredBy,
@@ -161,7 +161,7 @@ export class ActivityAdapter {
     this.logEventTriggered(eventData, eventType);
 
     const reference = eventData.reference;
-    const description = `[${eventData.callout.profile.displayName}] - ${reference.name}`;
+    const description = `[${eventData.callout.framing.profile.displayName}] - ${reference.name}`;
     const collaborationID = await this.getCollaborationIdForCallout(
       eventData.callout.id
     );

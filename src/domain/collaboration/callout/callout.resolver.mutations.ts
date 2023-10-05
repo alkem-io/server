@@ -308,7 +308,7 @@ export class CalloutResolverMutations {
     reference.authorization =
       await this.authorizationPolicyService.inheritParentAuthorization(
         reference.authorization,
-        callout.profile.authorization
+        callout.framing?.profile.authorization
       );
     const referenceAuthorized = await this.referenceService.saveReference(
       reference

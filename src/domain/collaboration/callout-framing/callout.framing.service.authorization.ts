@@ -7,6 +7,8 @@ import { ProfileAuthorizationService } from '@domain/common/profile/profile.serv
 import { CalloutFramingService } from './callout.framing.service';
 import { CalloutFraming } from './callout.framing.entity';
 import { ICalloutFraming } from './callout.framing.interface';
+import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
+import { WhiteboardRtAuthorizationService } from '@domain/common/whiteboard-rt/whiteboard.rt.authorization.service';
 
 @Injectable()
 export class CalloutFramingAuthorizationService {
@@ -14,6 +16,8 @@ export class CalloutFramingAuthorizationService {
     private calloutFramingService: CalloutFramingService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
+    private whiteboardAuthorizationService: WhiteboardAuthorizationService,
+    private whiteboardRtAuthorizationService: WhiteboardRtAuthorizationService,
     @InjectRepository(CalloutFraming)
     private calloutFramingRepository: Repository<CalloutFraming>
   ) {}
@@ -36,6 +40,22 @@ export class CalloutFramingAuthorizationService {
         calloutFraming.profile,
         calloutFraming.authorization
       );
+
+    if (calloutFraming.whiteboard) {
+      calloutFraming.whiteboard =
+        await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
+          calloutFraming.whiteboard,
+          calloutFraming.authorization
+        );
+    }
+
+    if (calloutFraming.whiteboardRt) {
+      calloutFraming.whiteboardRt =
+        await this.whiteboardRtAuthorizationService.applyAuthorizationPolicy(
+          calloutFraming.whiteboardRt,
+          calloutFraming.authorization
+        );
+    }
 
     return this.calloutFramingRepository.save(calloutFraming);
   }

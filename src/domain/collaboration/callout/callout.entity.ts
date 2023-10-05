@@ -13,14 +13,18 @@ import { CalloutType } from '@common/enums/callout.type';
 import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { PostTemplate } from '@domain/template/post-template/post.template.entity';
 import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
 import { Room } from '@domain/communication/room/room.entity';
 import { WhiteboardRt } from '@domain/common/whiteboard-rt/types';
+import { CalloutFraming } from '../callout-framing/callout.framing.entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 
 @Entity()
-export class Callout extends NameableEntity implements ICallout {
+export class Callout extends AuthorizableEntity implements ICallout {
+  @Column()
+  nameID!: string;
+
   @Column('text', { nullable: false })
   type!: CalloutType;
 
@@ -32,6 +36,14 @@ export class Callout extends NameableEntity implements ICallout {
 
   @Column('text', { nullable: false, default: CalloutVisibility.DRAFT })
   visibility!: CalloutVisibility;
+
+  @OneToOne(() => CalloutFraming, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  framing: CalloutFraming;
 
   @OneToMany(() => Whiteboard, whiteboard => whiteboard.callout, {
     eager: false,
@@ -94,4 +106,9 @@ export class Callout extends NameableEntity implements ICallout {
 
   @Column('datetime')
   publishedDate!: Date;
+
+  constructor() {
+    super();
+    this.framing = new CalloutFraming();
+  }
 }

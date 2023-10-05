@@ -75,10 +75,10 @@ export class CalloutAuthorizationService {
       );
     }
 
-    callout.profile = await this.calloutService.getProfile(callout);
-    callout.profile =
+    callout.framing.profile = await this.calloutService.getProfile(callout);
+    callout.framing.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
-        callout.profile,
+        callout.framing.profile,
         callout.authorization
       );
 

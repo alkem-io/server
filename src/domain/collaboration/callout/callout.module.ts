@@ -25,6 +25,7 @@ import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { WhiteboardRtModule } from '@domain/common/whiteboard-rt';
 import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
 import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
+import { CalloutFramingModule } from '../callout-framing/callout.framing.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { StorageBucketResolverModule } from '@services/infrastructure/storage-bu
     MessagingModule,
     ReferenceModule,
     StorageBucketResolverModule,
+    CalloutFramingModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [

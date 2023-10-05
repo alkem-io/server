@@ -58,6 +58,7 @@ import {
 import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
 import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { CalloutFramingService } from '../callout-framing/callout.framing.service';
 
 @Injectable()
 export class CalloutService {
@@ -73,6 +74,7 @@ export class CalloutService {
     private userLookupService: UserLookupService,
     private storageBucketResolverService: StorageBucketResolverService,
     private profileService: ProfileService,
+    private calloutFramingService: CalloutFramingService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -143,7 +145,7 @@ export class CalloutService {
       tagsetInputs
     );
 
-    callout.profile = await this.profileService.createProfile(
+    callout.framing.profile = await this.profileService.createProfile(
       calloutData.profile,
       ProfileType.CALLOUT,
       parentStorageBucket
@@ -334,8 +336,8 @@ export class CalloutService {
     });
 
     if (calloutUpdateData.profileData) {
-      callout.profile = await this.profileService.updateProfile(
-        callout.profile,
+      callout.framing.profile = await this.profileService.updateProfile(
+        callout.framing.profile,
         calloutUpdateData.profileData
       );
     }
@@ -385,12 +387,12 @@ export class CalloutService {
     callout: ICallout,
     group: CalloutDisplayLocation
   ) {
-    const displayLocationTagset = callout.profile.tagsets?.find(
+    const displayLocationTagset = callout.framing.profile.tagsets?.find(
       tagset => tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION
     );
     if (!displayLocationTagset) {
       throw new EntityNotFoundException(
-        `Callout display location tagset not found for profile: ${callout.profile.id}`,
+        `Callout display location tagset not found for profile: ${callout.framing.profile.id}`,
         LogContext.TAGSET
       );
     }
@@ -410,12 +412,12 @@ export class CalloutService {
         comments: true,
         postTemplate: true,
         whiteboardTemplate: true,
-        profile: true,
+        framing: true,
       },
     });
 
-    if (callout.profile) {
-      await this.profileService.deleteProfile(callout.profile.id);
+    if (callout.framing) {
+      await this.calloutFramingService.delete(callout.framing);
     }
 
     if (callout.whiteboards) {
@@ -464,15 +466,21 @@ export class CalloutService {
     relations: FindOptionsRelationByString = []
   ): Promise<IProfile> {
     const callout = await this.getCalloutOrFail(calloutInput.id, {
-      relations: ['profile', ...relations],
+      relations: ['framing', 'framing.profile', ...relations],
     });
-    if (!callout.profile)
+    if (!callout.framing)
+      throw new EntityNotFoundException(
+        `Callout framing not initialised: ${calloutInput.id}`,
+        LogContext.COLLABORATION
+      );
+
+    if (!callout.framing.profile)
       throw new EntityNotFoundException(
         `Callout profile not initialised: ${calloutInput.id}`,
         LogContext.COLLABORATION
       );
 
-    return callout.profile;
+    return callout.framing.profile;
   }
 
   public async getActivityCount(callout: ICallout): Promise<number> {
@@ -497,10 +505,10 @@ export class CalloutService {
   private async getReferencesCountInLinkCallout(calloutId: string) {
     const callout = await this.calloutRepository.findOne({
       where: { id: calloutId },
-      relations: { profile: { references: true } },
+      relations: { framing: { profile: { references: true } } },
     });
 
-    return callout?.profile.references?.length ?? 0;
+    return callout?.framing.profile.references?.length ?? 0;
   }
 
   private async setNameIdOnPostData(
@@ -544,7 +552,7 @@ export class CalloutService {
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: ['profile', 'posts', 'posts.profile'],
     });
-    if (!callout.posts || !callout.profile)
+    if (!callout.posts || !callout.framing.profile)
       throw new EntityNotInitializedException(
         `Callout (${calloutID}) not initialised`,
         LogContext.COLLABORATION
@@ -570,13 +578,13 @@ export class CalloutService {
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: ['profile', 'profile.references'],
     });
-    if (!callout.profile || !callout.profile.references)
+    if (!callout.framing.profile || !callout.framing.profile.references)
       throw new EntityNotInitializedException(
         `Callout (${calloutID}) not initialised`,
         LogContext.COLLABORATION
       );
     const referenceInput: CreateReferenceOnProfileInput = {
-      profileID: callout.profile.id,
+      profileID: callout.framing.profile.id,
       ...linkData,
     };
     const reference = await this.profileService.createReference(referenceInput);

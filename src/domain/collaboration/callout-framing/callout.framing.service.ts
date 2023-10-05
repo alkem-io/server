@@ -18,6 +18,9 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { ProfileType } from '@common/enums';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { WhiteboardRtService } from '@domain/common/whiteboard-rt/whiteboard.rt.service';
+import { AgentInfo } from '@core/authentication/agent-info';
 
 @Injectable()
 export class CalloutFramingService {
@@ -25,20 +28,23 @@ export class CalloutFramingService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private profileService: ProfileService,
+    private whiteboardService: WhiteboardService,
+    private whiteboardRtService: WhiteboardRtService,
     @InjectRepository(CalloutFraming)
     private calloutFramingRepository: Repository<CalloutFraming>
   ) {}
 
   public async createCalloutFraming(
     calloutFramingData: CreateCalloutFramingInput,
-    parentStorageBucket: IStorageBucket
+    parentStorageBucket: IStorageBucket,
+    agentInfo: AgentInfo
   ): Promise<ICalloutFraming> {
     const calloutFraming: ICalloutFraming =
       CalloutFraming.create(calloutFramingData);
 
     calloutFraming.authorization = new AuthorizationPolicy();
 
-    const { profile, whiteboardContent } = calloutFramingData;
+    const { profile, whiteboard, whiteboardRt } = calloutFramingData;
 
     calloutFraming.profile = await this.profileService.createProfile(
       profile,
@@ -46,14 +52,30 @@ export class CalloutFramingService {
       parentStorageBucket
     );
 
-    calloutFraming.whiteboardContent = whiteboardContent;
+    if (whiteboard) {
+      calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
+        whiteboard,
+        parentStorageBucket,
+        agentInfo.userID
+      );
+    }
+
+    if (whiteboardRt) {
+      calloutFraming.whiteboardRt =
+        await this.whiteboardRtService.createWhiteboardRt(
+          whiteboardRt,
+          parentStorageBucket,
+          agentInfo.userID
+        );
+    }
 
     return calloutFraming;
   }
 
   public async updateCalloutFraming(
     calloutFraming: ICalloutFraming,
-    calloutFramingData: UpdateCalloutFramingInput
+    calloutFramingData: UpdateCalloutFramingInput,
+    agentInfo: AgentInfo
   ): Promise<ICalloutFraming> {
     if (calloutFramingData.profile) {
       calloutFraming.profile = await this.profileService.updateProfile(
@@ -62,8 +84,12 @@ export class CalloutFramingService {
       );
     }
 
-    if (calloutFramingData.whiteboardContent) {
-      calloutFraming.whiteboardContent = calloutFramingData.whiteboardContent;
+    if (calloutFraming.whiteboard && calloutFramingData.whiteboard) {
+      calloutFraming.whiteboard = await this.whiteboardService.updateWhiteboard(
+        calloutFraming.whiteboard,
+        calloutFramingData.whiteboard,
+        agentInfo
+      );
     }
 
     return calloutFraming;
@@ -117,15 +143,18 @@ export class CalloutFramingService {
     calloutFramingInput: ICalloutFraming,
     relations: FindOptionsRelationByString = []
   ): Promise<IProfile> {
-    const callout = await this.getCalloutFramingOrFail(calloutFramingInput.id, {
-      relations: ['profile', ...relations],
-    });
-    if (!callout.profile)
+    const calloutFraming = await this.getCalloutFramingOrFail(
+      calloutFramingInput.id,
+      {
+        relations: ['profile', ...relations],
+      }
+    );
+    if (!calloutFraming.profile)
       throw new EntityNotFoundException(
         `Callout profile not initialised: ${calloutFramingInput.id}`,
         LogContext.COLLABORATION
       );
 
-    return callout.profile;
+    return calloutFraming.profile;
   }
 }

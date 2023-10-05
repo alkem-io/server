@@ -63,7 +63,8 @@ export class TemplatesSetResolverMutations {
     const calloutTemplate =
       await this.templatesSetService.createCalloutTemplate(
         templatesSet,
-        calloutTemplateInput
+        calloutTemplateInput,
+        agentInfo
       );
     await this.calloutTemplateAuthorizationService.applyAuthorizationPolicy(
       calloutTemplate,
