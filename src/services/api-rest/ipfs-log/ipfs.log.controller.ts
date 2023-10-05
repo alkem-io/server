@@ -11,6 +11,8 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AgentInfo } from '@core/authentication';
 import { RestGuard } from '@core/authorization/rest.guard';
+import { LogContext } from '@common/enums';
+import { NotFoundHttpException } from '@common/exceptions/http';
 
 @Controller('/ipfs')
 export class IpfsLogController {
@@ -25,8 +27,9 @@ export class IpfsLogController {
     @CurrentUser() agentInfo: AgentInfo,
     @Param('id') id: string
   ): Promise<StreamableFile | void> {
-    this.logger.warn(
-      `IPFS accessed from user: ${agentInfo.email} for document with id: ${id}`
+    throw new NotFoundHttpException(
+      `IPFS accessed from user: ${agentInfo.email} for document with id: ${id}`,
+      LogContext.IPFS
     );
   }
 }
