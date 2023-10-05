@@ -79,7 +79,11 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`callout\` DROP FOREIGN KEY \`FK_19991450cf75dc486700ca034c6\``
     );
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` DROP FOREIGN KEY \`FK_c7c005697d999f2b836052f4967\``
+    );
     await queryRunner.query(`ALTER TABLE callout DROP COLUMN profileId`);
+    await queryRunner.query(`ALTER TABLE callout DROP COLUMN whiteboardRtId`);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
