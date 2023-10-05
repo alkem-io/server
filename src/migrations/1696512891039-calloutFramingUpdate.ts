@@ -12,12 +12,12 @@ enum CalloutType {
 
 export class calloutFramingUpdate1696512891039 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // await queryRunner.query(
-    //   `ALTER TABLE callout_framing ADD whiteboardId char(36) NOT NULL`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE callout_framing ADD whiteboardRtId char(36) NOT NULL`
-    // );
+    await queryRunner.query(
+      `ALTER TABLE callout_framing ADD whiteboardId char(36) NOT NULL`
+    );
+    await queryRunner.query(
+      `ALTER TABLE callout_framing ADD whiteboardRtId char(36) NOT NULL`
+    );
 
     const callouts: {
       id: string;
