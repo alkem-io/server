@@ -1,5 +1,4 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { LoggerService } from '@nestjs/common';
 import { Inject, UseGuards } from '@nestjs/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { GraphqlGuard } from '@core/authorization';
@@ -11,7 +10,6 @@ import { CalloutFramingService } from './callout.framing.service';
 export class CalloutFramingResolverFields {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
     private calloutFramingService: CalloutFramingService
   ) {}
 
