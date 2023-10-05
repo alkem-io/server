@@ -96,7 +96,7 @@ export class StorageBucketResolverFields {
   async parentEntity(
     @Parent() storageBucket: IStorageBucket
   ): Promise<IStorageBucketParent | null> {
-    return await this.storageBucketService.getContainingEntityProfile(
+    return await this.storageBucketService.getStorageBucketParent(
       storageBucket
     );
   }

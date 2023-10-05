@@ -346,7 +346,7 @@ export class StorageBucketService {
     return result;
   }
 
-  public async getContainingEntityProfile(
+  public async getStorageBucketParent(
     storageBucket: IStorageBucket
   ): Promise<IStorageBucketParent | null> {
     const profile = await this.profileRepository.findOne({
@@ -356,7 +356,7 @@ export class StorageBucketService {
         },
       },
     });
-    if (!profile || profile.type) {
+    if (!profile || !profile.type) {
       return null;
     }
     const parentEntity: IStorageBucketParent = {
