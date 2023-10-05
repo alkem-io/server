@@ -32,6 +32,7 @@ export class ChatGuidanceResolverQueries {
       AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE,
       `Access interactive guidance: ${agentInfo.email}`
     );
+
     if (!this.chatGuidanceService.isGuidanceEngineEnabled()) {
       return {
         answer: 'guidance engine not enabled',
