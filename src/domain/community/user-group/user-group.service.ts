@@ -52,7 +52,7 @@ export class UserGroupService {
     group.authorization = new AuthorizationPolicy();
 
     (group as IUserGroup).profile = await this.profileService.createProfile(
-      userGroupData.profile,
+      userGroupData.profileData,
       ProfileType.USER_GROUP,
       parentStorageBucket
     );
@@ -228,9 +228,8 @@ export class UserGroupService {
 
     const newGroup = await this.createUserGroup(
       {
-        name: name,
         parentID: groupable.id,
-        profile: {
+        profileData: {
           displayName: name,
         },
       },

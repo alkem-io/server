@@ -28,10 +28,4 @@ export abstract class ISource {
     description: 'The URI of the source',
   })
   uri!: string;
-
-  @Field(() => String, {
-    nullable: false,
-    description: 'The title of the source',
-  })
-  title!: string;
 }
