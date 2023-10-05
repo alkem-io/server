@@ -344,6 +344,7 @@ integrations:
     indices:
       contribution: ${ELASTIC_INDEX_ACTIVITY_NAME}:contribution-events
       namings: ${ELASTIC_INDEX_NAMINGS_NAME}:namings
+      guidance_usage: ${ELASTIC_INDEX_GUIDANCE_USAGE_NAME}:guidance-usage
     tls:
       rejectUnauthorized: ${ELASTIC_TLS_REJECT_UNAUTHORIZED}:false
     policies:
