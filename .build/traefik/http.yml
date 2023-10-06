@@ -55,6 +55,11 @@ http:
         servers:
           - url: 'http://synapse-admin:80/'
 
+    ipfs-api:
+      loadBalancer:
+        servers:
+          - url: 'http://ipfs:5001'
+
   middlewares:
     strip-api-private-non-interactive-prefix:
       stripPrefix:
@@ -226,6 +231,12 @@ http:
       service: 'rabbitmq-management'
       entryPoints:
         - 'rabbitmq-management'
+
+    ipfs-api:
+        rule: 'PathPrefix(`/`)'
+        service: 'ipfs-api'
+        entryPoints:
+          - 'ipfs-api'
 
 tcp:
   services:
