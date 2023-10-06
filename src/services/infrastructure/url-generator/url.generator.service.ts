@@ -1,9 +1,6 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { ConfigurationTypes } from '@common/enums/configuration.type';
-import {
-  EntityNotFoundException,
-  NotSupportedException,
-} from '@common/exceptions';
+import { EntityNotFoundException } from '@common/exceptions';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -99,7 +96,7 @@ export class UrlGeneratorService {
       case ProfileType.WHITEBOARD_RT:
         return await this.getWhiteboardRtUrlPath(profile.id);
       case ProfileType.INNOVATION_FLOW:
-        return await this.getInnovationFlowUrlPath(profile.id);
+        return await this.getInnovationFlowUrlPathOrFail(profile.id);
       case ProfileType.WHITEBOARD_TEMPLATE:
         return await this.getTemplateUrlPathOrFail(
           'whiteboard_template',
@@ -122,14 +119,24 @@ export class UrlGeneratorService {
       case ProfileType.CALENDAR_EVENT:
         return await this.getCalendarEventUrlPath(profile.id);
 
-      // to do: remaining profile types
       case ProfileType.DISCUSSION:
-      case ProfileType.INNOVATION_HUB:
-      case ProfileType.USER_GROUP:
-        throw new NotSupportedException(
-          `Unable to generate URL for profile (${profile.id}) of type: ${profile.type}`,
-          LogContext.URL_GENERATOR
+        const discussionEntityInfo = await this.getNameableEntityInfoOrFail(
+          'discussion',
+          this.FIELD_PROFILE_ID,
+          profile.id
         );
+        return `${this.endpoint_cluster}/forum/discussion/${discussionEntityInfo.entityNameID}`;
+      case ProfileType.INNOVATION_HUB:
+        const innovationHubEntityInfo = await this.getNameableEntityInfoOrFail(
+          'innovation_hub',
+          this.FIELD_PROFILE_ID,
+          profile.id
+        );
+        //I am not sure whether actually we shouldn't return the subdomain of the innovation hub here? It's either that or the admin
+        return `${this.endpoint_cluster}/admin/innovation-hubs/${innovationHubEntityInfo.entityNameID}`;
+      case ProfileType.USER_GROUP:
+        // to do: implement and decide what to do with user groups
+        return '';
     }
     return '';
   }
@@ -301,7 +308,9 @@ export class UrlGeneratorService {
     return `${challengeUrlPath}/opportunities/${result.opportunityNameId}`;
   }
 
-  private async getInnovationFlowUrlPath(profileID: string): Promise<string> {
+  private async getInnovationFlowUrlPathOrFail(
+    profileID: string
+  ): Promise<string> {
     const [innovationFlowInfo]: {
       entityID: string;
     }[] = await this.entityManager.connection.query(
@@ -310,6 +319,13 @@ export class UrlGeneratorService {
         WHERE innovation_flow.profileId = '${profileID}'
       `
     );
+
+    if (!innovationFlowInfo) {
+      throw new EntityNotFoundException(
+        `Unable to find innovationFlow for profile: ${profileID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
 
     // Try challenge first
     const challengeInfo = await this.getNameableEntityInfo(
