@@ -33,7 +33,7 @@ export class CalloutTemplate extends TemplateBase implements ICalloutTemplate {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  responseDefaults!: CalloutContributionDefaults;
+  contributionDefaults!: CalloutContributionDefaults;
 
   @OneToOne(() => CalloutContributionPolicy, {
     eager: true,
@@ -41,12 +41,12 @@ export class CalloutTemplate extends TemplateBase implements ICalloutTemplate {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  responsePolicy!: CalloutContributionPolicy;
+  contributionPolicy!: CalloutContributionPolicy;
 
   constructor() {
     super();
     this.framing = new CalloutFraming();
-    this.responseDefaults = new CalloutContributionDefaults();
-    this.responsePolicy = new CalloutContributionPolicy();
+    this.contributionDefaults = new CalloutContributionDefaults();
+    this.contributionPolicy = new CalloutContributionPolicy();
   }
 }
