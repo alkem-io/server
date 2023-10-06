@@ -12,14 +12,14 @@ Variables:
     "templatesSetID": "uuid",
     "profile": {
         "displayName": "template displayname",
-        "description": template description"
+        "description": "template description"
     },
     "responseDefaults": {
-      "description": "this is what users will see"
+      "postDescription": "this is what users will see"
     },
     "responsePolicy": {
-      "allowedResponseTypes": ["COMMENTS"],
-      "allowNewResponses": true
+      "allowedContributionTypes": ["COMMENTS"],
+      "state": "OPEN"
     },
     "framing": {
       "profile": {
