@@ -49,8 +49,6 @@ import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { IReference } from '@domain/common/reference';
 import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
-import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
-import { IWhiteboardRt } from '@domain/common/whiteboard-rt/types';
 import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
 import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
@@ -65,7 +63,6 @@ export class CalloutService {
     private postTemplateService: PostTemplateService,
     private whiteboardTemplateService: WhiteboardTemplateService,
     private whiteboardService: WhiteboardService,
-    private whiteboardRtService: WhiteboardRtService,
     private namingService: NamingService,
     private roomService: RoomService,
     private userLookupService: UserLookupService,
@@ -385,7 +382,6 @@ export class CalloutService {
       relations: {
         posts: true,
         whiteboards: true,
-        whiteboardRt: true,
         comments: true,
         postTemplate: true,
         whiteboardTemplate: true,
@@ -401,12 +397,6 @@ export class CalloutService {
       for (const whiteboard of callout.whiteboards) {
         await this.whiteboardService.deleteWhiteboard(whiteboard.id);
       }
-    }
-
-    if (callout.whiteboardRt) {
-      await this.whiteboardRtService.deleteWhiteboardRt(
-        callout.whiteboardRt.id
-      );
     }
 
     if (callout.posts) {
@@ -668,17 +658,6 @@ export class CalloutService {
       results.push(whiteboard);
     }
     return results;
-  }
-
-  public async getWhiteboardRt(
-    callout: ICallout
-  ): Promise<IWhiteboardRt | undefined> {
-    const res: ICallout = await this.calloutRepository.findOneOrFail({
-      where: { id: callout.id },
-      relations: { whiteboardRt: true },
-    });
-
-    return res.whiteboardRt;
   }
 
   public async getPostsFromCallout(

@@ -16,7 +16,6 @@ import { Collaboration } from '@domain/collaboration/collaboration/collaboration
 import { PostTemplate } from '@domain/template/post-template/post.template.entity';
 import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
 import { Room } from '@domain/communication/room/room.entity';
-import { WhiteboardRt } from '@domain/common/whiteboard-rt/types';
 import { CalloutFraming } from '../callout-framing/callout.framing.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 
@@ -50,14 +49,6 @@ export class Callout extends AuthorizableEntity implements ICallout {
     cascade: true,
   })
   whiteboards?: Whiteboard[];
-
-  @OneToOne(() => WhiteboardRt, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  whiteboardRt?: WhiteboardRt;
 
   @OneToMany(() => Post, post => post.callout, {
     eager: false,

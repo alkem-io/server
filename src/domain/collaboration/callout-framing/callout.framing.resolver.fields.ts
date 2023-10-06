@@ -1,24 +1,27 @@
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Inject, UseGuards } from '@nestjs/common/decorators';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { UseGuards } from '@nestjs/common/decorators';
 import { GraphqlGuard } from '@core/authorization';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ICalloutFraming } from './callout.framing.interface';
-import { CalloutFramingService } from './callout.framing.service';
+import { Profiling } from '@common/decorators';
+import { Loader } from '@core/dataloader/decorators';
+import { CalloutFraming } from './callout.framing.entity';
+import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { ILoader } from '@core/dataloader/loader.interface';
 
 @Resolver(() => ICalloutFraming)
 export class CalloutFramingResolverFields {
-  constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private calloutFramingService: CalloutFramingService
-  ) {}
-
   @UseGuards(GraphqlGuard)
   @ResolveField('profile', () => IProfile, {
     nullable: false,
     description: 'The Profile for framing the associated Callout.',
   })
-  async profile(@Parent() calloutFraming: ICalloutFraming): Promise<IProfile> {
-    return this.calloutFramingService.getProfile(calloutFraming);
+  @Profiling.api
+  async profile(
+    @Parent() calloutFraming: ICalloutFraming,
+    @Loader(ProfileLoaderCreator, { parentClassRef: CalloutFraming })
+    loader: ILoader<IProfile>
+  ): Promise<IProfile> {
+    return loader.load(calloutFraming.id);
   }
 }

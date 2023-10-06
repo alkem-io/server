@@ -1,5 +1,5 @@
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CreateCalloutFramingInput } from './dto/callout.framing.dto.create';
 import { UpdateCalloutFramingInput } from './dto/callout.framing.dto.update';
@@ -26,7 +26,6 @@ import { AgentInfo } from '@core/authentication/agent-info';
 export class CalloutFramingService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
     private profileService: ProfileService,
     private whiteboardService: WhiteboardService,
     private whiteboardRtService: WhiteboardRtService,
@@ -116,6 +115,19 @@ export class CalloutFramingService {
     if (calloutFraming.profile) {
       await this.profileService.deleteProfile(calloutFraming.profile.id);
     }
+
+    if (calloutFraming.whiteboard) {
+      await this.whiteboardService.deleteWhiteboard(
+        calloutFraming.whiteboard.id
+      );
+    }
+
+    if (calloutFraming.whiteboardRt) {
+      await this.whiteboardRtService.deleteWhiteboardRt(
+        calloutFraming.whiteboardRt.id
+      );
+    }
+
     const result = await this.calloutFramingRepository.remove(
       calloutFraming as CalloutFraming
     );

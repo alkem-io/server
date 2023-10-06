@@ -22,7 +22,6 @@ import { PostTemplateModule } from '@domain/template/post-template/post.template
 import { WhiteboardTemplateModule } from '@domain/template/whiteboard-template/whiteboard.template.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
-import { WhiteboardRtModule } from '@domain/common/whiteboard-rt';
 import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
 import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
 import { CalloutFramingModule } from '../callout-framing/callout.framing.module';
@@ -37,7 +36,6 @@ import { CalloutFramingModule } from '../callout-framing/callout.framing.module'
     AuthorizationModule,
     PostModule,
     WhiteboardModule,
-    WhiteboardRtModule,
     RoomModule,
     CommunityPolicyModule,
     EntityResolverModule,

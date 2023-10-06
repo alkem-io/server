@@ -13,11 +13,9 @@ import { UUID_NAMEID } from '@domain/common/scalars';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { EntityNotFoundException } from '@common/exceptions';
-import { IProfile } from '@domain/common/profile/profile.interface';
 import {
   CalloutPostTemplateLoaderCreator,
   CalloutWhiteboardTemplateLoaderCreator,
-  ProfileLoaderCreator,
   UserLoaderCreator,
 } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -25,7 +23,6 @@ import { Loader } from '@core/dataloader/decorators';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
-import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -34,20 +31,6 @@ export class CalloutResolverFields {
     private readonly logger: LoggerService,
     private calloutService: CalloutService
   ) {}
-
-  @UseGuards(GraphqlGuard)
-  @ResolveField('profile', () => IProfile, {
-    nullable: false,
-    description: 'The Profile for this Callout.',
-  })
-  @Profiling.api
-  async profile(
-    @Parent() callout: ICallout,
-    @Loader(ProfileLoaderCreator, { parentClassRef: Callout })
-    loader: ILoader<IProfile>
-  ): Promise<IProfile> {
-    return loader.load(callout.id);
-  }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
@@ -131,19 +114,6 @@ export class CalloutResolverFields {
       limit,
       shuffle
     );
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('whiteboardRt', () => IWhiteboardRt, {
-    nullable: true,
-    description: 'The real time Whiteboard associated with this Callout.',
-  })
-  @Profiling.api
-  public whiteboardRt(
-    @Parent() callout: Callout
-  ): Promise<IWhiteboardRt | undefined> {
-    return this.calloutService.getWhiteboardRt(callout);
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)

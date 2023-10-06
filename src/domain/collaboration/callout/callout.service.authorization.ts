@@ -24,11 +24,10 @@ import {
   POLICY_RULE_CALLOUT_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
 } from '@common/constants';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { PostTemplateAuthorizationService } from '@domain/template/post-template/post.template.service.authorization';
 import { WhiteboardTemplateAuthorizationService } from '@domain/template/whiteboard-template/whiteboard.template.service.authorization';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
-import { WhiteboardRtAuthorizationService } from '@domain/common/whiteboard-rt';
+import { CalloutFramingAuthorizationService } from '../callout-framing/callout.framing.service.authorization';
 
 @Injectable()
 export class CalloutAuthorizationService {
@@ -36,11 +35,10 @@ export class CalloutAuthorizationService {
     private calloutService: CalloutService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
-    private whiteboardRtAuthorizationService: WhiteboardRtAuthorizationService,
     private postAuthorizationService: PostAuthorizationService,
     private postTemplateAuthorizationService: PostTemplateAuthorizationService,
     private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
-    private profileAuthorizationService: ProfileAuthorizationService,
+    private calloutFramingAuthorizationService: CalloutFramingAuthorizationService,
     private roomAuthorizationService: RoomAuthorizationService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
@@ -75,13 +73,11 @@ export class CalloutAuthorizationService {
       );
     }
 
-    callout.framing.profile = await this.calloutService.getProfile(callout);
-    callout.framing.profile =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(
-        callout.framing.profile,
+    callout.framing =
+      await this.calloutFramingAuthorizationService.applyAuthorizationPolicy(
+        callout.framing,
         callout.authorization
       );
-
     callout.whiteboards = await this.calloutService.getWhiteboardsFromCallout(
       callout,
       ['whiteboards.checkout']
@@ -91,14 +87,6 @@ export class CalloutAuthorizationService {
         whiteboard,
         callout.authorization
       );
-    }
-    callout.whiteboardRt = await this.calloutService.getWhiteboardRt(callout);
-    if (callout.whiteboardRt) {
-      callout.whiteboardRt =
-        await this.whiteboardRtAuthorizationService.applyAuthorizationPolicy(
-          callout.whiteboardRt,
-          callout.authorization
-        );
     }
 
     callout.comments = await this.calloutService.getComments(callout.id);

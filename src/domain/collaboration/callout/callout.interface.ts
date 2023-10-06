@@ -7,7 +7,6 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
-import { IWhiteboardRt } from '@domain/common/whiteboard-rt/types';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
@@ -56,9 +55,6 @@ export abstract class ICallout extends IAuthorizable {
 
   // exposed via field resolver
   whiteboards?: IWhiteboard[];
-
-  // exposed via field resolver
-  whiteboardRt?: IWhiteboardRt;
 
   @Field(() => IWhiteboardTemplate, {
     nullable: true,
