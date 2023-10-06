@@ -85,6 +85,9 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE \`whiteboard\` DROP FOREIGN KEY \`FK_fcabc1f3aa38aca70df4f66e938\``
     );
+    await queryRunner.query(
+      `ALTER TABLE callout ADD framingId char(36) NOT NULL`
+    );
 
     const callouts: {
       id: string;
@@ -121,6 +124,10 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
           `UPDATE whiteboard SET calloutId = 'NULL' WHERE id = '${whiteboards[0].id}'`
         );
 
+        await queryRunner.query(
+          `UPDATE callout SET framingId = '${calloutFramingID}' WHERE id = '${callout.id}'`
+        );
+
         continue;
       }
 
@@ -134,6 +141,9 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
                               NULL,
                               '${callout.whiteboardRtId}')`
         );
+        await queryRunner.query(
+          `UPDATE callout SET framingId = '${calloutFramingID}' WHERE id = '${callout.id}'`
+        );
         continue;
       }
 
@@ -145,6 +155,9 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
                             '${callout.profileId}',
                             NULL,
                             NULL)`
+      );
+      await queryRunner.query(
+        `UPDATE callout SET framingId = '${calloutFramingID}' WHERE id = '${callout.id}'`
       );
     }
 
