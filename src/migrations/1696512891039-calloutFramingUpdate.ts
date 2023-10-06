@@ -155,6 +155,7 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
       const whiteboardCheckoutAuthID = randomUUID();
       const whiteboardProfileId = randomUUID();
       const whiteboardProfileAuthId = randomUUID();
+      const whiteboardProfileLocationId = randomUUID();
       const whiteboardLifecycleId = randomUUID();
 
       await queryRunner.query(
@@ -180,11 +181,14 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
         );
 
       await queryRunner.query(
+        `INSERT INTO location VALUES ('${whiteboardProfileLocationId}', DEFAULT, DEFAULT, 1, '', '', DEFAULT ,DEFAULT, DEFAULT, DEFAULT)`
+      );
+      await queryRunner.query(
         `INSERT INTO profile (id, version, authorizationId, locationId, description, displayName)
                 VALUES ('${whiteboardProfileId}',
                         '1',
                         '${whiteboardProfileAuthId}',
-                        'NULL',
+                        '${whiteboardProfileLocationId}',
                         '',
                         '')`
       );
