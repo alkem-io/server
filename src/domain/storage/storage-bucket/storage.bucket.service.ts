@@ -29,6 +29,7 @@ import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { ProfileType } from '@common/enums';
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 5242880;
@@ -360,7 +361,7 @@ export class StorageBucketService {
       return null;
     }
     const parentEntity: IStorageBucketParent = {
-      type: profile?.type,
+      type: profile.type as ProfileType,
       displayName: profile.displayName,
       url: await this.urlGeneratorService.generateUrlForProfile(profile),
     };

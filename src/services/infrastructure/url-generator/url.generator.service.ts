@@ -131,6 +131,7 @@ export class UrlGeneratorService {
           LogContext.URL_GENERATOR
         );
     }
+    return '';
   }
 
   public async getNameableEntityInfoOrFail(
