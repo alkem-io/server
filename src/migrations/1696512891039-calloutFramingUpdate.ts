@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import replaceSpecialCharacters from 'replace-special-characters';
+import { escapeString } from './utils/escape-string';
 
 enum CalloutType {
   POST = 'post',
@@ -196,12 +197,13 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
       const lifecycleDefinition = { ...WhiteboardCheckoutLifecycleConfig };
       lifecycleDefinition.context.parentID = whiteboardCheckoutID;
       const machineDef = JSON.stringify(lifecycleDefinition);
+      const escapedDefinition = escapeString(machineDef);
       await queryRunner.query(
         `INSERT INTO lifecycle (id, version, machineState, machineDef)
                 VALUES ('${whiteboardLifecycleId}',
                         '1',
                         'NULL',
-                        ${machineDef})`
+                        '${escapedDefinition}')`
       );
 
       await queryRunner.query(
