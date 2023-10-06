@@ -62,7 +62,7 @@ jobs:
             org.opencontainers.image.description=${{ github.event.repository.description }}
             org.opencontainers.image.url=${{ github.event.repository.html_url }}
             org.opencontainers.image.source=${{ github.event.repository.clone_url }}
-            org.opencontainers.image.version=${{ steps.prep.outputs.version }}
-            org.opencontainers.image.created=${{ steps.prep.outputs.created }}
+            org.opencontainers.image.version=${{ github.action.GITHUB_OUTPUT.version }}
+            org.opencontainers.image.created=${{ github.action.GITHUB_OUTPUT.created }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=${{ github.event.repository.license.spdx_id }}
