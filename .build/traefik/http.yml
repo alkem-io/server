@@ -15,16 +15,6 @@ http:
         servers:
           - url: 'http://mailslurper:4437'
 
-    ipfs-http-adapter:
-      loadBalancer:
-        servers:
-          - url: 'http://ipfs:8080'
-
-    ipfs-api:
-      loadBalancer:
-        servers:
-          - url: 'http://ipfs:5001'
-
     alkemio-server:
       loadBalancer:
         servers:
@@ -202,8 +192,8 @@ http:
         - 'web'
 
     ipfs:
-      rule: 'PathPrefix(`/ipfs`) || HostRegexp(`{^[a-zA-Z0-9_.-]*$}.ipfs.localhost`)'
-      service: 'ipfs-http-adapter'
+      rule: 'PathPrefix(`/ipfs`)'
+      service: 'oathkeeper-proxy'
       entryPoints:
         - 'web'
 
@@ -230,12 +220,6 @@ http:
       service: 'mailslurper-client'
       entryPoints:
         - 'mailslurper-client'
-
-    ipfs-api:
-      rule: 'PathPrefix(`/`)'
-      service: 'ipfs-api'
-      entryPoints:
-        - 'ipfs-api'
 
     rabbitmq-management:
       rule: 'PathPrefix(`/`)'
