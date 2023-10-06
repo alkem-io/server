@@ -46,6 +46,8 @@ import { CalloutTemplateService } from '@domain/template/callout-template/callou
 import { ICalloutTemplate } from '@domain/template/callout-template/callout.template.interface';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
 import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
+import { DocumentService } from '@domain/storage/document/document.service';
+import { IDocument } from '@domain/storage/document';
 
 @Resolver(() => LookupQueryResults)
 export class LookupResolverFields {
@@ -69,8 +71,29 @@ export class LookupResolverFields {
     private innovationFlowService: InnovationFlowService,
     private calendarEventService: CalendarEventService,
     private calendarService: CalendarService,
+    private documentService: DocumentService,
     private innovationFlowTemplateService: InnovationFlowTemplateService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField(() => IDocument, {
+    nullable: true,
+    description: 'Lookup the specified Document',
+  })
+  async document(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('ID', { type: () => UUID }) id: string
+  ): Promise<IDocument> {
+    const document = await this.documentService.getDocumentOrFail(id);
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      document.authorization,
+      AuthorizationPrivilege.READ,
+      `lookup Document: ${document.id}`
+    );
+
+    return document;
+  }
 
   @UseGuards(GraphqlGuard)
   @ResolveField(() => IApplication, {
