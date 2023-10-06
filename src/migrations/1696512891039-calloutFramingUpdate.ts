@@ -75,6 +75,10 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
       `ALTER TABLE callout_framing ADD whiteboardRtId char(36) NOT NULL`
     );
 
+    await queryRunner.query(
+      `ALTER TABLE \`whiteboard\` DROP FOREIGN KEY \`FK_fcabc1f3aa38aca70df4f66e938\``
+    );
+
     const callouts: {
       id: string;
       type: CalloutType;
@@ -231,6 +235,9 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_c7c005697d999f2b836052f4967\` FOREIGN KEY (\`whiteboardRtId\`) REFERENCES \`whiteboard_rt\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`whiteboard\` ADD CONSTRAINT \`FK_fcabc1f3aa38aca70df4f66e938\` FOREIGN KEY (\`calloutId\`) REFERENCES \`callout\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
     await queryRunner.query(
