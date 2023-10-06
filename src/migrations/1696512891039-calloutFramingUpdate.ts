@@ -165,6 +165,10 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
       );
       await queryRunner.query(
         `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules)
+                VALUES ('${whiteboardCheckoutAuthID}', 1, '', '', 0, '')`
+      );
+      await queryRunner.query(
+        `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules)
                 VALUES ('${whiteboardProfileAuthId}', 1, '', '', 0, '')`
       );
 
