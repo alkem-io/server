@@ -36,7 +36,7 @@ export abstract class ICallout extends IAuthorizable {
   visibility!: CalloutVisibility;
 
   @Field(() => ICalloutFraming, {
-    nullable: true,
+    nullable: false,
     description: 'The Callout Framing associated with this Callout.',
   })
   framing!: ICalloutFraming;

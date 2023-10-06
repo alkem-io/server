@@ -107,7 +107,7 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
       );
 
       if (callout.type === CalloutType.WHITEBOARD) {
-        const whiteboards: { id: string }[] = await queryRunner.query(
+        const [whiteboard]: { id: string }[] = await queryRunner.query(
           `SELECT id FROM whiteboard WHERE calloutId = '${callout.id}'`
         );
         await queryRunner.query(
@@ -116,12 +116,12 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
                               '1',
                               '${calloutFramingAuthID}',
                               '${callout.profileId}',
-                              '${whiteboards[0].id}',
+                              '${whiteboard.id}',
                               NULL)`
         );
 
         await queryRunner.query(
-          `UPDATE whiteboard SET calloutId = 'NULL' WHERE id = '${whiteboards[0].id}'`
+          `UPDATE whiteboard SET calloutId = NULL WHERE id = '${whiteboard.id}'`
         );
 
         await queryRunner.query(

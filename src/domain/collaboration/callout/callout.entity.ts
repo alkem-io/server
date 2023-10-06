@@ -42,7 +42,7 @@ export class Callout extends AuthorizableEntity implements ICallout {
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  framing: CalloutFraming;
+  framing!: CalloutFraming;
 
   @OneToMany(() => Whiteboard, whiteboard => whiteboard.callout, {
     eager: false,
