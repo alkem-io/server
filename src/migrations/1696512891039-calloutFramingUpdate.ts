@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
+import replaceSpecialCharacters from 'replace-special-characters';
 
 enum CalloutType {
   POST = 'post',
@@ -10,6 +11,61 @@ enum CalloutType {
   LINK_COLLECTION = 'link-collection',
 }
 
+const WhiteboardCheckoutLifecycleConfig = {
+  id: 'whiteboard-checkout',
+  context: {
+    parentID: '',
+  },
+  initial: 'available',
+  states: {
+    available: {
+      entry: ['availableEntry'],
+      on: {
+        CHECKOUT: {
+          cond: 'WhiteboardCheckoutAuthorized',
+          target: 'checkedOut',
+          actions: ['lockedTransition', 'checkout'],
+        },
+      },
+      exit: ['availableExit'],
+    },
+    checkedOut: {
+      entry: ['lockedEntry'],
+      on: {
+        CHECKIN: {
+          cond: 'WhiteboardCheckinAuthorized',
+          target: 'available',
+          actions: ['availableTransition', 'checkin'],
+        },
+      },
+      exit: ['lockedExit'],
+    },
+  },
+};
+
+const NAMEID_LENGTH = 25;
+
+const createNameID = (base: string, useRandomSuffix = true): string => {
+  const NAMEID_SUFFIX_LENGTH = 5;
+  const nameIDExcludedCharacters = /[^a-zA-Z0-9-]/g;
+  let randomSuffix = '';
+  if (useRandomSuffix) {
+    const randomNumber = Math.floor(
+      Math.random() * Math.pow(10, NAMEID_SUFFIX_LENGTH - 1)
+    ).toString();
+    randomSuffix = `-${randomNumber}`;
+  }
+  const baseMaxLength = base.slice(0, NAMEID_LENGTH - NAMEID_SUFFIX_LENGTH);
+  // replace spaces + trim to NAMEID_LENGTH characters
+  const nameID = `${baseMaxLength}${randomSuffix}`.replace(/\s/g, '');
+  // replace characters with umlouts etc to normal characters
+  const nameIDNoSpecialCharacters: string = replaceSpecialCharacters(nameID);
+  // Remove any characters that are not allowed
+  return nameIDNoSpecialCharacters
+    .replace(nameIDExcludedCharacters, '')
+    .toLowerCase()
+    .slice(0, NAMEID_LENGTH);
+};
 export class calloutFramingUpdate1696512891039 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -49,6 +105,11 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
                               '${whiteboards[0].id}',
                               'NULL')`
         );
+
+        await queryRunner.query(
+          `UPDATE whiteboard SET calloutId = 'NULL' WHERE id = '${whiteboards[0].id}'`
+        );
+
         continue;
       }
 
@@ -76,6 +137,102 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
       );
     }
 
+    const calloutTemplates: {
+      id: string;
+      framingId: string;
+      profileId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, framingId, profileId from callout_template`
+    );
+    for (const calloutTemplate of calloutTemplates) {
+      const whiteboardID = randomUUID();
+      const whiteboardAuthID = randomUUID();
+      const whiteboardCheckoutID = randomUUID();
+      const whiteboardCheckoutAuthID = randomUUID();
+      const whiteboardProfileId = randomUUID();
+      const whiteboardProfileAuthId = randomUUID();
+      const whiteboardLifecycleId = randomUUID();
+
+      await queryRunner.query(
+        `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules)
+                VALUES ('${whiteboardAuthID}', 1, '', '', 0, '')`
+      );
+      await queryRunner.query(
+        `INSERT INTO authorization_policy (id, version, credentialRules, verifiedCredentialRules, anonymousReadAccess, privilegeRules)
+                VALUES ('${whiteboardProfileAuthId}', 1, '', '', 0, '')`
+      );
+
+      const [calloutFraming]: {
+        id: string;
+        content: string;
+        profileId: string;
+      }[] = await queryRunner.query(
+        `SELECT id, content, profileId FROM callout_framing WHERE id = '${calloutTemplate.framingId}'`
+      );
+
+      const [calloutTemplateProfile]: { displayName: string }[] =
+        await queryRunner.query(
+          `SELECT displayName FROM profile WHERE id = '${calloutTemplate.profileId}'`
+        );
+
+      await queryRunner.query(
+        `INSERT INTO profile (id, version, authorizationId, locationId, description, displayName)
+                VALUES ('${whiteboardProfileId}',
+                        '1',
+                        '${whiteboardProfileAuthId}',
+                        'NULL',
+                        '',
+                        '')`
+      );
+
+      const lifecycleDefinition = { ...WhiteboardCheckoutLifecycleConfig };
+      lifecycleDefinition.context.parentID = whiteboardCheckoutID;
+      const machineDef = JSON.stringify(lifecycleDefinition);
+      await queryRunner.query(
+        `INSERT INTO lifecycle (id, version, machineState, machineDef)
+                VALUES ('${whiteboardLifecycleId}',
+                        '1',
+                        'NULL',
+                        ${machineDef})`
+      );
+
+      await queryRunner.query(
+        `INSERT INTO whiteboard_checkout (id, version, whiteboardId, lockedBy, authorizationId, lifecycleId)
+                VALUES ('${whiteboardCheckoutID}',
+                        '1',
+                        '${whiteboardID}',
+                        'NULL',
+                        '${whiteboardCheckoutAuthID}',
+                        '${whiteboardLifecycleId}')`
+      );
+
+      const whiteboardNameID = createNameID(calloutTemplateProfile.displayName);
+
+      await queryRunner.query(
+        `INSERT INTO whiteboard (id, version, content, authorizationId, checkoutId, nameID, calloutId, createdBy, profileId) VALUES
+                ('${whiteboardID}',
+                1,
+                '${calloutFraming.content}',
+                '${whiteboardAuthID}',
+                '${whiteboardCheckoutID}',
+                '${whiteboardNameID}',
+                'NULL',
+                'NULL'
+                '${whiteboardProfileId}')`
+      );
+
+      await queryRunner.query(
+        `UPDATE callout_framing SET whiteboardId = '${whiteboardID}' WHERE id = '${calloutTemplate.framingId}'`
+      );
+    }
+
+    await queryRunner.query(
+      `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_19991450cf75dc486700ca034c6\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_c7c005697d999f2b836052f4967\` FOREIGN KEY (\`whiteboardRtId\`) REFERENCES \`whiteboard_rt\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+
     await queryRunner.query(
       `ALTER TABLE \`callout\` DROP FOREIGN KEY \`FK_19991450cf75dc486700ca034c6\``
     );
@@ -84,6 +241,8 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
     );
     await queryRunner.query(`ALTER TABLE callout DROP COLUMN profileId`);
     await queryRunner.query(`ALTER TABLE callout DROP COLUMN whiteboardRtId`);
+
+    await queryRunner.query(`ALTER TABLE callout_framing DROP COLUMN content`);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
