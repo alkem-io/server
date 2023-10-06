@@ -65,6 +65,7 @@ import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.mo
 import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
+import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
 import { AdminWhiteboardModule } from '@platform/admin/whiteboards/admin.whiteboard.module';
 
 @Module({
@@ -222,6 +223,7 @@ import { AdminWhiteboardModule } from '@platform/admin/whiteboards/admin.whitebo
     InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
+    IpfsLogModule,
     MeModule,
     ExcalidrawServerModule,
     ChatGuidanceModule,

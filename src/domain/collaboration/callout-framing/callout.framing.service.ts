@@ -46,7 +46,7 @@ export class CalloutFramingService {
       parentStorageBucket
     );
 
-    calloutFraming.whiteboardContent = whiteboardContent;
+    calloutFraming.content = whiteboardContent;
 
     return calloutFraming;
   }
@@ -63,7 +63,7 @@ export class CalloutFramingService {
     }
 
     if (calloutFramingData.whiteboardContent) {
-      calloutFraming.whiteboardContent = calloutFramingData.whiteboardContent;
+      calloutFraming.content = calloutFramingData.whiteboardContent;
     }
 
     return calloutFraming;

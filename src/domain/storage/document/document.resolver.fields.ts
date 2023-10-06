@@ -49,4 +49,12 @@ export class DocumentResolverFields {
   async uploadedDate(@Parent() document: IDocument): Promise<Date> {
     return this.documentService.getUploadedDate(document.id);
   }
+
+  @ResolveField('url', () => String, {
+    nullable: false,
+    description: 'The URL to be used to retrieve the Document',
+  })
+  async url(@Parent() document: IDocument): Promise<string> {
+    return this.documentService.getPubliclyAccessibleURL(document);
+  }
 }

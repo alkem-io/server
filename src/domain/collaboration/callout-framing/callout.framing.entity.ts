@@ -28,21 +28,21 @@ export class CalloutFraming
   profile!: Profile;
 
   @Column('longtext', { nullable: true })
-  whiteboardContent?: string;
+  content?: string;
 
   @BeforeInsert()
   @BeforeUpdate()
   async compressContent() {
-    if (this.whiteboardContent) {
-      this.whiteboardContent = await compressText(this.whiteboardContent);
+    if (this.content) {
+      this.content = await compressText(this.content);
     }
   }
   @AfterInsert()
   @AfterUpdate()
   @AfterLoad()
   async decompressContent() {
-    if (this.whiteboardContent) {
-      this.whiteboardContent = await decompressText(this.whiteboardContent);
+    if (this.content) {
+      this.content = await decompressText(this.content);
     }
   }
 }

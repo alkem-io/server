@@ -22,7 +22,7 @@ import { ChallengeModule } from '@domain/challenge/challenge/challenge.module';
 import { OpportunityModule } from '@domain/collaboration/opportunity/opportunity.module';
 import { CalloutTemplateModule } from '@domain/template/callout-template/callout.template.module';
 import { WhiteboardRtModule } from '@domain/common/whiteboard-rt';
-
+import { DocumentModule } from '@domain/storage/document/document.module';
 
 @Module({
   imports: [
@@ -46,6 +46,7 @@ import { WhiteboardRtModule } from '@domain/common/whiteboard-rt';
     InvitationModule,
     ChallengeModule,
     OpportunityModule,
+    DocumentModule,
   ],
   providers: [LookupService, LookupResolverQueries, LookupResolverFields],
   exports: [LookupService],
