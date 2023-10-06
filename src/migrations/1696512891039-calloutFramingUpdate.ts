@@ -231,7 +231,7 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
                 '${whiteboardCheckoutID}',
                 '${whiteboardNameID}',
                 'NULL',
-                'NULL'
+                'NULL',
                 '${whiteboardProfileId}')`
       );
 
