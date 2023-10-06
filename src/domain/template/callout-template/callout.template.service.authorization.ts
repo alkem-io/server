@@ -31,8 +31,8 @@ export class CalloutTemplateAuthorizationService {
           relations: {
             profile: true,
             framing: true,
-            responsePolicy: true,
-            responseDefaults: true,
+            contributionPolicy: true,
+            contributionDefaults: true,
           },
         }
       );

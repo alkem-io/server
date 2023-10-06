@@ -46,11 +46,11 @@ export class CalloutTemplateService {
         parentStorageBucket,
         agentInfo.userID
       );
-    calloutTemplate.responseDefaults =
+    calloutTemplate.contributionDefaults =
       this.calloutResponseDefaultsService.createCalloutContributionDefaults(
         calloutTemplateData.responseDefaults
       );
-    calloutTemplate.responsePolicy =
+    calloutTemplate.contributionPolicy =
       this.calloutResponsePolicyService.createCalloutContributionPolicy(
         calloutTemplateData.responsePolicy
       );
@@ -88,8 +88,8 @@ export class CalloutTemplateService {
         relations: {
           profile: true,
           framing: true,
-          responsePolicy: true,
-          responseDefaults: true,
+          contributionPolicy: true,
+          contributionDefaults: true,
         },
       }
     );
@@ -106,16 +106,16 @@ export class CalloutTemplateService {
         );
     }
     if (calloutTemplateData.responseDefaults) {
-      calloutTemplate.responseDefaults =
+      calloutTemplate.contributionDefaults =
         this.calloutResponseDefaultsService.updateCalloutContributionDefaults(
-          calloutTemplate.responseDefaults,
+          calloutTemplate.contributionDefaults,
           calloutTemplateData.responseDefaults
         );
     }
     if (calloutTemplateData.responsePolicy) {
-      calloutTemplate.responsePolicy =
+      calloutTemplate.contributionPolicy =
         this.calloutResponsePolicyService.updateCalloutContributionPolicy(
-          calloutTemplate.responsePolicy,
+          calloutTemplate.contributionPolicy,
           calloutTemplateData.responsePolicy
         );
     }
@@ -132,8 +132,8 @@ export class CalloutTemplateService {
         relations: {
           profile: true,
           framing: true,
-          responseDefaults: true,
-          responsePolicy: true,
+          contributionDefaults: true,
+          contributionPolicy: true,
         },
       }
     );
@@ -141,10 +141,10 @@ export class CalloutTemplateService {
     await this.templateBaseService.deleteEntities(calloutTemplate);
     await this.calloutFramingService.delete(calloutTemplate.framing);
     await this.calloutResponseDefaultsService.delete(
-      calloutTemplate.responseDefaults
+      calloutTemplate.contributionDefaults
     );
     await this.calloutResponsePolicyService.delete(
-      calloutTemplate.responsePolicy
+      calloutTemplate.contributionPolicy
     );
     const result = await this.calloutTemplateRepository.remove(
       calloutTemplate as CalloutTemplate
