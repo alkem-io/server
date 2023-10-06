@@ -150,7 +150,10 @@ export class OrganizationResolverMutations {
     authorizationResetData: OrganizationAuthorizationResetInput
   ): Promise<IOrganization> {
     const organization = await this.organizationService.getOrganizationOrFail(
-      authorizationResetData.organizationID
+      authorizationResetData.organizationID,
+      {
+        relations: ['profile', 'profile.storageBucket'],
+      }
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,
