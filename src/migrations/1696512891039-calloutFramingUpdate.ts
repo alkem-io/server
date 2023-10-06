@@ -241,9 +241,6 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
     }
 
     await queryRunner.query(
-      `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_19991450cf75dc486700ca034c6\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
       `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_c7c005697d999f2b836052f4967\` FOREIGN KEY (\`whiteboardRtId\`) REFERENCES \`whiteboard_rt\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
     await queryRunner.query(
@@ -269,9 +266,7 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE callout ADD whiteboardRtId char(36) NOT NULL`
     );
-    await queryRunner.query(
-      `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_19991450cf75dc486700ca034c6\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
+
     await queryRunner.query(
       `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_c7c005697d999f2b836052f4967\` FOREIGN KEY (\`whiteboardRtId\`) REFERENCES \`whiteboard_rt\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
