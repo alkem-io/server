@@ -70,11 +70,17 @@ const createNameID = (base: string, useRandomSuffix = true): string => {
 export class calloutFramingUpdate1696512891039 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE callout_framing ADD whiteboardId char(36) NOT NULL`
+      `ALTER TABLE callout_framing ADD whiteboardId char(36) NULL`
     );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`callout_framing\` ADD INDEX \`IDX_8bc0e1f40be5816d3a593cbf7f\` (\`whiteboardId\`)`
+    // );
     await queryRunner.query(
-      `ALTER TABLE callout_framing ADD whiteboardRtId char(36) NOT NULL`
+      `ALTER TABLE callout_framing ADD whiteboardRtId char(36) NULL`
     );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`callout_framing\` ADD INDEX \`IDX_62712f63939a6d56fd5c334ee3\` (\`whiteboardRtId\`)`
+    // );
 
     await queryRunner.query(
       `ALTER TABLE \`whiteboard\` DROP FOREIGN KEY \`FK_fcabc1f3aa38aca70df4f66e938\``
@@ -108,7 +114,7 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
                               '${calloutFramingAuthID}',
                               '${callout.profileId}',
                               '${whiteboards[0].id}',
-                              'NULL')`
+                              NULL)`
         );
 
         await queryRunner.query(
@@ -125,7 +131,7 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
                               '1',
                               '${calloutFramingAuthID}',
                               '${callout.profileId}',
-                              'NULL',
+                              NULL,
                               '${callout.whiteboardRtId}')`
         );
         continue;
@@ -137,8 +143,8 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
                             '1',
                             '${calloutFramingAuthID}',
                             '${callout.profileId}',
-                            'NULL',
-                            'NULL')`
+                            NULL,
+                            NULL)`
       );
     }
 
@@ -206,7 +212,7 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
         `INSERT INTO lifecycle (id, version, machineState, machineDef)
                 VALUES ('${whiteboardLifecycleId}',
                         '1',
-                        'NULL',
+                        NULL,
                         '${escapedDefinition}')`
       );
 
@@ -215,7 +221,7 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
                 VALUES ('${whiteboardCheckoutID}',
                         '1',
                         '${whiteboardID}',
-                        'NULL',
+                        '',
                         '${whiteboardCheckoutAuthID}',
                         '${whiteboardLifecycleId}')`
       );
@@ -230,8 +236,8 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
                 '${whiteboardAuthID}',
                 '${whiteboardCheckoutID}',
                 '${whiteboardNameID}',
-                'NULL',
-                'NULL',
+                NULL,
+                NULL,
                 '${whiteboardProfileId}')`
       );
 
@@ -240,12 +246,16 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
       );
     }
 
-    await queryRunner.query(
-      `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_c7c005697d999f2b836052f4967\` FOREIGN KEY (\`whiteboardRtId\`) REFERENCES \`whiteboard_rt\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`whiteboard\` ADD CONSTRAINT \`FK_fcabc1f3aa38aca70df4f66e938\` FOREIGN KEY (\`calloutId\`) REFERENCES \`callout\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
-    );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_8bc0e1f40be5816d3a593cbf7fa\` FOREIGN KEY (\`whiteboardId\`) REFERENCES \`whiteboard\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    // );
+    // await queryRunner.query(
+    //   `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_62712f63939a6d56fd5c334ee3f\` FOREIGN KEY (\`whiteboardRtId\`) REFERENCES \`whiteboard_rt\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    // );
+
+    // await queryRunner.query(
+    //   `ALTER TABLE \`whiteboard\` ADD CONSTRAINT \`FK_fcabc1f3aa38aca70df4f66e938\` FOREIGN KEY (\`calloutId\`) REFERENCES \`callout\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
+    // );
 
     await queryRunner.query(
       `ALTER TABLE \`callout\` DROP FOREIGN KEY \`FK_19991450cf75dc486700ca034c6\``
