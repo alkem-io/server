@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
-import { Opportunity } from '@domain/collaboration/opportunity';
 import { IOpportunity } from './opportunity.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
@@ -21,17 +17,23 @@ import {
 } from '@common/constants';
 import { InnovationFlowAuthorizationService } from '@domain/challenge/innovation-flow/innovation.flow.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
+import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
+import { CollaborationAuthorizationService } from '../collaboration/collaboration.service.authorization';
 
 @Injectable()
 export class OpportunityAuthorizationService {
   constructor(
-    private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private opportunityService: OpportunityService,
     private communityPolicyService: CommunityPolicyService,
     private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
-    @InjectRepository(Opportunity)
-    private opportunityRepository: Repository<Opportunity>
+    private profileAuthorizationService: ProfileAuthorizationService,
+    private contextAuthorizationService: ContextAuthorizationService,
+    private communityAuthorizationService: CommunityAuthorizationService,
+    private collaborationAuthorizationService: CollaborationAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -58,39 +60,10 @@ export class OpportunityAuthorizationService {
     );
 
     // propagate authorization rules for child entities
-    await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
+    return await this.propagateAuthorizationToChildEntities(
       opportunity,
-      this.opportunityRepository,
       communityPolicy
     );
-    if (opportunity.projects) {
-      for (const project of opportunity.projects) {
-        project.authorization =
-          this.authorizationPolicyService.inheritParentAuthorization(
-            project.authorization,
-            opportunity.authorization
-          );
-      }
-    }
-
-    opportunity.innovationFlow =
-      await this.opportunityService.getInnovationFlow(opportunity.id);
-    opportunity.innovationFlow =
-      await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
-        opportunity.innovationFlow,
-        opportunity.authorization
-      );
-
-    opportunity.community = await this.opportunityService.getCommunity(
-      opportunity.id
-    );
-    opportunity.community.authorization =
-      this.extendCommunityAuthorizationPolicy(
-        opportunity.community.authorization,
-        communityPolicy
-      );
-
-    return await this.opportunityRepository.save(opportunity);
   }
 
   private setCommunityPolicyFlags(
@@ -207,5 +180,146 @@ export class OpportunityAuthorizationService {
     rules.push(opportunityMember);
 
     return rules;
+  }
+  private async propagateAuthorizationToChildEntities(
+    opportunityBase: IOpportunity,
+    policy: ICommunityPolicy
+  ): Promise<IOpportunity> {
+    let opportunity =
+      await this.propagateAuthorizationToCommunityCollaborationAgent(
+        opportunityBase,
+        policy
+      );
+    opportunity = await this.propagateAuthorizationToProfileContext(
+      opportunity
+    );
+    return await this.propagateAuthorizationToProjectsInnovationFlow(
+      opportunity
+    );
+  }
+
+  private async propagateAuthorizationToProfileContext(
+    challengeBase: IOpportunity
+  ): Promise<IOpportunity> {
+    const challenge = await this.opportunityService.getOpportunityOrFail(
+      challengeBase.id,
+      {
+        relations: {
+          context: true,
+          profile: true,
+        },
+      }
+    );
+    if (!challenge.context || !challenge.profile)
+      throw new RelationshipNotFoundException(
+        `Unable to load context or profile for opportunity ${challenge.id} `,
+        LogContext.CONTEXT
+      );
+    // Clone the authorization policy
+    const clonedAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        challenge.authorization
+      );
+    // To ensure that profile + context on a space are always publicly visible, even for private challenges
+    clonedAuthorization.anonymousReadAccess = true;
+
+    challenge.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        challenge.profile,
+        clonedAuthorization
+      );
+
+    challenge.context =
+      await this.contextAuthorizationService.applyAuthorizationPolicy(
+        challenge.context,
+        clonedAuthorization
+      );
+    return challenge;
+  }
+
+  public async propagateAuthorizationToCommunityCollaborationAgent(
+    opportunityBase: IOpportunity,
+    communityPolicy: ICommunityPolicy
+  ): Promise<IOpportunity> {
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      opportunityBase.id,
+      {
+        relations: {
+          community: true,
+          collaboration: true,
+          agent: true,
+        },
+      }
+    );
+    if (
+      !opportunity.community ||
+      !opportunity.collaboration ||
+      !opportunity.agent
+    )
+      throw new RelationshipNotFoundException(
+        `Unable to load community or collaboration or agent for opportunity: ${opportunity.id} `,
+        LogContext.CHALLENGES
+      );
+
+    opportunity.community =
+      await this.communityAuthorizationService.applyAuthorizationPolicy(
+        opportunity.community,
+        opportunity.authorization
+      );
+    // Specific extension
+    opportunity.community.authorization =
+      this.extendCommunityAuthorizationPolicy(
+        opportunity.community.authorization,
+        communityPolicy
+      );
+
+    opportunity.collaboration =
+      await this.collaborationAuthorizationService.applyAuthorizationPolicy(
+        opportunity.collaboration,
+        opportunity.authorization,
+        communityPolicy
+      );
+
+    opportunity.agent.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        opportunity.agent.authorization,
+        opportunity.authorization
+      );
+    return await this.opportunityService.save(opportunity);
+  }
+
+  public async propagateAuthorizationToProjectsInnovationFlow(
+    opportunityBase: IOpportunity
+  ): Promise<IOpportunity> {
+    const opportunity = await this.opportunityService.getOpportunityOrFail(
+      opportunityBase.id,
+      {
+        relations: {
+          innovationFlow: true,
+          projects: true,
+        },
+      }
+    );
+    if (!opportunity.innovationFlow || !opportunity.projects)
+      throw new RelationshipNotFoundException(
+        `Unable to load child entities for opportunity: ${opportunity.id} `,
+        LogContext.CHALLENGES
+      );
+
+    for (const project of opportunity.projects) {
+      project.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          project.authorization,
+          opportunity.authorization
+        );
+    }
+
+    opportunity.innovationFlow =
+      await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
+        opportunity.innovationFlow,
+        opportunity.authorization
+      );
+
+    return await this.opportunityService.save(opportunity);
   }
 }

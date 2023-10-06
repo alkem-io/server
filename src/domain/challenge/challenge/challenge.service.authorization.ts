@@ -1,18 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import {
   AuthorizationPrivilege,
   AuthorizationVerifiedCredential,
   LogContext,
 } from '@common/enums';
-import { Repository } from 'typeorm';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { EntityNotInitializedException } from '@common/exceptions';
-import { BaseChallengeAuthorizationService } from '@domain/challenge/base-challenge/base.challenge.service.authorization';
+import {
+  EntityNotInitializedException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { OpportunityAuthorizationService } from '@domain/collaboration/opportunity/opportunity.service.authorization';
 import { ChallengeService } from './challenge.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { Challenge } from './challenge.entity';
 import { IChallenge } from './challenge.interface';
 import { PreferenceSetAuthorizationService } from '@domain/common/preference-set/preference.set.service.authorization';
 import { PreferenceSetService } from '@domain/common/preference-set/preference.set.service';
@@ -38,12 +37,15 @@ import {
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
 import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
+import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
+import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 
 @Injectable()
 export class ChallengeAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private challengeService: ChallengeService,
     private opportunityAuthorizationService: OpportunityAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
@@ -52,15 +54,17 @@ export class ChallengeAuthorizationService {
     private preferenceSetService: PreferenceSetService,
     private storageBucketAuthorizationService: StorageBucketAuthorizationService,
     private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
-    @InjectRepository(Challenge)
-    private challengeRepository: Repository<Challenge>
+    private profileAuthorizationService: ProfileAuthorizationService,
+    private contextAuthorizationService: ContextAuthorizationService,
+    private communityAuthorizationService: CommunityAuthorizationService,
+    private collaborationAuthorizationService: CollaborationAuthorizationService
   ) {}
 
   async applyAuthorizationPolicy(
-    challenge: IChallenge,
+    challengeInput: IChallenge,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IChallenge> {
-    const communityPolicy = await this.setCommunityPolicyFlags(challenge);
+    const communityPolicy = await this.setCommunityPolicyFlags(challengeInput);
 
     // private challenge or not?
     // If it is a private challenge then cannot inherit from Space
@@ -69,103 +73,36 @@ export class ChallengeAuthorizationService {
       CommunityPolicyFlag.ALLOW_NON_MEMBERS_READ_ACCESS
     );
     if (!privateChallenge) {
-      challenge.authorization =
+      challengeInput.authorization =
         this.authorizationPolicyService.inheritParentAuthorization(
-          challenge.authorization,
+          challengeInput.authorization,
           parentAuthorization
         );
     } else {
-      challenge.authorization = this.initializeAuthorizationPrivateChallenge(
-        challenge.authorization,
-        communityPolicy
-      );
+      challengeInput.authorization =
+        this.initializeAuthorizationPrivateChallenge(
+          challengeInput.authorization,
+          communityPolicy
+        );
     }
-    challenge.authorization = this.appendCredentialRules(
-      challenge.authorization,
+    challengeInput.authorization = this.appendCredentialRules(
+      challengeInput.authorization,
       communityPolicy
     );
-    challenge.authorization = this.appendVerifiedCredentialRules(
-      challenge.authorization,
+    challengeInput.authorization = this.appendVerifiedCredentialRules(
+      challengeInput.authorization,
       communityPolicy
     );
-    challenge.authorization = this.appendPrivilegeRules(
-      challenge.authorization,
+    challengeInput.authorization = this.appendPrivilegeRules(
+      challengeInput.authorization,
       communityPolicy
     );
 
     // propagate authorization rules for child entities
-    await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
-      challenge,
-      this.challengeRepository,
+    return await this.propagateAuthorizationToChildEntities(
+      challengeInput,
       communityPolicy
     );
-
-    challenge.community = await this.challengeService.getCommunity(
-      challenge.id
-    );
-    challenge.community.authorization = this.extendCommunityAuthorizationPolicy(
-      challenge.community.authorization,
-      communityPolicy
-    );
-
-    challenge.storageBucket =
-      await this.challengeService.getStorageBucketOrFail(challenge.id);
-    challenge.storageBucket =
-      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
-        challenge.storageBucket,
-        challenge.authorization
-      );
-    challenge.storageBucket.authorization =
-      this.extendStorageAuthorizationPolicy(
-        challenge.storageBucket.authorization,
-        communityPolicy
-      );
-
-    // Cascade
-    challenge.childChallenges = await this.challengeService.getChildChallenges(
-      challenge
-    );
-    if (challenge.childChallenges) {
-      for (const childChallenge of challenge.childChallenges) {
-        await this.applyAuthorizationPolicy(
-          childChallenge,
-          challenge.authorization
-        );
-      }
-    }
-    challenge.opportunities = await this.challengeService.getOpportunities(
-      challenge.id
-    );
-    if (challenge.opportunities) {
-      for (const opportunity of challenge.opportunities) {
-        await this.opportunityAuthorizationService.applyAuthorizationPolicy(
-          opportunity,
-          challenge.authorization,
-          communityPolicy
-        );
-      }
-    }
-
-    const preferenceSet = await this.challengeService.getPreferenceSetOrFail(
-      challenge.id
-    );
-    if (preferenceSet) {
-      challenge.preferenceSet =
-        await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
-          preferenceSet,
-          challenge.authorization
-        );
-    }
-
-    challenge.innovationFlow = await this.challengeService.getInnovationFlow(
-      challenge.id
-    );
-    challenge.innovationFlow =
-      await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
-        challenge.innovationFlow,
-        challenge.authorization
-      );
-    return await this.challengeRepository.save(challenge);
   }
 
   public async setCommunityPolicyFlags(
@@ -311,6 +248,176 @@ export class ChallengeAuthorizationService {
     rules.push(challengeSpaceAdmins);
 
     return rules;
+  }
+
+  private async propagateAuthorizationToChildEntities(
+    challengeBase: IChallenge,
+    policy: ICommunityPolicy
+  ): Promise<IChallenge> {
+    let challenge =
+      await this.propagateAuthorizationToCommunityCollaborationAgent(
+        challengeBase,
+        policy
+      );
+    challenge = await this.propagateAuthorizationToProfileContext(challenge);
+    return await this.propagateAuthorizationToOpportunitiesStorageChildChallengesPreferences(
+      challenge,
+      policy
+    );
+  }
+
+  private async propagateAuthorizationToProfileContext(
+    challengeBase: IChallenge
+  ): Promise<IChallenge> {
+    const challenge = await this.challengeService.getChallengeOrFail(
+      challengeBase.id,
+      {
+        relations: {
+          context: true,
+          profile: true,
+        },
+      }
+    );
+    if (!challenge.context || !challenge.profile)
+      throw new RelationshipNotFoundException(
+        `Unable to load context or profile for challenge ${challenge.id} `,
+        LogContext.CONTEXT
+      );
+    // Clone the authorization policy
+    const clonedAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        challenge.authorization
+      );
+    // To ensure that profile + context on a space are always publicly visible, even for private challenges
+    clonedAuthorization.anonymousReadAccess = true;
+
+    challenge.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        challenge.profile,
+        clonedAuthorization
+      );
+
+    challenge.context =
+      await this.contextAuthorizationService.applyAuthorizationPolicy(
+        challenge.context,
+        clonedAuthorization
+      );
+    return challenge;
+  }
+
+  public async propagateAuthorizationToCommunityCollaborationAgent(
+    challengeBase: IChallenge,
+    communityPolicy: ICommunityPolicy
+  ): Promise<IChallenge> {
+    const challenge = await this.challengeService.getChallengeOrFail(
+      challengeBase.id,
+      {
+        relations: {
+          community: true,
+          collaboration: true,
+          agent: true,
+        },
+      }
+    );
+    if (!challenge.community || !challenge.collaboration || !challenge.agent)
+      throw new RelationshipNotFoundException(
+        `Unable to load community or collaboration or agent for space ${challenge.id} `,
+        LogContext.CHALLENGES
+      );
+
+    challenge.community =
+      await this.communityAuthorizationService.applyAuthorizationPolicy(
+        challenge.community,
+        challenge.authorization
+      );
+    // Specific extension
+    challenge.community.authorization = this.extendCommunityAuthorizationPolicy(
+      challenge.community.authorization,
+      communityPolicy
+    );
+
+    challenge.collaboration =
+      await this.collaborationAuthorizationService.applyAuthorizationPolicy(
+        challenge.collaboration,
+        challenge.authorization,
+        communityPolicy
+      );
+
+    challenge.agent.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        challenge.agent.authorization,
+        challenge.authorization
+      );
+    return await this.challengeService.save(challenge);
+  }
+
+  public async propagateAuthorizationToOpportunitiesStorageChildChallengesPreferences(
+    challengeBase: IChallenge,
+    communityPolicy: ICommunityPolicy
+  ): Promise<IChallenge> {
+    const challenge = await this.challengeService.getChallengeOrFail(
+      challengeBase.id,
+      {
+        relations: {
+          opportunities: true,
+          childChallenges: true,
+          storageBucket: true,
+          preferenceSet: true,
+          innovationFlow: true,
+        },
+      }
+    );
+    if (
+      !challenge.opportunities ||
+      !challenge.storageBucket ||
+      !challenge.preferenceSet ||
+      !challenge.childChallenges ||
+      !challenge.innovationFlow
+    )
+      throw new RelationshipNotFoundException(
+        `Unable to load child entities for challenge ${challenge.id} `,
+        LogContext.CHALLENGES
+      );
+
+    challenge.storageBucket =
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+        challenge.storageBucket,
+        challenge.authorization
+      );
+    challenge.storageBucket.authorization =
+      this.extendStorageAuthorizationPolicy(
+        challenge.storageBucket.authorization,
+        communityPolicy
+      );
+
+    for (const childChallenge of challenge.childChallenges) {
+      await this.applyAuthorizationPolicy(
+        childChallenge,
+        challenge.authorization
+      );
+    }
+
+    for (const opportunity of challenge.opportunities) {
+      await this.opportunityAuthorizationService.applyAuthorizationPolicy(
+        opportunity,
+        challenge.authorization,
+        communityPolicy
+      );
+    }
+
+    challenge.preferenceSet =
+      await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
+        challenge.preferenceSet,
+        challenge.authorization
+      );
+
+    challenge.innovationFlow =
+      await this.innovationFlowAuthorizationService.applyAuthorizationPolicy(
+        challenge.innovationFlow,
+        challenge.authorization
+      );
+
+    return await this.challengeService.save(challenge);
   }
 
   private appendCredentialRules(
