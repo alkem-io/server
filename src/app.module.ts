@@ -65,6 +65,7 @@ import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.mo
 import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
+import { AdminWhiteboardModule } from '@platform/admin/whiteboards/admin.whiteboard.module';
 
 @Module({
   imports: [
@@ -226,6 +227,7 @@ import { APP_ID_PROVIDER } from '@common/app.id.provider';
     ChatGuidanceModule,
     LookupModule,
     AuthResetSubscriberModule,
+    AdminWhiteboardModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [
