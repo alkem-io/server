@@ -33,10 +33,12 @@ import { CreateLinkOnCalloutInput } from '../callout/dto/callout.dto.create.link
 import { IReference } from '@domain/common/reference/reference.interface';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
 export class CalloutFramingService {
   constructor(
+    private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
     private whiteboardService: WhiteboardService,
     private whiteboardRtService: WhiteboardRtService,
@@ -171,6 +173,11 @@ export class CalloutFramingService {
     if (calloutFraming.whiteboardRt) {
       await this.whiteboardRtService.deleteWhiteboardRt(
         calloutFraming.whiteboardRt.id
+      );
+    }
+    if (calloutFraming.authorization) {
+      await this.authorizationPolicyService.delete(
+        calloutFraming.authorization
       );
     }
 

@@ -17,6 +17,7 @@ import { UserLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -104,6 +105,48 @@ export class CalloutResolverFields {
     return await this.calloutService.getWhiteboardsFromCallout(
       callout,
       ['whiteboards.checkout'],
+      ids,
+      limit,
+      shuffle
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('contributions', () => [ICalloutContribution], {
+    nullable: true,
+    description: 'The Contributions that have been made to this Callout.',
+  })
+  @Profiling.api
+  async contributions(
+    @Parent() callout: Callout,
+    @Args({
+      name: 'IDs',
+      type: () => [UUID_NAMEID],
+      description: 'The IDs of the Contributions to return',
+      nullable: true,
+    })
+    ids: string[],
+    @Args({
+      name: 'limit',
+      type: () => Float,
+      description:
+        'The number of Contributions to return; if omitted return all Contributions.',
+      nullable: true,
+    })
+    limit: number,
+    @Args({
+      name: 'shuffle',
+      type: () => Boolean,
+      description:
+        'If true and limit is specified then return the Contributions based on a random selection. Defaults to false.',
+      nullable: true,
+    })
+    shuffle: boolean
+  ): Promise<ICalloutContribution[]> {
+    return await this.calloutService.getContributions(
+      callout,
+      [],
       ids,
       limit,
       shuffle

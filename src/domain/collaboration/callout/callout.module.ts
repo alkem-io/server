@@ -24,6 +24,7 @@ import { StorageBucketResolverModule } from '@services/infrastructure/storage-bu
 import { CalloutFramingModule } from '../callout-framing/callout.framing.module';
 import { CalloutContributionDefaultsModule } from '../callout-contribution-defaults/callout.contribution.defaults.module';
 import { CalloutContributionPolicyModule } from '../callout-contribution-policy/callout.contribution.policy.module';
+import { CalloutContributionModule } from '../callout-contribution/callout.contribution.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { CalloutContributionPolicyModule } from '../callout-contribution-policy/
     ReferenceModule,
     StorageBucketResolverModule,
     CalloutFramingModule,
+    CalloutContributionModule,
     CalloutContributionDefaultsModule,
     CalloutContributionPolicyModule,
     TypeOrmModule.forFeature([Callout]),

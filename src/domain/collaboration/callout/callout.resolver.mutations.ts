@@ -41,6 +41,9 @@ import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
 import { ActivityInputCalloutLinkCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.link.created';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ReferenceService } from '@domain/common/reference/reference.service';
+import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
+import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
+import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 
 @Resolver()
 export class CalloutResolverMutations {
@@ -56,6 +59,7 @@ export class CalloutResolverMutations {
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private postAuthorizationService: PostAuthorizationService,
     private referenceService: ReferenceService,
+    private contributionAuthorizationService: CalloutContributionAuthorizationService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private postCreatedSubscription: PubSubEngine
   ) {}
@@ -174,6 +178,64 @@ export class CalloutResolverMutations {
       calloutData.publisherID,
       calloutData.publishDate
     );
+  }
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => ICalloutContribution, {
+    description: 'Create a new Contribution on the Callout.',
+  })
+  @Profiling.api
+  async createContributionOnCallout(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('contributionData') contributionData: CreateContributionOnCalloutInput
+  ): Promise<ICalloutContribution> {
+    const callout = await this.calloutService.getCalloutOrFail(
+      contributionData.calloutID
+    );
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      callout.authorization,
+      AuthorizationPrivilege.CONTRIBUTE,
+      `create contribution on callout: ${callout.id}`
+    );
+
+    if (callout.contributionPolicy.state === CalloutState.CLOSED) {
+      throw new CalloutClosedException(
+        `New contributions to a closed Callout with id: '${callout.id}' are not allowed!`
+      );
+    }
+
+    let contribution = await this.calloutService.createContributionOnCallout(
+      contributionData,
+      agentInfo.userID
+    );
+
+    const communityPolicy =
+      await this.namingService.getCommunityPolicyForCallout(callout.id);
+    contribution =
+      await this.contributionAuthorizationService.applyAuthorizationPolicy(
+        contribution,
+        callout.authorization,
+        communityPolicy
+      );
+
+    // TODO: events around contributions
+
+    // const postCreatedEvent: CalloutPostCreatedPayload = {
+    //   eventID: `callout-post-created-${Math.round(Math.random() * 100)}`,
+    //   calloutID: callout.id,
+    //   post: contribution,
+    // };
+    // await this.postCreatedSubscription.publish(
+    //   SubscriptionType.CALLOUT_POST_CREATED,
+    //   postCreatedEvent
+    // );
+
+    // if (callout.visibility === CalloutVisibility.PUBLISHED) {
+    //   this.processActivityPostCreated(callout, contribution, agentInfo);
+    // }
+
+    return contribution;
   }
 
   @UseGuards(GraphqlGuard)

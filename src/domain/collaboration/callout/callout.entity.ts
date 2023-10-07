@@ -17,6 +17,7 @@ import { CalloutFraming } from '../callout-framing/callout.framing.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { CalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.entity';
 import { CalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.entity';
+import { CalloutContribution } from '../callout-contribution/callout.contribution.entity';
 
 @Entity()
 export class Callout extends AuthorizableEntity implements ICallout {
@@ -61,6 +62,12 @@ export class Callout extends AuthorizableEntity implements ICallout {
     cascade: true,
   })
   whiteboards?: Whiteboard[];
+
+  @OneToMany(() => CalloutContribution, contribution => contribution.callout, {
+    eager: false,
+    cascade: true,
+  })
+  contributions?: Whiteboard[];
 
   @OneToMany(() => Post, post => post.callout, {
     eager: false,

@@ -45,6 +45,9 @@ import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
 import { CalloutContributionPolicyService } from '../callout-contribution-policy/callout.contribution.policy.service';
 import { AgentInfo } from '@core/authentication';
+import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
+import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
+import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 
 @Injectable()
 export class CalloutService {
@@ -59,6 +62,7 @@ export class CalloutService {
     private calloutFramingService: CalloutFramingService,
     private contributionDefaultsService: CalloutContributionDefaultsService,
     private contributionPolicyService: CalloutContributionPolicyService,
+    private contributionService: CalloutContributionService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -69,38 +73,11 @@ export class CalloutService {
     parentStorageBucket: IStorageBucket,
     userID?: string
   ): Promise<ICallout> {
-    if (
-      calloutData.type == CalloutType.POST_COLLECTION &&
-      !calloutData.contributionDefaults?.postDescription
-    ) {
-      throw new Error('Please provide a post default description');
-    }
-
-    if (
-      calloutData.type == CalloutType.WHITEBOARD_COLLECTION &&
-      !calloutData.contributionDefaults?.whiteboardContent
-    ) {
-      throw new Error('Please provide a whiteboard template');
-    }
-
-    if (
-      calloutData.type == CalloutType.WHITEBOARD &&
-      !calloutData.framing.whiteboard
-    ) {
-      throw new Error('Please provide a whiteboard');
-    }
-
-    if (
-      calloutData.type == CalloutType.WHITEBOARD_RT &&
-      !calloutData.framing.whiteboardRt
-    ) {
-      throw new Error('Please provide a whiteboard for real time');
-    }
+    this.validateCreateCalloutData(calloutData);
 
     if (!calloutData.sortOrder) {
       calloutData.sortOrder = 10;
     }
-
     const calloutNameID = this.namingService.createNameID(
       `${calloutData.framing.profile.displayName}`
     );
@@ -108,7 +85,12 @@ export class CalloutService {
       ...calloutData,
       nameID: calloutData.nameID ?? calloutNameID,
     };
+
     const callout: ICallout = Callout.create(calloutCreationData);
+    callout.authorization = new AuthorizationPolicy();
+    callout.createdBy = userID ?? undefined;
+    callout.visibility = calloutData.visibility ?? CalloutVisibility.DRAFT;
+    callout.contributions = [];
 
     callout.framing = await this.calloutFramingService.createCalloutFraming(
       calloutData.framing,
@@ -133,9 +115,6 @@ export class CalloutService {
       this.contributionPolicyService.createCalloutContributionPolicy(
         calloutData.contributionPolicy
       );
-    callout.authorization = new AuthorizationPolicy();
-    callout.createdBy = userID ?? undefined;
-    callout.visibility = calloutData.visibility ?? CalloutVisibility.DRAFT;
 
     if (calloutData.type === CalloutType.POST) {
       callout.comments = await this.roomService.createRoom(
@@ -145,6 +124,48 @@ export class CalloutService {
     }
 
     return this.calloutRepository.save(callout);
+  }
+
+  private validateCreateCalloutData(calloutData: CreateCalloutInput) {
+    if (
+      calloutData.type == CalloutType.POST_COLLECTION &&
+      !calloutData.contributionDefaults?.postDescription
+    ) {
+      throw new ValidationException(
+        'Please provide a post default description',
+        LogContext.COLLABORATION
+      );
+    }
+
+    if (
+      calloutData.type == CalloutType.WHITEBOARD_COLLECTION &&
+      !calloutData.contributionDefaults?.whiteboardContent
+    ) {
+      throw new ValidationException(
+        'Please provide a whiteboard template',
+        LogContext.COLLABORATION
+      );
+    }
+
+    if (
+      calloutData.type == CalloutType.WHITEBOARD &&
+      !calloutData.framing.whiteboard
+    ) {
+      throw new ValidationException(
+        'Please provide a whiteboard',
+        LogContext.COLLABORATION
+      );
+    }
+
+    if (
+      calloutData.type == CalloutType.WHITEBOARD_RT &&
+      !calloutData.framing.whiteboardRt
+    ) {
+      throw new ValidationException(
+        'Please provide a whiteboard for real time',
+        LogContext.COLLABORATION
+      );
+    }
   }
 
   private async getStorageBucket(callout: ICallout): Promise<IStorageBucket> {
@@ -440,6 +461,33 @@ export class CalloutService {
     }
   }
 
+  public async createContributionOnCallout(
+    contributionData: CreateContributionOnCalloutInput,
+    userID: string
+  ): Promise<ICalloutContribution> {
+    const calloutID = contributionData.calloutID;
+    const callout = await this.getCalloutOrFail(calloutID, {
+      relations: ['contributions', 'contributionPolicy'],
+    });
+    if (!callout.contributions || !callout.contributionPolicy)
+      throw new EntityNotInitializedException(
+        `Callout (${calloutID}) not initialised as no contributions`,
+        LogContext.COLLABORATION
+      );
+
+    const storageBucket = await this.getStorageBucket(callout);
+    const contribution =
+      await this.contributionService.createCalloutContribution(
+        contributionData,
+        storageBucket,
+        callout.contributionPolicy,
+        userID
+      );
+    callout.contributions.push(contribution);
+    await this.calloutRepository.save(callout);
+    return contribution;
+  }
+
   public async createWhiteboardOnCallout(
     whiteboardData: CreateWhiteboardOnCalloutInput,
     userID: string
@@ -491,6 +539,41 @@ export class CalloutService {
       );
 
     return calloutLoaded.framing;
+  }
+
+  public async getContributions(
+    callout: ICallout,
+    relations: FindOptionsRelationByString = [],
+    contributionIDs?: string[],
+    limit?: number,
+    shuffle?: boolean
+  ): Promise<ICalloutContribution[]> {
+    const calloutLoaded = await this.getCalloutOrFail(callout.id, {
+      relations: ['contributions', ...relations],
+    });
+    if (!calloutLoaded.contributions)
+      throw new EntityNotFoundException(
+        `Callout not initialised, no contributions: ${callout.id}`,
+        LogContext.COLLABORATION
+      );
+
+    if (!contributionIDs) {
+      const limitAndShuffled = limitAndShuffle(
+        calloutLoaded.contributions,
+        limit,
+        shuffle
+      );
+      return limitAndShuffled;
+    }
+    const results: ICalloutContribution[] = [];
+    for (const contributionID of contributionIDs) {
+      const contribution = calloutLoaded.contributions.find(
+        contribution => contribution.id === contributionID
+      );
+      if (!contribution) continue;
+      results.push(contribution);
+    }
+    return results;
   }
 
   public async getWhiteboardsFromCallout(

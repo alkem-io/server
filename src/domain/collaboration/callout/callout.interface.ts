@@ -9,6 +9,7 @@ import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
+import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 
 @ObjectType('Callout')
 export abstract class ICallout extends IAuthorizable {
@@ -46,6 +47,8 @@ export abstract class ICallout extends IAuthorizable {
 
   // exposed via field resolver
   whiteboards?: IWhiteboard[];
+
+  contributions?: ICalloutContribution[];
 
   comments?: IRoom;
 
