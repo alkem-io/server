@@ -21,6 +21,18 @@ import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service'
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt/whiteboard.rt.service';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { IWhiteboard } from '@domain/common/whiteboard';
+import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
+import { VisualType } from '@common/enums/visual.type';
+import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
+import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
+import { CreateLinkOnCalloutInput } from '../callout/dto/callout.dto.create.link';
+import { IReference } from '@domain/common/reference/reference.interface';
+import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 
 @Injectable()
 export class CalloutFramingService {
@@ -28,6 +40,7 @@ export class CalloutFramingService {
     private profileService: ProfileService,
     private whiteboardService: WhiteboardService,
     private whiteboardRtService: WhiteboardRtService,
+    private namingService: NamingService,
     @InjectRepository(CalloutFraming)
     private calloutFramingRepository: Repository<CalloutFraming>
   ) {}
@@ -35,6 +48,7 @@ export class CalloutFramingService {
   public async createCalloutFraming(
     calloutFramingData: CreateCalloutFramingInput,
     parentStorageBucket: IStorageBucket,
+    tagsetTemplates: ITagsetTemplate[],
     userID?: string
   ): Promise<ICalloutFraming> {
     const calloutFraming: ICalloutFraming =
@@ -42,7 +56,26 @@ export class CalloutFramingService {
 
     calloutFraming.authorization = new AuthorizationPolicy();
 
-    const { profile, whiteboard, whiteboardRt } = calloutFramingData;
+    const { profile, whiteboard, whiteboardRt, tags } = calloutFramingData;
+
+    // To consider also having the default tagset as a template tagset
+    const defaultTagset: CreateTagsetInput = {
+      name: TagsetReservedName.DEFAULT,
+      type: TagsetType.FREEFORM,
+      tags: tags,
+    };
+
+    const tagsetInputsFromTemplates =
+      this.profileService.convertTagsetTemplatesToCreateTagsetInput(
+        tagsetTemplates
+      );
+    const tagsetInputs = [defaultTagset, ...tagsetInputsFromTemplates];
+
+    calloutFramingData.profile.tagsets =
+      this.profileService.updateProfileTagsetInputs(
+        calloutFraming.profile.tagsets,
+        tagsetInputs
+      );
 
     calloutFraming.profile = await this.profileService.createProfile(
       profile,
@@ -51,20 +84,34 @@ export class CalloutFramingService {
     );
 
     if (whiteboard) {
+      whiteboard.nameID = this.namingService.createNameID(
+        `${whiteboard.profileData.displayName}`
+      );
       calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
         whiteboard,
         parentStorageBucket,
         userID
       );
+      await this.profileService.addVisualOnProfile(
+        calloutFraming.whiteboard.profile,
+        VisualType.BANNER
+      );
     }
 
     if (whiteboardRt) {
+      whiteboardRt.nameID = this.namingService.createNameID(
+        `${whiteboardRt.profileData.displayName}`
+      );
       calloutFraming.whiteboardRt =
         await this.whiteboardRtService.createWhiteboardRt(
           whiteboardRt,
           parentStorageBucket,
           userID
         );
+      await this.profileService.addVisualOnProfile(
+        calloutFraming.whiteboardRt.profile,
+        VisualType.BANNER
+      );
     }
 
     return calloutFraming;
@@ -180,19 +227,70 @@ export class CalloutFramingService {
   public async getWhiteboard(
     calloutFramingInput: ICalloutFraming,
     relations: FindOptionsRelationByString = []
-  ): Promise<IWhiteboard> {
+  ): Promise<IWhiteboard | null> {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
       {
         relations: ['whiteboard', ...relations],
       }
     );
-    if (!calloutFraming.whiteboard)
-      throw new EntityNotFoundException(
-        `Callout profile not initialised: ${calloutFramingInput.id}`,
-        LogContext.COLLABORATION
-      );
+    if (!calloutFraming.whiteboard) {
+      return null;
+    }
 
     return calloutFraming.whiteboard;
+  }
+
+  public async getWhiteboardRt(
+    calloutFramingInput: ICalloutFraming,
+    relations: FindOptionsRelationByString = []
+  ): Promise<IWhiteboardRt | null> {
+    const calloutFraming = await this.getCalloutFramingOrFail(
+      calloutFramingInput.id,
+      {
+        relations: ['whiteboardRt', ...relations],
+      }
+    );
+    if (!calloutFraming.whiteboardRt) {
+      return null;
+    }
+
+    return calloutFraming.whiteboardRt;
+  }
+
+  updateDisplayLocationTagsetValue(
+    framing: ICalloutFraming,
+    group: CalloutDisplayLocation
+  ) {
+    const displayLocationTagset = framing.profile.tagsets?.find(
+      tagset => tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION
+    );
+    if (!displayLocationTagset) {
+      throw new EntityNotFoundException(
+        `Callout display location tagset not found for profile: ${framing.profile.id}`,
+        LogContext.TAGSET
+      );
+    }
+    displayLocationTagset.tags = [group];
+  }
+
+  public async createLinkOnCalloutFraming(
+    framingID: string,
+    linkData: CreateLinkOnCalloutInput
+  ): Promise<IReference> {
+    const framing = await this.getCalloutFramingOrFail(framingID, {
+      relations: ['profile', 'profile.references'],
+    });
+    if (!framing.profile || !framing.profile.references)
+      throw new EntityNotInitializedException(
+        `CalloutFraming (${framingID}) not initialised`,
+        LogContext.COLLABORATION
+      );
+    const referenceInput: CreateReferenceOnProfileInput = {
+      profileID: framing.profile.id,
+      ...linkData,
+    };
+    const reference = await this.profileService.createReference(referenceInput);
+    return reference;
   }
 }

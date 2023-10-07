@@ -9,6 +9,7 @@ import { CalloutFramingResolverFields } from './callout.framing.resolver.fields'
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { WhiteboardRtModule } from '@domain/common/whiteboard-rt/whiteboard.rt.module';
+import { NamingModule } from '@services/infrastructure/naming/naming.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { WhiteboardRtModule } from '@domain/common/whiteboard-rt/whiteboard.rt.m
     ProfileModule,
     WhiteboardModule,
     WhiteboardRtModule,
+    NamingModule,
     TypeOrmModule.forFeature([CalloutFraming]),
   ],
   providers: [

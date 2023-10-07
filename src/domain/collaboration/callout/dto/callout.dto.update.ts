@@ -1,12 +1,13 @@
 import { CalloutState } from '@common/enums/callout.state';
-import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
 import { UpdateCalloutWhiteboardTemplateInput } from './callout.dto.update.whiteboardTemplate';
 import { UpdateCalloutPostTemplateInput } from './callout.dto.update.postTemplate';
 import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
+import { NameID } from '@domain/common/scalars/scalar.nameid';
+import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/base.alkemio.dto.update';
 
 @InputType()
-export class UpdateCalloutInput extends UpdateNameableInput {
+export class UpdateCalloutInput extends UpdateBaseAlkemioInput {
   @Field(() => CalloutState, {
     nullable: true,
     description: 'State of the callout.',
@@ -36,4 +37,11 @@ export class UpdateCalloutInput extends UpdateNameableInput {
     description: 'Set display location for this Callout.',
   })
   displayLocation?: CalloutDisplayLocation;
+
+  @Field(() => NameID, {
+    nullable: true,
+    description:
+      'A display identifier, unique within the containing scope. Note: updating the nameID will affect URL on the client.',
+  })
+  nameID?: string;
 }

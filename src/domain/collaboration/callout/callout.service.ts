@@ -31,29 +31,21 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CalloutType } from '@common/enums/callout.type';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { ProfileService } from '@domain/common/profile/profile.service';
 import { PostTemplateService } from '@domain/template/post-template/post.template.service';
 import { WhiteboardTemplateService } from '@domain/template/whiteboard-template/whiteboard.template.service';
 import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
-import { VisualType } from '@common/enums/visual.type';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
-import { TagsetType } from '@common/enums/tagset.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { CreateTagsetInput } from '@domain/common/tagset';
-import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { IReference } from '@domain/common/reference';
 import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
-import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
 import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
 import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { CalloutFramingService } from '../callout-framing/callout.framing.service';
-import { CreateCalloutFramingInput } from '../callout-framing/dto/callout.framing.dto.create';
+import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 
 @Injectable()
 export class CalloutService {
@@ -67,7 +59,6 @@ export class CalloutService {
     private roomService: RoomService,
     private userLookupService: UserLookupService,
     private storageBucketResolverService: StorageBucketResolverService,
-    private profileService: ProfileService,
     private calloutFramingService: CalloutFramingService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
@@ -125,34 +116,16 @@ export class CalloutService {
     };
     const callout: ICallout = Callout.create(calloutCreationData);
 
-    // To consider also having the default tagset as a template tagset
-    const defaultTagset: CreateTagsetInput = {
-      name: TagsetReservedName.DEFAULT,
-      type: TagsetType.FREEFORM,
-      tags: calloutData.tags,
-    };
-    const tagsetInputsFromTemplates =
-      this.profileService.convertTagsetTemplatesToCreateTagsetInput(
-        tagsetTemplates
-      );
-    const tagsetInputs = [defaultTagset, ...tagsetInputsFromTemplates];
-
-    calloutData.framing.profile.tagsets =
-      this.profileService.updateProfileTagsetInputs(
-        calloutData.framing.profile.tagsets,
-        tagsetInputs
-      );
-
-    callout.framing = await this.createFramingForCallout(
-      calloutData.type,
+    callout.framing = await this.calloutFramingService.createCalloutFraming(
       calloutData.framing,
       parentStorageBucket,
+      tagsetTemplates,
       userID
     );
 
     if (calloutData.displayLocation) {
-      this.updateCalloutDisplayLocationTagsetValue(
-        callout,
+      this.calloutFramingService.updateDisplayLocationTagsetValue(
+        callout.framing,
         calloutData.displayLocation
       );
     }
@@ -192,53 +165,6 @@ export class CalloutService {
     return await this.storageBucketResolverService.getStorageBucketForCallout(
       callout.id
     );
-  }
-
-  private async createFramingForCallout(
-    calloutDataType: CalloutType,
-    calloutFramingData: CreateCalloutFramingInput,
-    parentStorageBucket: IStorageBucket,
-    userID?: string
-  ) {
-    if (
-      calloutDataType == CalloutType.WHITEBOARD &&
-      calloutFramingData.whiteboard
-    ) {
-      calloutFramingData.whiteboard.nameID = this.namingService.createNameID(
-        `${calloutFramingData.whiteboard.profileData.displayName}`
-      );
-    }
-
-    if (
-      calloutDataType == CalloutType.WHITEBOARD_RT &&
-      calloutFramingData.whiteboardRt
-    ) {
-      calloutFramingData.whiteboardRt.nameID = this.namingService.createNameID(
-        `${calloutFramingData.whiteboardRt.profileData.displayName}`
-      );
-    }
-    const calloutFraming =
-      await this.calloutFramingService.createCalloutFraming(
-        calloutFramingData,
-        parentStorageBucket,
-        userID
-      );
-
-    if (calloutFraming.whiteboard) {
-      await this.profileService.addVisualOnProfile(
-        calloutFraming.whiteboard.profile,
-        VisualType.BANNER
-      );
-    }
-
-    if (calloutFraming.whiteboardRt) {
-      await this.profileService.addVisualOnProfile(
-        calloutFraming.whiteboardRt.profile,
-        VisualType.BANNER
-      );
-    }
-
-    return calloutFraming;
   }
 
   public async getCalloutOrFail(
@@ -309,13 +235,6 @@ export class CalloutService {
       ],
     });
 
-    if (calloutUpdateData.profileData) {
-      callout.framing.profile = await this.profileService.updateProfile(
-        callout.framing.profile,
-        calloutUpdateData.profileData
-      );
-    }
-
     if (calloutUpdateData.state) callout.state = calloutUpdateData.state;
 
     if (calloutUpdateData.sortOrder)
@@ -348,29 +267,13 @@ export class CalloutService {
     }
 
     if (calloutUpdateData.displayLocation) {
-      this.updateCalloutDisplayLocationTagsetValue(
-        callout,
+      this.calloutFramingService.updateDisplayLocationTagsetValue(
+        callout.framing,
         calloutUpdateData.displayLocation
       );
     }
 
     return await this.calloutRepository.save(callout);
-  }
-
-  updateCalloutDisplayLocationTagsetValue(
-    callout: ICallout,
-    group: CalloutDisplayLocation
-  ) {
-    const displayLocationTagset = callout.framing.profile.tagsets?.find(
-      tagset => tagset.name === TagsetReservedName.CALLOUT_DISPLAY_LOCATION
-    );
-    if (!displayLocationTagset) {
-      throw new EntityNotFoundException(
-        `Callout display location tagset not found for profile: ${callout.framing.profile.id}`,
-        LogContext.TAGSET
-      );
-    }
-    displayLocationTagset.tags = [group];
   }
 
   async save(callout: ICallout): Promise<ICallout> {
@@ -426,28 +329,6 @@ export class CalloutService {
     result.id = calloutID;
 
     return result;
-  }
-
-  public async getProfile(
-    calloutInput: ICallout,
-    relations: FindOptionsRelationByString = []
-  ): Promise<IProfile> {
-    const callout = await this.getCalloutOrFail(calloutInput.id, {
-      relations: ['framing', 'framing.profile', ...relations],
-    });
-    if (!callout.framing)
-      throw new EntityNotFoundException(
-        `Callout framing not initialised: ${calloutInput.id}`,
-        LogContext.COLLABORATION
-      );
-
-    if (!callout.framing.profile)
-      throw new EntityNotFoundException(
-        `Callout profile not initialised: ${calloutInput.id}`,
-        LogContext.COLLABORATION
-      );
-
-    return callout.framing.profile;
   }
 
   public async getActivityCount(callout: ICallout): Promise<number> {
@@ -538,24 +419,16 @@ export class CalloutService {
     return post;
   }
 
+  // TODO: this is broken until have the
   public async createLinkOnCallout(
     linkData: CreateLinkOnCalloutInput
   ): Promise<IReference> {
-    const calloutID = linkData.calloutID;
-    const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['profile', 'profile.references'],
-    });
-    if (!callout.framing.profile || !callout.framing.profile.references)
-      throw new EntityNotInitializedException(
-        `Callout (${calloutID}) not initialised`,
-        LogContext.COLLABORATION
-      );
-    const referenceInput: CreateReferenceOnProfileInput = {
-      profileID: callout.framing.profile.id,
-      ...linkData,
-    };
-    const reference = await this.profileService.createReference(referenceInput);
-    return reference;
+    const framing = await this.getCalloutFraming(linkData.calloutID);
+
+    return await this.calloutFramingService.createLinkOnCalloutFraming(
+      framing.id,
+      linkData
+    );
   }
 
   public async getComments(calloutID: string): Promise<IRoom | undefined> {
@@ -622,6 +495,22 @@ export class CalloutService {
     callout.whiteboards.push(whiteboard);
     await this.calloutRepository.save(callout);
     return whiteboard;
+  }
+
+  public async getCalloutFraming(
+    calloutID: string,
+    relations: FindOptionsRelationByString = []
+  ): Promise<ICalloutFraming> {
+    const calloutLoaded = await this.getCalloutOrFail(calloutID, {
+      relations: ['framing', ...relations],
+    });
+    if (!calloutLoaded.framing)
+      throw new EntityNotFoundException(
+        `Callout not initialised, no framing: ${calloutID}`,
+        LogContext.COLLABORATION
+      );
+
+    return calloutLoaded.framing;
   }
 
   public async getWhiteboardsFromCallout(

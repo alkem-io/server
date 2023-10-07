@@ -44,6 +44,7 @@ export class CalloutTemplateService {
       await this.calloutFramingService.createCalloutFraming(
         calloutTemplateData.framing,
         parentStorageBucket,
+        [],
         agentInfo.userID
       );
     calloutTemplate.contributionDefaults =
