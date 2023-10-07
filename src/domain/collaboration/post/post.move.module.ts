@@ -6,11 +6,13 @@ import { PostMoveService } from './post.move.service';
 import { PostMoveResolverMutations } from './post.move.resolver.mutations';
 import { PostModule } from './post.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 
 @Module({
   imports: [
     PostModule,
     AuthorizationModule,
+    EntityResolverModule,
     TypeOrmModule.forFeature([Post, Callout]),
   ],
   providers: [PostMoveService, PostMoveResolverMutations],

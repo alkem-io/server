@@ -75,10 +75,7 @@ export class WhiteboardResolverMutations {
     @Args('whiteboardData') whiteboardData: UpdateWhiteboardDirectInput
   ): Promise<IWhiteboard> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
-      whiteboardData.ID,
-      {
-        relations: ['callout'],
-      }
+      whiteboardData.ID
     );
     await this.authorizationService.grantAccessOrFail(
       agentInfo,

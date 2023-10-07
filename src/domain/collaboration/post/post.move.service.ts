@@ -10,6 +10,7 @@ import { Repository } from 'typeorm';
 import { Post, IPost } from '.';
 import { Callout } from '../callout';
 import { PostService } from './post.service';
+import { ContributionResolverService } from '@services/infrastructure/entity-resolver/contribution.resolver.service';
 
 @Injectable()
 export class PostMoveService {
@@ -18,18 +19,26 @@ export class PostMoveService {
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
     @InjectRepository(Callout)
-    private calloutRepository: Repository<Callout>
+    private calloutRepository: Repository<Callout>,
+    private contributionResolverService: ContributionResolverService
   ) {}
 
   public async movePostToCallout(
     postID: string,
     calloutID: string
   ): Promise<IPost> {
-    const post = await this.postService.getPostOrFail(postID, {
-      relations: ['callout', 'callout.collaboration'],
-    });
+    const post = await this.postService.getPostOrFail(postID);
 
-    const sourceCallout = post.callout as Callout;
+    const sourceCallout =
+      (await this.contributionResolverService.getCalloutForPostContribution(
+        postID,
+        {
+          relations: {
+            framing: true,
+            collaboration: true,
+          },
+        }
+      )) as Callout;
     const targetCallout = await this.calloutRepository.findOne({
       where: { id: calloutID },
       relations: ['collaboration'],
@@ -60,9 +69,7 @@ export class PostMoveService {
 
     await this.postRepository.save(post);
 
-    const movedPost = await this.postService.getPostOrFail(postID, {
-      relations: ['callout'],
-    });
+    const movedPost = await this.postService.getPostOrFail(postID);
 
     return movedPost;
   }

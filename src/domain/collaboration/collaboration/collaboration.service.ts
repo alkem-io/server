@@ -537,6 +537,7 @@ export class CollaborationService {
     return loadedCollaboration.relations;
   }
 
+  // TODO:
   public async getPostsCount(collaboration: ICollaboration): Promise<number> {
     const [result]: {
       postsCount: number;
@@ -552,6 +553,7 @@ export class CollaborationService {
     return result.postsCount;
   }
 
+  // TODO:
   public async getWhiteboardsCount(
     collaboration: ICollaboration
   ): Promise<number> {

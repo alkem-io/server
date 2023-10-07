@@ -1,7 +1,7 @@
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
-import { NotificationInputBase } from './notification.dto.input.base';
+import { NotificationInputContributionCreated } from './notification.dto.input.contribution.created';
 
 export interface NotificationInputWhiteboardCreated
-  extends NotificationInputBase {
+  extends NotificationInputContributionCreated {
   whiteboard: IWhiteboard;
 }

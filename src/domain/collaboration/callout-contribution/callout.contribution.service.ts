@@ -34,7 +34,7 @@ export class CalloutContributionService {
     private referenceService: ReferenceService,
     private namingService: NamingService,
     @InjectRepository(CalloutContribution)
-    private calloutContributionRepository: Repository<CalloutContribution>
+    private contributionRepository: Repository<CalloutContribution>
   ) {}
 
   public async createCalloutContribution(
@@ -138,7 +138,7 @@ export class CalloutContributionService {
       await this.authorizationPolicyService.delete(contribution.authorization);
     }
 
-    const result = await this.calloutContributionRepository.remove(
+    const result = await this.contributionRepository.remove(
       contribution as CalloutContribution
     );
     result.id = contributionID;
@@ -148,7 +148,7 @@ export class CalloutContributionService {
   async save(
     calloutContribution: ICalloutContribution
   ): Promise<ICalloutContribution> {
-    return await this.calloutContributionRepository.save(calloutContribution);
+    return await this.contributionRepository.save(calloutContribution);
   }
 
   public async getCalloutContributionOrFail(
@@ -157,7 +157,7 @@ export class CalloutContributionService {
   ): Promise<ICalloutContribution | never> {
     let calloutContribution: ICalloutContribution | null = null;
     if (calloutContributionID.length === UUID_LENGTH) {
-      calloutContribution = await this.calloutContributionRepository.findOne({
+      calloutContribution = await this.contributionRepository.findOne({
         where: { id: calloutContributionID },
         ...options,
       });
@@ -169,6 +169,16 @@ export class CalloutContributionService {
         LogContext.COLLABORATION
       );
     return calloutContribution;
+  }
+
+  public async getContributionsInCalloutCount(
+    calloutID: string
+  ): Promise<number> {
+    return await this.contributionRepository.countBy({
+      callout: {
+        id: calloutID,
+      },
+    });
   }
 
   public async getWhiteboard(

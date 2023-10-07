@@ -220,7 +220,12 @@ export class CalloutResolverMutations {
       );
 
       if (callout.visibility === CalloutVisibility.PUBLISHED) {
-        this.processActivityPostCreated(callout, contribution.post, agentInfo);
+        this.processActivityPostCreated(
+          callout,
+          contribution,
+          contribution.post,
+          agentInfo
+        );
       }
     }
 
@@ -238,6 +243,7 @@ export class CalloutResolverMutations {
       if (callout.visibility === CalloutVisibility.PUBLISHED) {
         this.processActivityWhiteboardCreated(
           callout,
+          contribution,
           contribution.whiteboard,
           agentInfo
         );
@@ -279,10 +285,13 @@ export class CalloutResolverMutations {
 
   private async processActivityWhiteboardCreated(
     callout: ICallout,
+    contribution: ICalloutContribution,
     whiteboard: IWhiteboard,
     agentInfo: AgentInfo
   ) {
     const notificationInput: NotificationInputWhiteboardCreated = {
+      contribution: contribution,
+      callout: callout,
       whiteboard: whiteboard,
       triggeredBy: agentInfo.userID,
     };
@@ -314,10 +323,13 @@ export class CalloutResolverMutations {
 
   private async processActivityPostCreated(
     callout: ICallout,
+    contribution: ICalloutContribution,
     post: IPost,
     agentInfo: AgentInfo
   ) {
     const notificationInput: NotificationInputPostCreated = {
+      contribution: contribution,
+      callout: callout,
       post: post,
       triggeredBy: agentInfo.userID,
     };

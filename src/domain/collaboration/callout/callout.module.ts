@@ -3,8 +3,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Callout } from './callout.entity';
-import { PostModule } from '../post/post.module';
-import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { CalloutResolverMutations } from './callout.resolver.mutations';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
@@ -34,8 +32,6 @@ import { CalloutContributionModule } from '../callout-contribution/callout.contr
     NotificationAdapterModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
-    PostModule,
-    WhiteboardModule,
     RoomModule,
     CommunityPolicyModule,
     EntityResolverModule,

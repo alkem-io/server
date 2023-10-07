@@ -6,8 +6,6 @@ import {
   JoinColumn,
   OneToOne,
 } from 'typeorm';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { Post } from '@domain/collaboration/post/post.entity';
 import { ICallout } from './callout.interface';
 import { CalloutType } from '@common/enums/callout.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
@@ -57,23 +55,11 @@ export class Callout extends AuthorizableEntity implements ICallout {
   @JoinColumn()
   contributionDefaults?: CalloutContributionDefaults;
 
-  @OneToMany(() => Whiteboard, whiteboard => whiteboard.callout, {
-    eager: false,
-    cascade: true,
-  })
-  whiteboards?: Whiteboard[];
-
   @OneToMany(() => CalloutContribution, contribution => contribution.callout, {
     eager: false,
     cascade: true,
   })
-  contributions?: Whiteboard[];
-
-  @OneToMany(() => Post, post => post.callout, {
-    eager: false,
-    cascade: true,
-  })
-  posts?: Post[];
+  contributions?: CalloutContribution[];
 
   @OneToOne(() => Room, {
     eager: true,

@@ -20,8 +20,6 @@ import {
   UpdateCalloutInput,
 } from '@domain/collaboration/callout/dto/index';
 import { IPost } from '@domain/collaboration/post/post.interface';
-import { PostService } from '@domain/collaboration/post/post.service';
-import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { limitAndShuffle } from '@common/utils';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -51,8 +49,6 @@ import { CreatePostInput } from '../post/dto/post.dto.create';
 export class CalloutService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private postService: PostService,
-    private whiteboardService: WhiteboardService,
     private namingService: NamingService,
     private roomService: RoomService,
     private userLookupService: UserLookupService,
@@ -327,30 +323,21 @@ export class CalloutService {
 
   public async getActivityCount(callout: ICallout): Promise<number> {
     const result = 0;
-    if (callout.type === CalloutType.POST_COLLECTION) {
-      return await this.postService.getPostsInCalloutCount(callout.id);
-    } else if (callout.type === CalloutType.WHITEBOARD_COLLECTION) {
-      return await this.whiteboardService.getWhiteboardsInCalloutCount(
-        callout.id
-      );
-    } else if (callout.type === CalloutType.LINK_COLLECTION) {
-      return await this.getReferencesCountInLinkCallout(callout.id);
-    } else {
-      const comments = await this.getComments(callout.id);
-      if (comments) {
-        return comments.messagesCount;
-      }
+    switch (callout.type) {
+      case CalloutType.POST_COLLECTION:
+      case CalloutType.WHITEBOARD_COLLECTION:
+      case CalloutType.LINK_COLLECTION:
+        return await this.contributionService.getContributionsInCalloutCount(
+          callout.id
+        );
     }
+
+    const comments = await this.getComments(callout.id);
+    if (comments) {
+      return comments.messagesCount;
+    }
+
     return result;
-  }
-
-  private async getReferencesCountInLinkCallout(calloutId: string) {
-    const callout = await this.calloutRepository.findOne({
-      where: { id: calloutId },
-      relations: { framing: { profile: { references: true } } },
-    });
-
-    return callout?.framing.profile.references?.length ?? 0;
   }
 
   private async setNameIdOnPostData(

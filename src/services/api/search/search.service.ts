@@ -1116,6 +1116,7 @@ export class SearchService {
     );
 
     // Get all the posts IDs in the Space
+    // TODO: fix
     const postsFilter: string[] = [];
     const postQuery = this.postRepository
       .createQueryBuilder('post')

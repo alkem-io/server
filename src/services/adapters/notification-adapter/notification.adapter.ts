@@ -62,9 +62,7 @@ export class NotificationAdapter {
     this.logEventTriggered(eventData, event);
 
     const payload =
-      await this.notificationPayloadBuilder.buildPostCreatedPayload(
-        eventData.post.id
-      );
+      await this.notificationPayloadBuilder.buildPostCreatedPayload(eventData);
 
     this.notificationsClient.emit<number>(event, payload);
   }
@@ -77,7 +75,7 @@ export class NotificationAdapter {
 
     const payload =
       await this.notificationPayloadBuilder.buildWhiteboardCreatedPayload(
-        eventData.whiteboard.id
+        eventData
       );
 
     this.notificationsClient.emit<number>(event, payload);
@@ -106,9 +104,7 @@ export class NotificationAdapter {
     // build notification payload
     const payload =
       await this.notificationPayloadBuilder.buildCommentCreatedOnPostPayload(
-        eventData.post,
-        eventData.room.id,
-        eventData.commentSent
+        eventData
       );
     // send notification event
     this.notificationsClient.emit<number>(event, payload);

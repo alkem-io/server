@@ -49,9 +49,7 @@ import { IRelation } from '@domain/collaboration/relation/relation.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { IMessage } from '@domain/communication/message/message.interface';
-import { IPost } from '@domain/collaboration/post';
 import { IUser } from '@domain/community/user/user.interface';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { User } from '@domain/community/user/user.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { Community } from '@domain/community/community/community.entity';
@@ -59,6 +57,10 @@ import { ConfigService } from '@nestjs/config/dist/config.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { NotificationInputCommentReply } from './dto/notification.dto.input.comment.reply';
+import { NotificationInputWhiteboardCreated } from './dto/notification.dto.input.whiteboard.created';
+import { NotificationInputPostCreated } from './dto/notification.dto.input.post.created';
+import { NotificationInputPostComment } from './dto/notification.dto.input.post.comment';
+import { ContributionResolverService } from '@services/infrastructure/entity-resolver/contribution.resolver.service';
 
 @Injectable()
 export class NotificationPayloadBuilder {
@@ -72,8 +74,6 @@ export class NotificationPayloadBuilder {
     private communityResolverService: CommunityResolverService,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
-    @InjectRepository(Whiteboard)
-    private whiteboardRepository: Repository<Whiteboard>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @InjectRepository(Organization)
@@ -82,7 +82,8 @@ export class NotificationPayloadBuilder {
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private contributionResolverService: ContributionResolverService
   ) {}
 
   async buildApplicationCreatedNotificationPayload(
@@ -133,31 +134,10 @@ export class NotificationPayloadBuilder {
   }
 
   async buildPostCreatedPayload(
-    postId: string
+    eventData: NotificationInputPostCreated
   ): Promise<CollaborationPostCreatedEventPayload> {
-    const post = await this.postRepository.findOne({
-      where: { id: postId },
-      relations: [
-        'callout',
-        'callout.framing',
-        'callout.framing.profile',
-        'profile',
-      ],
-    });
-    if (!post) {
-      throw new NotificationEventException(
-        `Could not acquire post from id: ${postId}`,
-        LogContext.NOTIFICATIONS
-      );
-    }
-
-    const callout = post.callout;
-    if (!callout) {
-      throw new NotificationEventException(
-        `Could not acquire callout from post with id: ${postId}`,
-        LogContext.NOTIFICATIONS
-      );
-    }
+    const callout = eventData.callout;
+    const post = eventData.post;
 
     const community =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
@@ -166,13 +146,13 @@ export class NotificationPayloadBuilder {
 
     const journeyPayload = await this.buildJourneyPayload(community);
     const payload: CollaborationPostCreatedEventPayload = {
-      triggeredBy: post.createdBy,
+      triggeredBy: eventData.triggeredBy,
       callout: {
         displayName: callout.framing.profile.displayName,
         nameID: callout.nameID,
       },
       post: {
-        id: postId,
+        id: post.id,
         createdBy: post.createdBy,
         displayName: post.profile.displayName,
         nameID: post.nameID,
@@ -185,32 +165,10 @@ export class NotificationPayloadBuilder {
   }
 
   async buildWhiteboardCreatedPayload(
-    whiteboardId: string
+    eventData: NotificationInputWhiteboardCreated
   ): Promise<CollaborationWhiteboardCreatedEventPayload> {
-    const whiteboard = await this.whiteboardRepository.findOne({
-      where: { id: whiteboardId },
-      relations: [
-        'callout',
-        'callout.framing',
-        'callout.framing.profile',
-        'profile',
-      ],
-    });
-    if (!whiteboard) {
-      throw new NotificationEventException(
-        `Could not acquire whiteboard from id: ${whiteboardId}`,
-        LogContext.NOTIFICATIONS
-      );
-    }
-
-    const callout = whiteboard.callout;
-    if (!callout) {
-      throw new NotificationEventException(
-        `Could not acquire callout from whiteboard with id: ${whiteboardId}`,
-        LogContext.NOTIFICATIONS
-      );
-    }
-
+    const callout = eventData.callout;
+    const whiteboard = eventData.whiteboard;
     const community =
       await this.communityResolverService.getCommunityFromCalloutOrFail(
         callout.id
@@ -218,14 +176,14 @@ export class NotificationPayloadBuilder {
 
     const journeyPayload = await this.buildJourneyPayload(community);
     const payload: CollaborationWhiteboardCreatedEventPayload = {
-      triggeredBy: whiteboard.createdBy,
+      triggeredBy: eventData.triggeredBy,
       callout: {
         displayName: callout.framing.profile.displayName,
         nameID: callout.nameID,
       },
       whiteboard: {
-        id: whiteboardId,
-        createdBy: whiteboard.createdBy,
+        id: eventData.whiteboard.id,
+        createdBy: whiteboard.createdBy || '',
         displayName: whiteboard.profile.displayName,
         nameID: whiteboard.nameID,
       },
@@ -261,27 +219,15 @@ export class NotificationPayloadBuilder {
   }
 
   async buildCommentCreatedOnPostPayload(
-    postInput: IPost,
-    commentsId: string,
-    messageResult: IMessage
+    eventData: NotificationInputPostComment
   ): Promise<CollaborationPostCommentEventPayload> {
-    const post = await this.postRepository.findOne({
-      where: { id: postInput.id },
-      relations: [
-        'callout',
-        'callout.framing',
-        'callout.framing.profile',
-        'profile',
-      ],
-    });
-
-    if (!post) {
-      throw new NotificationEventException(
-        `Could not acquire post with id: ${postInput.id}`,
-        LogContext.NOTIFICATIONS
+    const commentsId = eventData.room.id;
+    const post = eventData.post;
+    const callout =
+      await this.contributionResolverService.getCalloutForPostContribution(
+        post.id
       );
-    }
-
+    const messageResult = eventData.commentSent;
     const community =
       await this.communityResolverService.getCommunityFromPostRoomOrFail(
         commentsId
@@ -290,13 +236,6 @@ export class NotificationPayloadBuilder {
     if (!community) {
       throw new NotificationEventException(
         `Could not acquire community from comments with id: ${commentsId}`,
-        LogContext.NOTIFICATIONS
-      );
-    }
-    const callout = post.callout;
-    if (!callout) {
-      throw new NotificationEventException(
-        `Could not acquire callout from post with id: ${post.id}`,
         LogContext.NOTIFICATIONS
       );
     }
@@ -793,7 +732,6 @@ export class NotificationPayloadBuilder {
         where: {
           id: originEntityId,
         },
-        relations: ['callout'],
       });
 
       if (!post) {
@@ -802,6 +740,10 @@ export class NotificationPayloadBuilder {
           LogContext.NOTIFICATIONS
         );
       }
+      const callout =
+        await this.contributionResolverService.getCalloutForPostContribution(
+          originEntityId
+        );
 
       const community =
         await this.communityResolverService.getCommunityFromPostRoomOrFail(
@@ -814,7 +756,7 @@ export class NotificationPayloadBuilder {
           LogContext.NOTIFICATIONS
         );
       }
-      const callout = post.callout;
+
       if (!callout) {
         throw new NotificationEventException(
           `Could not acquire callout from post with id: ${post.id}`,
