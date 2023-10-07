@@ -95,7 +95,7 @@ export class CalloutResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
-    return await this.calloutService.updateCallout(calloutData);
+    return await this.calloutService.updateCallout(calloutData, agentInfo);
   }
 
   @UseGuards(GraphqlGuard)
@@ -195,7 +195,7 @@ export class CalloutResolverMutations {
       `create post on callout: ${callout.id}`
     );
 
-    if (callout.state === CalloutState.CLOSED) {
+    if (callout.contributionPolicy.state === CalloutState.CLOSED) {
       throw new CalloutClosedException(
         `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
       );
@@ -249,7 +249,7 @@ export class CalloutResolverMutations {
       `create whiteboard on callout: ${callout.id}`
     );
 
-    if (callout.state === CalloutState.CLOSED) {
+    if (callout.contributionPolicy.state === CalloutState.CLOSED) {
       throw new CalloutClosedException(
         `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
       );

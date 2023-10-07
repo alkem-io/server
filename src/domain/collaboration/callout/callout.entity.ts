@@ -10,14 +10,13 @@ import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { ICallout } from './callout.interface';
 import { CalloutType } from '@common/enums/callout.type';
-import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { PostTemplate } from '@domain/template/post-template/post.template.entity';
-import { WhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.entity';
 import { Room } from '@domain/communication/room/room.entity';
 import { CalloutFraming } from '../callout-framing/callout.framing.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
+import { CalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.entity';
+import { CalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.entity';
 
 @Entity()
 export class Callout extends AuthorizableEntity implements ICallout {
@@ -30,9 +29,6 @@ export class Callout extends AuthorizableEntity implements ICallout {
   @Column('char', { length: 36, nullable: true })
   createdBy!: string;
 
-  @Column('text', { nullable: false, default: CalloutState.OPEN })
-  state!: CalloutState;
-
   @Column('text', { nullable: false, default: CalloutVisibility.DRAFT })
   visibility!: CalloutVisibility;
 
@@ -43,6 +39,22 @@ export class Callout extends AuthorizableEntity implements ICallout {
   })
   @JoinColumn()
   framing!: CalloutFraming;
+
+  @OneToOne(() => CalloutContributionPolicy, {
+    eager: true,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  contributionPolicy!: CalloutContributionPolicy;
+
+  @OneToOne(() => CalloutContributionDefaults, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  contributionDefaults?: CalloutContributionDefaults;
 
   @OneToMany(() => Whiteboard, whiteboard => whiteboard.callout, {
     eager: false,
@@ -55,22 +67,6 @@ export class Callout extends AuthorizableEntity implements ICallout {
     cascade: true,
   })
   posts?: Post[];
-
-  @OneToOne(() => PostTemplate, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  postTemplate?: PostTemplate;
-
-  @OneToOne(() => WhiteboardTemplate, {
-    eager: false,
-    cascade: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn()
-  whiteboardTemplate?: WhiteboardTemplate;
 
   @OneToOne(() => Room, {
     eager: true,

@@ -71,7 +71,7 @@ export class RoomResolverMutations {
         );
       }
 
-      if (callout.state === CalloutState.CLOSED) {
+      if (callout.contributionPolicy.state === CalloutState.CLOSED) {
         throw new CalloutClosedException(
           `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
         );

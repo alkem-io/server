@@ -11,7 +11,9 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'getting-started',
     type: CalloutType.LINK_COLLECTION,
-    state: CalloutState.CLOSED,
+    contributionPolicy: {
+      state: CalloutState.CLOSED,
+    },
     sortOrder: 1,
     framing: {
       profile: {
@@ -30,7 +32,9 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'general-chat',
     type: CalloutType.POST,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 1,
     framing: {
       profile: {
@@ -49,7 +53,9 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'tasks',
     type: CalloutType.POST_COLLECTION,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 2,
     framing: {
       profile: {
@@ -64,20 +70,17 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         ],
       },
     },
-    postTemplate: {
-      type: 'Task',
-      defaultDescription:
+    contributionDefaults: {
+      postDescription:
         'Task: <p>  Related to: <p> People involved: <p> Deadline:',
-      profile: {
-        displayName: 'task',
-        description: 'To share tasks with the community that can be picked up.',
-      },
     },
   },
   {
     nameID: 'roles',
     type: CalloutType.POST,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 3,
     framing: {
       profile: {
@@ -97,7 +100,9 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'news',
     type: CalloutType.POST_COLLECTION,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 1,
     framing: {
       profile: {
@@ -113,21 +118,17 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
         ],
       },
     },
-    postTemplate: {
-      type: 'contribution',
-      defaultDescription:
+    contributionDefaults: {
+      postDescription:
         'Please share your contribution. The more details the better!',
-      profile: {
-        displayName: 'contribution',
-        description:
-          'To share contributions with detailed explanations how they help.',
-      },
     },
   },
   {
     nameID: 'documents',
     type: CalloutType.LINK_COLLECTION,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 3,
     framing: {
       profile: {
@@ -146,7 +147,9 @@ export const opportunityDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'needs',
     type: CalloutType.WHITEBOARD,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 2,
     framing: {
       profile: {

@@ -24,8 +24,6 @@ import {
   POLICY_RULE_CALLOUT_CREATE,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
 } from '@common/constants';
-import { PostTemplateAuthorizationService } from '@domain/template/post-template/post.template.service.authorization';
-import { WhiteboardTemplateAuthorizationService } from '@domain/template/whiteboard-template/whiteboard.template.service.authorization';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { CalloutFramingAuthorizationService } from '../callout-framing/callout.framing.service.authorization';
 
@@ -36,8 +34,6 @@ export class CalloutAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private postAuthorizationService: PostAuthorizationService,
-    private postTemplateAuthorizationService: PostTemplateAuthorizationService,
-    private whiteboardTemplateAuthorizationService: WhiteboardTemplateAuthorizationService,
     private calloutFramingAuthorizationService: CalloutFramingAuthorizationService,
     private roomAuthorizationService: RoomAuthorizationService,
     @InjectRepository(Callout)
@@ -45,10 +41,40 @@ export class CalloutAuthorizationService {
   ) {}
 
   public async applyAuthorizationPolicy(
-    callout: ICallout,
+    calloutInput: ICallout,
     parentAuthorization: IAuthorizationPolicy | undefined,
     communityPolicy: ICommunityPolicy
   ): Promise<ICallout> {
+    const callout = await this.calloutService.getCalloutOrFail(
+      calloutInput.id,
+      {
+        relations: {
+          posts: {
+            comments: true,
+          },
+          whiteboards: {
+            checkout: true,
+          },
+          comments: true,
+          contributionDefaults: true,
+          contributionPolicy: true,
+          framing: true,
+        },
+      }
+    );
+
+    if (
+      !callout.contributionDefaults ||
+      !callout.contributionPolicy ||
+      !callout.posts ||
+      !callout.whiteboards
+    ) {
+      throw new EntityNotInitializedException(
+        `authorization: Unable to load callout: ${callout.id}`,
+        LogContext.COLLABORATION
+      );
+    }
+
     callout.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         callout.authorization,
@@ -62,9 +88,6 @@ export class CalloutAuthorizationService {
 
     callout.authorization = this.appendCredentialRules(callout);
 
-    callout.posts = await this.calloutService.getPostsFromCallout(callout, [
-      'posts.comments',
-    ]);
     for (const post of callout.posts) {
       await this.postAuthorizationService.applyAuthorizationPolicy(
         post,
@@ -78,10 +101,7 @@ export class CalloutAuthorizationService {
         callout.framing,
         callout.authorization
       );
-    callout.whiteboards = await this.calloutService.getWhiteboardsFromCallout(
-      callout,
-      ['whiteboards.checkout']
-    );
+
     for (const whiteboard of callout.whiteboards) {
       await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
         whiteboard,
@@ -89,7 +109,6 @@ export class CalloutAuthorizationService {
       );
     }
 
-    callout.comments = await this.calloutService.getComments(callout.id);
     if (callout.comments) {
       callout.comments =
         await this.roomAuthorizationService.applyAuthorizationPolicy(
@@ -103,27 +122,6 @@ export class CalloutAuthorizationService {
       callout.comments.authorization =
         this.roomAuthorizationService.allowContributorsToReplyReactToMessages(
           callout.comments.authorization
-        );
-    }
-
-    callout.postTemplate = await this.calloutService.getPostTemplateFromCallout(
-      callout.id
-    );
-    if (callout.postTemplate) {
-      callout.postTemplate =
-        await this.postTemplateAuthorizationService.applyAuthorizationPolicy(
-          callout.postTemplate,
-          callout.authorization
-        );
-    }
-
-    callout.whiteboardTemplate =
-      await this.calloutService.getWhiteboardTemplateFromCallout(callout.id);
-    if (callout.whiteboardTemplate) {
-      callout.whiteboardTemplate =
-        await this.whiteboardTemplateAuthorizationService.applyAuthorizationPolicy(
-          callout.whiteboardTemplate,
-          callout.authorization
         );
     }
 

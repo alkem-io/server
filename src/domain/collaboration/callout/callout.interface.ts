@@ -2,14 +2,13 @@ import { IPost } from '@domain/collaboration/post/post.interface';
 import { ObjectType, Field } from '@nestjs/graphql';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { CalloutType } from '@common/enums/callout.type';
-import { CalloutState } from '@common/enums/callout.state';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
-import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
+import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
+import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 
 @ObjectType('Callout')
 export abstract class ICallout extends IAuthorizable {
@@ -25,11 +24,6 @@ export abstract class ICallout extends IAuthorizable {
   })
   type!: CalloutType;
 
-  @Field(() => CalloutState, {
-    description: 'State of the Callout.',
-  })
-  state!: CalloutState;
-
   @Field(() => CalloutVisibility, {
     description: 'Visibility of the Callout.',
   })
@@ -41,26 +35,17 @@ export abstract class ICallout extends IAuthorizable {
   })
   framing!: ICalloutFraming;
 
+  contributionPolicy!: ICalloutContributionPolicy;
+  contributionDefaults?: ICalloutContributionDefaults;
+
   @Field(() => [IPost], {
     nullable: true,
     description: 'The Posts associated with this Callout.',
   })
   posts?: IPost[];
 
-  @Field(() => IPostTemplate, {
-    nullable: true,
-    description: 'The Post template associated with this Callout.',
-  })
-  postTemplate?: IPostTemplate;
-
   // exposed via field resolver
   whiteboards?: IWhiteboard[];
-
-  @Field(() => IWhiteboardTemplate, {
-    nullable: true,
-    description: 'The whiteboard template associated with this Callout.',
-  })
-  whiteboardTemplate?: IWhiteboardTemplate;
 
   comments?: IRoom;
 

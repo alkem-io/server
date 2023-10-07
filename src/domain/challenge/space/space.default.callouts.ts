@@ -11,7 +11,9 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'getting-started',
     type: CalloutType.LINK_COLLECTION,
-    state: CalloutState.CLOSED,
+    contributionPolicy: {
+      state: CalloutState.CLOSED,
+    },
     sortOrder: 1,
     framing: {
       profile: {
@@ -30,7 +32,9 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'general-chat',
     type: CalloutType.POST,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 1,
     framing: {
       profile: {
@@ -49,7 +53,9 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'questions',
     type: CalloutType.POST,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 2,
     framing: {
       profile: {
@@ -68,7 +74,9 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'vision',
     type: CalloutType.WHITEBOARD,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 2,
     framing: {
       profile: {
@@ -95,7 +103,9 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'space-welcome',
     type: CalloutType.POST,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 1,
     framing: {
       profile: {
@@ -115,7 +125,9 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'ecosystem',
     type: CalloutType.WHITEBOARD,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 1,
     framing: {
       profile: {
@@ -142,7 +154,9 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'challenge-ideas',
     type: CalloutType.POST,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 1,
     framing: {
       profile: {
@@ -161,7 +175,9 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'proposals',
     type: CalloutType.POST_COLLECTION,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 1,
     framing: {
       profile: {
@@ -177,20 +193,17 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         ],
       },
     },
-    postTemplate: {
-      type: 'challenge',
-      defaultDescription:
+    contributionDefaults: {
+      postDescription:
         'Title: <p> Description: <p> Who to involve: <p> Why is this important:',
-      profile: {
-        displayName: 'Challenge',
-        description: 'To share proposals for challenges to be worked on.',
-      },
     },
   },
   {
     nameID: 'news',
     type: CalloutType.POST_COLLECTION,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 1,
     framing: {
       profile: {
@@ -206,21 +219,17 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         ],
       },
     },
-    postTemplate: {
-      type: 'contribution',
-      defaultDescription:
+    contributionDefaults: {
+      postDescription:
         '✍️ Please share your contribution. The more details the better!',
-      profile: {
-        displayName: 'contribution',
-        description:
-          'To share contributions with detailed explanations how they help.',
-      },
     },
   },
   {
     nameID: 'documents',
     type: CalloutType.LINK_COLLECTION,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 2,
     framing: {
       profile: {
@@ -239,7 +248,9 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'faq',
     type: CalloutType.POST_COLLECTION,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 3,
     framing: {
       profile: {
@@ -255,13 +266,8 @@ export const spaceDefaultCallouts: CreateCalloutInput[] = [
         ],
       },
     },
-    postTemplate: {
-      type: 'FAQ',
-      defaultDescription: 'Please share your question!',
-      profile: {
-        displayName: 'faq',
-        description: 'To gather questions from the community.',
-      },
+    contributionDefaults: {
+      postDescription: 'Please share your question!',
     },
   },
 ];

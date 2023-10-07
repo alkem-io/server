@@ -13,15 +13,9 @@ import { UUID_NAMEID } from '@domain/common/scalars';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { EntityNotFoundException } from '@common/exceptions';
-import {
-  CalloutPostTemplateLoaderCreator,
-  CalloutWhiteboardTemplateLoaderCreator,
-  UserLoaderCreator,
-} from '@core/dataloader/creators';
+import { UserLoaderCreator } from '@core/dataloader/creators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
-import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
-import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 
 @Resolver(() => ICallout)
@@ -124,54 +118,6 @@ export class CalloutResolverFields {
   })
   async comments(@Parent() callout: Callout): Promise<IRoom | undefined> {
     return await this.calloutService.getComments(callout.id);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('postTemplate', () => IPostTemplate, {
-    nullable: true,
-    description: 'The PostTemplate for this Callout.',
-  })
-  async postTemplate(
-    @Parent() callout: ICallout,
-    @Loader(CalloutPostTemplateLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IPostTemplate>
-  ): Promise<IPostTemplate | null> {
-    return (
-      loader
-        .load(callout.id)
-        // empty object is result because DataLoader does not allow to return NULL values
-        // handle the value when the result is returned
-        .then(x => (!Object.keys(x).length ? null : x))
-    );
-  }
-
-  @ResolveField('activity', () => Number, {
-    nullable: false,
-    description: 'The activity for this Callout.',
-  })
-  async activity(@Parent() callout: ICallout): Promise<number> {
-    return await this.calloutService.getActivityCount(callout);
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('whiteboardTemplate', () => IWhiteboardTemplate, {
-    nullable: true,
-    description: 'The Whiteboard template for this Callout.',
-  })
-  async whiteboardTemplate(
-    @Parent() callout: ICallout,
-    @Loader(CalloutWhiteboardTemplateLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IWhiteboardTemplate>
-  ): Promise<IWhiteboardTemplate | null> {
-    return (
-      loader
-        .load(callout.id)
-        // empty object is result because DataLoader does not allow to return NULL values
-        // handle the value when the result is returned
-        .then(x => (!Object.keys(x).length ? null : x))
-    );
   }
 
   @ResolveField('publishedBy', () => IUser, {

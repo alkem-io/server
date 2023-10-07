@@ -31,10 +31,6 @@ import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CalloutType } from '@common/enums/callout.type';
 import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibility';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
-import { PostTemplateService } from '@domain/template/post-template/post.template.service';
-import { WhiteboardTemplateService } from '@domain/template/whiteboard-template/whiteboard.template.service';
-import { IWhiteboardTemplate } from '@domain/template/whiteboard-template/whiteboard.template.interface';
-import { IPostTemplate } from '@domain/template/post-template/post.template.interface';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
@@ -46,20 +42,23 @@ import { StorageBucketResolverService } from '@services/infrastructure/storage-b
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { CalloutFramingService } from '../callout-framing/callout.framing.service';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
+import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
+import { CalloutContributionPolicyService } from '../callout-contribution-policy/callout.contribution.policy.service';
+import { AgentInfo } from '@core/authentication';
 
 @Injectable()
 export class CalloutService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private postService: PostService,
-    private postTemplateService: PostTemplateService,
-    private whiteboardTemplateService: WhiteboardTemplateService,
     private whiteboardService: WhiteboardService,
     private namingService: NamingService,
     private roomService: RoomService,
     private userLookupService: UserLookupService,
     private storageBucketResolverService: StorageBucketResolverService,
     private calloutFramingService: CalloutFramingService,
+    private contributionDefaultsService: CalloutContributionDefaultsService,
+    private contributionPolicyService: CalloutContributionPolicyService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -72,14 +71,14 @@ export class CalloutService {
   ): Promise<ICallout> {
     if (
       calloutData.type == CalloutType.POST_COLLECTION &&
-      !calloutData.postTemplate
+      !calloutData.contributionDefaults?.postDescription
     ) {
-      throw new Error('Please provide a post template');
+      throw new Error('Please provide a post default description');
     }
 
     if (
       calloutData.type == CalloutType.WHITEBOARD_COLLECTION &&
-      !calloutData.whiteboardTemplate
+      !calloutData.contributionDefaults?.whiteboardContent
     ) {
       throw new Error('Please provide a whiteboard template');
     }
@@ -102,11 +101,6 @@ export class CalloutService {
       calloutData.sortOrder = 10;
     }
 
-    // Save the post template data for creation via service
-    // Note: do NOT save the callout post template that is created through ORM creation flow,
-    // as otherwise get a postTemplate created without any child entities (auth etc)
-    const postTemplateData = calloutData.postTemplate;
-    const whiteboardTemplateData = calloutData.whiteboardTemplate;
     const calloutNameID = this.namingService.createNameID(
       `${calloutData.framing.profile.displayName}`
     );
@@ -130,23 +124,15 @@ export class CalloutService {
       );
     }
 
-    if (calloutData.type == CalloutType.POST_COLLECTION && postTemplateData) {
-      callout.postTemplate = await this.postTemplateService.createPostTemplate(
-        postTemplateData,
-        parentStorageBucket
+    callout.contributionDefaults =
+      this.contributionDefaultsService.createCalloutContributionDefaults(
+        calloutData.contributionDefaults
       );
-    }
-    if (
-      calloutData.type == CalloutType.WHITEBOARD_COLLECTION &&
-      whiteboardTemplateData
-    ) {
-      callout.whiteboardTemplate =
-        await this.whiteboardTemplateService.createWhiteboardTemplate(
-          whiteboardTemplateData,
-          parentStorageBucket
-        );
-    }
 
+    callout.contributionPolicy =
+      this.contributionPolicyService.createCalloutContributionPolicy(
+        calloutData.contributionPolicy
+      );
     callout.authorization = new AuthorizationPolicy();
     callout.createdBy = userID ?? undefined;
     callout.visibility = calloutData.visibility ?? CalloutVisibility.DRAFT;
@@ -223,48 +209,46 @@ export class CalloutService {
   }
 
   public async updateCallout(
-    calloutUpdateData: UpdateCalloutInput
+    calloutUpdateData: UpdateCalloutInput,
+    agentInfo: AgentInfo
   ): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutUpdateData.ID, {
-      relations: [
-        'postTemplate',
-        'whiteboardTemplate',
-        'postTemplate.profile',
-        'whiteboardTemplate.profile',
-        'profile',
-      ],
+      relations: ['contributionDefaults', 'contributionPolicy', 'framing'],
     });
 
-    if (calloutUpdateData.state) callout.state = calloutUpdateData.state;
-
-    if (calloutUpdateData.sortOrder)
-      callout.sortOrder = calloutUpdateData.sortOrder;
-
-    if (
-      callout.type == CalloutType.POST_COLLECTION &&
-      callout.postTemplate &&
-      calloutUpdateData.postTemplate
-    ) {
-      callout.postTemplate = await this.postTemplateService.updatePostTemplate(
-        callout.postTemplate,
-        { ID: callout.postTemplate.id, ...calloutUpdateData.postTemplate }
+    if (!callout.contributionDefaults || !callout.contributionPolicy) {
+      throw new EntityNotInitializedException(
+        `Unable to load callout: ${callout.id}`,
+        LogContext.COLLABORATION
       );
     }
 
-    if (
-      callout.type == CalloutType.WHITEBOARD_COLLECTION &&
-      callout.whiteboardTemplate &&
-      calloutUpdateData.whiteboardTemplate
-    ) {
-      callout.whiteboardTemplate =
-        await this.whiteboardTemplateService.updateWhiteboardTemplate(
-          callout.whiteboardTemplate,
-          {
-            ID: callout.whiteboardTemplate.id,
-            ...calloutUpdateData.whiteboardTemplate,
-          }
+    if (calloutUpdateData.framing) {
+      callout.framing = await this.calloutFramingService.updateCalloutFraming(
+        callout.framing,
+        calloutUpdateData.framing,
+        agentInfo
+      );
+    }
+
+    if (calloutUpdateData.contributionPolicy) {
+      callout.contributionPolicy =
+        this.contributionPolicyService.updateCalloutContributionPolicy(
+          callout.contributionPolicy,
+          calloutUpdateData.contributionPolicy
         );
     }
+
+    if (calloutUpdateData.contributionDefaults) {
+      callout.contributionDefaults =
+        this.contributionDefaultsService.updateCalloutContributionDefaults(
+          callout.contributionDefaults,
+          calloutUpdateData.contributionDefaults
+        );
+    }
+
+    if (calloutUpdateData.sortOrder)
+      callout.sortOrder = calloutUpdateData.sortOrder;
 
     if (calloutUpdateData.displayLocation) {
       this.calloutFramingService.updateDisplayLocationTagsetValue(
@@ -286,41 +270,37 @@ export class CalloutService {
         posts: true,
         whiteboards: true,
         comments: true,
-        postTemplate: true,
-        whiteboardTemplate: true,
+        contributionDefaults: true,
+        contributionPolicy: true,
         framing: true,
       },
     });
 
-    if (callout.framing) {
-      await this.calloutFramingService.delete(callout.framing);
-    }
-
-    if (callout.whiteboards) {
-      for (const whiteboard of callout.whiteboards) {
-        await this.whiteboardService.deleteWhiteboard(whiteboard.id);
-      }
-    }
-
-    if (callout.posts) {
-      for (const post of callout.posts) {
-        await this.postService.deletePost({ ID: post.id });
-      }
-    }
-
-    if (callout.comments) {
-      await this.roomService.deleteRoom(callout.comments);
-    }
-
-    if (callout.postTemplate) {
-      await this.postTemplateService.deletePostTemplate(callout.postTemplate);
-    }
-
-    if (callout.whiteboardTemplate) {
-      await this.whiteboardTemplateService.deleteWhiteboardTemplate(
-        callout.whiteboardTemplate
+    if (
+      !callout.contributionDefaults ||
+      !callout.contributionPolicy ||
+      !callout.posts ||
+      !callout.whiteboards ||
+      !callout.comments
+    ) {
+      throw new EntityNotInitializedException(
+        `Unable to load callout: ${callout.id}`,
+        LogContext.COLLABORATION
       );
     }
+
+    await this.calloutFramingService.delete(callout.framing);
+    for (const whiteboard of callout.whiteboards) {
+      await this.whiteboardService.deleteWhiteboard(whiteboard.id);
+    }
+
+    for (const post of callout.posts) {
+      await this.postService.deletePost({ ID: post.id });
+    }
+    await this.roomService.deleteRoom(callout.comments);
+
+    await this.contributionDefaultsService.delete(callout.contributionDefaults);
+    await this.contributionPolicyService.delete(callout.contributionPolicy);
 
     if (callout.authorization)
       await this.authorizationPolicyService.delete(callout.authorization);
@@ -594,23 +574,5 @@ export class CalloutService {
     }
 
     return results;
-  }
-
-  public async getPostTemplateFromCallout(
-    calloutID: string
-  ): Promise<IPostTemplate | undefined> {
-    const loadedCallout = await this.getCalloutOrFail(calloutID, {
-      relations: ['postTemplate'],
-    });
-    return loadedCallout.postTemplate;
-  }
-
-  public async getWhiteboardTemplateFromCallout(
-    calloutID: string
-  ): Promise<IWhiteboardTemplate | undefined> {
-    const loadedCallout = await this.getCalloutOrFail(calloutID, {
-      relations: ['whiteboardTemplate'],
-    });
-    return loadedCallout.whiteboardTemplate;
   }
 }

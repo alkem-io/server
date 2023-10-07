@@ -17,14 +17,13 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { CommunityPolicyModule } from '@domain/community/community-policy/community.policy.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
-import { ProfileModule } from '@domain/common/profile/profile.module';
-import { PostTemplateModule } from '@domain/template/post-template/post.template.module';
-import { WhiteboardTemplateModule } from '@domain/template/whiteboard-template/whiteboard.template.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
 import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
 import { CalloutFramingModule } from '../callout-framing/callout.framing.module';
+import { CalloutContributionDefaultsModule } from '../callout-contribution-defaults/callout.contribution.defaults.module';
+import { CalloutContributionPolicyModule } from '../callout-contribution-policy/callout.contribution.policy.module';
 
 @Module({
   imports: [
@@ -41,13 +40,12 @@ import { CalloutFramingModule } from '../callout-framing/callout.framing.module'
     EntityResolverModule,
     UserLookupModule,
     NamingModule,
-    ProfileModule,
-    PostTemplateModule,
-    WhiteboardTemplateModule,
     MessagingModule,
     ReferenceModule,
     StorageBucketResolverModule,
     CalloutFramingModule,
+    CalloutContributionDefaultsModule,
+    CalloutContributionPolicyModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [

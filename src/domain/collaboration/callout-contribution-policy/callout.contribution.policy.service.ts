@@ -6,6 +6,7 @@ import { CreateCalloutContributionPolicyInput } from './dto';
 import { UpdateCalloutContributionPolicyInput } from './dto';
 import { ICalloutContributionPolicy } from './callout.contribution.policy.interface';
 import { CalloutContributionPolicy } from './callout.contribution.policy.entity';
+import { CalloutState } from '@common/enums/callout.state';
 
 @Injectable()
 export class CalloutContributionPolicyService {
@@ -17,16 +18,20 @@ export class CalloutContributionPolicyService {
   ) {}
 
   public createCalloutContributionPolicy(
-    calloutContributionPolicyData: CreateCalloutContributionPolicyInput
+    calloutContributionPolicyData?: CreateCalloutContributionPolicyInput
   ): ICalloutContributionPolicy {
     const calloutContributionPolicy = new CalloutContributionPolicy();
-    if (calloutContributionPolicyData.allowedContributionTypes) {
-      calloutContributionPolicy.allowedContributionTypes =
-        calloutContributionPolicyData.allowedContributionTypes;
-    }
+    calloutContributionPolicy.allowedContributionTypes = [];
+    calloutContributionPolicy.state = CalloutState.OPEN;
+    if (calloutContributionPolicyData) {
+      if (calloutContributionPolicyData.allowedContributionTypes) {
+        calloutContributionPolicy.allowedContributionTypes =
+          calloutContributionPolicyData.allowedContributionTypes;
+      }
 
-    if (calloutContributionPolicyData.state) {
-      calloutContributionPolicy.state = calloutContributionPolicyData.state;
+      if (calloutContributionPolicyData.state) {
+        calloutContributionPolicy.state = calloutContributionPolicyData.state;
+      }
     }
 
     return calloutContributionPolicy;

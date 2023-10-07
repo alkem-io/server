@@ -86,9 +86,7 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE callout_framing ADD whiteboardRtId char(36) NULL`
     );
-    await queryRunner.query(
-      `ALTER TABLE callout ADD framingId char(36) NOT NULL`
-    );
+    await queryRunner.query(`ALTER TABLE callout ADD framingId char(36) NULL`);
 
     const callouts: {
       id: string;

@@ -11,7 +11,9 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'getting-started',
     type: CalloutType.LINK_COLLECTION,
-    state: CalloutState.CLOSED,
+    contributionPolicy: {
+      state: CalloutState.CLOSED,
+    },
     sortOrder: 1,
     framing: {
       profile: {
@@ -30,7 +32,9 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'general-chat',
     type: CalloutType.POST,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 2,
     framing: {
       profile: {
@@ -49,7 +53,9 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'contributor-profiles',
     type: CalloutType.POST_COLLECTION,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 2,
     framing: {
       profile: {
@@ -65,21 +71,17 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         ],
       },
     },
-    postTemplate: {
-      type: 'Profile',
-      defaultDescription:
+    contributionDefaults: {
+      postDescription:
         'Hi! I am... <p> In daily life I... <p> And I also like to... <p> You can contact me for anything related to... <p> My wish for this Challenge is.. <p> <i>And of course feel invited to insert a nice picture!</i>',
-      profile: {
-        displayName: 'Profile',
-        description:
-          'To stimulate contributors to share more details about their profile.',
-      },
     },
   },
   {
     nameID: 'news',
     type: CalloutType.POST_COLLECTION,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 1,
     framing: {
       profile: {
@@ -95,21 +97,17 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         ],
       },
     },
-    postTemplate: {
-      type: 'contribution',
-      defaultDescription:
+    contributionDefaults: {
+      postDescription:
         '✍️ Please share your contribution. The more details the better!',
-      profile: {
-        displayName: 'contribution',
-        description:
-          'To share contributions with detailed explanations how they help.',
-      },
     },
   },
   {
     nameID: 'stakeholder-map',
     type: CalloutType.WHITEBOARD,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 2,
     framing: {
       profile: {
@@ -136,7 +134,9 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'documents',
     type: CalloutType.LINK_COLLECTION,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 3,
     framing: {
       profile: {
@@ -155,7 +155,9 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'opportunity-ideas',
     type: CalloutType.POST,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 1,
     framing: {
       profile: {
@@ -175,7 +177,9 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
   {
     nameID: 'proposals',
     type: CalloutType.POST_COLLECTION,
-    state: CalloutState.OPEN,
+    contributionPolicy: {
+      state: CalloutState.OPEN,
+    },
     sortOrder: 1,
     framing: {
       profile: {
@@ -191,14 +195,9 @@ export const challengeDefaultCallouts: CreateCalloutInput[] = [
         ],
       },
     },
-    postTemplate: {
-      type: 'opportunity',
-      defaultDescription:
+    contributionDefaults: {
+      postDescription:
         '💡 Title <p> 💬 Description <p> 🗣️ Who to involve <p> 🌟 Why this has great potential',
-      profile: {
-        displayName: 'opportunity',
-        description: 'To share proposals for Opportunities to be worked on.',
-      },
     },
   },
 ];
