@@ -7,12 +7,10 @@ import {
   Column,
   Entity,
   JoinColumn,
-  ManyToOne,
   OneToOne,
 } from 'typeorm';
 import { IWhiteboard } from './whiteboard.interface';
 import { WhiteboardCheckout } from '../whiteboard-checkout/whiteboard.checkout.entity';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 
@@ -47,13 +45,6 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
 
   @Column('char', { length: 36, nullable: true })
   createdBy!: string;
-
-  @ManyToOne(() => Callout, callout => callout.whiteboards, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  callout?: Callout;
 
   @OneToOne(() => WhiteboardCheckout, {
     eager: false,

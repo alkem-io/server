@@ -34,7 +34,7 @@ export class calloutPolicyDefaults1696674755742 implements MigrationInterface {
       postTemplateId: string;
       type: string;
     }[] = await queryRunner.query(
-      `SELECT id, type, state, whiteboardTemplateId, postTemplateId, type from callout`
+      `SELECT id, state, whiteboardTemplateId, postTemplateId, type from callout`
     );
     for (const callout of callouts) {
       // Create and link the Defaults
