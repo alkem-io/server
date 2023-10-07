@@ -12,6 +12,8 @@ import { IWhiteboard } from '@domain/common/whiteboard';
 import { CalloutFramingService } from './callout.framing.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 import { CalloutFramingWhiteboardLoaderCreator } from '@core/dataloader/creators/loader.creators/callout-framing/callout.framing.whiteboard.loader';
+import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
+import { CalloutFramingWhiteboardRtLoaderCreator } from '@core/dataloader/creators/loader.creators/callout-framing/callout.framing.whiteboard.rt.loader';
 
 @Resolver(() => ICalloutFraming)
 export class CalloutFramingResolverFields {
@@ -45,6 +47,20 @@ export class CalloutFramingResolverFields {
     @Loader(CalloutFramingWhiteboardLoaderCreator, { resolveToNull: true })
     loader: ILoader<IWhiteboard>
   ): Promise<IWhiteboard> {
+    return loader.load(calloutFraming.id);
+  }
+
+  @UseGuards(GraphqlGuard)
+  @ResolveField('whiteboardRt', () => IWhiteboardRt, {
+    nullable: true,
+    description: 'The WhiteboardRt for framing the associated Callout.',
+  })
+  @Profiling.api
+  async whiteboardRt(
+    @Parent() calloutFraming: ICalloutFraming,
+    @Loader(CalloutFramingWhiteboardRtLoaderCreator, { resolveToNull: true })
+    loader: ILoader<IWhiteboardRt>
+  ): Promise<IWhiteboardRt> {
     return loader.load(calloutFraming.id);
   }
 }

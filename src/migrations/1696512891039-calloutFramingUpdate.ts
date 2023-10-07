@@ -69,21 +69,22 @@ const createNameID = (base: string, useRandomSuffix = true): string => {
 };
 export class calloutFramingUpdate1696512891039 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // Drop the FKs before starting changes
+    // Callout ==> Profile
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` DROP FOREIGN KEY \`FK_19991450cf75dc486700ca034c6\``
+    );
+    // Callout ==> WhiteboardRt
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` DROP FOREIGN KEY \`FK_c7c005697d999f2b836052f4967\``
+    );
+
+    // Add in the structure
     await queryRunner.query(
       `ALTER TABLE callout_framing ADD whiteboardId char(36) NULL`
     );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout_framing\` ADD INDEX \`IDX_8bc0e1f40be5816d3a593cbf7f\` (\`whiteboardId\`)`
-    // );
     await queryRunner.query(
       `ALTER TABLE callout_framing ADD whiteboardRtId char(36) NULL`
-    );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout_framing\` ADD INDEX \`IDX_62712f63939a6d56fd5c334ee3\` (\`whiteboardRtId\`)`
-    // );
-
-    await queryRunner.query(
-      `ALTER TABLE \`whiteboard\` DROP FOREIGN KEY \`FK_fcabc1f3aa38aca70df4f66e938\``
     );
     await queryRunner.query(
       `ALTER TABLE callout ADD framingId char(36) NOT NULL`
@@ -98,6 +99,7 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
       `SELECT id, type, profileId, whiteboardRtId from callout`
     );
     for (const callout of callouts) {
+      // Create and link the Framing
       const calloutFramingID = randomUUID();
       const calloutFramingAuthID = randomUUID();
       await queryRunner.query(
@@ -105,47 +107,6 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
               ('${calloutFramingAuthID}',
               1, '', '', 0, '')`
       );
-
-      if (callout.type === CalloutType.WHITEBOARD) {
-        const [whiteboard]: { id: string }[] = await queryRunner.query(
-          `SELECT id FROM whiteboard WHERE calloutId = '${callout.id}'`
-        );
-        await queryRunner.query(
-          `INSERT INTO callout_framing (id, version, authorizationId, profileId, whiteboardId, whiteboardRtId)
-                      VALUES ('${calloutFramingID}',
-                              '1',
-                              '${calloutFramingAuthID}',
-                              '${callout.profileId}',
-                              '${whiteboard.id}',
-                              NULL)`
-        );
-
-        await queryRunner.query(
-          `UPDATE whiteboard SET calloutId = NULL WHERE id = '${whiteboard.id}'`
-        );
-
-        await queryRunner.query(
-          `UPDATE callout SET framingId = '${calloutFramingID}' WHERE id = '${callout.id}'`
-        );
-
-        continue;
-      }
-
-      if (callout.type === CalloutType.WHITEBOARD_RT) {
-        await queryRunner.query(
-          `INSERT INTO callout_framing (id, version, authorizationId, profileId, whiteboardId, whiteboardRtId)
-                      VALUES ('${calloutFramingID}',
-                              '1',
-                              '${calloutFramingAuthID}',
-                              '${callout.profileId}',
-                              NULL,
-                              '${callout.whiteboardRtId}')`
-        );
-        await queryRunner.query(
-          `UPDATE callout SET framingId = '${calloutFramingID}' WHERE id = '${callout.id}'`
-        );
-        continue;
-      }
 
       await queryRunner.query(
         `INSERT INTO callout_framing (id, version, authorizationId, profileId, whiteboardId, whiteboardRtId)
@@ -159,6 +120,26 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE callout SET framingId = '${calloutFramingID}' WHERE id = '${callout.id}'`
       );
+
+      // Move over the fields
+      switch (callout.type) {
+        case CalloutType.WHITEBOARD:
+          const [whiteboard]: { id: string }[] = await queryRunner.query(
+            `SELECT id FROM whiteboard WHERE calloutId = '${callout.id}'`
+          );
+          await queryRunner.query(
+            `UPDATE callout_framing SET whiteboardId = '${whiteboard.id}' WHERE id = '${calloutFramingID}'`
+          );
+          await queryRunner.query(
+            `UPDATE whiteboard SET calloutId = NULL WHERE id = '${whiteboard.id}'`
+          );
+          break;
+        case CalloutType.WHITEBOARD_RT:
+          await queryRunner.query(
+            `UPDATE callout_framing SET whiteboardRtId = '${callout.whiteboardRtId}' WHERE id = '${calloutFramingID}'`
+          );
+          break;
+      }
     }
 
     const calloutTemplates: {
@@ -259,30 +240,45 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
       );
     }
 
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_8bc0e1f40be5816d3a593cbf7fa\` FOREIGN KEY (\`whiteboardId\`) REFERENCES \`whiteboard\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    // );
-    // await queryRunner.query(
-    //   `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_62712f63939a6d56fd5c334ee3f\` FOREIGN KEY (\`whiteboardRtId\`) REFERENCES \`whiteboard_rt\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
-    // );
-
-    // await queryRunner.query(
-    //   `ALTER TABLE \`whiteboard\` ADD CONSTRAINT \`FK_fcabc1f3aa38aca70df4f66e938\` FOREIGN KEY (\`calloutId\`) REFERENCES \`callout\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`
-    // );
-
-    await queryRunner.query(
-      `ALTER TABLE \`callout\` DROP FOREIGN KEY \`FK_19991450cf75dc486700ca034c6\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`callout\` DROP FOREIGN KEY \`FK_c7c005697d999f2b836052f4967\``
-    );
+    // Remove the old data structure
     await queryRunner.query(`ALTER TABLE callout DROP COLUMN profileId`);
     await queryRunner.query(`ALTER TABLE callout DROP COLUMN whiteboardRtId`);
-
     await queryRunner.query(`ALTER TABLE callout_framing DROP COLUMN content`);
+
+    // Add back in the constraints
+    await queryRunner.query(
+      `ALTER TABLE \`callout_framing\` ADD INDEX \`IDX_8bc0e1f40be5816d3a593cbf7f\` (\`whiteboardId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout_framing\` ADD INDEX \`IDX_62712f63939a6d56fd5c334ee3\` (\`whiteboardRtId\`)`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_8bc0e1f40be5816d3a593cbf7fa\` FOREIGN KEY (\`whiteboardId\`) REFERENCES \`whiteboard\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout_framing\` ADD CONSTRAINT \`FK_62712f63939a6d56fd5c334ee3f\` FOREIGN KEY (\`whiteboardRtId\`) REFERENCES \`whiteboard_rt\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Drop the constraints
+    await queryRunner.query(
+      `ALTER TABLE \`callout_framing\` DROP INDEX \`IDX_8bc0e1f40be5816d3a593cbf7f\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout_framing\` DROP INDEX \`IDX_62712f63939a6d56fd5c334ee3\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout_framing\` DROP FOREIGN KEY \`FK_8bc0e1f40be5816d3a593cbf7fa\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout_framing\` DROP FOREIGN KEY \`FK_62712f63939a6d56fd5c334ee3f\``
+    );
+
+    // Add back in framing content
+    await queryRunner.query(
+      `ALTER TABLE callout ADD content longtext NOT NULL`
+    );
     await queryRunner.query(
       `ALTER TABLE callout ADD profileId char(36) NOT NULL`
     );
@@ -290,8 +286,57 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
       `ALTER TABLE callout ADD whiteboardRtId char(36) NOT NULL`
     );
 
+    // Migrate the data
+    const callouts: {
+      id: string;
+      type: CalloutType;
+      framingId: string;
+    }[] = await queryRunner.query(`SELECT id, type, framingId from callout`);
+    for (const callout of callouts) {
+      const [framing]: {
+        id: string;
+        profileId: string;
+        whiteboardId: string;
+        whiteboardRtId: string;
+      }[] = await queryRunner.query(
+        `SELECT id, profileId, whiteboardId, whiteboardRtId from callout_framing`
+      );
+      await queryRunner.query(
+        `UPDATE callout SET profileId = '${framing.profileId}' WHERE id = '${callout.id}'`
+      );
+
+      // Move over the fields
+      switch (callout.type) {
+        case CalloutType.WHITEBOARD:
+          await queryRunner.query(
+            `UPDATE whiteboard SET calloutId = '${callout.id}' WHERE id = '${framing.whiteboardId}'`
+          );
+          break;
+        case CalloutType.WHITEBOARD_RT:
+          await queryRunner.query(
+            `UPDATE callout SET whiteboardRtId = '${framing.whiteboardRtId}' WHERE id = '${callout.id}'`
+          );
+          break;
+      }
+    }
+
+    // Update the structure
     await queryRunner.query(
-      `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_c7c005697d999f2b836052f4967\` FOREIGN KEY (\`whiteboardRtId\`) REFERENCES \`whiteboard_rt\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+      `ALTER TABLE callout_framing DROP COLUMN whiteboardId`
+    );
+    await queryRunner.query(
+      `ALTER TABLE callout_framing DROP COLUMN  whiteboardRtId`
+    );
+    await queryRunner.query(
+      `ALTER TABLE callout DROP COLUMN framingId char(36)`
+    );
+
+    // Add back in the constraints
+    await queryRunner.query(
+      `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_19991450cf75dc486700ca034c6\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      'ALTER TABLE `callout` ADD CONSTRAINT `FK_c7c005697d999f2b836052f4967` FOREIGN KEY (`whiteboardRtId`) REFERENCES `whiteboard_rt`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
   }
 }
