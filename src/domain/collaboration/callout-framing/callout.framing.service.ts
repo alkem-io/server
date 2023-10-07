@@ -1,6 +1,5 @@
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { Inject, Injectable } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Injectable } from '@nestjs/common';
 import { CreateCalloutFramingInput } from './dto/callout.framing.dto.create';
 import { UpdateCalloutFramingInput } from './dto/callout.framing.dto.update';
 import { ICalloutFraming } from './callout.framing.interface';
@@ -26,7 +25,6 @@ import { IWhiteboard } from '@domain/common/whiteboard';
 @Injectable()
 export class CalloutFramingService {
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private profileService: ProfileService,
     private whiteboardService: WhiteboardService,
     private whiteboardRtService: WhiteboardRtService,
