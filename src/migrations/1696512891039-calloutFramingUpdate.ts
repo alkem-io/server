@@ -263,27 +263,25 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Drop the constraints
     await queryRunner.query(
-      `ALTER TABLE \`callout_framing\` DROP INDEX \`IDX_8bc0e1f40be5816d3a593cbf7f\``
-    );
-    await queryRunner.query(
-      `ALTER TABLE \`callout_framing\` DROP INDEX \`IDX_62712f63939a6d56fd5c334ee3\``
-    );
-    await queryRunner.query(
       `ALTER TABLE \`callout_framing\` DROP FOREIGN KEY \`FK_8bc0e1f40be5816d3a593cbf7fa\``
     );
     await queryRunner.query(
       `ALTER TABLE \`callout_framing\` DROP FOREIGN KEY \`FK_62712f63939a6d56fd5c334ee3f\``
     );
+    await queryRunner.query(
+      `ALTER TABLE \`callout_framing\` DROP INDEX \`IDX_8bc0e1f40be5816d3a593cbf7f\``
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`callout_framing\` DROP INDEX \`IDX_62712f63939a6d56fd5c334ee3\``
+    );
 
     // Add back in framing content
     await queryRunner.query(
-      `ALTER TABLE callout ADD content longtext NOT NULL`
+      `ALTER TABLE callout_framing ADD content longtext NULL`
     );
+    await queryRunner.query(`ALTER TABLE callout ADD profileId char(36) NULL`);
     await queryRunner.query(
-      `ALTER TABLE callout ADD profileId char(36) NOT NULL`
-    );
-    await queryRunner.query(
-      `ALTER TABLE callout ADD whiteboardRtId char(36) NOT NULL`
+      `ALTER TABLE callout ADD whiteboardRtId char(36) NULL`
     );
 
     // Migrate the data
@@ -327,14 +325,13 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE callout_framing DROP COLUMN  whiteboardRtId`
     );
-    await queryRunner.query(
-      `ALTER TABLE callout DROP COLUMN framingId char(36)`
-    );
+    await queryRunner.query(`ALTER TABLE callout DROP COLUMN framingId`);
 
     // Add back in the constraints
     await queryRunner.query(
       `ALTER TABLE \`callout\` ADD CONSTRAINT \`FK_19991450cf75dc486700ca034c6\` FOREIGN KEY (\`profileId\`) REFERENCES \`profile\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
+
     await queryRunner.query(
       'ALTER TABLE `callout` ADD CONSTRAINT `FK_c7c005697d999f2b836052f4967` FOREIGN KEY (`whiteboardRtId`) REFERENCES `whiteboard_rt`(`id`) ON DELETE SET NULL ON UPDATE NO ACTION'
     );
