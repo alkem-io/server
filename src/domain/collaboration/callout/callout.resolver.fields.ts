@@ -8,9 +8,7 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { IPost } from '@domain/collaboration/post/post.interface';
 import { UUID_NAMEID } from '@domain/common/scalars';
-import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { EntityNotFoundException } from '@common/exceptions';
 import { UserLoaderCreator } from '@core/dataloader/creators';
@@ -26,90 +24,6 @@ export class CalloutResolverFields {
     private readonly logger: LoggerService,
     private calloutService: CalloutService
   ) {}
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('posts', () => [IPost], {
-    nullable: true,
-    description: 'The Posts for this Callout.',
-  })
-  @Profiling.api
-  async posts(
-    @Parent() callout: Callout,
-    @Args({
-      name: 'IDs',
-      type: () => [UUID_NAMEID],
-      description: 'The IDs (either UUID or nameID) of the Posts to return',
-      nullable: true,
-    })
-    ids: string[],
-    @Args({
-      name: 'limit',
-      type: () => Float,
-      description:
-        'The number of Posts to return; if omitted returns all Posts.',
-      nullable: true,
-    })
-    limit: number,
-    @Args({
-      name: 'shuffle',
-      type: () => Boolean,
-      description:
-        'If true and limit is specified then return the Posts based on a random selection.',
-      nullable: true,
-    })
-    shuffle: boolean
-  ): Promise<IPost[]> {
-    return await this.calloutService.getPostsFromCallout(
-      callout,
-      ['posts.comments'],
-      ids,
-      limit,
-      shuffle
-    );
-  }
-
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('whiteboards', () => [IWhiteboard], {
-    nullable: true,
-    description: 'The Whiteboard entities for this Callout.',
-  })
-  @Profiling.api
-  async whiteboards(
-    @Parent() callout: Callout,
-    @Args({
-      name: 'IDs',
-      type: () => [UUID_NAMEID],
-      description: 'The IDs of the whiteboards to return',
-      nullable: true,
-    })
-    ids: string[],
-    @Args({
-      name: 'limit',
-      type: () => Float,
-      description:
-        'The number of Whiteboards to return; if omitted return all Whiteboards.',
-      nullable: true,
-    })
-    limit: number,
-    @Args({
-      name: 'shuffle',
-      type: () => Boolean,
-      description:
-        'If true and limit is specified then return the Whiteboards based on a random selection. Defaults to false.',
-      nullable: true,
-    })
-    shuffle: boolean
-  ): Promise<IWhiteboard[]> {
-    return await this.calloutService.getWhiteboardsFromCallout(
-      callout,
-      ['whiteboards.checkout'],
-      ids,
-      limit,
-      shuffle
-    );
-  }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)

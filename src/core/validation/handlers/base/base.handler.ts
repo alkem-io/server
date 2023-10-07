@@ -31,8 +31,6 @@ import { CreateChallengeOnSpaceInput } from '@domain/challenge/challenge/dto/cha
 import { CreateChallengeOnChallengeInput } from '@domain/challenge/challenge/dto/challenge.dto.create.in.challenge';
 import { CreateActorInput, UpdateActorInput } from '@domain/context/actor';
 import { CommunityApplyInput } from '@domain/community/community/dto/community.dto.apply';
-import { CreatePostOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.post';
-import { CreateWhiteboardOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.whiteboard';
 import { CommunicationCreateDiscussionInput } from '@domain/communication/communication/dto/communication.dto.create.discussion';
 import { CreateFeedbackOnCommunityContextInput } from '@domain/community/community/dto/community.dto.create.feedback.on.context';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
@@ -85,6 +83,7 @@ import {
 } from '@domain/collaboration/callout-contribution-defaults/dto';
 import { UpdateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.update';
 import { CreateCalloutTemplateInput } from '@domain/template/callout-template/dto/callout.template.dto.create';
+import { CreateContributionOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.contribution';
 
 export class BaseHandler extends AbstractHandler {
   public async handle(
@@ -105,12 +104,11 @@ export class BaseHandler extends AbstractHandler {
       CreateCalloutContributionDefaultsInput,
       CreateActorGroupInput,
       CreateActorInput,
-      CreatePostOnCalloutInput,
+      CreateContributionOnCalloutInput,
       CreateDocumentInput,
       CreateCalloutTemplateInput,
       CreateCalloutTemplateOnTemplatesSetInput,
       CreatePostTemplateOnTemplatesSetInput,
-      CreateWhiteboardOnCalloutInput,
       CreateWhiteboardTemplateOnTemplatesSetInput,
       CreateChallengeOnSpaceInput,
       CreateChallengeOnChallengeInput,

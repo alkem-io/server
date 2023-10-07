@@ -29,10 +29,6 @@ import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
-import { CreateLinkOnCalloutInput } from '../callout/dto/callout.dto.create.link';
-import { IReference } from '@domain/common/reference/reference.interface';
-import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 
 @Injectable()
@@ -279,25 +275,5 @@ export class CalloutFramingService {
       );
     }
     displayLocationTagset.tags = [group];
-  }
-
-  public async createLinkOnCalloutFraming(
-    framingID: string,
-    linkData: CreateLinkOnCalloutInput
-  ): Promise<IReference> {
-    const framing = await this.getCalloutFramingOrFail(framingID, {
-      relations: ['profile', 'profile.references'],
-    });
-    if (!framing.profile || !framing.profile.references)
-      throw new EntityNotInitializedException(
-        `CalloutFraming (${framingID}) not initialised`,
-        LogContext.COLLABORATION
-      );
-    const referenceInput: CreateReferenceOnProfileInput = {
-      profileID: framing.profile.id,
-      ...linkData,
-    };
-    const reference = await this.profileService.createReference(referenceInput);
-    return reference;
   }
 }

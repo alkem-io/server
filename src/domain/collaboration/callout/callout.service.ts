@@ -17,8 +17,6 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import {
   CreateCalloutInput,
-  CreatePostOnCalloutInput,
-  CreateWhiteboardOnCalloutInput,
   UpdateCalloutInput,
 } from '@domain/collaboration/callout/dto/index';
 import { IPost } from '@domain/collaboration/post/post.interface';
@@ -35,8 +33,6 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
-import { IReference } from '@domain/common/reference';
-import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
 import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
 import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
@@ -48,6 +44,8 @@ import { AgentInfo } from '@core/authentication';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
+import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
+import { CreatePostInput } from '../post/dto/post.dto.create';
 
 @Injectable()
 export class CalloutService {
@@ -288,9 +286,8 @@ export class CalloutService {
   public async deleteCallout(calloutID: string): Promise<ICallout> {
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: {
-        posts: true,
-        whiteboards: true,
         comments: true,
+        contributions: true,
         contributionDefaults: true,
         contributionPolicy: true,
         framing: true,
@@ -300,8 +297,7 @@ export class CalloutService {
     if (
       !callout.contributionDefaults ||
       !callout.contributionPolicy ||
-      !callout.posts ||
-      !callout.whiteboards ||
+      !callout.contributions ||
       !callout.comments
     ) {
       throw new EntityNotInitializedException(
@@ -311,13 +307,10 @@ export class CalloutService {
     }
 
     await this.calloutFramingService.delete(callout.framing);
-    for (const whiteboard of callout.whiteboards) {
-      await this.whiteboardService.deleteWhiteboard(whiteboard.id);
+    for (const contribution of callout.contributions) {
+      await this.contributionService.delete(contribution);
     }
 
-    for (const post of callout.posts) {
-      await this.postService.deletePost({ ID: post.id });
-    }
     await this.roomService.deleteRoom(callout.comments);
 
     await this.contributionDefaultsService.delete(callout.contributionDefaults);
@@ -361,7 +354,7 @@ export class CalloutService {
   }
 
   private async setNameIdOnPostData(
-    postData: CreatePostOnCalloutInput,
+    postData: CreatePostInput,
     callout: ICallout
   ) {
     if (postData.nameID && postData.nameID.length > 0) {
@@ -392,46 +385,6 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
   }
-
-  public async createPostOnCallout(
-    postData: CreatePostOnCalloutInput,
-    userID: string
-  ): Promise<IPost> {
-    const calloutID = postData.calloutID;
-    const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['profile', 'posts', 'posts.profile'],
-    });
-    if (!callout.posts || !callout.framing.profile)
-      throw new EntityNotInitializedException(
-        `Callout (${calloutID}) not initialised`,
-        LogContext.COLLABORATION
-      );
-
-    await this.setNameIdOnPostData(postData, callout);
-
-    const storageBucket = await this.getStorageBucket(callout);
-    const post = await this.postService.createPost(
-      postData,
-      storageBucket,
-      userID
-    );
-    callout.posts.push(post);
-    await this.calloutRepository.save(callout);
-    return post;
-  }
-
-  // TODO: this is broken until have the
-  public async createLinkOnCallout(
-    linkData: CreateLinkOnCalloutInput
-  ): Promise<IReference> {
-    const framing = await this.getCalloutFraming(linkData.calloutID);
-
-    return await this.calloutFramingService.createLinkOnCalloutFraming(
-      framing.id,
-      linkData
-    );
-  }
-
   public async getComments(calloutID: string): Promise<IRoom | undefined> {
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: ['comments'],
@@ -440,7 +393,7 @@ export class CalloutService {
   }
 
   private async setNameIdOnWhiteboardData(
-    whiteboardData: CreateWhiteboardOnCalloutInput,
+    whiteboardData: CreateWhiteboardInput,
     callout: ICallout
   ) {
     if (whiteboardData.nameID && whiteboardData.nameID.length > 0) {
@@ -475,6 +428,12 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
 
+    if (contributionData.whiteboard) {
+      this.setNameIdOnWhiteboardData(contributionData.whiteboard, callout);
+    }
+    if (contributionData.post) {
+      this.setNameIdOnPostData(contributionData.post, callout);
+    }
     const storageBucket = await this.getStorageBucket(callout);
     const contribution =
       await this.contributionService.createCalloutContribution(
@@ -486,43 +445,6 @@ export class CalloutService {
     callout.contributions.push(contribution);
     await this.calloutRepository.save(callout);
     return contribution;
-  }
-
-  public async createWhiteboardOnCallout(
-    whiteboardData: CreateWhiteboardOnCalloutInput,
-    userID: string
-  ): Promise<IWhiteboard> {
-    const calloutID = whiteboardData.calloutID;
-    const callout = await this.getCalloutOrFail(calloutID, {
-      relations: ['profile', 'whiteboards'],
-    });
-    if (!callout.whiteboards)
-      throw new EntityNotInitializedException(
-        `Callout (${calloutID}) not initialised`,
-        LogContext.COLLABORATION
-      );
-
-    if (callout.type == CalloutType.WHITEBOARD && callout.whiteboards[0]) {
-      throw new Error(
-        'Whiteboard Callout cannot have more than one whiteboard'
-      );
-    }
-
-    this.setNameIdOnWhiteboardData(whiteboardData, callout);
-
-    const storageBucket = await this.getStorageBucket(callout);
-    const whiteboard = await this.whiteboardService.createWhiteboard(
-      {
-        nameID: whiteboardData.nameID,
-        content: whiteboardData.content,
-        profileData: whiteboardData.profileData,
-      },
-      storageBucket,
-      userID
-    );
-    callout.whiteboards.push(whiteboard);
-    await this.calloutRepository.save(callout);
-    return whiteboard;
   }
 
   public async getCalloutFraming(

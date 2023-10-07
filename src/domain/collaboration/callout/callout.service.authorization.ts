@@ -6,8 +6,6 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { CalloutService } from './callout.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
-import { PostAuthorizationService } from '@domain/collaboration/post/post.service.authorization';
 import {
   LogContext,
   AuthorizationPrivilege,
@@ -26,14 +24,14 @@ import {
 } from '@common/constants';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { CalloutFramingAuthorizationService } from '../callout-framing/callout.framing.service.authorization';
+import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 
 @Injectable()
 export class CalloutAuthorizationService {
   constructor(
     private calloutService: CalloutService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private whiteboardAuthorizationService: WhiteboardAuthorizationService,
-    private postAuthorizationService: PostAuthorizationService,
+    private contributionAuthorizationService: CalloutContributionAuthorizationService,
     private calloutFramingAuthorizationService: CalloutFramingAuthorizationService,
     private roomAuthorizationService: RoomAuthorizationService,
     @InjectRepository(Callout)
@@ -49,13 +47,8 @@ export class CalloutAuthorizationService {
       calloutInput.id,
       {
         relations: {
-          posts: {
-            comments: true,
-          },
-          whiteboards: {
-            checkout: true,
-          },
           comments: true,
+          contributions: true,
           contributionDefaults: true,
           contributionPolicy: true,
           framing: true,
@@ -64,10 +57,9 @@ export class CalloutAuthorizationService {
     );
 
     if (
+      !callout.contributions ||
       !callout.contributionDefaults ||
-      !callout.contributionPolicy ||
-      !callout.posts ||
-      !callout.whiteboards
+      !callout.contributionPolicy
     ) {
       throw new EntityNotInitializedException(
         `authorization: Unable to load callout: ${callout.id}`,
@@ -88,9 +80,9 @@ export class CalloutAuthorizationService {
 
     callout.authorization = this.appendCredentialRules(callout);
 
-    for (const post of callout.posts) {
-      await this.postAuthorizationService.applyAuthorizationPolicy(
-        post,
+    for (const contribution of callout.contributions) {
+      await this.contributionAuthorizationService.applyAuthorizationPolicy(
+        contribution,
         callout.authorization,
         communityPolicy
       );
@@ -101,13 +93,6 @@ export class CalloutAuthorizationService {
         callout.framing,
         callout.authorization
       );
-
-    for (const whiteboard of callout.whiteboards) {
-      await this.whiteboardAuthorizationService.applyAuthorizationPolicy(
-        whiteboard,
-        callout.authorization
-      );
-    }
 
     if (callout.comments) {
       callout.comments =
