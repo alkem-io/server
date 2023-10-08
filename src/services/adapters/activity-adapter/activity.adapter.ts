@@ -416,7 +416,8 @@ export class ActivityAdapter {
   private async getCalloutIdForPost(postID: string): Promise<string> {
     const callout = await this.calloutRepository
       .createQueryBuilder('callout')
-      .innerJoinAndSelect('callout.posts', 'post')
+      .leftJoinAndSelect('callout.contributions', 'contributions')
+      .innerJoinAndSelect('contributions.post', 'post')
       .where('post.id = :id')
       .setParameters({ id: `${postID}` })
       .getOne();
@@ -433,7 +434,8 @@ export class ActivityAdapter {
     const collaboration = await this.collaborationRepository
       .createQueryBuilder('collaboration')
       .leftJoinAndSelect('collaboration.callouts', 'callouts')
-      .innerJoinAndSelect('callouts.posts', 'post')
+      .leftJoinAndSelect('callouts.contributions', 'contributions')
+      .innerJoinAndSelect('contributions.post', 'post')
       .where('post.id = :id')
       .setParameters({ id: `${postID}` })
       .getOne();

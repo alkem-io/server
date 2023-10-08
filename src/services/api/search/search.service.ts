@@ -36,6 +36,7 @@ import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { ISearchResultBuilder } from './search.result.builder.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { SpaceVisibility } from '@common/enums/space.visibility';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 
 enum SearchEntityTypes {
   USER = 'user',
@@ -94,6 +95,8 @@ export class SearchService {
     private opportunityRepository: Repository<Opportunity>,
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
+    @InjectRepository(CalloutContribution)
+    private contributionRepository: Repository<CalloutContribution>,
     private spaceService: SpaceService,
     private challengeService: ChallengeService,
     private opportunityService: OpportunityService,
@@ -1116,18 +1119,23 @@ export class SearchService {
     );
 
     // Get all the posts IDs in the Space
-    // TODO: fix
-    const postsFilter: string[] = [];
-    const postQuery = this.postRepository
-      .createQueryBuilder('post')
-      .leftJoinAndSelect('post.callout', 'callout')
+    const contributionsQuery = this.contributionRepository
+      .createQueryBuilder('callout_contribution')
+      .leftJoinAndSelect('callout_contribution.callout', 'callout')
+      .leftJoinAndSelect('callout_contribution.post', 'post')
       .leftJoinAndSelect('callout.collaboration', 'collaboration')
       .where('collaboration.id IN (:collaborationFilter)', {
         collaborationFilter: collaborationFilter,
       });
 
-    const postMatches = await postQuery.getMany();
-    postMatches.forEach(match => postsFilter.push(match.id));
+    const contributionMatches = await contributionsQuery.getMany();
+
+    const postsFilter: string[] = [];
+    contributionMatches.forEach(contribution => {
+      if (contribution.post) {
+        postsFilter.push(contribution.post.id);
+      }
+    });
 
     return postsFilter;
   }
