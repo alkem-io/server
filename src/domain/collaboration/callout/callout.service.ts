@@ -44,6 +44,8 @@ import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contr
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { CreatePostInput } from '../post/dto/post.dto.create';
+import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
+import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 
 @Injectable()
 export class CalloutService {
@@ -372,6 +374,35 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
   }
+
+  public async getContributionPolicy(
+    calloutID: string
+  ): Promise<ICalloutContributionPolicy> {
+    const callout = await this.getCalloutOrFail(calloutID, {
+      relations: ['contributionPolicy'],
+    });
+    if (!callout.contributionPolicy)
+      throw new EntityNotInitializedException(
+        `Callout (${calloutID}) not initialised as no contribution policy`,
+        LogContext.COLLABORATION
+      );
+    return callout.contributionPolicy;
+  }
+
+  public async getContributionDefaults(
+    calloutID: string
+  ): Promise<ICalloutContributionDefaults> {
+    const callout = await this.getCalloutOrFail(calloutID, {
+      relations: ['contributionDefaults'],
+    });
+    if (!callout.contributionDefaults)
+      throw new EntityNotInitializedException(
+        `Callout (${calloutID}) not initialised as no contribution defaults`,
+        LogContext.COLLABORATION
+      );
+    return callout.contributionDefaults;
+  }
+
   public async getComments(calloutID: string): Promise<IRoom | undefined> {
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: ['comments'],

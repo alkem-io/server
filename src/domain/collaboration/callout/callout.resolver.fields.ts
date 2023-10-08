@@ -16,6 +16,8 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Loader } from '@core/dataloader/decorators';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
+import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
+import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -75,6 +77,30 @@ export class CalloutResolverFields {
   })
   async comments(@Parent() callout: Callout): Promise<IRoom | undefined> {
     return await this.calloutService.getComments(callout.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('contributionPolicy', () => ICalloutContributionPolicy, {
+    nullable: false,
+    description: 'The ContributionPolicy for this Callout.',
+  })
+  async contributionPolicy(
+    @Parent() callout: Callout
+  ): Promise<ICalloutContributionPolicy> {
+    return await this.calloutService.getContributionPolicy(callout.id);
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('contributionDefaults', () => ICalloutContributionDefaults, {
+    nullable: false,
+    description: 'The Contribution Defaults for this Callout.',
+  })
+  async contributionDefaults(
+    @Parent() callout: Callout
+  ): Promise<ICalloutContributionDefaults> {
+    return await this.calloutService.getContributionDefaults(callout.id);
   }
 
   @ResolveField('publishedBy', () => IUser, {
