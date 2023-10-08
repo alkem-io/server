@@ -107,9 +107,14 @@ export class CalloutService {
         calloutData.contributionDefaults
       );
 
+    const policyData =
+      this.contributionPolicyService.updateContributionPolicyInput(
+        calloutData.type,
+        calloutData.contributionPolicy
+      );
     callout.contributionPolicy =
       this.contributionPolicyService.createCalloutContributionPolicy(
-        calloutData.contributionPolicy
+        policyData
       );
 
     if (calloutData.type === CalloutType.POST) {

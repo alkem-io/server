@@ -7,6 +7,8 @@ import { UpdateCalloutContributionPolicyInput } from './dto';
 import { ICalloutContributionPolicy } from './callout.contribution.policy.interface';
 import { CalloutContributionPolicy } from './callout.contribution.policy.entity';
 import { CalloutState } from '@common/enums/callout.state';
+import { CalloutType } from '@common/enums/callout.type';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 
 @Injectable()
 export class CalloutContributionPolicyService {
@@ -18,32 +20,57 @@ export class CalloutContributionPolicyService {
   ) {}
 
   public createCalloutContributionPolicy(
-    calloutContributionPolicyData?: CreateCalloutContributionPolicyInput
+    calloutContributionPolicyData: CreateCalloutContributionPolicyInput
   ): ICalloutContributionPolicy {
     const calloutContributionPolicy = new CalloutContributionPolicy();
     calloutContributionPolicy.allowedContributionTypes = [];
     calloutContributionPolicy.state = CalloutState.OPEN;
-    if (calloutContributionPolicyData) {
-      if (calloutContributionPolicyData.allowedContributionTypes) {
-        calloutContributionPolicy.allowedContributionTypes =
-          calloutContributionPolicyData.allowedContributionTypes;
-      }
+    if (calloutContributionPolicyData.allowedContributionTypes) {
+      calloutContributionPolicy.allowedContributionTypes =
+        calloutContributionPolicyData.allowedContributionTypes;
+    }
 
-      if (calloutContributionPolicyData.state) {
-        calloutContributionPolicy.state = calloutContributionPolicyData.state;
-      }
+    if (calloutContributionPolicyData.state) {
+      calloutContributionPolicy.state = calloutContributionPolicyData.state;
     }
 
     return calloutContributionPolicy;
+  }
+
+  public updateContributionPolicyInput(
+    calloutType: CalloutType,
+    policyData: CreateCalloutContributionPolicyInput | undefined
+  ): CreateCalloutContributionPolicyInput {
+    const allowedContributionTypes: CalloutContributionType[] = [];
+    switch (calloutType) {
+      case CalloutType.LINK_COLLECTION:
+        allowedContributionTypes.push(CalloutContributionType.LINK);
+        break;
+      case CalloutType.POST_COLLECTION:
+        allowedContributionTypes.push(CalloutContributionType.POST);
+        break;
+      case CalloutType.WHITEBOARD_COLLECTION:
+        allowedContributionTypes.push(CalloutContributionType.WHITEBOARD);
+        break;
+    }
+    if (!policyData) {
+      const result: CreateCalloutContributionPolicyInput = {
+        state: CalloutState.OPEN,
+        allowedContributionTypes: allowedContributionTypes,
+      };
+      return result;
+    }
+    policyData.allowedContributionTypes = allowedContributionTypes;
+    return policyData;
   }
 
   public updateCalloutContributionPolicy(
     calloutResponsePolicy: ICalloutContributionPolicy,
     calloutResponsePolicyData: UpdateCalloutContributionPolicyInput
   ): ICalloutContributionPolicy {
-    if (calloutResponsePolicyData.allowedResponseTypes) {
+    if (calloutResponsePolicyData.allowedContributionTypes) {
       calloutResponsePolicy.allowedContributionTypes =
-        calloutResponsePolicyData.allowedResponseTypes;
+        calloutResponsePolicyData.allowedContributionTypes;
     }
 
     if (calloutResponsePolicyData.state) {

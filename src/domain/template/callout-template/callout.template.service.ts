@@ -51,9 +51,14 @@ export class CalloutTemplateService {
       this.calloutResponseDefaultsService.createCalloutContributionDefaults(
         calloutTemplateData.responseDefaults
       );
+    const policyData =
+      this.calloutResponsePolicyService.updateContributionPolicyInput(
+        calloutTemplateData.type,
+        calloutTemplateData.responsePolicy
+      );
     calloutTemplate.contributionPolicy =
       this.calloutResponsePolicyService.createCalloutContributionPolicy(
-        calloutTemplateData.responsePolicy
+        policyData
       );
 
     return this.calloutTemplateRepository.save(calloutTemplate);
