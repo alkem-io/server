@@ -43,6 +43,7 @@ import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { keyBy } from 'lodash';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
+import { CalloutType } from '@common/enums/callout.type';
 
 @Injectable()
 export class CollaborationService {
@@ -537,23 +538,21 @@ export class CollaborationService {
     return loadedCollaboration.relations;
   }
 
-  // TODO:
   public async getPostsCount(collaboration: ICollaboration): Promise<number> {
     const [result]: {
       postsCount: number;
     }[] = await this.entityManager.connection.query(
       `
-      SELECT COUNT(*) as postsCount
-      FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
-      RIGHT JOIN \`post\` ON \`post\`.\`calloutId\` = \`callout\`.\`id\`
-      WHERE \`collaboration\`.\`id\` = '${collaboration.id}' AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}';
+      SELECT COUNT(*) as postsCount FROM \`collaboration\`
+      RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
+      RIGHT JOIN \`callout_contribution\` ON \`callout_contribution\`.\`calloutId\` = \`callout\`.\`id\`
+      WHERE \`collaboration\`.\`id\` = '${collaboration.id}' AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}' AND \`callout\`.\`type\` = '${CalloutType.POST_COLLECTION}';
       `
     );
 
     return result.postsCount;
   }
 
-  // TODO:
   public async getWhiteboardsCount(
     collaboration: ICollaboration
   ): Promise<number> {
@@ -563,8 +562,10 @@ export class CollaborationService {
       `
       SELECT COUNT(*) as whiteboardsCount
       FROM \`collaboration\` RIGHT JOIN \`callout\` ON \`callout\`.\`collaborationId\` = \`collaboration\`.\`id\`
-      RIGHT JOIN \`whiteboard\` ON \`whiteboard\`.\`calloutId\` = \`callout\`.\`id\`
-      WHERE \`collaboration\`.\`id\` = '${collaboration.id}'  AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}';
+      RIGHT JOIN \`callout_contribution\` ON \`callout_contribution\`.\`calloutId\` = \`callout\`.\`id\`
+      WHERE \`collaboration\`.\`id\` = '${collaboration.id}'
+        AND \`callout\`.\`visibility\` = '${CalloutVisibility.PUBLISHED}'
+        AND \`callout\`.\`type\` = '${CalloutType.WHITEBOARD_COLLECTION}';
       `
     );
 
