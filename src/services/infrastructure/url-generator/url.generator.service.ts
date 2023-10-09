@@ -206,7 +206,7 @@ export class UrlGeneratorService {
     const ignoreTemplatesOnCallout = true;
     const templateInfo = await this.getTemplateInfo(entityTableName, profileID);
     if (!templateInfo || !templateInfo.templatesSetID) {
-      if (!ignoreTemplatesOnCallout) {
+      if (ignoreTemplatesOnCallout) {
         return 'https://not.used.with.new.callouts';
       }
       throw new EntityNotFoundException(
@@ -356,7 +356,7 @@ export class UrlGeneratorService {
     }
 
     throw new EntityNotFoundException(
-      `Unable to find innovationFlow for profile: ${profileID}`,
+      `Unable to find challenge or opportunity for innovationFlow with ID: ${innovationFlowInfo.entityID}`,
       LogContext.URL_GENERATOR
     );
   }

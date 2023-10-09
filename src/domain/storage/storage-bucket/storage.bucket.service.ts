@@ -208,7 +208,7 @@ export class StorageBucketService {
 
     storage.documents.push(document);
     this.logger.verbose?.(
-      `Uploaded document '${document.externalID}' on storage bucket: ${storageBucket.id}`,
+      `Uploaded document '${document.externalID}' on storage bucket: ${storage.id}`,
       LogContext.STORAGE_BUCKET
     );
     await this.storageBucketRepository.save(storage);
@@ -378,6 +378,7 @@ export class StorageBucketService {
       return null;
     }
     const parentEntity: IStorageBucketParent = {
+      id: profile.id,
       type: profile.type as ProfileType,
       displayName: profile.displayName,
       url: await this.urlGeneratorService.generateUrlForProfile(profile),
