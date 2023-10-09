@@ -24,6 +24,7 @@ import { RoomService } from '../room/room.service';
 import { IRoom } from '../room/room.interface';
 import { RoomType } from '@common/enums/room.type';
 import { COMMUNICATION_PLATFORM_SPACEID } from '@common/constants';
+import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
 
 @Injectable()
 export class CommunicationService {
@@ -31,6 +32,7 @@ export class CommunicationService {
     private discussionService: DiscussionService,
     private roomService: RoomService,
     private communicationAdapter: CommunicationAdapter,
+    private storageBucketResolverService: StorageBucketResolverService,
     @InjectRepository(Communication)
     private communicationRepository: Repository<Communication>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -92,11 +94,17 @@ export class CommunicationService {
     if (this.isPlatformCommunication(communication)) {
       roomType = RoomType.DISCUSSION_FORUM;
     }
+
+    const storageBucket =
+      await this.storageBucketResolverService.getStorageBucketForCommunication(
+        communication.id
+      );
     const discussion = await this.discussionService.createDiscussion(
       discussionData,
       userID,
       communication.displayName,
-      roomType
+      roomType,
+      storageBucket
     );
     this.logger.verbose?.(
       `[Discussion] Room created (${displayName}) and membership replicated from Updates (${communicationID})`,

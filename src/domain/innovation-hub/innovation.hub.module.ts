@@ -11,6 +11,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { InnovationHubResolverMutations } from './innovation.hub.resolver.mutations';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
     AuthorizationPolicyModule,
     AuthorizationModule,
     NamingModule,
+    StorageBucketResolverModule,
   ],
   providers: [
     InnovationHubService,

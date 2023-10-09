@@ -54,7 +54,6 @@ import { InnovationHubModule } from '@domain/innovation-hub';
 import { SsiCredentialFlowController } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.controller';
 import { SsiCredentialFlowModule } from '@services/api-rest/ssi-credential-flow/ssi.credential.flow.module';
 import { StorageAccessModule } from '@services/api-rest/storage-access/storage.access.module';
-import { AdminStorageModule } from '@platform/admin/storage/admin.storage.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 import {
   HttpExceptionFilter,
@@ -66,6 +65,8 @@ import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.mo
 import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
+import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
+import { AdminWhiteboardModule } from '@platform/admin/whiteboards/admin.whiteboard.module';
 
 @Module({
   imports: [
@@ -208,7 +209,6 @@ import { APP_ID_PROVIDER } from '@common/app.id.provider';
     KonfigModule,
     IpfsModule,
     AdminCommunicationModule,
-    AdminStorageModule,
     AgentModule,
     MessageModule,
     MessageReactionModule,
@@ -223,11 +223,13 @@ import { APP_ID_PROVIDER } from '@common/app.id.provider';
     InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
+    IpfsLogModule,
     MeModule,
     ExcalidrawServerModule,
     ChatGuidanceModule,
     LookupModule,
     AuthResetSubscriberModule,
+    //AdminWhiteboardModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

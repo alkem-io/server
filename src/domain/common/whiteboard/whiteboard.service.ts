@@ -6,7 +6,7 @@ import {
   Repository,
 } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { Whiteboard } from './whiteboard.entity';
 import { IWhiteboard } from './whiteboard.interface';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
@@ -21,6 +21,7 @@ import { ProfileService } from '../profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { IVisual } from '../visual';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class WhiteboardService {
@@ -34,6 +35,7 @@ export class WhiteboardService {
 
   async createWhiteboard(
     whiteboardData: CreateWhiteboardInput,
+    parentStorageBucket: IStorageBucket,
     userID?: string
   ): Promise<IWhiteboard> {
     const whiteboard: IWhiteboard = Whiteboard.create({ ...whiteboardData });
@@ -41,7 +43,9 @@ export class WhiteboardService {
     whiteboard.createdBy = userID;
 
     whiteboard.profile = await this.profileService.createProfile(
-      whiteboardData.profileData
+      whiteboardData.profileData,
+      ProfileType.WHITEBOARD,
+      parentStorageBucket
     );
     await this.profileService.addVisualOnProfile(
       whiteboard.profile,

@@ -92,9 +92,21 @@ export class OrganizationResolverFields {
       `read single usergroup on org: ${organization.nameID}`
     );
 
-    return await this.groupService.getUserGroupOrFail(groupID, {
-      where: { organization: { id: organization.id } },
+    const userGroup = await this.groupService.getUserGroupOrFail(groupID, {
+      relations: ['profile'],
     });
+
+    if (userGroup.profile && !userGroup.profile?.displayName) {
+      return {
+        ...userGroup,
+        profile: {
+          ...userGroup.profile,
+          displayName: 'This user group has no displayName. Please set one.',
+        },
+      };
+    }
+
+    return userGroup;
   }
 
   @UseGuards(GraphqlGuard)

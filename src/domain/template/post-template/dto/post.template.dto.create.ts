@@ -17,10 +17,10 @@ export class CreatePostTemplateInput extends CreateTemplateBaseInput {
   type!: string;
 
   @Field(() => Markdown, {
-    nullable: false,
+    nullable: true,
     description:
       'The default description to be pre-filled when users create Posts based on this template.',
   })
   @MaxLength(VERY_LONG_TEXT_LENGTH)
-  defaultDescription!: string;
+  defaultDescription?: string;
 }

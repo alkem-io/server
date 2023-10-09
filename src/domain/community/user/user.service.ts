@@ -1,5 +1,5 @@
 import { UUID_LENGTH } from '@common/constants';
-import { LogContext, UserPreferenceType } from '@common/enums';
+import { LogContext, ProfileType, UserPreferenceType } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -61,6 +61,7 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { userDefaults } from './user.defaults';
 import { UsersQueryArgs } from './dto/users.query.args';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
@@ -73,6 +74,7 @@ export class UserService {
     private agentService: AgentService,
     private preferenceSetService: PreferenceSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private storageBucketService: StorageBucketService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -106,7 +108,12 @@ export class UserService {
     const profileData = await this.extendProfileDataWithReferences(
       userData.profileData
     );
-    user.profile = await this.profileService.createProfile(profileData);
+    user.storageBucket = await this.storageBucketService.createStorageBucket();
+    user.profile = await this.profileService.createProfile(
+      profileData,
+      ProfileType.USER,
+      user.storageBucket
+    );
 
     // Set the visuals
     let avatarURL = profileData?.avatarURL;

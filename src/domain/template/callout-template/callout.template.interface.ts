@@ -17,12 +17,12 @@ export abstract class ICalloutTemplate extends ITemplateBase {
     description:
       'The defaults to use for Callouts created from this template.  ',
   })
-  responseDefaults!: ICalloutContributionDefaults;
+  contributionDefaults!: ICalloutContributionDefaults;
 
   @Field(() => ICalloutContributionPolicy, {
     nullable: false,
     description:
       'The response policy to use for Callouts created from this template.  ',
   })
-  responsePolicy!: ICalloutContributionPolicy;
+  contributionPolicy!: ICalloutContributionPolicy;
 }

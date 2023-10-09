@@ -16,6 +16,8 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { LogContext } from '@common/enums/logging.context';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { ProfileType } from '@common/enums';
 
 @Injectable()
 export class CalloutFramingService {
@@ -28,7 +30,8 @@ export class CalloutFramingService {
   ) {}
 
   public async createCalloutFraming(
-    calloutFramingData: CreateCalloutFramingInput
+    calloutFramingData: CreateCalloutFramingInput,
+    parentStorageBucket: IStorageBucket
   ): Promise<ICalloutFraming> {
     const calloutFraming: ICalloutFraming =
       CalloutFraming.create(calloutFramingData);
@@ -37,9 +40,13 @@ export class CalloutFramingService {
 
     const { profile, whiteboardContent } = calloutFramingData;
 
-    calloutFraming.profile = await this.profileService.createProfile(profile);
+    calloutFraming.profile = await this.profileService.createProfile(
+      profile,
+      ProfileType.CALLOUT_FRAMING,
+      parentStorageBucket
+    );
 
-    calloutFraming.whiteboardContent = whiteboardContent;
+    calloutFraming.content = whiteboardContent;
 
     return calloutFraming;
   }
@@ -56,7 +63,7 @@ export class CalloutFramingService {
     }
 
     if (calloutFramingData.whiteboardContent) {
-      calloutFraming.whiteboardContent = calloutFramingData.whiteboardContent;
+      calloutFraming.content = calloutFramingData.whiteboardContent;
     }
 
     return calloutFraming;

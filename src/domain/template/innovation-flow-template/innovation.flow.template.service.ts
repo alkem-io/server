@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOneOptions, EntityManager } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { TemplateBaseService } from '@domain/template/template-base/template.base.service';
 import { CreateInnovationFlowTemplateInput } from './dto/innovation.flow.template.dto.create';
 import { InnovationFlowTemplate } from './innovation.flow.template.entity';
@@ -10,6 +10,7 @@ import { IInnovationFlowTemplate } from './innovation.flow.template.interface';
 import { UpdateInnovationFlowTemplateInput } from './dto/innovation.flow.template.dto.update';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { ILifecycleDefinition } from '@interfaces/lifecycle.definition.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class InnovationFlowTemplateService {
@@ -22,13 +23,16 @@ export class InnovationFlowTemplateService {
   ) {}
 
   async createInnovationFLowTemplate(
-    innovationFlowTemplateData: CreateInnovationFlowTemplateInput
+    innovationFlowTemplateData: CreateInnovationFlowTemplateInput,
+    parentStorageBucket: IStorageBucket
   ): Promise<IInnovationFlowTemplate> {
     const innovationFlowTemplate: IInnovationFlowTemplate =
       InnovationFlowTemplate.create(innovationFlowTemplateData);
     await this.templateBaseService.initialise(
       innovationFlowTemplate,
-      innovationFlowTemplateData
+      innovationFlowTemplateData,
+      ProfileType.INNOVATION_FLOW_TEMPLATE,
+      parentStorageBucket
     );
 
     return await this.innovationFlowTemplateRepository.save(

@@ -25,6 +25,7 @@ import { IVisual } from '@domain/common/visual/visual.interface';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { streamToBuffer } from '@common/utils';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
+import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 5242880;
@@ -54,14 +55,18 @@ export class StorageBucketService {
   ) {}
 
   public async createStorageBucket(
-    allowedMimeTypes = this.DEFAULT_VISUAL_ALLOWED_MIME_TYPES,
-    maxAllowedFileSize = this.DEFAULT_MAX_ALLOWED_FILE_SIZE
+    storageBucketData?: CreateStorageBucketInput,
+    parentStorageBucket?: IStorageBucket
   ): Promise<IStorageBucket> {
     const storage: IStorageBucket = new StorageBucket();
     storage.authorization = new AuthorizationPolicy();
     storage.documents = [];
-    storage.allowedMimeTypes = allowedMimeTypes;
-    storage.maxFileSize = maxAllowedFileSize;
+    storage.allowedMimeTypes =
+      storageBucketData?.allowedMimeTypes ||
+      this.DEFAULT_VISUAL_ALLOWED_MIME_TYPES;
+    storage.maxFileSize =
+      storageBucketData?.maxFileSize || this.DEFAULT_MAX_ALLOWED_FILE_SIZE;
+    storage.parentStorageBucket = parentStorageBucket;
 
     return await this.storageBucketRepository.save(storage);
   }
@@ -123,7 +128,7 @@ export class StorageBucketService {
     return documents;
   }
   public async uploadFileAsDocument(
-    storageBucket: IStorageBucket,
+    storageBucketId: string,
     readStream: ReadStream,
     filename: string,
     mimeType: string,
@@ -132,7 +137,7 @@ export class StorageBucketService {
     const buffer = await streamToBuffer(readStream);
 
     return await this.uploadFileAsDocumentFromBuffer(
-      storageBucket,
+      storageBucketId,
       buffer,
       filename,
       mimeType,
@@ -141,14 +146,14 @@ export class StorageBucketService {
   }
 
   public async uploadFileAsDocumentFromBuffer(
-    storageBucket: IStorageBucket,
+    storageBucketId: string,
     buffer: Buffer,
     filename: string,
     mimeType: string,
     userID: string,
     anonymousReadAccess = false
   ): Promise<IDocument | never> {
-    const storage = await this.getStorageBucketOrFail(storageBucket.id, {
+    const storage = await this.getStorageBucketOrFail(storageBucketId, {
       relations: ['documents'],
     });
     if (!storage.documents)
@@ -172,12 +177,30 @@ export class StorageBucketService {
       createdBy: userID,
       anonymousReadAccess,
     };
+
+    try {
+      const docByExternalId =
+        await this.documentService.getDocumentByExternalIdOrFail(externalID, {
+          where: {
+            storageBucket: {
+              id: storageBucketId,
+            },
+          },
+        });
+      if (docByExternalId) {
+        return docByExternalId;
+      }
+    } catch (e) {
+      /* just consume */
+    }
+
     const document = await this.documentService.createDocument(
       createDocumentInput
     );
+
     storage.documents.push(document);
     this.logger.verbose?.(
-      `Uploaded document '${document.externalID}' on storage space: ${storageBucket.id}`,
+      `Uploaded document '${document.externalID}' on storage space: ${storageBucketId}`,
       LogContext.STORAGE_BUCKET
     );
     await this.storageBucketRepository.save(storage);
@@ -209,15 +232,14 @@ export class StorageBucketService {
     this.visualService.validateImageHeight(visual, imageHeight);
 
     try {
-      const document = await this.uploadFileAsDocumentFromBuffer(
-        storageBucket,
+      return await this.uploadFileAsDocumentFromBuffer(
+        storageBucket.id,
         buffer,
         fileName,
         mimetype,
         userID,
         true
       );
-      return document;
     } catch (error: any) {
       throw new IpfsUploadFailedException(
         `Ipfs upload of ${fileName} failed! Error: ${error.message}`

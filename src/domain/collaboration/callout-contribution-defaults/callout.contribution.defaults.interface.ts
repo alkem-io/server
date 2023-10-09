@@ -3,7 +3,7 @@ import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
 
-@ObjectType('CalloutResponseDefaults')
+@ObjectType('CalloutContributionDefaults')
 export abstract class ICalloutContributionDefaults extends IBaseAlkemio {
   @Field(() => Markdown, {
     nullable: true,

@@ -29,6 +29,7 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
 import { ChallengeStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/challenge/challenge.storage.space.loader.creator';
 import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
 
 @Module({
   imports: [
@@ -54,6 +55,8 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
     TypeOrmModule.forFeature([Challenge]),
     LoaderCreatorModule,
     StorageBucketModule,
+    ContextModule,
+    ProfileModule,
     CollaborationModule,
   ],
   providers: [

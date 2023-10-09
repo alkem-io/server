@@ -7,7 +7,7 @@ import {
   Repository,
 } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -21,6 +21,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class PostService {
@@ -35,11 +36,14 @@ export class PostService {
 
   public async createPost(
     postInput: CreatePostInput,
+    parentStorageBucket: IStorageBucket,
     userID: string
   ): Promise<IPost> {
     const post: IPost = Post.create(postInput);
     post.profile = await this.profileService.createProfile(
-      postInput.profileData
+      postInput.profileData,
+      ProfileType.POST,
+      parentStorageBucket
     );
     await this.profileService.addVisualOnProfile(
       post.profile,

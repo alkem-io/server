@@ -16,7 +16,11 @@ import {
   IOpportunity,
 } from '@domain/collaboration/opportunity';
 import { BaseChallengeService } from '@domain/challenge/base-challenge/base.challenge.service';
-import { AuthorizationCredential, LogContext } from '@common/enums';
+import {
+  AuthorizationCredential,
+  LogContext,
+  ProfileType,
+} from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityService } from '@domain/community/community/community.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
@@ -106,7 +110,10 @@ export class ChallengeService {
     challenge.opportunities = [];
 
     challenge.storageBucket =
-      await this.storageBucketService.createStorageBucket();
+      await this.storageBucketService.createStorageBucket(
+        {},
+        challengeData.storageBucketParent
+      );
 
     await this.baseChallengeService.initialise(
       challenge,
@@ -114,7 +121,9 @@ export class ChallengeService {
       spaceID,
       CommunityType.CHALLENGE,
       challengeCommunityPolicy,
-      challengeCommunityApplicationForm
+      challengeCommunityApplicationForm,
+      ProfileType.CHALLENGE,
+      challenge.storageBucket
     );
 
     await this.challengeRepository.save(challenge);
@@ -180,7 +189,8 @@ export class ChallengeService {
             displayName: '',
           },
         },
-        [statesTagssetTemplate]
+        [statesTagssetTemplate],
+        challenge.storageBucket
       );
 
     const savedChallenge = await this.challengeRepository.save(challenge);
@@ -207,6 +217,7 @@ export class ChallengeService {
       await this.collaborationService.addDefaultCallouts(
         challenge.collaboration,
         challengeDefaultCallouts,
+        challenge.storageBucket,
         agentInfo?.userID
       );
 
@@ -269,6 +280,7 @@ export class ChallengeService {
         'innovationFlow',
         'preferenceSet',
         'preferenceSet.preferences',
+        'storageBucket',
       ],
     });
 
@@ -302,6 +314,12 @@ export class ChallengeService {
     if (challenge.preferenceSet) {
       await this.preferenceSetService.deletePreferenceSet(
         challenge.preferenceSet.id
+      );
+    }
+
+    if (challenge.storageBucket) {
+      await this.storageBucketService.deleteStorageBucket(
+        challenge.storageBucket.id
       );
     }
 
@@ -582,6 +600,7 @@ export class ChallengeService {
     const opportunity = await this.opportunityService.createOpportunity(
       opportunityData,
       spaceID,
+      challenge.storageBucket,
       agentInfo
     );
 

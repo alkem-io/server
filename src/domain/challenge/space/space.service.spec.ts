@@ -15,6 +15,7 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { MockFunctionMetadata, ModuleMocker } from 'jest-mock';
 import { InnovationFlow } from '../innovation-flow/innovation.flow.entity';
 import { InnovationFlowType } from '@common/enums/innovation.flow.type';
+import { ProfileType } from '@common/enums';
 
 const moduleMocker = new ModuleMocker(global);
 
@@ -90,6 +91,7 @@ const getChallengesMock = (
       id: `${spaceId}.${i}`,
       rowId: i,
       nameID: `challenge-${spaceId}.${i}`,
+      spaceID: `${spaceId}`,
       innovationFlow: {
         id: '',
         spaceID: '',
@@ -104,6 +106,7 @@ const getChallengesMock = (
           displayName: `Challenge ${spaceId}.${i}`,
           tagline: '',
           description: '',
+          type: ProfileType.SPACE,
           ...getEntityMock<Profile>(),
         },
         ...getEntityMock<InnovationFlow>(),
@@ -113,6 +116,7 @@ const getChallengesMock = (
         displayName: `Challenge ${spaceId}.${i}`,
         tagline: '',
         description: '',
+        type: ProfileType.CHALLENGE,
         ...getEntityMock<Profile>(),
       },
       opportunities: getOpportunitiesMock(
@@ -135,6 +139,7 @@ const getOpportunitiesMock = (
       id: `${challengeId}.${i}`,
       rowId: i,
       nameID: `opportunity-${challengeId}.${i}`,
+      spaceID: `${challengeId}`,
       innovationFlow: {
         id: '',
         spaceID: '',
@@ -149,6 +154,7 @@ const getOpportunitiesMock = (
           displayName: `opportunity-${challengeId}.${i}`,
           tagline: '',
           description: '',
+          type: ProfileType.OPPORTUNITY,
           ...getEntityMock<Profile>(),
         },
         ...getEntityMock<InnovationFlow>(),
@@ -158,6 +164,7 @@ const getOpportunitiesMock = (
         displayName: `Challenge ${challengeId}.${i}`,
         tagline: '',
         description: '',
+        type: ProfileType.CHALLENGE,
         ...getEntityMock<Profile>(),
       },
       ...getEntityMock<Challenge>(),
@@ -188,6 +195,7 @@ const getSpaceMock = ({
       displayName: `Space ${id}`,
       tagline: '',
       description: '',
+      type: ProfileType.SPACE,
       ...getEntityMock<Profile>(),
     },
     visibility,

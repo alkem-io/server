@@ -11,5 +11,5 @@ export abstract class ICalloutFraming extends IAuthorizable {
     nullable: true,
     description: 'The whiteboard template content for this Callout Framing.',
   })
-  whiteboardContent?: string;
+  content?: string;
 }

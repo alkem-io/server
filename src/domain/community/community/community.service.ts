@@ -60,6 +60,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
 import { CommunityEventsService } from './community.service.events';
+import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
 
 @Injectable()
 export class CommunityService {
@@ -78,6 +79,7 @@ export class CommunityService {
     private communityEventsService: CommunityEventsService,
     private formService: FormService,
     private communityPolicyService: CommunityPolicyService,
+    private storageBucketResolverService: StorageBucketResolverService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -119,7 +121,7 @@ export class CommunityService {
 
   async createGroup(groupData: CreateUserGroupInput): Promise<IUserGroup> {
     const communityID = groupData.parentID;
-    const groupName = groupData.name;
+    const groupName = groupData.profileData.displayName;
 
     this.logger.verbose?.(
       `Adding userGroup (${groupName}) to Community (${communityID})`,
@@ -131,9 +133,14 @@ export class CommunityService {
       relations: ['groups'],
     });
 
+    const storageBucket =
+      await this.storageBucketResolverService.getStorageBucketForCommunity(
+        community.id
+      );
     const group = await this.userGroupService.addGroupWithName(
       community,
       groupName,
+      storageBucket,
       community.spaceID
     );
     await this.communityRepository.save(community);

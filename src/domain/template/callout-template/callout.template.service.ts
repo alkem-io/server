@@ -2,7 +2,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
 import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { LogContext, ProfileType } from '@common/enums';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CalloutTemplate } from './callout.template.entity';
 import { ICalloutTemplate } from './callout.template.interface';
@@ -12,6 +12,7 @@ import { UpdateCalloutTemplateInput } from './dto/callout.template.dto.update';
 import { CalloutFramingService } from '@domain/collaboration/callout-framing/callout.framing.service';
 import { CalloutContributionDefaultsService } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.service';
 import { CalloutContributionPolicyService } from '@domain/collaboration/callout-contribution-policy/callout.contribution.policy.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 
 @Injectable()
 export class CalloutTemplateService {
@@ -27,22 +28,26 @@ export class CalloutTemplateService {
   ) {}
 
   public async createCalloutTemplate(
-    calloutTemplateData: CreateCalloutTemplateInput
+    calloutTemplateData: CreateCalloutTemplateInput,
+    parentStorageBucket: IStorageBucket
   ): Promise<ICalloutTemplate> {
     const calloutTemplate: ICalloutTemplate = new CalloutTemplate();
     await this.templateBaseService.initialise(
       calloutTemplate,
-      calloutTemplateData
+      calloutTemplateData,
+      ProfileType.CALLOUT_TEMPLATE,
+      parentStorageBucket
     );
     calloutTemplate.framing =
       await this.calloutFramingService.createCalloutFraming(
-        calloutTemplateData.framing
+        calloutTemplateData.framing,
+        parentStorageBucket
       );
-    calloutTemplate.responseDefaults =
+    calloutTemplate.contributionDefaults =
       this.calloutResponseDefaultsService.createCalloutContributionDefaults(
         calloutTemplateData.responseDefaults
       );
-    calloutTemplate.responsePolicy =
+    calloutTemplate.contributionPolicy =
       this.calloutResponsePolicyService.createCalloutContributionPolicy(
         calloutTemplateData.responsePolicy
       );
@@ -79,8 +84,8 @@ export class CalloutTemplateService {
         relations: {
           profile: true,
           framing: true,
-          responsePolicy: true,
-          responseDefaults: true,
+          contributionPolicy: true,
+          contributionDefaults: true,
         },
       }
     );
@@ -96,16 +101,16 @@ export class CalloutTemplateService {
         );
     }
     if (calloutTemplateData.responseDefaults) {
-      calloutTemplate.responseDefaults =
+      calloutTemplate.contributionDefaults =
         this.calloutResponseDefaultsService.updateCalloutContributionDefaults(
-          calloutTemplate.responseDefaults,
+          calloutTemplate.contributionDefaults,
           calloutTemplateData.responseDefaults
         );
     }
     if (calloutTemplateData.responsePolicy) {
-      calloutTemplate.responsePolicy =
+      calloutTemplate.contributionPolicy =
         this.calloutResponsePolicyService.updateCalloutContributionPolicy(
-          calloutTemplate.responsePolicy,
+          calloutTemplate.contributionPolicy,
           calloutTemplateData.responsePolicy
         );
     }
@@ -122,8 +127,8 @@ export class CalloutTemplateService {
         relations: {
           profile: true,
           framing: true,
-          responseDefaults: true,
-          responsePolicy: true,
+          contributionDefaults: true,
+          contributionPolicy: true,
         },
       }
     );
@@ -131,10 +136,10 @@ export class CalloutTemplateService {
     await this.templateBaseService.deleteEntities(calloutTemplate);
     await this.calloutFramingService.delete(calloutTemplate.framing);
     await this.calloutResponseDefaultsService.delete(
-      calloutTemplate.responseDefaults
+      calloutTemplate.contributionDefaults
     );
     await this.calloutResponsePolicyService.delete(
-      calloutTemplate.responsePolicy
+      calloutTemplate.contributionPolicy
     );
     const result = await this.calloutTemplateRepository.remove(
       calloutTemplate as CalloutTemplate

@@ -11,7 +11,11 @@ import { UserGroupService } from '@domain/community/user-group/user-group.servic
 import { IContext } from '@domain/context/context';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import {
+  AuthorizationAgentPrivilege,
+  CurrentUser,
+  Profiling,
+} from '@src/common/decorators';
 import { IChallenge } from '@domain/challenge/challenge/challenge.interface';
 import { SpaceService } from '@domain/challenge/space/space.service';
 import { ISpace } from '@domain/challenge/space/space.interface';
@@ -35,12 +39,15 @@ import {
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { SpaceStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.storage.space.loader.creator';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AgentInfo } from '@core/authentication/agent-info';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
   constructor(
     private groupService: UserGroupService,
-    private spaceService: SpaceService
+    private spaceService: SpaceService,
+    private authorizationService: AuthorizationService
   ) {}
 
   @ResolveField('community', () => ICommunity, {
@@ -66,13 +73,22 @@ export class SpaceResolverFields {
     nullable: true,
     description: 'The context for the space.',
   })
-  @Profiling.api
+  @UseGuards(GraphqlGuard)
   async context(
     @Parent() space: Space,
+    @CurrentUser() agentInfo: AgentInfo,
     @Loader(JourneyContextLoaderCreator, { parentClassRef: Space })
     loader: ILoader<IContext>
-  ) {
-    return loader.load(space.id);
+  ): Promise<IContext> {
+    const context = await loader.load(space.id);
+    // Check if the user can read the Context entity, not the space
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      context.authorization,
+      AuthorizationPrivilege.READ,
+      `read context on space: ${context.id}`
+    );
+    return context;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
@@ -166,13 +182,22 @@ export class SpaceResolverFields {
     nullable: false,
     description: 'The Profile for the Space.',
   })
-  @Profiling.api
+  @UseGuards(GraphqlGuard)
   async profile(
     @Parent() space: Space,
+    @CurrentUser() agentInfo: AgentInfo,
     @Loader(ProfileLoaderCreator, { parentClassRef: Space })
     loader: ILoader<IProfile>
-  ) {
-    return loader.load(space.id);
+  ): Promise<IProfile> {
+    const profile = await loader.load(space.id);
+    // Check if the user can read the profile entity, not the space
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      profile.authorization,
+      AuthorizationPrivilege.READ,
+      `read profile on space: ${profile.displayName}`
+    );
+    return profile;
   }
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
