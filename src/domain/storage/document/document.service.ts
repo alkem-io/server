@@ -79,12 +79,34 @@ export class DocumentService {
     options?: FindOneOptions<Document>
   ): Promise<IDocument | never> {
     const document = await this.documentRepository.findOne({
-      where: { id: documentID },
+      where: {
+        ...options?.where,
+        id: documentID,
+      },
       ...options,
     });
     if (!document)
       throw new EntityNotFoundException(
         `Not able to locate document with the specified ID: ${documentID}`,
+        LogContext.STORAGE_BUCKET
+      );
+    return document;
+  }
+
+  public async getDocumentByExternalIdOrFail(
+    externalID: string,
+    { where, ...rest }: FindOneOptions<Document>
+  ) {
+    const document = await this.documentRepository.findOne({
+      where: {
+        ...where,
+        externalID,
+      },
+      ...rest,
+    });
+    if (!document)
+      throw new EntityNotFoundException(
+        `Not able to locate document with the specified external id: ${externalID}`,
         LogContext.STORAGE_BUCKET
       );
     return document;

@@ -8,3 +8,4 @@ export * from './random.id.generator.util';
 export * from './stringify.util';
 export * from './getJourneyByCollaboration';
 export * from './async.filter';
+export * from './base64.to.array.buffer';
