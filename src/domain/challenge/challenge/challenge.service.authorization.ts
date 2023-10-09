@@ -254,6 +254,8 @@ export class ChallengeAuthorizationService {
     challengeBase: IChallenge,
     policy: ICommunityPolicy
   ): Promise<IChallenge> {
+    await this.challengeService.save(challengeBase);
+
     let challenge =
       await this.propagateAuthorizationToCommunityCollaborationAgent(
         challengeBase,

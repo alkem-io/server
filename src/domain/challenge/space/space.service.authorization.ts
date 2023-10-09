@@ -312,6 +312,7 @@ export class SpaceAuthorizationService {
     spaceBase: ISpace,
     policy: ICommunityPolicy
   ): Promise<ISpace> {
+    await this.spaceService.save(spaceBase);
     let space = await this.propagateAuthorizationToCommunityCollaborationAgent(
       spaceBase,
       policy

@@ -185,6 +185,8 @@ export class OpportunityAuthorizationService {
     opportunityBase: IOpportunity,
     policy: ICommunityPolicy
   ): Promise<IOpportunity> {
+    await this.opportunityService.save(opportunityBase);
+
     let opportunity =
       await this.propagateAuthorizationToCommunityCollaborationAgent(
         opportunityBase,
