@@ -136,7 +136,7 @@ export class StorageBucketService {
     return documents;
   }
   public async uploadFileAsDocument(
-    storageBucket: IStorageBucket,
+    storageBucketId: string,
     readStream: ReadStream,
     filename: string,
     mimeType: string,
@@ -145,7 +145,7 @@ export class StorageBucketService {
     const buffer = await streamToBuffer(readStream);
 
     return await this.uploadFileAsDocumentFromBuffer(
-      storageBucket,
+      storageBucketId,
       buffer,
       filename,
       mimeType,
@@ -154,14 +154,14 @@ export class StorageBucketService {
   }
 
   public async uploadFileAsDocumentFromBuffer(
-    storageBucket: IStorageBucket,
+    storageBucketId: string,
     buffer: Buffer,
     filename: string,
     mimeType: string,
     userID: string,
     anonymousReadAccess = false
   ): Promise<IDocument | never> {
-    const storage = await this.getStorageBucketOrFail(storageBucket.id, {
+    const storage = await this.getStorageBucketOrFail(storageBucketId, {
       relations: ['documents'],
     });
     if (!storage.documents)
@@ -185,9 +185,27 @@ export class StorageBucketService {
       createdBy: userID,
       anonymousReadAccess,
     };
+
+    try {
+      const docByExternalId =
+        await this.documentService.getDocumentByExternalIdOrFail(externalID, {
+          where: {
+            storageBucket: {
+              id: storageBucketId,
+            },
+          },
+        });
+      if (docByExternalId) {
+        return docByExternalId;
+      }
+    } catch (e) {
+      /* just consume */
+    }
+
     const document = await this.documentService.createDocument(
       createDocumentInput
     );
+
     storage.documents.push(document);
     this.logger.verbose?.(
       `Uploaded document '${document.externalID}' on storage bucket: ${storageBucket.id}`,
@@ -222,15 +240,14 @@ export class StorageBucketService {
     this.visualService.validateImageHeight(visual, imageHeight);
 
     try {
-      const document = await this.uploadFileAsDocumentFromBuffer(
-        storageBucket,
+      return await this.uploadFileAsDocumentFromBuffer(
+        storageBucket.id,
         buffer,
         fileName,
         mimetype,
         userID,
         true
       );
-      return document;
     } catch (error: any) {
       throw new IpfsUploadFailedException(
         `Ipfs upload of ${fileName} failed! Error: ${error.message}`

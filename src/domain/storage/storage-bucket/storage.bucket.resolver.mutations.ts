@@ -150,7 +150,7 @@ export class StorageBucketResolverMutations {
     const readStream = createReadStream();
 
     const document = await this.storageBucketService.uploadFileAsDocument(
-      storageBucket,
+      storageBucket.id,
       readStream,
       filename,
       mimetype,
@@ -197,7 +197,7 @@ export class StorageBucketResolverMutations {
     const readStream = createReadStream();
 
     const document = await this.storageBucketService.uploadFileAsDocument(
-      storageBucket,
+      storageBucket.id,
       readStream,
       filename,
       mimetype,
