@@ -229,7 +229,7 @@ import { AdminWhiteboardModule } from '@platform/admin/whiteboards/admin.whitebo
     ChatGuidanceModule,
     LookupModule,
     AuthResetSubscriberModule,
-    AdminWhiteboardModule,
+    //AdminWhiteboardModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [
