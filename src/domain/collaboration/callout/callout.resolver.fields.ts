@@ -91,6 +91,14 @@ export class CalloutResolverFields {
     return await this.calloutService.getContributionPolicy(callout.id);
   }
 
+  @ResolveField('activity', () => Number, {
+    nullable: false,
+    description: 'The activity for this Callout.',
+  })
+  async activity(@Parent() callout: ICallout): Promise<number> {
+    return await this.calloutService.getActivityCount(callout);
+  }
+
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('contributionDefaults', () => ICalloutContributionDefaults, {

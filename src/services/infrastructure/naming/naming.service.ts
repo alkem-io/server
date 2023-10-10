@@ -330,7 +330,6 @@ export class NamingService {
       where: {
         comments: { id: commentsID },
       },
-      relations: ['profile'],
     });
     if (!result) {
       throw new EntityNotFoundException(
