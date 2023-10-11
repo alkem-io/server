@@ -30,12 +30,6 @@ export class AuthorizationRuleAgentPrivilege {
   }
 
   execute(agentInfo: AgentInfo): boolean {
-    throw new ForbiddenAuthorizationPolicyException(
-      'test msg',
-      this.privilege,
-      this.fieldParent.authorization.id,
-      agentInfo.userID
-    );
     const accessGranted = this.authorizationService.isAccessGranted(
       agentInfo,
       this.fieldParent.authorization,
