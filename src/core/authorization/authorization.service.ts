@@ -28,6 +28,13 @@ export class AuthorizationService {
     msg: string
   ) {
     const auth = this.validateAuthorization(authorization);
+
+    throw new ForbiddenAuthorizationPolicyException(
+      'grantAccessOrFail',
+      privilegeRequired,
+      auth.id,
+      agentInfo.userID
+    );
     if (this.isAccessGranted(agentInfo, auth, privilegeRequired)) return true;
 
     const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg} user: ${agentInfo.userID}`;
