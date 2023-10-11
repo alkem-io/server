@@ -517,13 +517,15 @@ export class CalloutService {
         if (
           contribution.whiteboard &&
           filter.whiteboardIDs &&
-          !filter.whiteboardIDs.includes(contribution.whiteboard.id)
+          !filter.whiteboardIDs.includes(contribution.whiteboard.id) &&
+          !filter.whiteboardIDs.includes(contribution.whiteboard.nameID)
         )
           continue;
         if (
           contribution.post &&
           filter.postIDs &&
-          !filter.postIDs.includes(contribution.post.id)
+          !filter.postIDs.includes(contribution.post.id) &&
+          !filter.postIDs.includes(contribution.post.nameID)
         )
           continue;
         if (
