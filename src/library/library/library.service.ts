@@ -108,7 +108,7 @@ export class LibraryService {
 
     if (!storageBucket) {
       throw new EntityNotFoundException(
-        `Unable to find storage space for Library: ${libraryInput.id}`,
+        `Unable to find storage bucket for Library: ${libraryInput.id}`,
         LogContext.STORAGE_BUCKET
       );
     }

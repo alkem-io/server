@@ -12,6 +12,7 @@ import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.
 import { IAuthorizationPolicyRuleVerifiedCredential } from './authorization.policy.rule.verified.credential.interface';
 import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception copy';
 import { IAuthorizationPolicyRulePrivilege } from './authorization.policy.rule.privilege.interface';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 
 @Injectable()
 export class AuthorizationService {
@@ -27,13 +28,19 @@ export class AuthorizationService {
     msg: string
   ) {
     const auth = this.validateAuthorization(authorization);
+
     if (this.isAccessGranted(agentInfo, auth, privilegeRequired)) return true;
 
     const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg} user: ${agentInfo.userID}`;
     this.logCredentialCheckFailDetails(errorMsg, agentInfo, auth);
 
     // If get to here then no match was found
-    throw new ForbiddenException(errorMsg, LogContext.AUTH);
+    throw new ForbiddenAuthorizationPolicyException(
+      errorMsg,
+      privilegeRequired,
+      auth.id,
+      agentInfo.userID
+    );
   }
 
   logCredentialCheckFailDetails(
@@ -98,7 +105,7 @@ export class AuthorizationService {
       privilegeRequired === AuthorizationPrivilege.READ
     ) {
       this.logger.verbose?.(
-        `Granted privilege '${privilegeRequired}' using rule 'AnonymouseReadAccess'`,
+        `Granted privilege '${privilegeRequired}' using rule 'AnonymousReadAccess'`,
         LogContext.AUTH_POLICY
       );
       return true;

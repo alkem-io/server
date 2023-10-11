@@ -13,6 +13,7 @@ import { ProfileResolverFields } from './profile.resolver.fields';
 import { LocationModule } from '@domain/common/location';
 import { TagsetTemplateModule } from '../tagset-template/tagset.template.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
     VisualModule,
     LocationModule,
     StorageBucketModule,
+    UrlGeneratorModule,
   ],
   providers: [
     ProfileResolverMutations,

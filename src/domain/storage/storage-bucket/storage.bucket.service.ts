@@ -26,6 +26,10 @@ import { VisualService } from '@domain/common/visual/visual.service';
 import { streamToBuffer } from '@common/utils';
 import { IpfsUploadFailedException } from '@common/exceptions/ipfs/ipfs.upload.exception';
 import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
+import { Profile } from '@domain/common/profile/profile.entity';
+import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { ProfileType } from '@common/enums';
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 5242880;
@@ -47,11 +51,15 @@ export class StorageBucketService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private visualService: VisualService,
+    private urlGeneratorService: UrlGeneratorService,
     @InjectRepository(StorageBucket)
     private storageBucketRepository: Repository<StorageBucket>,
     @InjectRepository(Document)
     private documentRepository: Repository<Document>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @InjectRepository(Profile)
+    private profileRepository: Repository<Profile>
   ) {}
 
   public async createStorageBucket(
@@ -128,7 +136,7 @@ export class StorageBucketService {
     return documents;
   }
   public async uploadFileAsDocument(
-    storageBucket: IStorageBucket,
+    storageBucketId: string,
     readStream: ReadStream,
     filename: string,
     mimeType: string,
@@ -137,7 +145,7 @@ export class StorageBucketService {
     const buffer = await streamToBuffer(readStream);
 
     return await this.uploadFileAsDocumentFromBuffer(
-      storageBucket,
+      storageBucketId,
       buffer,
       filename,
       mimeType,
@@ -146,14 +154,14 @@ export class StorageBucketService {
   }
 
   public async uploadFileAsDocumentFromBuffer(
-    storageBucket: IStorageBucket,
+    storageBucketId: string,
     buffer: Buffer,
     filename: string,
     mimeType: string,
     userID: string,
     anonymousReadAccess = false
   ): Promise<IDocument | never> {
-    const storage = await this.getStorageBucketOrFail(storageBucket.id, {
+    const storage = await this.getStorageBucketOrFail(storageBucketId, {
       relations: ['documents'],
     });
     if (!storage.documents)
@@ -177,12 +185,30 @@ export class StorageBucketService {
       createdBy: userID,
       anonymousReadAccess,
     };
+
+    try {
+      const docByExternalId =
+        await this.documentService.getDocumentByExternalIdOrFail(externalID, {
+          where: {
+            storageBucket: {
+              id: storageBucketId,
+            },
+          },
+        });
+      if (docByExternalId) {
+        return docByExternalId;
+      }
+    } catch (e) {
+      /* just consume */
+    }
+
     const document = await this.documentService.createDocument(
       createDocumentInput
     );
+
     storage.documents.push(document);
     this.logger.verbose?.(
-      `Uploaded document '${document.externalID}' on storage space: ${storageBucket.id}`,
+      `Uploaded document '${document.externalID}' on storage bucket: ${storage.id}`,
       LogContext.STORAGE_BUCKET
     );
     await this.storageBucketRepository.save(storage);
@@ -214,15 +240,14 @@ export class StorageBucketService {
     this.visualService.validateImageHeight(visual, imageHeight);
 
     try {
-      const document = await this.uploadFileAsDocumentFromBuffer(
-        storageBucket,
+      return await this.uploadFileAsDocumentFromBuffer(
+        storageBucket.id,
         buffer,
         fileName,
         mimetype,
         userID,
         true
       );
-      return document;
     } catch (error: any) {
       throw new IpfsUploadFailedException(
         `Ipfs upload of ${fileName} failed! Error: ${error.message}`
@@ -254,7 +279,7 @@ export class StorageBucketService {
     const allDocuments = storageLoaded.documents;
     if (!allDocuments)
       throw new EntityNotFoundException(
-        `Space not initialised, no documents: ${storage.id}`,
+        `Storage not initialised, no documents: ${storage.id}`,
         LogContext.STORAGE_BUCKET
       );
 
@@ -307,7 +332,7 @@ export class StorageBucketService {
     );
     if (!result) {
       throw new ValidationException(
-        `Invalid Mime Type specified for storage space '${mimeType}'- allowed types: ${storageBucket.allowedMimeTypes}.`,
+        `Invalid Mime Type specified for storage bucket '${mimeType}'- allowed types: ${storageBucket.allowedMimeTypes}.`,
         LogContext.STORAGE_BUCKET
       );
     }
@@ -319,9 +344,45 @@ export class StorageBucketService {
   ): void | never {
     if (size > storageBucket.maxFileSize) {
       throw new ValidationException(
-        `File size (${size}) exceeds maximum allowed file size for storage space: ${storageBucket.maxFileSize}`,
+        `File size (${size}) exceeds maximum allowed file size for storage bucket: ${storageBucket.maxFileSize}`,
         LogContext.STORAGE_BUCKET
       );
     }
+  }
+
+  public async getChildStorageBuckets(
+    storageBucket: IStorageBucket
+  ): Promise<IStorageBucket[]> {
+    const result = await this.storageBucketRepository.find({
+      where: {
+        parentStorageBucket: {
+          id: storageBucket.id,
+        },
+      },
+    });
+    if (!result) return [];
+    return result;
+  }
+
+  public async getStorageBucketParent(
+    storageBucket: IStorageBucket
+  ): Promise<IStorageBucketParent | null> {
+    const profile = await this.profileRepository.findOne({
+      where: {
+        storageBucket: {
+          id: storageBucket.id,
+        },
+      },
+    });
+    if (!profile || !profile.type) {
+      return null;
+    }
+    const parentEntity: IStorageBucketParent = {
+      id: profile.id,
+      type: profile.type as ProfileType,
+      displayName: profile.displayName,
+      url: await this.urlGeneratorService.generateUrlForProfile(profile),
+    };
+    return parentEntity;
   }
 }

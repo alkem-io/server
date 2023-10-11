@@ -18,6 +18,8 @@ import { CommunityPolicyModule } from '@domain/community/community-policy/commun
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { InnovationFlowModule } from '@domain/challenge/innovation-flow/innovation.flow.module';
 import { CollaborationModule } from '../collaboration/collaboration.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
+import { ContextModule } from '@domain/context/context/context.module';
 
 @Module({
   imports: [
@@ -33,6 +35,8 @@ import { CollaborationModule } from '../collaboration/collaboration.module';
     CollaborationModule,
     InnovationFlowModule,
     NamingModule,
+    ProfileModule,
+    ContextModule,
     ContributionReporterModule,
     TypeOrmModule.forFeature([Opportunity]),
   ],

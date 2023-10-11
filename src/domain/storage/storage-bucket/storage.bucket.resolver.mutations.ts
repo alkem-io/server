@@ -77,7 +77,7 @@ export class StorageBucketResolverMutations {
       agentInfo,
       storageBucket.authorization,
       AuthorizationPrivilege.FILE_UPLOAD,
-      `visual image upload on storage space: ${visual.id}`
+      `visual image upload on storage bucket: ${visual.id}`
     );
     const readStream = createReadStream();
 
@@ -150,7 +150,7 @@ export class StorageBucketResolverMutations {
     const readStream = createReadStream();
 
     const document = await this.storageBucketService.uploadFileAsDocument(
-      storageBucket,
+      storageBucket.id,
       readStream,
       filename,
       mimetype,
@@ -197,7 +197,7 @@ export class StorageBucketResolverMutations {
     const readStream = createReadStream();
 
     const document = await this.storageBucketService.uploadFileAsDocument(
-      storageBucket,
+      storageBucket.id,
       readStream,
       filename,
       mimetype,
