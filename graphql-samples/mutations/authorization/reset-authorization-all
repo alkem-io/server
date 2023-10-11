@@ -1,4 +1,4 @@
-mutation authorizationPolicyResetAll() {
-  authorizationPolicyResetAll()
+mutation authorizationPolicyResetAll {
+  authorizationPolicyResetAll
 }
 

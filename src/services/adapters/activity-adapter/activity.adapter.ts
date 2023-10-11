@@ -454,8 +454,9 @@ export class ActivityAdapter {
     const collaboration = await this.collaborationRepository
       .createQueryBuilder('collaboration')
       .leftJoinAndSelect('collaboration.callouts', 'callouts')
-      .innerJoinAndSelect('callouts.whiteboards', 'whiteboards')
-      .where('whiteboards.id = :id')
+      .innerJoinAndSelect('callouts.contributions', 'contributions')
+      .innerJoinAndSelect('contributions.whiteboard', 'whiteboard')
+      .where('whiteboard.id = :id')
       .setParameters({ id: `${whiteboardID}` })
       .getOne();
     if (!collaboration) {

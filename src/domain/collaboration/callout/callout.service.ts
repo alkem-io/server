@@ -46,6 +46,7 @@ import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.
 import { CreatePostInput } from '../post/dto/post.dto.create';
 import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
+import { CalloutContributionFilterArgs } from '../callout-contribution/dto/callout.contribution.args.filter';
 
 @Injectable()
 export class CalloutService {
@@ -490,11 +491,12 @@ export class CalloutService {
     callout: ICallout,
     relations: FindOptionsRelationByString = [],
     contributionIDs?: string[],
+    filter?: CalloutContributionFilterArgs,
     limit?: number,
     shuffle?: boolean
   ): Promise<ICalloutContribution[]> {
     const calloutLoaded = await this.getCalloutOrFail(callout.id, {
-      relations: ['contributions', ...relations],
+      relations: ['contributions', 'contributions.whiteboard', ...relations],
     });
     if (!calloutLoaded.contributions)
       throw new EntityNotFoundException(
@@ -502,105 +504,70 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
 
-    if (!contributionIDs) {
-      const limitAndShuffled = limitAndShuffle(
-        calloutLoaded.contributions,
-        limit,
-        shuffle
-      );
-      return limitAndShuffled;
-    }
     const results: ICalloutContribution[] = [];
+    if (!contributionIDs) {
+      if (!filter) {
+        const limitAndShuffled = limitAndShuffle(
+          calloutLoaded.contributions,
+          limit,
+          shuffle
+        );
+        return limitAndShuffled;
+      }
+
+      for (const contribution of calloutLoaded.contributions) {
+        if (
+          contribution.whiteboard &&
+          filter.whiteboardIDs &&
+          !filter.whiteboardIDs.includes(contribution.whiteboard.id)
+        )
+          continue;
+        if (
+          contribution.post &&
+          filter.postIDs &&
+          !filter.postIDs.includes(contribution.post.id)
+        )
+          continue;
+        if (
+          contribution.link &&
+          filter.linkIDs &&
+          !filter.linkIDs.includes(contribution.link.id)
+        )
+          continue;
+
+        results.push(contribution);
+      }
+      return results;
+    }
+
     for (const contributionID of contributionIDs) {
       const contribution = calloutLoaded.contributions.find(
         contribution => contribution.id === contributionID
       );
       if (!contribution) continue;
+      if (
+        contribution.whiteboard &&
+        filter?.whiteboardIDs &&
+        (!filter.whiteboardIDs.includes(contribution.whiteboard.id) ||
+          !filter.whiteboardIDs.includes(contribution.whiteboard.nameID))
+      )
+        continue;
+      if (
+        contribution.post &&
+        filter?.postIDs &&
+        (!filter.postIDs.includes(contribution.post.id) ||
+          !filter.postIDs.includes(contribution.post.nameID))
+      )
+        continue;
+      if (
+        contribution.link &&
+        filter?.linkIDs &&
+        !filter.linkIDs.includes(contribution.link.id)
+      )
+        continue;
+
       results.push(contribution);
     }
-    return results;
-  }
-
-  public async getWhiteboardsFromCallout(
-    callout: ICallout,
-    relations: FindOptionsRelationByString = [],
-    whiteboardIDs?: string[],
-    limit?: number,
-    shuffle?: boolean
-  ): Promise<IWhiteboard[]> {
-    const calloutLoaded = await this.getCalloutOrFail(callout.id, {
-      relations: ['whiteboards', ...relations],
-    });
-    if (!calloutLoaded.whiteboards)
-      throw new EntityNotFoundException(
-        `Callout not initialised, no whiteboards: ${callout.id}`,
-        LogContext.COLLABORATION
-      );
-
-    if (!whiteboardIDs) {
-      const limitAndShuffled = limitAndShuffle(
-        calloutLoaded.whiteboards,
-        limit,
-        shuffle
-      );
-      return limitAndShuffled;
-    }
-    const results: IWhiteboard[] = [];
-    for (const whiteboardID of whiteboardIDs) {
-      const whiteboard = calloutLoaded.whiteboards.find(
-        whiteboard =>
-          whiteboard.id === whiteboardID || whiteboard.nameID === whiteboardID
-      );
-      if (!whiteboard) continue;
-      results.push(whiteboard);
-    }
-    return results;
-  }
-
-  public async getPostsFromCallout(
-    callout: ICallout,
-    relations: FindOptionsRelationByString = [],
-    postIDs?: string[],
-    limit?: number,
-    shuffle?: boolean
-  ): Promise<IPost[]> {
-    const loadedCallout = await this.getCalloutOrFail(callout.id, {
-      relations: ['posts', ...relations],
-    });
-    if (!loadedCallout.posts) {
-      throw new EntityNotFoundException(
-        `Context not initialised: ${callout.id}`,
-        LogContext.COLLABORATION
-      );
-    }
-    if (!postIDs) {
-      const limitAndShuffled = limitAndShuffle(
-        loadedCallout.posts,
-        limit,
-        shuffle
-      );
-      const sortedPosts = limitAndShuffled.sort((a, b) =>
-        a.nameID.toLowerCase() > b.nameID.toLowerCase() ? 1 : -1
-      );
-      return sortedPosts;
-    }
-    const results: IPost[] = [];
-    for (const postID of postIDs) {
-      const post = loadedCallout.posts.find(
-        post => post.id === postID || post.nameID === postID.toLowerCase()
-      );
-      if (!post) continue;
-      // toDo - in order to have this flow as 'exceptional' the client need to query only posts in callouts the posts
-      // are. Currently, with the latest set of changes, callouts can be a list and without specifying the correct one in the query,
-      // errors will be thrown.
-
-      // throw new EntityNotFoundException(
-      //   `Post with requested ID (${postID}) not located within current Callout: ${callout.id}`,
-      //   LogContext.COLLABORATION
-      // );
-      results.push(post);
-    }
-
     return results;
   }
 }
