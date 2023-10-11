@@ -35,9 +35,9 @@ jobs:
           elif [ "${{ github.event_name }}" = "push" ]; then
             TAGS="$TAGS,${DOCKER_IMAGE}:sha-${GITHUB_SHA::8}"
           fi
-          echo "{version}={VERSION}" >> $GITHUB_OUTPUT
-          echo "{tags}={TAGS}" >> $GITHUB_OUTPUT
-          echo "{created}={$(date -u +'%Y-%m-%dT%H:%M:%SZ')}" >> $GITHUB_OUTPUT
+          echo "version={VERSION}" >> $GITHUB_OUTPUT
+          echo "tags={TAGS}" >> $GITHUB_OUTPUT
+          echo "created={$(date -u +'%Y-%m-%dT%H:%M:%SZ')}" >> $GITHUB_OUTPUT
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
@@ -62,7 +62,7 @@ jobs:
             org.opencontainers.image.description=${{ github.event.repository.description }}
             org.opencontainers.image.url=${{ github.event.repository.html_url }}
             org.opencontainers.image.source=${{ github.event.repository.clone_url }}
-            org.opencontainers.image.version=${{ github.action.GITHUB_OUTPUT.version }}
-            org.opencontainers.image.created=${{ github.action.GITHUB_OUTPUT.created }}
+            org.opencontainers.image.version=${{ steps.prep.outputs.version  }}
+            org.opencontainers.image.created=${{ steps.prep.outputs.created }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=${{ github.event.repository.license.spdx_id }}
