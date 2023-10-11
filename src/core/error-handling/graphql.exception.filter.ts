@@ -1,10 +1,11 @@
-import { ExceptionFilter, Catch, Inject, LoggerService } from '@nestjs/common';
+import { Catch, Inject, LoggerService } from '@nestjs/common';
+import { GqlExceptionFilter } from '@nestjs/graphql';
 import { GraphQLError } from 'graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseException } from '@common/exceptions/base.exception';
 
 @Catch(GraphQLError)
-export class GraphqlExceptionFilter implements ExceptionFilter {
+export class GraphqlExceptionFilter implements GqlExceptionFilter {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
