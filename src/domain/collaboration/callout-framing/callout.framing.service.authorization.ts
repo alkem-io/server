@@ -9,6 +9,8 @@ import { CalloutFraming } from './callout.framing.entity';
 import { ICalloutFraming } from './callout.framing.interface';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
 import { WhiteboardRtAuthorizationService } from '@domain/common/whiteboard-rt/whiteboard.rt.authorization.service';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { LogContext } from '@common/enums/logging.context';
 
 @Injectable()
 export class CalloutFramingAuthorizationService {
@@ -23,18 +25,31 @@ export class CalloutFramingAuthorizationService {
   ) {}
 
   public async applyAuthorizationPolicy(
-    calloutFraming: ICalloutFraming,
+    calloutFramingInput: ICalloutFraming,
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<ICalloutFraming> {
+    const calloutFraming =
+      await this.calloutFramingService.getCalloutFramingOrFail(
+        calloutFramingInput.id,
+        {
+          relations: {
+            whiteboard: true,
+            whiteboardRt: true,
+            profile: true,
+          },
+        }
+      );
+    if (!calloutFraming.profile)
+      throw new RelationshipNotFoundException(
+        `Unable to load entities on calloutFraming:  ${calloutFraming.id} `,
+        LogContext.COLLABORATION
+      );
     calloutFraming.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         calloutFraming.authorization,
         parentAuthorization
       );
 
-    calloutFraming.profile = await this.calloutFramingService.getProfile(
-      calloutFraming
-    );
     calloutFraming.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         calloutFraming.profile,
