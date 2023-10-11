@@ -19,9 +19,7 @@ import {
   CreateCalloutInput,
   UpdateCalloutInput,
 } from '@domain/collaboration/callout/dto/index';
-import { IPost } from '@domain/collaboration/post/post.interface';
 import { limitAndShuffle } from '@common/utils';
-import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { CalloutType } from '@common/enums/callout.type';

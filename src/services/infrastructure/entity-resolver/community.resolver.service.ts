@@ -111,6 +111,86 @@ export class CommunityResolverService {
     return community;
   }
 
+  public async getCommunityFromWhiteboardOrFail(
+    whiteboardId: string
+  ): Promise<ICommunity> {
+    const [result]: {
+      entityId: string;
+      communityId: string;
+      communityType: string;
+    }[] = await this.entityManager.connection.query(
+      `
+        SELECT \`space\`.\`id\` as \`spaceId\`, \`space\`.\`communityId\` as communityId, 'space' as \`entityType\` FROM \`callout\`
+        RIGHT JOIN \`space\` on \`callout\`.\`collaborationId\` = \`space\`.\`collaborationId\`
+        JOIN \`callout_contribution\` on \`callout_contribution\`.calloutId = \`callout\`.\`id\`
+        JOIN \`whiteboard\` on \`callout_contribution\`.whiteboardId = \`whiteboard\`.\`id\`
+        WHERE \`whiteboard\`.\`id\` = '${whiteboardId}' UNION
+
+        SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`callout\`
+        RIGHT JOIN \`challenge\` on \`callout\`.\`collaborationId\` = \`challenge\`.\`collaborationId\`
+        JOIN \`callout_contribution\` on \`callout_contribution\`.calloutId = \`callout\`.\`id\`
+        JOIN \`whiteboard\` on \`callout_contribution\`.whiteboardId = \`whiteboard\`.\`id\`
+        WHERE \`whiteboard\`.\`id\` = '${whiteboardId}' UNION
+
+        SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`callout\`
+        RIGHT JOIN \`opportunity\` on \`callout\`.\`collaborationId\` = \`opportunity\`.\`collaborationId\`
+        JOIN \`callout_contribution\` on \`callout_contribution\`.calloutId = \`callout\`.\`id\`
+        JOIN \`whiteboard\` on \`callout_contribution\`.whiteboardId = \`whiteboard\`.\`id\`
+        WHERE \`whiteboard\`.\`id\` = '${whiteboardId}';
+      `
+    );
+
+    if (!result) {
+      const [result]: {
+        entityId: string;
+        communityId: string;
+        communityType: string;
+      }[] = await this.entityManager.connection.query(
+        `
+          SELECT \`space\`.\`id\` as \`spaceId\`, \`space\`.\`communityId\` as communityId, 'space' as \`entityType\` FROM \`callout\`
+          RIGHT JOIN \`space\` on \`callout\`.\`collaborationId\` = \`space\`.\`collaborationId\`
+          JOIN \`callout_framing\` on \`callout_framing\`.id = \`callout\`.\`framingId\`
+          JOIN \`whiteboard\` on \`callout_framing\`.whiteboardId = \`whiteboard\`.\`id\`
+          WHERE \`whiteboard\`.\`id\` = '${whiteboardId}' UNION
+  
+          SELECT \`challenge\`.\`id\` as \`entityId\`, \`challenge\`.\`communityId\` as communityId, 'challenge' as \`entityType\` FROM \`callout\`
+          RIGHT JOIN \`challenge\` on \`callout\`.\`collaborationId\` = \`challenge\`.\`collaborationId\`
+          JOIN \`callout_framing\` on \`callout_framing\`.id = \`callout\`.\`framingId\`
+          JOIN \`whiteboard\` on \`callout_framing\`.whiteboardId = \`whiteboard\`.\`id\`
+          WHERE \`whiteboard\`.\`id\` = '${whiteboardId}' UNION
+  
+          SELECT \`opportunity\`.\`id\`, \`opportunity\`.\`communityId\` as communityId, 'opportunity' as \`entityType\` FROM \`callout\`
+          RIGHT JOIN \`opportunity\` on \`callout\`.\`collaborationId\` = \`opportunity\`.\`collaborationId\`
+          JOIN \`callout_framing\` on \`callout_framing\`.id = \`callout\`.\`framingId\`
+          JOIN \`whiteboard\` on \`callout_framing\`.whiteboardId = \`whiteboard\`.\`id\`
+          WHERE \`whiteboard\`.\`id\` = '${whiteboardId}';
+        `
+      );
+
+      const community = await this.communityRepository.findOneBy({
+        id: result.communityId,
+      });
+      if (!community) {
+        throw new EntityNotFoundException(
+          `Unable to find Community: ${result.communityId} for Contribution: ${whiteboardId}`,
+          LogContext.COMMUNITY
+        );
+      }
+      return community;
+    }
+
+    const community = await this.communityRepository.findOneBy({
+      id: result.communityId,
+    });
+    if (!community) {
+      throw new EntityNotFoundException(
+        `Unable to find Community: ${result.communityId} for Contribution: ${whiteboardId}`,
+        LogContext.COMMUNITY
+      );
+    }
+    return community;
+  }
+
   public async getCommunityFromCalendarEventOrFail(
     callendarEventId: string
   ): Promise<ICommunity> {
