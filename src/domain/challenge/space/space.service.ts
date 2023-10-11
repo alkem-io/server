@@ -109,7 +109,7 @@ export class SpaceService {
     // default to active space
     space.visibility = SpaceVisibility.ACTIVE;
 
-    // Set up the storage space as that is needed for Profile
+    // Set up the storage bucket as that is needed for Profile
     space.storageBucket = await this.storageBucketService.createStorageBucket();
 
     // remove context before saving as want to control that creation

@@ -1,3 +1,4 @@
+import { ProfileType } from '@common/enums/profile.type';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ILocation } from '@domain/common/location';
 import { IReference } from '@domain/common/reference/reference.interface';
@@ -35,4 +36,10 @@ export abstract class IProfile extends IAuthorizable {
   visuals?: IVisual[];
 
   location?: ILocation;
+
+  @Field(() => ProfileType, {
+    nullable: true,
+    description: 'A type of entity that this Profile is being used with.',
+  })
+  type!: string;
 }

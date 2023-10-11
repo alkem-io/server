@@ -11,7 +11,7 @@ export class storage1681736452222 implements MigrationInterface {
   name = 'storage1681736452222';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Create storage space entity
+    // Create storage bucket entity
     await queryRunner.query(
       `CREATE TABLE \`storage_bucket\` (\`id\` char(36) NOT NULL, \`createdDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                  \`updatedDate\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
@@ -54,7 +54,7 @@ export class storage1681736452222 implements MigrationInterface {
       `ALTER TABLE \`document\` ADD CONSTRAINT \`FK_3337f26ca267009fcf514e0e726\` FOREIGN KEY (\`createdBy\`) REFERENCES \`user\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );
 
-    // Link documents to storage space
+    // Link documents to storage bucket
     await queryRunner.query(
       `ALTER TABLE \`document\` ADD CONSTRAINT \`FK_11155450cf75dc486700ca034c6\` FOREIGN KEY (\`storageBucketId\`) REFERENCES \`storage_bucket\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`
     );

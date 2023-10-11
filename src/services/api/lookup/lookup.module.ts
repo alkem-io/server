@@ -24,6 +24,7 @@ import { CalloutTemplateModule } from '@domain/template/callout-template/callout
 import { WhiteboardRtModule } from '@domain/common/whiteboard-rt';
 import { DocumentModule } from '@domain/storage/document/document.module';
 
+
 @Module({
   imports: [
     AuthorizationModule,
