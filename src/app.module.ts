@@ -66,7 +66,6 @@ import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
 import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
-import { AdminWhiteboardModule } from '@platform/admin/whiteboards/admin.whiteboard.module';
 
 @Module({
   imports: [
@@ -156,7 +155,7 @@ import { AdminWhiteboardModule } from '@platform/admin/whiteboards/admin.whitebo
             },
           ],
         },
-        fieldResolverEnhancers: ['guards'],
+        fieldResolverEnhancers: ['guards', 'filters'],
         sortSchema: true,
         /***
          * graphql-ws requires passing the request object through the context method

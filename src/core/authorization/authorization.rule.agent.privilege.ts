@@ -2,6 +2,7 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ForbiddenException } from '@common/exceptions';
 import { AgentInfo } from '@core/authentication/agent-info';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 
 export class AuthorizationRuleAgentPrivilege {
   privilege: AuthorizationPrivilege;
@@ -42,7 +43,12 @@ export class AuthorizationRuleAgentPrivilege {
         agentInfo,
         this.fieldParent.authorization
       );
-      throw new ForbiddenException(errorMsg, LogContext.AUTH);
+      throw new ForbiddenAuthorizationPolicyException(
+        errorMsg,
+        this.privilege,
+        this.fieldParent.authorization.id,
+        agentInfo.userID
+      );
     }
 
     return true;
