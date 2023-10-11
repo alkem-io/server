@@ -1,3 +1,5 @@
+import { registerEnumType } from '@nestjs/graphql';
+
 export enum ProfileType {
   SPACE = 'space',
   CHALLENGE = 'challenge',
@@ -20,3 +22,7 @@ export enum ProfileType {
   POST_TEMPLATE = 'post-template',
   WHITEBOARD_TEMPLATE = 'whiteboard-template',
 }
+
+registerEnumType(ProfileType, {
+  name: 'ProfileType',
+});
