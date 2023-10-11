@@ -102,7 +102,7 @@ export class PlatformService {
 
     if (!storageBucket) {
       throw new EntityNotFoundException(
-        `Unable to find storage space for Platform: ${platformInput.id}`,
+        `Unable to find storage bucket for Platform: ${platformInput.id}`,
         LogContext.LIBRARY
       );
     }

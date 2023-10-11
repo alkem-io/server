@@ -155,7 +155,7 @@ import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
             },
           ],
         },
-        fieldResolverEnhancers: ['guards'],
+        fieldResolverEnhancers: ['guards', 'filters'],
         sortSchema: true,
         /***
          * graphql-ws requires passing the request object through the context method
@@ -228,6 +228,7 @@ import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
     ChatGuidanceModule,
     LookupModule,
     AuthResetSubscriberModule,
+    //AdminWhiteboardModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

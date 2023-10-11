@@ -179,7 +179,7 @@ export class StorageBucketResolverService {
     query = `SELECT \`storageBucketId\` FROM \`challenge\`
       LEFT JOIN \`opportunity\` ON \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
       LEFT JOIN \`community\` ON \`community\`.\`id\` = \`opportunity\`.\`communityId\`
-      WHERE \`collaboration\`.\`id\`='${communityID}'`;
+      WHERE \`community\`.\`id\`='${communityID}'`;
     [result] = await this.entityManager.connection.query(query);
 
     return result.storageBucketId;

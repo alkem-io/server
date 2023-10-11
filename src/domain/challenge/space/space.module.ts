@@ -33,6 +33,7 @@ import { LoaderCreatorModule } from '@core/dataloader/creators';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { SpaceStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.storage.space.loader.creator';
 import { NameReporterModule } from '@services/external/elasticsearch/name-reporter/name.reporter.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { NameReporterModule } from '@services/external/elasticsearch/name-report
     ContributionReporterModule,
     LoaderCreatorModule,
     NameReporterModule,
+    ProfileModule,
     TypeOrmModule.forFeature([Space]),
   ],
   providers: [
