@@ -9,5 +9,6 @@ export class BaseHttpException extends HttpException {
     public code: AlkemioErrorStatus
   ) {
     super(message, statusCode);
+    this.name = this.constructor.name;
   }
 }

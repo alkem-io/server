@@ -10,5 +10,6 @@ export class BaseException extends GraphQLError {
     super(error, {
       extensions: { code: code.toLocaleString() },
     });
+    this.name = this.constructor.name;
   }
 }

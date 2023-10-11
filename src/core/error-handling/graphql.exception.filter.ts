@@ -13,6 +13,7 @@ export class GraphqlExceptionFilter implements ExceptionFilter {
   catch(exception: BaseException) {
     /* add values in 'stack' that you want to include as additional data
       e.g. stack = { code: '123' };
+      THE VAR NAME DOES NOT CORRESPOND WITH ITS VALUE OR PURPOSE
      */
     const stack = undefined;
     const context = undefined;
