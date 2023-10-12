@@ -629,7 +629,7 @@ export class SpaceAuthorizationService {
         ],
         CREDENTIAL_RULE_SPACE_FILE_UPLOAD
       );
-    membersCanUpload.cascade = false;
+    membersCanUpload.cascade = true;
     newRules.push(membersCanUpload);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(

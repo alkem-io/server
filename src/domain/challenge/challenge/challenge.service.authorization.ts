@@ -648,7 +648,7 @@ export class ChallengeAuthorizationService {
         this.getContributorCriteria(policy),
         CREDENTIAL_RULE_CHALLENGE_FILE_UPLOAD
       );
-    membersCanUpload.cascade = false;
+    membersCanUpload.cascade = true;
     newRules.push(membersCanUpload);
 
     this.authorizationPolicyService.appendCredentialAuthorizationRules(
