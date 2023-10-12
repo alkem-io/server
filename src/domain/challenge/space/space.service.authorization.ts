@@ -39,7 +39,6 @@ import {
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
-  CREDENTIAL_RULE_SPACE_FILE_UPLOAD,
 } from '@common/constants';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
@@ -129,15 +128,6 @@ export class SpaceAuthorizationService {
             spacePolicy,
             hostOrg
           );
-
-        spaceSaved.storageBucket =
-          await this.spaceService.getStorageBucketOrFail(spaceSaved.id);
-        spaceSaved.storageBucket.authorization =
-          this.extendStorageAuthorizationPolicy(
-            spaceSaved.storageBucket.authorization,
-            spacePolicy
-          );
-
         spaceSaved.collaboration = await this.spaceService.getCollaboration(
           spaceSaved
         );
@@ -604,40 +594,6 @@ export class SpaceAuthorizationService {
       newRules
     );
   }
-
-  private extendStorageAuthorizationPolicy(
-    storageAuthorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
-  ): IAuthorizationPolicy {
-    if (!storageAuthorization)
-      throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${JSON.stringify(policy)}`,
-        LogContext.CHALLENGES
-      );
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    // Any member can upload
-    const membersCanUpload =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.FILE_UPLOAD],
-        [
-          this.communityPolicyService.getCredentialForRole(
-            policy,
-            CommunityRole.MEMBER
-          ),
-        ],
-        CREDENTIAL_RULE_SPACE_FILE_UPLOAD
-      );
-    membersCanUpload.cascade = true;
-    newRules.push(membersCanUpload);
-
-    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      storageAuthorization,
-      newRules
-    );
-  }
-
   appendVerifiedCredentialRules(
     authorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {
