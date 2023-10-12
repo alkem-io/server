@@ -61,7 +61,8 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { userDefaults } from './user.defaults';
 import { UsersQueryArgs } from './dto/users.query.args';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 @Injectable()
 export class UserService {
   cacheOptions: CachingConfig = { ttl: 300 };
@@ -74,7 +75,7 @@ export class UserService {
     private agentService: AgentService,
     private preferenceSetService: PreferenceSetService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private storageBucketService: StorageBucketService,
+    private storageAggregatorService: StorageAggregatorService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -108,11 +109,12 @@ export class UserService {
     const profileData = await this.extendProfileDataWithReferences(
       userData.profileData
     );
-    user.storageBucket = await this.storageBucketService.createStorageBucket();
+    user.storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator();
     user.profile = await this.profileService.createProfile(
       profileData,
       ProfileType.USER,
-      user.storageBucket
+      user.storageAggregator
     );
 
     // Set the visuals
@@ -820,15 +822,24 @@ export class UserService {
     return agent;
   }
 
-  private async hasMatchingCredential(
-    user: IUser,
-    credentialCriteria: CredentialsSearchInput
-  ) {
-    const agent = this.getAgentOrFail(user);
-    return await this.agentService.hasValidCredential(
-      agent.id,
-      credentialCriteria
-    );
+  async getStorageAggregatorOrFail(
+    userID: string
+  ): Promise<IStorageAggregator> {
+    const userWithStorage = await this.getUserOrFail(userID, {
+      relations: {
+        storageAggregator: true,
+      },
+    });
+    const storageAggregator = userWithStorage.storageAggregator;
+
+    if (!storageAggregator) {
+      throw new EntityNotFoundException(
+        `Unable to find storageAggregator for User with nameID: ${userWithStorage.nameID}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return storageAggregator;
   }
 
   async getUserCount(): Promise<number> {

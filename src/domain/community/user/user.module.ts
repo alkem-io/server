@@ -25,7 +25,7 @@ import {
   AgentLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
-import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 
 @Module({
   imports: [
@@ -44,7 +44,7 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
     PreferenceSetModule,
     KonfigModule,
     MessagingModule,
-    StorageBucketModule,
+    StorageAggregatorModule,
     TypeOrmModule.forFeature([User]),
   ],
   providers: [

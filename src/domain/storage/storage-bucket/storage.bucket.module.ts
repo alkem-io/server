@@ -12,7 +12,6 @@ import { StorageBucketAuthorizationService } from './storage.bucket.service.auth
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { Document } from '../document/document.entity';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
-import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 
@@ -23,7 +22,6 @@ import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
     AuthorizationPolicyModule,
     IpfsModule,
     VisualModule,
-    StorageBucketResolverModule,
     ReferenceModule,
     UrlGeneratorModule,
     TypeOrmModule.forFeature([StorageBucket]),

@@ -21,6 +21,7 @@ import {
   CREDENTIAL_RULE_USER_SELF_ADMIN,
   CREDENTIAL_RULE_USER_READ,
 } from '@common/constants';
+import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 
 @Injectable()
 export class UserAuthorizationService {
@@ -29,6 +30,7 @@ export class UserAuthorizationService {
     private profileAuthorizationService: ProfileAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
+    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private agentService: AgentService,
     private userService: UserService
   ) {}
@@ -74,6 +76,15 @@ export class UserAuthorizationService {
           user.authorization
         );
     }
+
+    user.storageAggregator = await this.userService.getStorageAggregatorOrFail(
+      user.id
+    );
+    user.storageAggregator =
+      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
+        user.storageAggregator,
+        user.authorization
+      );
 
     return await this.userService.saveUser(user);
   }

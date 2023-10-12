@@ -16,7 +16,7 @@ import { SpaceService } from '@domain/challenge/space/space.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 
 @Injectable()
 export class InnovationHubService {
@@ -26,7 +26,7 @@ export class InnovationHubService {
     private readonly profileService: ProfileService,
     private readonly authService: InnovationHubAuthorizationService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
-    private storageBucketResolverService: StorageBucketResolverService,
+    private storageAggregatorResolverService: StorageAggregatorResolverService,
     private readonly spaceService: SpaceService,
     private namingService: NamingService
   ) {}
@@ -73,13 +73,13 @@ export class InnovationHubService {
     const hub: IInnovationHub = InnovationHub.create(createData);
     hub.authorization = new AuthorizationPolicy();
 
-    const storageBucket =
-      await this.storageBucketResolverService.getPlatformStorageBucket();
+    const storageAggregator =
+      await this.storageAggregatorResolverService.getPlatformStorageAggregator();
 
     hub.profile = await this.profileService.createProfile(
       createData.profileData,
       ProfileType.INNOVATION_HUB,
-      storageBucket
+      storageAggregator
     );
 
     await this.profileService.addTagsetOnProfile(hub.profile, {

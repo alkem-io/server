@@ -23,7 +23,7 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
   CREDENTIAL_RULE_ORGANIZATION_FILE_UPLOAD,
 } from '@common/constants';
-import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
+import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 
 @Injectable()
 export class OrganizationAuthorizationService {
@@ -35,7 +35,7 @@ export class OrganizationAuthorizationService {
     private organizationVerificationAuthorizationService: OrganizationVerificationAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private storageBucketAuthorizationService: StorageBucketAuthorizationService,
+    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>
@@ -64,16 +64,18 @@ export class OrganizationAuthorizationService {
         );
     }
 
-    organization.storageBucket =
-      await this.organizationService.getStorageBucketOrFail(organization.id);
-    organization.storageBucket =
-      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
-        organization.storageBucket,
+    organization.storageAggregator =
+      await this.organizationService.getStorageAggregatorOrFail(
+        organization.id
+      );
+    organization.storageAggregator =
+      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
+        organization.storageAggregator,
         organization.authorization
       );
-    organization.storageBucket.authorization =
+    organization.storageAggregator.authorization =
       this.extendStorageAuthorizationPolicy(
-        organization.storageBucket.authorization,
+        organization.storageAggregator.authorization,
         organization
       );
 

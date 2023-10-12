@@ -41,12 +41,12 @@ import {
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_SPACE_FILE_UPLOAD,
 } from '@common/constants';
-import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
+import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 
 @Injectable()
 export class SpaceAuthorizationService {
@@ -58,7 +58,7 @@ export class SpaceAuthorizationService {
     private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private communityPolicyService: CommunityPolicyService,
-    private storageBucketAuthorizationService: StorageBucketAuthorizationService,
+    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private contextAuthorizationService: ContextAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
@@ -130,11 +130,11 @@ export class SpaceAuthorizationService {
             hostOrg
           );
 
-        spaceSaved.storageBucket =
-          await this.spaceService.getStorageBucketOrFail(spaceSaved.id);
-        spaceSaved.storageBucket.authorization =
+        spaceSaved.storageAggregator =
+          await this.spaceService.getStorageAggregatorOrFail(spaceSaved.id);
+        spaceSaved.storageAggregator.authorization =
           this.extendStorageAuthorizationPolicy(
-            spaceSaved.storageBucket.authorization,
+            spaceSaved.storageAggregator.authorization,
             spacePolicy
           );
 
@@ -327,14 +327,14 @@ export class SpaceAuthorizationService {
     const space = await this.spaceService.getSpaceOrFail(spaceBase.id, {
       relations: {
         challenges: true,
-        storageBucket: true,
+        storageAggregator: true,
         templatesSet: true,
         preferenceSet: true,
       },
     });
     if (
       !space.challenges ||
-      !space.storageBucket ||
+      !space.storageAggregator ||
       !space.templatesSet ||
       !space.preferenceSet
     )
@@ -372,9 +372,9 @@ export class SpaceAuthorizationService {
         space.authorization
       );
 
-    space.storageBucket =
-      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
-        space.storageBucket,
+    space.storageAggregator =
+      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
+        space.storageAggregator,
         space.authorization
       );
 

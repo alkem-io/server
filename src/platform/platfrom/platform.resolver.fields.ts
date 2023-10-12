@@ -1,7 +1,6 @@
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ILibrary } from '@library/library/library.interface';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { InnovationHub as InnovationHubDecorator } from '@src/common/decorators';
 import { InnovationHubArgsQuery } from '@domain/innovation-hub/dto';
 import { InnovationHubService } from '@domain/innovation-hub';
@@ -15,6 +14,7 @@ import { IMetadata } from '@platform/metadata/metadata.interface';
 import { MetadataService } from '@platform/metadata/metadata.service';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -50,13 +50,15 @@ export class PlatformResolverFields {
     return this.platformService.getCommunicationOrFail();
   }
 
-  @ResolveField('storageBucket', () => IStorageBucket, {
+  @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: false,
     description:
-      'The StorageBucket with documents in use by Users + Organizations on the Platform.',
+      'The StorageAggregator with documents in use by Users + Organizations on the Platform.',
   })
-  storageBucket(@Parent() platform: IPlatform): Promise<IStorageBucket> {
-    return this.platformService.getStorageBucket(platform);
+  storageAggregator(
+    @Parent() platform: IPlatform
+  ): Promise<IStorageAggregator> {
+    return this.platformService.getStorageAggregator(platform);
   }
 
   @ResolveField(() => [IInnovationHub], {

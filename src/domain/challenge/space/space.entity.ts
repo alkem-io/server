@@ -5,7 +5,7 @@ import { Challenge } from '@domain/challenge/challenge/challenge.entity';
 import { PreferenceSet } from '@domain/common/preference-set/preference.set.entity';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 @Entity()
 export class Space extends BaseChallenge implements ISpace {
   @Column('varchar', {
@@ -37,13 +37,13 @@ export class Space extends BaseChallenge implements ISpace {
   @JoinColumn()
   templatesSet?: TemplatesSet;
 
-  @OneToOne(() => StorageBucket, {
+  @OneToOne(() => StorageAggregator, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  storageBucket?: StorageBucket;
+  storageAggregator?: StorageAggregator;
 
   constructor() {
     super();

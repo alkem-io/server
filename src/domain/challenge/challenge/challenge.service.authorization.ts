@@ -34,13 +34,13 @@ import {
   CREDENTIAL_RULE_CHALLENGE_FILE_UPLOAD,
   CREDENTIAL_RULE_COMMUNITY_ADD_MEMBER,
 } from '@common/constants';
-import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
 import { InnovationFlowAuthorizationService } from '../innovation-flow/innovation.flow.service.authorization';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
+import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 
 @Injectable()
 export class ChallengeAuthorizationService {
@@ -52,7 +52,7 @@ export class ChallengeAuthorizationService {
     private communityPolicyService: CommunityPolicyService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private preferenceSetService: PreferenceSetService,
-    private storageBucketAuthorizationService: StorageBucketAuthorizationService,
+    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private contextAuthorizationService: ContextAuthorizationService,
@@ -363,7 +363,7 @@ export class ChallengeAuthorizationService {
         relations: {
           opportunities: true,
           childChallenges: true,
-          storageBucket: true,
+          storageAggregator: true,
           preferenceSet: true,
           innovationFlow: true,
         },
@@ -371,7 +371,7 @@ export class ChallengeAuthorizationService {
     );
     if (
       !challenge.opportunities ||
-      !challenge.storageBucket ||
+      !challenge.storageAggregator ||
       !challenge.preferenceSet ||
       !challenge.childChallenges ||
       !challenge.innovationFlow
@@ -381,14 +381,14 @@ export class ChallengeAuthorizationService {
         LogContext.CHALLENGES
       );
 
-    challenge.storageBucket =
-      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
-        challenge.storageBucket,
+    challenge.storageAggregator =
+      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
+        challenge.storageAggregator,
         challenge.authorization
       );
-    challenge.storageBucket.authorization =
+    challenge.storageAggregator.authorization =
       this.extendStorageAuthorizationPolicy(
-        challenge.storageBucket.authorization,
+        challenge.storageAggregator.authorization,
         communityPolicy
       );
 

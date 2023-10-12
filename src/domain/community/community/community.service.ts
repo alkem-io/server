@@ -60,7 +60,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { CreateInvitationInput } from '../invitation/dto/invitation.dto.create';
 import { CommunityMembershipException } from '@common/exceptions/community.membership.exception';
 import { CommunityEventsService } from './community.service.events';
-import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 
 @Injectable()
 export class CommunityService {
@@ -79,7 +79,7 @@ export class CommunityService {
     private communityEventsService: CommunityEventsService,
     private formService: FormService,
     private communityPolicyService: CommunityPolicyService,
-    private storageBucketResolverService: StorageBucketResolverService,
+    private storageAggregatorResolverService: StorageAggregatorResolverService,
     @InjectRepository(Community)
     private communityRepository: Repository<Community>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -133,14 +133,14 @@ export class CommunityService {
       relations: ['groups'],
     });
 
-    const storageBucket =
-      await this.storageBucketResolverService.getStorageBucketForCommunity(
+    const storageAggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorForCommunity(
         community.id
       );
     const group = await this.userGroupService.addGroupWithName(
       community,
       groupName,
-      storageBucket,
+      storageAggregator,
       community.spaceID
     );
     await this.communityRepository.save(community);
