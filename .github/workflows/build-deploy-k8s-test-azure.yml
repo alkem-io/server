@@ -8,10 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout GitHub Action'
-        uses: actions/checkout@master
+        uses: actions/checkout@v3.0.2
 
       - name: 'Login into ACR'
-        uses: azure/docker-login@v1
+        uses: azure/docker-login@v1.0.1
         with:
           login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
           username: ${{ secrets.REGISTRY_USERNAME }}
@@ -26,32 +26,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout GitHub Action'
-        uses: actions/checkout@master
+        uses: actions/checkout@v3.0.2
 
       - name: 'Login via Azure CLI'
-        uses: azure/login@v1
+        uses: azure/login@v1.4.7
         with:
           creds: ${{ secrets.AZURE_CRED_K8S_NEW }}
 
-      - uses: Azure/aks-set-context@v1
+      - uses: Azure/aks-set-context@v3.2
         with:
-          creds: ${{ secrets.AZURE_CRED_K8S_NEW }}
           cluster-name: k8s-test
           resource-group: res-grp-k8s-test
 
-      - uses: Azure/k8s-create-secret@v1
+      - uses: Azure/k8s-create-secret@v4.0
         with:
           container-registry-url: ${{ secrets.REGISTRY_LOGIN_SERVER }}
           container-registry-username: ${{ secrets.REGISTRY_USERNAME }}
           container-registry-password: ${{ secrets.REGISTRY_PASSWORD }}
           secret-name: alkemio-server-secret
 
-      - uses: azure/setup-kubectl@v3
+      - uses: azure/setup-kubectl@v3.2
         with:
-          version: "v1.22.0" # default is latest stable, fixing it to a compatible version
+          version: 'v1.22.0' # default is latest stable, fixing it to a compatible version
         id: install
 
-      - uses: Azure/k8s-deploy@v1
+      - uses: Azure/k8s-deploy@v4.10
         with:
           manifests: |
             manifests/26-server-migration.yaml
@@ -74,32 +73,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout GitHub Action'
-        uses: actions/checkout@master
+        uses: actions/checkout@v3.0.2
 
       - name: 'Login via Azure CLI'
-        uses: azure/login@v1
+        uses: azure/login@v1.4.7
         with:
           creds: ${{ secrets.AZURE_CRED_K8S_NEW }}
 
-      - uses: Azure/aks-set-context@v1
+      - uses: Azure/aks-set-context@v3.2
         with:
-          creds: ${{ secrets.AZURE_CRED_K8S_NEW }}
           cluster-name: k8s-test
           resource-group: res-grp-k8s-test
 
-      - uses: Azure/k8s-create-secret@v1
+      - uses: Azure/k8s-create-secret@v4.0
         with:
           container-registry-url: ${{ secrets.REGISTRY_LOGIN_SERVER }}
           container-registry-username: ${{ secrets.REGISTRY_USERNAME }}
           container-registry-password: ${{ secrets.REGISTRY_PASSWORD }}
           secret-name: alkemio-server-secret
 
-      - uses: azure/setup-kubectl@v3
+      - uses: azure/setup-kubectl@v3.2
         with:
-          version: "v1.22.0" # default is latest stable, fixing it to a compatible version
+          version: 'v1.22.0' # default is latest stable, fixing it to a compatible version
         id: install
 
-      - uses: Azure/k8s-deploy@v1
+      - uses: Azure/k8s-deploy@v4.10
         with:
           manifests: |
             manifests/25-server-deployment-dev.yaml
