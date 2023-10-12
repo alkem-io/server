@@ -36,7 +36,4 @@ export class Document extends AuthorizableEntity implements IDocument {
 
   @Column('varchar', { length: 128, default: '' })
   externalID!: string;
-
-  @Column('boolean', { default: false })
-  anonymousReadAccess!: boolean;
 }

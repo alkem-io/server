@@ -42,8 +42,6 @@ export class DocumentAuthorizationService {
     // Extend to give the user creating the document more rights
     document.authorization = this.appendCredentialRules(document);
 
-    if (document.anonymousReadAccess)
-      document.authorization.anonymousReadAccess = document.anonymousReadAccess;
     if (document.tagset) {
       document.tagset.authorization =
         this.authorizationPolicyService.inheritParentAuthorization(
