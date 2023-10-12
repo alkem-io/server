@@ -102,7 +102,7 @@ export class CalloutResolverMutations {
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutData.calloutID,
-      { relations: ['profile'] }
+      { relations: ['framing'] }
     );
     this.authorizationService.grantAccessOrFail(
       agentInfo,
