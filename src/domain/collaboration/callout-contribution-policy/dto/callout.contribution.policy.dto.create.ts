@@ -4,10 +4,6 @@ import { CalloutState } from '@common/enums/callout.state';
 
 @InputType()
 export class CreateCalloutContributionPolicyInput {
-  @Field(() => [CalloutContributionType], {
-    nullable: true,
-    description: 'Contribution types of the callout.',
-  })
   allowedContributionTypes?: CalloutContributionType[];
 
   @Field(() => CalloutState, {
