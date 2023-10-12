@@ -80,6 +80,13 @@ export class StorageBucketAuthorizationService {
     );
     privilegeRules.push(createPrivilege);
 
+    const fileUploadPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.FILE_UPLOAD],
+      AuthorizationPrivilege.CONTRIBUTE,
+      POLICY_RULE_STORAGE_BUCKET_FILE_UPLOAD
+    );
+    privilegeRules.push(fileUploadPrivilege);
+
     const deletePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.FILE_DELETE],
       AuthorizationPrivilege.DELETE,
