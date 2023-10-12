@@ -31,11 +31,5 @@ export abstract class IDocument extends IAuthorizable {
     description: 'Size of the Document.',
   })
   size!: number;
-
-  @Field(() => Boolean, {
-    description: 'Do we allow anonymous read access for this document?',
-  })
-  anonymousReadAccess!: boolean;
-
   externalID!: string;
 }
