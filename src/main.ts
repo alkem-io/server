@@ -14,7 +14,15 @@ import cookieParser from 'cookie-parser';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 const bootstrap = async () => {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    /***
+     * if the logger is provided at a later stage via 'useLogger' after the app has initialized, Nest falls back to the default logger
+     * while initializing, which logs a lot of info logs, which we don't have control over and don't want tracked.
+     * The logger is disabled while the app is loading ONLY on production to avoid the messages;
+     * then the costume logger is applied as usual
+     */
+    logger: process.env.NODE_ENV === 'production' ? false : undefined,
+  });
   const configService: ConfigService = app.get(ConfigService);
   const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
   const bootstrapService: BootstrapService = app.get(BootstrapService);
