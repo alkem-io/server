@@ -40,15 +40,16 @@ export class calloutPolicyDefaults1696674755742 implements MigrationInterface {
 
       await queryRunner.query(
         `INSERT INTO callout_contribution_defaults (id, version)
-                    VALUES ('${contributionDefaultsID}',
-                            '1')`
+                    VALUES (?, '1')`,
+        [contributionDefaultsID]
       );
 
       const [whiteboardTemplate]: {
         id: string;
         content: string;
       }[] = await queryRunner.query(
-        `SELECT id, content FROM whiteboard_template WHERE id = '${callout.whiteboardTemplateId}'`
+        `SELECT id, content FROM whiteboard_template WHERE id = ?`,
+        [callout.whiteboardTemplateId]
       );
       if (whiteboardTemplate) {
         await queryRunner.query(
@@ -61,7 +62,8 @@ export class calloutPolicyDefaults1696674755742 implements MigrationInterface {
         id: string;
         defaultDescription: string;
       }[] = await queryRunner.query(
-        `SELECT id, defaultDescription FROM post_template WHERE id = '${callout.postTemplateId}'`
+        `SELECT id, defaultDescription FROM post_template WHERE id = ?`,
+        [callout.postTemplateId]
       );
       if (postTemplate) {
         await queryRunner.query(
@@ -85,13 +87,19 @@ export class calloutPolicyDefaults1696674755742 implements MigrationInterface {
           break;
       }
 
-      await queryRunner.query(
-        `INSERT INTO callout_contribution_policy (id, version, state, allowedContributionTypes)
-                    VALUES ('${contributionPolicyID}',
-                            '1',
-                            '${callout.state}',
-                            '${JSON.stringify(allowedContributionTypes)}')`
-      );
+      if (allowedContributionTypes.length === 0) {
+        await queryRunner.query(
+          `INSERT INTO callout_contribution_policy (id, version, state)
+                        VALUES (?, '1', ?)`,
+          [contributionPolicyID, callout.state]
+        );
+      } else {
+        await queryRunner.query(
+          `INSERT INTO callout_contribution_policy (id, version, state, allowedContributionTypes)
+                        VALUES (?, '1', ?, ?)`,
+          [contributionPolicyID, callout.state, allowedContributionTypes]
+        );
+      }
 
       await queryRunner.query(
         `UPDATE callout SET contributionPolicyId = ?, contributionDefaultsId = ? WHERE id = ?`,
