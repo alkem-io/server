@@ -462,7 +462,8 @@ export class CalloutService {
         contributionData,
         storageBucket,
         callout.contributionPolicy,
-        userID
+        userID,
+        callout.framing.profile.id
       );
     callout.contributions.push(contribution);
     await this.calloutRepository.save(callout);

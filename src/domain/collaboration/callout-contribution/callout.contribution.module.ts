@@ -11,6 +11,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { PostModule } from '../post/post.module';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { UserLookupModule } from '@services/infrastructure/user-lookup/user.look
     NamingModule,
     ReferenceModule,
     UserLookupModule,
+    ProfileModule,
     TypeOrmModule.forFeature([CalloutContribution]),
   ],
   providers: [
