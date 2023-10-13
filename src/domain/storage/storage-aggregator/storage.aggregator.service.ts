@@ -12,6 +12,7 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 import { StorageBucketService } from '../storage-bucket/storage.bucket.service';
 import { IStorageAggregatorParent } from './dto/storage.aggregator.dto.parent';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
 @Injectable()
 export class StorageAggregatorService {
   constructor(
@@ -144,6 +145,17 @@ export class StorageAggregatorService {
         },
       },
     });
+    if (!result) return [];
+    return result;
+  }
+
+  public async getStorageBuckets(
+    storageAggregator: IStorageAggregator
+  ): Promise<IStorageBucket[]> {
+    const result =
+      await this.storageBucketService.getStorageBucketsForAggregator(
+        storageAggregator.id
+      );
     if (!result) return [];
     return result;
   }

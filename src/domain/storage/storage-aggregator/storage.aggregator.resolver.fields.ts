@@ -7,6 +7,7 @@ import { UseGuards } from '@nestjs/common';
 import { AuthorizationAgentPrivilege } from '@src/common/decorators';
 import { Parent, ResolveField } from '@nestjs/graphql';
 import { IStorageAggregatorParent } from './dto/storage.aggregator.dto.parent';
+import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
 
 @Resolver(() => IStorageAggregator)
 export class StorageAggregatorResolverFields {
@@ -25,7 +26,7 @@ export class StorageAggregatorResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('childStorage', () => [IStorageAggregator], {
+  @ResolveField('storageAggregators', () => [IStorageAggregator], {
     nullable: false,
     description:
       'The list of child storageAggregators for this StorageAggregator.',
@@ -34,6 +35,21 @@ export class StorageAggregatorResolverFields {
     @Parent() storageAggregator: IStorageAggregator
   ): Promise<IStorageAggregator[]> {
     return await this.storageAggregatorService.getChildStorageAggregators(
+      storageAggregator
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('storageBuckets', () => [IStorageBucket], {
+    nullable: false,
+    description:
+      'The Storage Buckets that are being managed via this StorageAggregators.',
+  })
+  async storageBuckets(
+    @Parent() storageAggregator: IStorageAggregator
+  ): Promise<IStorageBucket[]> {
+    return await this.storageAggregatorService.getStorageBuckets(
       storageAggregator
     );
   }
