@@ -128,16 +128,6 @@ export class CalloutService {
 
   private validateCreateCalloutData(calloutData: CreateCalloutInput) {
     if (
-      calloutData.type == CalloutType.POST_COLLECTION &&
-      !calloutData.contributionDefaults?.postDescription
-    ) {
-      throw new ValidationException(
-        'Please provide a post default description',
-        LogContext.COLLABORATION
-      );
-    }
-
-    if (
       calloutData.type == CalloutType.WHITEBOARD_COLLECTION &&
       !calloutData.contributionDefaults?.whiteboardContent
     ) {

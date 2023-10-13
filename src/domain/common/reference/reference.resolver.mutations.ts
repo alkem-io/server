@@ -8,6 +8,7 @@ import { UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ReferenceService } from './reference.service';
+import { UpdateReferenceInput } from './reference.dto.update';
 
 @Resolver()
 export class ReferenceResolverMutations {
@@ -15,6 +16,30 @@ export class ReferenceResolverMutations {
     private authorizationService: AuthorizationService,
     private referenceService: ReferenceService
   ) {}
+
+  @UseGuards(GraphqlGuard)
+  @Mutation(() => IReference, {
+    description: 'Updates the specified Reference.',
+  })
+  async updateReference(
+    @CurrentUser() agentInfo: AgentInfo,
+    @Args('referenceData') referenceData: UpdateReferenceInput
+  ): Promise<IReference> {
+    const reference = await this.referenceService.getReferenceOrFail(
+      referenceData.ID
+    );
+    await this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      reference.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update Reference: ${reference.id}`
+    );
+
+    const updatedReference = await this.referenceService.updateReference(
+      referenceData
+    );
+    return updatedReference;
+  }
 
   @UseGuards(GraphqlGuard)
   @Mutation(() => IReference, {
