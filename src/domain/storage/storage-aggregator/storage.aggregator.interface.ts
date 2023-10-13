@@ -4,7 +4,7 @@ import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
 
 @ObjectType('StorageAggregator')
 export abstract class IStorageAggregator extends IAuthorizable {
-  directStorage!: IStorageBucket;
+  directStorage?: IStorageBucket;
 
   parentStorageAggregator?: IStorageAggregator;
 }

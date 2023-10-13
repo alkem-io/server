@@ -13,6 +13,7 @@ import { StorageBucketService } from '../storage-bucket/storage.bucket.service';
 import { IStorageAggregatorParent } from './dto/storage.aggregator.dto.parent';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
+import { EntityNotInitializedException } from '@common/exceptions';
 @Injectable()
 export class StorageAggregatorService {
   constructor(
@@ -34,12 +35,11 @@ export class StorageAggregatorService {
 
     storageAggregator.parentStorageAggregator = parentStorageAggregator;
 
-    const savedAggregator = await this.save(storageAggregator);
-    const directStorage = await this.storageBucketService.createStorageBucket({
-      storageAggregator: savedAggregator,
-    });
-    savedAggregator.directStorage = directStorage;
-    return await this.save(savedAggregator);
+    // Do not set the storage aggregator on direct storage buckets as this causes
+    // a circular loop
+    storageAggregator.directStorage =
+      await this.storageBucketService.createStorageBucket({});
+    return await this.save(storageAggregator);
   }
 
   async delete(storageAggregatorID: string): Promise<IStorageAggregator> {
@@ -51,6 +51,13 @@ export class StorageAggregatorService {
         },
       }
     );
+
+    if (!storageAggregator.directStorage) {
+      throw new EntityNotInitializedException(
+        `Unable to load direct storage on storage aggregator: ${storageAggregator.id}`,
+        LogContext.STORAGE_AGGREGATOR
+      );
+    }
 
     if (storageAggregator.authorization)
       await this.authorizationPolicyService.delete(
@@ -92,8 +99,9 @@ export class StorageAggregatorService {
   }
 
   public async size(storageAggregator: IStorageAggregator): Promise<number> {
+    const directStorage = await this.getDirectStorageBucket(storageAggregator);
     const directStorageSize = await this.storageBucketService.size(
-      storageAggregator.directStorage
+      directStorage
     );
     const childStorageAggregatorsSize = await this.sizeChildStorageAggregators(
       storageAggregator
@@ -101,9 +109,11 @@ export class StorageAggregatorService {
     const childStorageBucketsSize = await this.sizeChildStorageBuckets(
       storageAggregator
     );
-    return (
-      directStorageSize + childStorageAggregatorsSize + childStorageBucketsSize
-    );
+    const totalSize =
+      +directStorageSize +
+      +childStorageBucketsSize +
+      +childStorageAggregatorsSize;
+    return totalSize;
   }
 
   public async sizeChildStorageBuckets(
@@ -116,7 +126,7 @@ export class StorageAggregatorService {
     let result = 0;
     for (const storageBucket of childStorageBuckets) {
       const size = await this.storageBucketService.size(storageBucket);
-      result = result + size;
+      result += +size;
     }
     return result;
   }
@@ -130,7 +140,7 @@ export class StorageAggregatorService {
     let result = 0;
     for (const childStorageAggregator of childStorageAggregators) {
       const size = await this.size(childStorageAggregator);
-      result = result + size;
+      result += +size;
     }
     return result;
   }
@@ -173,6 +183,28 @@ export class StorageAggregatorService {
     );
     if (!storageAggregator.parentStorageAggregator) return null;
     return storageAggregator.parentStorageAggregator;
+  }
+
+  async getDirectStorageBucket(
+    storageAggregatorInput: IStorageAggregator
+  ): Promise<IStorageBucket> {
+    const storageAggregator = await this.getStorageAggregatorOrFail(
+      storageAggregatorInput.id,
+      {
+        relations: {
+          directStorage: true,
+        },
+      }
+    );
+
+    if (!storageAggregator.directStorage) {
+      throw new EntityNotFoundException(
+        `Unable to find direct storage bucket for storage aggregator: ${storageAggregator.id}`,
+        LogContext.COMMUNITY
+      );
+    }
+
+    return storageAggregator.directStorage;
   }
 
   public async getParentEntity(

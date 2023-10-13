@@ -859,10 +859,21 @@ export class SpaceService {
     challengeData: CreateChallengeOnSpaceInput,
     agentInfo?: AgentInfo
   ): Promise<IChallenge> {
-    const space = await this.getSpaceOrFail(challengeData.spaceID);
+    const space = await this.getSpaceOrFail(challengeData.spaceID, {
+      relations: {
+        storageAggregator: true,
+      },
+    });
     await this.validateChallengeNameIdOrFail(challengeData.nameID, space.id);
+    if (!space.storageAggregator) {
+      throw new EntityNotFoundException(
+        `Unable to retrieve storage aggregator on space: ${space.id}`,
+        LogContext.CHALLENGES
+      );
+    }
 
-    // Update the challenge data being passed in to state set the parent ID to the contained challenge
+    // Update the challenge data being passed in to set the storage aggregator to use
+    challengeData.storageAggregatorParent = space.storageAggregator;
     const newChallenge = await this.challengeService.createChallenge(
       challengeData,
       space.id,

@@ -4,5 +4,5 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 export class CreateStorageBucketInput {
   allowedMimeTypes?: MimeFileType[];
   maxFileSize?: number;
-  storageAggregator!: IStorageAggregator;
+  storageAggregator?: IStorageAggregator;
 }

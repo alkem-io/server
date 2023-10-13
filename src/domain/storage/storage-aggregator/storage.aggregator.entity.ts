@@ -17,10 +17,10 @@ export class StorageAggregator
   parentStorageAggregator?: StorageAggregator;
 
   @OneToOne(() => StorageBucket, {
-    eager: true,
+    eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  directStorage!: StorageBucket;
+  directStorage?: StorageBucket;
 }

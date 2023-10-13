@@ -41,6 +41,21 @@ export class StorageAggregatorResolverFields {
 
   @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
+  @ResolveField('directStorageBucket', () => IStorageBucket, {
+    nullable: false,
+    description:
+      'The Storage Bucket for files directly on this Storage Aggregator (legacy).',
+  })
+  async directStorageBucket(
+    @Parent() storageAggregator: IStorageAggregator
+  ): Promise<IStorageBucket> {
+    return await this.storageAggregatorService.getDirectStorageBucket(
+      storageAggregator
+    );
+  }
+
+  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('storageBuckets', () => [IStorageBucket], {
     nullable: false,
     description:
