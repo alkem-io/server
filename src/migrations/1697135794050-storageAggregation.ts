@@ -363,6 +363,10 @@ export class storageAggregation1697135794050 implements MigrationInterface {
       await queryRunner.query(
         `UPDATE \`${entityTable}\` SET storageBucketId = '${storageAggregator.directStorageId}' WHERE (id = '${entity.id}')`
       );
+
+      await queryRunner.query(
+        `UPDATE \`storage_bucket\` SET parentStorageBucketId = null WHERE (id = '${storageAggregator.directStorageId}')`
+      );
     }
   }
 
@@ -404,9 +408,9 @@ export class storageAggregation1697135794050 implements MigrationInterface {
     await queryRunner.query(
       `UPDATE \`${entityTable}\` SET storageAggregatorId = '${storageAggregatorID}' WHERE (id = '${entityID}')`
     );
-    // Also update the direct storage to point to the storage aggregator
+    // Also update the direct storage to explicitly not have a storage aggregator to avoid a circular dependency
     await queryRunner.query(
-      `UPDATE \`storage_bucket\` SET storageAggregatorId = '${storageAggregatorID}' WHERE (id = '${directStorageId}')`
+      `UPDATE \`storage_bucket\` SET storageAggregatorId = null WHERE (id = '${directStorageId}')`
     );
     return storageAggregatorID;
   }
