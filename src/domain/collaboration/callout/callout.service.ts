@@ -387,7 +387,7 @@ export class CalloutService {
     });
     if (!callout.contributionPolicy)
       throw new EntityNotInitializedException(
-        `Callout (${calloutID}) not initialised as no contribution policy`,
+        `Callout (${calloutID}) not initialised as it does not have contribution policy`,
         LogContext.COLLABORATION
       );
     return callout.contributionPolicy;

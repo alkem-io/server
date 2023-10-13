@@ -92,6 +92,11 @@ export class calloutPolicyDefaults1696674755742 implements MigrationInterface {
                             '${callout.state}',
                             '${JSON.stringify(allowedContributionTypes)}')`
       );
+
+      await queryRunner.query(
+        `UPDATE callout SET contributionPolicyId = ?, contributionDefaultsId = ? WHERE id = ?`,
+        [contributionPolicyID, contributionDefaultsID, callout.id]
+      );
     }
 
     // Add in constraints
