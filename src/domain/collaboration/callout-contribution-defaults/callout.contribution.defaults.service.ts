@@ -40,6 +40,11 @@ export class CalloutContributionDefaultsService {
         calloutResponseDefaultsData.postDescription;
     }
 
+    if (calloutResponseDefaultsData.whiteboardContent) {
+      calloutResponseDefaults.whiteboardContent =
+        calloutResponseDefaultsData.whiteboardContent;
+    }
+
     return calloutResponseDefaults;
   }
 
