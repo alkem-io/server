@@ -79,26 +79,20 @@ export class storageAggregation1697135794050 implements MigrationInterface {
     );
 
     // Migrate data
+    await this.migrateToStorageAggregationOnEntity(queryRunner, 'space');
+    await this.migrateToStorageAggregationOnEntity(queryRunner, 'organization');
+    await this.migrateToStorageAggregationOnEntity(queryRunner, 'user');
+    await this.migrateToStorageAggregationOnEntity(queryRunner, 'library');
+    await this.migrateToStorageAggregationOnEntity(queryRunner, 'platform');
+    // challenges need some additional information
     const spaces: {
       id: string;
       storageBucketId: string;
-    }[] = await queryRunner.query(`SELECT id, storageBucketId FROM space`);
+      storageAggregatorId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, storageBucketId, storageAggregatorId FROM space`
+    );
     for (const space of spaces) {
-      const spaceStorageAggregatorID =
-        await this.createStorageAggregatorOnEntity(
-          queryRunner,
-          'space',
-          space.id,
-          null,
-          space.storageBucketId
-        );
-
-      await this.updateStorageBucketsAggregation(
-        queryRunner,
-        space.storageBucketId,
-        spaceStorageAggregatorID
-      );
-
       const challenges: {
         id: string;
         storageBucketId: string;
@@ -111,7 +105,7 @@ export class storageAggregation1697135794050 implements MigrationInterface {
             queryRunner,
             'challenge',
             challenge.id,
-            spaceStorageAggregatorID,
+            space.storageAggregatorId,
             challenge.storageBucketId
           );
         await this.updateStorageBucketsAggregation(
@@ -121,11 +115,6 @@ export class storageAggregation1697135794050 implements MigrationInterface {
         );
       }
     }
-
-    await this.migrateStorageAggregationOnEntity(queryRunner, 'organization');
-    await this.migrateStorageAggregationOnEntity(queryRunner, 'user');
-    await this.migrateStorageAggregationOnEntity(queryRunner, 'library');
-    await this.migrateStorageAggregationOnEntity(queryRunner, 'platform');
 
     // Add new constraints
     await queryRunner.query(
@@ -156,6 +145,10 @@ export class storageAggregation1697135794050 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`challenge\` DROP COLUMN \`storageBucketId\``
+    );
+
+    await queryRunner.query(
+      `ALTER TABLE \`storage_bucket\` DROP COLUMN \`parentStorageBucketId\``
     );
   }
 
@@ -199,6 +192,9 @@ export class storageAggregation1697135794050 implements MigrationInterface {
     );
 
     // Create new structures
+    await queryRunner.query(
+      `ALTER TABLE \`storage_bucket\` ADD \`parentStorageBucketId\` char(36) NULL`
+    );
     await this.addStorageBucketRelation(
       queryRunner,
       'FK_11991450cf75dc486700ca034c6',
@@ -231,8 +227,46 @@ export class storageAggregation1697135794050 implements MigrationInterface {
     );
 
     // Migrate data
+    await this.migrateFromStorageAggregationOnEntity(queryRunner, 'space');
+    await this.migrateFromStorageAggregationOnEntity(
+      queryRunner,
+      'organization'
+    );
+    await this.migrateFromStorageAggregationOnEntity(queryRunner, 'user');
+    await this.migrateFromStorageAggregationOnEntity(queryRunner, 'library');
+    await this.migrateFromStorageAggregationOnEntity(queryRunner, 'platform');
+    // challenges need some additional information
+    const spaces: {
+      id: string;
+      storageBucketId: string;
+      storageAggregatorId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, storageBucketId, storageAggregatorId FROM space`
+    );
+    for (const space of spaces) {
+      const challenges: {
+        id: string;
+        storageAggregatorId: string;
+      }[] = await queryRunner.query(
+        `SELECT id, storageAggregatorId FROM challenge WHERE challenge.spaceId = '${space.id}'`
+      );
+      for (const challenge of challenges) {
+        const [storageAggregator]: {
+          id: string;
+          directStorageId: string;
+        }[] = await queryRunner.query(
+          `SELECT id, directStorageId FROM storage_aggregator WHERE (id = '${challenge.storageAggregatorId}')`
+        );
 
-    // TODO
+        await queryRunner.query(
+          `UPDATE \`challenge\` SET storageBucketId = '${storageAggregator.directStorageId}' WHERE (id = '${challenge.id}')`
+        );
+
+        await queryRunner.query(
+          `UPDATE \`storage_bucket\` SET parentStorageBucketId = '${space.storageBucketId}' WHERE (id = '${storageAggregator.directStorageId}')`
+        );
+      }
+    }
 
     // Add new constraints
 
@@ -280,7 +314,7 @@ export class storageAggregation1697135794050 implements MigrationInterface {
     );
   }
 
-  private async migrateStorageAggregationOnEntity(
+  private async migrateToStorageAggregationOnEntity(
     queryRunner: QueryRunner,
     entityTable: string
   ) {
@@ -304,6 +338,30 @@ export class storageAggregation1697135794050 implements MigrationInterface {
         queryRunner,
         entity.storageBucketId,
         entityStorageAggregatorID
+      );
+    }
+  }
+
+  private async migrateFromStorageAggregationOnEntity(
+    queryRunner: QueryRunner,
+    entityTable: string
+  ) {
+    const entities: {
+      id: string;
+      storageAggregatorId: string;
+    }[] = await queryRunner.query(
+      `SELECT id, storageAggregatorId FROM ${entityTable}`
+    );
+    for (const entity of entities) {
+      const [storageAggregator]: {
+        id: string;
+        directStorageId: string;
+      }[] = await queryRunner.query(
+        `SELECT id, directStorageId FROM storage_aggregator WHERE (id = '${entity.storageAggregatorId}')`
+      );
+
+      await queryRunner.query(
+        `UPDATE \`${entityTable}\` SET storageBucketId = '${storageAggregator.directStorageId}' WHERE (id = '${entity.id}')`
       );
     }
   }
