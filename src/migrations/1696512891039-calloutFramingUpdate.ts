@@ -125,6 +125,14 @@ export class calloutFramingUpdate1696512891039 implements MigrationInterface {
           const [whiteboard]: { id: string }[] = await queryRunner.query(
             `SELECT id FROM whiteboard WHERE calloutId = '${callout.id}'`
           );
+
+          if (!whiteboard) {
+            console.log(
+              `Whiteboard for calloutId ${callout.id} could not be found!`
+            );
+            break;
+          }
+
           await queryRunner.query(
             `UPDATE callout_framing SET whiteboardId = '${whiteboard.id}' WHERE id = '${calloutFramingID}'`
           );

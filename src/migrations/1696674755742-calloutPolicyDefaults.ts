@@ -1,7 +1,5 @@
 import { randomUUID } from 'crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
-import replaceSpecialCharacters from 'replace-special-characters';
-import { escapeString } from './utils/escape-string';
 
 export class calloutPolicyDefaults1696674755742 implements MigrationInterface {
   name = 'calloutPolicyDefaults1696674755742';
@@ -54,9 +52,8 @@ export class calloutPolicyDefaults1696674755742 implements MigrationInterface {
       );
       if (whiteboardTemplate) {
         await queryRunner.query(
-          `UPDATE callout_contribution_defaults SET content = '${escapeString(
-            whiteboardTemplate.content
-          )}' WHERE id = '${contributionDefaultsID}'`
+          `UPDATE callout_contribution_defaults SET whiteboardContent = ? WHERE id = ?`,
+          [whiteboardTemplate.content, contributionDefaultsID]
         );
       }
 
@@ -68,9 +65,8 @@ export class calloutPolicyDefaults1696674755742 implements MigrationInterface {
       );
       if (postTemplate) {
         await queryRunner.query(
-          `UPDATE callout_contribution_defaults SET postDescription = '${escapeString(
-            postTemplate.defaultDescription
-          )}' WHERE id = '${contributionDefaultsID}'`
+          `UPDATE callout_contribution_defaults SET postDescription = ? WHERE id = '${contributionDefaultsID}'`,
+          [postTemplate.defaultDescription]
         );
       }
 
