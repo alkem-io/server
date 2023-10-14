@@ -1,4 +1,4 @@
-import { HttpContext } from '@src/types';
+import { HttpContext } from '@src/types/graphql/subscriptions/subscriptionRelatedTypes';
 import { DATA_LOADER_CTX_INJECT_TOKEN } from '@core/dataloader/data.loader.inject.token';
 import { DataLoaderContextEntry } from '@core/dataloader/interceptors';
 import { ILoader } from '@core/dataloader/loader.interface';
