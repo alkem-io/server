@@ -189,9 +189,17 @@ export class CalloutResolverMutations {
     );
 
     if (callout.contributionPolicy.state === CalloutState.CLOSED) {
-      throw new CalloutClosedException(
-        `New contributions to a closed Callout with id: '${callout.id}' are not allowed!`
-      );
+      if (
+        !this.authorizationService.grantAccessOrFail(
+          agentInfo,
+          callout.authorization,
+          AuthorizationPrivilege.UPDATE,
+          `create contribution on callout: ${callout.id}`
+        )
+      )
+        throw new CalloutClosedException(
+          `New contributions to a closed Callout with id: '${callout.id}' are not allowed!`
+        );
     }
 
     let contribution = await this.calloutService.createContributionOnCallout(
