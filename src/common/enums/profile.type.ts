@@ -7,7 +7,6 @@ export enum ProfileType {
   INNOVATION_FLOW = 'innovation-flow',
   CALLOUT_TEMPLATE = 'callout-framing',
   CALLOUT_FRAMING = 'callout-framing',
-  CALLOUT = 'callout',
   POST = 'post',
   WHITEBOARD_RT = 'whiteboard-rt',
   WHITEBOARD = 'whiteboard',

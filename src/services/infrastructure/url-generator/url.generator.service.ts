@@ -87,7 +87,7 @@ export class UrlGeneratorService {
           profile.id
         );
         return `${this.endpoint_cluster}/${this.PATH_ORGANIZATION}/${organizationEntityInfo.entityNameID}`;
-      case ProfileType.CALLOUT:
+      case ProfileType.CALLOUT_FRAMING:
         return await this.getCalloutUrlPath(this.FIELD_PROFILE_ID, profile.id);
       case ProfileType.POST:
         return await this.getPostUrlPath(profile.id);
