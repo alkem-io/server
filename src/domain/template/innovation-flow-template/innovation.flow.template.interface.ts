@@ -2,7 +2,7 @@ import { InnovationFlowType } from '@common/enums/innovation.flow.type';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ITemplateBase } from '../template-base/template.base.interface';
 import { LifecycleDefinitionScalar } from '@domain/common/scalars/scalar.lifecycle.definition';
-import { ITemplatesSet } from '../templates-set';
+import { ITemplatesSet } from '../templates-set/templates.set.interface';
 
 @ObjectType('InnovationFlowTemplate')
 export abstract class IInnovationFlowTemplate extends ITemplateBase {

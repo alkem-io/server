@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql';
-import { ICallout } from '@domain/collaboration/callout';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { INameable } from '../entity/nameable-entity/nameable.interface';
 import { WhiteboardContent } from '../scalars/scalar.whiteboard.content';
 

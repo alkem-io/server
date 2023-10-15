@@ -1,4 +1,4 @@
-import { ICallout } from '@domain/collaboration/callout';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IWhiteboardCheckout } from '../whiteboard-checkout/whiteboard.checkout.interface';
 import { INameable } from '../entity/nameable-entity/nameable.interface';
