@@ -10,8 +10,9 @@ import { DocumentAuthorizationService } from '../document/document.service.autho
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { AuthorizationPrivilege } from '@common/enums';
 import {
-  POLICY_RULE_STORAGE_BUCKET_FILE_UPLOAD,
+  POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD,
   POLICY_RULE_PLATFORM_DELETE,
+  POLICY_RULE_STORAGE_BUCKET_CONTRIBUTOR_FILE_UPLOAD,
 } from '@common/constants';
 
 @Injectable()
@@ -76,9 +77,16 @@ export class StorageBucketAuthorizationService {
     const createPrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.FILE_UPLOAD],
       AuthorizationPrivilege.UPDATE,
-      POLICY_RULE_STORAGE_BUCKET_FILE_UPLOAD
+      POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD
     );
     privilegeRules.push(createPrivilege);
+
+    const fileUploadPrivilege = new AuthorizationPolicyRulePrivilege(
+      [AuthorizationPrivilege.FILE_UPLOAD],
+      AuthorizationPrivilege.CONTRIBUTE,
+      POLICY_RULE_STORAGE_BUCKET_CONTRIBUTOR_FILE_UPLOAD
+    );
+    privilegeRules.push(fileUploadPrivilege);
 
     const deletePrivilege = new AuthorizationPolicyRulePrivilege(
       [AuthorizationPrivilege.FILE_DELETE],

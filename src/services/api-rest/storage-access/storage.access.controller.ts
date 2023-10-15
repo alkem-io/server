@@ -63,7 +63,7 @@ export class StorageAccessController {
           },
         });
         this.logger.error(
-          `User '${agentInfo}' - unable to access document '${document.id} in storage bucked '${document.storageBucket.id}`,
+          `User '${agentInfo.userID}' - unable to access document '${document.id} in storage bucket '${document.storageBucket.id}`,
           LogContext.DOCUMENT
         );
       } catch (e) {

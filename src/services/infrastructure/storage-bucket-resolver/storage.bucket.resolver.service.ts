@@ -179,7 +179,7 @@ export class StorageBucketResolverService {
     query = `SELECT \`storageBucketId\` FROM \`challenge\`
       LEFT JOIN \`opportunity\` ON \`opportunity\`.\`challengeId\` = \`challenge\`.\`id\`
       LEFT JOIN \`community\` ON \`community\`.\`id\` = \`opportunity\`.\`communityId\`
-      WHERE \`collaboration\`.\`id\`='${communityID}'`;
+      WHERE \`community\`.\`id\`='${communityID}'`;
     [result] = await this.entityManager.connection.query(query);
 
     return result.storageBucketId;
@@ -217,17 +217,26 @@ export class StorageBucketResolverService {
   ): Promise<string> {
     const query = `SELECT \`id\` FROM \`community\`
       WHERE \`community\`.\`communicationId\`='${communicationID}'`;
-    const [result]: {
+    const [communityQueryResult]: {
       id: string;
     }[] = await this.entityManager.connection.query(query);
 
-    if (!result) {
-      this.logger.error(
-        `lookup for communication ${communicationID} - community not found`,
-        LogContext.STORAGE_BUCKET
-      );
+    if (!communityQueryResult) {
+      const query = `SELECT \`id\` FROM \`platform\`
+      WHERE \`platform\`.\`communicationId\`='${communicationID}'`;
+      const [platformQueryResult]: {
+        id: string;
+      }[] = await this.entityManager.connection.query(query);
+      if (!platformQueryResult) {
+        this.logger.error(
+          `lookup for communication ${communicationID} - community / platform not found`,
+          LogContext.STORAGE_BUCKET
+        );
+      }
+      const platformStorageBucket = await this.getPlatformStorageBucket();
+      return platformStorageBucket.id;
     }
-    return await this.getStorageBucketIdForCommunity(result.id);
+    return await this.getStorageBucketIdForCommunity(communityQueryResult.id);
   }
 
   private async getStorageBucketIdForCalendar(

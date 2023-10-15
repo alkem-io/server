@@ -7,7 +7,7 @@ import { ICommunication } from '@domain/communication/communication';
 import { CommunityType } from '@common/enums/community.type';
 import { ICommunityPolicy } from '../community-policy/community.policy.interface';
 import { IForm } from '@domain/common/form/form.interface';
-import { IInvitation } from '../invitation';
+import { IInvitation } from '../invitation/invitation.interface';
 import { IInvitationExternal } from '../invitation.external/invitation.external.interface';
 
 @ObjectType('Community', {

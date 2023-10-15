@@ -6,8 +6,10 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { SpaceService } from './space.service';
 import { ChallengeAuthorizationService } from '@domain/challenge/challenge/challenge.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { BaseChallengeAuthorizationService } from '../base-challenge/base.challenge.service.authorization';
-import { EntityNotInitializedException } from '@common/exceptions';
+import {
+  EntityNotInitializedException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ISpace } from './space.interface';
 import { Space } from './space.entity';
@@ -25,7 +27,6 @@ import { ICommunityPolicy } from '@domain/community/community-policy/community.p
 import { CommunityPolicyFlag } from '@common/enums/community.policy.flag';
 import { CommunityPolicyService } from '@domain/community/community-policy/community.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import {
   CREDENTIAL_RULE_CHALLENGE_SPACE_ADMIN_DELETE,
   CREDENTIAL_RULE_TYPES_SPACE_AUTHORIZATION_RESET,
@@ -38,15 +39,17 @@ import {
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_APPLY_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_TYPES_SPACE_COMMUNITY_JOIN_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
-  CREDENTIAL_RULE_SPACE_FILE_UPLOAD,
 } from '@common/constants';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { CommunityRole } from '@common/enums/community.role';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { ContextAuthorizationService } from '@domain/context/context/context.service.authorization';
+import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
+import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 
 @Injectable()
 export class SpaceAuthorizationService {
   constructor(
-    private baseChallengeAuthorizationService: BaseChallengeAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private challengeAuthorizationService: ChallengeAuthorizationService,
     private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
@@ -54,8 +57,11 @@ export class SpaceAuthorizationService {
     private preferenceSetService: PreferenceSetService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private communityPolicyService: CommunityPolicyService,
-    private collaborationAuthorizationService: CollaborationAuthorizationService,
     private storageBucketAuthorizationService: StorageBucketAuthorizationService,
+    private profileAuthorizationService: ProfileAuthorizationService,
+    private contextAuthorizationService: ContextAuthorizationService,
+    private communityAuthorizationService: CommunityAuthorizationService,
+    private collaborationAuthorizationService: CollaborationAuthorizationService,
     private spaceService: SpaceService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>
@@ -122,15 +128,6 @@ export class SpaceAuthorizationService {
             spacePolicy,
             hostOrg
           );
-
-        spaceSaved.storageBucket =
-          await this.spaceService.getStorageBucketOrFail(spaceSaved.id);
-        spaceSaved.storageBucket.authorization =
-          this.extendStorageAuthorizationPolicy(
-            spaceSaved.storageBucket.authorization,
-            spacePolicy
-          );
-
         spaceSaved.collaboration = await this.spaceService.getCollaboration(
           spaceSaved
         );
@@ -227,18 +224,115 @@ export class SpaceAuthorizationService {
     );
   }
 
+  private async propagateAuthorizationToProfileContext(
+    spaceBase: ISpace
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(spaceBase.id, {
+      relations: {
+        context: true,
+        profile: true,
+      },
+    });
+    if (!space.context || !space.profile)
+      throw new RelationshipNotFoundException(
+        `Unable to load context or profile for space ${space.id} `,
+        LogContext.CHALLENGES
+      );
+    // NOTE: Clone the authorization policy to ensure the changes are local to context + profile
+    const clonedAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        space.authorization
+      );
+    // To ensure that profile + context on a space are always publicly visible, even for private spaces
+    clonedAuthorization.anonymousReadAccess = true;
+
+    space.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        space.profile,
+        clonedAuthorization
+      );
+
+    space.context =
+      await this.contextAuthorizationService.applyAuthorizationPolicy(
+        space.context,
+        clonedAuthorization
+      );
+    return await this.spaceService.save(space);
+  }
+
+  public async propagateAuthorizationToCommunityCollaborationAgent(
+    spaceBase: ISpace,
+    communityPolicy: ICommunityPolicy
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(spaceBase.id, {
+      relations: {
+        community: true,
+        collaboration: true,
+        agent: true,
+      },
+    });
+    if (!space.community || !space.collaboration || !space.agent)
+      throw new RelationshipNotFoundException(
+        `Unable to load community or collaboration or agent for space ${space.id} `,
+        LogContext.CHALLENGES
+      );
+
+    space.community =
+      await this.communityAuthorizationService.applyAuthorizationPolicy(
+        space.community,
+        space.authorization
+      );
+
+    space.collaboration =
+      await this.collaborationAuthorizationService.applyAuthorizationPolicy(
+        space.collaboration,
+        space.authorization,
+        communityPolicy
+      );
+
+    space.agent.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        space.agent.authorization,
+        space.authorization
+      );
+    return await this.spaceService.save(space);
+  }
+
   private async propagateAuthorizationToChildEntities(
     spaceBase: ISpace,
     policy: ICommunityPolicy
   ): Promise<ISpace> {
-    const space: ISpace =
-      await this.baseChallengeAuthorizationService.applyAuthorizationPolicy(
-        spaceBase,
-        this.spaceRepository,
-        policy
+    await this.spaceService.save(spaceBase);
+    let space = await this.propagateAuthorizationToCommunityCollaborationAgent(
+      spaceBase,
+      policy
+    );
+    space = await this.propagateAuthorizationToProfileContext(space);
+    return await this.propagateAuthorizationToChallengesTemplatesStorage(space);
+  }
+
+  public async propagateAuthorizationToChallengesTemplatesStorage(
+    spaceBase: ISpace
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(spaceBase.id, {
+      relations: {
+        challenges: true,
+        storageBucket: true,
+        templatesSet: true,
+        preferenceSet: true,
+      },
+    });
+    if (
+      !space.challenges ||
+      !space.storageBucket ||
+      !space.templatesSet ||
+      !space.preferenceSet
+    )
+      throw new RelationshipNotFoundException(
+        `Unable to load challenges or storage or templates or preferences for space ${space.id} `,
+        LogContext.CHALLENGES
       );
 
-    space.challenges = await this.spaceService.getChallenges(space);
     for (const challenge of space.challenges) {
       await this.challengeAuthorizationService.applyAuthorizationPolicy(
         challenge,
@@ -258,22 +352,16 @@ export class SpaceAuthorizationService {
 
     space.preferenceSet =
       await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
-        await this.spaceService.getPreferenceSetOrFail(space.id),
+        space.preferenceSet,
         space.authorization
       );
 
-    space.templatesSet = await this.spaceService.getTemplatesSetOrFail(
-      space.id
-    );
     space.templatesSet =
       await this.templatesSetAuthorizationService.applyAuthorizationPolicy(
         space.templatesSet,
         space.authorization
       );
 
-    space.storageBucket = await this.spaceService.getStorageBucketOrFail(
-      space.id
-    );
     space.storageBucket =
       await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         space.storageBucket,
@@ -506,40 +594,6 @@ export class SpaceAuthorizationService {
       newRules
     );
   }
-
-  private extendStorageAuthorizationPolicy(
-    storageAuthorization: IAuthorizationPolicy | undefined,
-    policy: ICommunityPolicy
-  ): IAuthorizationPolicy {
-    if (!storageAuthorization)
-      throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${JSON.stringify(policy)}`,
-        LogContext.CHALLENGES
-      );
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    // Any member can upload
-    const membersCanUpload =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.FILE_UPLOAD],
-        [
-          this.communityPolicyService.getCredentialForRole(
-            policy,
-            CommunityRole.MEMBER
-          ),
-        ],
-        CREDENTIAL_RULE_SPACE_FILE_UPLOAD
-      );
-    membersCanUpload.cascade = false;
-    newRules.push(membersCanUpload);
-
-    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      storageAuthorization,
-      newRules
-    );
-  }
-
   appendVerifiedCredentialRules(
     authorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {

@@ -65,6 +65,7 @@ import { ChatGuidanceModule } from '@services/api/chat-guidance/chat.guidance.mo
 import { LookupModule } from '@services/api/lookup';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
+import { IpfsLogModule } from '@services/api-rest/ipfs-log/ipfs.log.module';
 import { TaskGraphqlModule } from '@domain/task/task.module';
 
 @Module({
@@ -155,7 +156,7 @@ import { TaskGraphqlModule } from '@domain/task/task.module';
             },
           ],
         },
-        fieldResolverEnhancers: ['guards'],
+        fieldResolverEnhancers: ['guards', 'filters'],
         sortSchema: true,
         /***
          * graphql-ws requires passing the request object through the context method
@@ -222,12 +223,14 @@ import { TaskGraphqlModule } from '@domain/task/task.module';
     InnovationHubModule,
     SsiCredentialFlowModule,
     StorageAccessModule,
+    IpfsLogModule,
     MeModule,
     ExcalidrawServerModule,
     ChatGuidanceModule,
     LookupModule,
     AuthResetSubscriberModule,
     TaskGraphqlModule,
+    //AdminWhiteboardModule,
   ],
   controllers: [AppController, SsiCredentialFlowController],
   providers: [

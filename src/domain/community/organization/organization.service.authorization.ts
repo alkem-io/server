@@ -7,7 +7,10 @@ import { IOrganization, Organization } from '@domain/community/organization';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { EntityNotInitializedException } from '@common/exceptions';
+import {
+  EntityNotInitializedException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { OrganizationService } from './organization.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { OrganizationVerificationAuthorizationService } from '../organization-verification/organization.verification.service.authorization';
@@ -42,8 +45,33 @@ export class OrganizationAuthorizationService {
   ) {}
 
   async applyAuthorizationPolicy(
-    organization: IOrganization
+    organizationInput: IOrganization
   ): Promise<IOrganization> {
+    const organization = await this.organizationService.getOrganizationOrFail(
+      organizationInput.id,
+      {
+        relations: {
+          storageBucket: true,
+          profile: true,
+          agent: true,
+          groups: true,
+          verification: true,
+          preferenceSet: true,
+        },
+      }
+    );
+    if (
+      !organization.profile ||
+      !organization.storageBucket ||
+      !organization.agent ||
+      !organization.groups ||
+      !organization.verification ||
+      !organization.preferenceSet
+    )
+      throw new RelationshipNotFoundException(
+        `Unable to load entities for organization: ${organization.id} `,
+        LogContext.COMMUNITY
+      );
     organization.authorization = await this.authorizationPolicyService.reset(
       organization.authorization
     );
@@ -56,16 +84,19 @@ export class OrganizationAuthorizationService {
       organization.id
     );
 
-    if (organization.profile) {
-      organization.profile =
-        await this.profileAuthorizationService.applyAuthorizationPolicy(
-          organization.profile,
-          organization.authorization
-        );
-    }
+    // NOTE: Clone the authorization policy to ensure the changes are local to profile
+    const clonedOrganizationAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        organization.authorization
+      );
+    // To ensure that profile on an organization is always publicly visible, even for non-authenticated users
+    clonedOrganizationAuthorization.anonymousReadAccess = true;
+    organization.profile =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        organization.profile,
+        clonedOrganizationAuthorization
+      );
 
-    organization.storageBucket =
-      await this.organizationService.getStorageBucketOrFail(organization.id);
     organization.storageBucket =
       await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
         organization.storageBucket,
@@ -77,16 +108,12 @@ export class OrganizationAuthorizationService {
         organization
       );
 
-    organization.agent = await this.organizationService.getAgent(organization);
     organization.agent.authorization =
       this.authorizationPolicyService.inheritParentAuthorization(
         organization.agent.authorization,
         organization.authorization
       );
 
-    organization.groups = await this.organizationService.getUserGroups(
-      organization
-    );
     for (const group of organization.groups) {
       const savedGroup =
         await this.userGroupAuthorizationService.applyAuthorizationPolicy(
@@ -96,23 +123,16 @@ export class OrganizationAuthorizationService {
       group.authorization = savedGroup.authorization;
     }
 
-    organization.verification = await this.organizationService.getVerification(
-      organization
-    );
     organization.verification =
       await this.organizationVerificationAuthorizationService.applyAuthorizationPolicy(
         organization.verification,
         organization.id
       );
 
-    const preferenceSet = await this.organizationService.getPreferenceSetOrFail(
-      organization.id
-    );
-
-    if (preferenceSet) {
+    if (organization.preferenceSet) {
       organization.preferenceSet =
         await this.preferenceSetAuthorizationService.applyAuthorizationPolicy(
-          preferenceSet,
+          organization.preferenceSet,
           organization.authorization
         );
     }

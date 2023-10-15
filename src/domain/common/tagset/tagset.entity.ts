@@ -3,7 +3,7 @@ import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { TagsetType } from '@common/enums/tagset.type';
-import { TagsetTemplate } from '../tagset-template';
+import { TagsetTemplate } from '../tagset-template/tagset.template.entity';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 
 @Entity()
