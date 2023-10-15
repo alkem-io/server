@@ -8,7 +8,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CID, create, IPFSHTTPClient } from 'ipfs-http-client';
 import { IpfsDeleteFailedException } from '@common/exceptions/ipfs/ipfs.delete.exception';
 import { IpfsGCFailedException } from '@common/exceptions/ipfs/ipfs.gc.exception';
-import { CID as CIDobj } from 'multiformats/cid';
+
 @Injectable()
 export class IpfsService {
   private readonly ipfsClient: IPFSHTTPClient;
@@ -60,14 +60,14 @@ export class IpfsService {
     return this.ipfsClient.cat(CID);
   }
 
-  private async cidExists(CID: string): Promise<boolean> {
+  private async cidExists(cidID: string): Promise<boolean> {
     try {
-      const cidObj = CIDobj.parse(CID);
+      const cidObj = CID.parse(cidID);
       await this.ipfsClient.dag.get(cidObj, { timeout: 100 });
       return true;
     } catch (error) {
       this.logger.error(
-        `IPFS file with CID: ${CID} does not exist in this IPFS instance!`,
+        `IPFS file with CID: ${cidID} does not exist in this IPFS instance!`,
         LogContext.IPFS
       );
     }
