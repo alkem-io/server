@@ -51,13 +51,11 @@ import { CreateLinkOnCalloutInput } from './dto/callout.dto.create.link';
 import { CreateReferenceOnProfileInput } from '@domain/common/profile/dto/profile.dto.create.reference';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt';
-import {
-  CreateWhiteboardRtInput,
-  IWhiteboardRt,
-} from '@domain/common/whiteboard-rt/types';
+import { CreateWhiteboardRtInput } from '@domain/common/whiteboard-rt/types';
 import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { IWhiteboardRt } from '@domain/common/whiteboard-rt/whiteboard.rt.interface';
 
 @Injectable()
 export class CalloutService {
