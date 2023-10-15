@@ -26,6 +26,7 @@ import {
   ProfileLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
+import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/user.storage.aggregator.loader.creator';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
     UserResolverFields,
     AgentLoaderCreator,
     ProfileLoaderCreator,
+    UserStorageAggregatorLoaderCreator,
   ],
   exports: [UserService, UserAuthorizationService],
 })
