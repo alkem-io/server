@@ -340,7 +340,12 @@ export class UserService {
   async deleteUser(deleteData: DeleteUserInput): Promise<IUser> {
     const userID = deleteData.ID;
     const user = await this.getUserOrFail(userID, {
-      relations: ['profile', 'agent', 'preferenceSet'],
+      relations: {
+        profile: true,
+        agent: true,
+        preferenceSet: true,
+        storageAggregator: true,
+      },
     });
     const { id } = user;
     await this.clearUserCache(user);
@@ -361,6 +366,10 @@ export class UserService {
 
     if (user.authorization) {
       await this.authorizationPolicyService.delete(user.authorization);
+    }
+
+    if (user.storageAggregator) {
+      await this.storageAggregatorService.delete(user.storageAggregator.id);
     }
 
     const result = await this.userRepository.remove(user as User);

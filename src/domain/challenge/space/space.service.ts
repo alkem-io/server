@@ -271,7 +271,7 @@ export class SpaceService {
         'preferenceSet.preferences',
         'templatesSet',
         'profile',
-        'storageBucket',
+        'storageAggregator',
       ],
     });
 
