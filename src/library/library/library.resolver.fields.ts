@@ -41,7 +41,7 @@ export class LibraryResolverFields {
     description: 'The StorageAggregator for storage used by this Library',
   })
   @UseGuards(GraphqlGuard)
-  async storageBucket(
+  async storageAggregator(
     @Parent() library: ILibrary
   ): Promise<IStorageAggregator> {
     return await this.libraryService.getStorageAggregator(library);

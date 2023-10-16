@@ -196,7 +196,7 @@ export class UserResolverFields {
       'The StorageAggregator for managing storage buckets in use by this User',
   })
   @UseGuards(GraphqlGuard)
-  async storageBucket(
+  async storageAggregator(
     @Parent() user: IUser,
     @Loader(UserStorageAggregatorLoaderCreator)
     loader: ILoader<IStorageAggregator>

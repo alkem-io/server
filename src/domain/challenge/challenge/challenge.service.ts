@@ -279,7 +279,7 @@ export class ChallengeService {
         'innovationFlow',
         'preferenceSet',
         'preferenceSet.preferences',
-        'storageBucket',
+        'storageAggregator',
       ],
     });
 

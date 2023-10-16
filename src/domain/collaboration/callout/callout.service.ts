@@ -634,14 +634,14 @@ export class CalloutService {
 
     this.setNameIdOnWhiteboardData(whiteboardData, callout);
 
-    const storageBucket = await this.getStorageAggregator(callout);
+    const storageAggregator = await this.getStorageAggregator(callout);
     const whiteboard = await this.whiteboardService.createWhiteboard(
       {
         nameID: whiteboardData.nameID,
         content: whiteboardData.content,
         profileData: whiteboardData.profileData,
       },
-      storageBucket,
+      storageAggregator,
       userID
     );
     callout.whiteboards.push(whiteboard);
