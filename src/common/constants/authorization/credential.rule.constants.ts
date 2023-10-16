@@ -25,6 +25,8 @@ export const CREDENTIAL_RULE_SPACE_FILE_UPLOAD =
   'credentialRule-spaceMemberFileUpload';
 export const CREDENTIAL_RULE_POST_CREATED_BY = 'credentialRule-postCreatedBy';
 export const CREDENTIAL_RULE_POST_ADMINS_MOVE = 'credentialRule-postAdminsMove';
+export const CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE =
+  'credentialRule-contributionAdminsMove';
 export const CREDENTIAL_RULE_CALLOUT_CREATED_BY =
   'credentialRule-calloutCreatedBy';
 export const CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS =
