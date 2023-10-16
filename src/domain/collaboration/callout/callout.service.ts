@@ -292,11 +292,10 @@ export class CalloutService {
     if (
       !callout.contributionDefaults ||
       !callout.contributionPolicy ||
-      !callout.contributions ||
-      !callout.comments
+      !callout.contributions
     ) {
       throw new EntityNotInitializedException(
-        `Unable to load callout: ${callout.id}`,
+        `Unable to load callout for deleting: ${callout.id}`,
         LogContext.COLLABORATION
       );
     }
@@ -306,7 +305,9 @@ export class CalloutService {
       await this.contributionService.delete(contribution);
     }
 
-    await this.roomService.deleteRoom(callout.comments);
+    if (callout.comments) {
+      await this.roomService.deleteRoom(callout.comments);
+    }
 
     await this.contributionDefaultsService.delete(callout.contributionDefaults);
     await this.contributionPolicyService.delete(callout.contributionPolicy);
