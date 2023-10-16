@@ -579,13 +579,13 @@ export class ChallengeService {
     const challenge = await this.getChallengeOrFail(
       opportunityData.challengeID,
       {
-        relations: ['storageBucket', 'opportunities', 'community'],
+        relations: ['storageAggregator', 'opportunities', 'community'],
       }
     );
 
     if (!challenge.storageAggregator) {
       throw new EntityNotInitializedException(
-        'Unable to find StorageBucket for Challenge',
+        'Unable to find StorageAggregator for Challenge',
         LogContext.CHALLENGES
       );
     }

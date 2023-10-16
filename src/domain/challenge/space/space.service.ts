@@ -109,7 +109,6 @@ export class SpaceService {
     // default to active space
     space.visibility = SpaceVisibility.ACTIVE;
 
-    // Set up the storage bucket as that is needed for Profile
     space.storageAggregator =
       await this.storageAggregatorService.createStorageAggregator();
 

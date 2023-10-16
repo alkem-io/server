@@ -6,7 +6,6 @@ import { IdentityResolverService } from './identity.resolver.service';
 import { CommunityResolverService } from './community.resolver.service';
 import { Community } from '@domain/community/community/community.entity';
 import { Communication } from '@domain/communication/communication/communication.entity';
-import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { TimelineResolverService } from './timeline.resolver.service';
 import { ContributionResolverService } from './contribution.resolver.service';
@@ -17,7 +16,6 @@ import { ContributionResolverService } from './contribution.resolver.service';
     TypeOrmModule.forFeature([Discussion]),
     TypeOrmModule.forFeature([Community]),
     TypeOrmModule.forFeature([Communication]),
-    TypeOrmModule.forFeature([StorageBucket]),
     TypeOrmModule.forFeature([Profile]),
   ],
   providers: [

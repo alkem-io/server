@@ -613,7 +613,7 @@ export class OrganizationService {
   async getStorageAggregatorOrFail(
     organizationID: string
   ): Promise<IStorageAggregator> {
-    const organizationWithStorageBucket = await this.getOrganizationOrFail(
+    const organizationWithStorageAggregator = await this.getOrganizationOrFail(
       organizationID,
       {
         relations: {
@@ -621,11 +621,12 @@ export class OrganizationService {
         },
       }
     );
-    const storageAggregator = organizationWithStorageBucket.storageAggregator;
+    const storageAggregator =
+      organizationWithStorageAggregator.storageAggregator;
 
     if (!storageAggregator) {
       throw new EntityNotFoundException(
-        `Unable to find storageAggregator for Organization with nameID: ${organizationWithStorageBucket.nameID}`,
+        `Unable to find storageAggregator for Organization with nameID: ${organizationWithStorageAggregator.nameID}`,
         LogContext.COMMUNITY
       );
     }
