@@ -6,11 +6,7 @@ import { CurrentUser, Profiling } from '@src/common/decorators';
 import { IUser } from '@domain/community/user';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { AgentInfo } from '@core/authentication';
-import {
-  AuthorizationPrivilege,
-  AuthorizationRoleGlobal,
-  LogContext,
-} from '@common/enums';
+import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AssignGlobalAdminInput } from './dto/authorization.dto.assign.global.admin';
@@ -212,13 +208,13 @@ export class AdminAuthorizationResolverMutations {
   }
 
   @UseGuards(GraphqlGuard)
-  @Mutation(() => Boolean, {
+  @Mutation(() => String, {
     description: 'Reset the Authorization Policy on all entities',
   })
   @Profiling.api
-  async authorizationPolicyResetAll(
+  public authorizationPolicyResetAll(
     @CurrentUser() agentInfo: AgentInfo
-  ): Promise<boolean> {
+  ): Promise<string> {
     const platformPolicy =
       this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
@@ -228,19 +224,6 @@ export class AdminAuthorizationResolverMutations {
       `reset authorization on platform: ${agentInfo.email}`
     );
 
-    try {
-      await this.authResetService.publishAllSpaceReset();
-      await this.authResetService.publishAllOrganizationsReset();
-      await this.authResetService.publishAllUsersReset();
-      await this.authResetService.publishPlatformReset();
-    } catch (error) {
-      this.logger.error(
-        `Error while resetting authorization: ${error}`,
-        LogContext.AUTH
-      );
-      return false;
-    }
-
-    return true;
+    return this.authResetService.publishResetAll();
   }
 }

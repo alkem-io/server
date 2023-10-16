@@ -9,7 +9,7 @@ import { TaskStatus } from '@domain/task/dto/task.status.enum';
 export class TaskResolverQueries {
   constructor(private taskService: TaskService) {}
 
-  @Query(() => [ITask], {
+  @Query(() => ITask, {
     nullable: false,
     description: 'Information about a specific task',
   })
@@ -27,7 +27,7 @@ export class TaskResolverQueries {
   @Profiling.api
   public tasks(
     @Args('status', { type: () => TaskStatus, nullable: true })
-    status: TaskStatus
+    status?: TaskStatus
   ): Promise<ITask[]> {
     return this.taskService.getAll(status);
   }
