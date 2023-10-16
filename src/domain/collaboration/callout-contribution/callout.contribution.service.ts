@@ -12,7 +12,6 @@ import {
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { LogContext } from '@common/enums/logging.context';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { IWhiteboard } from '@domain/common/whiteboard';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -25,6 +24,7 @@ import { ICalloutContributionPolicy } from '../callout-contribution-policy/callo
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { ValidationException } from '@common/exceptions';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class CalloutContributionService {
@@ -41,7 +41,7 @@ export class CalloutContributionService {
 
   public async createCalloutContribution(
     calloutContributionData: CreateCalloutContributionInput,
-    parentStorageBucket: IStorageBucket,
+    storageAggregator: IStorageAggregator,
     contributionPolicy: ICalloutContributionPolicy,
     userID: string,
     profileID?: string
@@ -64,7 +64,7 @@ export class CalloutContributionService {
       );
       contribution.whiteboard = await this.whiteboardService.createWhiteboard(
         whiteboard,
-        parentStorageBucket,
+        storageAggregator,
         userID
       );
     }
@@ -79,7 +79,7 @@ export class CalloutContributionService {
       );
       contribution.post = await this.postService.createPost(
         post,
-        parentStorageBucket,
+        storageAggregator,
         userID
       );
     }

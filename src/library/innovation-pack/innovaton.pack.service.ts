@@ -33,7 +33,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { VisualType } from '@common/enums/visual.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class InnovationPackService {
@@ -49,7 +49,7 @@ export class InnovationPackService {
 
   async createInnovationPack(
     innovationPackData: CreateInnovationPackInput,
-    parentStorageBucket: IStorageBucket
+    storageAggregator: IStorageAggregator
   ): Promise<IInnovationPack> {
     const innovationPack: IInnovationPack =
       InnovationPack.create(innovationPackData);
@@ -58,7 +58,7 @@ export class InnovationPackService {
     innovationPack.profile = await this.profileService.createProfile(
       innovationPackData.profileData,
       ProfileType.INNOVATION_PACK,
-      parentStorageBucket
+      storageAggregator
     );
     await this.profileService.addVisualOnProfile(
       innovationPack.profile,
@@ -76,7 +76,7 @@ export class InnovationPackService {
           minInnovationFlow: 0,
         },
         false,
-        parentStorageBucket
+        storageAggregator
       );
 
     // save before assigning host in case that fails

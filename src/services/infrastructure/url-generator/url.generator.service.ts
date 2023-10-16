@@ -40,6 +40,24 @@ export class UrlGeneratorService {
     )?.endpoint_cluster;
   }
 
+  async generateUrlForChallenge(challengeID: string): Promise<string> {
+    const challengeUrlPath = await this.getChallengeUrlPath(
+      this.FIELD_ID,
+      challengeID
+    );
+    if (!challengeUrlPath) {
+      throw new EntityNotFoundException(
+        `Unable to find challenge for ID: ${challengeID}`,
+        LogContext.URL_GENERATOR
+      );
+    }
+    return challengeUrlPath;
+  }
+
+  public generateUrlForSpace(spaceNameID: string): string {
+    return `${this.endpoint_cluster}/${spaceNameID}`;
+  }
+
   async generateUrlForProfile(profile: IProfile): Promise<string> {
     switch (profile.type) {
       case ProfileType.SPACE:
@@ -48,7 +66,7 @@ export class UrlGeneratorService {
           this.FIELD_PROFILE_ID,
           profile.id
         );
-        return `${this.endpoint_cluster}/${spaceEntityInfo.entityNameID}`;
+        return this.generateUrlForSpace(spaceEntityInfo.entityNameID);
       case ProfileType.CHALLENGE:
         const challengeUrlPath = await this.getChallengeUrlPath(
           this.FIELD_PROFILE_ID,
@@ -223,7 +241,7 @@ export class UrlGeneratorService {
     );
 
     if (spaceInfo) {
-      return `${this.endpoint_cluster}/${spaceInfo.entityNameID}`;
+      return this.generateUrlForSpace(spaceInfo.entityNameID);
     }
     const innovationPackInfo = await this.getNameableEntityInfoOrFail(
       'innovation_pack',
@@ -247,7 +265,7 @@ export class UrlGeneratorService {
       return undefined;
     }
 
-    return `${this.endpoint_cluster}/${spaceInfo.entityNameID}`;
+    return this.generateUrlForSpace(spaceInfo.entityNameID);
   }
 
   private async getChallengeUrlPath(

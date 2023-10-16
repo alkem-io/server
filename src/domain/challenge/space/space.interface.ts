@@ -3,7 +3,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { IBaseChallenge } from '@domain/challenge/base-challenge/base.challenge.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @ObjectType('Space')
 export class ISpace extends IBaseChallenge {
@@ -17,5 +17,5 @@ export class ISpace extends IBaseChallenge {
   challenges?: IChallenge[];
 
   templatesSet?: ITemplatesSet;
-  storageBucket?: IStorageBucket;
+  storageAggregator?: IStorageAggregator;
 }

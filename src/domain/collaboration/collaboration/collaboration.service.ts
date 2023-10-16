@@ -41,8 +41,8 @@ import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { TimelineService } from '@domain/timeline/timeline/timeline.service';
 import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
 import { keyBy } from 'lodash';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { CalloutType } from '@common/enums/callout.type';
 
 @Injectable()
@@ -54,7 +54,7 @@ export class CollaborationService {
     private namingService: NamingService,
     private relationService: RelationService,
     private tagsetTemplateSetService: TagsetTemplateSetService,
-    private storageBucketResolverService: StorageBucketResolverService,
+    private storageAggregatorResolverService: StorageAggregatorResolverService,
     @InjectRepository(Collaboration)
     private collaborationRepository: Repository<Collaboration>,
     @InjectEntityManager('default')
@@ -95,7 +95,7 @@ export class CollaborationService {
   public async addDefaultCallouts(
     collaboration: ICollaboration,
     calloutsData: CreateCalloutInput[],
-    parentStorageBucket: IStorageBucket,
+    storageAggregator: IStorageAggregator,
     userID: string | undefined
   ): Promise<ICollaboration> {
     collaboration.callouts = await this.getCalloutsOnCollaboration(
@@ -109,7 +109,7 @@ export class CollaborationService {
       const callout = await this.calloutService.createCallout(
         calloutDefault,
         collaboration.tagsetTemplateSet.tagsetTemplates,
-        parentStorageBucket,
+        storageAggregator,
         userID
       );
       // default callouts are already published
@@ -295,14 +295,14 @@ export class CollaborationService {
       );
 
     const tagsetTemplates = collaboration.tagsetTemplateSet.tagsetTemplates;
-    const storageBucket =
-      await this.storageBucketResolverService.getStorageBucketForCollaboration(
+    const storageAggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorForCollaboration(
         collaboration.id
       );
     const callout = await this.calloutService.createCallout(
       calloutData,
       tagsetTemplates,
-      storageBucket,
+      storageAggregator,
       userID
     );
     collaboration.callouts.push(callout);

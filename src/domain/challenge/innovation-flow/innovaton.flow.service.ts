@@ -32,7 +32,7 @@ import { ITagset } from '@domain/common/tagset';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class InnovationFlowService {
@@ -50,7 +50,7 @@ export class InnovationFlowService {
   async createInnovationFlow(
     innovationFlowData: CreateInnovationFlowInput,
     tagsetTemplates: ITagsetTemplate[],
-    parentStorageBucket: IStorageBucket
+    storageAggregator: IStorageAggregator
   ): Promise<IInnovationFlow> {
     if (innovationFlowData.innovationFlowTemplateID) {
       await this.innovationFlowTemplateService.validateInnovationFlowDefinitionOrFail(
@@ -83,7 +83,7 @@ export class InnovationFlowService {
     innovationFlow.profile = await this.profileService.createProfile(
       innovationFlowData.profile,
       ProfileType.INNOVATION_FLOW,
-      parentStorageBucket
+      storageAggregator
     );
 
     await this.profileService.addVisualOnProfile(

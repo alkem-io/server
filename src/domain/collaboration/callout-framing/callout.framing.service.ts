@@ -15,7 +15,6 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { LogContext } from '@common/enums/logging.context';
 import { UUID_LENGTH } from '@common/constants/entity.field.length.constants';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { ProfileType } from '@common/enums';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { WhiteboardRtService } from '@domain/common/whiteboard-rt/whiteboard.rt.service';
@@ -30,6 +29,7 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CalloutDisplayLocation } from '@common/enums/callout.display.location';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class CalloutFramingService {
@@ -45,8 +45,8 @@ export class CalloutFramingService {
 
   public async createCalloutFraming(
     calloutFramingData: CreateCalloutFramingInput,
-    parentStorageBucket: IStorageBucket,
     tagsetTemplates: ITagsetTemplate[],
+    storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<ICalloutFraming> {
     const calloutFraming: ICalloutFraming =
@@ -78,7 +78,7 @@ export class CalloutFramingService {
     calloutFraming.profile = await this.profileService.createProfile(
       profile,
       ProfileType.CALLOUT_FRAMING,
-      parentStorageBucket
+      storageAggregator
     );
 
     if (whiteboard) {
@@ -87,7 +87,7 @@ export class CalloutFramingService {
       );
       calloutFraming.whiteboard = await this.whiteboardService.createWhiteboard(
         whiteboard,
-        parentStorageBucket,
+        storageAggregator,
         userID
       );
       await this.profileService.addVisualOnProfile(
@@ -103,7 +103,7 @@ export class CalloutFramingService {
       calloutFraming.whiteboardRt =
         await this.whiteboardRtService.createWhiteboardRt(
           whiteboardRt,
-          parentStorageBucket,
+          storageAggregator,
           userID
         );
       await this.profileService.addVisualOnProfile(

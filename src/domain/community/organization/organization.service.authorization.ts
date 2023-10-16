@@ -24,9 +24,8 @@ import {
   CREDENTIAL_RULE_ORGANIZATION_ADMIN,
   CREDENTIAL_RULE_ORGANIZATION_READ,
   CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
-  CREDENTIAL_RULE_ORGANIZATION_FILE_UPLOAD,
 } from '@common/constants';
-import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
+import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 
 @Injectable()
 export class OrganizationAuthorizationService {
@@ -38,7 +37,7 @@ export class OrganizationAuthorizationService {
     private organizationVerificationAuthorizationService: OrganizationVerificationAuthorizationService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
-    private storageBucketAuthorizationService: StorageBucketAuthorizationService,
+    private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private preferenceSetAuthorizationService: PreferenceSetAuthorizationService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>
@@ -51,7 +50,7 @@ export class OrganizationAuthorizationService {
       organizationInput.id,
       {
         relations: {
-          storageBucket: true,
+          storageAggregator: true,
           profile: true,
           agent: true,
           groups: true,
@@ -62,7 +61,7 @@ export class OrganizationAuthorizationService {
     );
     if (
       !organization.profile ||
-      !organization.storageBucket ||
+      !organization.storageAggregator ||
       !organization.agent ||
       !organization.groups ||
       !organization.verification ||
@@ -85,27 +84,22 @@ export class OrganizationAuthorizationService {
     );
 
     // NOTE: Clone the authorization policy to ensure the changes are local to profile
-    const clonedOrganizationAuthorization =
+    const clonedOrganizationAuthorizationAnonymousAccess =
       this.authorizationPolicyService.cloneAuthorizationPolicy(
         organization.authorization
       );
     // To ensure that profile on an organization is always publicly visible, even for non-authenticated users
-    clonedOrganizationAuthorization.anonymousReadAccess = true;
+    clonedOrganizationAuthorizationAnonymousAccess.anonymousReadAccess = true;
     organization.profile =
       await this.profileAuthorizationService.applyAuthorizationPolicy(
         organization.profile,
-        clonedOrganizationAuthorization
+        clonedOrganizationAuthorizationAnonymousAccess
       );
 
-    organization.storageBucket =
-      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
-        organization.storageBucket,
+    organization.storageAggregator =
+      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
+        organization.storageAggregator,
         organization.authorization
-      );
-    organization.storageBucket.authorization =
-      this.extendStorageAuthorizationPolicy(
-        organization.storageBucket.authorization,
-        organization
       );
 
     organization.agent.authorization =
@@ -245,41 +239,6 @@ export class OrganizationAuthorizationService {
       );
 
     return updatedAuthorization;
-  }
-
-  private extendStorageAuthorizationPolicy(
-    storageAuthorization: IAuthorizationPolicy | undefined,
-    organization: IOrganization
-  ): IAuthorizationPolicy {
-    if (!storageAuthorization)
-      throw new EntityNotInitializedException(
-        `Authorization definition not found for: ${organization.nameID}`,
-        LogContext.COMMUNITY
-      );
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-
-    // Any associate can upload
-    const associatesCanUpload =
-      this.authorizationPolicyService.createCredentialRule(
-        [AuthorizationPrivilege.FILE_UPLOAD],
-        [
-          {
-            type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-            resourceID: organization.id,
-          },
-        ],
-        CREDENTIAL_RULE_ORGANIZATION_FILE_UPLOAD
-      );
-    associatesCanUpload.cascade = false;
-    newRules.push(associatesCanUpload);
-
-    this.authorizationPolicyService.appendCredentialAuthorizationRules(
-      storageAuthorization,
-      newRules
-    );
-
-    return storageAuthorization;
   }
 
   public extendAuthorizationPolicyForSelfRemoval(

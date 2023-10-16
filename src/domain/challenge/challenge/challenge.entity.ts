@@ -12,8 +12,8 @@ import { Opportunity } from '@domain/collaboration/opportunity/opportunity.entit
 import { PreferenceSet } from '@domain/common/preference-set';
 import { IChallenge } from './challenge.interface';
 import { BaseChallenge } from '../base-challenge/base.challenge.entity';
-import { StorageBucket } from '@domain/storage/storage-bucket/storage.bucket.entity';
 import { InnovationFlow } from '../innovation-flow/innovation.flow.entity';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 
 @Entity()
 export class Challenge extends BaseChallenge implements IChallenge {
@@ -54,13 +54,13 @@ export class Challenge extends BaseChallenge implements IChallenge {
   @JoinColumn()
   preferenceSet?: PreferenceSet;
 
-  @OneToOne(() => StorageBucket, {
+  @OneToOne(() => StorageAggregator, {
     eager: false,
     cascade: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn()
-  storageBucket?: StorageBucket;
+  storageAggregator?: StorageAggregator;
 
   @OneToOne(() => InnovationFlow, {
     eager: false,

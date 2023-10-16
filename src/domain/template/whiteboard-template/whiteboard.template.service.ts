@@ -10,7 +10,7 @@ import { TemplateBaseService } from '../template-base/template.base.service';
 import { CreateWhiteboardTemplateInput } from './dto/whiteboard.template.dto.create';
 import { UpdateWhiteboardTemplateInput } from './dto/whiteboard.template.dto.update';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class WhiteboardTemplateService {
@@ -25,7 +25,7 @@ export class WhiteboardTemplateService {
 
   async createWhiteboardTemplate(
     whiteboardTemplateData: CreateWhiteboardTemplateInput,
-    parentStorageBucket: IStorageBucket
+    storageAggregator: IStorageAggregator
   ): Promise<IWhiteboardTemplate> {
     const whiteboardTemplate: IWhiteboardTemplate = WhiteboardTemplate.create(
       whiteboardTemplateData
@@ -35,7 +35,7 @@ export class WhiteboardTemplateService {
         whiteboardTemplate,
         whiteboardTemplateData,
         ProfileType.WHITEBOARD_TEMPLATE,
-        parentStorageBucket
+        storageAggregator
       );
 
     // Allow specifying a Whiteboard to use as a base if no value is set

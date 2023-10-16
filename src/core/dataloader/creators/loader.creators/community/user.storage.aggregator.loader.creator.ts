@@ -1,22 +1,22 @@
 import { EntityManager } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { Space } from '@domain/challenge/space/space.entity';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageBucket as IStorageAggregator } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { User } from '@domain/community/user';
 
 @Injectable()
-export class SpaceStorageBucketLoaderCreator
-  implements DataLoaderCreator<IStorageBucket[]>
+export class UserStorageAggregatorLoaderCreator
+  implements DataLoaderCreator<IStorageAggregator[]>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(options?: DataLoaderCreatorOptions<IStorageBucket[]>) {
+  create(options?: DataLoaderCreatorOptions<IStorageAggregator[]>) {
     return createTypedRelationDataLoader(
       this.manager,
-      Space,
-      { storageBucket: true },
+      User,
+      { storageAggregator: true },
       this.constructor.name,
       options
     );

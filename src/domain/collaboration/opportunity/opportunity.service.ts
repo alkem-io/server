@@ -44,7 +44,7 @@ import { CreateTagsetTemplateInput } from '@domain/common/tagset-template/dto/ta
 import { opportunityDefaultCallouts } from './opportunity.default.callouts';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { OpportunityDisplayLocation } from '@common/enums/opportunity.display.location';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 @Injectable()
 export class OpportunityService {
   constructor(
@@ -65,7 +65,7 @@ export class OpportunityService {
   async createOpportunity(
     opportunityData: CreateOpportunityInput,
     spaceID: string,
-    parentStorageBucket: IStorageBucket,
+    storageAggregator: IStorageAggregator,
     agentInfo?: AgentInfo
   ): Promise<IOpportunity> {
     if (!opportunityData.nameID) {
@@ -90,7 +90,7 @@ export class OpportunityService {
       opportunityCommunityPolicy,
       opportunityCommunityApplicationForm,
       ProfileType.OPPORTUNITY,
-      parentStorageBucket
+      storageAggregator
     );
 
     await this.opportunityRepository.save(opportunity);
@@ -130,7 +130,7 @@ export class OpportunityService {
             },
           },
           [stateTagsetTemplate],
-          parentStorageBucket
+          storageAggregator
         );
 
       await this.innovationFlowService.updateFlowStateTagsetTemplateForLifecycle(
@@ -155,7 +155,7 @@ export class OpportunityService {
         await this.collaborationService.addDefaultCallouts(
           opportunity.collaboration,
           opportunityDefaultCallouts,
-          parentStorageBucket,
+          storageAggregator,
           agentInfo?.userID
         );
     }

@@ -2,6 +2,7 @@ import { MimeFileType } from '@common/enums/mime.file.type';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IDocument } from '../document/document.interface';
+import { IStorageAggregator } from '../storage-aggregator/storage.aggregator.interface';
 
 @ObjectType('StorageBucket')
 export abstract class IStorageBucket extends IAuthorizable {
@@ -17,5 +18,5 @@ export abstract class IStorageBucket extends IAuthorizable {
   })
   maxFileSize!: number;
 
-  parentStorageBucket?: IStorageBucket;
+  storageAggregator?: IStorageAggregator;
 }

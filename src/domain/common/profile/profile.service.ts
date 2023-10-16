@@ -28,7 +28,7 @@ import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 import { TagsetTemplateService } from '../tagset-template/tagset.template.service';
 import { UpdateProfileSelectTagsetInput } from './dto/profile.dto.update.select.tagset';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 
 @Injectable()
 export class ProfileService {
@@ -50,7 +50,7 @@ export class ProfileService {
   async createProfile(
     profileData: CreateProfileInput,
     profileType: ProfileType,
-    parentStorageBucket: IStorageBucket
+    storageAggregator: IStorageAggregator
   ): Promise<IProfile> {
     const profile: IProfile = Profile.create({
       description: profileData?.description,
@@ -60,8 +60,7 @@ export class ProfileService {
     });
     profile.authorization = new AuthorizationPolicy();
     profile.storageBucket = await this.storageBucketService.createStorageBucket(
-      {},
-      parentStorageBucket
+      { storageAggregator: storageAggregator }
     );
 
     profile.visuals = [];

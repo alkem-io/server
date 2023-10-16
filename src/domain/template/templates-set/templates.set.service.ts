@@ -26,9 +26,9 @@ import { CreateInnovationFlowTemplateInput } from '../innovation-flow-template/d
 import { ICalloutTemplate } from '../callout-template/callout.template.interface';
 import { CreateCalloutTemplateInput } from '../callout-template/dto/callout.template.dto.create';
 import { CalloutTemplateService } from '../callout-template/callout.template.service';
-import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { AgentInfo } from '@core/authentication/agent-info';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 
 @Injectable()
 export class TemplatesSetService {
@@ -36,7 +36,7 @@ export class TemplatesSetService {
     private authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(TemplatesSet)
     private templatesSetRepository: Repository<TemplatesSet>,
-    private storageBucketResolverService: StorageBucketResolverService,
+    private storageAggregatorResolverService: StorageAggregatorResolverService,
     private calloutTemplateService: CalloutTemplateService,
     private postTemplateService: PostTemplateService,
     private whiteboardTemplateService: WhiteboardTemplateService,
@@ -47,7 +47,7 @@ export class TemplatesSetService {
   async createTemplatesSet(
     policy: ITemplatesSetPolicy,
     addDefaults: boolean,
-    parentStorageBucket: IStorageBucket
+    storageAggregator: IStorageAggregator
   ): Promise<ITemplatesSet> {
     const templatesSet: ITemplatesSet = TemplatesSet.create();
     templatesSet.authorization = new AuthorizationPolicy();
@@ -60,7 +60,7 @@ export class TemplatesSetService {
       for (const postTemplateDefault of templatesSetDefaults.posts) {
         const postTemplate = await this.postTemplateService.createPostTemplate(
           postTemplateDefault,
-          parentStorageBucket
+          storageAggregator
         );
         templatesSet.postTemplates.push(postTemplate);
       }
@@ -69,7 +69,7 @@ export class TemplatesSetService {
         const innovationFlowTemplate =
           await this.innovationFlowTemplateService.createInnovationFLowTemplate(
             innovationFlowTemplateDefault,
-            parentStorageBucket
+            storageAggregator
           );
         templatesSet.innovationFlowTemplates.push(innovationFlowTemplate);
       }
@@ -223,7 +223,7 @@ export class TemplatesSetService {
         LogContext.CONTEXT
       );
     }
-    const storageBucket = await this.getStorageBucket(templatesSet);
+    const storageBucket = await this.getStorageAggregator(templatesSet);
     const postTemplate = await this.postTemplateService.createPostTemplate(
       postTemplateInput,
       storageBucket
@@ -233,10 +233,10 @@ export class TemplatesSetService {
     return postTemplate;
   }
 
-  private async getStorageBucket(
+  private async getStorageAggregator(
     templatesSet: ITemplatesSet
-  ): Promise<IStorageBucket> {
-    return await this.storageBucketResolverService.getStorageBucketForTemplatesSet(
+  ): Promise<IStorageAggregator> {
+    return await this.storageAggregatorResolverService.getStorageAggregatorForTemplatesSet(
       templatesSet.id
     );
   }
@@ -249,11 +249,11 @@ export class TemplatesSetService {
     templatesSet.calloutTemplates = await this.getCalloutTemplates(
       templatesSet
     );
-    const storageBucket = await this.getStorageBucket(templatesSet);
+    const storageAggregator = await this.getStorageAggregator(templatesSet);
     const calloutTemplate =
       await this.calloutTemplateService.createCalloutTemplate(
         calloutTemplateInput,
-        storageBucket,
+        storageAggregator,
         agentInfo
       );
     templatesSet.calloutTemplates.push(calloutTemplate);
@@ -298,11 +298,11 @@ export class TemplatesSetService {
         LogContext.CONTEXT
       );
     }
-    const storageBucket = await this.getStorageBucket(templatesSet);
+    const storageAggregator = await this.getStorageAggregator(templatesSet);
     const whiteboardTemplate =
       await this.whiteboardTemplateService.createWhiteboardTemplate(
         whiteboardTemplateInput,
-        storageBucket
+        storageAggregator
       );
 
     templatesSet.whiteboardTemplates.push(whiteboardTemplate);
@@ -371,7 +371,7 @@ export class TemplatesSetService {
         LogContext.CONTEXT
       );
     }
-    const storageBucket = await this.getStorageBucket(templatesSet);
+    const storageBucket = await this.getStorageAggregator(templatesSet);
     const innovationFlowTemplate =
       await this.innovationFlowTemplateService.createInnovationFLowTemplate(
         innovationFlowTemplateInput,

@@ -30,8 +30,6 @@ import { RoomType } from '@common/enums/room.type';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { ITagsetTemplate } from '@domain/common/tagset-template';
 import { UserLookupService } from '@services/infrastructure/user-lookup/user.lookup.service';
-import { StorageBucketResolverService } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.service';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { CalloutFramingService } from '../callout-framing/callout.framing.service';
 import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
@@ -45,6 +43,9 @@ import { CreatePostInput } from '../post/dto/post.dto.create';
 import { ICalloutContributionPolicy } from '../callout-contribution-policy/callout.contribution.policy.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CalloutContributionFilterArgs } from '../callout-contribution/dto/callout.contribution.args.filter';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { PostService } from '../post/post.service';
 
 @Injectable()
 export class CalloutService {
@@ -53,11 +54,12 @@ export class CalloutService {
     private namingService: NamingService,
     private roomService: RoomService,
     private userLookupService: UserLookupService,
-    private storageBucketResolverService: StorageBucketResolverService,
     private calloutFramingService: CalloutFramingService,
     private contributionDefaultsService: CalloutContributionDefaultsService,
     private contributionPolicyService: CalloutContributionPolicyService,
     private contributionService: CalloutContributionService,
+    private storageAggregatorResolverService: StorageAggregatorResolverService,
+    private postService: PostService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -65,7 +67,7 @@ export class CalloutService {
   public async createCallout(
     calloutData: CreateCalloutInput,
     tagsetTemplates: ITagsetTemplate[],
-    parentStorageBucket: IStorageBucket,
+    storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<ICallout> {
     this.validateCreateCalloutData(calloutData);
@@ -89,11 +91,10 @@ export class CalloutService {
 
     callout.framing = await this.calloutFramingService.createCalloutFraming(
       calloutData.framing,
-      parentStorageBucket,
       tagsetTemplates,
+      storageAggregator,
       userID
     );
-
     if (calloutData.displayLocation) {
       this.calloutFramingService.updateDisplayLocationTagsetValue(
         callout.framing,
@@ -158,8 +159,10 @@ export class CalloutService {
     }
   }
 
-  private async getStorageBucket(callout: ICallout): Promise<IStorageBucket> {
-    return await this.storageBucketResolverService.getStorageBucketForCallout(
+  private async getStorageAggregator(
+    callout: ICallout
+  ): Promise<IStorageAggregator> {
+    return await this.storageAggregatorResolverService.getStorageAggregatorForCallout(
       callout.id
     );
   }
@@ -446,17 +449,19 @@ export class CalloutService {
     if (contributionData.post) {
       this.setNameIdOnPostData(contributionData.post, callout);
     }
-    const storageBucket = await this.getStorageBucket(callout);
+
+    const storageAggregator = await this.getStorageAggregator(callout);
     const contribution =
       await this.contributionService.createCalloutContribution(
         contributionData,
-        storageBucket,
+        storageAggregator,
         callout.contributionPolicy,
         userID,
         callout.framing.profile.id
       );
     callout.contributions.push(contribution);
     await this.calloutRepository.save(callout);
+
     return contribution;
   }
 

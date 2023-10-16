@@ -18,11 +18,12 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { RoomModule } from '@domain/communication/room/room.module';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { UserLookupModule } from '@services/infrastructure/user-lookup/user.lookup.module';
-import { StorageBucketResolverModule } from '@services/infrastructure/storage-bucket-resolver/storage.bucket.resolver.module';
+import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { CalloutFramingModule } from '../callout-framing/callout.framing.module';
 import { CalloutContributionDefaultsModule } from '../callout-contribution-defaults/callout.contribution.defaults.module';
 import { CalloutContributionPolicyModule } from '../callout-contribution-policy/callout.contribution.policy.module';
 import { CalloutContributionModule } from '../callout-contribution/callout.contribution.module';
+import { PostModule } from '../post/post.module';
 
 @Module({
   imports: [
@@ -39,11 +40,12 @@ import { CalloutContributionModule } from '../callout-contribution/callout.contr
     NamingModule,
     MessagingModule,
     ReferenceModule,
-    StorageBucketResolverModule,
     CalloutFramingModule,
     CalloutContributionModule,
     CalloutContributionDefaultsModule,
     CalloutContributionPolicyModule,
+    StorageAggregatorResolverModule,
+    PostModule,
     TypeOrmModule.forFeature([Callout]),
   ],
   providers: [
